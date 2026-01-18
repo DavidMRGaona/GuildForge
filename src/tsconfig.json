@@ -1,0 +1,45 @@
+{
+    "references": [{ "path": "./tsconfig.node.json" }],
+    "compilerOptions": {
+        "target": "ESNext",
+        "useDefineForClassFields": true,
+        "module": "ESNext",
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "skipLibCheck": true,
+
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "isolatedModules": true,
+        "moduleDetection": "force",
+        "noEmit": true,
+        "jsx": "preserve",
+
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictBindCallApply": true,
+        "strictPropertyInitialization": true,
+        "noImplicitThis": true,
+        "alwaysStrict": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedIndexedAccess": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "exactOptionalPropertyTypes": true,
+
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["resources/js/*"]
+        },
+
+        "types": ["vite/client", "node"]
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.d.ts",
+        "resources/js/**/*.vue"
+    ],
+    "exclude": ["node_modules", "public"]
+}

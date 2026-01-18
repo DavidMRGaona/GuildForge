@@ -1,0 +1,92 @@
+services:
+  app:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: association_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    networks:
+      - association
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PHP_MEMORY_LIMIT=512M
+      - COMPOSER_MEMORY_LIMIT=-1
+
+  nginx:
+    image: nginx:alpine
+    container_name: association_nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./src:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - association
+    depends_on:
+      - app
+
+  db:
+    image: postgres:16-alpine
+    container_name: association_db
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-association}
+      POSTGRES_USER: ${DB_USERNAME:-association}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - association_db_data:/var/lib/postgresql/data
+    networks:
+      - association
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-association} -d ${DB_DATABASE:-association}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  node:
+    build:
+      context: ./docker/node
+      dockerfile: Dockerfile
+    container_name: association_node
+    restart: unless-stopped
+    working_dir: /var/www/html
+    user: root
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - association
+    environment:
+      - VITE_HOST=0.0.0.0
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: association_mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAIL_PORT:-8025}:8025"
+      - "${MAIL_SMTP_PORT:-1025}:1025"
+    networks:
+      - association
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+networks:
+  association:
+    driver: bridge
+
+volumes:
+  association_db_data:
+    driver: local

@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Unit\Domain\ValueObjects;
+
+use App\Domain\Exceptions\InvalidSlugException;
+use App\Domain\ValueObjects\Slug;
+use PHPUnit\Framework\TestCase;
+
+final class SlugTest extends TestCase
+{
+    public function test_it_creates_slug_with_valid_value(): void
+    {
+        $slug = new Slug('valid-slug-123');
+
+        $this->assertEquals('valid-slug-123', $slug->value);
+    }
+
+    public function test_it_returns_value_as_string(): void
+    {
+        $slug = new Slug('my-slug');
+
+        $this->assertEquals('my-slug', (string) $slug);
+    }
+
+    public function test_it_throws_exception_for_empty_slug(): void
+    {
+        $this->expectException(InvalidSlugException::class);
+
+        new Slug('');
+    }
+
+    public function test_it_throws_exception_for_invalid_characters(): void
+    {
+        $this->expectException(InvalidSlugException::class);
+
+        new Slug('invalid slug with spaces');
+    }
+
+    public function test_it_throws_exception_for_uppercase_letters(): void
+    {
+        $this->expectException(InvalidSlugException::class);
+
+        new Slug('Invalid-Uppercase');
+    }
+
+    public function test_it_accepts_slug_with_numbers(): void
+    {
+        $slug = new Slug('event-2024');
+
+        $this->assertEquals('event-2024', $slug->value);
+    }
+
+    public function test_it_accepts_slug_with_hyphens(): void
+    {
+        $slug = new Slug('my-multi-word-slug');
+
+        $this->assertEquals('my-multi-word-slug', $slug->value);
+    }
+
+    public function test_it_throws_exception_for_leading_hyphen(): void
+    {
+        $this->expectException(InvalidSlugException::class);
+
+        new Slug('-invalid-slug');
+    }
+
+    public function test_it_throws_exception_for_trailing_hyphen(): void
+    {
+        $this->expectException(InvalidSlugException::class);
+
+        new Slug('invalid-slug-');
+    }
+
+    public function test_it_throws_exception_for_consecutive_hyphens(): void
+    {
+        $this->expectException(InvalidSlugException::class);
+
+        new Slug('invalid--slug');
+    }
+
+    public function test_it_accepts_single_word_slug(): void
+    {
+        $slug = new Slug('singleword');
+
+        $this->assertEquals('singleword', $slug->value);
+    }
+}
