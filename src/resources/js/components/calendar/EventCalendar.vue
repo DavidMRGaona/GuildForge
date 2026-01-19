@@ -148,9 +148,9 @@ const calendarOptions = computed<CalendarOptions>(() => {
         dateClick: handleDateClick,
         headerToolbar: props.compact
             ? {
-                  left: '',
+                  left: 'prev',
                   center: 'title',
-                  right: '',
+                  right: 'next',
               }
             : {
                   left: 'prev,next today',
@@ -160,7 +160,8 @@ const calendarOptions = computed<CalendarOptions>(() => {
         buttonText: {
             today: t('calendar.today'),
         },
-        height: props.compact ? 300 : 'auto',
+        height: props.compact ? 'auto' : 'auto',
+        fixedWeekCount: !props.compact,
         eventDisplay: props.compact ? 'list-item' : 'block',
         loading: (isLoadingArg: boolean) => {
             isLoading.value = isLoadingArg;
@@ -281,20 +282,157 @@ watch(tooltipVisible, (visible) => {
     font-weight: 500;
 }
 
-/* Compact mode styles */
-.event-calendar--compact :deep(.fc-toolbar-title) {
-    font-size: 1.125rem;
+/* ===== COMPACT MODE REDESIGN ===== */
+
+/* Remove all borders */
+.event-calendar--compact :deep(.fc-theme-standard th),
+.event-calendar--compact :deep(.fc-theme-standard td),
+.event-calendar--compact :deep(.fc-theme-standard .fc-scrollgrid),
+.event-calendar--compact :deep(.fc-scrollgrid-sync-table) {
+    border: none !important;
 }
 
+/* Title styling */
+.event-calendar--compact :deep(.fc-toolbar-title) {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Navigation buttons */
+.event-calendar--compact :deep(.fc-button) {
+    background: none !important;
+    border: none !important;
+    color: #6b7280;
+    padding: 0.25rem 0.5rem;
+    box-shadow: none !important;
+}
+
+.event-calendar--compact :deep(.fc-button:hover) {
+    color: #f59e0b;
+    background: none !important;
+}
+
+.event-calendar--compact :deep(.fc-button:focus) {
+    box-shadow: none !important;
+}
+
+/* Day header (L M X J V S D) */
+.event-calendar--compact :deep(.fc-col-header-cell) {
+    background: transparent;
+    padding: 0.5rem 0;
+}
+
+.event-calendar--compact :deep(.fc-col-header-cell-cushion) {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+/* Day cells */
 .event-calendar--compact :deep(.fc-daygrid-day) {
     cursor: pointer;
 }
 
-.event-calendar--compact :deep(.fc-daygrid-day:hover) {
-    background-color: #fef9c3;
+.event-calendar--compact :deep(.fc-daygrid-day-frame) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 40px;
+    padding: 2px 0;
+}
+
+/* Day numbers */
+.event-calendar--compact :deep(.fc-daygrid-day-top) {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.event-calendar--compact :deep(.fc-daygrid-day-number) {
+    font-size: 0.875rem;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.15s ease;
+}
+
+/* Hover effect on day numbers */
+.event-calendar--compact :deep(.fc-daygrid-day:not(.fc-day-today):hover .fc-daygrid-day-number) {
+    background-color: #f3f4f6;
+}
+
+/* Today highlight */
+.event-calendar--compact :deep(.fc-day-today) {
+    background: transparent !important;
+}
+
+.event-calendar--compact :deep(.fc-day-today .fc-daygrid-day-number) {
+    background-color: #f59e0b;
+    color: white;
+    font-weight: 600;
+}
+
+/* Days outside current month */
+.event-calendar--compact :deep(.fc-day-other .fc-daygrid-day-number) {
+    color: #9ca3af;
+}
+
+/* Event dots on days outside current month - more subtle */
+.event-calendar--compact :deep(.fc-day-other .fc-daygrid-event-dot) {
+    opacity: 0.35;
+}
+
+/* Events container - position for dots */
+.event-calendar--compact :deep(.fc-daygrid-day-events) {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    min-height: 8px;
+    margin-top: 2px;
+}
+
+.event-calendar--compact :deep(.fc-daygrid-day-bottom) {
+    display: none;
+}
+
+/* Event dots */
+.event-calendar--compact :deep(.fc-daygrid-event-harness) {
+    margin: 0 !important;
+}
+
+.event-calendar--compact :deep(.fc-daygrid-event) {
+    margin: 0;
+    padding: 0;
+    background: none !important;
+    border: none !important;
 }
 
 .event-calendar--compact :deep(.fc-daygrid-event-dot) {
-    border-color: #f59e0b;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #f59e0b;
+    border: none !important;
+    margin: 0;
+}
+
+/* Hide event title text in compact mode */
+.event-calendar--compact :deep(.fc-event-title) {
+    display: none;
+}
+
+.event-calendar--compact :deep(.fc-event-time) {
+    display: none;
+}
+
+/* Fix for list-item display mode */
+.event-calendar--compact :deep(.fc-daygrid-event-harness-abs) {
+    position: relative !important;
 }
 </style>

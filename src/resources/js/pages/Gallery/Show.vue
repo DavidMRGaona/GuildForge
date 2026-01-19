@@ -57,14 +57,14 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
             </div>
 
             <div class="overflow-hidden rounded-lg bg-white shadow">
-                <div class="border-b border-gray-200 bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-8 text-white">
+                <div class="border-b border-gray-200 bg-gradient-to-r from-amber-500 to-slate-600 px-6 py-8 text-white">
                     <h1 class="text-3xl font-bold sm:text-4xl">
                         {{ props.gallery.title }}
                     </h1>
-                    <p v-if="props.gallery.description" class="mt-4 text-lg text-purple-100">
+                    <p v-if="props.gallery.description" class="mt-4 text-lg text-amber-100">
                         {{ props.gallery.description }}
                     </p>
-                    <p class="mt-4 text-sm text-purple-200">
+                    <p class="mt-4 text-sm text-slate-300">
                         {{ formatGalleryDate(props.gallery.createdAt) }} · {{ photos.length }} {{ t('gallery.photos') }}
                     </p>
                 </div>
@@ -76,7 +76,7 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
                             :key="photo.id"
                             type="button"
                             :aria-label="t('a11y.openPhoto', { number: index + 1, caption: photo.caption ?? '' })"
-                            class="group relative aspect-square overflow-hidden rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            class="group relative aspect-square overflow-hidden rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
                             @click="openLightbox(index)"
                         >
                             <img

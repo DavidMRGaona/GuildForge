@@ -33,7 +33,7 @@ useSeo({
     <DefaultLayout>
         <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="mb-6">
-                <Link href="/articulos" class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <Link href="/articulos" class="inline-flex items-center rounded text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
                     <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path
                             stroke-linecap="round"
@@ -55,7 +55,7 @@ useSeo({
                 />
                 <div
                     v-else
-                    class="flex h-48 w-full items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 sm:h-64 md:h-80 lg:h-96"
+                    class="flex h-48 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-slate-600 sm:h-64 md:h-80 lg:h-96"
                 >
                     <svg
                         class="h-24 w-24 text-white/50"
@@ -87,7 +87,7 @@ useSeo({
                         />
                         <div
                             v-else
-                            class="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600"
+                            class="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600"
                         >
                             <span class="text-sm font-medium">
                                 {{ getAuthorDisplayName(props.article).charAt(0).toUpperCase() }}
@@ -95,13 +95,13 @@ useSeo({
                         </div>
                         <div>
                             <p class="font-medium text-gray-900">{{ getAuthorDisplayName(props.article) }}</p>
-                            <p v-if="props.article.publishedAt" class="text-sm text-blue-600">
+                            <p v-if="props.article.publishedAt" class="text-sm text-amber-600">
                                 {{ t('articles.publishedAt') }} {{ formatPublishedDate(props.article.publishedAt) }}
                             </p>
                         </div>
                     </div>
 
-                    <div class="prose prose-blue max-w-none" v-html="props.article.content" />
+                    <div class="prose prose-amber max-w-none" v-html="props.article.content" />
 
                     <div class="mt-8 border-t border-gray-200 pt-6">
                         <Link href="/articulos">

@@ -10,4 +10,17 @@
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: 'Playfair Display', ui-serif, Georgia, serif;
+
+    /* Color System - Primary (Amber) */
+    --color-primary: #F59E0B;
+    --color-primary-light: #FBBF24;
+    --color-primary-dark: #D97706;
+
+    /* Color System - Secondary (Slate) */
+    --color-secondary: #475569;
+    --color-secondary-light: #64748B;
+    --color-secondary-dark: #334155;
+
+    /* Transitions */
+    --transition-card: 200ms ease-in-out;
 }
