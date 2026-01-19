@@ -70,6 +70,12 @@ export const buildAvatarUrl = (publicId: string | null | undefined, size = 100):
 export const buildGalleryImageUrl = (publicId: string | null | undefined): string | null =>
     buildImageUrl(publicId, { width: 800, height: 600, crop: 'fit' });
 
+export const buildMosaicLargeUrl = (publicId: string | null | undefined): string | null =>
+    buildImageUrl(publicId, { width: 800, height: 600, crop: 'fill' });
+
+export const buildMosaicSmallUrl = (publicId: string | null | undefined): string | null =>
+    buildImageUrl(publicId, { width: 400, height: 300, crop: 'fill' });
+
 export const buildLightboxImageUrl = (publicId: string | null | undefined): string | null =>
     buildImageUrl(publicId, { width: 1920, crop: 'fit' });
 

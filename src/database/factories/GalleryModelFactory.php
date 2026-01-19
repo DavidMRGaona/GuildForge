@@ -27,7 +27,6 @@ final class GalleryModelFactory extends Factory
             'title' => $title,
             'slug' => Str::slug($title),
             'description' => fake()->optional()->paragraphs(2, true),
-            'cover_image_public_id' => null,
             'is_published' => false,
         ];
     }

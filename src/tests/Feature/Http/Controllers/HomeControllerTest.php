@@ -205,10 +205,12 @@ final class HomeControllerTest extends TestCase
         GalleryModel::factory()->published()->create([
             'title' => 'Older Gallery',
             'created_at' => now()->subDays(5),
+            'updated_at' => now()->subDays(5),
         ]);
         GalleryModel::factory()->published()->create([
             'title' => 'Newest Gallery',
             'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         $response = $this->get('/');

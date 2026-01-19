@@ -63,6 +63,7 @@ class HeroSlideResource extends Resource
                     ->getUploadedFileNameForStorageUsing(
                         fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
                     )
+                    ->maxSize(2048)
                     ->nullable()
                     ->columnSpanFull(),
                 Toggle::make('is_active')

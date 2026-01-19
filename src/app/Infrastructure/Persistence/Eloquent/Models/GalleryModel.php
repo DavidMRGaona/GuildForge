@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
-use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use Database\Factories\GalleryModelFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -18,8 +17,9 @@ use Illuminate\Support\Carbon;
  * @property string $title
  * @property string $slug
  * @property string|null $description
- * @property string|null $cover_image_public_id
+ * @property-read string|null $cover_image_public_id Derived from first photo by sort_order
  * @property bool $is_published
+ * @property bool $is_featured
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, PhotoModel> $photos
@@ -29,10 +29,6 @@ final class GalleryModel extends Model
     /** @use HasFactory<GalleryModelFactory> */
     use HasFactory;
     use HasUuids;
-    use DeletesCloudinaryImages;
-
-    /** @var array<string> */
-    protected array $cloudinaryImageFields = ['cover_image_public_id'];
 
     protected $table = 'galleries';
 
@@ -41,8 +37,8 @@ final class GalleryModel extends Model
         'title',
         'slug',
         'description',
-        'cover_image_public_id',
         'is_published',
+        'is_featured',
     ];
 
     /**
@@ -52,6 +48,7 @@ final class GalleryModel extends Model
     {
         return [
             'is_published' => 'boolean',
+            'is_featured' => 'boolean',
         ];
     }
 
@@ -75,5 +72,13 @@ final class GalleryModel extends Model
     public function photos(): HasMany
     {
         return $this->hasMany(PhotoModel::class, 'gallery_id')->orderBy('sort_order');
+    }
+
+    /**
+     * Get cover image from the first photo by sort_order.
+     */
+    public function getCoverImagePublicIdAttribute(): ?string
+    {
+        return $this->photos()->orderBy('sort_order')->first()?->image_public_id;
     }
 }

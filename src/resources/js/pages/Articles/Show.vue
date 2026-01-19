@@ -55,7 +55,7 @@ useSeo({
                 />
                 <div
                     v-else
-                    class="flex h-48 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-slate-600 sm:h-64 md:h-80 lg:h-96"
+                    class="flex h-48 w-full items-center justify-center bg-linear-to-br from-amber-400 to-slate-600 sm:h-64 md:h-80 lg:h-96"
                 >
                     <svg
                         class="h-24 w-24 text-white/50"

@@ -58,6 +58,8 @@ export default {
         close: 'Close',
         previous: 'Previous',
         next: 'Next',
+        viewPhoto: 'View photo',
+        noPhotosYet: 'Photos coming soon',
     },
     home: {
         welcome: 'Welcome to {appName}',

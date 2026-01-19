@@ -104,7 +104,6 @@ final class EloquentGalleryRepositoryTest extends TestCase
             title: 'New Gallery',
             slug: new Slug('new-gallery'),
             description: 'A brand new gallery.',
-            coverImagePublicId: 'galleries/new-gallery-cover.jpg',
             isPublished: true,
         );
 
@@ -115,7 +114,6 @@ final class EloquentGalleryRepositoryTest extends TestCase
             'title' => 'New Gallery',
             'slug' => 'new-gallery',
             'description' => 'A brand new gallery.',
-            'cover_image_public_id' => 'galleries/new-gallery-cover.jpg',
             'is_published' => true,
         ]);
     }
@@ -133,7 +131,6 @@ final class EloquentGalleryRepositoryTest extends TestCase
             title: 'Updated Title',
             slug: new Slug('updated-slug'),
             description: 'Updated description.',
-            coverImagePublicId: 'galleries/updated-cover.jpg',
             isPublished: true,
         );
 
@@ -144,7 +141,6 @@ final class EloquentGalleryRepositoryTest extends TestCase
             'title' => 'Updated Title',
             'slug' => 'updated-slug',
             'description' => 'Updated description.',
-            'cover_image_public_id' => 'galleries/updated-cover.jpg',
             'is_published' => true,
         ]);
 
