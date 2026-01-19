@@ -54,7 +54,7 @@ useSeo({
                     class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
                 >
                     <ArticleCard
-                        v-for="article in props.latestArticles"
+                        v-for="article in props.latestArticles.slice(0, 3)"
                         :key="article.id"
                         :article="article"
                     />
@@ -63,10 +63,10 @@ useSeo({
                 <aside
                     v-else
                     role="complementary"
-                    class="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center"
+                    class="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center"
                 >
                     <svg
-                        class="mx-auto h-12 w-12 text-gray-400"
+                        class="mx-auto h-8 w-8 text-gray-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
