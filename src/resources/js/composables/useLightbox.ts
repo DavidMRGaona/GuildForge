@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted, type Ref, type ComputedRef } from 'vue';
+import { ref, computed, onUnmounted, type Ref, type ComputedRef } from 'vue';
 import type { Photo } from '@/types/models';
 
 interface UseLightboxReturn {
@@ -50,28 +50,7 @@ export function useLightbox(photos: Ref<Photo[]>): UseLightboxReturn {
         }
     }
 
-    function handleKeydown(e: globalThis.KeyboardEvent): void {
-        if (!isOpen.value) return;
-
-        switch (e.key) {
-            case 'ArrowLeft':
-                prev();
-                break;
-            case 'ArrowRight':
-                next();
-                break;
-            case 'Escape':
-                close();
-                break;
-        }
-    }
-
-    onMounted(() => {
-        window.addEventListener('keydown', handleKeydown);
-    });
-
     onUnmounted(() => {
-        window.removeEventListener('keydown', handleKeydown);
         document.body.style.overflow = '';
     });
 

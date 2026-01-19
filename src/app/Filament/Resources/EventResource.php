@@ -102,6 +102,7 @@ class EventResource extends Resource
                     ->getUploadedFileNameForStorageUsing(
                         fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
                     )
+                    ->maxSize(2048)
                     ->nullable(),
                 Toggle::make('is_published')
                     ->label(__('Publicado'))

@@ -62,20 +62,21 @@ class GalleryResource extends Resource
                     ->rows(3)
                     ->maxLength(1000)
                     ->columnSpanFull(),
-                FileUpload::make('cover_image_public_id')
-                    ->label(__('Imagen de portada'))
-                    ->image()
-                    ->disk('images')
-                    ->directory(fn (): string => 'galleries/' . now()->format('Y/m'))
-                    ->getUploadedFileNameForStorageUsing(
-                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
-                    )
-                    ->nullable(),
                 Toggle::make('is_published')
                     ->label(__('Publicada'))
                     ->default(false),
+                Toggle::make('is_featured')
+                    ->label(__('Destacada en inicio'))
+                    ->helperText(__('Solo una galería puede estar destacada. Al activar esta opción se desactivará en las demás.'))
+                    ->default(false)
+                    ->afterStateUpdated(function (bool $state): void {
+                        if ($state) {
+                            GalleryModel::where('is_featured', true)->update(['is_featured' => false]);
+                        }
+                    }),
                 Repeater::make('photos')
                     ->label(__('Fotos'))
+                    ->helperText(__('La primera foto será la portada de la galería. Arrastra para reordenar.'))
                     ->relationship()
                     ->schema([
                         FileUpload::make('image_public_id')
@@ -86,6 +87,7 @@ class GalleryResource extends Resource
                             ->getUploadedFileNameForStorageUsing(
                                 fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
                             )
+                            ->maxSize(10240)
                             ->required(),
                         TextInput::make('caption')
                             ->label(__('Descripción'))
@@ -95,7 +97,7 @@ class GalleryResource extends Resource
                     ->reorderable()
                     ->collapsible()
                     ->collapsed()
-                    ->itemLabel(fn (array $state): string => $state['caption'] ?? __('Foto'))
+                    ->itemLabel(fn (array $state): ?string => $state['caption'] ?? null)
                     ->columnSpanFull(),
             ]);
     }
@@ -115,6 +117,9 @@ class GalleryResource extends Resource
                     ->sortable(),
                 IconColumn::make('is_published')
                     ->label(__('Publicada'))
+                    ->boolean(),
+                IconColumn::make('is_featured')
+                    ->label(__('Destacada'))
                     ->boolean(),
                 TextColumn::make('created_at')
                     ->label(__('Creada'))

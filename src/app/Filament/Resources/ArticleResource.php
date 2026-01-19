@@ -80,6 +80,7 @@ class ArticleResource extends Resource
                     ->getUploadedFileNameForStorageUsing(
                         fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
                     )
+                    ->maxSize(2048)
                     ->nullable(),
                 Select::make('author_id')
                     ->label(__('Autor'))

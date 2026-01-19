@@ -94,7 +94,6 @@ final readonly class EloquentGalleryRepository implements GalleryRepositoryInter
             'title' => $gallery->title(),
             'slug' => $gallery->slug()->value,
             'description' => $gallery->description(),
-            'cover_image_public_id' => $gallery->coverImagePublicId(),
             'is_published' => $gallery->isPublished(),
         ];
     }

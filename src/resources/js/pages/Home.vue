@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import type { Event, Article, Gallery, HeroSlide } from '@/types/models';
+import type { Event, Article, Gallery, HeroSlide, Photo } from '@/types/models';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import EventsSection from '@/components/events/EventsSection.vue';
 import ArticleCard from '@/components/articles/ArticleCard.vue';
-import GalleryCard from '@/components/gallery/GalleryCard.vue';
+import PhotoLightbox from '@/components/gallery/PhotoLightbox.vue';
 import HeroSlider from '@/components/hero/HeroSlider.vue';
 import { useSeo } from '@/composables/useSeo';
+import { useLightbox } from '@/composables/useLightbox';
+import { buildMosaicLargeUrl, buildMosaicSmallUrl } from '@/utils/cloudinary';
 
 interface Props {
     heroSlides: HeroSlide[];
@@ -23,6 +26,26 @@ const { t } = useI18n();
 useSeo({
     description: t('home.subtitle'),
 });
+
+// Gallery photos for lightbox
+const allPhotos = computed<Photo[]>(() => props.featuredGallery?.photos ?? []);
+
+// Photos to display in the mosaic (max 5 on desktop, 4 on mobile)
+const displayPhotos = computed<Photo[]>(() => allPhotos.value.slice(0, 5));
+
+// Remaining photos count for the "+N" overlay
+const remainingCount = computed<number>(() => {
+    const totalPhotos = props.featuredGallery?.photoCount ?? 0;
+    return Math.max(0, totalPhotos - displayPhotos.value.length);
+});
+
+// Lightbox state
+const lightboxPhotos = ref(allPhotos);
+const { isOpen, currentIndex, open, close, next, prev } = useLightbox(lightboxPhotos);
+
+function openLightbox(index: number): void {
+    open(index);
+}
 </script>
 
 <template>
@@ -93,24 +116,121 @@ useSeo({
                     </h2>
                     <Link
                         v-if="props.featuredGallery"
-                        href="/galeria"
+                        :href="`/galeria/${props.featuredGallery.slug}`"
                         class="text-sm font-medium text-amber-600 hover:text-amber-700"
                     >
                         {{ t('common.viewAll') }} &rarr;
                     </Link>
                 </div>
 
-                <div v-if="props.featuredGallery" class="mx-auto max-w-md">
-                    <GalleryCard :gallery="props.featuredGallery" />
+                <!-- Gallery Mosaic Grid (with photos) -->
+                <div v-if="props.featuredGallery && displayPhotos.length > 0">
+                    <!-- Asymmetric grid: 4 columns on desktop, 2 on mobile -->
+                    <div class="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:grid-rows-2">
+                        <!-- Photo 1: Large image spanning 2 columns and 2 rows on desktop -->
+                        <button
+                            v-if="displayPhotos[0]"
+                            type="button"
+                            class="group relative aspect-[4/3] overflow-hidden rounded-lg lg:col-span-2 lg:row-span-2 lg:aspect-auto"
+                            :aria-label="displayPhotos[0].caption ?? t('gallery.viewPhoto')"
+                            @click="openLightbox(0)"
+                        >
+                            <img
+                                :src="buildMosaicLargeUrl(displayPhotos[0].imagePublicId) ?? ''"
+                                :alt="displayPhotos[0].caption ?? ''"
+                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                            <div
+                                class="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20"
+                            />
+                        </button>
+
+                        <!-- Photos 2-5: Small images on the right -->
+                        <button
+                            v-for="(photo, idx) in displayPhotos.slice(1, 5)"
+                            :key="photo.id"
+                            type="button"
+                            class="group relative aspect-[4/3] overflow-hidden rounded-lg"
+                            :aria-label="photo.caption ?? t('gallery.viewPhoto')"
+                            @click="openLightbox(idx + 1)"
+                        >
+                            <img
+                                :src="buildMosaicSmallUrl(photo.imagePublicId) ?? ''"
+                                :alt="photo.caption ?? ''"
+                                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                            <div
+                                class="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20"
+                            />
+
+                            <!-- "+N photos" overlay on the last visible cell -->
+                            <div
+                                v-if="remainingCount > 0 && idx === Math.min(3, displayPhotos.length - 2)"
+                                class="absolute inset-0 flex items-center justify-center bg-black/50"
+                            >
+                                <span class="text-2xl font-bold text-white">+{{ remainingCount }}</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Gallery title below the mosaic -->
+                    <div class="mt-4 text-center">
+                        <Link
+                            :href="`/galeria/${props.featuredGallery.slug}`"
+                            class="text-lg font-medium text-gray-900 hover:text-amber-600"
+                        >
+                            {{ props.featuredGallery.title }}
+                        </Link>
+                        <p v-if="props.featuredGallery.description" class="mt-1 text-sm text-gray-500">
+                            {{ props.featuredGallery.description }}
+                        </p>
+                    </div>
                 </div>
 
-                <aside
-                    v-else
-                    role="complementary"
-                    class="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center"
+                <!-- Gallery exists but has no photos yet -->
+                <div
+                    v-else-if="props.featuredGallery && displayPhotos.length === 0"
+                    class="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center"
                 >
                     <svg
                         class="mx-auto h-12 w-12 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                    </svg>
+                    <h3 class="mt-4 text-lg font-medium text-gray-900">
+                        {{ props.featuredGallery.title }}
+                    </h3>
+                    <p v-if="props.featuredGallery.description" class="mt-1 text-sm text-gray-500">
+                        {{ props.featuredGallery.description }}
+                    </p>
+                    <p class="mt-2 text-sm text-gray-400">
+                        {{ t('gallery.noPhotosYet') }}
+                    </p>
+                    <Link
+                        :href="`/galeria/${props.featuredGallery.slug}`"
+                        class="mt-4 inline-block text-sm font-medium text-amber-600 hover:text-amber-700"
+                    >
+                        {{ t('common.viewAll') }} &rarr;
+                    </Link>
+                </div>
+
+                <!-- No gallery at all -->
+                <aside
+                    v-else
+                    role="complementary"
+                    class="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center"
+                >
+                    <svg
+                        class="mx-auto h-8 w-8 text-gray-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -129,5 +249,15 @@ useSeo({
                 </aside>
             </section>
         </div>
+
+        <!-- Lightbox -->
+        <PhotoLightbox
+            :photos="allPhotos"
+            :current-index="currentIndex"
+            :is-open="isOpen"
+            @close="close"
+            @next="next"
+            @prev="prev"
+        />
     </DefaultLayout>
 </template>

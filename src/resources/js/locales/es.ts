@@ -58,6 +58,8 @@ export default {
         close: 'Cerrar',
         previous: 'Anterior',
         next: 'Siguiente',
+        viewPhoto: 'Ver foto',
+        noPhotosYet: 'Próximamente fotos de este evento',
     },
     home: {
         welcome: 'Bienvenido a {appName}',

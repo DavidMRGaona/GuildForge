@@ -37,13 +37,35 @@ final class GalleryModelTest extends TestCase
             'title',
             'slug',
             'description',
-            'cover_image_public_id',
             'is_published',
+            'is_featured',
         ];
 
         $model = new GalleryModel();
 
         $this->assertEquals($fillable, $model->getFillable());
+    }
+
+    public function test_cover_image_public_id_returns_first_photo_image(): void
+    {
+        $gallery = GalleryModel::factory()->create();
+        PhotoModel::factory()->forGallery($gallery)->create([
+            'image_public_id' => 'galleries/second.jpg',
+            'sort_order' => 2,
+        ]);
+        PhotoModel::factory()->forGallery($gallery)->create([
+            'image_public_id' => 'galleries/first.jpg',
+            'sort_order' => 1,
+        ]);
+
+        $this->assertEquals('galleries/first.jpg', $gallery->cover_image_public_id);
+    }
+
+    public function test_cover_image_public_id_returns_null_when_no_photos(): void
+    {
+        $gallery = GalleryModel::factory()->create();
+
+        $this->assertNull($gallery->cover_image_public_id);
     }
 
     public function test_it_casts_boolean_correctly(): void

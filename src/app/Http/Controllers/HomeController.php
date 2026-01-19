@@ -8,6 +8,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
+use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -60,8 +61,10 @@ final class HomeController extends Controller
     {
         $gallery = GalleryModel::query()
             ->where('is_published', true)
+            ->with(['photos' => fn ($query) => $query->orderBy('sort_order')->limit(6)])
             ->withCount('photos')
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('is_featured')
+            ->orderByDesc('updated_at')
             ->first();
 
         if ($gallery === null) {
@@ -154,6 +157,12 @@ final class HomeController extends Controller
             'coverImagePublicId' => $gallery->cover_image_public_id,
             'isPublished' => $gallery->is_published,
             'photoCount' => $gallery->photos_count ?? 0,
+            'photos' => $gallery->photos->map(fn (PhotoModel $photo): array => [
+                'id' => $photo->id,
+                'imagePublicId' => $photo->image_public_id,
+                'caption' => $photo->caption,
+                'sortOrder' => $photo->sort_order,
+            ])->toArray(),
             'createdAt' => $gallery->created_at?->format('c'),
             'updatedAt' => $gallery->updated_at?->format('c'),
         ];
