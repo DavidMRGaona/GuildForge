@@ -130,6 +130,30 @@ Domain → Application → Infrastructure → Presentation
 4. **All code in English**: variables, functions, classes, comments, commits
 5. **SOLID principles**: Apply consistently
 
+## CI/CD
+
+### Pipeline de integración continua
+
+El proyecto usa GitHub Actions para CI/CD:
+
+| Workflow | Trigger            | Descripción         |
+|----------|--------------------|---------------------|
+| CI       | Push/PR a main     | Tests y linting     |
+| Deploy   | CI exitoso en main | Deploy a producción |
+
+### Jobs de CI
+
+- **test**: PHP 8.4, PostgreSQL 17, Redis 7. Ejecuta migraciones y tests en paralelo.
+- **lint**: TypeScript type-check y ESLint.
+
+### Secrets necesarios
+
+Configurar en GitHub → Settings → Secrets and variables → Actions:
+
+| Secret                | Descripción                            |
+|-----------------------|----------------------------------------|
+| `COOLIFY_WEBHOOK_URL` | URL del webhook de Coolify para deploy |
+
 ## License
 
 Proprietary – All rights reserved.
