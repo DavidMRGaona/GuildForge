@@ -20,6 +20,7 @@ final class DatabaseSeeder extends Seeder
             UserSeeder::class,
             EventSeeder::class,
             GallerySeeder::class,
+            HeroSlideSeeder::class,
             SettingsSeeder::class,
         ]);
     }

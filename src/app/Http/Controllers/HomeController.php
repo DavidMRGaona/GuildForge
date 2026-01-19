@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
+use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -17,6 +18,7 @@ final class HomeController extends Controller
     public function __invoke(): Response
     {
         return Inertia::render('Home', [
+            'heroSlides' => $this->getHeroSlides(),
             'upcomingEvents' => $this->getUpcomingEvents(),
             'latestArticles' => $this->getLatestArticles(),
             'featuredGallery' => $this->getFeaturedGallery(),
@@ -67,6 +69,17 @@ final class HomeController extends Controller
         }
 
         return $this->mapGalleryModel($gallery);
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function getHeroSlides(): Collection
+    {
+        return HeroSlideModel::query()
+            ->activeOrdered()
+            ->get()
+            ->map(fn (HeroSlideModel $slide): array => $this->mapHeroSlideModel($slide));
     }
 
     /**
@@ -143,6 +156,21 @@ final class HomeController extends Controller
             'photoCount' => $gallery->photos_count ?? 0,
             'createdAt' => $gallery->created_at?->format('c'),
             'updatedAt' => $gallery->updated_at?->format('c'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapHeroSlideModel(HeroSlideModel $slide): array
+    {
+        return [
+            'id' => $slide->id,
+            'title' => $slide->title,
+            'subtitle' => $slide->subtitle,
+            'buttonText' => $slide->button_text,
+            'buttonUrl' => $slide->button_url,
+            'imagePublicId' => $slide->image_public_id,
         ];
     }
 }

@@ -7,6 +7,7 @@ namespace Tests\Feature\Http\Controllers;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
+use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -252,6 +253,64 @@ final class HomeControllerTest extends TestCase
                 ->has('upcomingEvents.0.isPublished')
                 ->has('upcomingEvents.0.createdAt')
                 ->has('upcomingEvents.0.updatedAt')
+        );
+    }
+
+    public function test_index_displays_active_hero_slides(): void
+    {
+        HeroSlideModel::factory()->active()->withOrder(1)->create(['title' => 'First Slide']);
+        HeroSlideModel::factory()->active()->withOrder(2)->create(['title' => 'Second Slide']);
+        HeroSlideModel::factory()->inactive()->create(['title' => 'Inactive Slide']);
+
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Home')
+                ->has('heroSlides', 2)
+                ->where('heroSlides.0.title', 'First Slide')
+                ->where('heroSlides.1.title', 'Second Slide')
+        );
+    }
+
+    public function test_index_returns_empty_array_when_no_active_slides(): void
+    {
+        HeroSlideModel::factory()->inactive()->count(3)->create();
+
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Home')
+                ->has('heroSlides', 0)
+        );
+    }
+
+    public function test_index_returns_correct_hero_slide_data_format(): void
+    {
+        HeroSlideModel::factory()->active()->create([
+            'title' => 'Test Slide',
+            'subtitle' => 'Test Subtitle',
+            'button_text' => 'Click Me',
+            'button_url' => '/test-url',
+            'image_public_id' => 'test-image-id',
+        ]);
+
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Home')
+                ->has('heroSlides', 1)
+                ->has('heroSlides.0.id')
+                ->where('heroSlides.0.title', 'Test Slide')
+                ->where('heroSlides.0.subtitle', 'Test Subtitle')
+                ->where('heroSlides.0.buttonText', 'Click Me')
+                ->where('heroSlides.0.buttonUrl', '/test-url')
+                ->where('heroSlides.0.imagePublicId', 'test-image-id')
         );
     }
 }

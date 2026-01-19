@@ -25,6 +25,8 @@ export default {
         noResults: 'No se encontraron resultados',
         showing: 'Mostrando',
         of: 'de',
+        slideNavigation: 'Navegación del carrusel',
+        goToSlide: 'Ir a la diapositiva {number}',
     },
     events: {
         title: 'Eventos',
@@ -60,6 +62,7 @@ export default {
     home: {
         welcome: 'Bienvenido a {appName}',
         subtitle: '{appDescription}',
+        heroSlider: 'Carrusel de presentación',
         featuredEvents: 'Eventos destacados',
         latestArticles: 'Últimos artículos',
         heroDescription:

@@ -16,6 +16,7 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentPhotoRepository
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
+use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Services\CloudinaryStorageAdapter;
 use App\Infrastructure\Services\SettingsService;
@@ -25,6 +26,7 @@ use League\Flysystem\Filesystem;
 use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
+use App\Policies\HeroSlidePolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -52,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(EventModel::class, EventPolicy::class);
         Gate::policy(ArticleModel::class, ArticlePolicy::class);
         Gate::policy(GalleryModel::class, GalleryPolicy::class);
+        Gate::policy(HeroSlideModel::class, HeroSlidePolicy::class);
 
         // Override cloudinary driver with safe adapter that:
         // - Generates URLs directly (no Admin API calls)
