@@ -72,3 +72,6 @@ export const buildGalleryImageUrl = (publicId: string | null | undefined): strin
 
 export const buildLightboxImageUrl = (publicId: string | null | undefined): string | null =>
     buildImageUrl(publicId, { width: 1920, crop: 'fit' });
+
+export const buildFullScreenHeroImageUrl = (publicId: string | null | undefined): string | null =>
+    buildImageUrl(publicId, { width: 1920, height: 1080, crop: 'fill', gravity: 'auto' });

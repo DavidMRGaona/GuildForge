@@ -25,6 +25,8 @@ export default {
         noResults: 'No results found',
         showing: 'Showing',
         of: 'of',
+        slideNavigation: 'Slide navigation',
+        goToSlide: 'Go to slide {number}',
     },
     events: {
         title: 'Events',
@@ -60,6 +62,7 @@ export default {
     home: {
         welcome: 'Welcome to {appName}',
         subtitle: '{appDescription}',
+        heroSlider: 'Hero slider',
         featuredEvents: 'Featured events',
         latestArticles: 'Latest articles',
         heroDescription:

@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import type { Event, Article, Gallery } from '@/types/models';
+import type { Event, Article, Gallery, HeroSlide } from '@/types/models';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import EventCard from '@/components/events/EventCard.vue';
 import ArticleCard from '@/components/articles/ArticleCard.vue';
 import GalleryCard from '@/components/gallery/GalleryCard.vue';
-import BaseButton from '@/components/ui/BaseButton.vue';
 import CalendarWidget from '@/components/calendar/CalendarWidget.vue';
+import HeroSlider from '@/components/hero/HeroSlider.vue';
 import { useSeo } from '@/composables/useSeo';
 
 interface Props {
+    heroSlides: HeroSlide[];
     upcomingEvents: Event[];
     latestArticles: Article[];
     featuredGallery: Gallery | null;
@@ -27,27 +28,8 @@ useSeo({
 
 <template>
     <DefaultLayout>
-        <!-- Hero Section -->
-        <section role="banner" class="bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg">
-            <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-                <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-                    {{ t('home.welcome') }}
-                </h1>
-                <p class="mt-4 text-2xl text-amber-50">
-                    {{ t('home.subtitle') }}
-                </p>
-                <p class="mt-4 max-w-3xl text-lg text-amber-100">
-                    {{ t('home.heroDescription') }}
-                </p>
-                <div class="mt-8">
-                    <Link href="/eventos">
-                        <BaseButton variant="secondary" size="lg">
-                            {{ t('home.viewEvents') }}
-                        </BaseButton>
-                    </Link>
-                </div>
-            </div>
-        </section>
+        <!-- Hero slider Section -->
+        <HeroSlider :slides="props.heroSlides" />
 
         <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
             <!-- Upcoming Events Section -->

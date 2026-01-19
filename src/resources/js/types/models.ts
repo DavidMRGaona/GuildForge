@@ -61,6 +61,15 @@ export interface Photo {
     sortOrder: number;
 }
 
+export interface HeroSlide {
+    id: string;
+    title: string;
+    subtitle: string | null;
+    buttonText: string | null;
+    buttonUrl: string | null;
+    imagePublicId: string | null;
+}
+
 export interface EventFilters {
     search?: string;
     upcoming?: boolean;
