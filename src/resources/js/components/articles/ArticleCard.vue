@@ -23,7 +23,7 @@ const articleImageUrl = computed(() => buildCardImageUrl(props.article.featuredI
     <Link
         :href="`/articulos/${props.article.slug}`"
         :aria-label="t('a11y.viewArticle', { title: props.article.title })"
-        class="block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        class="block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
     >
         <BaseCard :padding="false">
             <template #header>
@@ -37,7 +37,7 @@ const articleImageUrl = computed(() => buildCardImageUrl(props.article.featuredI
                     />
                     <div
                         v-else
-                        class="flex aspect-video h-48 w-full items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600"
+                        class="flex aspect-video h-48 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-slate-600"
                     >
                         <svg
                             class="h-16 w-16 text-white/50"
@@ -62,7 +62,7 @@ const articleImageUrl = computed(() => buildCardImageUrl(props.article.featuredI
                     {{ props.article.title }}
                 </h3>
 
-                <p v-if="props.article.publishedAt" class="mb-3 text-sm text-blue-600">
+                <p v-if="props.article.publishedAt" class="mb-3 text-sm text-amber-600">
                     {{ t('articles.by') }} {{ getAuthorDisplayName(props.article) }} · {{ formatPublishedDate(props.article.publishedAt) }}
                 </p>
 

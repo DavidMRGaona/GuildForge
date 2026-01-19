@@ -11,21 +11,22 @@ const navigateToCalendar = (): void => {
 </script>
 
 <template>
-    <div class="calendar-widget rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <div class="calendar-widget flex flex-col justify-center rounded-lg bg-white p-4">
         <EventCalendar
             compact
+            show-tooltips
             :navigate-on-click="false"
             @event-select="navigateToCalendar"
             @calendar-click="navigateToCalendar"
         />
 
-        <div class="mt-4 border-t border-gray-100 pt-4">
+        <div class="mt-3 text-center">
             <button
                 type="button"
-                class="w-full text-center text-sm font-medium text-amber-600 hover:text-amber-700"
+                class="text-sm font-medium text-amber-600 transition-colors hover:text-amber-700"
                 @click="navigateToCalendar"
             >
-                {{ t('calendar.viewFull') }} &rarr;
+                {{ t('calendar.viewFullCalendar') }} &rarr;
             </button>
         </div>
     </div>
@@ -34,5 +35,9 @@ const navigateToCalendar = (): void => {
 <style scoped>
 .calendar-widget :deep(.event-calendar) {
     margin: 0;
+}
+
+.calendar-widget :deep(.fc-toolbar-title) {
+    font-family: var(--font-display), ui-serif, Georgia, serif;
 }
 </style>

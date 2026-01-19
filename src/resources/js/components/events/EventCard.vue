@@ -37,7 +37,7 @@ const eventImageUrl = computed(() => buildCardImageUrl(props.event.imagePublicId
                     />
                     <div
                         v-else
-                        class="flex aspect-video h-48 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-amber-600"
+                        class="flex aspect-video h-48 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-slate-600"
                     >
                         <svg
                             class="h-16 w-16 text-white/50"

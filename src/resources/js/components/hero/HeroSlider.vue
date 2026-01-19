@@ -90,7 +90,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                         class="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600"
                     />
                     <!-- Dark overlay -->
-                    <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
+                    <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/70" />
                 </div>
             </Transition>
 
@@ -108,7 +108,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                         :key="'content-' + currentSlide.id"
                         class="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8"
                     >
-                        <h1 class="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 class="font-display text-4xl font-bold tracking-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.5)] sm:text-5xl lg:text-6xl">
                             {{ currentSlide.title }}
                         </h1>
                         <p

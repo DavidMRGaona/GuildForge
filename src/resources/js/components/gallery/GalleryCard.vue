@@ -23,7 +23,7 @@ const coverImageUrl = computed(() => buildCardImageUrl(props.gallery.coverImageP
     <Link
         :href="`/galeria/${props.gallery.slug}`"
         :aria-label="t('a11y.viewGallery', { title: props.gallery.title })"
-        class="block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+        class="block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
     >
         <BaseCard :padding="false">
             <template #header>
@@ -37,7 +37,7 @@ const coverImageUrl = computed(() => buildCardImageUrl(props.gallery.coverImageP
                     />
                     <div
                         v-else
-                        class="flex aspect-video h-48 w-full items-center justify-center bg-gradient-to-br from-purple-400 to-purple-600"
+                        class="flex aspect-video h-48 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-slate-600"
                     >
                         <svg
                             class="h-16 w-16 text-white/50"
@@ -54,7 +54,7 @@ const coverImageUrl = computed(() => buildCardImageUrl(props.gallery.coverImageP
                             />
                         </svg>
                     </div>
-                    <div class="absolute bottom-2 right-2 rounded-full bg-purple-600 px-3 py-1 text-xs font-medium text-white">
+                    <div class="absolute bottom-2 right-2 rounded-full bg-slate-600 px-3 py-1 text-xs font-medium text-white">
                         {{ getPhotoCount(props.gallery) }}
                     </div>
                 </div>
