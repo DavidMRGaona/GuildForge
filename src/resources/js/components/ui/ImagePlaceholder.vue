@@ -24,7 +24,7 @@ const iconPaths: Record<PlaceholderVariant, string> = {
 <template>
     <div
         :class="[
-            'flex aspect-video w-full items-center justify-center bg-gradient-to-br from-amber-400 to-slate-600',
+            'flex aspect-video w-full items-center justify-center bg-gradient-to-br from-amber-500 to-stone-600 dark:from-amber-600 dark:to-stone-700',
             height,
             $props.class,
         ]"

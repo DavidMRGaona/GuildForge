@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\ThemeSettingsServiceInterface;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -57,7 +58,9 @@ final class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'appName' => config('app.name'),
             'appDescription' => config('app.description'),
-            'siteLogo' => fn () => $this->getSiteLogo(),
+            'siteLogoLight' => fn () => $this->getSiteLogo('site_logo_light'),
+            'siteLogoDark' => fn () => $this->getSiteLogo('site_logo_dark'),
+            'theme' => fn () => $this->getThemeSettings(),
             'auth' => [
                 'user' => $request->user(),
             ],
@@ -70,11 +73,11 @@ final class HandleInertiaRequests extends Middleware
         ];
     }
 
-    private function getSiteLogo(): ?string
+    private function getSiteLogo(string $key): ?string
     {
         try {
             $settingsService = app(SettingsServiceInterface::class);
-            $logoPath = (string) $settingsService->get('site_logo', '');
+            $logoPath = (string) $settingsService->get($key, '');
 
             if ($logoPath === '') {
                 return null;
@@ -83,6 +86,42 @@ final class HandleInertiaRequests extends Middleware
             return Storage::disk('images')->url($logoPath);
         } catch (\Throwable) {
             return null;
+        }
+    }
+
+    /**
+     * Get theme settings for frontend.
+     *
+     * @return array{
+     *     cssVariables: string,
+     *     darkModeDefault: bool,
+     *     darkModeToggleVisible: bool,
+     *     fontHeading: string,
+     *     fontBody: string
+     * }
+     */
+    private function getThemeSettings(): array
+    {
+        try {
+            $themeService = app(ThemeSettingsServiceInterface::class);
+            $settings = $themeService->getThemeSettings();
+
+            return [
+                'cssVariables' => $themeService->getCssVariables(),
+                'darkModeDefault' => $settings->darkModeDefault,
+                'darkModeToggleVisible' => $settings->darkModeToggleVisible,
+                'fontHeading' => $settings->fontHeading,
+                'fontBody' => $settings->fontBody,
+            ];
+        } catch (\Throwable) {
+            // Return safe defaults if service fails
+            return [
+                'cssVariables' => '',
+                'darkModeDefault' => false,
+                'darkModeToggleVisible' => true,
+                'fontHeading' => 'Inter',
+                'fontBody' => 'Inter',
+            ];
         }
     }
 }

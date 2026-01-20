@@ -146,6 +146,10 @@ export default {
         brand: '{appName}',
         copyright: '© {year} {appName}. Todos los derechos reservados.',
         madeWith: 'Hecho con ❤️',
+        selectTheme: 'Tema',
+        systemTheme: 'Sistema',
+        lightTheme: 'Claro',
+        darkTheme: 'Oscuro',
     },
     buttons: {
         submit: 'Enviar',

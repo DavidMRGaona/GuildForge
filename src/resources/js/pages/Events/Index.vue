@@ -45,12 +45,12 @@ function handleNext(): void {
 
 <template>
     <DefaultLayout>
-        <div class="bg-white shadow">
+        <div class="bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50">
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold tracking-tight text-gray-900">
+                <h1 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                     {{ t('events.title') }}
                 </h1>
-                <p class="mt-2 text-lg text-gray-600">
+                <p class="mt-2 text-lg text-stone-600 dark:text-stone-400">
                     {{ t('home.subtitle') }}
                 </p>
             </div>
@@ -68,9 +68,9 @@ function handleNext(): void {
 
             <div
                 v-if="hasPagination"
-                class="mt-8 flex items-center justify-between border-t border-gray-200 pt-6"
+                class="mt-8 flex items-center justify-between border-t border-stone-200 pt-6 dark:border-stone-700"
             >
-                <p class="text-sm text-gray-700">
+                <p class="text-sm text-stone-700 dark:text-stone-300">
                     {{ t('common.showing') }}
                     <span class="font-medium">
                         {{ firstItemNumber }}

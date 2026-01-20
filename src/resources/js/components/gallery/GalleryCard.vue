@@ -29,7 +29,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
     <Link
         :href="`/galeria/${props.gallery.slug}`"
         :aria-label="t('a11y.viewGallery', { title: props.gallery.title })"
-        class="block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+        class="block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-stone-900"
     >
         <BaseCard :padding="false">
             <template #header>
@@ -53,14 +53,14 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
                         class="absolute left-3 top-3"
                     />
 
-                    <div class="absolute bottom-2 right-2 rounded-full bg-slate-600 px-3 py-1 text-xs font-medium text-white">
+                    <div class="absolute bottom-2 right-2 rounded-full bg-stone-600 px-3 py-1 text-xs font-medium text-white dark:bg-stone-700">
                         {{ getPhotoCount(props.gallery) }}
                     </div>
                 </div>
             </template>
 
             <div class="p-4">
-                <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-gray-900">
+                <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 dark:text-stone-100">
                     {{ props.gallery.title }}
                 </h3>
 
@@ -73,7 +73,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
                     class="mb-2"
                 />
 
-                <p v-if="props.gallery.description" class="line-clamp-2 text-sm text-gray-600">
+                <p v-if="props.gallery.description" class="line-clamp-2 text-sm text-stone-600 dark:text-stone-300">
                     {{ getGalleryExcerpt(props.gallery.description) }}
                 </p>
             </div>
