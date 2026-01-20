@@ -3,6 +3,34 @@
 declare(strict_types=1);
 
 return [
+    'tags' => [
+        'label' => 'Tag',
+        'plural' => 'Tags',
+        'sections' => [
+            'general' => 'General Information',
+            'display' => 'Display',
+        ],
+        'fields' => [
+            'name' => 'Name',
+            'slug' => 'Slug',
+            'parent' => 'Parent Tag',
+            'description' => 'Description',
+            'applies_to' => 'Applies To',
+            'color' => 'Color',
+            'sort_order' => 'Sort Order',
+            'events_count' => 'Events',
+            'articles_count' => 'Articles',
+            'galleries_count' => 'Galleries',
+            'created_at' => 'Created',
+            'category' => 'Category',
+            'additional' => 'Additional Tags',
+        ],
+        'applies_to_options' => [
+            'events' => 'Events',
+            'articles' => 'Articles',
+            'galleries' => 'Galleries',
+        ],
+    ],
     'settings' => [
         'title' => 'Site Settings',
         'location' => [

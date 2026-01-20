@@ -5,7 +5,10 @@ import { useI18n } from 'vue-i18n';
 import type { Event } from '@/types/models';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import TagBadge from '@/components/ui/TagBadge.vue';
+import TagList from '@/components/ui/TagList.vue';
 import { useEvents } from '@/composables/useEvents';
+import { useTags } from '@/composables/useTags';
 import { useSeo } from '@/composables/useSeo';
 import { buildHeroImageUrl } from '@/utils/cloudinary';
 
@@ -19,6 +22,8 @@ const { t } = useI18n();
 const { formatDateRange, formatPrice, isUpcoming } = useEvents();
 
 const heroImageUrl = computed(() => buildHeroImageUrl(props.event.imagePublicId));
+
+const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.event.tags));
 
 useSeo({
     title: props.event.title,
@@ -91,6 +96,21 @@ useSeo({
                     <h1 class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
                         {{ props.event.title }}
                     </h1>
+
+                    <!-- Tags -->
+                    <div v-if="hasTags" class="mb-4 flex flex-wrap items-center gap-2">
+                        <TagBadge
+                            v-if="categoryTag"
+                            :tag="categoryTag"
+                            variant="category"
+                            content-type="events"
+                        />
+                        <TagList
+                            v-if="additionalTags.length"
+                            :tags="additionalTags"
+                            content-type="events"
+                        />
+                    </div>
 
                     <div class="mb-6 flex flex-col gap-3 text-gray-600 sm:flex-row sm:gap-6">
                         <div class="flex items-center">

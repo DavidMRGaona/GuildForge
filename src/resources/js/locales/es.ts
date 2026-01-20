@@ -169,4 +169,8 @@ export default {
         eventsFound: '{count} evento encontrado | {count} eventos encontrados',
         articlesFound: '{count} artículo encontrado | {count} artículos encontrados',
     },
+    tags: {
+        all: 'Todos',
+        filter: 'Filtrar por etiqueta',
+    },
 };

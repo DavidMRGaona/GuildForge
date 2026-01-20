@@ -4,8 +4,11 @@ import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { Gallery, Photo } from '@/types/models';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
+import TagBadge from '@/components/ui/TagBadge.vue';
+import TagList from '@/components/ui/TagList.vue';
 import { useLightbox } from '@/composables/useLightbox';
 import { useGallery } from '@/composables/useGallery';
+import { useTags } from '@/composables/useTags';
 import { useSeo } from '@/composables/useSeo';
 import { buildGalleryImageUrl } from '@/utils/cloudinary';
 
@@ -29,6 +32,8 @@ useSeo({
 
 const photos = computed<Photo[]>(() => props.gallery.photos ?? []);
 const { isOpen, currentIndex, open, close, next, prev } = useLightbox(photos);
+
+const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.gallery.tags));
 
 function openLightbox(index: number): void {
     open(index);
@@ -64,6 +69,22 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
                     <p v-if="props.gallery.description" class="mt-4 text-lg text-amber-100">
                         {{ props.gallery.description }}
                     </p>
+
+                    <!-- Tags -->
+                    <div v-if="hasTags" class="mt-4 flex flex-wrap items-center gap-2">
+                        <TagBadge
+                            v-if="categoryTag"
+                            :tag="categoryTag"
+                            variant="category"
+                            content-type="galleries"
+                        />
+                        <TagList
+                            v-if="additionalTags.length"
+                            :tags="additionalTags"
+                            content-type="galleries"
+                        />
+                    </div>
+
                     <p class="mt-4 text-sm text-slate-300">
                         {{ formatGalleryDate(props.gallery.createdAt) }} · {{ photos.length }} {{ t('gallery.photos') }}
                     </p>

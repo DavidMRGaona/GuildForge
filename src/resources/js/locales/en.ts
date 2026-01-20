@@ -169,4 +169,8 @@ export default {
         eventsFound: '{count} event found | {count} events found',
         articlesFound: '{count} article found | {count} articles found',
     },
+    tags: {
+        all: 'All',
+        filter: 'Filter by tag',
+    },
 };

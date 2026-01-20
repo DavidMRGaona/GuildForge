@@ -31,6 +31,7 @@ final class GalleryWithPhotosResource extends JsonResource
             'createdAt' => $this->resource->createdAt?->format('c'),
             'updatedAt' => $this->resource->updatedAt?->format('c'),
             'photos' => PhotoResource::collection($this->resource->photos)->resolve(),
+            'tags' => TagResource::collection($this->resource->tags)->resolve(),
         ];
     }
 }

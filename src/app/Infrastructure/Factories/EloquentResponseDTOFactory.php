@@ -11,12 +11,14 @@ use App\Application\DTOs\Response\GalleryDetailResponseDTO;
 use App\Application\DTOs\Response\GalleryResponseDTO;
 use App\Application\DTOs\Response\HeroSlideResponseDTO;
 use App\Application\DTOs\Response\PhotoResponseDTO;
+use App\Application\DTOs\Response\TagResponseDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
+use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -28,6 +30,10 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
         if (!$model instanceof EventModel) {
             throw new InvalidArgumentException('Expected EventModel instance');
         }
+
+        $tags = $model->relationLoaded('tags')
+            ? $model->tags->map(fn ($tag) => $this->createTagDTO($tag))->toArray()
+            : [];
 
         return new EventResponseDTO(
             id: $model->id,
@@ -49,6 +55,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             updatedAt: $model->updated_at !== null
                 ? DateTimeImmutable::createFromMutable($model->updated_at)
                 : null,
+            tags: $tags,
         );
     }
 
@@ -57,6 +64,10 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
         if (!$model instanceof ArticleModel) {
             throw new InvalidArgumentException('Expected ArticleModel instance');
         }
+
+        $tags = $model->relationLoaded('tags')
+            ? $model->tags->map(fn ($tag) => $this->createTagDTO($tag))->toArray()
+            : [];
 
         return new ArticleResponseDTO(
             id: $model->id,
@@ -78,6 +89,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             updatedAt: $model->updated_at !== null
                 ? DateTimeImmutable::createFromMutable($model->updated_at)
                 : null,
+            tags: $tags,
         );
     }
 
@@ -101,6 +113,10 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             throw new InvalidArgumentException('Expected GalleryModel instance');
         }
 
+        $tags = $model->relationLoaded('tags')
+            ? $model->tags->map(fn ($tag) => $this->createTagDTO($tag))->toArray()
+            : [];
+
         return new GalleryResponseDTO(
             id: $model->id,
             title: $model->title,
@@ -115,6 +131,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             updatedAt: $model->updated_at !== null
                 ? DateTimeImmutable::createFromMutable($model->updated_at)
                 : null,
+            tags: $tags,
         );
     }
 
@@ -126,6 +143,10 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
         $photos = $model->relationLoaded('photos')
             ? $model->photos->map(fn ($photo) => $this->createPhotoDTO($photo))->toArray()
+            : [];
+
+        $tags = $model->relationLoaded('tags')
+            ? $model->tags->map(fn ($tag) => $this->createTagDTO($tag))->toArray()
             : [];
 
         return new GalleryDetailResponseDTO(
@@ -142,6 +163,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             updatedAt: $model->updated_at !== null
                 ? DateTimeImmutable::createFromMutable($model->updated_at)
                 : null,
+            tags: $tags,
         );
     }
 
@@ -173,6 +195,26 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             buttonUrl: $model->button_url,
             imagePublicId: $model->image_public_id ?? '',
             isActive: $model->is_active,
+            sortOrder: $model->sort_order,
+        );
+    }
+
+    public function createTagDTO(object $model): TagResponseDTO
+    {
+        if (!$model instanceof TagModel) {
+            throw new InvalidArgumentException('Expected TagModel instance');
+        }
+
+        return new TagResponseDTO(
+            id: $model->id,
+            name: $model->name,
+            slug: $model->slug,
+            parentId: $model->parent_id,
+            parentName: $model->relationLoaded('parent') && $model->parent !== null
+                ? $model->parent->name
+                : null,
+            appliesTo: $model->applies_to,
+            color: $model->color,
             sortOrder: $model->sort_order,
         );
     }

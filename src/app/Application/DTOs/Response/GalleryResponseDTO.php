@@ -8,6 +8,9 @@ use DateTimeImmutable;
 
 final readonly class GalleryResponseDTO
 {
+    /**
+     * @param array<TagResponseDTO> $tags
+     */
     public function __construct(
         public string $id,
         public string $title,
@@ -18,6 +21,7 @@ final readonly class GalleryResponseDTO
         public int $photoCount,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
+        public array $tags = [],
     ) {
     }
 }

@@ -5,7 +5,10 @@ import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import TagBadge from '@/components/ui/TagBadge.vue';
+import TagList from '@/components/ui/TagList.vue';
 import { useArticles } from '@/composables/useArticles';
+import { useTags } from '@/composables/useTags';
 import { useSeo } from '@/composables/useSeo';
 import { buildHeroImageUrl, buildAvatarUrl } from '@/utils/cloudinary';
 
@@ -20,6 +23,8 @@ const { formatPublishedDate, getAuthorDisplayName } = useArticles();
 
 const heroImageUrl = computed(() => buildHeroImageUrl(props.article.featuredImagePublicId));
 const authorAvatarUrl = computed(() => buildAvatarUrl(props.article.author.avatarPublicId, 40));
+
+const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.article.tags));
 
 useSeo({
     title: props.article.title,
@@ -99,6 +104,21 @@ useSeo({
                                 {{ t('articles.publishedAt') }} {{ formatPublishedDate(props.article.publishedAt) }}
                             </p>
                         </div>
+                    </div>
+
+                    <!-- Tags -->
+                    <div v-if="hasTags" class="mb-6 flex flex-wrap items-center gap-2">
+                        <TagBadge
+                            v-if="categoryTag"
+                            :tag="categoryTag"
+                            variant="category"
+                            content-type="articles"
+                        />
+                        <TagList
+                            v-if="additionalTags.length"
+                            :tags="additionalTags"
+                            content-type="articles"
+                        />
                     </div>
 
                     <!--

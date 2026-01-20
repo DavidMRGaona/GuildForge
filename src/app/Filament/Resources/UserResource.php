@@ -31,7 +31,7 @@ class UserResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Usuario');
+        return __('usuario');
     }
 
     public static function getPluralModelLabel(): string
