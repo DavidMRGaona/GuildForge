@@ -3,6 +3,23 @@
 declare(strict_types=1);
 
 return [
+    'navigation' => [
+        'pages' => 'Páginas',
+    ],
+    'pages' => [
+        'about' => [
+            'title' => 'Nosotros',
+            'saved' => 'Configuración de la página guardada correctamente',
+            'tabs' => [
+                'hero' => 'Hero',
+                'content' => 'Contenido',
+                'join' => 'Cómo unirse',
+                'location' => 'Ubicación',
+                'contact' => 'Contacto',
+                'social' => 'Redes sociales',
+            ],
+        ],
+    ],
     'tags' => [
         'label' => 'etiqueta',
         'plural' => 'Etiquetas',
@@ -33,6 +50,12 @@ return [
     ],
     'settings' => [
         'title' => 'Configuración del sitio',
+        'general' => [
+            'title' => 'Configuración general',
+            'description' => 'Configuración global del sitio web.',
+            'logo' => 'Logo del sitio',
+            'logo_help' => 'Se mostrará en el header del sitio y en el panel de administración. Recomendado: PNG transparente, máx. 1MB.',
+        ],
         'location' => [
             'title' => 'Ubicación de la sede',
             'description' => 'Configura las coordenadas y datos de la ubicación que se mostrará en el mapa de la página "Nosotros".',
