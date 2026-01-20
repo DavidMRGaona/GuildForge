@@ -86,9 +86,9 @@ Website template for associations with:
 ```
 src/app/
 ├── Domain/           # Entities, Value Objects, Enums, Exceptions, Repository Interfaces
-├── Application/      # DTOs, Service Interfaces
-├── Infrastructure/   # Eloquent Models, Repositories, External Services
-├── Http/             # Controllers, Middleware
+├── Application/      # DTOs (Create/Response), Factories, Query Service Interfaces
+├── Infrastructure/   # Eloquent Models, Repositories, Query Services, External Services
+├── Http/             # Controllers, Resources, Requests, Middleware
 ├── Filament/         # Admin Resources, Widgets
 ├── Policies/         # Authorization Policies
 └── Providers/        # Service Providers
@@ -118,9 +118,9 @@ Domain → Application → Infrastructure → Presentation
 ```
 
 - **Domain**: Business entities, value objects, and repository interfaces
-- **Application**: DTOs and service interfaces
-- **Infrastructure**: Eloquent implementations, external services
-- **Presentation**: Controllers, Filament resources, Vue components
+- **Application**: DTOs (Create/Response), factories, query service interfaces
+- **Infrastructure**: Eloquent implementations, query services, external services
+- **Presentation**: Controllers, HTTP resources, Filament resources, Vue components
 
 ## Public routes
 

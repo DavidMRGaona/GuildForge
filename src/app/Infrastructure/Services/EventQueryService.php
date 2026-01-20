@@ -61,12 +61,14 @@ final readonly class EventQueryService implements EventQueryServiceInterface
 
     public function searchPublished(string $query, int $limit = 12): array
     {
+        $searchTerm = '%' . mb_strtolower($query) . '%';
+
         $events = EventModel::query()
             ->where('is_published', true)
-            ->where(function ($q) use ($query): void {
-                $q->where('title', 'LIKE', "%{$query}%")
-                    ->orWhere('description', 'LIKE', "%{$query}%")
-                    ->orWhere('location', 'LIKE', "%{$query}%");
+            ->where(function ($q) use ($searchTerm): void {
+                $q->whereRaw('LOWER(title) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('LOWER(description) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm]);
             })
             ->orderBy('start_date', 'desc')
             ->limit($limit)
