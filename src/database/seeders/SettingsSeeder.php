@@ -14,6 +14,17 @@ final class SettingsSeeder extends Seeder
      */
     public function run(): void
     {
+        $activities = [
+            ['icon' => 'dice', 'title' => 'Juegos de rol', 'description' => 'Partidas semanales de D&D, Pathfinder, Call of Cthulhu y más sistemas.'],
+            ['icon' => 'sword', 'title' => 'Wargames', 'description' => 'Batallas épicas con Warhammer, Infinity, Bolt Action y otros sistemas.'],
+            ['icon' => 'puzzle', 'title' => 'Juegos de mesa', 'description' => 'Noches de juegos de mesa modernos y clásicos para todos los gustos.'],
+            ['icon' => 'trophy', 'title' => 'Torneos', 'description' => 'Competiciones mensuales con premios y clasificaciones.'],
+            ['icon' => 'calendar', 'title' => 'Eventos especiales', 'description' => 'Jornadas temáticas, maratones de juego y quedadas especiales.'],
+            ['icon' => 'book', 'title' => 'Biblioteca', 'description' => 'Préstamo de juegos, manuales y material para que pruebes antes de comprar.'],
+            ['icon' => 'map', 'title' => 'Campañas', 'description' => 'Campañas narrativas de larga duración con historia continuada.'],
+            ['icon' => 'users', 'title' => 'Comunidad', 'description' => 'Un espacio acogedor donde compartir tu pasión con gente afín.'],
+        ];
+
         $settings = [
             'location_name' => env('APP_NAME', 'Association') . ' HQ',
             'location_address' => 'Your address here',
@@ -21,7 +32,10 @@ final class SettingsSeeder extends Seeder
             'location_lng' => '-3.7038',
             'location_zoom' => '15',
             'association_name' => env('APP_NAME', 'Runesword'),
+            'about_hero_image' => '',
+            'about_tagline' => 'Tu comunidad de juegos de rol y wargames',
             'about_history' => '<p><strong>Runesword</strong> nació en 2010 como un pequeño grupo de amigos apasionados por los juegos de rol y los wargames. Lo que comenzó como partidas casuales en el salón de uno de nuestros fundadores, pronto se convirtió en algo más grande.</p><p>En 2012, nos constituimos oficialmente como asociación, con el objetivo de promover los juegos de mesa, rol y wargames en nuestra comunidad. Desde entonces, hemos organizado cientos de eventos, torneos y jornadas que han reunido a jugadores de todas las edades y experiencias.</p><p>Hoy somos más de <strong>50 miembros activos</strong> y seguimos creciendo. Nuestra sede se ha convertido en un punto de encuentro para la comunidad gamer de la zona, donde cada semana se respira el espíritu de aventura y competición sana.</p>',
+            'about_activities' => json_encode($activities),
             'contact_email' => 'info@runesword.es',
             'contact_phone' => '+34 612 345 678',
             'contact_address' => 'Calle de la Espada Rúnica, 42, Local 3, 28001 Madrid',
