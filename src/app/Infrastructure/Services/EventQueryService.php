@@ -19,6 +19,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
     public function getUpcomingEvents(int $limit = 10): array
     {
         $events = EventModel::query()
+            ->with('tags')
             ->where('is_published', true)
             ->where('start_date', '>=', now())
             ->orderBy('start_date', 'asc')
@@ -28,12 +29,19 @@ final readonly class EventQueryService implements EventQueryServiceInterface
         return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
     }
 
-    public function getPublishedEventsPaginated(int $page = 1, int $perPage = 12): array
+    public function getPublishedEventsPaginated(int $page = 1, int $perPage = 12, ?array $tagSlugs = null): array
     {
         $offset = ($page - 1) * $perPage;
 
-        $events = EventModel::query()
-            ->where('is_published', true)
+        $query = EventModel::query()
+            ->with('tags')
+            ->where('is_published', true);
+
+        if ($tagSlugs !== null && count($tagSlugs) > 0) {
+            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
+        }
+
+        $events = $query
             ->orderBy('start_date', 'desc')
             ->offset($offset)
             ->limit($perPage)
@@ -42,16 +50,22 @@ final readonly class EventQueryService implements EventQueryServiceInterface
         return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
     }
 
-    public function getPublishedEventsTotal(): int
+    public function getPublishedEventsTotal(?array $tagSlugs = null): int
     {
-        return EventModel::query()
-            ->where('is_published', true)
-            ->count();
+        $query = EventModel::query()
+            ->where('is_published', true);
+
+        if ($tagSlugs !== null && count($tagSlugs) > 0) {
+            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
+        }
+
+        return $query->count();
     }
 
     public function findPublishedBySlug(string $slug): ?EventResponseDTO
     {
         $event = EventModel::query()
+            ->with('tags')
             ->where('slug', $slug)
             ->where('is_published', true)
             ->first();
@@ -64,6 +78,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
         $searchTerm = '%' . mb_strtolower($query) . '%';
 
         $events = EventModel::query()
+            ->with('tags')
             ->where('is_published', true)
             ->where(function ($q) use ($searchTerm): void {
                 $q->whereRaw('LOWER(title) LIKE ?', [$searchTerm])

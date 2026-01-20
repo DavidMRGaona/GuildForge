@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { Event } from '@/types/models';
-import EventCardCompact from './EventCardCompact.vue';
+import EventCard from './EventCard.vue';
 import CalendarWidget from '@/components/calendar/CalendarWidget.vue';
 
 interface Props {
@@ -46,10 +46,11 @@ const hasEvents = computed(() => props.events.length > 0);
                     class="flex flex-1 items-center"
                 >
                     <div class="grid w-full grid-cols-1 gap-6 sm:grid-cols-2">
-                        <EventCardCompact
+                        <EventCard
                             v-for="event in displayEvents"
                             :key="event.id"
                             :event="event"
+                            variant="compact"
                         />
                     </div>
                 </div>

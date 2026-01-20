@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Seeder;
 
@@ -23,30 +24,39 @@ final class ArticleSeeder extends Seeder
             $editors = collect([UserModel::factory()->editor()->create()]);
         }
 
+        // Get tags for attaching
+        $warhammer40kTag = TagModel::where('slug', 'warhammer-40k')->first();
+        $wargamesTag = TagModel::where('slug', 'wargames')->first();
+        $juegosRolTag = TagModel::where('slug', 'juegos-de-rol')->first();
+        $juegosMesaTag = TagModel::where('slug', 'juegos-de-mesa')->first();
+
         // 3 published articles with real Spanish content
-        ArticleModel::factory()->published()->create([
+        $guiaIniciacion = ArticleModel::factory()->published()->create([
             'title' => 'Guía de iniciación para nuevos socios',
             'slug' => 'guia-iniciacion-nuevos-socios',
             'content' => 'Bienvenido a nuestra asociación. En esta guía te explicamos todo lo que necesitas saber para empezar: cómo participar en nuestras actividades, los horarios habituales, las cuotas de socio y los beneficios que obtendrás. También te presentamos a los miembros del equipo directivo y te explicamos cómo funcionan nuestras sesiones regulares. No dudes en preguntar cualquier duda a los miembros veteranos.',
             'excerpt' => 'Todo lo que necesitas saber para empezar como socio.',
             'author_id' => $editors->random()->id,
         ]);
+        $guiaIniciacion->tags()->attach(array_filter([$wargamesTag?->id, $juegosRolTag?->id, $juegosMesaTag?->id]));
 
-        ArticleModel::factory()->published()->create([
+        $tecnicasConsejos = ArticleModel::factory()->published()->create([
             'title' => 'Técnicas y consejos para principiantes',
             'slug' => 'tecnicas-consejos-principiantes',
             'content' => 'Empezar en cualquier hobby puede parecer intimidante al principio, pero con las técnicas adecuadas y algo de práctica, cualquiera puede conseguir resultados impresionantes. En este artículo cubrimos los conceptos básicos que todo principiante debería conocer. También te recomendamos los materiales esenciales para empezar y te damos consejos prácticos basados en nuestra experiencia. Recuerda que la paciencia es la clave del éxito.',
             'excerpt' => 'Aprende las técnicas básicas paso a paso.',
             'author_id' => $editors->random()->id,
         ]);
+        $tecnicasConsejos->tags()->attach(array_filter([$warhammer40kTag?->id]));
 
-        ArticleModel::factory()->published()->create([
+        $cronicaTorneo = ArticleModel::factory()->published()->create([
             'title' => 'Crónica del torneo regional 2024',
             'slug' => 'cronica-torneo-regional-2024',
             'content' => 'El pasado fin de semana celebramos nuestro torneo regional 2024 con una participación récord de 32 participantes de toda la comunidad. Las actividades fueron emocionantes y el nivel muy alto. El primer puesto fue para Juan García, seguido de María López y Pedro Martínez. Agradecemos a todos los participantes y voluntarios que hicieron posible este evento. ¡Nos vemos en el próximo torneo!',
             'excerpt' => 'Resumen y resultados del torneo regional 2024.',
             'author_id' => $editors->random()->id,
         ]);
+        $cronicaTorneo->tags()->attach(array_filter([$warhammer40kTag?->id, $wargamesTag?->id]));
 
         // 2 draft articles
         ArticleModel::factory()->draft()->create([

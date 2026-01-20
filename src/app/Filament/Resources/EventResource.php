@@ -6,13 +6,16 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\EventResource\Pages;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\IconColumn;
@@ -20,6 +23,8 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -35,7 +40,7 @@ class EventResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Evento');
+        return __('evento');
     }
 
     public static function getPluralModelLabel(): string
@@ -104,6 +109,43 @@ class EventResource extends Resource
                     )
                     ->maxSize(2048)
                     ->nullable(),
+                Select::make('category_id')
+                    ->label(__('filament.tags.fields.category'))
+                    ->options(fn () => TagModel::roots()
+                        ->forType('events')
+                        ->ordered()
+                        ->pluck('name', 'id'))
+                    ->required()
+                    ->searchable()
+                    ->preload()
+                    ->afterStateHydrated(function (Select $component, ?Model $record): void {
+                        if ($record instanceof EventModel) {
+                            $categoryId = $record->tags()
+                                ->whereNull('parent_id')
+                                ->first()?->id;
+                            $component->state($categoryId);
+                        }
+                    }),
+                Select::make('additional_tag_ids')
+                    ->label(__('filament.tags.fields.additional'))
+                    ->options(fn (Get $get) => TagModel::whereNotNull('parent_id')
+                        ->forType('events')
+                        ->when($get('category_id'), fn (Builder $q, string $id) => $q->where('id', '!=', $id))
+                        ->ordered()
+                        ->get()
+                        ->mapWithKeys(fn (TagModel $tag): array => [$tag->id => $tag->getIndentedNameForSelect()]))
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->afterStateHydrated(function (Select $component, ?Model $record): void {
+                        if ($record instanceof EventModel) {
+                            $tagIds = $record->tags()
+                                ->whereNotNull('parent_id')
+                                ->pluck('id')
+                                ->toArray();
+                            $component->state($tagIds);
+                        }
+                    }),
                 Toggle::make('is_published')
                     ->label(__('Publicado'))
                     ->default(false),

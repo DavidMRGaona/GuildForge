@@ -18,6 +18,7 @@ final class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
+            TagSeeder::class,
             EventSeeder::class,
             ArticleSeeder::class,
             GallerySeeder::class,

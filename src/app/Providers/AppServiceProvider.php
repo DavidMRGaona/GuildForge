@@ -24,6 +24,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
+use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Services\ArticleQueryService;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
@@ -42,6 +43,7 @@ use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
 use App\Policies\HeroSlidePolicy;
+use App\Policies\TagPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -93,6 +95,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ArticleModel::class, ArticlePolicy::class);
         Gate::policy(GalleryModel::class, GalleryPolicy::class);
         Gate::policy(HeroSlideModel::class, HeroSlidePolicy::class);
+        Gate::policy(TagModel::class, TagPolicy::class);
 
         // Override cloudinary driver with a safe adapter that:
         // - Generates URLs directly (no Admin API calls)

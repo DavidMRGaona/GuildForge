@@ -8,6 +8,9 @@ use DateTimeImmutable;
 
 final readonly class EventResponseDTO
 {
+    /**
+     * @param array<TagResponseDTO> $tags
+     */
     public function __construct(
         public string $id,
         public string $title,
@@ -22,6 +25,7 @@ final readonly class EventResponseDTO
         public bool $isPublished,
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
+        public array $tags = [],
     ) {
     }
 }

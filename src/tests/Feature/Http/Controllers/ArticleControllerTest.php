@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers;
 
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -165,5 +166,189 @@ final class ArticleControllerTest extends TestCase
         $response = $this->get('/articulos/nonexistent-article');
 
         $response->assertStatus(404);
+    }
+
+    public function test_index_includes_tags_in_response(): void
+    {
+        $tag1 = TagModel::factory()->forArticles()->create([
+            'name' => 'Tutorial',
+            'slug' => 'tutorial',
+        ]);
+        $tag2 = TagModel::factory()->forArticles()->create([
+            'name' => 'Battle Report',
+            'slug' => 'battle-report',
+        ]);
+
+        TagModel::factory()->forEvents()->create();
+
+        $response = $this->get('/articulos');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Articles/Index')
+                ->has('tags', 2)
+                ->where('tags.0.name', fn ($val) => in_array($val, ['Tutorial', 'Battle Report']))
+                ->where('tags.1.name', fn ($val) => in_array($val, ['Tutorial', 'Battle Report']))
+        );
+    }
+
+    public function test_index_includes_current_tag_filter(): void
+    {
+        TagModel::factory()->forArticles()->create([
+            'slug' => 'tutorial',
+        ]);
+
+        $response = $this->get('/articulos?tags=tutorial');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Articles/Index')
+                ->where('currentTags', ['tutorial'])
+        );
+    }
+
+    public function test_index_filters_articles_by_tag(): void
+    {
+        $tag = TagModel::factory()->forArticles()->create([
+            'name' => 'Tutorial',
+            'slug' => 'tutorial',
+        ]);
+
+        $author = UserModel::factory()->create();
+
+        $taggedArticle = ArticleModel::factory()->published()->withAuthor($author)->create([
+            'title' => 'How to Paint Miniatures',
+        ]);
+        $taggedArticle->tags()->attach($tag->id);
+
+        $untaggedArticle = ArticleModel::factory()->published()->withAuthor($author)->create([
+            'title' => 'Game Review',
+        ]);
+
+        $response = $this->get('/articulos?tags=tutorial');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Articles/Index')
+                ->has('articles.data', 1)
+                ->where('articles.data.0.title', 'How to Paint Miniatures')
+        );
+    }
+
+    public function test_index_shows_all_articles_when_no_tag_filter(): void
+    {
+        $tag = TagModel::factory()->forArticles()->create();
+        $author = UserModel::factory()->create();
+
+        $taggedArticle = ArticleModel::factory()->published()->withAuthor($author)->create(['title' => 'Tagged Article']);
+        $taggedArticle->tags()->attach($tag->id);
+
+        $untaggedArticle = ArticleModel::factory()->published()->withAuthor($author)->create(['title' => 'Untagged Article']);
+
+        $response = $this->get('/articulos');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Articles/Index')
+                ->has('articles.data', 2)
+        );
+    }
+
+    public function test_index_returns_empty_when_tag_has_no_articles(): void
+    {
+        $tag = TagModel::factory()->forArticles()->create([
+            'slug' => 'unused-tag',
+        ]);
+
+        $author = UserModel::factory()->create();
+        ArticleModel::factory()->published()->withAuthor($author)->create();
+
+        $response = $this->get('/articulos?tags=unused-tag');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Articles/Index')
+                ->has('articles.data', 0)
+        );
+    }
+
+    public function test_show_includes_article_tags(): void
+    {
+        $tag1 = TagModel::factory()->forArticles()->create([
+            'name' => 'Tutorial',
+            'slug' => 'tutorial',
+        ]);
+        $tag2 = TagModel::factory()->forArticles()->create([
+            'name' => 'Painting',
+            'slug' => 'painting',
+        ]);
+
+        $author = UserModel::factory()->create();
+        $article = ArticleModel::factory()->published()->withAuthor($author)->create([
+            'slug' => 'test-article',
+        ]);
+        $article->tags()->attach([$tag1->id, $tag2->id]);
+
+        $response = $this->get('/articulos/test-article');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Articles/Show')
+                ->has('article.tags', 2)
+                ->where('article.tags.0.name', fn ($val) => in_array($val, ['Tutorial', 'Painting']))
+                ->where('article.tags.1.name', fn ($val) => in_array($val, ['Tutorial', 'Painting']))
+        );
+    }
+
+    public function test_show_displays_article_without_tags(): void
+    {
+        $author = UserModel::factory()->create();
+        $article = ArticleModel::factory()->published()->withAuthor($author)->create([
+            'slug' => 'untagged-article',
+        ]);
+
+        $response = $this->get('/articulos/untagged-article');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Articles/Show')
+                ->has('article.tags', 0)
+        );
+    }
+
+    public function test_index_filters_by_child_tag(): void
+    {
+        $parent = TagModel::factory()->forArticles()->create([
+            'name' => 'Hobby',
+            'slug' => 'hobby',
+        ]);
+
+        $child = TagModel::factory()->forArticles()->withParent($parent)->create([
+            'name' => 'Painting',
+            'slug' => 'painting',
+        ]);
+
+        $author = UserModel::factory()->create();
+        $article = ArticleModel::factory()->published()->withAuthor($author)->create([
+            'title' => 'Advanced Painting Techniques',
+        ]);
+        $article->tags()->attach($child->id);
+
+        $response = $this->get('/articulos?tags=painting');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Articles/Index')
+                ->has('articles.data', 1)
+                ->where('articles.data.0.title', 'Advanced Painting Techniques')
+        );
     }
 }

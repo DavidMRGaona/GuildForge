@@ -6,6 +6,7 @@ import type { CalendarEvent } from '@/types/models';
 import { buildCardImageUrl } from '@/utils/cloudinary';
 import { useEvents } from '@/composables/useEvents';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import TagList from '@/components/ui/TagList.vue';
 
 interface Props {
     event: CalendarEvent | null;
@@ -92,6 +93,15 @@ const truncatedDescription = computed(() => {
                 <h3 class="text-lg font-semibold text-gray-900">
                     {{ event.title }}
                 </h3>
+
+                <!-- Tags -->
+                <TagList
+                    v-if="event.tags && event.tags.length > 0"
+                    :tags="event.tags"
+                    :linkable="false"
+                    content-type="events"
+                    class="mt-2"
+                />
 
                 <!-- Date -->
                 <div class="mt-2 flex items-center text-sm text-gray-600">

@@ -19,7 +19,7 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
     public function getLatestPublished(int $limit = 10): array
     {
         $articles = ArticleModel::query()
-            ->with('author')
+            ->with(['author', 'tags'])
             ->where('is_published', true)
             ->orderBy('published_at', 'desc')
             ->limit($limit)
@@ -28,13 +28,19 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
         return $articles->map(fn (ArticleModel $article) => $this->dtoFactory->createArticleDTO($article))->all();
     }
 
-    public function getPublishedPaginated(int $page = 1, int $perPage = 12): array
+    public function getPublishedPaginated(int $page = 1, int $perPage = 12, ?array $tagSlugs = null): array
     {
         $offset = ($page - 1) * $perPage;
 
-        $articles = ArticleModel::query()
-            ->with('author')
-            ->where('is_published', true)
+        $query = ArticleModel::query()
+            ->with(['author', 'tags'])
+            ->where('is_published', true);
+
+        if ($tagSlugs !== null && count($tagSlugs) > 0) {
+            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
+        }
+
+        $articles = $query
             ->orderBy('published_at', 'desc')
             ->offset($offset)
             ->limit($perPage)
@@ -43,17 +49,22 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
         return $articles->map(fn (ArticleModel $article) => $this->dtoFactory->createArticleDTO($article))->all();
     }
 
-    public function getPublishedTotal(): int
+    public function getPublishedTotal(?array $tagSlugs = null): int
     {
-        return ArticleModel::query()
-            ->where('is_published', true)
-            ->count();
+        $query = ArticleModel::query()
+            ->where('is_published', true);
+
+        if ($tagSlugs !== null && count($tagSlugs) > 0) {
+            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
+        }
+
+        return $query->count();
     }
 
     public function findPublishedBySlug(string $slug): ?ArticleResponseDTO
     {
         $article = ArticleModel::query()
-            ->with('author')
+            ->with(['author', 'tags'])
             ->where('slug', $slug)
             ->where('is_published', true)
             ->first();
@@ -63,13 +74,15 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
 
     public function searchPublished(string $query, int $limit = 12): array
     {
+        $searchTerm = '%' . mb_strtolower($query) . '%';
+
         $articles = ArticleModel::query()
-            ->with('author')
+            ->with(['author', 'tags'])
             ->where('is_published', true)
-            ->where(function ($q) use ($query): void {
-                $q->where('title', 'LIKE', "%{$query}%")
-                    ->orWhere('content', 'LIKE', "%{$query}%")
-                    ->orWhere('excerpt', 'LIKE', "%{$query}%");
+            ->where(function ($q) use ($searchTerm): void {
+                $q->whereRaw('LOWER(title) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('LOWER(content) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('LOWER(excerpt) LIKE ?', [$searchTerm]);
             })
             ->orderBy('published_at', 'desc')
             ->limit($limit)

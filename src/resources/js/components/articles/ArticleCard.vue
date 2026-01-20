@@ -4,7 +4,10 @@ import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
 import { useArticles } from '@/composables/useArticles';
+import { useTags } from '@/composables/useTags';
 import ImagePlaceholder from '@/components/ui/ImagePlaceholder.vue';
+import TagBadge from '@/components/ui/TagBadge.vue';
+import TagList from '@/components/ui/TagList.vue';
 import { buildCardImageUrl } from '@/utils/cloudinary';
 
 interface Props {
@@ -17,6 +20,8 @@ const { t } = useI18n();
 const { getAuthorDisplayName, formatPublishedDate, getExcerpt } = useArticles();
 
 const articleImageUrl = computed(() => buildCardImageUrl(props.article.featuredImagePublicId));
+
+const { categoryTag, additionalTags } = useTags(computed(() => props.article.tags));
 </script>
 
 <template>
@@ -35,6 +40,16 @@ const articleImageUrl = computed(() => buildCardImageUrl(props.article.featuredI
                 class="aspect-video h-40 w-full object-cover"
             />
             <ImagePlaceholder v-else variant="article" height="h-40" icon-size="h-12 w-12" />
+
+            <!-- Category badge as overlay on image -->
+            <TagBadge
+                v-if="categoryTag"
+                :tag="categoryTag"
+                :linkable="false"
+                variant="category"
+                content-type="articles"
+                class="absolute left-3 top-3"
+            />
         </div>
 
         <!-- Content -->
@@ -42,6 +57,15 @@ const articleImageUrl = computed(() => buildCardImageUrl(props.article.featuredI
             <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-gray-900 group-hover:text-amber-600">
                 {{ props.article.title }}
             </h3>
+
+            <!-- Additional tags below title -->
+            <TagList
+                v-if="additionalTags.length"
+                :tags="additionalTags"
+                :linkable="false"
+                content-type="articles"
+                class="mb-2"
+            />
 
             <p v-if="props.article.publishedAt" class="mb-2 text-sm text-gray-500">
                 {{ t('articles.by') }} {{ getAuthorDisplayName(props.article) }} · {{ formatPublishedDate(props.article.publishedAt) }}

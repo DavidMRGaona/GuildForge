@@ -11,6 +11,7 @@ use App\Application\DTOs\Response\GalleryDetailResponseDTO;
 use App\Application\DTOs\Response\GalleryResponseDTO;
 use App\Application\DTOs\Response\HeroSlideResponseDTO;
 use App\Application\DTOs\Response\PhotoResponseDTO;
+use App\Application\DTOs\Response\TagResponseDTO;
 
 interface ResponseDTOFactoryInterface
 {
@@ -48,4 +49,9 @@ interface ResponseDTOFactoryInterface
      * @param object $model The underlying model (implementation-specific)
      */
     public function createHeroSlideDTO(object $model): HeroSlideResponseDTO;
+
+    /**
+     * @param object $model The underlying model (implementation-specific)
+     */
+    public function createTagDTO(object $model): TagResponseDTO;
 }

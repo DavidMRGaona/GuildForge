@@ -3,6 +3,34 @@
 declare(strict_types=1);
 
 return [
+    'tags' => [
+        'label' => 'etiqueta',
+        'plural' => 'Etiquetas',
+        'sections' => [
+            'general' => 'Información general',
+            'display' => 'Visualización',
+        ],
+        'fields' => [
+            'name' => 'Nombre',
+            'slug' => 'Slug',
+            'parent' => 'Etiqueta padre',
+            'description' => 'Descripción',
+            'applies_to' => 'Aplica a',
+            'color' => 'Color',
+            'sort_order' => 'Orden',
+            'events_count' => 'Eventos',
+            'articles_count' => 'Artículos',
+            'galleries_count' => 'Galerías',
+            'created_at' => 'Creado',
+            'category' => 'Categoría',
+            'additional' => 'Etiquetas adicionales',
+        ],
+        'applies_to_options' => [
+            'events' => 'Eventos',
+            'articles' => 'Artículos',
+            'galleries' => 'Galerías',
+        ],
+    ],
     'settings' => [
         'title' => 'Configuración del sitio',
         'location' => [

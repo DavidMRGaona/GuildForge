@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { Article, PaginatedResponse } from '@/types';
+import type { Article, PaginatedResponse, Tag } from '@/types';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleList from '@/components/articles/ArticleList.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import TagFilter from '@/components/ui/TagFilter.vue';
 import { useSeo } from '@/composables/useSeo';
 import { usePagination } from '@/composables/usePagination';
 
 interface Props {
     articles: PaginatedResponse<Article>;
+    tags: Tag[];
+    currentTags: string[];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    tags: () => [],
+    currentTags: () => [],
+});
 
 const { t } = useI18n();
 
@@ -51,6 +57,13 @@ function handleNext(): void {
         </div>
 
         <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <TagFilter
+                :tags="props.tags"
+                :current-tags="props.currentTags"
+                base-path="/articulos"
+                class="mb-6"
+            />
+
             <ArticleList :articles="props.articles.data" />
 
             <div

@@ -11,6 +11,14 @@ export interface User {
 
 export type UserRole = 'admin' | 'editor' | 'member';
 
+export interface Tag {
+    id: string;
+    name: string;
+    slug: string;
+    color: string;
+    parentId: string | null;
+}
+
 export interface Event {
     id: string;
     title: string;
@@ -25,6 +33,7 @@ export interface Event {
     isPublished: boolean;
     createdAt: string;
     updatedAt: string;
+    tags: Tag[];
 }
 
 export interface Article {
@@ -39,6 +48,7 @@ export interface Article {
     author: User;
     createdAt: string;
     updatedAt: string;
+    tags: Tag[];
 }
 
 export interface Gallery {
@@ -52,6 +62,7 @@ export interface Gallery {
     photoCount?: number;
     createdAt: string;
     updatedAt: string;
+    tags: Tag[];
 }
 
 export interface Photo {
@@ -73,17 +84,20 @@ export interface HeroSlide {
 export interface EventFilters {
     search?: string;
     upcoming?: boolean;
+    tags?: string[];
     page?: number;
 }
 
 export interface ArticleFilters {
     search?: string;
     authorId?: string;
+    tags?: string[];
     page?: number;
 }
 
 export interface GalleryFilters {
     search?: string;
+    tags?: string[];
     page?: number;
 }
 
@@ -100,6 +114,7 @@ export interface CalendarEvent {
     nonMemberPrice: number | null;
     url: string;
     backgroundColor: string;
+    tags: Tag[];
 }
 
 export type ActivityIcon =

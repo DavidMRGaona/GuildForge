@@ -28,9 +28,11 @@ class HeroSlideResource extends Resource
 
     protected static ?int $navigationSort = 0;
 
+    protected static ?string $navigationLabel = 'Hero slides';
+
     public static function getModelLabel(): string
     {
-        return __('Slide');
+        return __('slide');
     }
 
     public static function getPluralModelLabel(): string

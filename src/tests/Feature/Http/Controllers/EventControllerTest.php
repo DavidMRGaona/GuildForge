@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers;
 
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -188,6 +189,183 @@ final class EventControllerTest extends TestCase
                 ->component('Events/Show')
                 ->where('event.memberPrice', null)
                 ->where('event.nonMemberPrice', null)
+        );
+    }
+
+    public function test_index_includes_tags_in_response(): void
+    {
+        $tag1 = TagModel::factory()->forEvents()->create([
+            'name' => 'Warhammer 40k',
+            'slug' => 'warhammer-40k',
+        ]);
+        $tag2 = TagModel::factory()->forEvents()->create([
+            'name' => 'Tournament',
+            'slug' => 'tournament',
+        ]);
+
+        TagModel::factory()->forArticles()->create();
+
+        $response = $this->get('/eventos');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Index')
+                ->has('tags', 2)
+                ->where('tags.0.name', fn ($val) => in_array($val, ['Warhammer 40k', 'Tournament']))
+                ->where('tags.1.name', fn ($val) => in_array($val, ['Warhammer 40k', 'Tournament']))
+        );
+    }
+
+    public function test_index_includes_current_tag_filter(): void
+    {
+        TagModel::factory()->forEvents()->create([
+            'slug' => 'warhammer-40k',
+        ]);
+
+        $response = $this->get('/eventos?tags=warhammer-40k');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Index')
+                ->where('currentTags', ['warhammer-40k'])
+        );
+    }
+
+    public function test_index_filters_events_by_tag(): void
+    {
+        $tag = TagModel::factory()->forEvents()->create([
+            'name' => 'Warhammer 40k',
+            'slug' => 'warhammer-40k',
+        ]);
+
+        $taggedEvent = EventModel::factory()->published()->create([
+            'title' => 'Warhammer Tournament',
+        ]);
+        $taggedEvent->tags()->attach($tag->id);
+
+        $untaggedEvent = EventModel::factory()->published()->create([
+            'title' => 'D&D Campaign',
+        ]);
+
+        $response = $this->get('/eventos?tags=warhammer-40k');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Index')
+                ->has('events.data', 1)
+                ->where('events.data.0.title', 'Warhammer Tournament')
+        );
+    }
+
+    public function test_index_shows_all_events_when_no_tag_filter(): void
+    {
+        $tag = TagModel::factory()->forEvents()->create();
+
+        $taggedEvent = EventModel::factory()->published()->create(['title' => 'Tagged Event']);
+        $taggedEvent->tags()->attach($tag->id);
+
+        $untaggedEvent = EventModel::factory()->published()->create(['title' => 'Untagged Event']);
+
+        $response = $this->get('/eventos');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Index')
+                ->has('events.data', 2)
+        );
+    }
+
+    public function test_index_returns_empty_when_tag_has_no_events(): void
+    {
+        $tag = TagModel::factory()->forEvents()->create([
+            'slug' => 'unused-tag',
+        ]);
+
+        EventModel::factory()->published()->create();
+
+        $response = $this->get('/eventos?tags=unused-tag');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Index')
+                ->has('events.data', 0)
+        );
+    }
+
+    public function test_show_includes_event_tags(): void
+    {
+        $tag1 = TagModel::factory()->forEvents()->create([
+            'name' => 'Warhammer 40k',
+            'slug' => 'warhammer-40k',
+        ]);
+        $tag2 = TagModel::factory()->forEvents()->create([
+            'name' => 'Tournament',
+            'slug' => 'tournament',
+        ]);
+
+        $event = EventModel::factory()->published()->create([
+            'slug' => 'test-event',
+        ]);
+        $event->tags()->attach([$tag1->id, $tag2->id]);
+
+        $response = $this->get('/eventos/test-event');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Show')
+                ->has('event.tags', 2)
+                ->where('event.tags.0.name', fn ($val) => in_array($val, ['Warhammer 40k', 'Tournament']))
+                ->where('event.tags.1.name', fn ($val) => in_array($val, ['Warhammer 40k', 'Tournament']))
+        );
+    }
+
+    public function test_show_displays_event_without_tags(): void
+    {
+        $event = EventModel::factory()->published()->create([
+            'slug' => 'untagged-event',
+        ]);
+
+        $response = $this->get('/eventos/untagged-event');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Show')
+                ->has('event.tags', 0)
+        );
+    }
+
+    public function test_index_filters_by_child_tag(): void
+    {
+        $parent = TagModel::factory()->forEvents()->create([
+            'name' => 'Miniature Games',
+            'slug' => 'miniature-games',
+        ]);
+
+        $child = TagModel::factory()->forEvents()->withParent($parent)->create([
+            'name' => 'Warhammer 40k',
+            'slug' => 'warhammer-40k',
+        ]);
+
+        $event = EventModel::factory()->published()->create([
+            'title' => 'Warhammer Tournament',
+        ]);
+        $event->tags()->attach($child->id);
+
+        $response = $this->get('/eventos?tags=warhammer-40k');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Index')
+                ->has('events.data', 1)
+                ->where('events.data.0.title', 'Warhammer Tournament')
         );
     }
 }

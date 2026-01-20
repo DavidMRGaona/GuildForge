@@ -6,6 +6,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ArticleResource\Pages;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -24,6 +25,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -39,7 +42,7 @@ class ArticleResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Artículo');
+        return __('artículo');
     }
 
     public static function getPluralModelLabel(): string
@@ -89,6 +92,43 @@ class ArticleResource extends Resource
                     ->searchable()
                     ->preload()
                     ->required(),
+                Select::make('category_id')
+                    ->label(__('filament.tags.fields.category'))
+                    ->options(fn () => TagModel::roots()
+                        ->forType('articles')
+                        ->ordered()
+                        ->pluck('name', 'id'))
+                    ->required()
+                    ->searchable()
+                    ->preload()
+                    ->afterStateHydrated(function (Select $component, ?Model $record): void {
+                        if ($record instanceof ArticleModel) {
+                            $categoryId = $record->tags()
+                                ->whereNull('parent_id')
+                                ->first()?->id;
+                            $component->state($categoryId);
+                        }
+                    }),
+                Select::make('additional_tag_ids')
+                    ->label(__('filament.tags.fields.additional'))
+                    ->options(fn (Get $get) => TagModel::whereNotNull('parent_id')
+                        ->forType('articles')
+                        ->when($get('category_id'), fn (Builder $q, string $id) => $q->where('id', '!=', $id))
+                        ->ordered()
+                        ->get()
+                        ->mapWithKeys(fn (TagModel $tag): array => [$tag->id => $tag->getIndentedNameForSelect()]))
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->afterStateHydrated(function (Select $component, ?Model $record): void {
+                        if ($record instanceof ArticleModel) {
+                            $tagIds = $record->tags()
+                                ->whereNotNull('parent_id')
+                                ->pluck('id')
+                                ->toArray();
+                            $component->state($tagIds);
+                        }
+                    }),
                 Toggle::make('is_published')
                     ->label(__('Publicado'))
                     ->default(false)

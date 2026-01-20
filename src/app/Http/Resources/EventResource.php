@@ -34,6 +34,7 @@ final class EventResource extends JsonResource
             'isPublished' => $this->resource->isPublished,
             'createdAt' => $this->resource->createdAt?->format('c'),
             'updatedAt' => $this->resource->updatedAt?->format('c'),
+            'tags' => TagResource::collection($this->resource->tags)->resolve(),
         ];
     }
 }

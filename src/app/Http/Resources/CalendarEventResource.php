@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Domain\Entities\Event;
+use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @property Event $resource
+ * @property EventModel $resource
  */
 final class CalendarEventResource extends JsonResource
 {
@@ -22,19 +22,28 @@ final class CalendarEventResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $tags = $this->resource->tags->map(fn ($tag): array => [
+            'id' => $tag->id,
+            'name' => $tag->name,
+            'slug' => $tag->slug,
+            'color' => $tag->color,
+            'parentId' => $tag->parent_id,
+        ])->all();
+
         return [
-            'id' => $this->resource->id()->value,
-            'title' => $this->resource->title(),
-            'slug' => $this->resource->slug()->value,
-            'description' => $this->resource->description(),
-            'start' => $this->resource->startDate()->format('c'),
-            'end' => $this->resource->endDate()?->format('c'),
-            'location' => $this->resource->location(),
-            'imagePublicId' => $this->resource->imagePublicId(),
-            'memberPrice' => $this->resource->memberPrice()?->value,
-            'nonMemberPrice' => $this->resource->nonMemberPrice()?->value,
-            'url' => '/eventos/' . $this->resource->slug()->value,
+            'id' => $this->resource->id,
+            'title' => $this->resource->title,
+            'slug' => $this->resource->slug,
+            'description' => $this->resource->description,
+            'start' => $this->resource->start_date->format('c'),
+            'end' => $this->resource->end_date?->format('c'),
+            'location' => $this->resource->location,
+            'imagePublicId' => $this->resource->image_public_id,
+            'memberPrice' => $this->resource->member_price !== null ? (float) $this->resource->member_price : null,
+            'nonMemberPrice' => $this->resource->non_member_price !== null ? (float) $this->resource->non_member_price : null,
+            'url' => '/eventos/' . $this->resource->slug,
             'backgroundColor' => self::AMBER_500,
+            'tags' => $tags,
         ];
     }
 }
