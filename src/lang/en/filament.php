@@ -3,6 +3,23 @@
 declare(strict_types=1);
 
 return [
+    'navigation' => [
+        'pages' => 'Pages',
+    ],
+    'pages' => [
+        'about' => [
+            'title' => 'About',
+            'saved' => 'Page settings saved successfully',
+            'tabs' => [
+                'hero' => 'Hero',
+                'content' => 'Content',
+                'join' => 'How to Join',
+                'location' => 'Location',
+                'contact' => 'Contact',
+                'social' => 'Social Media',
+            ],
+        ],
+    ],
     'tags' => [
         'label' => 'Tag',
         'plural' => 'Tags',
@@ -33,6 +50,12 @@ return [
     ],
     'settings' => [
         'title' => 'Site Settings',
+        'general' => [
+            'title' => 'General Settings',
+            'description' => 'Global website configuration.',
+            'logo' => 'Site Logo',
+            'logo_help' => 'Displayed in the site header and admin panel. Recommended: transparent PNG, max 1MB.',
+        ],
         'location' => [
             'title' => 'Headquarters Location',
             'description' => 'Configure the coordinates and data of the location that will be displayed on the map on the "About" page.',

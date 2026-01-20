@@ -4,6 +4,7 @@ declare module '@inertiajs/vue3' {
     interface PageProps {
         appName: string;
         appDescription: string;
+        siteLogo: string | null;
         auth: {
             user: User | null;
         };

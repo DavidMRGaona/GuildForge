@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Application\Services\SettingsServiceInterface;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -55,6 +57,7 @@ final class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'appName' => config('app.name'),
             'appDescription' => config('app.description'),
+            'siteLogo' => fn () => $this->getSiteLogo(),
             'auth' => [
                 'user' => $request->user(),
             ],
@@ -65,5 +68,21 @@ final class HandleInertiaRequests extends Middleware
                 'info' => fn () => $request->session()->get('info'),
             ],
         ];
+    }
+
+    private function getSiteLogo(): ?string
+    {
+        try {
+            $settingsService = app(SettingsServiceInterface::class);
+            $logoPath = (string) $settingsService->get('site_logo', '');
+
+            if ($logoPath === '') {
+                return null;
+            }
+
+            return Storage::disk('images')->url($logoPath);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
