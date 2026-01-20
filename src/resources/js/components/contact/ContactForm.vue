@@ -3,13 +3,8 @@ import { computed } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { ContactFormData } from '@/types/models';
+import type { FlashMessages } from '@/types';
 import BaseButton from '@/components/ui/BaseButton.vue';
-
-// Define flash interface for type safety
-interface FlashMessages {
-    success?: string;
-    error?: string;
-}
 
 // Composables
 const { t } = useI18n();

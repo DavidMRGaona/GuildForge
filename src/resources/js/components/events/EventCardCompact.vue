@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import type { Event } from '@/types/models';
 import { useEvents } from '@/composables/useEvents';
 import { useEventDateBadge } from '@/composables/useEventDateBadge';
+import ImagePlaceholder from '@/components/ui/ImagePlaceholder.vue';
 import { buildCardImageUrl } from '@/utils/cloudinary';
 
 interface Props {
@@ -13,9 +14,9 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const { getExcerpt } = useEvents();
-const { getDateBadge } = useEventDateBadge(locale.value);
+const { getDateBadge } = useEventDateBadge();
 
 const eventImageUrl = computed(() => buildCardImageUrl(props.event.imagePublicId));
 const dateBadge = computed(() => getDateBadge(props.event.startDate));
@@ -36,25 +37,7 @@ const dateBadge = computed(() => getDateBadge(props.event.startDate));
                 loading="lazy"
                 class="aspect-video h-40 w-full object-cover"
             />
-            <div
-                v-else
-                class="flex aspect-video h-40 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-slate-600"
-            >
-                <svg
-                    class="h-12 w-12 text-white/50"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                </svg>
-            </div>
+            <ImagePlaceholder v-else variant="event" height="h-40" icon-size="h-12 w-12" />
 
             <!-- Date badge overlay -->
             <div class="absolute left-3 top-3 flex flex-col items-center rounded bg-white px-2 py-1 shadow-md">

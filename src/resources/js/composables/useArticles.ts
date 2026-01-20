@@ -1,3 +1,4 @@
+import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
 
 interface UseArticlesReturn {
@@ -7,9 +8,10 @@ interface UseArticlesReturn {
 }
 
 export function useArticles(): UseArticlesReturn {
+    const { locale } = useI18n();
     function formatPublishedDate(dateString: string): string {
         const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
+        return date.toLocaleDateString(locale.value, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',

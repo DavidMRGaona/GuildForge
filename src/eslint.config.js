@@ -28,6 +28,8 @@ export default [
                 document: 'readonly',
                 window: 'readonly',
                 fetch: 'readonly',
+                MediaQueryList: 'readonly',
+                MediaQueryListEvent: 'readonly',
             },
         },
         plugins: {

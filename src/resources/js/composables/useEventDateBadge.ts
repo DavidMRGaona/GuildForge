@@ -1,3 +1,7 @@
+import { computed, unref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import type { MaybeRef } from 'vue';
+
 export interface EventDateBadge {
     day: string;
     month: string;
@@ -11,18 +15,30 @@ const MONTH_ABBREVIATIONS: Record<string, string> = {
     en: MONTH_ABBREVIATIONS_EN,
 };
 
-export function useEventDateBadge(locale = 'es'): {
+export function useEventDateBadge(localeParam?: MaybeRef<string>): {
     getDateBadge: (dateString: string) => EventDateBadge;
 } {
-    const abbreviations = MONTH_ABBREVIATIONS[locale] ?? MONTH_ABBREVIATIONS_ES;
-    const months = abbreviations.split('|');
+    // Use provided locale (ref or string) or fall back to i18n locale
+    const { locale: i18nLocale } = localeParam === undefined ? useI18n() : { locale: null };
+    const locale = computed(() => {
+        if (localeParam !== undefined) {
+            return unref(localeParam);
+        }
+        return i18nLocale?.value ?? 'es';
+    });
+
+    // Reactive month abbreviations based on current locale
+    const months = computed(() => {
+        const abbreviations = MONTH_ABBREVIATIONS[locale.value] ?? MONTH_ABBREVIATIONS_ES;
+        return abbreviations.split('|');
+    });
 
     function getDateBadge(dateString: string): EventDateBadge {
         const date = new Date(dateString);
         const day = date.getDate().toString();
         const monthIndex = date.getMonth();
         // months array is always 12 elements, monthIndex is always 0-11
-        const month = months[monthIndex] as string;
+        const month = months.value[monthIndex] as string;
 
         return { day, month };
     }

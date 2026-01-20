@@ -9,11 +9,11 @@ interface UseGalleryReturn {
 }
 
 export function useGallery(): UseGalleryReturn {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
 
     function formatGalleryDate(dateString: string): string {
         const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
+        return date.toLocaleDateString(locale.value, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',

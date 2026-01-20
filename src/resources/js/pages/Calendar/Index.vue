@@ -6,8 +6,10 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel.vue';
 import { useSeo } from '@/composables/useSeo';
+import { useMediaQuery } from '@/composables/useMediaQuery';
 
 const { t } = useI18n();
+const isMobile = useMediaQuery('(max-width: 1023px)');
 
 useSeo({
     title: t('calendar.title'),
@@ -53,7 +55,7 @@ const handleEventSelect = (event: CalendarEvent): void => {
     selectedEvent.value = event;
 
     // On mobile, show the modal
-    if (window.innerWidth < 1024) {
+    if (isMobile.value) {
         showMobileModal.value = true;
     }
 };
