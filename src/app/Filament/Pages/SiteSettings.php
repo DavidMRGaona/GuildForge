@@ -70,6 +70,17 @@ final class SiteSettings extends Page implements HasForms
             }
         }
 
+        $joinStepsJson = (string) $settingsService->get('join_steps', '');
+        $joinSteps = [];
+        if ($joinStepsJson !== '') {
+            try {
+                $decoded = json_decode($joinStepsJson, true, 512, JSON_THROW_ON_ERROR);
+                $joinSteps = is_array($decoded) ? $decoded : [];
+            } catch (\JsonException) {
+                $joinSteps = [];
+            }
+        }
+
         $this->form->fill([
             'location_name' => (string) $settingsService->get('location_name', ''),
             'location_address' => (string) $settingsService->get('location_address', ''),
@@ -81,6 +92,7 @@ final class SiteSettings extends Page implements HasForms
             'about_hero_image' => (string) $settingsService->get('about_hero_image', ''),
             'about_tagline' => (string) $settingsService->get('about_tagline', ''),
             'about_activities' => $activities,
+            'join_steps' => $joinSteps,
             'contact_email' => (string) $settingsService->get('contact_email', ''),
             'contact_phone' => (string) $settingsService->get('contact_phone', ''),
             'contact_address' => (string) $settingsService->get('contact_address', ''),
@@ -176,6 +188,26 @@ final class SiteSettings extends Page implements HasForms
                             ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
                             ->maxItems(8)
                             ->columnSpanFull(),
+
+                        Repeater::make('join_steps')
+                            ->label(__('filament.settings.about.join_steps'))
+                            ->helperText(__('filament.settings.about.join_steps_help'))
+                            ->schema([
+                                TextInput::make('title')
+                                    ->label(__('filament.settings.about.join_step_title'))
+                                    ->required()
+                                    ->maxLength(100),
+                                Textarea::make('description')
+                                    ->label(__('filament.settings.about.join_step_description'))
+                                    ->rows(2)
+                                    ->maxLength(500),
+                            ])
+                            ->reorderable()
+                            ->collapsible()
+                            ->collapsed()
+                            ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                            ->maxItems(6)
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make(__('filament.settings.contact.title'))
@@ -211,6 +243,11 @@ final class SiteSettings extends Page implements HasForms
             ? json_encode(array_values($activities), JSON_THROW_ON_ERROR)
             : '';
 
+        $joinSteps = $formData['join_steps'] ?? [];
+        $joinStepsJson = is_array($joinSteps) && count($joinSteps) > 0
+            ? json_encode(array_values($joinSteps), JSON_THROW_ON_ERROR)
+            : '';
+
         $settingsService->set('location_name', (string) $formData['location_name']);
         $settingsService->set('location_address', (string) $formData['location_address']);
         $settingsService->set('location_lat', (string) $formData['location_lat']);
@@ -221,6 +258,7 @@ final class SiteSettings extends Page implements HasForms
         $settingsService->set('about_tagline', (string) ($formData['about_tagline'] ?? ''));
         $settingsService->set('about_history', (string) ($formData['about_history'] ?? ''));
         $settingsService->set('about_activities', $activitiesJson);
+        $settingsService->set('join_steps', $joinStepsJson);
         $settingsService->set('contact_email', (string) ($formData['contact_email'] ?? ''));
         $settingsService->set('contact_phone', (string) ($formData['contact_phone'] ?? ''));
         $settingsService->set('contact_address', (string) ($formData['contact_address'] ?? ''));

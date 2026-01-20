@@ -106,11 +106,8 @@ export default {
             },
         },
         join: {
-            title: 'How to join?',
-            content: 'Joining {appName} is very easy. Follow these steps:',
-            step1: 'Come meet us at one of our open sessions',
-            step2: 'Fill out the registration form',
-            step3: 'Pay the annual membership fee',
+            title: 'How to join',
+            contactUs: 'Contact us',
         },
         contact: {
             title: 'Contact',

@@ -43,6 +43,10 @@ return [
                 'sparkles' => 'Sparkles (General)',
                 'heart' => 'Heart (Volunteering)',
             ],
+            'join_steps' => 'Join steps',
+            'join_steps_help' => 'Steps shown in the "How to join" section of the About page',
+            'join_step_title' => 'Step title',
+            'join_step_description' => 'Description (optional)',
         ],
         'contact' => [
             'title' => 'Contact',

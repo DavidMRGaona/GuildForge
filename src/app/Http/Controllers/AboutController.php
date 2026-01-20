@@ -24,6 +24,7 @@ final class AboutController extends Controller
             'aboutHeroImage' => $settings->get('about_hero_image', ''),
             'aboutTagline' => $settings->get('about_tagline', ''),
             'activities' => $this->parseActivities($settings->get('about_activities', '')),
+            'joinSteps' => $this->parseJoinSteps($settings->get('join_steps', '')),
         ]);
     }
 
@@ -49,6 +50,36 @@ final class AboutController extends Controller
                 $activities,
                 fn ($activity) => is_array($activity)
                     && isset($activity['icon'], $activity['title'], $activity['description'])
+            ));
+        } catch (JsonException) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array<int, array{title: string, description: string|null}>
+     */
+    private function parseJoinSteps(mixed $json): array
+    {
+        if (!is_string($json) || $json === '') {
+            return [];
+        }
+        try {
+            $joinSteps = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($joinSteps)) {
+                return [];
+            }
+            $filtered = array_filter(
+                $joinSteps,
+                fn ($step) => is_array($step) && isset($step['title'])
+            );
+
+            return array_values(array_map(
+                fn (array $step): array => [
+                    'title' => (string) $step['title'],
+                    'description' => isset($step['description']) ? (string) $step['description'] : null,
+                ],
+                $filtered
             ));
         } catch (JsonException) {
             return [];

@@ -201,4 +201,66 @@ final class AboutControllerTest extends TestCase
                 ->where('activities', [])
         );
     }
+
+    /**
+     * Verify the about page receives join steps from settings.
+     */
+    public function test_about_page_includes_join_steps(): void
+    {
+        // Arrange
+        $joinSteps = [
+            ['title' => 'Step 1', 'description' => 'Description 1'],
+            ['title' => 'Step 2', 'description' => null],
+        ];
+        app(SettingsServiceInterface::class)->set('join_steps', json_encode($joinSteps));
+
+        // Act
+        $response = $this->get('/nosotros');
+
+        // Assert
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('About')
+                ->has('joinSteps', 2)
+                ->where('joinSteps.0.title', 'Step 1')
+                ->where('joinSteps.0.description', 'Description 1')
+                ->where('joinSteps.1.title', 'Step 2')
+                ->where('joinSteps.1.description', null)
+        );
+    }
+
+    /**
+     * Verify the about page returns empty join steps when not configured.
+     */
+    public function test_about_page_returns_empty_join_steps_when_not_configured(): void
+    {
+        // Act
+        $response = $this->get('/nosotros');
+
+        // Assert
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('About')
+                ->where('joinSteps', [])
+        );
+    }
+
+    /**
+     * Verify the about page handles invalid join steps JSON gracefully.
+     */
+    public function test_about_page_handles_invalid_join_steps_json(): void
+    {
+        // Arrange
+        app(SettingsServiceInterface::class)->set('join_steps', 'invalid json');
+
+        // Act
+        $response = $this->get('/nosotros');
+
+        // Assert
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('About')
+                ->where('joinSteps', [])
+        );
+    }
 }

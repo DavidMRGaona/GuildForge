@@ -106,11 +106,8 @@ export default {
             },
         },
         join: {
-            title: '¿Cómo unirte?',
-            content: 'Unirte a {appName} es muy sencillo. Sigue estos pasos:',
-            step1: 'Ven a conocernos en una de nuestras sesiones abiertas',
-            step2: 'Rellena el formulario de inscripción',
-            step3: 'Paga la cuota anual de socio',
+            title: 'Cómo unirte',
+            contactUs: 'Contacta con nosotros',
         },
         contact: {
             title: 'Contacto',
