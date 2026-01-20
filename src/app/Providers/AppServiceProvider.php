@@ -12,6 +12,7 @@ use App\Application\Services\HeroSlideQueryServiceInterface;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
+use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\Repositories\EventRepositoryInterface;
@@ -36,6 +37,7 @@ use App\Infrastructure\Services\HeroSlideQueryService;
 use App\Infrastructure\Services\SettingsService;
 use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\AboutPageService;
+use App\Infrastructure\Services\ImageOptimizationService;
 use App\Infrastructure\Services\ThemeSettingsService;
 use Cloudinary\Cloudinary;
 use Illuminate\Filesystem\FilesystemAdapter;
@@ -69,6 +71,7 @@ class AppServiceProvider extends ServiceProvider
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
         $this->app->singleton(ThemeSettingsServiceInterface::class, ThemeSettingsService::class);
+        $this->app->singleton(ImageOptimizationServiceInterface::class, ImageOptimizationService::class);
 
         // Factory bindings
         $this->app->singleton(ResponseDTOFactoryInterface::class, EloquentResponseDTOFactory::class);
@@ -103,12 +106,14 @@ class AppServiceProvider extends ServiceProvider
         // Override cloudinary driver with a safe adapter that:
         // - Generates URLs directly (no Admin API calls)
         // - Ignores "not found" errors on delete
+        // - Optimizes images before upload (resize/compress)
         Storage::extend('cloudinary', static function ($app, $config) {
             $cloudinaryUrl = $config['url'] ?? config('cloudinary.cloud_url');
             $prefix = $config['prefix'] ?? null;
 
             $cloudinary = new Cloudinary($cloudinaryUrl);
-            $adapter = new CloudinaryStorageAdapter($cloudinary, null, $prefix);
+            $imageOptimization = $app->make(ImageOptimizationServiceInterface::class);
+            $adapter = new CloudinaryStorageAdapter($cloudinary, null, $prefix, $imageOptimization);
 
             return new FilesystemAdapter(
                 new Filesystem($adapter),

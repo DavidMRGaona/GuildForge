@@ -7,6 +7,7 @@ RUN apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
+    libwebp-dev \
     libzip-dev \
     zip \
     unzip \
@@ -14,10 +15,12 @@ RUN apk add --no-cache \
     oniguruma-dev \
     libpq-dev \
     linux-headers \
+    imagemagick \
+    imagemagick-dev \
     $PHPIZE_DEPS
 
 # Configure and install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) \
         pdo \
         pdo_pgsql \
@@ -33,6 +36,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 
 # Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
+
+# Install Imagick extension (better quality than GD for image processing)
+RUN pecl install imagick && docker-php-ext-enable imagick
 
 # Install Xdebug
 RUN pecl install xdebug && docker-php-ext-enable xdebug
