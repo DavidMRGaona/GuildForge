@@ -16,5 +16,18 @@ return [
             'preview' => 'Vista previa del mapa',
             'saved' => 'Configuración guardada correctamente',
         ],
+        'about' => [
+            'title' => 'Sobre nosotros',
+            'association_name' => 'Nombre de la asociación',
+            'association_name_help' => 'Se mostrará en el título de la página "Sobre nosotros"',
+            'history' => 'Nuestra historia',
+            'history_help' => 'Contenido de la sección "Nuestra historia"',
+        ],
+        'contact' => [
+            'title' => 'Contacto',
+            'email' => 'Correo electrónico',
+            'phone' => 'Teléfono',
+            'address' => 'Dirección postal',
+        ],
     ],
 ];

@@ -7,6 +7,16 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue';
 import { useSeo } from '@/composables/useSeo';
 import { useMap } from '@/composables/useMap';
 
+interface Props {
+    associationName: string;
+    aboutHistory: string;
+    contactEmail: string;
+    contactPhone: string;
+    contactAddress: string;
+}
+
+const props = defineProps<Props>();
+
 const LocationMap = defineAsyncComponent(
     () => import('@/components/map/LocationMap.vue')
 );
@@ -14,7 +24,7 @@ const LocationMap = defineAsyncComponent(
 const { t } = useI18n();
 
 useSeo({
-    title: t('about.title'),
+    title: t('about.title', { appName: props.associationName }),
     description: t('about.subtitle'),
 });
 
@@ -24,6 +34,10 @@ const openStreetMapUrl = computed(() => {
     if (!location.value) return 'https://www.openstreetmap.org';
     return getOpenStreetMapUrl();
 });
+
+const hasContactInfo = computed(() =>
+    props.contactEmail || props.contactPhone || props.contactAddress
+);
 </script>
 
 <template>
@@ -32,7 +46,7 @@ const openStreetMapUrl = computed(() => {
         <div class="bg-white shadow">
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <h1 class="text-3xl font-bold tracking-tight text-gray-900">
-                    {{ t('about.title') }}
+                    {{ t('about.title', { appName: props.associationName }) }}
                 </h1>
                 <p class="mt-2 text-lg text-gray-600">
                     {{ t('about.subtitle') }}
@@ -43,10 +57,15 @@ const openStreetMapUrl = computed(() => {
         <!-- Main Content -->
         <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- History Section -->
-            <BaseCard :title="t('about.history.title')" class="mb-8">
-                <p class="text-gray-700 leading-relaxed">
-                    {{ t('about.history.content') }}
-                </p>
+            <BaseCard
+                v-if="aboutHistory"
+                :title="t('about.history.title')"
+                class="mb-8"
+            >
+                <div
+                    v-html="aboutHistory"
+                    class="prose prose-gray max-w-none"
+                ></div>
             </BaseCard>
 
             <!-- What We Do Section -->
@@ -88,10 +107,35 @@ const openStreetMapUrl = computed(() => {
             </BaseCard>
 
             <!-- Contact Section -->
-            <BaseCard :title="t('about.contact.title')" class="mb-8">
-                <p class="text-gray-700 leading-relaxed">
-                    {{ t('about.contact.placeholder') }}
-                </p>
+            <BaseCard
+                v-if="hasContactInfo"
+                :title="t('about.contact.title')"
+                class="mb-8"
+            >
+                <div class="space-y-3">
+                    <div v-if="contactEmail" class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span class="font-medium text-gray-700">{{ t('about.contact.email') }}:</span>
+                        <a
+                            :href="'mailto:' + contactEmail"
+                            class="text-indigo-600 hover:text-indigo-500 underline"
+                        >
+                            {{ contactEmail }}
+                        </a>
+                    </div>
+                    <div v-if="contactPhone" class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span class="font-medium text-gray-700">{{ t('about.contact.phone') }}:</span>
+                        <a
+                            :href="'tel:' + contactPhone"
+                            class="text-indigo-600 hover:text-indigo-500 underline"
+                        >
+                            {{ contactPhone }}
+                        </a>
+                    </div>
+                    <div v-if="contactAddress" class="flex flex-col gap-1">
+                        <span class="font-medium text-gray-700">{{ t('about.contact.address') }}:</span>
+                        <p class="text-gray-700 leading-relaxed">{{ contactAddress }}</p>
+                    </div>
+                </div>
             </BaseCard>
 
             <!-- Location Section -->
