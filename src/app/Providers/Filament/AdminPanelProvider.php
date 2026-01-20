@@ -33,7 +33,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName(config('app.name') . ' Admin')
-            ->brandLogo(fn (): ?string => $this->getBrandLogo())
+            ->brandLogo(fn (): ?string => $this->getBrandLogo('site_logo_light'))
+            ->darkModeBrandLogo(fn (): ?string => $this->getBrandLogo('site_logo_dark'))
             ->brandLogoHeight('2.5rem')
             ->colors([
                 'primary' => Color::Amber,
@@ -70,11 +71,11 @@ class AdminPanelProvider extends PanelProvider
             ]);
     }
 
-    private function getBrandLogo(): ?string
+    private function getBrandLogo(string $key): ?string
     {
         try {
             $settingsService = app(SettingsServiceInterface::class);
-            $logoPath = (string) $settingsService->get('site_logo', '');
+            $logoPath = (string) $settingsService->get($key, '');
 
             if ($logoPath === '') {
                 return null;

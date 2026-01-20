@@ -98,7 +98,7 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
         v-if="tags.length > 0"
         class="flex flex-wrap items-center gap-2"
     >
-        <span class="text-sm font-medium text-gray-700">
+        <span class="text-sm font-medium text-stone-700 dark:text-stone-300">
             {{ t('tags.filter') }}:
         </span>
 
@@ -108,7 +108,7 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
                 'rounded-full px-3 py-1 text-sm font-medium transition-colors',
                 !hasActiveTags
                     ? 'bg-amber-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200 dark:bg-stone-700 dark:text-stone-300 dark:hover:bg-stone-600',
             ]"
             @click="clearTags"
         >

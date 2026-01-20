@@ -12,6 +12,7 @@ use App\Application\Services\HeroSlideQueryServiceInterface;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
+use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\Repositories\GalleryRepositoryInterface;
@@ -35,6 +36,7 @@ use App\Infrastructure\Services\HeroSlideQueryService;
 use App\Infrastructure\Services\SettingsService;
 use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\AboutPageService;
+use App\Infrastructure\Services\ThemeSettingsService;
 use Cloudinary\Cloudinary;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
@@ -66,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
+        $this->app->singleton(ThemeSettingsServiceInterface::class, ThemeSettingsService::class);
 
         // Factory bindings
         $this->app->singleton(ResponseDTOFactoryInterface::class, EloquentResponseDTOFactory::class);

@@ -24,13 +24,13 @@ const emit = defineEmits<{
 
 const variantClasses: Record<NonNullable<typeof props.variant>, string> = {
     primary:
-        'bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-500 disabled:bg-amber-300',
+        'bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-500 disabled:bg-amber-300 dark:bg-amber-500 dark:hover:bg-amber-400 dark:focus:ring-amber-400 dark:disabled:bg-amber-800 dark:disabled:text-amber-950',
     secondary:
-        'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500 disabled:bg-gray-100 disabled:text-gray-400',
+        'bg-stone-200 text-stone-900 hover:bg-stone-300 focus:ring-stone-500 disabled:bg-stone-100 disabled:text-stone-400 dark:bg-stone-700 dark:text-stone-100 dark:hover:bg-stone-600 dark:focus:ring-stone-400 dark:disabled:bg-stone-800 dark:disabled:text-stone-500',
     danger:
-        'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300',
+        'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 dark:bg-red-500 dark:hover:bg-red-400 dark:focus:ring-red-400 dark:disabled:bg-red-800',
     ghost:
-        'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500 disabled:text-gray-400',
+        'bg-transparent text-stone-700 hover:bg-stone-100 focus:ring-stone-500 disabled:text-stone-400 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-stone-100 dark:focus:ring-stone-400 dark:disabled:text-stone-600',
 };
 
 const sizeClasses: Record<NonNullable<typeof props.size>, string> = {
@@ -47,14 +47,14 @@ const spinnerSizes: Record<NonNullable<typeof props.size>, 'sm' | 'md' | 'lg'> =
 
 const spinnerColors: Record<NonNullable<typeof props.variant>, string> = {
     primary: 'text-white',
-    secondary: 'text-gray-600',
+    secondary: 'text-stone-600 dark:text-stone-300',
     danger: 'text-white',
-    ghost: 'text-gray-600',
+    ghost: 'text-stone-600 dark:text-stone-300',
 };
 
 const buttonClasses = computed(() => [
     'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-offset-2',
+    'focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-stone-900',
     'disabled:cursor-not-allowed',
     variantClasses[props.variant],
     sizeClasses[props.size],

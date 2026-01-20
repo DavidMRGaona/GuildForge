@@ -26,12 +26,12 @@ const iconPath = computed((): string => {
 </script>
 
 <template>
-    <div class="rounded-lg bg-white p-12 text-center shadow">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="rounded-lg bg-white p-12 text-center shadow dark:bg-stone-800 dark:shadow-stone-900/50">
+        <svg class="mx-auto h-12 w-12 text-stone-400 dark:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="iconPath" />
         </svg>
-        <h3 class="mt-4 text-lg font-medium text-gray-900">{{ props.title }}</h3>
-        <p v-if="props.description" class="mt-2 text-sm text-gray-500">{{ props.description }}</p>
+        <h3 class="mt-4 text-lg font-medium text-stone-900 dark:text-stone-100">{{ props.title }}</h3>
+        <p v-if="props.description" class="mt-2 text-sm text-stone-500 dark:text-stone-400">{{ props.description }}</p>
         <div v-if="$slots.default" class="mt-6">
             <slot />
         </div>

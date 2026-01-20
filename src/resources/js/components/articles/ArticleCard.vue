@@ -28,7 +28,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
     <Link
         :href="`/articulos/${props.article.slug}`"
         :aria-label="t('a11y.viewArticle', { title: props.article.title })"
-        class="group block overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+        class="group block overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:border-stone-700 dark:bg-stone-800 dark:shadow-stone-900/50 dark:focus:ring-offset-stone-900"
     >
         <!-- Image -->
         <div class="relative">
@@ -54,7 +54,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
 
         <!-- Content -->
         <div class="p-4">
-            <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-gray-900 group-hover:text-amber-600">
+            <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 group-hover:text-amber-600 dark:text-stone-100 dark:group-hover:text-amber-500">
                 {{ props.article.title }}
             </h3>
 
@@ -67,11 +67,11 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
                 class="mb-2"
             />
 
-            <p v-if="props.article.publishedAt" class="mb-2 text-sm text-gray-500">
+            <p v-if="props.article.publishedAt" class="mb-2 text-sm text-stone-500 dark:text-stone-400">
                 {{ t('articles.by') }} {{ getAuthorDisplayName(props.article) }} · {{ formatPublishedDate(props.article.publishedAt) }}
             </p>
 
-            <p class="line-clamp-2 text-sm text-gray-600">
+            <p class="line-clamp-2 text-sm text-stone-600 dark:text-stone-300">
                 {{ getExcerpt(props.article, 100) }}
             </p>
         </div>

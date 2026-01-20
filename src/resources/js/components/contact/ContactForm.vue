@@ -32,18 +32,18 @@ const submit = (): void => {
 </script>
 
 <template>
-    <div class="bg-white rounded-lg shadow-md p-6 h-full">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+    <div class="bg-white rounded-lg shadow-md p-6 h-full dark:bg-stone-800 dark:shadow-stone-900/50">
+        <h2 class="text-2xl font-bold text-stone-900 mb-6 dark:text-stone-100">
             {{ t('about.contact.form.title') }}
         </h2>
 
         <!-- Success message -->
         <div
             v-if="flashSuccess"
-            class="mb-6 p-4 bg-green-50 border border-green-200 rounded-md"
+            class="mb-6 p-4 bg-green-50 border border-green-200 rounded-md dark:bg-green-900/20 dark:border-green-800"
             role="alert"
         >
-            <p class="text-green-800 text-sm">
+            <p class="text-green-800 text-sm dark:text-green-300">
                 {{ flashSuccess }}
             </p>
         </div>
@@ -53,10 +53,10 @@ const submit = (): void => {
             <div>
                 <label
                     for="contact-name"
-                    class="block text-sm font-medium text-gray-700 mb-1"
+                    class="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300"
                 >
                     {{ t('about.contact.form.name') }}
-                    <span class="text-red-500" aria-label="required">*</span>
+                    <span class="text-red-500 dark:text-red-400" aria-label="required">*</span>
                 </label>
                 <input
                     id="contact-name"
@@ -68,16 +68,16 @@ const submit = (): void => {
                     :disabled="form.processing"
                     :aria-invalid="!!form.errors.name"
                     :aria-describedby="form.errors.name ? 'name-error' : undefined"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+                    class="w-full px-4 py-2 border border-stone-300 rounded-md shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-stone-100 disabled:cursor-not-allowed transition-colors dark:bg-stone-700 dark:border-stone-600 dark:text-stone-100 dark:placeholder-stone-400 dark:focus:ring-amber-400 dark:focus:border-amber-400 dark:disabled:bg-stone-800 dark:disabled:text-stone-500"
                     :class="{
-                        'border-red-500 focus:ring-red-500 focus:border-red-500':
+                        'border-red-500 focus:ring-red-500 focus:border-red-500 dark:border-red-400':
                             form.errors.name,
                     }"
                 />
                 <p
                     v-if="form.errors.name"
                     id="name-error"
-                    class="mt-1 text-sm text-red-600"
+                    class="mt-1 text-sm text-red-600 dark:text-red-400"
                     role="alert"
                 >
                     {{ form.errors.name }}
@@ -88,10 +88,10 @@ const submit = (): void => {
             <div>
                 <label
                     for="contact-email"
-                    class="block text-sm font-medium text-gray-700 mb-1"
+                    class="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300"
                 >
                     {{ t('about.contact.email') }}
-                    <span class="text-red-500" aria-label="required">*</span>
+                    <span class="text-red-500 dark:text-red-400" aria-label="required">*</span>
                 </label>
                 <input
                     id="contact-email"
@@ -103,16 +103,16 @@ const submit = (): void => {
                     :disabled="form.processing"
                     :aria-invalid="!!form.errors.email"
                     :aria-describedby="form.errors.email ? 'email-error' : undefined"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+                    class="w-full px-4 py-2 border border-stone-300 rounded-md shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-stone-100 disabled:cursor-not-allowed transition-colors dark:bg-stone-700 dark:border-stone-600 dark:text-stone-100 dark:placeholder-stone-400 dark:focus:ring-amber-400 dark:focus:border-amber-400 dark:disabled:bg-stone-800 dark:disabled:text-stone-500"
                     :class="{
-                        'border-red-500 focus:ring-red-500 focus:border-red-500':
+                        'border-red-500 focus:ring-red-500 focus:border-red-500 dark:border-red-400':
                             form.errors.email,
                     }"
                 />
                 <p
                     v-if="form.errors.email"
                     id="email-error"
-                    class="mt-1 text-sm text-red-600"
+                    class="mt-1 text-sm text-red-600 dark:text-red-400"
                     role="alert"
                 >
                     {{ form.errors.email }}
@@ -123,10 +123,10 @@ const submit = (): void => {
             <div>
                 <label
                     for="contact-message"
-                    class="block text-sm font-medium text-gray-700 mb-1"
+                    class="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300"
                 >
                     {{ t('about.contact.form.message') }}
-                    <span class="text-red-500" aria-label="required">*</span>
+                    <span class="text-red-500 dark:text-red-400" aria-label="required">*</span>
                 </label>
                 <textarea
                     id="contact-message"
@@ -138,16 +138,16 @@ const submit = (): void => {
                     :disabled="form.processing"
                     :aria-invalid="!!form.errors.message"
                     :aria-describedby="form.errors.message ? 'message-error' : undefined"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors resize-y"
+                    class="w-full px-4 py-2 border border-stone-300 rounded-md shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 disabled:bg-stone-100 disabled:cursor-not-allowed transition-colors resize-y dark:bg-stone-700 dark:border-stone-600 dark:text-stone-100 dark:placeholder-stone-400 dark:focus:ring-amber-400 dark:focus:border-amber-400 dark:disabled:bg-stone-800 dark:disabled:text-stone-500"
                     :class="{
-                        'border-red-500 focus:ring-red-500 focus:border-red-500':
+                        'border-red-500 focus:ring-red-500 focus:border-red-500 dark:border-red-400':
                             form.errors.message,
                     }"
                 />
                 <p
                     v-if="form.errors.message"
                     id="message-error"
-                    class="mt-1 text-sm text-red-600"
+                    class="mt-1 text-sm text-red-600 dark:text-red-400"
                     role="alert"
                 >
                     {{ form.errors.message }}

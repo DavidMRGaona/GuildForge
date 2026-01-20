@@ -1,10 +1,20 @@
 import type { User } from './models';
 
+interface ThemeSettings {
+    cssVariables: string;
+    darkModeDefault: boolean;
+    darkModeToggleVisible: boolean;
+    fontHeading: string;
+    fontBody: string;
+}
+
 declare module '@inertiajs/vue3' {
     interface PageProps {
         appName: string;
         appDescription: string;
-        siteLogo: string | null;
+        siteLogoLight: string | null;
+        siteLogoDark: string | null;
+        theme: ThemeSettings;
         auth: {
             user: User | null;
         };
@@ -18,4 +28,4 @@ declare module '@inertiajs/vue3' {
     }
 }
 
-export {};
+export type { ThemeSettings };

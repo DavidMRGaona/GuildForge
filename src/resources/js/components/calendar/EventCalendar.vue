@@ -195,8 +195,8 @@ watch(tooltipVisible, (visible) => {
 
 <template>
     <div :class="['event-calendar', { 'event-calendar--compact': compact }]">
-        <div v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 p-4 text-center">
-            <p class="text-sm font-medium text-red-800">
+        <div v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
+            <p class="text-sm font-medium text-red-800 dark:text-red-300">
                 {{ error }}
             </p>
         </div>
@@ -204,13 +204,13 @@ watch(tooltipVisible, (visible) => {
         <div class="relative">
             <div
                 v-if="isLoading"
-                class="absolute inset-0 z-10 flex items-center justify-center bg-white/70"
+                class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 dark:bg-stone-900/70"
             >
                 <div class="text-center">
                     <div
                         class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"
                     ></div>
-                    <p class="mt-2 text-sm text-gray-600">
+                    <p class="mt-2 text-sm text-stone-600 dark:text-stone-400">
                         {{ t('calendar.loading') }}
                     </p>
                 </div>
@@ -229,210 +229,3 @@ watch(tooltipVisible, (visible) => {
         />
     </div>
 </template>
-
-<style scoped>
-.event-calendar :deep(.fc) {
-    --fc-border-color: #e5e7eb;
-    --fc-button-bg-color: #f59e0b;
-    --fc-button-border-color: #f59e0b;
-    --fc-button-hover-bg-color: #d97706;
-    --fc-button-hover-border-color: #d97706;
-    --fc-button-active-bg-color: #b45309;
-    --fc-button-active-border-color: #b45309;
-    --fc-event-bg-color: #f59e0b;
-    --fc-event-border-color: #f59e0b;
-    --fc-today-bg-color: #fef3c7;
-}
-
-.event-calendar :deep(.fc-theme-standard th) {
-    background-color: #fffbeb;
-    border-color: var(--fc-border-color);
-}
-
-.event-calendar :deep(.fc-theme-standard td) {
-    border-color: var(--fc-border-color);
-}
-
-.event-calendar :deep(.fc-toolbar-title) {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #111827;
-}
-
-.event-calendar :deep(.fc-button) {
-    text-transform: capitalize;
-    font-weight: 500;
-}
-
-.event-calendar :deep(.fc-event) {
-    cursor: pointer;
-    transition: transform 0.15s ease-in-out;
-}
-
-.event-calendar :deep(.fc-event:hover) {
-    transform: scale(1.05);
-}
-
-.event-calendar :deep(.fc-daygrid-event) {
-    white-space: normal;
-    align-items: flex-start;
-}
-
-.event-calendar :deep(.fc-event-title) {
-    font-weight: 500;
-}
-
-/* ===== COMPACT MODE REDESIGN ===== */
-
-/* Remove all borders */
-.event-calendar--compact :deep(.fc-theme-standard th),
-.event-calendar--compact :deep(.fc-theme-standard td),
-.event-calendar--compact :deep(.fc-theme-standard .fc-scrollgrid),
-.event-calendar--compact :deep(.fc-scrollgrid-sync-table) {
-    border: none !important;
-}
-
-/* Title styling */
-.event-calendar--compact :deep(.fc-toolbar-title) {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #111827;
-}
-
-/* Navigation buttons */
-.event-calendar--compact :deep(.fc-button) {
-    background: none !important;
-    border: none !important;
-    color: #6b7280;
-    padding: 0.25rem 0.5rem;
-    box-shadow: none !important;
-}
-
-.event-calendar--compact :deep(.fc-button:hover) {
-    color: #f59e0b;
-    background: none !important;
-}
-
-.event-calendar--compact :deep(.fc-button:focus) {
-    box-shadow: none !important;
-}
-
-/* Day header (L M X J V S D) */
-.event-calendar--compact :deep(.fc-col-header-cell) {
-    background: transparent;
-    padding: 0.5rem 0;
-}
-
-.event-calendar--compact :deep(.fc-col-header-cell-cushion) {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #9ca3af;
-    text-transform: uppercase;
-}
-
-/* Day cells */
-.event-calendar--compact :deep(.fc-daygrid-day) {
-    cursor: pointer;
-}
-
-.event-calendar--compact :deep(.fc-daygrid-day-frame) {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: 40px;
-    padding: 2px 0;
-}
-
-/* Day numbers */
-.event-calendar--compact :deep(.fc-daygrid-day-top) {
-    flex-direction: row;
-    justify-content: center;
-}
-
-.event-calendar--compact :deep(.fc-daygrid-day-number) {
-    font-size: 0.875rem;
-    padding: 0;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.15s ease;
-}
-
-/* Hover effect on day numbers */
-.event-calendar--compact :deep(.fc-daygrid-day:not(.fc-day-today):hover .fc-daygrid-day-number) {
-    background-color: #f3f4f6;
-}
-
-/* Today highlight */
-.event-calendar--compact :deep(.fc-day-today) {
-    background: transparent !important;
-}
-
-.event-calendar--compact :deep(.fc-day-today .fc-daygrid-day-number) {
-    background-color: #f59e0b;
-    color: white;
-    font-weight: 600;
-}
-
-/* Days outside current month */
-.event-calendar--compact :deep(.fc-day-other .fc-daygrid-day-number) {
-    color: #9ca3af;
-}
-
-/* Event dots on days outside current month - more subtle */
-.event-calendar--compact :deep(.fc-day-other .fc-daygrid-event-dot) {
-    opacity: 0.35;
-}
-
-/* Events container - position for dots */
-.event-calendar--compact :deep(.fc-daygrid-day-events) {
-    display: flex;
-    justify-content: center;
-    gap: 2px;
-    min-height: 8px;
-    margin-top: 2px;
-}
-
-.event-calendar--compact :deep(.fc-daygrid-day-bottom) {
-    display: none;
-}
-
-/* Event dots */
-.event-calendar--compact :deep(.fc-daygrid-event-harness) {
-    margin: 0 !important;
-}
-
-.event-calendar--compact :deep(.fc-daygrid-event) {
-    margin: 0;
-    padding: 0;
-    background: none !important;
-    border: none !important;
-}
-
-.event-calendar--compact :deep(.fc-daygrid-event-dot) {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #f59e0b;
-    border: none !important;
-    margin: 0;
-}
-
-/* Hide event title text in compact mode */
-.event-calendar--compact :deep(.fc-event-title) {
-    display: none;
-}
-
-.event-calendar--compact :deep(.fc-event-time) {
-    display: none;
-}
-
-/* Fix for list-item display mode */
-.event-calendar--compact :deep(.fc-daygrid-event-harness-abs) {
-    position: relative !important;
-}
-</style>

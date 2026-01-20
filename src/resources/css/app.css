@@ -1,26 +1,558 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.vue';
 @source '../**/*.ts';
 
+/* ==========================================================================
+   Design Tokens via @theme - creates utility classes
+   ========================================================================== */
 @theme {
+    /* Typography */
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: 'Playfair Display', ui-serif, Georgia, serif;
 
-    /* Color System - Primary (Amber) */
-    --color-primary: #F59E0B;
-    --color-primary-light: #FBBF24;
-    --color-primary-dark: #D97706;
+    /* Base Colors - Stone palette for warmer, natural feel */
+    --color-stone-50: #FAFAF9;
+    --color-stone-100: #F5F5F4;
+    --color-stone-200: #E7E5E4;
+    --color-stone-300: #D6D3D1;
+    --color-stone-400: #A8A29E;
+    --color-stone-500: #78716C;
+    --color-stone-600: #57534E;
+    --color-stone-700: #44403C;
+    --color-stone-800: #292524;
+    --color-stone-900: #1C1917;
 
-    /* Color System - Secondary (Slate) */
-    --color-secondary: #475569;
-    --color-secondary-light: #64748B;
-    --color-secondary-dark: #334155;
+    /* Primary - Amber palette */
+    --color-amber-50: #FFFBEB;
+    --color-amber-100: #FEF3C7;
+    --color-amber-200: #FDE68A;
+    --color-amber-300: #FCD34D;
+    --color-amber-400: #FBBF24;
+    --color-amber-500: #F59E0B;
+    --color-amber-600: #D97706;
+    --color-amber-700: #B45309;
+    --color-amber-800: #92400E;
+    --color-amber-900: #78350F;
+    --color-amber-950: #451A03;
 
     /* Transitions */
     --transition-card: 200ms ease-in-out;
+    --transition-colors: 150ms ease-in-out;
+}
+
+/* ==========================================================================
+   Semantic Tokens - Light Mode (Default)
+   Following best practices: warm stone palette, no pure black/white
+   ========================================================================== */
+:root {
+    /* Primary Colors */
+    --color-primary: #D97706;           /* amber-600 - richer amber for light mode */
+    --color-primary-hover: #B45309;     /* amber-700 */
+    --color-primary-light: #FEF3C7;     /* amber-100 - subtle backgrounds */
+    --color-primary-dark: #92400E;      /* amber-800 */
+
+    /* Secondary Colors */
+    --color-secondary: #57534E;         /* stone-600 */
+    --color-secondary-hover: #44403C;   /* stone-700 */
+    --color-secondary-light: #A8A29E;   /* stone-400 */
+
+    /* Background Colors */
+    --color-bg-page: #FAFAF9;           /* stone-50 - warm white */
+    --color-bg-surface: #FFFFFF;        /* white for cards */
+    --color-bg-elevated: #FFFFFF;       /* modals, dropdowns */
+    --color-bg-muted: #F5F5F4;          /* stone-100 - subtle sections */
+
+    /* Text Colors */
+    --color-text-primary: #1C1917;      /* stone-900 */
+    --color-text-secondary: #57534E;    /* stone-600 */
+    --color-text-muted: #A8A29E;        /* stone-400 */
+    --color-text-inverted: #FFFFFF;     /* white on dark bg */
+
+    /* Border Colors */
+    --color-border: #E7E5E4;            /* stone-200 */
+    --color-border-strong: #D6D3D1;     /* stone-300 */
+
+    /* Status Colors - Light Mode */
+    --color-success: #16A34A;           /* green-600 */
+    --color-success-bg: #DCFCE7;        /* green-100 */
+    --color-warning: #CA8A04;           /* yellow-600 */
+    --color-warning-bg: #FEF9C3;        /* yellow-100 */
+    --color-error: #DC2626;             /* red-600 */
+    --color-error-bg: #FEE2E2;          /* red-100 */
+    --color-info: #2563EB;              /* blue-600 */
+    --color-info-bg: #DBEAFE;           /* blue-100 */
+
+    /* Focus Ring */
+    --color-focus-ring: #F59E0B;        /* amber-500 */
+    --color-focus-ring-offset: #FFFFFF;
+}
+
+/* ==========================================================================
+   Semantic Tokens - Dark Mode
+   Following best practices:
+   - NO pure black (#000000) - using stone-900 (#1C1917) instead
+   - NO pure white text - using stone-100 (#F5F5F4)
+   - Reduced saturation on accent colors
+   ========================================================================== */
+.dark {
+    /* Primary Colors - Glowing amber for dark backgrounds */
+    --color-primary: #F59E0B;           /* amber-500 - brighter, glowing */
+    --color-primary-hover: #FBBF24;     /* amber-400 - lighter on hover */
+    --color-primary-light: #451A03;     /* amber-950 - muted background */
+    --color-primary-dark: #D97706;      /* amber-600 */
+
+    /* Secondary Colors */
+    --color-secondary: #A8A29E;         /* stone-400 - lighter in dark mode */
+    --color-secondary-hover: #D6D3D1;   /* stone-300 */
+    --color-secondary-light: #57534E;   /* stone-600 */
+
+    /* Background Colors - Deep warm blacks, NOT pure black */
+    --color-bg-page: #1C1917;           /* stone-900 - main background */
+    --color-bg-surface: #292524;        /* stone-800 - cards */
+    --color-bg-elevated: #44403C;       /* stone-700 - modals, dropdowns */
+    --color-bg-muted: #292524;          /* stone-800 - subtle sections */
+
+    /* Text Colors - Soft white, NOT pure white */
+    --color-text-primary: #F5F5F4;      /* stone-100 */
+    --color-text-secondary: #D6D3D1;    /* stone-300 */
+    --color-text-muted: #78716C;        /* stone-500 */
+    --color-text-inverted: #1C1917;     /* stone-900 */
+
+    /* Border Colors */
+    --color-border: #44403C;            /* stone-700 */
+    --color-border-strong: #57534E;     /* stone-600 */
+
+    /* Status Colors - Dark Mode (slightly reduced saturation) */
+    --color-success: #4ADE80;           /* green-400 */
+    --color-success-bg: #14532D;        /* green-900 */
+    --color-warning: #FACC15;           /* yellow-400 */
+    --color-warning-bg: #713F12;        /* yellow-900 */
+    --color-error: #F87171;             /* red-400 */
+    --color-error-bg: #7F1D1D;          /* red-900 */
+    --color-info: #60A5FA;              /* blue-400 */
+    --color-info-bg: #1E3A8A;           /* blue-900 */
+
+    /* Focus Ring */
+    --color-focus-ring: #FBBF24;        /* amber-400 */
+    --color-focus-ring-offset: #1C1917; /* stone-900 */
+}
+
+/* ==========================================================================
+   Semantic Utility Classes
+   Components use these instead of hardcoded colors like bg-white dark:bg-gray-800
+   ========================================================================== */
+
+/* Background utilities */
+.bg-page { background-color: var(--color-bg-page); }
+.bg-surface { background-color: var(--color-bg-surface); }
+.bg-elevated { background-color: var(--color-bg-elevated); }
+.bg-muted { background-color: var(--color-bg-muted); }
+.bg-primary { background-color: var(--color-primary); }
+.bg-primary-light { background-color: var(--color-primary-light); }
+
+/* Text utilities */
+.text-base-primary { color: var(--color-text-primary); }
+.text-base-secondary { color: var(--color-text-secondary); }
+.text-base-muted { color: var(--color-text-muted); }
+.text-base-inverted { color: var(--color-text-inverted); }
+.text-primary { color: var(--color-primary); }
+
+/* Border utilities */
+.border-default { border-color: var(--color-border); }
+.border-strong { border-color: var(--color-border-strong); }
+.border-primary { border-color: var(--color-primary); }
+
+/* ==========================================================================
+   Legacy Theme Utilities (for backward compatibility)
+   These map to CSS variables for dynamic theme from admin settings
+   ========================================================================== */
+.text-theme-primary { color: var(--color-primary); }
+.bg-theme-primary { background-color: var(--color-primary); }
+.border-theme-primary { border-color: var(--color-primary); }
+
+.text-theme-secondary { color: var(--color-secondary); }
+.bg-theme-secondary { background-color: var(--color-secondary); }
+.border-theme-secondary { border-color: var(--color-secondary); }
+
+.text-theme-accent { color: var(--color-accent); }
+.bg-theme-accent { background-color: var(--color-accent); }
+.border-theme-accent { border-color: var(--color-accent); }
+
+.text-theme-text { color: var(--color-text); }
+.bg-theme-background { background-color: var(--color-background); }
+.bg-theme-surface { background-color: var(--color-surface); }
+
+/* Dynamic font family */
+.font-theme-heading { font-family: var(--font-heading); }
+.font-theme-body { font-family: var(--font-body); }
+
+/* Dynamic border radius */
+.rounded-theme { border-radius: var(--border-radius); }
+
+/* ==========================================================================
+   Component-level Dark Mode Overrides
+   For components that need specific dark mode styling
+   ========================================================================== */
+
+/* Input fields dark mode */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea,
+.dark select {
+    background-color: var(--color-bg-surface);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):focus,
+.dark textarea:focus,
+.dark select:focus {
+    border-color: var(--color-primary);
+    --tw-ring-color: var(--color-primary);
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):disabled,
+.dark textarea:disabled,
+.dark select:disabled {
+    background-color: var(--color-bg-muted);
+    color: var(--color-text-muted);
+}
+
+/* Focus ring offset color for dark mode */
+.dark .focus\:ring-offset-2 {
+    --tw-ring-offset-color: var(--color-bg-page);
+}
+
+/* ==========================================================================
+   FullCalendar Component Styling
+   Third-party library - requires global CSS (scoped styles don't work)
+   ========================================================================== */
+
+/* ===== LIGHT MODE ===== */
+.event-calendar .fc {
+    --fc-border-color: #e7e5e4;
+    --fc-button-bg-color: #f59e0b;
+    --fc-button-border-color: #f59e0b;
+    --fc-button-hover-bg-color: #d97706;
+    --fc-button-hover-border-color: #d97706;
+    --fc-button-active-bg-color: #b45309;
+    --fc-button-active-border-color: #b45309;
+    --fc-event-bg-color: #f59e0b;
+    --fc-event-border-color: #f59e0b;
+    --fc-today-bg-color: #fef3c7;
+    --fc-page-bg-color: #ffffff;
+    --fc-neutral-bg-color: #fafaf9;
+}
+
+.event-calendar .fc-theme-standard th {
+    background-color: #fef3c7;
+    border-color: var(--fc-border-color);
+}
+
+.event-calendar .fc-theme-standard td {
+    border-color: var(--fc-border-color);
+    background-color: var(--fc-page-bg-color);
+}
+
+.event-calendar .fc-toolbar-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1c1917;
+}
+
+.event-calendar .fc-button {
+    text-transform: capitalize;
+    font-weight: 500;
+}
+
+.event-calendar .fc-event {
+    cursor: pointer;
+    transition: transform 0.15s ease-in-out;
+}
+
+.event-calendar .fc-event:hover {
+    transform: scale(1.05);
+}
+
+.event-calendar .fc-daygrid-event {
+    white-space: normal;
+    align-items: flex-start;
+}
+
+.event-calendar .fc-event-title {
+    font-weight: 500;
+}
+
+.event-calendar .fc-daygrid-day-number {
+    color: #1c1917;
+}
+
+.event-calendar .fc-day-other .fc-daygrid-day-number {
+    color: #a8a29e;
+}
+
+/* ===== DARK MODE ===== */
+.dark .event-calendar .fc {
+    --fc-border-color: #44403c;
+    --fc-today-bg-color: #451a03;
+    --fc-page-bg-color: #292524;
+    --fc-neutral-bg-color: #1c1917;
+    --fc-button-text-color: #f5f5f4;
+}
+
+.dark .event-calendar .fc-view-harness,
+.dark .event-calendar .fc-scrollgrid,
+.dark .event-calendar .fc-scrollgrid-section-body table {
+    background-color: #292524;
+}
+
+.dark .event-calendar .fc-theme-standard th,
+.dark .event-calendar .fc-col-header,
+.dark .event-calendar .fc-col-header-cell {
+    background-color: #44403c;
+    border-color: #44403c;
+}
+
+.dark .event-calendar .fc-theme-standard td,
+.dark .event-calendar .fc-daygrid-day,
+.dark .event-calendar .fc-daygrid-day-frame {
+    background-color: #292524;
+    border-color: #44403c;
+}
+
+.dark .event-calendar .fc-day-today,
+.dark .event-calendar .fc-day-today .fc-daygrid-day-frame {
+    background-color: #451a03;
+}
+
+.dark .event-calendar .fc-day-other,
+.dark .event-calendar .fc-day-other .fc-daygrid-day-frame {
+    background-color: #1c1917;
+}
+
+.dark .event-calendar .fc-toolbar-title {
+    color: #f5f5f4;
+}
+
+.dark .event-calendar .fc-daygrid-day-number {
+    color: #f5f5f4;
+}
+
+.dark .event-calendar .fc-day-other .fc-daygrid-day-number {
+    color: #78716c;
+}
+
+.dark .event-calendar .fc-col-header-cell-cushion {
+    color: #d6d3d1;
+}
+
+.dark .event-calendar .fc-event-title,
+.dark .event-calendar .fc-event-time {
+    color: #ffffff;
+}
+
+.dark .event-calendar .fc-daygrid-more-link {
+    color: #f59e0b;
+}
+
+/* ===== COMPACT MODE ===== */
+.event-calendar--compact .fc-theme-standard th,
+.event-calendar--compact .fc-theme-standard td,
+.event-calendar--compact .fc-theme-standard .fc-scrollgrid,
+.event-calendar--compact .fc-scrollgrid-sync-table {
+    border: none;
+}
+
+.event-calendar--compact .fc-toolbar-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.event-calendar--compact .fc-button {
+    background: none;
+    border: none;
+    color: #78716c;
+    padding: 0.25rem 0.5rem;
+    box-shadow: none;
+}
+
+.event-calendar--compact .fc-button:hover {
+    color: #f59e0b;
+    background: none;
+}
+
+.event-calendar--compact .fc-button:focus {
+    box-shadow: none;
+}
+
+.dark .event-calendar--compact .fc-button {
+    color: #a8a29e;
+}
+
+.dark .event-calendar--compact .fc-button:hover {
+    color: #fbbf24;
+}
+
+.event-calendar--compact .fc-col-header-cell {
+    background: transparent;
+    padding: 0.5rem 0;
+}
+
+.event-calendar--compact .fc-col-header-cell-cushion {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #78716c;
+    text-transform: uppercase;
+}
+
+.dark .event-calendar--compact .fc-col-header-cell-cushion {
+    color: #a8a29e;
+}
+
+.event-calendar--compact .fc-daygrid-day {
+    cursor: pointer;
+}
+
+.event-calendar--compact .fc-daygrid-day-frame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 40px;
+    padding: 2px 0;
+}
+
+.event-calendar--compact .fc-daygrid-day-top {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.event-calendar--compact .fc-daygrid-day-number {
+    font-size: 0.875rem;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.15s ease;
+    color: #1c1917;
+}
+
+.dark .event-calendar--compact .fc-daygrid-day-number {
+    color: #d6d3d1;
+}
+
+.event-calendar--compact .fc-daygrid-day:not(.fc-day-today):hover .fc-daygrid-day-number {
+    background-color: #f5f5f4;
+}
+
+.dark .event-calendar--compact .fc-daygrid-day:not(.fc-day-today):hover .fc-daygrid-day-number {
+    background-color: #44403c;
+}
+
+.event-calendar--compact .fc-day-today .fc-daygrid-day-number {
+    background-color: #f59e0b;
+    color: white;
+    font-weight: 600;
+}
+
+.event-calendar--compact .fc-day-other .fc-daygrid-day-number {
+    color: #a8a29e;
+}
+
+.dark .event-calendar--compact .fc-day-other .fc-daygrid-day-number {
+    color: #57534e;
+}
+
+.event-calendar--compact .fc-day-other .fc-daygrid-event-dot {
+    opacity: 0.35;
+}
+
+.event-calendar--compact .fc-daygrid-day-events {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    min-height: 8px;
+    margin-top: 2px;
+}
+
+.event-calendar--compact .fc-daygrid-day-bottom {
+    display: none;
+}
+
+.event-calendar--compact .fc-daygrid-event-harness {
+    margin: 0;
+}
+
+.event-calendar--compact .fc-daygrid-event {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+}
+
+.event-calendar--compact .fc-daygrid-event-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #f59e0b;
+    border: none;
+    margin: 0;
+}
+
+.event-calendar--compact .fc-event-title,
+.event-calendar--compact .fc-event-time {
+    display: none;
+}
+
+.event-calendar--compact .fc-daygrid-event-harness-abs {
+    position: relative;
+}
+
+/* ==========================================================================
+   Prose Typography Dark Mode
+   Explicit overrides for @tailwindcss/typography in dark mode
+   ========================================================================== */
+
+.dark .prose {
+    --tw-prose-body: #d6d3d1;
+    --tw-prose-headings: #f5f5f4;
+    --tw-prose-lead: #a8a29e;
+    --tw-prose-links: #fbbf24;
+    --tw-prose-bold: #f5f5f4;
+    --tw-prose-counters: #a8a29e;
+    --tw-prose-bullets: #78716c;
+    --tw-prose-hr: #44403c;
+    --tw-prose-quotes: #f5f5f4;
+    --tw-prose-quote-borders: #44403c;
+    --tw-prose-captions: #a8a29e;
+    --tw-prose-code: #f5f5f4;
+    --tw-prose-pre-code: #d6d3d1;
+    --tw-prose-pre-bg: #1c1917;
+    --tw-prose-th-borders: #57534e;
+    --tw-prose-td-borders: #44403c;
+}
+
+.dark .prose :where(p):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-body);
+}
+
+.dark .prose :where(strong):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-bold);
+}
+
+.dark .prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-links);
+}
+
+.dark .prose :where(h1, h2, h3, h4, h5, h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    color: var(--tw-prose-headings);
 }
