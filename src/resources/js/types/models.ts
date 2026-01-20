@@ -124,3 +124,18 @@ export interface JoinStep {
     title: string;
     description: string | null;
 }
+
+export interface ContactFormData {
+    name: string;
+    email: string;
+    message: string;
+    website: string; // Honeypot field - should be empty
+}
+
+export interface SocialMediaLinks {
+    facebook?: string | undefined;
+    instagram?: string | undefined;
+    twitter?: string | undefined;
+    discord?: string | undefined;
+    tiktok?: string | undefined;
+}

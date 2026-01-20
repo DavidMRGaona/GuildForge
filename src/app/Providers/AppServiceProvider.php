@@ -28,7 +28,10 @@ use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
 use App\Policies\HeroSlidePolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -50,6 +53,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Rate limiter for contact form: 3 submissions per minute per IP
+        RateLimiter::for(
+            'contact',
+            fn (Request $request) =>
+            Limit::perMinute(3)->by($request->ip() ?? 'unknown')
+        );
+
         Gate::policy(UserModel::class, UserPolicy::class);
         Gate::policy(EventModel::class, EventPolicy::class);
         Gate::policy(ArticleModel::class, ArticlePolicy::class);

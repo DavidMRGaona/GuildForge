@@ -54,5 +54,13 @@ return [
             'phone' => 'Teléfono',
             'address' => 'Dirección postal',
         ],
+        'social' => [
+            'title' => 'Redes sociales',
+            'facebook' => 'Facebook',
+            'instagram' => 'Instagram',
+            'twitter' => 'X (Twitter)',
+            'discord' => 'Discord',
+            'tiktok' => 'TikTok',
+        ],
     ],
 ];

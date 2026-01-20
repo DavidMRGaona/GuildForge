@@ -96,6 +96,11 @@ final class SiteSettings extends Page implements HasForms
             'contact_email' => (string) $settingsService->get('contact_email', ''),
             'contact_phone' => (string) $settingsService->get('contact_phone', ''),
             'contact_address' => (string) $settingsService->get('contact_address', ''),
+            'social_facebook' => (string) $settingsService->get('social_facebook', ''),
+            'social_instagram' => (string) $settingsService->get('social_instagram', ''),
+            'social_twitter' => (string) $settingsService->get('social_twitter', ''),
+            'social_discord' => (string) $settingsService->get('social_discord', ''),
+            'social_tiktok' => (string) $settingsService->get('social_tiktok', ''),
         ]);
     }
 
@@ -222,6 +227,35 @@ final class SiteSettings extends Page implements HasForms
                             ->label(__('filament.settings.contact.address'))
                             ->rows(2),
                     ]),
+
+                Section::make(__('filament.settings.social.title'))
+                    ->schema([
+                        TextInput::make('social_facebook')
+                            ->label(__('filament.settings.social.facebook'))
+                            ->prefix('https://')
+                            ->placeholder('www.facebook.com/tu-pagina')
+                            ->maxLength(255),
+                        TextInput::make('social_instagram')
+                            ->label(__('filament.settings.social.instagram'))
+                            ->prefix('https://')
+                            ->placeholder('www.instagram.com/tu-usuario')
+                            ->maxLength(255),
+                        TextInput::make('social_twitter')
+                            ->label(__('filament.settings.social.twitter'))
+                            ->prefix('https://')
+                            ->placeholder('x.com/tu-usuario')
+                            ->maxLength(255),
+                        TextInput::make('social_discord')
+                            ->label(__('filament.settings.social.discord'))
+                            ->prefix('https://')
+                            ->placeholder('discord.gg/tu-servidor')
+                            ->maxLength(255),
+                        TextInput::make('social_tiktok')
+                            ->label(__('filament.settings.social.tiktok'))
+                            ->prefix('https://')
+                            ->placeholder('www.tiktok.com/@tu-usuario')
+                            ->maxLength(255),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -262,6 +296,11 @@ final class SiteSettings extends Page implements HasForms
         $settingsService->set('contact_email', (string) ($formData['contact_email'] ?? ''));
         $settingsService->set('contact_phone', (string) ($formData['contact_phone'] ?? ''));
         $settingsService->set('contact_address', (string) ($formData['contact_address'] ?? ''));
+        $settingsService->set('social_facebook', (string) ($formData['social_facebook'] ?? ''));
+        $settingsService->set('social_instagram', (string) ($formData['social_instagram'] ?? ''));
+        $settingsService->set('social_twitter', (string) ($formData['social_twitter'] ?? ''));
+        $settingsService->set('social_discord', (string) ($formData['social_discord'] ?? ''));
+        $settingsService->set('social_tiktok', (string) ($formData['social_tiktok'] ?? ''));
 
         Notification::make()
             ->title(__('filament.settings.location.saved'))

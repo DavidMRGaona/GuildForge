@@ -25,6 +25,11 @@ final class AboutController extends Controller
             'aboutTagline' => $settings->get('about_tagline', ''),
             'activities' => $this->parseActivities($settings->get('about_activities', '')),
             'joinSteps' => $this->parseJoinSteps($settings->get('join_steps', '')),
+            'socialFacebook' => $this->formatSocialUrl($settings->get('social_facebook', '')),
+            'socialInstagram' => $this->formatSocialUrl($settings->get('social_instagram', '')),
+            'socialTwitter' => $this->formatSocialUrl($settings->get('social_twitter', '')),
+            'socialDiscord' => $this->formatSocialUrl($settings->get('social_discord', '')),
+            'socialTiktok' => $this->formatSocialUrl($settings->get('social_tiktok', '')),
         ]);
     }
 
@@ -84,5 +89,22 @@ final class AboutController extends Controller
         } catch (JsonException) {
             return [];
         }
+    }
+
+    /**
+     * Format social URL by prepending https:// if needed.
+     */
+    private function formatSocialUrl(mixed $url): string
+    {
+        if (!is_string($url) || $url === '') {
+            return '';
+        }
+
+        // If already has protocol, return as-is
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        return 'https://' . $url;
     }
 }
