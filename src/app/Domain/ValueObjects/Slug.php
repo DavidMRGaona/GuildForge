@@ -22,6 +22,11 @@ final readonly class Slug implements Stringable
         return $this->value;
     }
 
+    public function equals(self $other): bool
+    {
+        return $this->value === $other->value;
+    }
+
     private function validate(string $value): void
     {
         if ($value === '') {

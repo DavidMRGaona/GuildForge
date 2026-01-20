@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Exceptions;
 
-use InvalidArgumentException;
+use DomainException;
 
-final class InvalidSlugException extends InvalidArgumentException
+final class InvalidSlugException extends DomainException
 {
     public static function empty(): self
     {

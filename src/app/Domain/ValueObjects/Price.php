@@ -20,4 +20,9 @@ final readonly class Price
     {
         return $this->value === 0.0;
     }
+
+    public function equals(self $other): bool
+    {
+        return $this->value === $other->value;
+    }
 }

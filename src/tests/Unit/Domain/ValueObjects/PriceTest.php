@@ -37,4 +37,20 @@ final class PriceTest extends TestCase
 
         $this->assertFalse($price->isFree());
     }
+
+    public function test_equals_returns_true_for_same_value(): void
+    {
+        $price1 = new Price(10.50);
+        $price2 = new Price(10.50);
+
+        $this->assertTrue($price1->equals($price2));
+    }
+
+    public function test_equals_returns_false_for_different_values(): void
+    {
+        $price1 = new Price(10.50);
+        $price2 = new Price(15.00);
+
+        $this->assertFalse($price1->equals($price2));
+    }
 }

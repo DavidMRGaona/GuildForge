@@ -75,6 +75,7 @@ final readonly class EloquentGalleryRepository implements GalleryRepositoryInter
             description: $model->description,
             coverImagePublicId: $model->cover_image_public_id,
             isPublished: $model->is_published,
+            isFeatured: $model->is_featured,
             createdAt: $model->created_at !== null
                 ? new DateTimeImmutable($model->created_at->toDateTimeString())
                 : null,
@@ -95,6 +96,7 @@ final readonly class EloquentGalleryRepository implements GalleryRepositoryInter
             'slug' => $gallery->slug()->value,
             'description' => $gallery->description(),
             'is_published' => $gallery->isPublished(),
+            'is_featured' => $gallery->isFeatured(),
         ];
     }
 }

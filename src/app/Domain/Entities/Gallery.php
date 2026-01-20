@@ -17,6 +17,7 @@ final class Gallery
         private readonly ?string $description = null,
         private readonly ?string $coverImagePublicId = null,
         private bool $isPublished = false,
+        private readonly bool $isFeatured = false,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
     ) {
@@ -50,6 +51,11 @@ final class Gallery
     public function isPublished(): bool
     {
         return $this->isPublished;
+    }
+
+    public function isFeatured(): bool
+    {
+        return $this->isFeatured;
     }
 
     public function createdAt(): ?DateTimeImmutable
