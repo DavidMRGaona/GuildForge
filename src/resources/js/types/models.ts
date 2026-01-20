@@ -101,3 +101,21 @@ export interface CalendarEvent {
     url: string;
     backgroundColor: string;
 }
+
+export type ActivityIcon =
+    | 'dice'
+    | 'sword'
+    | 'book'
+    | 'users'
+    | 'calendar'
+    | 'map'
+    | 'trophy'
+    | 'puzzle'
+    | 'sparkles'
+    | 'heart';
+
+export interface Activity {
+    icon: ActivityIcon;
+    title: string;
+    description: string;
+}
