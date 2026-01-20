@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Services;
 
+use App\Application\Services\ImageOptimizationServiceInterface;
 use Cloudinary\Api\Exception\NotFound;
 use Cloudinary\Cloudinary;
 use CloudinaryLabs\CloudinaryLaravel\CloudinaryStorageAdapter as BaseCloudinaryStorageAdapter;
@@ -19,6 +20,7 @@ use League\MimeTypeDetection\MimeTypeDetector;
  * - Generates URLs directly without Admin API calls (faster, more reliable)
  * - Handles "not found" errors gracefully on delete
  * - Supports Dynamic Folder Mode with asset_folder parameter
+ * - Optimizes images before upload (resize/compress) to reduce bandwidth
  */
 final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
 {
@@ -31,7 +33,8 @@ final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
     public function __construct(
         Cloudinary $cloudinary,
         ?MimeTypeDetector $mimeTypeDetector = null,
-        ?string $prefix = null
+        ?string $prefix = null,
+        private ?ImageOptimizationServiceInterface $imageOptimization = null,
     ) {
         parent::__construct($cloudinary, $mimeTypeDetector, $prefix);
         $this->cloudinaryInstance = $cloudinary;
@@ -87,13 +90,24 @@ final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
     /**
      * Override writing to add asset_folder parameter for Dynamic Folder Mode.
      * This ensures assets are organized into folders in the Media Library.
+     * Also optimizes images before upload to reduce bandwidth.
      */
     public function write(string $path, string $contents, Config $config): void
     {
+        $mimeType = $this->mimeDetector->detectMimeTypeFromPath($path);
+
+        // Optimize image before upload if service is available
+        if ($this->imageOptimization !== null) {
+            $contents = $this->imageOptimization->optimize($contents, $mimeType);
+        }
+
         [$publicId, $type] = $this->prepareResource($path);
         $assetFolder = $this->extractFolder($publicId);
 
-        $this->cloudinaryInstance->uploadApi()->upload($contents, [
+        // Convert binary content to data URI for Cloudinary upload
+        $dataUri = $this->toDataUri($contents, $mimeType);
+
+        $this->cloudinaryInstance->uploadApi()->upload($dataUri, [
             'public_id' => $publicId,
             'resource_type' => $type,
             'asset_folder' => $assetFolder,
@@ -102,17 +116,45 @@ final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
 
     /**
      * Override writeStream to add asset_folder parameter for Dynamic Folder Mode.
+     * Also optimizes images before upload.
      */
     public function writeStream(string $path, $contents, Config $config): void
     {
+        // Convert stream to string for optimization
+        $stringContents = is_resource($contents) ? stream_get_contents($contents) : (string) $contents;
+
+        if ($stringContents === false) {
+            $stringContents = '';
+        }
+
+        $mimeType = $this->mimeDetector->detectMimeTypeFromPath($path);
+
+        // Optimize image before upload if service is available
+        if ($this->imageOptimization !== null) {
+            $stringContents = $this->imageOptimization->optimize($stringContents, $mimeType);
+        }
+
         [$publicId, $type] = $this->prepareResource($path);
         $assetFolder = $this->extractFolder($publicId);
 
-        $this->cloudinaryInstance->uploadApi()->upload($contents, [
+        // Convert binary content to data URI for Cloudinary upload
+        $dataUri = $this->toDataUri($stringContents, $mimeType);
+
+        $this->cloudinaryInstance->uploadApi()->upload($dataUri, [
             'public_id' => $publicId,
             'resource_type' => $type,
             'asset_folder' => $assetFolder,
         ]);
+    }
+
+    /**
+     * Convert binary content to a data URI for Cloudinary upload.
+     */
+    private function toDataUri(string $contents, ?string $mimeType): string
+    {
+        $mimeType ??= 'application/octet-stream';
+
+        return 'data:' . $mimeType . ';base64,' . base64_encode($contents);
     }
 
     /**
