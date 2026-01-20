@@ -115,6 +115,20 @@ export default {
             email: 'Email',
             phone: 'Teléfono',
             address: 'Dirección',
+            form: {
+                title: 'Envíanos un mensaje',
+                name: 'Nombre',
+                namePlaceholder: 'Tu nombre',
+                emailPlaceholder: 'tu@email.com',
+                message: 'Mensaje',
+                messagePlaceholder: 'Escribe tu mensaje aquí...',
+                submit: 'Enviar mensaje',
+                sending: 'Enviando...',
+                success: 'Mensaje enviado correctamente',
+            },
+            social: {
+                title: 'Síguenos',
+            },
         },
         location: {
             title: 'Nuestra ubicación',

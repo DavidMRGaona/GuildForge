@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CalendarPageController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GalleryController;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 Route::get('/nosotros', AboutController::class)->name('about');
+Route::post('/contacto', ContactController::class)->middleware('throttle:contact')->name('contact.store');
 Route::get('/calendario', CalendarPageController::class)->name('calendar');
 
 Route::get('/eventos', [EventController::class, 'index'])->name('events.index');

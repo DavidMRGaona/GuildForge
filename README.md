@@ -122,6 +122,42 @@ Domain → Application → Infrastructure → Presentation
 - **Infrastructure**: Eloquent implementations, external services
 - **Presentation**: Controllers, Filament resources, Vue components
 
+## Public routes
+
+| Route               | Description                                           |
+|---------------------|-------------------------------------------------------|
+| `/`                 | Home with hero slider, events, articles, gallery      |
+| `/nosotros`         | About page with association info and contact section  |
+| `/contacto`         | Contact form (POST)                                   |
+| `/calendario`       | Interactive event calendar                            |
+| `/eventos`          | Events listing                                        |
+| `/eventos/{slug}`   | Event detail                                          |
+| `/articulos`        | Articles listing                                      |
+| `/articulos/{slug}` | Article detail                                        |
+| `/galeria`          | Gallery listing                                       |
+| `/galeria/{slug}`   | Gallery detail with lightbox                          |
+| `/buscar`           | Global search                                         |
+| `/sitemap.xml`      | XML sitemap                                           |
+
+## API routes
+
+| Route                | Description                |
+|----------------------|----------------------------|
+| `/api/calendar`      | Calendar events JSON       |
+| `/api/settings`      | Site settings JSON         |
+
+## Environment variables
+
+Key environment variables to configure:
+
+| Variable        | Description                              |
+|-----------------|------------------------------------------|
+| `APP_NAME`      | Association name                         |
+| `APP_URL`       | Application URL                          |
+| `CLOUDINARY_URL`| Cloudinary connection string for images  |
+| `MAIL_*`        | Email configuration for contact form     |
+| `DB_*`          | Database connection settings             |
+
 ## Contributing
 
 1. **TDD**: Write tests BEFORE implementation
