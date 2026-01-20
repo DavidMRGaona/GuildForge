@@ -115,6 +115,9 @@ export default {
         contact: {
             title: 'Contact',
             placeholder: 'Contact information coming soon.',
+            email: 'Email',
+            phone: 'Phone',
+            address: 'Address',
         },
         location: {
             title: 'Our location',

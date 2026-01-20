@@ -115,6 +115,9 @@ export default {
         contact: {
             title: 'Contacto',
             placeholder: 'Información de contacto próximamente.',
+            email: 'Email',
+            phone: 'Teléfono',
+            address: 'Dirección',
         },
         location: {
             title: 'Nuestra ubicación',

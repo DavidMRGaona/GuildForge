@@ -6,7 +6,9 @@ namespace App\Filament\Pages;
 
 use App\Application\Services\SettingsServiceInterface;
 use Filament\Actions\Action;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -57,6 +59,11 @@ final class SiteSettings extends Page implements HasForms
             'location_lat' => (string) $settingsService->get('location_lat', ''),
             'location_lng' => (string) $settingsService->get('location_lng', ''),
             'location_zoom' => (string) $settingsService->get('location_zoom', '15'),
+            'association_name' => (string) $settingsService->get('association_name', ''),
+            'about_history' => (string) $settingsService->get('about_history', ''),
+            'contact_email' => (string) $settingsService->get('contact_email', ''),
+            'contact_phone' => (string) $settingsService->get('contact_phone', ''),
+            'contact_address' => (string) $settingsService->get('contact_address', ''),
         ]);
     }
 
@@ -92,6 +99,32 @@ final class SiteSettings extends Page implements HasForms
                             ->rules(['required', 'integer', 'between:1,18'])
                             ->default('15'),
                     ])->columns(2),
+
+                Section::make(__('filament.settings.about.title'))
+                    ->schema([
+                        TextInput::make('association_name')
+                            ->label(__('filament.settings.about.association_name'))
+                            ->maxLength(255)
+                            ->helperText(__('filament.settings.about.association_name_help')),
+
+                        RichEditor::make('about_history')
+                            ->label(__('filament.settings.about.history'))
+                            ->helperText(__('filament.settings.about.history_help'))
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make(__('filament.settings.contact.title'))
+                    ->schema([
+                        TextInput::make('contact_email')
+                            ->label(__('filament.settings.contact.email'))
+                            ->email(),
+                        TextInput::make('contact_phone')
+                            ->label(__('filament.settings.contact.phone'))
+                            ->tel(),
+                        Textarea::make('contact_address')
+                            ->label(__('filament.settings.contact.address'))
+                            ->rows(2),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -105,6 +138,11 @@ final class SiteSettings extends Page implements HasForms
         $settingsService->set('location_lat', (string) $formData['location_lat']);
         $settingsService->set('location_lng', (string) $formData['location_lng']);
         $settingsService->set('location_zoom', (string) $formData['location_zoom']);
+        $settingsService->set('association_name', (string) ($formData['association_name'] ?? ''));
+        $settingsService->set('about_history', (string) ($formData['about_history'] ?? ''));
+        $settingsService->set('contact_email', (string) ($formData['contact_email'] ?? ''));
+        $settingsService->set('contact_phone', (string) ($formData['contact_phone'] ?? ''));
+        $settingsService->set('contact_address', (string) ($formData['contact_address'] ?? ''));
 
         Notification::make()
             ->title(__('filament.settings.location.saved'))

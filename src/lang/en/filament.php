@@ -16,5 +16,18 @@ return [
             'preview' => 'Map Preview',
             'saved' => 'Settings saved successfully',
         ],
+        'about' => [
+            'title' => 'About us',
+            'association_name' => 'Association name',
+            'association_name_help' => 'Shown in the "About us" page title',
+            'history' => 'Our history',
+            'history_help' => 'Content for "Our history" section',
+        ],
+        'contact' => [
+            'title' => 'Contact',
+            'email' => 'Email',
+            'phone' => 'Phone',
+            'address' => 'Postal address',
+        ],
     ],
 ];
