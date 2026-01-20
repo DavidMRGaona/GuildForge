@@ -15,7 +15,7 @@ final class Photo
         private readonly GalleryId $galleryId,
         private readonly string $imagePublicId,
         private readonly ?string $caption = null,
-        private int $sortOrder = 0,
+        private readonly int $sortOrder = 0,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
     ) {
@@ -56,8 +56,19 @@ final class Photo
         return $this->updatedAt;
     }
 
-    public function updateSortOrder(int $sortOrder): void
+    /**
+     * Returns a new Photo instance with the updated sort order (immutable pattern).
+     */
+    public function withSortOrder(int $sortOrder): self
     {
-        $this->sortOrder = $sortOrder;
+        return new self(
+            id: $this->id,
+            galleryId: $this->galleryId,
+            imagePublicId: $this->imagePublicId,
+            caption: $this->caption,
+            sortOrder: $sortOrder,
+            createdAt: $this->createdAt,
+            updatedAt: $this->updatedAt,
+        );
     }
 }

@@ -67,22 +67,31 @@ final class PhotoTest extends TestCase
         $this->assertEquals(0, $photo->sortOrder());
     }
 
-    public function test_it_updates_sort_order(): void
+    public function test_with_sort_order_returns_new_instance(): void
     {
         $photo = $this->createPhoto();
 
-        $photo->updateSortOrder(10);
+        $newPhoto = $photo->withSortOrder(10);
 
-        $this->assertEquals(10, $photo->sortOrder());
+        // Original is unchanged (immutable)
+        $this->assertEquals(0, $photo->sortOrder());
+        // New instance has updated value
+        $this->assertEquals(10, $newPhoto->sortOrder());
+        // Same identity properties preserved
+        $this->assertEquals($photo->id(), $newPhoto->id());
+        $this->assertEquals($photo->galleryId(), $newPhoto->galleryId());
+        $this->assertEquals($photo->imagePublicId(), $newPhoto->imagePublicId());
     }
 
-    public function test_it_updates_sort_order_to_zero(): void
+    public function test_with_sort_order_preserves_all_properties(): void
     {
         $photo = $this->createPhoto(sortOrder: 5);
 
-        $photo->updateSortOrder(0);
+        $newPhoto = $photo->withSortOrder(0);
 
-        $this->assertEquals(0, $photo->sortOrder());
+        // Verify immutability
+        $this->assertEquals(5, $photo->sortOrder());
+        $this->assertEquals(0, $newPhoto->sortOrder());
     }
 
     private function createPhoto(

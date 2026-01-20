@@ -6,14 +6,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Repositories\EventRepositoryInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CalendarEventResource;
 use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 final class CalendarController extends Controller
 {
-    private const AMBER_500 = '#f59e0b';
-
     public function __construct(
         private readonly EventRepositoryInterface $eventRepository,
     ) {
@@ -31,23 +30,8 @@ final class CalendarController extends Controller
 
         $events = $this->eventRepository->findByDateRange($start, $end);
 
-        $calendarEvents = $events->map(function ($event) {
-            return [
-                'id' => $event->id()->value,
-                'title' => $event->title(),
-                'slug' => $event->slug()->value,
-                'description' => $event->description(),
-                'start' => $event->startDate()->format('c'),
-                'end' => $event->endDate()?->format('c'),
-                'location' => $event->location(),
-                'imagePublicId' => $event->imagePublicId(),
-                'memberPrice' => $event->memberPrice()?->value,
-                'nonMemberPrice' => $event->nonMemberPrice()?->value,
-                'url' => '/eventos/' . $event->slug()->value,
-                'backgroundColor' => self::AMBER_500,
-            ];
-        })->values()->toArray();
-
-        return response()->json($calendarEvents);
+        return response()->json(
+            CalendarEventResource::collection($events)->resolve()
+        );
     }
 }

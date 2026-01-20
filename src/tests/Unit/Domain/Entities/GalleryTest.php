@@ -30,6 +30,7 @@ final class GalleryTest extends TestCase
         $this->assertNull($gallery->description());
         $this->assertNull($gallery->coverImagePublicId());
         $this->assertFalse($gallery->isPublished());
+        $this->assertFalse($gallery->isFeatured());
     }
 
     public function test_it_creates_gallery_with_all_data(): void
@@ -40,6 +41,7 @@ final class GalleryTest extends TestCase
         $description = 'Photos from our weekly campaign sessions.';
         $coverImagePublicId = 'galleries/dnd-campaign-cover.jpg';
         $isPublished = true;
+        $isFeatured = true;
         $createdAt = new DateTimeImmutable('2024-01-01 10:00:00');
         $updatedAt = new DateTimeImmutable('2024-01-02 15:30:00');
 
@@ -50,6 +52,7 @@ final class GalleryTest extends TestCase
             description: $description,
             coverImagePublicId: $coverImagePublicId,
             isPublished: $isPublished,
+            isFeatured: $isFeatured,
             createdAt: $createdAt,
             updatedAt: $updatedAt,
         );
@@ -60,6 +63,7 @@ final class GalleryTest extends TestCase
         $this->assertEquals($description, $gallery->description());
         $this->assertEquals($coverImagePublicId, $gallery->coverImagePublicId());
         $this->assertTrue($gallery->isPublished());
+        $this->assertTrue($gallery->isFeatured());
         $this->assertEquals($createdAt, $gallery->createdAt());
         $this->assertEquals($updatedAt, $gallery->updatedAt());
     }
@@ -69,6 +73,13 @@ final class GalleryTest extends TestCase
         $gallery = $this->createGallery();
 
         $this->assertFalse($gallery->isPublished());
+    }
+
+    public function test_it_is_not_featured_by_default(): void
+    {
+        $gallery = $this->createGallery();
+
+        $this->assertFalse($gallery->isFeatured());
     }
 
     public function test_it_publishes_gallery(): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Entities;
 
 use App\Domain\Exceptions\CannotPublishPastEventException;
+use App\Domain\Exceptions\InvalidEventDatesException;
 use App\Domain\ValueObjects\EventId;
 use App\Domain\ValueObjects\Price;
 use App\Domain\ValueObjects\Slug;
@@ -27,6 +28,14 @@ final class Event
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
     ) {
+        $this->validateDates();
+    }
+
+    private function validateDates(): void
+    {
+        if ($this->endDate !== null && $this->endDate < $this->startDate) {
+            throw InvalidEventDatesException::endDateBeforeStartDate();
+        }
     }
 
     public function id(): EventId

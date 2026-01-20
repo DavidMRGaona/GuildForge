@@ -86,4 +86,20 @@ final class SlugTest extends TestCase
 
         $this->assertEquals('singleword', $slug->value);
     }
+
+    public function test_equals_returns_true_for_same_value(): void
+    {
+        $slug1 = new Slug('my-slug');
+        $slug2 = new Slug('my-slug');
+
+        $this->assertTrue($slug1->equals($slug2));
+    }
+
+    public function test_equals_returns_false_for_different_values(): void
+    {
+        $slug1 = new Slug('first-slug');
+        $slug2 = new Slug('second-slug');
+
+        $this->assertFalse($slug1->equals($slug2));
+    }
 }
