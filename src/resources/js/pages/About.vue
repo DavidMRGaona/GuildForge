@@ -3,11 +3,12 @@ import { defineAsyncComponent, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import BaseCard from '@/components/ui/BaseCard.vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue';
 import { useSeo } from '@/composables/useSeo';
 import { useMap } from '@/composables/useMap';
 import { buildFullScreenHeroImageUrl } from '@/utils/cloudinary';
-import type { Activity, ActivityIcon } from '@/types/models';
+import type { Activity, ActivityIcon, JoinStep } from '@/types/models';
 
 interface Props {
     associationName: string;
@@ -18,6 +19,7 @@ interface Props {
     aboutHeroImage: string;
     aboutTagline: string;
     activities: Activity[];
+    joinSteps: JoinStep[];
 }
 
 const props = defineProps<Props>();
@@ -44,7 +46,18 @@ const hasContactInfo = computed(() =>
     props.contactEmail || props.contactPhone || props.contactAddress
 );
 
+const hasJoinSteps = computed(() => props.joinSteps.length > 0);
+
 const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroImage));
+
+const scrollToContact = () => {
+    const contactSection = document.getElementById('contact-section');
+    if (contactSection) {
+        contactSection.scrollIntoView({ behavior: 'smooth' });
+    } else if (props.contactEmail) {
+        window.location.href = `mailto:${props.contactEmail}`;
+    }
+};
 
 const activityIconPaths: Record<ActivityIcon, string> = {
     dice: 'M6.5 9a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5-6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm-5-3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM4.5 2A2.5 2.5 0 0 0 2 4.5v15A2.5 2.5 0 0 0 4.5 22h15a2.5 2.5 0 0 0 2.5-2.5v-15A2.5 2.5 0 0 0 19.5 2h-15ZM4 4.5a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-15a.5.5 0 0 1-.5-.5v-15Z',
@@ -144,8 +157,100 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                 ></div>
             </BaseCard>
 
+            <!-- Join Section -->
+            <section v-if="hasJoinSteps" class="space-y-12 mb-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
+                        {{ $t('about.join.title') }}
+                    </h2>
+                </div>
+
+                <!-- Desktop: Horizontal Timeline -->
+                <div class="hidden md:block">
+                    <div class="relative">
+                        <!-- Connection line -->
+                        <div class="absolute left-0 right-0 top-6 h-0.5 bg-amber-200 dark:bg-amber-900" />
+
+                        <!-- Steps -->
+                        <div class="relative flex justify-between">
+                            <div
+                                v-for="(step, index) in joinSteps"
+                                :key="index"
+                                class="flex flex-col items-center text-center"
+                                :style="{ width: `${100 / joinSteps.length}%` }"
+                            >
+                                <!-- Number circle -->
+                                <div
+                                    class="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-xl font-bold text-white shadow-lg"
+                                >
+                                    {{ index + 1 }}
+                                </div>
+
+                                <!-- Content -->
+                                <div class="mt-4 max-w-[200px]">
+                                    <h3 class="font-semibold text-gray-900 dark:text-white">
+                                        {{ step.title }}
+                                    </h3>
+                                    <p
+                                        v-if="step.description"
+                                        class="mt-1 text-sm text-gray-600 dark:text-gray-400"
+                                    >
+                                        {{ step.description }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile: Vertical Timeline -->
+                <div class="md:hidden">
+                    <div class="relative ml-6">
+                        <!-- Connection line -->
+                        <div class="absolute bottom-0 left-0 top-0 w-0.5 bg-amber-200 dark:bg-amber-900" />
+
+                        <!-- Steps -->
+                        <div class="space-y-8">
+                            <div
+                                v-for="(step, index) in joinSteps"
+                                :key="index"
+                                class="relative flex items-start gap-4"
+                            >
+                                <!-- Number circle -->
+                                <div
+                                    class="relative z-10 -ml-6 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 text-xl font-bold text-white shadow-lg"
+                                >
+                                    {{ index + 1 }}
+                                </div>
+
+                                <!-- Content -->
+                                <div class="pt-2">
+                                    <h3 class="font-semibold text-gray-900 dark:text-white">
+                                        {{ step.title }}
+                                    </h3>
+                                    <p
+                                        v-if="step.description"
+                                        class="mt-1 text-sm text-gray-600 dark:text-gray-400"
+                                    >
+                                        {{ step.description }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CTA Button -->
+                <div class="text-center">
+                    <BaseButton variant="primary" size="lg" @click="scrollToContact">
+                        {{ $t('about.join.contactUs') }}
+                    </BaseButton>
+                </div>
+            </section>
+
             <!-- Contact Section -->
             <BaseCard
+                id="contact-section"
                 v-if="hasContactInfo"
                 :title="t('about.contact.title')"
                 class="mb-8"

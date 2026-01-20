@@ -43,6 +43,10 @@ return [
                 'sparkles' => 'Estrellas (General)',
                 'heart' => 'Corazón (Voluntariado)',
             ],
+            'join_steps' => 'Pasos para unirse',
+            'join_steps_help' => 'Pasos que se muestran en la sección "Cómo unirte" de la página Nosotros',
+            'join_step_title' => 'Título del paso',
+            'join_step_description' => 'Descripción (opcional)',
         ],
         'contact' => [
             'title' => 'Contacto',

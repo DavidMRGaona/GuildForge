@@ -119,3 +119,8 @@ export interface Activity {
     title: string;
     description: string;
 }
+
+export interface JoinStep {
+    title: string;
+    description: string | null;
+}
