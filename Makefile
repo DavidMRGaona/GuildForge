@@ -4,6 +4,7 @@
         install setup fresh migrate migrate-rollback seed db-backup db-restore \
         test test-unit test-feature test-coverage test-filter test-parallel \
         check check-fix cs cs-fix phpstan lint-js lint-js-fix types \
+        check-q test-q lint format db-reset \
         dev build-assets cache cache-clear routes tinker ide-helper \
         make-model make-migration make-controller make-resource \
         make-request make-test make-filament hooks pre-commit
@@ -169,6 +170,29 @@ lint-js-fix: ## Fix ESLint issues
 
 types: ## TypeScript type check
 	docker exec $(NODE_CONTAINER) npm run type-check
+
+# =============================================================================
+# QUIET VERSIONS (for CI - minimal output)
+# =============================================================================
+
+check-q: ## Check with minimal output
+	@docker exec $(PHP_CONTAINER) vendor/bin/php-cs-fixer fix --dry-run --quiet && echo "✓ CS" || echo "✗ CS"
+	@docker exec $(PHP_CONTAINER) vendor/bin/phpstan analyse --no-progress -q && echo "✓ PHPStan" || echo "✗ PHPStan"
+	@docker exec $(NODE_CONTAINER) npm run lint --silent && echo "✓ ESLint" || echo "✗ ESLint"
+	@docker exec $(NODE_CONTAINER) npm run type-check --silent && echo "✓ Types" || echo "✗ Types"
+
+test-q: ## Tests with compact output
+	@docker exec $(PHP_CONTAINER) php artisan test --compact
+
+lint: check ## Alias for check
+
+format: ## Format all (CS Fixer + ESLint + Prettier)
+	@docker exec $(PHP_CONTAINER) vendor/bin/php-cs-fixer fix --quiet
+	@docker exec $(NODE_CONTAINER) npm run lint:fix --silent
+	@docker exec $(NODE_CONTAINER) npx prettier --write "resources/js/**/*.{ts,vue}" --log-level error
+
+db-reset: ## Reset database completely
+	@docker exec $(PHP_CONTAINER) php artisan db:wipe --force && docker exec $(PHP_CONTAINER) php artisan migrate --seed
 
 # =============================================================================
 # FRONTEND
