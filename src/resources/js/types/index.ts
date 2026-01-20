@@ -21,3 +21,8 @@ export interface ApiResponse<T> {
     data: T;
     message?: string;
 }
+
+export interface FlashMessages {
+    success?: string;
+    error?: string;
+}

@@ -23,6 +23,7 @@ interface UseMapReturn {
     loadLocation: () => Promise<void>;
     getOpenStreetMapUrl: (lat?: number, lng?: number, zoom?: number) => string;
     getLeafletIcon: () => L.Icon;
+    invalidateCache: () => void;
 }
 
 // Module-level cache for location data
@@ -100,6 +101,11 @@ export function useMap(options: UseMapOptions = {}): UseMapReturn {
         });
     }
 
+    function invalidateCache(): void {
+        cachedLocation = null;
+        loadPromise = null;
+    }
+
     if (autoLoad) {
         onMounted((): void => {
             loadLocation().catch((): void => {
@@ -115,5 +121,6 @@ export function useMap(options: UseMapOptions = {}): UseMapReturn {
         loadLocation,
         getOpenStreetMapUrl,
         getLeafletIcon,
+        invalidateCache,
     };
 }

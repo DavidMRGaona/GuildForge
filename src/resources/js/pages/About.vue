@@ -165,6 +165,13 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                 :title="t('about.history.title')"
                 class="mb-8"
             >
+                <!--
+                    SECURITY: v-html is used to render rich text content from site settings.
+                    Content MUST be sanitized server-side before storage in the database.
+                    XSS RISK: If content is not properly sanitized, this could execute malicious scripts.
+                    @see App\Filament\Pages\SiteSettings - about_history field validation
+                    @see App\Infrastructure\Services\SettingsService - settings persistence
+                -->
                 <div
                     v-html="aboutHistory"
                     class="prose prose-gray max-w-none"

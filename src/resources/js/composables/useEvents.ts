@@ -1,3 +1,4 @@
+import { useI18n } from 'vue-i18n';
 import type { Event } from '@/types/models';
 
 interface UseEventsReturn {
@@ -11,9 +12,10 @@ interface UseEventsReturn {
 }
 
 export function useEvents(): UseEventsReturn {
+    const { locale } = useI18n();
     function formatEventDate(dateString: string): string {
         const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
+        return date.toLocaleDateString(locale.value, {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -27,7 +29,7 @@ export function useEvents(): UseEventsReturn {
 
         if (!end || start.toDateString() === end.toDateString()) {
             // Single day: "15 de enero de 2026"
-            return start.toLocaleDateString('es-ES', {
+            return start.toLocaleDateString(locale.value, {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
@@ -36,11 +38,11 @@ export function useEvents(): UseEventsReturn {
 
         // Multi-day same month: "15-17 de enero de 2026"
         if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-            return `${start.getDate()}-${end.getDate()} de ${start.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`;
+            return `${start.getDate()}-${end.getDate()} de ${start.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })}`;
         }
 
         // Multi-day different months: "15 ene - 2 feb 2026"
-        const formatShort = (d: Date): string => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        const formatShort = (d: Date): string => d.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' });
         return `${formatShort(start)} - ${formatShort(end)} ${end.getFullYear()}`;
     }
 

@@ -101,6 +101,13 @@ useSeo({
                         </div>
                     </div>
 
+                    <!--
+                        SECURITY: v-html is used to render rich text content from the article.
+                        Content MUST be sanitized server-side before storage in the database.
+                        XSS RISK: If content is not properly sanitized, this could execute malicious scripts.
+                        @see App\Filament\Resources\ArticleResource - content field validation
+                        @see App\Domain\Entities\Article - domain entity
+                    -->
                     <div class="prose prose-amber max-w-none" v-html="props.article.content" />
 
                     <div class="mt-8 border-t border-gray-200 pt-6">

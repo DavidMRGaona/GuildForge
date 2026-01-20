@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
 import { useArticles } from '@/composables/useArticles';
+import ImagePlaceholder from '@/components/ui/ImagePlaceholder.vue';
 import { buildCardImageUrl } from '@/utils/cloudinary';
 
 interface Props {
@@ -33,25 +34,7 @@ const articleImageUrl = computed(() => buildCardImageUrl(props.article.featuredI
                 loading="lazy"
                 class="aspect-video h-40 w-full object-cover"
             />
-            <div
-                v-else
-                class="flex aspect-video h-40 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-slate-600"
-            >
-                <svg
-                    class="h-12 w-12 text-white/50"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                </svg>
-            </div>
+            <ImagePlaceholder v-else variant="article" height="h-40" icon-size="h-12 w-12" />
         </div>
 
         <!-- Content -->

@@ -45,6 +45,13 @@ const spinnerSizes: Record<NonNullable<typeof props.size>, 'sm' | 'md' | 'lg'> =
     lg: 'md',
 };
 
+const spinnerColors: Record<NonNullable<typeof props.variant>, string> = {
+    primary: 'text-white',
+    secondary: 'text-gray-600',
+    danger: 'text-white',
+    ghost: 'text-gray-600',
+};
+
 const buttonClasses = computed(() => [
     'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors',
     'focus:outline-none focus:ring-2 focus:ring-offset-2',
@@ -52,6 +59,8 @@ const buttonClasses = computed(() => [
     variantClasses[props.variant],
     sizeClasses[props.size],
 ]);
+
+const spinnerColor = computed(() => spinnerColors[props.variant]);
 
 function handleClick(event: Event): void {
     if (!props.disabled && !props.loading) {
@@ -70,7 +79,7 @@ function handleClick(event: Event): void {
         <LoadingSpinner
             v-if="loading"
             :size="spinnerSizes[size]"
-            :color="variant === 'primary' || variant === 'danger' ? 'text-white' : 'text-gray-600'"
+            :color="spinnerColor"
         />
         <slot />
     </button>
