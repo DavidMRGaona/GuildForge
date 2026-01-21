@@ -1,4 +1,4 @@
-import type { User } from './models';
+import type { AuthSettings, User } from './models';
 
 interface ThemeSettings {
     cssVariables: string;
@@ -18,6 +18,7 @@ declare module '@inertiajs/vue3' {
         auth: {
             user: User | null;
         };
+        authSettings: AuthSettings;
         flash: {
             success?: string;
             error?: string;

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\DTOs\ImageOptimizationSettingsDTO;
+use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Domain\Enums\UserRole;
 use App\Filament\Resources\UserResource\Pages;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -11,11 +13,16 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -69,9 +76,34 @@ class UserResource extends Resource
                     ->image()
                     ->disk('images')
                     ->directory(fn (): string => 'avatars/' . now()->format('Y/m'))
-                    ->getUploadedFileNameForStorageUsing(
-                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
-                    )
+                    ->saveUploadedFileUsing(static function (TemporaryUploadedFile $file): string {
+                        $imageOptimizer = app(ImageOptimizationServiceInterface::class);
+                        $avatarSettings = ImageOptimizationSettingsDTO::withOverrides([
+                            'maxWidth' => 512,
+                            'maxHeight' => 512,
+                            'quality' => 90,
+                            'minSizeBytes' => 0,
+                        ]);
+
+                        $contents = $file->get();
+                        if ($contents === false) {
+                            throw new \RuntimeException('Failed to read uploaded file');
+                        }
+
+                        $optimizedContents = $imageOptimizer->optimize(
+                            $contents,
+                            $file->getMimeType(),
+                            $avatarSettings
+                        );
+
+                        $directory = 'avatars/' . now()->format('Y/m');
+                        $filename = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
+                        $path = $directory . '/' . $filename;
+
+                        Storage::disk('images')->put($path, $optimizedContents);
+
+                        return $path;
+                    })
                     ->nullable(),
                 Select::make('role')
                     ->label(__('Rol'))
@@ -114,6 +146,14 @@ class UserResource extends Resource
                         UserRole::Editor => 'warning',
                         UserRole::Member => 'success',
                     }),
+                IconColumn::make('email_verified_at')
+                    ->label(__('filament.users.fields.emailVerified'))
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger')
+                    ->getStateUsing(fn (UserModel $record): bool => $record->email_verified_at !== null),
                 TextColumn::make('created_at')
                     ->label(__('Fecha de creación'))
                     ->dateTime('d/m/Y H:i')
@@ -128,6 +168,44 @@ class UserResource extends Resource
                             ->mapWithKeys(fn (UserRole $role): array => [$role->value => $role->label()])
                             ->toArray()
                     ),
+            ])
+            ->actions([
+                Action::make('sendVerificationEmail')
+                    ->label(__('filament.users.actions.sendVerificationEmail'))
+                    ->icon('heroicon-o-envelope')
+                    ->color('warning')
+                    ->visible(fn (UserModel $record): bool => $record->email_verified_at === null)
+                    ->requiresConfirmation()
+                    ->modalHeading(__('filament.users.actions.sendVerificationEmail'))
+                    ->modalDescription(__('filament.users.actions.sendVerificationEmailConfirm'))
+                    ->action(function (UserModel $record): void {
+                        $record->sendEmailVerificationNotification();
+                        Notification::make()
+                            ->title(__('filament.users.actions.verificationEmailSent'))
+                            ->success()
+                            ->send();
+                    }),
+                Action::make('sendPasswordResetEmail')
+                    ->label(__('filament.users.actions.sendPasswordResetEmail'))
+                    ->icon('heroicon-o-key')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->modalHeading(__('filament.users.actions.sendPasswordResetEmail'))
+                    ->modalDescription(__('filament.users.actions.sendPasswordResetEmailConfirm'))
+                    ->action(function (UserModel $record): void {
+                        $status = Password::sendResetLink(['email' => $record->email]);
+                        if ($status === Password::RESET_LINK_SENT) {
+                            Notification::make()
+                                ->title(__('filament.users.actions.passwordResetEmailSent'))
+                                ->success()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title(__('filament.users.actions.passwordResetEmailFailed'))
+                                ->danger()
+                                ->send();
+                        }
+                    }),
             ])
             ->defaultSort('created_at', 'desc');
     }

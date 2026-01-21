@@ -12,6 +12,7 @@ use App\Application\DTOs\Response\GalleryResponseDTO;
 use App\Application\DTOs\Response\HeroSlideResponseDTO;
 use App\Application\DTOs\Response\PhotoResponseDTO;
 use App\Application\DTOs\Response\TagResponseDTO;
+use App\Application\DTOs\Response\UserResponseDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
@@ -216,6 +217,27 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             appliesTo: $model->applies_to,
             color: $model->color,
             sortOrder: $model->sort_order,
+        );
+    }
+
+    public function createUserDTO(object $model): UserResponseDTO
+    {
+        if (!$model instanceof UserModel) {
+            throw new InvalidArgumentException('Expected UserModel instance');
+        }
+
+        return new UserResponseDTO(
+            id: (string) $model->id,
+            name: $model->name,
+            displayName: $model->display_name,
+            email: $model->email,
+            pendingEmail: $model->pending_email,
+            avatarPublicId: $model->avatar_public_id,
+            role: $model->role->value,
+            emailVerified: $model->email_verified_at !== null,
+            createdAt: $model->created_at !== null
+                ? DateTimeImmutable::createFromMutable($model->created_at)
+                : new DateTimeImmutable(),
         );
     }
 }

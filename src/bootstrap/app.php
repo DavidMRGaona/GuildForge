@@ -25,6 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
+
+        $middleware->alias([
+            'registration.enabled' => \App\Http\Middleware\EnsureRegistrationIsEnabled::class,
+            'login.enabled' => \App\Http\Middleware\EnsureLoginIsEnabled::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

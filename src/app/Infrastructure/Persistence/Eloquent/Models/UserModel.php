@@ -9,23 +9,26 @@ use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
  * @property string $name
  * @property string|null $display_name
  * @property string $email
+ * @property string|null $pending_email
  * @property string $password
  * @property string|null $avatar_public_id
  * @property UserRole $role
- * @property \Illuminate\Support\Carbon|null $email_verified_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $email_verified_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
-final class UserModel extends Authenticatable implements FilamentUser
+final class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
@@ -49,6 +52,7 @@ final class UserModel extends Authenticatable implements FilamentUser
         'name',
         'display_name',
         'email',
+        'pending_email',
         'password',
         'avatar_public_id',
         'role',

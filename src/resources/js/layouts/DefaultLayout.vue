@@ -6,6 +6,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import type { ThemeSettings } from '@/types/inertia';
 import TheHeader from '@/components/layout/TheHeader.vue';
 import TheFooter from '@/components/layout/TheFooter.vue';
+import NotificationToast from '@/components/ui/NotificationToast.vue';
 
 const { t } = useI18n();
 const page = usePage();
@@ -73,5 +74,6 @@ watch(theme, (newTheme) => {
             <slot />
         </main>
         <TheFooter />
+        <NotificationToast />
     </div>
 </template>
