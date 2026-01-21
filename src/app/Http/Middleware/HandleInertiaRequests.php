@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use Closure;
@@ -62,8 +63,9 @@ final class HandleInertiaRequests extends Middleware
             'siteLogoDark' => fn () => $this->getSiteLogo('site_logo_dark'),
             'theme' => fn () => $this->getThemeSettings(),
             'auth' => [
-                'user' => $request->user(),
+                'user' => fn () => $this->getAuthUser($request),
             ],
+            'authSettings' => fn () => $this->getAuthSettings(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
@@ -121,6 +123,63 @@ final class HandleInertiaRequests extends Middleware
                 'darkModeToggleVisible' => true,
                 'fontHeading' => 'Inter',
                 'fontBody' => 'Inter',
+            ];
+        }
+    }
+
+    /**
+     * Get the authenticated user as a DTO.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function getAuthUser(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        try {
+            $factory = app(ResponseDTOFactoryInterface::class);
+            $userDTO = $factory->createUserDTO($user);
+
+            return [
+                'id' => $userDTO->id,
+                'name' => $userDTO->name,
+                'displayName' => $userDTO->displayName,
+                'email' => $userDTO->email,
+                'avatarPublicId' => $userDTO->avatarPublicId,
+                'role' => $userDTO->role,
+                'emailVerified' => $userDTO->emailVerified,
+                'createdAt' => $userDTO->createdAt->format('c'),
+            ];
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Get authentication settings for frontend.
+     *
+     * @return array{registrationEnabled: bool, loginEnabled: bool, emailVerificationRequired: bool}
+     */
+    private function getAuthSettings(): array
+    {
+        try {
+            $settingsService = app(SettingsServiceInterface::class);
+
+            return [
+                'registrationEnabled' => $settingsService->isRegistrationEnabled(),
+                'loginEnabled' => $settingsService->isLoginEnabled(),
+                'emailVerificationRequired' => $settingsService->isEmailVerificationRequired(),
+            ];
+        } catch (\Throwable) {
+            // Return safe defaults if service fails
+            return [
+                'registrationEnabled' => true,
+                'loginEnabled' => true,
+                'emailVerificationRequired' => false,
             ];
         }
     }

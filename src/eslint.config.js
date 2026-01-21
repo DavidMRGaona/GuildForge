@@ -30,6 +30,8 @@ export default [
                 fetch: 'readonly',
                 MediaQueryList: 'readonly',
                 MediaQueryListEvent: 'readonly',
+                URL: 'readonly',
+                File: 'readonly',
             },
         },
         plugins: {
@@ -66,6 +68,7 @@ export default [
                 clearTimeout: 'readonly',
                 fetch: 'readonly',
                 URLSearchParams: 'readonly',
+                URL: 'readonly',
             },
         },
         plugins: {

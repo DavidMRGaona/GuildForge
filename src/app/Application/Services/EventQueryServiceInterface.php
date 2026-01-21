@@ -30,4 +30,9 @@ interface EventQueryServiceInterface
      * @return array<int, EventResponseDTO>
      */
     public function searchPublished(string $query, int $limit = 12): array;
+
+    /**
+     * @return array<int, EventResponseDTO>
+     */
+    public function findByDateRange(string $start, string $end): array;
 }

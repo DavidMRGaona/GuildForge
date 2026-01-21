@@ -61,6 +61,30 @@ final class SettingsService implements SettingsServiceInterface
     }
 
     /**
+     * Check if public registration is enabled.
+     */
+    public function isRegistrationEnabled(): bool
+    {
+        return $this->getBooleanSetting('auth_registration_enabled', true);
+    }
+
+    /**
+     * Check if public login is enabled.
+     */
+    public function isLoginEnabled(): bool
+    {
+        return $this->getBooleanSetting('auth_login_enabled', true);
+    }
+
+    /**
+     * Check if email verification is required.
+     */
+    public function isEmailVerificationRequired(): bool
+    {
+        return $this->getBooleanSetting('auth_email_verification_required', false);
+    }
+
+    /**
      * Get all settings from the cache or database.
      *
      * @return array<string, string|null>
@@ -72,5 +96,19 @@ final class SettingsService implements SettingsServiceInterface
                 ->pluck('value', 'key')
                 ->toArray();
         });
+    }
+
+    /**
+     * Get a boolean setting value.
+     */
+    private function getBooleanSetting(string $key, bool $default): bool
+    {
+        $value = $this->get($key);
+
+        if ($value === null) {
+            return $default;
+        }
+
+        return $value === '1' || $value === 'true';
     }
 }

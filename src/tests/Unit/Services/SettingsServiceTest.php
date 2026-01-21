@@ -147,4 +147,97 @@ final class SettingsServiceTest extends TestCase
         $secondResult = $this->settingsService->get('cached_key');
         $this->assertEquals('updated_value', $secondResult);
     }
+
+    public function test_is_registration_enabled_returns_true_by_default(): void
+    {
+        $result = $this->settingsService->isRegistrationEnabled();
+
+        $this->assertTrue($result);
+    }
+
+    public function test_is_registration_enabled_returns_false_when_disabled(): void
+    {
+        SettingModel::create([
+            'key' => 'auth_registration_enabled',
+            'value' => '0',
+        ]);
+
+        $result = $this->settingsService->isRegistrationEnabled();
+
+        $this->assertFalse($result);
+    }
+
+    public function test_is_registration_enabled_returns_true_when_enabled(): void
+    {
+        SettingModel::create([
+            'key' => 'auth_registration_enabled',
+            'value' => '1',
+        ]);
+
+        $result = $this->settingsService->isRegistrationEnabled();
+
+        $this->assertTrue($result);
+    }
+
+    public function test_is_login_enabled_returns_true_by_default(): void
+    {
+        $result = $this->settingsService->isLoginEnabled();
+
+        $this->assertTrue($result);
+    }
+
+    public function test_is_login_enabled_returns_false_when_disabled(): void
+    {
+        SettingModel::create([
+            'key' => 'auth_login_enabled',
+            'value' => '0',
+        ]);
+
+        $result = $this->settingsService->isLoginEnabled();
+
+        $this->assertFalse($result);
+    }
+
+    public function test_is_login_enabled_returns_true_when_enabled(): void
+    {
+        SettingModel::create([
+            'key' => 'auth_login_enabled',
+            'value' => '1',
+        ]);
+
+        $result = $this->settingsService->isLoginEnabled();
+
+        $this->assertTrue($result);
+    }
+
+    public function test_is_email_verification_required_returns_false_by_default(): void
+    {
+        $result = $this->settingsService->isEmailVerificationRequired();
+
+        $this->assertFalse($result);
+    }
+
+    public function test_is_email_verification_required_returns_true_when_enabled(): void
+    {
+        SettingModel::create([
+            'key' => 'auth_email_verification_required',
+            'value' => '1',
+        ]);
+
+        $result = $this->settingsService->isEmailVerificationRequired();
+
+        $this->assertTrue($result);
+    }
+
+    public function test_is_email_verification_required_returns_false_when_disabled(): void
+    {
+        SettingModel::create([
+            'key' => 'auth_email_verification_required',
+            'value' => '0',
+        ]);
+
+        $result = $this->settingsService->isEmailVerificationRequired();
+
+        $this->assertFalse($result);
+    }
 }

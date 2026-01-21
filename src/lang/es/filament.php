@@ -56,6 +56,7 @@ return [
             'colors' => 'Colores',
             'typography' => 'Tipografía',
             'appearance' => 'Apariencia',
+            'authentication' => 'Autenticación',
         ],
         'general' => [
             'title' => 'Configuración general',
@@ -166,6 +167,32 @@ return [
             'twitter' => 'X (Twitter)',
             'discord' => 'Discord',
             'tiktok' => 'TikTok',
+        ],
+        'auth' => [
+            'section_public' => 'Acceso público',
+            'section_public_description' => 'Controla si los visitantes pueden registrarse e iniciar sesión en el sitio.',
+            'section_security' => 'Seguridad',
+            'section_security_description' => 'Opciones de seguridad adicionales para la autenticación de usuarios.',
+            'registration_enabled' => 'Permitir registro',
+            'registration_enabled_help' => 'Si está desactivado, los nuevos usuarios no podrán registrarse en el sitio.',
+            'login_enabled' => 'Permitir inicio de sesión',
+            'login_enabled_help' => 'Si está desactivado, los usuarios no podrán iniciar sesión (excepto en el panel de administración).',
+            'email_verification_required' => 'Requerir verificación de email',
+            'email_verification_required_help' => 'Los usuarios deberán verificar su correo electrónico antes de poder acceder a todas las funciones.',
+        ],
+    ],
+    'users' => [
+        'fields' => [
+            'emailVerified' => 'Email verificado',
+        ],
+        'actions' => [
+            'sendVerificationEmail' => 'Enviar email de verificación',
+            'sendVerificationEmailConfirm' => '¿Enviar un correo de verificación a este usuario?',
+            'verificationEmailSent' => 'Email de verificación enviado',
+            'sendPasswordResetEmail' => 'Enviar email de recuperación',
+            'sendPasswordResetEmailConfirm' => '¿Enviar un correo para restablecer la contraseña de este usuario?',
+            'passwordResetEmailSent' => 'Email de recuperación enviado',
+            'passwordResetEmailFailed' => 'Error al enviar el email de recuperación',
         ],
     ],
 ];

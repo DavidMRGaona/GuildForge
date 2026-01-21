@@ -27,4 +27,19 @@ interface SettingsServiceInterface
      * Clear the settings cache.
      */
     public function clearCache(): void;
+
+    /**
+     * Check if public registration is enabled.
+     */
+    public function isRegistrationEnabled(): bool;
+
+    /**
+     * Check if public login is enabled.
+     */
+    public function isLoginEnabled(): bool;
+
+    /**
+     * Check if email verification is required.
+     */
+    public function isEmailVerificationRequired(): bool;
 }

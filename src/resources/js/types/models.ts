@@ -1,15 +1,59 @@
 export interface User {
     id: string;
     name: string;
-    displayName: string;
+    displayName: string | null;
     email: string;
+    pendingEmail: string | null;
     avatarPublicId: string | null;
     role: UserRole;
+    emailVerified: boolean;
     createdAt: string;
-    updatedAt: string;
 }
 
 export type UserRole = 'admin' | 'editor' | 'member';
+
+export interface AuthSettings {
+    registrationEnabled: boolean;
+    loginEnabled: boolean;
+    emailVerificationRequired: boolean;
+}
+
+export interface RegisterFormData {
+    name: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+}
+
+export interface LoginFormData {
+    email: string;
+    password: string;
+    remember: boolean;
+}
+
+export interface ForgotPasswordFormData {
+    email: string;
+}
+
+export interface ResetPasswordFormData {
+    token: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+}
+
+export interface UpdateProfileFormData {
+    name: string;
+    display_name: string | null;
+    email: string;
+    avatar: File | null;
+}
+
+export interface ChangePasswordFormData {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+}
 
 export interface Tag {
     id: string;

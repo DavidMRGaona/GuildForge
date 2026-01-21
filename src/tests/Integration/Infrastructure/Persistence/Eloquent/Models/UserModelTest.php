@@ -39,6 +39,7 @@ final class UserModelTest extends TestCase
             'name',
             'display_name',
             'email',
+            'pending_email',
             'password',
             'avatar_public_id',
             'role',

@@ -4,9 +4,13 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { useAppStore } from '@/stores/useAppStore';
 import type { ThemeMode } from '@/stores/useAppStore';
+import { useAuth } from '@/composables/useAuth';
 import TheNavigation from './TheNavigation.vue';
+import UserDropdown from './UserDropdown.vue';
+import AuthLinks from './AuthLinks.vue';
 
 const { t } = useI18n();
+const { isAuthenticated } = useAuth();
 const page = usePage();
 const appStore = useAppStore();
 
@@ -183,6 +187,10 @@ function selectTheme(mode: ThemeMode): void {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Auth: User dropdown or login/register links -->
+                    <UserDropdown v-if="isAuthenticated" />
+                    <AuthLinks v-else />
                 </div>
 
                 <!-- Mobile menu button -->
@@ -294,6 +302,12 @@ function selectTheme(mode: ThemeMode): void {
                             {{ t('layout.darkTheme') }}
                         </button>
                     </div>
+                </div>
+
+                <!-- Mobile Auth: User dropdown or login/register links -->
+                <div class="border-t border-stone-200 dark:border-stone-700 pt-3 mt-3">
+                    <UserDropdown v-if="isAuthenticated" @navigate="closeMobileMenu" />
+                    <AuthLinks v-else mobile @navigate="closeMobileMenu" />
                 </div>
             </div>
         </div>

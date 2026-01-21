@@ -88,6 +88,9 @@ final class SiteSettings extends Page implements HasForms
             'theme_button_style',
             'theme_dark_mode_default',
             'theme_dark_mode_toggle_visible',
+            'auth_registration_enabled',
+            'auth_login_enabled',
+            'auth_email_verification_required',
         ];
     }
 
@@ -314,6 +317,33 @@ final class SiteSettings extends Page implements HasForms
                                     ->label(__('filament.settings.appearance.dark_mode_toggle_visible'))
                                     ->helperText(__('filament.settings.appearance.dark_mode_toggle_visible_help'))
                                     ->default(true),
+                            ]),
+
+                        Tab::make(__('filament.settings.tabs.authentication'))
+                            ->icon('heroicon-o-key')
+                            ->schema([
+                                Section::make(__('filament.settings.auth.section_public'))
+                                    ->description(__('filament.settings.auth.section_public_description'))
+                                    ->schema([
+                                        Toggle::make('auth_registration_enabled')
+                                            ->label(__('filament.settings.auth.registration_enabled'))
+                                            ->helperText(__('filament.settings.auth.registration_enabled_help'))
+                                            ->default(true),
+
+                                        Toggle::make('auth_login_enabled')
+                                            ->label(__('filament.settings.auth.login_enabled'))
+                                            ->helperText(__('filament.settings.auth.login_enabled_help'))
+                                            ->default(true),
+                                    ]),
+
+                                Section::make(__('filament.settings.auth.section_security'))
+                                    ->description(__('filament.settings.auth.section_security_description'))
+                                    ->schema([
+                                        Toggle::make('auth_email_verification_required')
+                                            ->label(__('filament.settings.auth.email_verification_required'))
+                                            ->helperText(__('filament.settings.auth.email_verification_required_help'))
+                                            ->default(false),
+                                    ]),
                             ]),
                     ])
                     ->columnSpanFull(),

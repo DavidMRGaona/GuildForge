@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
+use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\GalleryQueryServiceInterface;
 use App\Application\Services\HeroSlideQueryServiceInterface;
@@ -29,6 +30,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Services\ArticleQueryService;
+use App\Infrastructure\Services\AuthService;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Services\CloudinaryStorageAdapter;
 use App\Infrastructure\Services\EventQueryService;
@@ -72,6 +74,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
         $this->app->singleton(ThemeSettingsServiceInterface::class, ThemeSettingsService::class);
         $this->app->singleton(ImageOptimizationServiceInterface::class, ImageOptimizationService::class);
+        $this->app->singleton(AuthServiceInterface::class, AuthService::class);
 
         // Factory bindings
         $this->app->singleton(ResponseDTOFactoryInterface::class, EloquentResponseDTOFactory::class);
