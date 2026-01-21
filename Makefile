@@ -1,6 +1,7 @@
 # Association website - Makefile
 
-.PHONY: help up down build restart logs ps shell shell-node shell-db \
+.PHONY: help up down build restart recreate logs ps shell shell-node shell-db \
+        es-test es-logs es-health es-indices \
         install setup fresh migrate migrate-rollback seed db-backup db-restore \
         test test-unit test-feature test-coverage test-filter test-parallel \
         check check-fix cs cs-fix phpstan lint-js lint-js-fix types \
@@ -40,6 +41,8 @@ up: ## Start all containers
 	@echo "Application: http://localhost:8080"
 	@echo "Mailpit: http://localhost:8025"
 	@echo "Vite: http://localhost:5173"
+	@echo "Elasticsearch: http://localhost:9200"
+	@echo "Kibana: http://localhost:5601"
 
 down: ## Stop all containers
 	@echo "Stopping containers..."
@@ -51,6 +54,9 @@ build: ## Rebuild containers
 
 restart: ## Restart all containers
 	$(DOCKER_COMPOSE) restart
+
+recreate: ## Recreate all containers (pulls new images)
+	$(DOCKER_COMPOSE) up -d --force-recreate
 
 logs: ## Tail all logs
 	$(DOCKER_COMPOSE) logs -f
@@ -254,6 +260,22 @@ ide-helper: ## Generate IDE helpers
 	docker exec $(PHP_CONTAINER) php artisan ide-helper:generate
 	docker exec $(PHP_CONTAINER) php artisan ide-helper:models --nowrite
 	docker exec $(PHP_CONTAINER) php artisan ide-helper:meta
+
+# =============================================================================
+# ELASTICSEARCH
+# =============================================================================
+
+es-test: ## Test Elasticsearch connection and send test logs
+	docker exec $(PHP_CONTAINER) php artisan elasticsearch:test
+
+es-logs: ## View recent Elasticsearch container logs
+	docker logs association_elasticsearch --tail 50
+
+es-health: ## Check Elasticsearch cluster health
+	@curl -s http://localhost:9200/_cluster/health?pretty
+
+es-indices: ## List all Elasticsearch indices
+	@curl -s http://localhost:9200/_cat/indices?v
 
 # =============================================================================
 # GIT HOOKS

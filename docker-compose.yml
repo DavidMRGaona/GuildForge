@@ -83,10 +83,47 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
+  elasticsearch:
+    image: elasticsearch:9.2.4
+    container_name: association_elasticsearch
+    restart: unless-stopped
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - association_elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - association
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  kibana:
+    image: kibana:9.2.4
+    container_name: association_kibana
+    restart: unless-stopped
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - association
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
 networks:
   association:
     driver: bridge
 
 volumes:
   association_db_data:
+    driver: local
+  association_elasticsearch_data:
     driver: local
