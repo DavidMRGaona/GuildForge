@@ -109,6 +109,24 @@ tests/
 └── Feature/          # Feature tests (Controllers)
 ```
 
+## Modules
+
+The project includes an extensible module system for adding functionality without modifying core code.
+
+```bash
+# Create a new module
+php artisan module:make my-module --description="My module"
+
+# Discover and enable
+php artisan module:discover
+php artisan module:enable my-module
+
+# List all modules
+php artisan module:list
+```
+
+For detailed module development documentation, see [docs/modules/README.md](docs/modules/README.md).
+
 ## Architecture
 
 This project follows **Clean Architecture** principles:

@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | {{ moduleNameStudly }} Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | Translations for the {{ moduleNameStudly }} module.
+    |
+    */
+
+    'title' => '{{ moduleNameStudly }}',
+];

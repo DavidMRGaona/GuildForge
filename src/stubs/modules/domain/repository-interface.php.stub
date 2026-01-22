@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Domain\Repositories;
+
+use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
+use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
+
+interface {{ nameStudly }}RepositoryInterface
+{
+    public function findById({{ nameStudly }}Id $id): ?{{ nameStudly }};
+
+    /**
+     * @return array<{{ nameStudly }}>
+     */
+    public function all(): array;
+
+    public function save({{ nameStudly }} ${{ nameCamel }}): void;
+
+    public function delete({{ nameStudly }} ${{ nameCamel }}): void;
+}

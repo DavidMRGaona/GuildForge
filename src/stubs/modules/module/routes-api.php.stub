@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| {{ moduleNameStudly }} API Routes
+|--------------------------------------------------------------------------
+|
+| API routes for the {{ moduleNameStudly }} module.
+|
+*/
+
+Route::prefix('api/{{ moduleName }}')
+    ->name('{{ moduleNameSnake }}.api.')
+    ->middleware('api')
+    ->group(function (): void {
+        // Define your API routes here
+    });

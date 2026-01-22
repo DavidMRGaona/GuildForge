@@ -1,0 +1,22 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+
+const props = defineProps<{
+    title?: string;
+}>();
+
+const displayTitle = computed(() => props.title ?? '{{ nameStudly }}');
+</script>
+
+<template>
+    <div class="{{ nameKebab }}">
+        <h2 class="text-xl font-semibold">{{ '{{' }} displayTitle {{ '}}' }}</h2>
+        <slot />
+    </div>
+</template>
+
+<style scoped>
+.{{ nameKebab }} {
+    /* Component styles */
+}
+</style>

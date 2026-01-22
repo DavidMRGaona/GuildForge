@@ -27,7 +27,7 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        $panel = $panel
             ->default()
             ->id('admin')
             ->path('admin')
@@ -69,6 +69,78 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+
+        // Discover resources from enabled modules
+        $this->discoverModuleResources($panel);
+
+        return $panel;
+    }
+
+    /**
+     * Discover and register Filament resources from enabled modules.
+     */
+    private function discoverModuleResources(Panel $panel): void
+    {
+        $modulesPath = config('modules.path', base_path('modules'));
+
+        if (!is_dir($modulesPath)) {
+            return;
+        }
+
+        $resources = [];
+
+        foreach (glob($modulesPath . '/*/src/Filament/Resources') as $resourcesPath) {
+            if (!is_dir($resourcesPath)) {
+                continue;
+            }
+
+            // Extract module name from path: modules/{module-name}/src/Filament/Resources
+            $modulePath = dirname(dirname(dirname($resourcesPath)));
+            $moduleName = basename($modulePath);
+            $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
+            $namespace = "Modules\\{$studlyName}\\Filament\\Resources";
+
+            // Register SPL autoloader for this module
+            $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath . '/src');
+
+            // Find all resource files
+            foreach (glob($resourcesPath . '/*Resource.php') as $file) {
+                $className = basename($file, '.php');
+                $resourceClass = $namespace . '\\' . $className;
+
+                // Load the class file
+                require_once $file;
+
+                if (class_exists($resourceClass)) {
+                    $resources[] = $resourceClass;
+                }
+            }
+        }
+
+        if ($resources !== []) {
+            $panel->resources($resources);
+        }
+    }
+
+    /**
+     * Register SPL autoloader for a module namespace.
+     */
+    private function registerModuleAutoloader(string $namespace, string $path): void
+    {
+        spl_autoload_register(function (string $class) use ($namespace, $path): void {
+            $namespace = rtrim($namespace, '\\') . '\\';
+
+            if (!str_starts_with($class, $namespace)) {
+                return;
+            }
+
+            $relativeClass = substr($class, strlen($namespace));
+            $file = $path . '/' . str_replace('\\', '/', $relativeClass) . '.php';
+
+            if (file_exists($file)) {
+                require_once $file;
+            }
+        });
     }
 
     private function getBrandLogo(string $key): ?string

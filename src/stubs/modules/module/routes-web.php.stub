@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| {{ moduleNameStudly }} Web Routes
+|--------------------------------------------------------------------------
+|
+| Web routes for the {{ moduleNameStudly }} module.
+|
+*/
+
+Route::prefix('{{ moduleName }}')
+    ->name('{{ moduleNameSnake }}.')
+    ->group(function (): void {
+        // Define your web routes here
+    });

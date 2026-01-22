@@ -81,6 +81,16 @@ final class ModuleLoader
     }
 
     /**
+     * Get all loaded providers.
+     *
+     * @return array<string, ModuleServiceProvider>
+     */
+    public function getLoadedProviders(): array
+    {
+        return $this->loadedProviders;
+    }
+
+    /**
      * @return array<Module>
      */
     private function getEnabledModules(): array

@@ -82,6 +82,28 @@ final readonly class TagQueryService implements TagQueryServiceInterface
     }
 
     /**
+     * @return array<TagResponseDTO>
+     */
+    public function getByType(string $type): array
+    {
+        return TagModel::query()
+            ->forType($type)
+            ->ordered()
+            ->get()
+            ->map(fn (TagModel $tag) => new TagResponseDTO(
+                id: $tag->id,
+                name: $tag->name,
+                slug: $tag->slug,
+                parentId: $tag->parent_id,
+                parentName: $tag->parent?->name,
+                appliesTo: $tag->applies_to,
+                color: $tag->color,
+                sortOrder: $tag->sort_order,
+            ))
+            ->all();
+    }
+
+    /**
      * Recursively add a tag and its descendants to the result array.
      *
      * @param array<TagHierarchyDTO> $result

@@ -5,9 +5,17 @@ declare(strict_types=1);
 namespace App\Application\Services;
 
 use App\Application\DTOs\Response\TagHierarchyDTO;
+use App\Application\DTOs\Response\TagResponseDTO;
 
 interface TagQueryServiceInterface
 {
+    /**
+     * Get tags by type for filtering.
+     *
+     * @return array<TagResponseDTO>
+     */
+    public function getByType(string $type): array;
+
     /**
      * Get all tags in hierarchical order as a flat collection.
      *

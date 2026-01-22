@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
+use App\Application\Services\TagQueryServiceInterface;
 use App\Http\Concerns\BuildsPaginatedResponse;
 use App\Http\Resources\ArticleResource;
 use App\Http\Resources\TagResource;
-use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,7 +21,7 @@ final class ArticleController extends Controller
 
     public function __construct(
         private readonly ArticleQueryServiceInterface $articleQuery,
-        private readonly ResponseDTOFactoryInterface $dtoFactory,
+        private readonly TagQueryServiceInterface $tagQuery,
     ) {
     }
 
@@ -38,12 +37,7 @@ final class ArticleController extends Controller
         $articles = $this->articleQuery->getPublishedPaginated($page, self::PER_PAGE, $tagSlugs);
         $total = $this->articleQuery->getPublishedTotal($tagSlugs);
 
-        $availableTags = TagModel::query()
-            ->forType('articles')
-            ->ordered()
-            ->get()
-            ->map(fn (TagModel $tag) => $this->dtoFactory->createTagDTO($tag))
-            ->all();
+        $availableTags = $this->tagQuery->getByType('articles');
 
         return Inertia::render('Articles/Index', [
             'articles' => $this->buildPaginatedResponse(

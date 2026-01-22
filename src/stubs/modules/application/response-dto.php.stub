@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Application\DTOs;
+
+use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
+
+final readonly class {{ nameStudly }}ResponseDTO
+{
+    public function __construct(
+        public string $id,
+        public string $name,
+        public string $createdAt,
+        public string $updatedAt,
+    ) {
+    }
+
+    public static function fromEntity({{ nameStudly }} $entity): self
+    {
+        return new self(
+            id: $entity->id()->value,
+            name: $entity->name(),
+            createdAt: $entity->createdAt()->format('Y-m-d H:i:s'),
+            updatedAt: $entity->updatedAt()->format('Y-m-d H:i:s'),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            id: $data['id'] ?? '',
+            name: $data['name'] ?? '',
+            createdAt: $data['created_at'] ?? '',
+            updatedAt: $data['updated_at'] ?? '',
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'created_at' => $this->createdAt,
+            'updated_at' => $this->updatedAt,
+        ];
+    }
+}

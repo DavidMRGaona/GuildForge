@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent;
+
+use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
+use {{ moduleNamespace }}\Domain\Repositories\{{ nameStudly }}RepositoryInterface;
+use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
+use DateTimeImmutable;
+
+final class Eloquent{{ nameStudly }}Repository implements {{ nameStudly }}RepositoryInterface
+{
+    public function findById({{ nameStudly }}Id $id): ?{{ nameStudly }}
+    {
+        $model = {{ nameStudly }}Model::find($id->value);
+
+        if ($model === null) {
+            return null;
+        }
+
+        return $this->toDomain($model);
+    }
+
+    public function all(): array
+    {
+        return {{ nameStudly }}Model::all()
+            ->map(fn ({{ nameStudly }}Model $model): {{ nameStudly }} => $this->toDomain($model))
+            ->all();
+    }
+
+    public function save({{ nameStudly }} ${{ nameCamel }}): void
+    {
+        {{ nameStudly }}Model::updateOrCreate(
+            ['id' => ${{ nameCamel }}->id()->value],
+            [
+                'name' => ${{ nameCamel }}->name(),
+            ]
+        );
+    }
+
+    public function delete({{ nameStudly }} ${{ nameCamel }}): void
+    {
+        {{ nameStudly }}Model::destroy(${{ nameCamel }}->id()->value);
+    }
+
+    private function toDomain({{ nameStudly }}Model $model): {{ nameStudly }}
+    {
+        return new {{ nameStudly }}(
+            id: new {{ nameStudly }}Id($model->id),
+            name: $model->name,
+            createdAt: new DateTimeImmutable($model->created_at->toDateTimeString()),
+            updatedAt: new DateTimeImmutable($model->updated_at->toDateTimeString()),
+        );
+    }
+}

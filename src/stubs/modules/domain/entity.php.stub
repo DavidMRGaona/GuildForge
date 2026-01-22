@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Domain\Entities;
+
+use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
+use DateTimeImmutable;
+
+final class {{ nameStudly }}
+{
+    public function __construct(
+        private readonly {{ nameStudly }}Id $id,
+        private string $name,
+        private readonly DateTimeImmutable $createdAt,
+        private DateTimeImmutable $updatedAt,
+    ) {
+    }
+
+    public function id(): {{ nameStudly }}Id
+    {
+        return $this->id;
+    }
+
+    public function name(): string
+    {
+        return $this->name;
+    }
+
+    public function updateName(string $name): void
+    {
+        $this->name = $name;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
+    public function createdAt(): DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function updatedAt(): DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+}

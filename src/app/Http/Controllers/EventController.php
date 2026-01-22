@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\EventQueryServiceInterface;
+use App\Application\Services\TagQueryServiceInterface;
 use App\Http\Concerns\BuildsPaginatedResponse;
 use App\Http\Resources\EventResource;
 use App\Http\Resources\TagResource;
-use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,7 +21,7 @@ final class EventController extends Controller
 
     public function __construct(
         private readonly EventQueryServiceInterface $eventQuery,
-        private readonly ResponseDTOFactoryInterface $dtoFactory,
+        private readonly TagQueryServiceInterface $tagQuery,
     ) {
     }
 
@@ -38,12 +37,7 @@ final class EventController extends Controller
         $events = $this->eventQuery->getPublishedEventsPaginated($page, self::PER_PAGE, $tagSlugs);
         $total = $this->eventQuery->getPublishedEventsTotal($tagSlugs);
 
-        $availableTags = TagModel::query()
-            ->forType('events')
-            ->ordered()
-            ->get()
-            ->map(fn (TagModel $tag) => $this->dtoFactory->createTagDTO($tag))
-            ->all();
+        $availableTags = $this->tagQuery->getByType('events');
 
         return Inertia::render('Events/Index', [
             'events' => $this->buildPaginatedResponse(

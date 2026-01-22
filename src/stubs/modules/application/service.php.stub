@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Infrastructure\Services;
+
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}ResponseDTO;
+use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
+use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
+use {{ moduleNamespace }}\Domain\Repositories\{{ nameStudly }}RepositoryInterface;
+use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
+use DateTimeImmutable;
+
+final readonly class {{ nameStudly }}Service implements {{ nameStudly }}ServiceInterface
+{
+    public function __construct(
+        private {{ nameStudly }}RepositoryInterface $repository,
+    ) {
+    }
+
+    public function create({{ nameStudly }}DTO $dto): {{ nameStudly }}ResponseDTO
+    {
+        $entity = new {{ nameStudly }}(
+            id: {{ nameStudly }}Id::generate(),
+            name: $dto->name,
+            createdAt: new DateTimeImmutable(),
+            updatedAt: new DateTimeImmutable(),
+        );
+
+        $this->repository->save($entity);
+
+        return {{ nameStudly }}ResponseDTO::fromEntity($entity);
+    }
+
+    public function update(string $id, {{ nameStudly }}DTO $dto): {{ nameStudly }}ResponseDTO
+    {
+        $entity = $this->repository->findById(new {{ nameStudly }}Id($id));
+
+        if ($entity === null) {
+            throw new \RuntimeException('{{ nameStudly }} not found');
+        }
+
+        $entity->updateName($dto->name);
+        $this->repository->save($entity);
+
+        return {{ nameStudly }}ResponseDTO::fromEntity($entity);
+    }
+
+    public function delete(string $id): void
+    {
+        $entity = $this->repository->findById(new {{ nameStudly }}Id($id));
+
+        if ($entity === null) {
+            throw new \RuntimeException('{{ nameStudly }} not found');
+        }
+
+        $this->repository->delete($entity);
+    }
+
+    public function findById(string $id): ?{{ nameStudly }}ResponseDTO
+    {
+        $entity = $this->repository->findById(new {{ nameStudly }}Id($id));
+
+        if ($entity === null) {
+            return null;
+        }
+
+        return {{ nameStudly }}ResponseDTO::fromEntity($entity);
+    }
+
+    public function all(): array
+    {
+        return array_map(
+            fn ({{ nameStudly }} $entity): {{ nameStudly }}ResponseDTO => {{ nameStudly }}ResponseDTO::fromEntity($entity),
+            $this->repository->all()
+        );
+    }
+}

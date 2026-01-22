@@ -1,0 +1,22 @@
+<script setup lang="ts">
+import { Head } from '@inertiajs/vue3';
+
+defineProps<{
+    title?: string;
+}>();
+</script>
+
+<template>
+    <Head :title="title ?? '{{ nameStudly }}'" />
+
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold mb-4">{{ nameStudly }}</h1>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <!-- Page content -->
+            <p class="text-gray-600 dark:text-gray-300">
+                {{ nameStudly }} page content goes here.
+            </p>
+        </div>
+    </div>
+</template>

@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    '{{ nameSnake }}' => [
+        'label' => '{{ nameStudly }}',
+        'plural_label' => '{{ namePluralStudly }}',
+        'fields' => [
+            'name' => 'Nombre',
+            'created_at' => 'Creado',
+            'updated_at' => 'Actualizado',
+        ],
+    ],
+];
