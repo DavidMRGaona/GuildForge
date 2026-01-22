@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { Tag } from '@/types/models';
+import { getLuminance } from '@/utils/color';
 
 interface Props {
     tags: Tag[];
@@ -15,22 +16,6 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { t } = useI18n();
-
-/**
- * Calculate relative luminance of a color.
- * Used to determine if text should be dark or light.
- */
-function getLuminance(hex: string): number {
-    const matches = hex.replace('#', '').match(/.{2}/g);
-    if (!matches || matches.length < 3) return 0;
-
-    const rgb = matches.map((c) => {
-        const value = parseInt(c, 16) / 255;
-        return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
-    }) as [number, number, number];
-
-    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
-}
 
 /**
  * Determine if text should be dark or light based on background color.
@@ -94,10 +79,7 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
 </script>
 
 <template>
-    <div
-        v-if="tags.length > 0"
-        class="flex flex-wrap items-center gap-2"
-    >
+    <div v-if="tags.length > 0" class="flex flex-wrap items-center gap-2">
         <span class="text-sm font-medium text-stone-700 dark:text-stone-300">
             {{ t('tags.filter') }}:
         </span>
@@ -121,9 +103,7 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
             type="button"
             :class="[
                 'inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium transition-colors',
-                isActive(tag.slug)
-                    ? 'ring-2 ring-offset-1'
-                    : 'hover:opacity-80',
+                isActive(tag.slug) ? 'ring-2 ring-offset-1' : 'hover:opacity-80',
             ]"
             :style="{
                 backgroundColor: tag.color,

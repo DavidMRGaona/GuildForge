@@ -38,8 +38,17 @@ useSeo({
     <DefaultLayout>
         <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="mb-6">
-                <Link href="/articulos" class="inline-flex items-center rounded text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
-                    <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <Link
+                    href="/articulos"
+                    class="inline-flex items-center rounded text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:text-stone-400 dark:hover:text-stone-300 dark:focus:ring-offset-stone-900"
+                >
+                    <svg
+                        class="mr-1 h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -51,7 +60,7 @@ useSeo({
                 </Link>
             </div>
 
-            <article class="overflow-hidden rounded-lg bg-white shadow">
+            <article class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50">
                 <img
                     v-if="heroImageUrl"
                     :src="heroImageUrl"
@@ -79,11 +88,11 @@ useSeo({
                 </div>
 
                 <div class="p-6 sm:p-8">
-                    <h1 class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl">
+                    <h1 class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl dark:text-stone-100">
                         {{ props.article.title }}
                     </h1>
 
-                    <div class="mb-6 flex items-center text-gray-600">
+                    <div class="mb-6 flex items-center text-gray-600 dark:text-stone-400">
                         <img
                             v-if="authorAvatarUrl"
                             :src="authorAvatarUrl"
@@ -92,16 +101,19 @@ useSeo({
                         />
                         <div
                             v-else
-                            class="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600"
+                            class="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
                         >
                             <span class="text-sm font-medium">
                                 {{ getAuthorDisplayName(props.article).charAt(0).toUpperCase() }}
                             </span>
                         </div>
                         <div>
-                            <p class="font-medium text-gray-900">{{ getAuthorDisplayName(props.article) }}</p>
+                            <p class="font-medium text-gray-900 dark:text-stone-100">
+                                {{ getAuthorDisplayName(props.article) }}
+                            </p>
                             <p v-if="props.article.publishedAt" class="text-sm text-amber-600">
-                                {{ t('articles.publishedAt') }} {{ formatPublishedDate(props.article.publishedAt) }}
+                                {{ t('articles.publishedAt') }}
+                                {{ formatPublishedDate(props.article.publishedAt) }}
                             </p>
                         </div>
                     </div>
@@ -130,7 +142,7 @@ useSeo({
                     -->
                     <div class="prose prose-amber max-w-none" v-html="props.article.content" />
 
-                    <div class="mt-8 border-t border-gray-200 pt-6">
+                    <div class="mt-8 border-t border-gray-200 pt-6 dark:border-stone-700">
                         <Link href="/articulos">
                             <BaseButton variant="primary">
                                 {{ t('common.viewAll') }} {{ t('common.articles').toLowerCase() }}

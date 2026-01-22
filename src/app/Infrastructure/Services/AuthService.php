@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Infrastructure\Services;
 
 use App\Application\DTOs\CreateUserDTO;
+use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\DTOs\Response\UserResponseDTO;
 use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
+use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Domain\Enums\UserRole;
 use App\Domain\Events\UserLoggedIn;
 use App\Domain\Events\UserLoggedOut;
@@ -24,11 +26,13 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 final readonly class AuthService implements AuthServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
+        private ImageOptimizationServiceInterface $imageOptimizer,
     ) {
     }
 
@@ -203,5 +207,29 @@ final readonly class AuthService implements AuthServiceInterface
         ]);
 
         return true;
+    }
+
+    public function uploadAvatar(string $userId, string $contents, string $mimeType): ?string
+    {
+        $avatarSettings = ImageOptimizationSettingsDTO::withOverrides([
+            'maxWidth' => 512,
+            'maxHeight' => 512,
+            'quality' => 90,
+            'minSizeBytes' => 0, // Always optimize avatars
+        ]);
+
+        $optimizedContents = $this->imageOptimizer->optimize(
+            $contents,
+            $mimeType,
+            $avatarSettings
+        );
+
+        $path = 'users/' . $userId;
+        $filename = Str::uuid()->toString() . '.jpg';
+        $fullPath = $path . '/' . $filename;
+
+        $stored = Storage::disk('images')->put($fullPath, $optimizedContents);
+
+        return $stored !== false ? $fullPath : null;
     }
 }

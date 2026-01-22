@@ -1,0 +1,12 @@
+{
+    "name": "dependent-module",
+    "version": "1.0.0",
+    "description": "Module that depends on test-module",
+    "author": "Runesword",
+    "namespace": "Modules\\DependentModule",
+    "provider": "DependentModuleServiceProvider",
+    "requires": {},
+    "dependencies": {
+        "test-module": "^1.0"
+    }
+}

@@ -54,7 +54,9 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
 
         <!-- Content -->
         <div class="p-4">
-            <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 group-hover:text-amber-600 dark:text-stone-100 dark:group-hover:text-amber-500">
+            <h3
+                class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 group-hover:text-amber-600 dark:text-stone-100 dark:group-hover:text-amber-500"
+            >
                 {{ props.article.title }}
             </h3>
 
@@ -67,8 +69,12 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
                 class="mb-2"
             />
 
-            <p v-if="props.article.publishedAt" class="mb-2 text-sm text-stone-500 dark:text-stone-400">
-                {{ t('articles.by') }} {{ getAuthorDisplayName(props.article) }} · {{ formatPublishedDate(props.article.publishedAt) }}
+            <p
+                v-if="props.article.publishedAt"
+                class="mb-2 text-sm text-stone-500 dark:text-stone-400"
+            >
+                {{ t('articles.by') }} {{ getAuthorDisplayName(props.article) }} ·
+                {{ formatPublishedDate(props.article.publishedAt) }}
             </p>
 
             <p class="line-clamp-2 text-sm text-stone-600 dark:text-stone-300">

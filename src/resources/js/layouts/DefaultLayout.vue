@@ -26,7 +26,7 @@ const googleFontsUrl = computed(() => {
     if (fonts.size === 0) return null;
 
     const fontString = Array.from(fonts)
-        .map(f => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
+        .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
         .join('&');
 
     return `https://fonts.googleapis.com/css2?${fontString}&display=swap`;
@@ -50,17 +50,15 @@ watch(theme, (newTheme) => {
 </script>
 
 <template>
-    <div class="flex min-h-screen flex-col bg-stone-50 dark:bg-stone-900 transition-colors duration-200">
+    <div
+        class="flex min-h-screen flex-col bg-stone-50 dark:bg-stone-900 transition-colors duration-200"
+    >
         <!-- Inject CSS Variables -->
         <component :is="'style'" v-if="cssVariables">{{ cssVariables }}</component>
 
         <!-- Load Google Fonts -->
         <Teleport to="head">
-            <link
-                v-if="googleFontsUrl"
-                rel="stylesheet"
-                :href="googleFontsUrl"
-            />
+            <link v-if="googleFontsUrl" rel="stylesheet" :href="googleFontsUrl" />
         </Teleport>
 
         <a

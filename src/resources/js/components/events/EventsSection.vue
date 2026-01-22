@@ -25,7 +25,7 @@ const hasEvents = computed(() => props.events.length > 0);
     <section class="events-section">
         <!-- Section header -->
         <div class="mb-6 flex items-center justify-between">
-            <h2 class="font-display text-3xl font-bold tracking-tight text-gray-900">
+            <h2 class="font-display text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                 {{ t('home.upcomingEvents') }}
             </h2>
             <Link
@@ -41,10 +41,7 @@ const hasEvents = computed(() => props.events.length > 0);
         <div class="grid grid-cols-1 items-stretch gap-8 lg:grid-cols-3">
             <!-- Left column: Events grid -->
             <div class="flex flex-col lg:col-span-2">
-                <div
-                    v-if="hasEvents"
-                    class="flex flex-1 items-center"
-                >
+                <div v-if="hasEvents" class="flex flex-1 items-center">
                     <div class="grid w-full grid-cols-1 gap-6 sm:grid-cols-2">
                         <EventCard
                             v-for="event in displayEvents"
@@ -58,11 +55,11 @@ const hasEvents = computed(() => props.events.length > 0);
                 <!-- Empty state (compact) -->
                 <div
                     v-else
-                    class="flex flex-1 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8"
+                    class="flex flex-1 items-center justify-center rounded-lg border border-dashed border-stone-300 bg-stone-50 p-8 dark:border-stone-600 dark:bg-stone-800"
                 >
                     <div class="text-center">
                         <svg
-                            class="mx-auto h-8 w-8 text-gray-400"
+                            class="mx-auto h-8 w-8 text-stone-400 dark:text-stone-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -75,7 +72,7 @@ const hasEvents = computed(() => props.events.length > 0);
                                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                         </svg>
-                        <p class="mt-2 text-sm text-gray-500">
+                        <p class="mt-2 text-sm text-stone-500 dark:text-stone-400">
                             {{ t('home.noEventsCompact') }}
                         </p>
                     </div>

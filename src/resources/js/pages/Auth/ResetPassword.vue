@@ -37,7 +37,10 @@ const submit = () => {
     <AuthLayout :title="t('auth.resetPassword.title')" :subtitle="t('auth.resetPassword.subtitle')">
         <form @submit.prevent="submit" class="space-y-6">
             <div>
-                <label for="email" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="email"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.resetPassword.email') }}
                 </label>
                 <input
@@ -54,7 +57,10 @@ const submit = () => {
             </div>
 
             <div>
-                <label for="password" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="password"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.resetPassword.password') }}
                 </label>
                 <input
@@ -71,7 +77,10 @@ const submit = () => {
             </div>
 
             <div>
-                <label for="password_confirmation" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="password_confirmation"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.resetPassword.passwordConfirm') }}
                 </label>
                 <input

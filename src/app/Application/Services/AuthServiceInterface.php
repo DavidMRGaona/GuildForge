@@ -64,4 +64,14 @@ interface AuthServiceInterface
      * Verify and apply the pending email change.
      */
     public function verifyPendingEmail(string $userId, string $hash): bool;
+
+    /**
+     * Upload and optimize a user avatar.
+     *
+     * @param string $userId The user ID
+     * @param string $contents The raw file contents
+     * @param string $mimeType The file MIME type
+     * @return string|null The avatar public ID, or null if upload failed
+     */
+    public function uploadAvatar(string $userId, string $contents, string $mimeType): ?string;
 }

@@ -18,16 +18,14 @@ export interface UseTagsReturn {
  * @param tags - Array of tags (can be a ref or plain value)
  */
 export function useTags(tags: MaybeRef<Tag[] | undefined>): UseTagsReturn {
-    const categoryTag = computed(() =>
-        unref(tags)?.find((tag) => tag.parentId === null)
+    const categoryTag = computed(() => unref(tags)?.find((tag) => tag.parentId === null));
+
+    const additionalTags = computed(
+        () => unref(tags)?.filter((tag) => tag.parentId !== null) ?? []
     );
 
-    const additionalTags = computed(() =>
-        unref(tags)?.filter((tag) => tag.parentId !== null) ?? []
-    );
-
-    const hasTags = computed(() =>
-        categoryTag.value !== undefined || additionalTags.value.length > 0
+    const hasTags = computed(
+        () => categoryTag.value !== undefined || additionalTags.value.length > 0
     );
 
     return {

@@ -31,7 +31,10 @@ const submit = () => {
     <AuthLayout :title="t('auth.login.title')" :subtitle="t('auth.login.subtitle')">
         <form @submit.prevent="submit" class="space-y-6">
             <div>
-                <label for="email" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="email"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.login.email') }}
                 </label>
                 <input
@@ -48,7 +51,10 @@ const submit = () => {
             </div>
 
             <div>
-                <label for="password" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="password"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.login.password') }}
                 </label>
                 <input
@@ -72,12 +78,18 @@ const submit = () => {
                         type="checkbox"
                         class="h-4 w-4 rounded border-stone-300 dark:border-stone-600 text-amber-600 focus:ring-amber-500"
                     />
-                    <label for="remember" class="ml-2 block text-sm text-stone-700 dark:text-stone-300">
+                    <label
+                        for="remember"
+                        class="ml-2 block text-sm text-stone-700 dark:text-stone-300"
+                    >
                         {{ t('auth.login.remember') }}
                     </label>
                 </div>
 
-                <Link href="/olvide-contrasena" class="text-sm font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300">
+                <Link
+                    href="/olvide-contrasena"
+                    class="text-sm font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300"
+                >
                     {{ t('auth.login.forgotPassword') }}
                 </Link>
             </div>
@@ -93,9 +105,15 @@ const submit = () => {
                 </BaseButton>
             </div>
 
-            <p v-if="authSettings.registrationEnabled" class="text-center text-sm text-stone-600 dark:text-stone-400">
+            <p
+                v-if="authSettings.registrationEnabled"
+                class="text-center text-sm text-stone-600 dark:text-stone-400"
+            >
                 {{ t('auth.login.noAccount') }}
-                <Link href="/registro" class="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300">
+                <Link
+                    href="/registro"
+                    class="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300"
+                >
                     {{ t('auth.login.registerLink') }}
                 </Link>
             </p>

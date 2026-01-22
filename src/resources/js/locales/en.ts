@@ -101,8 +101,7 @@ export default {
             title: 'What we do',
             activities: {
                 title: 'Activities',
-                content:
-                    'We organize regular events and activities for all experience levels.',
+                content: 'We organize regular events and activities for all experience levels.',
             },
         },
         join: {
@@ -229,7 +228,8 @@ export default {
             displayName: 'Display name',
             displayNameHelp: 'This name will be displayed publicly instead of your real name',
             email: 'Email',
-            pendingEmailNotice: 'A verification email has been sent to {email}. Click the link in the email to confirm the change.',
+            pendingEmailNotice:
+                'A verification email has been sent to {email}. Click the link in the email to confirm the change.',
             avatar: 'Avatar',
             changePassword: 'Change password',
             currentPassword: 'Current password',

@@ -102,7 +102,10 @@ const changePassword = () => {
             <BaseCard :title="t('auth.profile.information')" class="mb-8">
                 <form @submit.prevent="updateProfile" class="space-y-6">
                     <div>
-                        <label for="name" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                        <label
+                            for="name"
+                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                        >
                             {{ t('auth.profile.name') }}
                         </label>
                         <input
@@ -112,13 +115,19 @@ const changePassword = () => {
                             required
                             class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
                         />
-                        <p v-if="profileForm.errors.name" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p
+                            v-if="profileForm.errors.name"
+                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        >
                             {{ profileForm.errors.name }}
                         </p>
                     </div>
 
                     <div>
-                        <label for="display_name" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                        <label
+                            for="display_name"
+                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                        >
                             {{ t('auth.profile.displayName') }}
                         </label>
                         <input
@@ -130,13 +139,19 @@ const changePassword = () => {
                         <p class="mt-1 text-sm text-stone-500 dark:text-stone-400">
                             {{ t('auth.profile.displayNameHelp') }}
                         </p>
-                        <p v-if="profileForm.errors.display_name" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p
+                            v-if="profileForm.errors.display_name"
+                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        >
                             {{ profileForm.errors.display_name }}
                         </p>
                     </div>
 
                     <div>
-                        <label for="email" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                        <label
+                            for="email"
+                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                        >
                             {{ t('auth.profile.email') }}
                         </label>
                         <input
@@ -146,28 +161,50 @@ const changePassword = () => {
                             required
                             class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
                         />
-                        <p v-if="profileForm.errors.email" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p
+                            v-if="profileForm.errors.email"
+                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        >
                             {{ profileForm.errors.email }}
                         </p>
-                        <p v-if="props.user.pendingEmail" class="mt-2 text-sm text-amber-600 dark:text-amber-400">
-                            {{ t('auth.profile.pendingEmailNotice', { email: props.user.pendingEmail }) }}
+                        <p
+                            v-if="props.user.pendingEmail"
+                            class="mt-2 text-sm text-amber-600 dark:text-amber-400"
+                        >
+                            {{
+                                t('auth.profile.pendingEmailNotice', {
+                                    email: props.user.pendingEmail,
+                                })
+                            }}
                         </p>
                     </div>
 
                     <div>
-                        <label for="avatar" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                        <label
+                            for="avatar"
+                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                        >
                             {{ t('auth.profile.avatar') }}
                         </label>
                         <div class="mt-1 flex items-center gap-4">
-                            <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700">
+                            <div
+                                class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 dark:bg-stone-700"
+                            >
                                 <img
                                     v-if="displayAvatarUrl"
                                     :src="displayAvatarUrl"
                                     alt="Avatar"
                                     class="h-full w-full object-cover"
                                 />
-                                <svg v-else class="h-8 w-8 text-stone-400" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                                <svg
+                                    v-else
+                                    class="h-8 w-8 text-stone-400"
+                                    fill="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z"
+                                    />
                                 </svg>
                             </div>
                             <input
@@ -178,7 +215,10 @@ const changePassword = () => {
                                 @change="handleAvatarChange"
                             />
                         </div>
-                        <p v-if="profileForm.errors.avatar" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p
+                            v-if="profileForm.errors.avatar"
+                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        >
                             {{ profileForm.errors.avatar }}
                         </p>
                     </div>
@@ -199,7 +239,10 @@ const changePassword = () => {
             <BaseCard :title="t('auth.profile.changePassword')">
                 <form @submit.prevent="changePassword" class="space-y-6">
                     <div>
-                        <label for="current_password" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                        <label
+                            for="current_password"
+                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                        >
                             {{ t('auth.profile.currentPassword') }}
                         </label>
                         <input
@@ -210,13 +253,19 @@ const changePassword = () => {
                             autocomplete="current-password"
                             class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
                         />
-                        <p v-if="passwordForm.errors.current_password" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p
+                            v-if="passwordForm.errors.current_password"
+                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        >
                             {{ passwordForm.errors.current_password }}
                         </p>
                     </div>
 
                     <div>
-                        <label for="new_password" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                        <label
+                            for="new_password"
+                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                        >
                             {{ t('auth.profile.newPassword') }}
                         </label>
                         <input
@@ -227,13 +276,19 @@ const changePassword = () => {
                             autocomplete="new-password"
                             class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
                         />
-                        <p v-if="passwordForm.errors.password" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                        <p
+                            v-if="passwordForm.errors.password"
+                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                        >
                             {{ passwordForm.errors.password }}
                         </p>
                     </div>
 
                     <div>
-                        <label for="password_confirmation" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                        <label
+                            for="password_confirmation"
+                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                        >
                             {{ t('auth.profile.confirmPassword') }}
                         </label>
                         <input
@@ -252,7 +307,11 @@ const changePassword = () => {
                             variant="primary"
                             :disabled="passwordForm.processing"
                         >
-                            {{ passwordForm.processing ? t('common.loading') : t('auth.profile.updatePassword') }}
+                            {{
+                                passwordForm.processing
+                                    ? t('common.loading')
+                                    : t('auth.profile.updatePassword')
+                            }}
                         </BaseButton>
                     </div>
                 </form>

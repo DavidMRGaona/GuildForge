@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\Application\DTOs\Response\LocationSettingsDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use App\Infrastructure\Services\SettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,7 +68,7 @@ final class SettingsServiceTest extends TestCase
         $this->assertDatabaseCount('settings', 1);
     }
 
-    public function test_get_location_settings_returns_all_location_keys(): void
+    public function test_get_location_settings_returns_location_dto(): void
     {
         SettingModel::create([
             'key' => 'location_name',
@@ -96,17 +97,12 @@ final class SettingsServiceTest extends TestCase
 
         $result = $this->settingsService->getLocationSettings();
 
-        $this->assertIsArray($result);
-        $this->assertArrayHasKey('name', $result);
-        $this->assertArrayHasKey('address', $result);
-        $this->assertArrayHasKey('lat', $result);
-        $this->assertArrayHasKey('lng', $result);
-        $this->assertArrayHasKey('zoom', $result);
-        $this->assertEquals('Test HQ', $result['name']);
-        $this->assertEquals('Test Address, City', $result['address']);
-        $this->assertEquals(42.5956, $result['lat']);
-        $this->assertEquals(-8.7644, $result['lng']);
-        $this->assertEquals(15, $result['zoom']);
+        $this->assertInstanceOf(LocationSettingsDTO::class, $result);
+        $this->assertEquals('Test HQ', $result->name);
+        $this->assertEquals('Test Address, City', $result->address);
+        $this->assertEquals(42.5956, $result->lat);
+        $this->assertEquals(-8.7644, $result->lng);
+        $this->assertEquals(15, $result->zoom);
     }
 
     public function test_settings_are_cached(): void

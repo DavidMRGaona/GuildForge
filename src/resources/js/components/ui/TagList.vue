@@ -25,10 +25,7 @@ const hiddenCount = computed(() => Math.max(0, props.tags.length - props.maxVisi
 </script>
 
 <template>
-    <div
-        v-if="tags.length > 0"
-        class="flex flex-wrap items-center gap-1"
-    >
+    <div v-if="tags.length > 0" class="flex flex-wrap items-center gap-1">
         <TagBadge
             v-for="tag in visibleTags"
             :key="tag.id"
@@ -38,10 +35,7 @@ const hiddenCount = computed(() => Math.max(0, props.tags.length - props.maxVisi
             :variant="variant"
             :content-type="contentType"
         />
-        <span
-            v-if="hiddenCount > 0"
-            class="text-xs text-gray-500"
-        >
+        <span v-if="hiddenCount > 0" class="text-xs text-stone-500 dark:text-stone-400">
             +{{ hiddenCount }}
         </span>
     </div>

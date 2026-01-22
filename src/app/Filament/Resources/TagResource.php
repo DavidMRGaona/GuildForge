@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\Services\TagQueryServiceInterface;
 use App\Filament\Resources\TagResource\Pages;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Filament\Forms\Components\CheckboxList;
@@ -64,22 +65,14 @@ class TagResource extends Resource
                             ->rules(['alpha_dash']),
                         Select::make('parent_id')
                             ->label(__('filament.tags.fields.parent'))
-                            ->relationship(
-                                name: 'parent',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: fn (Builder $query, ?TagModel $record) => $query
-                                    ->when($record !== null, fn (Builder $q) => $q->where('id', '!=', $record?->id))
-                                    ->where(function (Builder $q): void {
-                                        $q->whereNull('parent_id')
-                                            ->orWhereNotNull('parent_id');
-                                    })
-                                    ->orderBy('sort_order')
-                                    ->orderBy('name')
-                            )
-                            ->getOptionLabelFromRecordUsing(fn (TagModel $record): string => $record->getIndentedNameForSelect())
+                            ->options(fn (): array => self::getTagQueryService()->getOptionsForSelect())
                             ->searchable()
                             ->preload()
-                            ->nullable(),
+                            ->nullable()
+                            ->disabledOn('edit')
+                            ->hint(fn (?TagModel $record): ?string => $record?->parent_id !== null
+                                ? (string) __('filament.tags.hints.parent_not_editable')
+                                : null),
                         Textarea::make('description')
                             ->label(__('filament.tags.fields.description'))
                             ->rows(3)
@@ -115,7 +108,7 @@ class TagResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label(__('filament.tags.fields.name'))
-                    ->formatStateUsing(fn (TagModel $record): string => $record->getIndentedNameForTable())
+                    ->formatStateUsing(fn (TagModel $record): string => self::formatIndentedNameForTable($record))
                     ->searchable()
                     ->sortable(),
                 ColorColumn::make('color')
@@ -178,7 +171,7 @@ class TagResource extends Resource
             ->actions([
                 EditAction::make(),
                 DeleteAction::make()
-                    ->hidden(fn (TagModel $record): bool => $record->hasChildren() || $record->isInUse()),
+                    ->hidden(fn (TagModel $record): bool => !self::getTagQueryService()->canDelete($record->id)),
             ])
             ->paginated(false)
             ->defaultSort(null);
@@ -191,12 +184,14 @@ class TagResource extends Resource
      */
     public static function getEloquentQuery(): Builder
     {
-        // Get IDs in hierarchical order
-        $orderedIds = TagModel::getAllInHierarchicalOrder()->pluck('id')->toArray();
+        $tagService = self::getTagQueryService();
+        $hierarchicalTags = $tagService->getAllInHierarchicalOrder();
 
-        if (empty($orderedIds)) {
+        if (empty($hierarchicalTags)) {
             return parent::getEloquentQuery();
         }
+
+        $orderedIds = array_map(fn ($tag) => $tag->id, $hierarchicalTags);
 
         // Build CASE statement for ordering
         $orderCase = 'CASE id ';
@@ -220,5 +215,43 @@ class TagResource extends Resource
             'create' => Pages\CreateTag::route('/create'),
             'edit' => Pages\EditTag::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Get the tag query service from the container.
+     */
+    private static function getTagQueryService(): TagQueryServiceInterface
+    {
+        return app(TagQueryServiceInterface::class);
+    }
+
+    /**
+     * Format the tag name with indentation for table display.
+     */
+    private static function formatIndentedNameForTable(TagModel $record): string
+    {
+        $depth = self::computeDepth($record);
+
+        if ($depth === 0) {
+            return $record->name;
+        }
+
+        return str_repeat('-', $depth) . ' ' . $record->name;
+    }
+
+    /**
+     * Compute the depth of a tag by traversing the parent relationship.
+     */
+    private static function computeDepth(TagModel $tag): int
+    {
+        $depth = 0;
+        $current = $tag;
+
+        while ($current->parent !== null) {
+            $depth++;
+            $current = $current->parent;
+        }
+
+        return $depth;
     }
 }
