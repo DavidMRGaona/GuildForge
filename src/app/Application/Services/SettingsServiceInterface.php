@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Services;
 
+use App\Application\DTOs\Response\LocationSettingsDTO;
+
 interface SettingsServiceInterface
 {
     /**
@@ -17,11 +19,9 @@ interface SettingsServiceInterface
     public function set(string $key, string $value): void;
 
     /**
-     * Get all location settings with proper types.
-     *
-     * @return array{name: string, address: string, lat: float, lng: float, zoom: int}
+     * Get all location settings.
      */
-    public function getLocationSettings(): array;
+    public function getLocationSettings(): LocationSettingsDTO;
 
     /**
      * Clear the settings cache.

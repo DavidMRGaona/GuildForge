@@ -42,7 +42,8 @@ export function useEvents(): UseEventsReturn {
         }
 
         // Multi-day different months: "15 ene - 2 feb 2026"
-        const formatShort = (d: Date): string => d.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' });
+        const formatShort = (d: Date): string =>
+            d.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' });
         return `${formatShort(start)} - ${formatShort(end)} ${end.getFullYear()}`;
     }
 

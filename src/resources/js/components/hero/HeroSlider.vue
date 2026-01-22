@@ -20,16 +20,8 @@ const props = withDefaults(defineProps<Props>(), {
 const { t } = useI18n();
 
 const slidesRef = toRef(props, 'slides');
-const {
-    currentIndex,
-    currentSlide,
-    hasMultipleSlides,
-    next,
-    prev,
-    goTo,
-    pause,
-    resume,
-} = useHeroSlider(slidesRef, props.autoplayInterval);
+const { currentIndex, currentSlide, hasMultipleSlides, next, prev, goTo, pause, resume } =
+    useHeroSlider(slidesRef, props.autoplayInterval);
 
 const currentImageUrl = computed<string | null>(() => {
     if (!currentSlide.value) return null;
@@ -52,7 +44,9 @@ const hasSlides = computed(() => props.slides.length > 0);
             <div class="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600">
                 <div class="flex h-full items-center justify-center">
                     <div class="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
-                        <h1 class="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1
+                            class="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl"
+                        >
                             {{ t('home.welcome') }}
                         </h1>
                         <p class="mt-4 text-xl font-light text-amber-50 sm:text-2xl">
@@ -73,11 +67,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                 leave-to-class="opacity-0"
                 mode="out-in"
             >
-                <div
-                    v-if="currentSlide"
-                    :key="currentSlide.id"
-                    class="absolute inset-0"
-                >
+                <div v-if="currentSlide" :key="currentSlide.id" class="absolute inset-0">
                     <!-- Background image -->
                     <div
                         v-if="currentImageUrl"
@@ -90,7 +80,9 @@ const hasSlides = computed(() => props.slides.length > 0);
                         class="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600"
                     />
                     <!-- Dark overlay -->
-                    <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/70" />
+                    <div
+                        class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/70"
+                    />
                 </div>
             </Transition>
 
@@ -108,19 +100,21 @@ const hasSlides = computed(() => props.slides.length > 0);
                         :key="'content-' + currentSlide.id"
                         class="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8"
                     >
-                        <h1 class="font-display text-4xl font-bold tracking-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.5)] sm:text-5xl lg:text-6xl">
+                        <h1
+                            class="font-display text-4xl font-bold tracking-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.5)] sm:text-5xl lg:text-6xl"
+                        >
                             {{ currentSlide.title }}
                         </h1>
                         <p
                             v-if="currentSlide.subtitle"
-                            class="mt-4 text-xl font-light text-gray-200 sm:text-2xl"
+                            class="mt-4 text-xl font-light text-stone-200 sm:text-2xl"
                         >
                             {{ currentSlide.subtitle }}
                         </p>
                         <div v-if="currentSlide.buttonText && currentSlide.buttonUrl" class="mt-8">
                             <Link
                                 :href="currentSlide.buttonUrl"
-                                class="inline-flex items-center rounded-lg bg-amber-500 px-6 py-3 text-lg font-semibold text-white transition-colors hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-black"
+                                class="inline-flex items-center rounded-lg bg-amber-500 px-6 py-3 text-lg font-semibold text-white transition-colors hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-stone-900"
                             >
                                 {{ currentSlide.buttonText }}
                             </Link>
@@ -134,24 +128,46 @@ const hasSlides = computed(() => props.slides.length > 0);
                 <!-- Previous arrow -->
                 <button
                     type="button"
-                    class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black"
+                    class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
                     :aria-label="t('common.previous')"
                     @click="prev"
                 >
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    <svg
+                        class="h-6 w-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 19l-7-7 7-7"
+                        />
                     </svg>
                 </button>
 
                 <!-- Next arrow -->
                 <button
                     type="button"
-                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
                     :aria-label="t('common.next')"
                     @click="next"
                 >
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    <svg
+                        class="h-6 w-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5l7 7-7 7"
+                        />
                     </svg>
                 </button>
             </template>
@@ -170,11 +186,9 @@ const hasSlides = computed(() => props.slides.length > 0);
                     role="tab"
                     :aria-selected="index === currentIndex"
                     :aria-label="t('common.goToSlide', { number: index + 1 })"
-                    class="h-3 w-3 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black"
+                    class="h-3 w-3 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
                     :class="[
-                        index === currentIndex
-                            ? 'bg-white w-6'
-                            : 'bg-white/50 hover:bg-white/70'
+                        index === currentIndex ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/70',
                     ]"
                     @click="goTo(index)"
                 />

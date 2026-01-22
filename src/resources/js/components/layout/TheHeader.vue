@@ -54,12 +54,7 @@ function selectTheme(mode: ThemeMode): void {
                 <!-- Logo -->
                 <div class="shrink-0">
                     <Link href="/" class="flex items-center">
-                        <img
-                            v-if="currentLogo"
-                            :src="currentLogo"
-                            :alt="appName"
-                            class="h-8"
-                        />
+                        <img v-if="currentLogo" :src="currentLogo" :alt="appName" class="h-8" />
                         <span v-else class="text-xl font-bold text-amber-600 dark:text-amber-500">
                             {{ t('layout.brand') }}
                         </span>
@@ -76,8 +71,19 @@ function selectTheme(mode: ThemeMode): void {
                         :aria-label="t('search.title')"
                         class="p-2 rounded-md text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white dark:focus:ring-amber-400"
                     >
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        <svg
+                            class="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
                         </svg>
                     </Link>
 
@@ -151,36 +157,75 @@ function selectTheme(mode: ThemeMode): void {
                                 <button
                                     type="button"
                                     class="flex w-full items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-700"
-                                    :class="{ 'bg-stone-100 dark:bg-stone-700': appStore.themeMode === 'system' }"
+                                    :class="{
+                                        'bg-stone-100 dark:bg-stone-700':
+                                            appStore.themeMode === 'system',
+                                    }"
                                     role="menuitem"
                                     @click="selectTheme('system')"
                                 >
-                                    <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    <svg
+                                        class="mr-3 h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                        />
                                     </svg>
                                     {{ t('layout.systemTheme') }}
                                 </button>
                                 <button
                                     type="button"
                                     class="flex w-full items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-700"
-                                    :class="{ 'bg-stone-100 dark:bg-stone-700': appStore.themeMode === 'light' }"
+                                    :class="{
+                                        'bg-stone-100 dark:bg-stone-700':
+                                            appStore.themeMode === 'light',
+                                    }"
                                     role="menuitem"
                                     @click="selectTheme('light')"
                                 >
-                                    <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    <svg
+                                        class="mr-3 h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                                        />
                                     </svg>
                                     {{ t('layout.lightTheme') }}
                                 </button>
                                 <button
                                     type="button"
                                     class="flex w-full items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-700"
-                                    :class="{ 'bg-stone-100 dark:bg-stone-700': appStore.themeMode === 'dark' }"
+                                    :class="{
+                                        'bg-stone-100 dark:bg-stone-700':
+                                            appStore.themeMode === 'dark',
+                                    }"
                                     role="menuitem"
                                     @click="selectTheme('dark')"
                                 >
-                                    <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                    <svg
+                                        class="mr-3 h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                                        />
                                     </svg>
                                     {{ t('layout.darkTheme') }}
                                 </button>
@@ -201,7 +246,9 @@ function selectTheme(mode: ThemeMode): void {
                         :aria-expanded="isMobileMenuOpen"
                         @click="toggleMobileMenu"
                     >
-                        <span class="sr-only">{{ isMobileMenuOpen ? 'Close menu' : 'Open menu' }}</span>
+                        <span class="sr-only">{{
+                            isMobileMenuOpen ? 'Close menu' : 'Open menu'
+                        }}</span>
                         <!-- Hamburger icon -->
                         <svg
                             v-if="!isMobileMenuOpen"
@@ -240,7 +287,10 @@ function selectTheme(mode: ThemeMode): void {
         </div>
 
         <!-- Mobile menu -->
-        <div v-if="isMobileMenuOpen" class="border-t border-stone-200 md:hidden dark:border-stone-700">
+        <div
+            v-if="isMobileMenuOpen"
+            class="border-t border-stone-200 md:hidden dark:border-stone-700"
+        >
             <div class="space-y-1 px-4 py-3">
                 <TheNavigation mobile @navigate="closeMobileMenu" />
 
@@ -250,54 +300,103 @@ function selectTheme(mode: ThemeMode): void {
                     class="flex items-center px-3 py-2 text-base font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900 rounded-md dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
                     @click="closeMobileMenu"
                 >
-                    <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <svg
+                        class="mr-3 h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
                     </svg>
                     {{ t('search.title') }}
                 </Link>
 
                 <!-- Theme selector -->
                 <div v-if="appStore.isThemeToggleVisible" class="px-3 py-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                    <span
+                        class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400"
+                    >
                         {{ t('layout.selectTheme') }}
                     </span>
                     <div class="mt-2 flex gap-2">
                         <button
                             type="button"
                             class="flex flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
-                            :class="appStore.themeMode === 'system'
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                                : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'"
+                            :class="
+                                appStore.themeMode === 'system'
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'
+                            "
                             @click="selectTheme('system')"
                         >
-                            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            <svg
+                                class="mr-2 h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                />
                             </svg>
                             {{ t('layout.systemTheme') }}
                         </button>
                         <button
                             type="button"
                             class="flex flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
-                            :class="appStore.themeMode === 'light'
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                                : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'"
+                            :class="
+                                appStore.themeMode === 'light'
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'
+                            "
                             @click="selectTheme('light')"
                         >
-                            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            <svg
+                                class="mr-2 h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                                />
                             </svg>
                             {{ t('layout.lightTheme') }}
                         </button>
                         <button
                             type="button"
                             class="flex flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
-                            :class="appStore.themeMode === 'dark'
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                                : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'"
+                            :class="
+                                appStore.themeMode === 'dark'
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'
+                            "
                             @click="selectTheme('dark')"
                         >
-                            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            <svg
+                                class="mr-2 h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                                />
                             </svg>
                             {{ t('layout.darkTheme') }}
                         </button>

@@ -37,10 +37,7 @@ export function usePagination<T>(
 
     const lastItemNumber = computed((): number => {
         const p = toValue(paginated);
-        return Math.min(
-            p.meta.currentPage * p.meta.perPage,
-            p.meta.total
-        );
+        return Math.min(p.meta.currentPage * p.meta.perPage, p.meta.total);
     });
 
     const hasPagination = computed((): boolean => {

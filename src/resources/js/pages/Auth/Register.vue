@@ -32,7 +32,10 @@ const submit = () => {
     <AuthLayout :title="t('auth.register.title')" :subtitle="t('auth.register.subtitle')">
         <form @submit.prevent="submit" class="space-y-6">
             <div>
-                <label for="name" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="name"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.register.name') }}
                 </label>
                 <input
@@ -49,7 +52,10 @@ const submit = () => {
             </div>
 
             <div>
-                <label for="email" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="email"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.register.email') }}
                 </label>
                 <input
@@ -66,7 +72,10 @@ const submit = () => {
             </div>
 
             <div>
-                <label for="password" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="password"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.register.password') }}
                 </label>
                 <input
@@ -83,7 +92,10 @@ const submit = () => {
             </div>
 
             <div>
-                <label for="password_confirmation" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="password_confirmation"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.register.passwordConfirm') }}
                 </label>
                 <input
@@ -107,9 +119,15 @@ const submit = () => {
                 </BaseButton>
             </div>
 
-            <p v-if="authSettings.loginEnabled" class="text-center text-sm text-stone-600 dark:text-stone-400">
+            <p
+                v-if="authSettings.loginEnabled"
+                class="text-center text-sm text-stone-600 dark:text-stone-400"
+            >
                 {{ t('auth.register.hasAccount') }}
-                <Link href="/login" class="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300">
+                <Link
+                    href="/login"
+                    class="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300"
+                >
                     {{ t('auth.register.loginLink') }}
                 </Link>
             </p>

@@ -25,10 +25,7 @@ const errorMessage = computed((): string => {
     <div class="h-full w-full">
         <LoadingSpinner v-if="isLoading" />
 
-        <div
-            v-else-if="errorMessage"
-            class="flex items-center justify-center h-full text-red-600"
-        >
+        <div v-else-if="errorMessage" class="flex items-center justify-center h-full text-red-600">
             {{ errorMessage }}
         </div>
 

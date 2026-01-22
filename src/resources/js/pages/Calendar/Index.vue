@@ -34,9 +34,7 @@ const handleEventsLoaded = (events: CalendarEvent[]): void => {
     );
 
     // Find next upcoming event (date >= today)
-    const upcomingEvent = sortedEvents.find(
-        (event) => new Date(event.start) >= now
-    );
+    const upcomingEvent = sortedEvents.find((event) => new Date(event.start) >= now);
 
     if (upcomingEvent) {
         selectedEvent.value = upcomingEvent;

@@ -41,7 +41,12 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
                         loading="lazy"
                         class="aspect-video h-48 w-full object-cover"
                     />
-                    <ImagePlaceholder v-else variant="gallery" height="h-48" icon-size="h-16 w-16" />
+                    <ImagePlaceholder
+                        v-else
+                        variant="gallery"
+                        height="h-48"
+                        icon-size="h-16 w-16"
+                    />
 
                     <!-- Category badge as overlay on image -->
                     <TagBadge
@@ -53,14 +58,18 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
                         class="absolute left-3 top-3"
                     />
 
-                    <div class="absolute bottom-2 right-2 rounded-full bg-stone-600 px-3 py-1 text-xs font-medium text-white dark:bg-stone-700">
+                    <div
+                        class="absolute bottom-2 right-2 rounded-full bg-stone-600 px-3 py-1 text-xs font-medium text-white dark:bg-stone-700"
+                    >
                         {{ getPhotoCount(props.gallery) }}
                     </div>
                 </div>
             </template>
 
             <div class="p-4">
-                <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 dark:text-stone-100">
+                <h3
+                    class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 dark:text-stone-100"
+                >
                     {{ props.gallery.title }}
                 </h3>
 
@@ -73,7 +82,10 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
                     class="mb-2"
                 />
 
-                <p v-if="props.gallery.description" class="line-clamp-2 text-sm text-stone-600 dark:text-stone-300">
+                <p
+                    v-if="props.gallery.description"
+                    class="line-clamp-2 text-sm text-stone-600 dark:text-stone-300"
+                >
                     {{ getGalleryExcerpt(props.gallery.description) }}
                 </p>
             </div>

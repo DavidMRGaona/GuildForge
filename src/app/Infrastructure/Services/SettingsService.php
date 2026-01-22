@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Services;
 
+use App\Application\DTOs\Response\LocationSettingsDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use Illuminate\Support\Facades\Cache;
@@ -37,19 +38,17 @@ final class SettingsService implements SettingsServiceInterface
     }
 
     /**
-     * Get all location settings with proper types.
-     *
-     * @return array{name: string, address: string, lat: float, lng: float, zoom: int}
+     * Get all location settings.
      */
-    public function getLocationSettings(): array
+    public function getLocationSettings(): LocationSettingsDTO
     {
-        return [
-            'name' => (string) $this->get('location_name', ''),
-            'address' => (string) $this->get('location_address', ''),
-            'lat' => (float) $this->get('location_lat', 0),
-            'lng' => (float) $this->get('location_lng', 0),
-            'zoom' => (int) $this->get('location_zoom', 10),
-        ];
+        return new LocationSettingsDTO(
+            name: (string) $this->get('location_name', ''),
+            address: (string) $this->get('location_address', ''),
+            lat: (float) $this->get('location_lat', 0),
+            lng: (float) $this->get('location_lng', 0),
+            zoom: (int) $this->get('location_zoom', 10),
+        );
     }
 
     /**

@@ -1,0 +1,12 @@
+{
+    "name": "circular-a",
+    "version": "1.0.0",
+    "description": "Module A for circular dependency testing",
+    "author": "Runesword",
+    "namespace": "Modules\\CircularA",
+    "provider": "CircularAServiceProvider",
+    "requires": {},
+    "dependencies": {
+        "circular-b": "^1.0"
+    }
+}

@@ -32,7 +32,9 @@ const submit = (): void => {
 </script>
 
 <template>
-    <div class="bg-white rounded-lg shadow-md p-6 h-full dark:bg-stone-800 dark:shadow-stone-900/50">
+    <div
+        class="bg-white rounded-lg shadow-md p-6 h-full dark:bg-stone-800 dark:shadow-stone-900/50"
+    >
         <h2 class="text-2xl font-bold text-stone-900 mb-6 dark:text-stone-100">
             {{ t('about.contact.form.title') }}
         </h2>
@@ -156,9 +158,7 @@ const submit = (): void => {
 
             <!-- Honeypot field (hidden from users, visible to bots) -->
             <div class="absolute left-[-9999px] w-px h-px overflow-hidden" aria-hidden="true">
-                <label for="contact-website">
-                    Website
-                </label>
+                <label for="contact-website"> Website </label>
                 <input
                     id="contact-website"
                     v-model="form.website"

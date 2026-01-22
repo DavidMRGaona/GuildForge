@@ -63,7 +63,7 @@ export function useMap(options: UseMapOptions = {}): UseMapReturn {
                 if (!response.ok) {
                     throw new Error('Failed to fetch location');
                 }
-                cachedLocation = await response.json() as MapLocation;
+                cachedLocation = (await response.json()) as MapLocation;
                 location.value = cachedLocation;
             } catch {
                 error.value = 'Error loading location';

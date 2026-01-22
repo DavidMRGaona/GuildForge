@@ -47,6 +47,9 @@ return [
             'articles' => 'Artículos',
             'galleries' => 'Galerías',
         ],
+        'hints' => [
+            'parent_not_editable' => 'La etiqueta padre no se puede cambiar una vez creada.',
+        ],
     ],
     'settings' => [
         'title' => 'Configuración del sitio',

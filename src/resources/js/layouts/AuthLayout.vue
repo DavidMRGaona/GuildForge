@@ -29,7 +29,7 @@ const googleFontsUrl = computed(() => {
     if (fonts.size === 0) return null;
 
     const fontString = Array.from(fonts)
-        .map(f => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
+        .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
         .join('&');
 
     return `https://fonts.googleapis.com/css2?${fontString}&display=swap`;
@@ -50,17 +50,15 @@ watch(theme, (newTheme) => {
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-stone-50 dark:bg-stone-900 transition-colors duration-200">
+    <div
+        class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-stone-50 dark:bg-stone-900 transition-colors duration-200"
+    >
         <!-- Inject CSS Variables -->
         <component :is="'style'" v-if="cssVariables">{{ cssVariables }}</component>
 
         <!-- Load Google Fonts -->
         <Teleport to="head">
-            <link
-                v-if="googleFontsUrl"
-                rel="stylesheet"
-                :href="googleFontsUrl"
-            />
+            <link v-if="googleFontsUrl" rel="stylesheet" :href="googleFontsUrl" />
         </Teleport>
 
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
@@ -69,10 +67,15 @@ watch(theme, (newTheme) => {
                     {{ page.props.appName }}
                 </span>
             </Link>
-            <h1 class="mt-6 text-center text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+            <h1
+                class="mt-6 text-center text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100"
+            >
                 {{ props.title }}
             </h1>
-            <p v-if="props.subtitle" class="mt-2 text-center text-sm text-stone-600 dark:text-stone-400">
+            <p
+                v-if="props.subtitle"
+                class="mt-2 text-center text-sm text-stone-600 dark:text-stone-400"
+            >
                 {{ props.subtitle }}
             </p>
         </div>
@@ -84,7 +87,10 @@ watch(theme, (newTheme) => {
         </div>
 
         <div class="mt-8 text-center">
-            <Link href="/" class="text-sm text-stone-600 dark:text-stone-400 hover:text-amber-600 dark:hover:text-amber-400">
+            <Link
+                href="/"
+                class="text-sm text-stone-600 dark:text-stone-400 hover:text-amber-600 dark:hover:text-amber-400"
+            >
                 ← {{ t('auth.backToHome') }}
             </Link>
         </div>

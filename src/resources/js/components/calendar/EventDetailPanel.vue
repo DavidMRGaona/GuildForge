@@ -52,12 +52,11 @@ const truncatedDescription = computed(() => {
 </script>
 
 <template>
-    <div class="flex h-full flex-col rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800 dark:shadow-stone-900/50">
+    <div
+        class="flex h-full flex-col rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800 dark:shadow-stone-900/50"
+    >
         <!-- Empty state -->
-        <div
-            v-if="!event"
-            class="flex flex-1 flex-col items-center justify-center text-center"
-        >
+        <div v-if="!event" class="flex flex-1 flex-col items-center justify-center text-center">
             <svg
                 class="mx-auto h-12 w-12 text-stone-300 dark:text-stone-600"
                 fill="none"
@@ -122,7 +121,10 @@ const truncatedDescription = computed(() => {
                 </div>
 
                 <!-- Location -->
-                <div v-if="event.location" class="mt-2 flex items-center text-sm text-stone-600 dark:text-stone-300">
+                <div
+                    v-if="event.location"
+                    class="mt-2 flex items-center text-sm text-stone-600 dark:text-stone-300"
+                >
                     <svg
                         class="mr-2 h-4 w-4 text-stone-400 dark:text-stone-500"
                         fill="none"
@@ -146,7 +148,10 @@ const truncatedDescription = computed(() => {
                 </div>
 
                 <!-- Description -->
-                <p v-if="truncatedDescription" class="mt-3 text-sm text-stone-600 dark:text-stone-300">
+                <p
+                    v-if="truncatedDescription"
+                    class="mt-3 text-sm text-stone-600 dark:text-stone-300"
+                >
                     {{ truncatedDescription }}
                 </p>
 

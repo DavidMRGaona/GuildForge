@@ -229,7 +229,8 @@ export default {
             displayName: 'Nombre para mostrar',
             displayNameHelp: 'Este nombre se mostrará públicamente en lugar de tu nombre real',
             email: 'Correo electrónico',
-            pendingEmailNotice: 'Se ha enviado un correo de verificación a {email}. Haz clic en el enlace del correo para confirmar el cambio.',
+            pendingEmailNotice:
+                'Se ha enviado un correo de verificación a {email}. Haz clic en el enlace del correo para confirmar el cambio.',
             avatar: 'Avatar',
             changePassword: 'Cambiar contraseña',
             currentPassword: 'Contraseña actual',

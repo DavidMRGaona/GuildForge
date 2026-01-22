@@ -27,10 +27,8 @@ const variantClasses: Record<NonNullable<typeof props.variant>, string> = {
         'bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-500 disabled:bg-amber-300 dark:bg-amber-500 dark:hover:bg-amber-400 dark:focus:ring-amber-400 dark:disabled:bg-amber-800 dark:disabled:text-amber-950',
     secondary:
         'bg-stone-200 text-stone-900 hover:bg-stone-300 focus:ring-stone-500 disabled:bg-stone-100 disabled:text-stone-400 dark:bg-stone-700 dark:text-stone-100 dark:hover:bg-stone-600 dark:focus:ring-stone-400 dark:disabled:bg-stone-800 dark:disabled:text-stone-500',
-    danger:
-        'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 dark:bg-red-500 dark:hover:bg-red-400 dark:focus:ring-red-400 dark:disabled:bg-red-800',
-    ghost:
-        'bg-transparent text-stone-700 hover:bg-stone-100 focus:ring-stone-500 disabled:text-stone-400 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-stone-100 dark:focus:ring-stone-400 dark:disabled:text-stone-600',
+    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 dark:bg-red-500 dark:hover:bg-red-400 dark:focus:ring-red-400 dark:disabled:bg-red-800',
+    ghost: 'bg-transparent text-stone-700 hover:bg-stone-100 focus:ring-stone-500 disabled:text-stone-400 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-stone-100 dark:focus:ring-stone-400 dark:disabled:text-stone-600',
 };
 
 const sizeClasses: Record<NonNullable<typeof props.size>, string> = {
@@ -76,11 +74,7 @@ function handleClick(event: Event): void {
         :class="buttonClasses"
         @click="handleClick"
     >
-        <LoadingSpinner
-            v-if="loading"
-            :size="spinnerSizes[size]"
-            :color="spinnerColor"
-        />
+        <LoadingSpinner v-if="loading" :size="spinnerSizes[size]" :color="spinnerColor" />
         <slot />
     </button>
 </template>

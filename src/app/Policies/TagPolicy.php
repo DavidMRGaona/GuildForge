@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Application\Services\TagQueryServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 
 class TagPolicy
 {
+    public function __construct(
+        private readonly TagQueryServiceInterface $tagQueryService,
+    ) {
+    }
+
     public function viewAny(UserModel $user): bool
     {
         return true;
@@ -31,7 +37,7 @@ class TagPolicy
 
     public function delete(UserModel $user, TagModel $tag): bool
     {
-        if ($tag->hasChildren() || $tag->isInUse()) {
+        if (!$this->tagQueryService->canDelete($tag->id)) {
             return false;
         }
 
@@ -45,7 +51,7 @@ class TagPolicy
 
     public function forceDelete(UserModel $user, TagModel $tag): bool
     {
-        if ($tag->hasChildren() || $tag->isInUse()) {
+        if (!$this->tagQueryService->canDelete($tag->id)) {
             return false;
         }
 

@@ -14,7 +14,15 @@ use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
 use App\Application\Services\ImageOptimizationServiceInterface;
+use App\Application\Services\TagQueryServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
+use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
+use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
+use App\Infrastructure\Modules\Services\ModuleManagerService;
+use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
+use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\Repositories\GalleryRepositoryInterface;
@@ -40,6 +48,7 @@ use App\Infrastructure\Services\SettingsService;
 use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\AboutPageService;
 use App\Infrastructure\Services\ImageOptimizationService;
+use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
 use Cloudinary\Cloudinary;
 use Illuminate\Filesystem\FilesystemAdapter;
@@ -85,7 +94,37 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(GalleryQueryServiceInterface::class, GalleryQueryService::class);
         $this->app->singleton(HeroSlideQueryServiceInterface::class, HeroSlideQueryService::class);
         $this->app->singleton(SitemapQueryServiceInterface::class, SitemapQueryService::class);
+        $this->app->singleton(TagQueryServiceInterface::class, TagQueryService::class);
         $this->app->singleton(AboutPageServiceInterface::class, AboutPageService::class);
+
+        // Module system bindings
+        $this->app->bind(ModuleRepositoryInterface::class, EloquentModuleRepository::class);
+
+        $this->app->singleton(ModuleDiscoveryService::class, function ($app) {
+            return new ModuleDiscoveryService(
+                modulesPath: config('modules.path'),
+            );
+        });
+
+        $this->app->singleton(ModuleDependencyResolver::class, function () {
+            return new ModuleDependencyResolver();
+        });
+
+        $this->app->singleton(ModuleMigrationRunner::class, function ($app) {
+            return new ModuleMigrationRunner(
+                modulesPath: config('modules.path'),
+            );
+        });
+
+        $this->app->singleton(ModuleManagerServiceInterface::class, ModuleManagerService::class);
+
+        // Module loader (for booting enabled modules)
+        $this->app->singleton(\App\Modules\ModuleLoader::class, function ($app) {
+            return new \App\Modules\ModuleLoader(
+                $app,
+                $app->make(ModuleRepositoryInterface::class),
+            );
+        });
     }
 
     /**

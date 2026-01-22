@@ -67,7 +67,7 @@ function trapFocus(event: KeyboardEvent): void {
     if (!lightboxRef.value) return;
 
     const focusableElements = lightboxRef.value.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
     );
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
@@ -91,7 +91,7 @@ watch(
         } else {
             document.body.style.overflow = '';
         }
-    },
+    }
 );
 
 onMounted(() => {
@@ -129,11 +129,17 @@ onUnmounted(() => {
                 <button
                     ref="closeButtonRef"
                     type="button"
-                    class="absolute right-4 top-4 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black"
+                    class="absolute right-4 top-4 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-stone-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
                     :aria-label="t('gallery.close')"
                     @click="emit('close')"
                 >
-                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg
+                        class="h-8 w-8"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -147,11 +153,17 @@ onUnmounted(() => {
                 <button
                     v-if="hasMultiplePhotos"
                     type="button"
-                    class="absolute left-4 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black"
+                    class="absolute left-4 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-stone-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
                     :aria-label="t('gallery.previous')"
                     @click="emit('prev')"
                 >
-                    <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg
+                        class="h-10 w-10"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -173,11 +185,17 @@ onUnmounted(() => {
                 <button
                     v-if="hasMultiplePhotos"
                     type="button"
-                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-stone-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
                     :aria-label="t('gallery.next')"
                     @click="emit('next')"
                 >
-                    <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg
+                        class="h-10 w-10"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -193,7 +211,8 @@ onUnmounted(() => {
                         {{ currentPhoto.caption }}
                     </p>
                     <p class="text-sm text-white/70">
-                        {{ props.currentIndex + 1 }} {{ t('gallery.photoOf') }} {{ props.photos.length }}
+                        {{ props.currentIndex + 1 }} {{ t('gallery.photoOf') }}
+                        {{ props.photos.length }}
                     </p>
                 </div>
             </div>

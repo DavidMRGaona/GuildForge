@@ -195,7 +195,11 @@ watch(tooltipVisible, (visible) => {
 
 <template>
     <div :class="['event-calendar', { 'event-calendar--compact': compact }]">
-        <div v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
+        <div
+            v-if="error"
+            role="alert"
+            class="mb-4 rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20"
+        >
             <p class="text-sm font-medium text-red-800 dark:text-red-300">
                 {{ error }}
             </p>

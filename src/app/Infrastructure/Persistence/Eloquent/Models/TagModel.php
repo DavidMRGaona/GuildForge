@@ -71,6 +71,10 @@ final class TagModel extends Model
         return TagModelFactory::new();
     }
 
+    // =========================================================================
+    // RELATIONSHIPS
+    // =========================================================================
+
     /**
      * @return BelongsTo<TagModel, $this>
      */
@@ -114,6 +118,10 @@ final class TagModel extends Model
             ->withTimestamps();
     }
 
+    // =========================================================================
+    // SCOPES
+    // =========================================================================
+
     /**
      * Scope to get only root tags (without parent).
      *
@@ -147,6 +155,10 @@ final class TagModel extends Model
         return $query->orderBy('sort_order')->orderBy('name');
     }
 
+    // =========================================================================
+    // SIMPLE ACCESSORS (no queries, use loaded relations)
+    // =========================================================================
+
     /**
      * Check if this tag applies to a specific type.
      */
@@ -156,49 +168,8 @@ final class TagModel extends Model
     }
 
     /**
-     * Get the full path of the tag (Parent > Child > Grandchild).
-     */
-    public function getFullPath(): string
-    {
-        $path = [$this->name];
-        $current = $this;
-
-        while ($current->parent !== null) {
-            $current = $current->parent;
-            array_unshift($path, $current->name);
-        }
-
-        return implode(' > ', $path);
-    }
-
-    /**
-     * Get the total usage count across all content types.
-     */
-    public function getUsageCount(): int
-    {
-        return $this->events()->count()
-            + $this->articles()->count()
-            + $this->galleries()->count();
-    }
-
-    /**
-     * Check if the tag has any children.
-     */
-    public function hasChildren(): bool
-    {
-        return $this->children()->exists();
-    }
-
-    /**
-     * Check if the tag is in use by any content.
-     */
-    public function isInUse(): bool
-    {
-        return $this->getUsageCount() > 0;
-    }
-
-    /**
      * Get the nesting depth of the tag.
+     * Note: Uses loaded parent relation, ensure it's eager loaded to avoid N+1.
      */
     public function getDepth(): int
     {
@@ -214,22 +185,6 @@ final class TagModel extends Model
     }
 
     /**
-     * Get the tag name with dashes for table display.
-     * Example: "- Child", "-- Grandchild", "--- Great-grandchild"
-     */
-    public function getIndentedNameForTable(): string
-    {
-        $depth = $this->getDepth();
-        if ($depth === 0) {
-            return $this->name;
-        }
-
-        $dashes = str_repeat('-', $depth);
-
-        return $dashes . ' ' . $this->name;
-    }
-
-    /**
      * Get the tag name with space indentation for select dropdowns.
      * Example: "  Child", "    Grandchild" (2 spaces per depth level)
      */
@@ -240,74 +195,6 @@ final class TagModel extends Model
             return $this->name;
         }
 
-        $indent = str_repeat('  ', $depth);
-
-        return $indent . $this->name;
-    }
-
-    /**
-     * @deprecated Use getIndentedNameForTable() or getIndentedNameForSelect() instead
-     */
-    public function getIndentedName(): string
-    {
-        return $this->getIndentedNameForSelect();
-    }
-
-    /**
-     * Get all tags in hierarchical order as a flat collection.
-     *
-     * @return Collection<int, TagModel>
-     */
-    public static function getAllInHierarchicalOrder(): Collection
-    {
-        $result = new Collection();
-        $roots = self::query()
-            ->whereNull('parent_id')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
-
-        foreach ($roots as $root) {
-            self::addWithDescendants($root, $result);
-        }
-
-        return $result;
-    }
-
-    /**
-     * Recursively add a tag and its descendants to the collection.
-     *
-     * @param Collection<int, TagModel> $collection
-     */
-    private static function addWithDescendants(TagModel $tag, Collection $collection): void
-    {
-        $collection->push($tag);
-
-        $children = self::query()
-            ->where('parent_id', $tag->id)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
-
-        foreach ($children as $child) {
-            self::addWithDescendants($child, $collection);
-        }
-    }
-
-    /**
-     * Get hierarchical sort key for database ordering.
-     * Returns a sortable string like "00001.00003.00002" based on ancestor sort_orders.
-     */
-    public function getHierarchySortKey(): string
-    {
-        $parts = [];
-        $current = $this;
-
-        while ($current !== null) {
-            array_unshift($parts, str_pad((string) $current->sort_order, 5, '0', STR_PAD_LEFT));
-            $current = $current->parent;
-        }
-
-        return implode('.', $parts);
+        return str_repeat('  ', $depth) . $this->name;
     }
 }

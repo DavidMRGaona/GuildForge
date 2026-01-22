@@ -32,14 +32,20 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthLayout :title="t('auth.forgotPassword.title')" :subtitle="t('auth.forgotPassword.subtitle')">
+    <AuthLayout
+        :title="t('auth.forgotPassword.title')"
+        :subtitle="t('auth.forgotPassword.subtitle')"
+    >
         <div v-if="successMessage" class="mb-4 rounded-md bg-green-50 dark:bg-green-900/30 p-4">
             <p class="text-sm text-green-700 dark:text-green-400">{{ successMessage }}</p>
         </div>
 
         <form @submit.prevent="submit" class="space-y-6">
             <div>
-                <label for="email" class="block text-sm font-medium text-stone-700 dark:text-stone-300">
+                <label
+                    for="email"
+                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
                     {{ t('auth.forgotPassword.email') }}
                 </label>
                 <input

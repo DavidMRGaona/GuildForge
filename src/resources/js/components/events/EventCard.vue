@@ -32,10 +32,10 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.event.tags)
 
 const isCompact = computed(() => props.variant === 'compact');
 
-const imageHeight = computed(() => isCompact.value ? 'h-40' : 'h-48');
-const iconSize = computed(() => isCompact.value ? 'h-12 w-12' : 'h-16 w-16');
-const descriptionLines = computed(() => isCompact.value ? 'line-clamp-2' : 'line-clamp-3');
-const excerptLength = computed(() => isCompact.value ? 100 : 150);
+const imageHeight = computed(() => (isCompact.value ? 'h-40' : 'h-48'));
+const iconSize = computed(() => (isCompact.value ? 'h-12 w-12' : 'h-16 w-16'));
+const descriptionLines = computed(() => (isCompact.value ? 'line-clamp-2' : 'line-clamp-3'));
+const excerptLength = computed(() => (isCompact.value ? 100 : 150));
 </script>
 
 <template>
@@ -60,12 +60,25 @@ const excerptLength = computed(() => isCompact.value ? 100 : 150);
                     loading="lazy"
                     :class="['aspect-video w-full object-cover', imageHeight]"
                 />
-                <ImagePlaceholder v-else variant="event" :height="imageHeight" :icon-size="iconSize" />
+                <ImagePlaceholder
+                    v-else
+                    variant="event"
+                    :height="imageHeight"
+                    :icon-size="iconSize"
+                />
 
                 <!-- Date badge overlay (compact only) -->
-                <div class="absolute left-3 top-3 flex flex-col items-center rounded bg-white px-2 py-1 shadow-md dark:bg-stone-800">
-                    <span class="text-xl font-bold leading-none text-amber-600 dark:text-amber-500">{{ dateBadge.day }}</span>
-                    <span class="text-xs uppercase tracking-wide text-stone-600 dark:text-stone-400">{{ dateBadge.month }}</span>
+                <div
+                    class="absolute left-3 top-3 flex flex-col items-center rounded bg-white px-2 py-1 shadow-md dark:bg-stone-800"
+                >
+                    <span
+                        class="text-xl font-bold leading-none text-amber-600 dark:text-amber-500"
+                        >{{ dateBadge.day }}</span
+                    >
+                    <span
+                        class="text-xs uppercase tracking-wide text-stone-600 dark:text-stone-400"
+                        >{{ dateBadge.month }}</span
+                    >
                 </div>
 
                 <!-- Category badge overlay -->
@@ -81,7 +94,9 @@ const excerptLength = computed(() => isCompact.value ? 100 : 150);
 
             <!-- Content -->
             <div class="p-4">
-                <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 group-hover:text-amber-600 dark:text-stone-100 dark:group-hover:text-amber-500">
+                <h3
+                    class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 group-hover:text-amber-600 dark:text-stone-100 dark:group-hover:text-amber-500"
+                >
                     {{ props.event.title }}
                 </h3>
 
@@ -93,7 +108,10 @@ const excerptLength = computed(() => isCompact.value ? 100 : 150);
                     class="mb-2"
                 />
 
-                <p v-if="props.event.location" class="mb-2 flex items-center text-sm text-stone-500 dark:text-stone-400">
+                <p
+                    v-if="props.event.location"
+                    class="mb-2 flex items-center text-sm text-stone-500 dark:text-stone-400"
+                >
                     <svg
                         class="mr-1.5 h-4 w-4 flex-shrink-0"
                         fill="none"
@@ -135,7 +153,12 @@ const excerptLength = computed(() => isCompact.value ? 100 : 150);
                         loading="lazy"
                         :class="['aspect-video w-full object-cover', imageHeight]"
                     />
-                    <ImagePlaceholder v-else variant="event" :height="imageHeight" :icon-size="iconSize" />
+                    <ImagePlaceholder
+                        v-else
+                        variant="event"
+                        :height="imageHeight"
+                        :icon-size="iconSize"
+                    />
 
                     <!-- Category badge as overlay on image -->
                     <TagBadge
@@ -157,7 +180,9 @@ const excerptLength = computed(() => isCompact.value ? 100 : 150);
             </template>
 
             <div class="p-4">
-                <h3 class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 dark:text-stone-100">
+                <h3
+                    class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 dark:text-stone-100"
+                >
                     {{ props.event.title }}
                 </h3>
 
@@ -174,7 +199,10 @@ const excerptLength = computed(() => isCompact.value ? 100 : 150);
                     {{ formatDateRange(props.event.startDate, props.event.endDate) }}
                 </p>
 
-                <p v-if="props.event.location" class="mb-3 text-sm text-stone-500 dark:text-stone-400">
+                <p
+                    v-if="props.event.location"
+                    class="mb-3 text-sm text-stone-500 dark:text-stone-400"
+                >
                     <span class="sr-only">{{ t('events.location') }}:</span>
                     <svg
                         class="mr-1 inline-block h-4 w-4"

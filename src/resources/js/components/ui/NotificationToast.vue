@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { useNotifications, type Notification, type NotificationType } from '@/composables/useNotifications';
+import {
+    useNotifications,
+    type Notification,
+    type NotificationType,
+} from '@/composables/useNotifications';
 
 const { notifications, removeNotification } = useNotifications();
 
@@ -85,7 +89,10 @@ function getIconPath(notification: Notification) {
                                 </svg>
                             </div>
                             <div class="ml-3 w-0 flex-1 pt-0.5">
-                                <p class="text-sm font-medium" :class="getColors(notification).text">
+                                <p
+                                    class="text-sm font-medium"
+                                    :class="getColors(notification).text"
+                                >
                                     {{ notification.message }}
                                 </p>
                             </div>
