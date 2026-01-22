@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource\Pages;
+
+use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
+use Filament\Actions;
+use Filament\Resources\Pages\ListRecords;
+
+final class List{{ namePluralStudly }} extends ListRecords
+{
+    protected static string $resource = {{ nameStudly }}Resource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\CreateAction::make(),
+        ];
+    }
+}

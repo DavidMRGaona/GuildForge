@@ -1,0 +1,77 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Tests\Feature\Filament;
+
+use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
+use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\{{ nameStudly }}Model;
+use App\Domain\User\Entities\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+
+final class {{ nameStudly }}ResourceTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $admin;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->admin = User::factory()->admin()->create();
+    }
+
+    #[Test]
+    public function it_can_list_{{ namePluralSnake }}(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->get({{ nameStudly }}Resource::getUrl('index'))
+            ->assertSuccessful();
+    }
+
+    #[Test]
+    public function it_can_create_a_{{ nameSnake }}(): void
+    {
+        $this->actingAs($this->admin);
+
+        Livewire::test({{ nameStudly }}Resource\Pages\Create{{ nameStudly }}::class)
+            ->fillForm([
+                'name' => 'Test {{ nameStudly }}',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('{{ tableName }}', [
+            'name' => 'Test {{ nameStudly }}',
+        ]);
+    }
+
+    #[Test]
+    public function it_can_edit_a_{{ nameSnake }}(): void
+    {
+        $this->actingAs($this->admin);
+
+        ${{ nameCamel }} = {{ nameStudly }}Model::create([
+            'name' => 'Original Name',
+        ]);
+
+        Livewire::test({{ nameStudly }}Resource\Pages\Edit{{ nameStudly }}::class, [
+            'record' => ${{ nameCamel }}->id,
+        ])
+            ->fillForm([
+                'name' => 'Updated Name',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('{{ tableName }}', [
+            'id' => ${{ nameCamel }}->id,
+            'name' => 'Updated Name',
+        ]);
+    }
+}

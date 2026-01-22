@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | {{ moduleNameStudly }} Module Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration options for the {{ moduleNameStudly }} module.
+    |
+    */
+
+    'enabled' => true,
+];

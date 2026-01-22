@@ -16,12 +16,21 @@ use App\Application\Services\SitemapQueryServiceInterface;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
+use App\Application\Modules\Services\ModuleContextServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
+use App\Application\Modules\Services\ModulePermissionRegistryInterface;
+use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
 use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
 use App\Infrastructure\Modules\Services\ModuleManagerService;
+use App\Infrastructure\Modules\Services\ModuleContextService;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
+use App\Infrastructure\Modules\Services\ModuleNavigationRegistry;
+use App\Infrastructure\Modules\Services\ModulePermissionRegistry;
+use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
+use App\Infrastructure\Modules\Services\StubRenderer;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\Repositories\EventRepositoryInterface;
@@ -117,6 +126,22 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ModuleManagerServiceInterface::class, ModuleManagerService::class);
+
+        // Module SDK services
+        $this->app->singleton(StubRenderer::class, function () {
+            return new StubRenderer(base_path('stubs/modules'));
+        });
+
+        $this->app->singleton(ModuleScaffoldingServiceInterface::class, function ($app) {
+            return new ModuleScaffoldingService(
+                $app->make(StubRenderer::class),
+                config('modules.path'),
+            );
+        });
+
+        $this->app->singleton(ModuleContextServiceInterface::class, ModuleContextService::class);
+        $this->app->singleton(ModulePermissionRegistryInterface::class, ModulePermissionRegistry::class);
+        $this->app->singleton(ModuleNavigationRegistryInterface::class, ModuleNavigationRegistry::class);
 
         // Module loader (for booting enabled modules)
         $this->app->singleton(\App\Modules\ModuleLoader::class, function ($app) {

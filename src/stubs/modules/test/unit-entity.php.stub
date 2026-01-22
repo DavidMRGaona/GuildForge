@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Tests\Unit\Domain\Entities;
+
+use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
+use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
+use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+
+final class {{ nameStudly }}Test extends TestCase
+{
+    #[Test]
+    public function it_can_be_created(): void
+    {
+        $id = {{ nameStudly }}Id::generate();
+        $name = 'Test {{ nameStudly }}';
+        $createdAt = new DateTimeImmutable();
+        $updatedAt = new DateTimeImmutable();
+
+        $entity = new {{ nameStudly }}(
+            id: $id,
+            name: $name,
+            createdAt: $createdAt,
+            updatedAt: $updatedAt,
+        );
+
+        $this->assertSame($id, $entity->id());
+        $this->assertSame($name, $entity->name());
+        $this->assertSame($createdAt, $entity->createdAt());
+        $this->assertSame($updatedAt, $entity->updatedAt());
+    }
+
+    #[Test]
+    public function it_can_update_name(): void
+    {
+        $entity = new {{ nameStudly }}(
+            id: {{ nameStudly }}Id::generate(),
+            name: 'Original Name',
+            createdAt: new DateTimeImmutable(),
+            updatedAt: new DateTimeImmutable(),
+        );
+
+        $originalUpdatedAt = $entity->updatedAt();
+        $entity->updateName('New Name');
+
+        $this->assertSame('New Name', $entity->name());
+        $this->assertNotSame($originalUpdatedAt, $entity->updatedAt());
+    }
+}

@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
+use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
+use {{ moduleNamespace }}\Http\Requests\Store{{ nameStudly }}Request;
+use {{ moduleNamespace }}\Http\Requests\Update{{ nameStudly }}Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
+
+final class {{ nameStudly }}Controller extends Controller
+{
+    public function __construct(
+        private readonly {{ nameStudly }}ServiceInterface $service,
+    ) {
+    }
+
+    public function index(): Response
+    {
+        $items = $this->service->all();
+
+        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}.index', [
+            '{{ namePluralSnake }}' => $items,
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}.create');
+    }
+
+    public function store(Store{{ nameStudly }}Request $request): RedirectResponse
+    {
+        $dto = {{ nameStudly }}DTO::fromArray($request->validated());
+        $this->service->create($dto);
+
+        return redirect()
+            ->route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index')
+            ->with('success', __('{{ moduleNameSnake }}::messages.{{ nameSnake }}.created'));
+    }
+
+    public function show(string $id): Response
+    {
+        $item = $this->service->findById($id);
+
+        if ($item === null) {
+            abort(404);
+        }
+
+        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}.show', [
+            '{{ nameSnake }}' => $item,
+        ]);
+    }
+
+    public function edit(string $id): Response
+    {
+        $item = $this->service->findById($id);
+
+        if ($item === null) {
+            abort(404);
+        }
+
+        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}.edit', [
+            '{{ nameSnake }}' => $item,
+        ]);
+    }
+
+    public function update(Update{{ nameStudly }}Request $request, string $id): RedirectResponse
+    {
+        $dto = {{ nameStudly }}DTO::fromArray($request->validated());
+        $this->service->update($id, $dto);
+
+        return redirect()
+            ->route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index')
+            ->with('success', __('{{ moduleNameSnake }}::messages.{{ nameSnake }}.updated'));
+    }
+
+    public function destroy(string $id): RedirectResponse
+    {
+        $this->service->delete($id);
+
+        return redirect()
+            ->route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index')
+            ->with('success', __('{{ moduleNameSnake }}::messages.{{ nameSnake }}.deleted'));
+    }
+}

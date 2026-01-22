@@ -1,0 +1,13 @@
+{
+    "name": "{{ moduleName }}",
+    "version": "1.0.0",
+    "namespace": "{{ moduleNamespaceJson }}",
+    "provider": "{{ moduleNameStudly }}ServiceProvider",
+    "description": "{{ moduleDescription }}",
+    "author": "{{ moduleAuthor }}",
+    "requires": {
+        "php": ">=8.2",
+        "laravel": ">=11.0"
+    },
+    "dependencies": []
+}

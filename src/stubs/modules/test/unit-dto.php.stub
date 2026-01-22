@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Tests\Unit\Application\DTOs;
+
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+
+final class {{ nameStudly }}DTOTest extends TestCase
+{
+    #[Test]
+    public function it_can_be_created(): void
+    {
+        $dto = new {{ nameStudly }}DTO(
+            name: 'Test Name',
+        );
+
+        $this->assertSame('Test Name', $dto->name);
+    }
+
+    #[Test]
+    public function it_can_be_created_from_array(): void
+    {
+        $dto = {{ nameStudly }}DTO::fromArray([
+            'name' => 'Test Name',
+        ]);
+
+        $this->assertSame('Test Name', $dto->name);
+    }
+
+    #[Test]
+    public function it_can_be_converted_to_array(): void
+    {
+        $dto = new {{ nameStudly }}DTO(
+            name: 'Test Name',
+        );
+
+        $array = $dto->toArray();
+
+        $this->assertSame(['name' => 'Test Name'], $array);
+    }
+}

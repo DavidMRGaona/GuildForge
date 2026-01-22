@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource\Pages;
+
+use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
+use Filament\Resources\Pages\CreateRecord;
+
+final class Create{{ nameStudly }} extends CreateRecord
+{
+    protected static string $resource = {{ nameStudly }}Resource::class;
+}

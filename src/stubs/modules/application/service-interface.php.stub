@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Application\Services;
+
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}ResponseDTO;
+
+interface {{ nameStudly }}ServiceInterface
+{
+    public function create({{ nameStudly }}DTO $dto): {{ nameStudly }}ResponseDTO;
+
+    public function update(string $id, {{ nameStudly }}DTO $dto): {{ nameStudly }}ResponseDTO;
+
+    public function delete(string $id): void;
+
+    public function findById(string $id): ?{{ nameStudly }}ResponseDTO;
+
+    /**
+     * @return array<{{ nameStudly }}ResponseDTO>
+     */
+    public function all(): array;
+}

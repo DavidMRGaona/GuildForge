@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Tests\Feature\Http\Controllers;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+
+final class {{ nameStudly }}ControllerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    #[Test]
+    public function it_can_list_{{ namePluralSnake }}(): void
+    {
+        $response = $this->get(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index'));
+
+        $response->assertOk();
+    }
+
+    #[Test]
+    public function it_can_show_create_form(): void
+    {
+        $response = $this->get(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.create'));
+
+        $response->assertOk();
+    }
+
+    #[Test]
+    public function it_can_store_a_{{ nameSnake }}(): void
+    {
+        $response = $this->post(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.store'), [
+            'name' => 'Test {{ nameStudly }}',
+        ]);
+
+        $response->assertRedirect(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index'));
+        $this->assertDatabaseHas('{{ tableName }}', [
+            'name' => 'Test {{ nameStudly }}',
+        ]);
+    }
+}

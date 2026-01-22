@@ -1,0 +1,13 @@
+{
+    "name": "minimal-module",
+    "version": "1.0.0",
+    "namespace": "Modules\\MinimalModule",
+    "provider": "MinimalModuleServiceProvider",
+    "description": "A minimal example module",
+    "author": "Runesword Team",
+    "requires": {
+        "php": ">=8.2",
+        "laravel": ">=11.0"
+    },
+    "dependencies": []
+}

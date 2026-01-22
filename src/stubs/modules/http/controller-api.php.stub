@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
+use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
+use {{ moduleNamespace }}\Http\Requests\Store{{ nameStudly }}Request;
+use {{ moduleNamespace }}\Http\Requests\Update{{ nameStudly }}Request;
+use Illuminate\Http\JsonResponse;
+
+final class {{ nameStudly }}Controller extends Controller
+{
+    public function __construct(
+        private readonly {{ nameStudly }}ServiceInterface $service,
+    ) {
+    }
+
+    public function index(): JsonResponse
+    {
+        $items = $this->service->all();
+
+        return response()->json([
+            'data' => array_map(fn ($item) => $item->toArray(), $items),
+        ]);
+    }
+
+    public function store(Store{{ nameStudly }}Request $request): JsonResponse
+    {
+        $dto = {{ nameStudly }}DTO::fromArray($request->validated());
+        $item = $this->service->create($dto);
+
+        return response()->json([
+            'data' => $item->toArray(),
+        ], 201);
+    }
+
+    public function show(string $id): JsonResponse
+    {
+        $item = $this->service->findById($id);
+
+        if ($item === null) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json([
+            'data' => $item->toArray(),
+        ]);
+    }
+
+    public function update(Update{{ nameStudly }}Request $request, string $id): JsonResponse
+    {
+        $dto = {{ nameStudly }}DTO::fromArray($request->validated());
+        $item = $this->service->update($id, $dto);
+
+        return response()->json([
+            'data' => $item->toArray(),
+        ]);
+    }
+
+    public function destroy(string $id): JsonResponse
+    {
+        $this->service->delete($id);
+
+        return response()->json(null, 204);
+    }
+}

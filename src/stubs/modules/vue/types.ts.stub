@@ -1,0 +1,22 @@
+/**
+ * {{ nameStudly }} TypeScript types for the {{ moduleNameStudly }} module.
+ */
+
+export interface {{ nameStudly }} {
+    id: string;
+    name: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface {{ nameStudly }}FormData {
+    name: string;
+}
+
+export interface {{ nameStudly }}ListProps {
+    items: {{ nameStudly }}[];
+}
+
+export interface {{ nameStudly }}ShowProps {
+    item: {{ nameStudly }};
+}
