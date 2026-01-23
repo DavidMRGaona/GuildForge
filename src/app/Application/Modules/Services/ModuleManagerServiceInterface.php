@@ -60,4 +60,36 @@ interface ModuleManagerServiceInterface
      * @return int The number of migrations rolled back
      */
     public function rollback(ModuleName $name, int $steps = 1): int;
+
+    /**
+     * Uninstall a module (revert migrations, delete files, remove from DB).
+     *
+     * @throws \App\Domain\Modules\Exceptions\ModuleNotFoundException
+     * @throws \App\Domain\Modules\Exceptions\ModuleCannotUninstallException
+     */
+    public function uninstall(ModuleName $name): void;
+
+    /**
+     * Get settings for a module.
+     *
+     * @return array<string, mixed>
+     */
+    public function getSettings(ModuleName $name): array;
+
+    /**
+     * Update settings for a module.
+     *
+     * @param array<string, mixed> $settings
+     */
+    public function updateSettings(ModuleName $name, array $settings): void;
+
+    /**
+     * Get modules that depend on the given module.
+     */
+    public function getDependents(ModuleName $name): ModuleCollection;
+
+    /**
+     * Find a module entity by name (string version of find).
+     */
+    public function findByName(string $name): ?Module;
 }

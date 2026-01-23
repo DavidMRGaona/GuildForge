@@ -21,6 +21,8 @@ use App\Console\Commands\Module\ModuleMakeVueComponentCommand;
 use App\Console\Commands\Module\ModuleMakeVuePageCommand;
 use App\Console\Commands\Module\ModuleMigrateCommand;
 use App\Console\Commands\Module\ModulePublishAssetsCommand;
+use App\Application\Modules\Services\ModuleInstallerInterface;
+use App\Infrastructure\Modules\Services\ModuleInstaller;
 use App\Modules\ModuleLoader;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -33,6 +35,8 @@ final class ModulesServiceProvider extends ServiceProvider
             __DIR__ . '/../../config/modules.php',
             'modules'
         );
+
+        $this->app->bind(ModuleInstallerInterface::class, ModuleInstaller::class);
     }
 
     public function boot(): void
