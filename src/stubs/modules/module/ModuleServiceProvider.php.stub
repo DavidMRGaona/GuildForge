@@ -93,4 +93,26 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
     {
         return [];
     }
+
+    /**
+     * Register slot components provided by this module.
+     * Slots allow modules to inject Vue components into layout positions.
+     *
+     * @return array<\App\Application\Modules\DTOs\SlotRegistrationDTO>
+     */
+    public function registerSlots(): array
+    {
+        return [];
+    }
+
+    /**
+     * Get the Filament form schema for module settings.
+     * Override to provide configurable settings that appear in the admin panel.
+     *
+     * @return array<\Filament\Forms\Components\Component>
+     */
+    public function getSettingsSchema(): array
+    {
+        return [];
+    }
 }

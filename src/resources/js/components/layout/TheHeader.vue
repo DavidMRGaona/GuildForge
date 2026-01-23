@@ -151,9 +151,11 @@ function selectTheme(mode: ThemeMode): void {
                         <div
                             v-if="isThemeMenuOpen"
                             class="absolute right-0 mt-2 w-36 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-stone-800 dark:ring-stone-700 z-50"
+                            role="menu"
+                            :aria-label="t('layout.selectTheme')"
                             @mousedown.prevent
                         >
-                            <div class="py-1" role="menu">
+                            <div class="py-1">
                                 <button
                                     type="button"
                                     class="flex w-full items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-700"
@@ -247,7 +249,7 @@ function selectTheme(mode: ThemeMode): void {
                         @click="toggleMobileMenu"
                     >
                         <span class="sr-only">{{
-                            isMobileMenuOpen ? 'Close menu' : 'Open menu'
+                            isMobileMenuOpen ? t('layout.closeMenu') : t('layout.openMenu')
                         }}</span>
                         <!-- Hamburger icon -->
                         <svg

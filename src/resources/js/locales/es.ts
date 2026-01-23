@@ -125,6 +125,7 @@ export default {
                 submit: 'Enviar mensaje',
                 sending: 'Enviando...',
                 success: 'Mensaje enviado correctamente',
+                error: 'Error al enviar el mensaje. Por favor, inténtalo de nuevo.',
             },
             social: {
                 title: 'Síguenos',
@@ -150,6 +151,8 @@ export default {
         systemTheme: 'Sistema',
         lightTheme: 'Claro',
         darkTheme: 'Oscuro',
+        openMenu: 'Abrir menú',
+        closeMenu: 'Cerrar menú',
     },
     buttons: {
         submit: 'Enviar',
@@ -189,6 +192,7 @@ export default {
             submit: 'Crear cuenta',
             hasAccount: '¿Ya tienes cuenta?',
             loginLink: 'Iniciar sesión',
+            error: 'Error al crear la cuenta. Por favor, revisa los datos e inténtalo de nuevo.',
         },
         login: {
             title: 'Iniciar sesión',
@@ -200,6 +204,7 @@ export default {
             submit: 'Iniciar sesión',
             noAccount: '¿No tienes cuenta?',
             registerLink: 'Regístrate',
+            error: 'Error al iniciar sesión. Por favor, revisa tus credenciales.',
         },
         forgotPassword: {
             title: 'Recuperar contraseña',
@@ -239,6 +244,8 @@ export default {
             updatePassword: 'Actualizar contraseña',
             profileUpdated: 'Perfil actualizado correctamente',
             passwordUpdated: 'Contraseña actualizada correctamente',
+            profileError: 'Error al actualizar el perfil. Por favor, revisa los datos e inténtalo de nuevo.',
+            passwordError: 'Error al cambiar la contraseña. Por favor, revisa los datos e inténtalo de nuevo.',
         },
         userMenu: {
             openMenu: 'Abrir menú de usuario',

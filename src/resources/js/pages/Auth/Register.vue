@@ -5,10 +5,12 @@ import AuthLayout from '@/layouts/AuthLayout.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useSeo } from '@/composables/useSeo';
 import { useAuth } from '@/composables/useAuth';
+import { useNotifications } from '@/composables/useNotifications';
 import type { RegisterFormData } from '@/types/models';
 
 const { t } = useI18n();
 const { authSettings } = useAuth();
+const notifications = useNotifications();
 
 useSeo({
     title: t('auth.register.title'),
@@ -24,6 +26,7 @@ const form = useForm<RegisterFormData>({
 const submit = () => {
     form.post('/registro', {
         onFinish: () => form.reset('password', 'password_confirmation'),
+        onError: () => notifications.error(t('auth.register.error')),
     });
 };
 </script>

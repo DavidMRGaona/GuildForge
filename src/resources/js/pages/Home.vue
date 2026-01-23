@@ -60,7 +60,7 @@ function openLightbox(index: number): void {
             <!-- Latest Articles Section -->
             <section class="mb-16">
                 <div class="mb-6 flex items-center justify-between">
-                    <h2 class="font-display text-3xl font-bold tracking-tight text-gray-900 dark:text-stone-100">
+                    <h2 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                         {{ t('articles.latest') }}
                     </h2>
                     <Link
@@ -86,10 +86,10 @@ function openLightbox(index: number): void {
                 <aside
                     v-else
                     role="complementary"
-                    class="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center dark:border-stone-600"
+                    class="rounded-lg border-2 border-dashed border-stone-300 p-8 text-center dark:border-stone-600"
                 >
                     <svg
-                        class="mx-auto h-8 w-8 text-gray-400 dark:text-stone-500"
+                        class="mx-auto h-8 w-8 text-stone-400 dark:text-stone-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -102,7 +102,7 @@ function openLightbox(index: number): void {
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                     </svg>
-                    <p class="mt-4 text-gray-500 dark:text-stone-400">
+                    <p class="mt-4 text-stone-500 dark:text-stone-400">
                         {{ t('home.noArticles') }}
                     </p>
                 </aside>
@@ -111,7 +111,7 @@ function openLightbox(index: number): void {
             <!-- Featured Gallery Section -->
             <section>
                 <div class="mb-6 flex items-center justify-between">
-                    <h2 class="font-display text-3xl font-bold tracking-tight text-gray-900 dark:text-stone-100">
+                    <h2 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                         {{ t('home.featuredGallery') }}
                     </h2>
                     <Link
@@ -182,13 +182,13 @@ function openLightbox(index: number): void {
                     <div class="mt-4 text-center">
                         <Link
                             :href="`/galeria/${props.featuredGallery.slug}`"
-                            class="text-lg font-medium text-gray-900 hover:text-amber-600 dark:text-stone-100 dark:hover:text-amber-400"
+                            class="text-lg font-medium text-stone-900 hover:text-amber-600 dark:text-stone-100 dark:hover:text-amber-400"
                         >
                             {{ props.featuredGallery.title }}
                         </Link>
                         <p
                             v-if="props.featuredGallery.description"
-                            class="mt-1 text-sm text-gray-500 dark:text-stone-400"
+                            class="mt-1 text-sm text-stone-500 dark:text-stone-400"
                         >
                             {{ props.featuredGallery.description }}
                         </p>
@@ -198,10 +198,10 @@ function openLightbox(index: number): void {
                 <!-- Gallery exists but has no photos yet -->
                 <div
                     v-else-if="props.featuredGallery && displayPhotos.length === 0"
-                    class="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center dark:border-stone-700 dark:bg-stone-800"
+                    class="rounded-lg border border-stone-200 bg-stone-50 p-8 text-center dark:border-stone-700 dark:bg-stone-800"
                 >
                     <svg
-                        class="mx-auto h-12 w-12 text-gray-400 dark:text-stone-500"
+                        class="mx-auto h-12 w-12 text-stone-400 dark:text-stone-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -214,13 +214,13 @@ function openLightbox(index: number): void {
                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                     </svg>
-                    <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-stone-100">
+                    <h3 class="mt-4 text-lg font-medium text-stone-900 dark:text-stone-100">
                         {{ props.featuredGallery.title }}
                     </h3>
-                    <p v-if="props.featuredGallery.description" class="mt-1 text-sm text-gray-500 dark:text-stone-400">
+                    <p v-if="props.featuredGallery.description" class="mt-1 text-sm text-stone-500 dark:text-stone-400">
                         {{ props.featuredGallery.description }}
                     </p>
-                    <p class="mt-2 text-sm text-gray-400 dark:text-stone-500">
+                    <p class="mt-2 text-sm text-stone-400 dark:text-stone-500">
                         {{ t('gallery.noPhotosYet') }}
                     </p>
                     <Link
@@ -235,10 +235,10 @@ function openLightbox(index: number): void {
                 <aside
                     v-else
                     role="complementary"
-                    class="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center dark:border-stone-600"
+                    class="rounded-lg border-2 border-dashed border-stone-300 p-8 text-center dark:border-stone-600"
                 >
                     <svg
-                        class="mx-auto h-8 w-8 text-gray-400 dark:text-stone-500"
+                        class="mx-auto h-8 w-8 text-stone-400 dark:text-stone-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -251,7 +251,7 @@ function openLightbox(index: number): void {
                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                     </svg>
-                    <p class="mt-4 text-gray-500 dark:text-stone-400">
+                    <p class="mt-4 text-stone-500 dark:text-stone-400">
                         {{ t('home.noGallery') }}
                     </p>
                 </aside>
