@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console\Commands\Module;
 
+use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
+use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -17,17 +20,23 @@ final class ModuleDiscoverCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->modulesPath = base_path('modules');
+
+        // Use isolated test directory to avoid interference from real modules
+        $this->modulesPath = storage_path('app/test-modules-discover');
+        File::makeDirectory($this->modulesPath, 0755, true, true);
+        config(['modules.path' => $this->modulesPath]);
+
+        // Force recreation of singletons with new config
+        $this->app->forgetInstance(ModuleDiscoveryService::class);
+        $this->app->forgetInstance(ModuleMigrationRunner::class);
+        $this->app->forgetInstance(ModuleManagerServiceInterface::class);
     }
 
     protected function tearDown(): void
     {
-        // Clean up test modules
-        if (File::exists($this->modulesPath . '/test-discovery-module')) {
-            File::deleteDirectory($this->modulesPath . '/test-discovery-module');
-        }
-        if (File::exists($this->modulesPath . '/another-discovery-module')) {
-            File::deleteDirectory($this->modulesPath . '/another-discovery-module');
+        // Clean up entire test directory
+        if (File::isDirectory($this->modulesPath)) {
+            File::deleteDirectory($this->modulesPath);
         }
 
         parent::tearDown();
