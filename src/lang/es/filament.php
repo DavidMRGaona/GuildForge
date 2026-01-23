@@ -63,7 +63,7 @@ return [
         ],
         'general' => [
             'title' => 'Configuración general',
-            'description' => 'Descripción de la asociación',
+            'description' => 'Descripción del gremio',
             'logo_light' => 'Logo (tema claro)',
             'logo_light_help' => 'Se mostrará cuando el tema claro esté activo. PNG transparente recomendado, máx. 1MB.',
             'logo_dark' => 'Logo (tema oscuro)',
@@ -127,8 +127,8 @@ return [
         ],
         'about' => [
             'title' => 'Sobre nosotros',
-            'association_name' => 'Nombre de la asociación',
-            'association_name_help' => 'Se mostrará en el título de la página "Sobre nosotros"',
+            'guild_name' => 'Nombre del gremio',
+            'guild_name_help' => 'Se mostrará en el título de la página "Sobre nosotros"',
             'hero_image' => 'Imagen del encabezado',
             'hero_image_help' => 'Imagen de fondo para el hero. Si no se configura, se muestra un degradado.',
             'tagline' => 'Eslogan',

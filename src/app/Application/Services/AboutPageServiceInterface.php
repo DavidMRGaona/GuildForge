@@ -10,7 +10,7 @@ interface AboutPageServiceInterface
      * Get all data needed for the About page.
      *
      * @return array{
-     *     associationName: string,
+     *     guildName: string,
      *     aboutHistory: string,
      *     contactEmail: string,
      *     contactPhone: string,

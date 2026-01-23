@@ -1,22 +1,22 @@
-# Module Development Guide
+# Module development guide
 
-This guide covers how to create and develop modules for Runesword using the Module SDK.
+This guide covers how to create and develop modules for GuildForge using the Module SDK.
 
-## Table of Contents
+## Table of contents
 
-1. [Getting Started](#getting-started)
-2. [Module Structure](#module-structure)
-3. [Scaffolding Commands](#scaffolding-commands)
-4. [Service Provider](#service-provider)
-5. [Permissions & Navigation](#permissions--navigation)
-6. [Testing Modules](#testing-modules)
-7. [Best Practices](#best-practices)
+1. [Getting started](#getting-started)
+2. [Module structure](#module-structure)
+3. [Scaffolding commands](#scaffolding-commands)
+4. [Service provider](#service-provider)
+5. [Permissions & navigation](#permissions--navigation)
+6. [Testing modules](#testing-modules)
+7. [Best practices](#best-practices)
 
 ---
 
-## Getting Started
+## Getting started
 
-### Creating a New Module
+### Creating a new module
 
 Use the `module:make` command to create a new module with the standard directory structure:
 
@@ -31,7 +31,7 @@ This creates a complete module skeleton at `modules/my-module/` with:
 - Language files
 - Directory structure for all layers
 
-### Discovering and Enabling
+### Discovering and enabling
 
 After creating a module, you must discover and enable it:
 
@@ -46,7 +46,7 @@ php artisan module:enable my-module
 php artisan module:migrate my-module
 ```
 
-### Listing Modules
+### Listing modules
 
 View all discovered modules:
 
@@ -56,7 +56,7 @@ php artisan module:list
 
 ---
 
-## Module Structure
+## Module structure
 
 A typical module follows this structure:
 
@@ -103,7 +103,7 @@ modules/my-module/
     └── Feature/
 ```
 
-### Module Manifest (module.json)
+### Module manifest (module.json)
 
 ```json
 {
@@ -125,18 +125,18 @@ modules/my-module/
 
 ---
 
-## Scaffolding Commands
+## Scaffolding commands
 
 The Module SDK provides commands to scaffold all components:
 
-### Domain Layer
+### Domain layer
 
 ```bash
 # Create entity, value object, repository interface, model, and repository
 php artisan module:make-entity my-module Game --migration
 ```
 
-### Application Layer
+### Application layer
 
 ```bash
 # Create DTO
@@ -149,7 +149,7 @@ php artisan module:make-dto my-module Game --response
 php artisan module:make-service my-module Game --interface
 ```
 
-### HTTP Layer
+### HTTP layer
 
 ```bash
 # Create controller (default)
@@ -204,7 +204,7 @@ php artisan module:make-test my-module GameController --feature
 
 ---
 
-## Service Provider
+## Service provider
 
 The service provider is the entry point for your module. It extends `ModuleServiceProvider`:
 
@@ -288,9 +288,9 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
 
 ---
 
-## Permissions & Navigation
+## Permissions & navigation
 
-### Registering Permissions
+### Registering permissions
 
 Permissions are registered via the service provider's `registerPermissions()` method. They are automatically added to the permission registry when the module is booted.
 
@@ -310,7 +310,7 @@ public function registerPermissions(): array
 }
 ```
 
-### Registering Navigation
+### Registering navigation
 
 Navigation items can be registered with permission requirements:
 
@@ -340,11 +340,11 @@ public function registerNavigation(): array
 
 ---
 
-## Module Settings
+## Module settings
 
 Modules can define configurable settings that appear in the Filament admin panel.
 
-### Defining Default Settings
+### Defining default settings
 
 Create `config/settings.php` in your module:
 
@@ -360,7 +360,7 @@ return [
 ];
 ```
 
-### Settings Form Schema
+### Settings form schema
 
 Override `getSettingsSchema()` in your ServiceProvider to define Filament form components:
 
@@ -395,7 +395,7 @@ public function getSettingsSchema(): array
 }
 ```
 
-### Accessing Settings
+### Accessing settings
 
 ```php
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
@@ -418,9 +418,9 @@ $apiKey = config('modules.settings.my-module.api_key');
 
 ---
 
-## Filament Integration
+## Filament integration
 
-### Navigation Groups
+### Navigation groups
 
 Modules can register custom Filament navigation groups:
 
@@ -442,7 +442,7 @@ public function registerNavigationGroups(): array
 
 Groups are only added if they don't already exist in core Filament configuration.
 
-### Policy Registration
+### Policy registration
 
 Register model policies for Filament authorization:
 
@@ -456,7 +456,7 @@ public function registerPolicies(): array
 }
 ```
 
-### Auto-Discovery
+### Auto-discovery
 
 Filament automatically discovers Resources, Pages, and Widgets from enabled modules:
 - **Resources**: `modules/{name}/src/Filament/Resources/`
@@ -465,11 +465,11 @@ Filament automatically discovers Resources, Pages, and Widgets from enabled modu
 
 ---
 
-## Slot Registration
+## Slot registration
 
 Slots allow modules to inject Vue components into predefined layout positions on the frontend.
 
-### SlotRegistrationDTO Fields
+### SlotRegistrationDTO fields
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -480,7 +480,7 @@ Slots allow modules to inject Vue components into predefined layout positions on
 | `props` | array | Props passed to the Vue component |
 | `dataKeys` | array | Required Inertia shared data keys |
 
-### Registering Slot Components
+### Registering slot components
 
 Override `registerSlots()` in your ServiceProvider:
 
@@ -510,7 +510,7 @@ public function registerSlots(): array
 }
 ```
 
-### Frontend Usage
+### Frontend usage
 
 Use the `useModuleSlots` composable in Vue:
 
@@ -543,13 +543,13 @@ if (hasComponents('home.sidebar')) {
 
 ---
 
-## Module Installation
+## Module installation
 
-### Installing from Filament Admin
+### Installing from Filament admin
 
-Navigate to **Settings > Modules** in the Filament admin panel. Use the "Install Module" button to upload a ZIP file.
+Navigate to **Settings > Modules** in the Filament admin panel. Use the "Install module" button to upload a ZIP file.
 
-### Programmatic Installation
+### Programmatic installation
 
 ```php
 use App\Application\Modules\Services\ModuleInstallerInterface;
@@ -561,7 +561,7 @@ $manifest = $moduleInstaller->installFromZip($uploadedFile);
 echo "Installed: {$manifest->name} v{$manifest->version}";
 ```
 
-### Uninstallation Process
+### Uninstallation process
 
 ```php
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
@@ -571,14 +571,14 @@ $moduleManager = app(ModuleManagerServiceInterface::class);
 $moduleManager->uninstall(new ModuleName('my-module'));
 ```
 
-**Uninstallation Steps:**
+**Uninstallation steps:**
 1. Verify no dependent modules are enabled (fails otherwise)
 2. Revert all module migrations
 3. Delete the module directory
 4. Remove database record
 5. Dispatch `ModuleUninstalled` event
 
-### Installation Events
+### Installation events
 
 | Event | Fields | Description |
 |-------|--------|-------------|
@@ -587,7 +587,7 @@ $moduleManager->uninstall(new ModuleName('my-module'));
 
 ---
 
-## Testing Modules
+## Testing modules
 
 ### Using ModuleTestCase
 
@@ -618,7 +618,7 @@ final class GameTest extends ModuleTestCase
 }
 ```
 
-### Using InteractsWithModules Trait
+### Using InteractsWithModules trait
 
 For more control, use the trait directly:
 
@@ -641,15 +641,15 @@ final class MyTest extends TestCase
 
 ---
 
-## Best Practices
+## Best practices
 
-### 1. Follow DDD Architecture
+### 1. Follow DDD architecture
 
 - Keep domain logic in `Domain/`
 - Use DTOs for data transfer
 - Implement repository interfaces
 
-### 2. Use Translations
+### 2. Use translations
 
 ```php
 // In PHP
@@ -659,7 +659,7 @@ __('my_module::messages.created')
 $t('my_module.messages.created')
 ```
 
-### 3. Prefix Database Tables
+### 3. Prefix database tables
 
 Use module name as prefix:
 
@@ -667,11 +667,11 @@ Use module name as prefix:
 $table->uuid('id')->primary();  // Table: my_module_games
 ```
 
-### 4. Register Filament Resources
+### 4. Register Filament resources
 
 Filament resources from modules need to be discovered. Add them to the Filament panel provider or use auto-discovery.
 
-### 5. Handle Module Dependencies
+### 5. Handle module dependencies
 
 Declare dependencies in `module.json`:
 
@@ -684,7 +684,7 @@ Declare dependencies in `module.json`:
 }
 ```
 
-### 6. Use Helper Functions
+### 6. Use helper functions
 
 ```php
 // Get module path
@@ -700,7 +700,7 @@ module_enabled('my-module');
 module_trans('my-module', 'messages.success');
 ```
 
-### 7. Use the Module Facade
+### 7. Use the Module facade
 
 ```php
 use App\Modules\Facades\Module;
@@ -717,9 +717,9 @@ $path = Module::path('src');
 
 ---
 
-## Quick Reference
+## Quick reference
 
-### Management Commands
+### Management commands
 
 | Command | Description |
 |---------|-------------|
@@ -730,7 +730,7 @@ $path = Module::path('src');
 | `module:migrate {module}` | Run module migrations |
 | `module:publish-assets` | Publish module assets |
 
-### Scaffolding Commands
+### Scaffolding commands
 
 | Command | Description |
 |---------|-------------|
@@ -746,7 +746,7 @@ $path = Module::path('src');
 | `module:make-vue-page {module} {name}` | Create Vue page |
 | `module:make-vue-component {module} {name}` | Create Vue component |
 
-### ServiceProvider Methods
+### ServiceProvider methods
 
 | Method | Returns | Description |
 |--------|---------|-------------|

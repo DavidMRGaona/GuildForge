@@ -1,6 +1,6 @@
-# Association website
+# GuildForge
 
-Website template for associations with:
+Platform for wargames and role-playing games guilds with:
 
 - **Public frontend**: Events, articles, photo galleries for visitors
 - **Admin panel**: Content management for members
@@ -40,10 +40,10 @@ Website template for associations with:
    cp src/.env.example src/.env
    ```
 
-3. Configure your association in `.env`:
+3. Configure your instance in `.env`:
    ```env
-   APP_NAME="Your association"
-   APP_DESCRIPTION="Brief description of your association"
+   APP_NAME="GuildForge"
+   APP_DESCRIPTION="Platform for wargames and role-playing games guilds"
    ```
 
 4. Start the containers:
@@ -145,7 +145,7 @@ Domain → Application → Infrastructure → Presentation
 | Route               | Description                                           |
 |---------------------|-------------------------------------------------------|
 | `/`                 | Home with hero slider, events, articles, gallery      |
-| `/nosotros`         | About page with association info and contact section  |
+| `/nosotros`         | About page with guild info and contact section        |
 | `/contacto`         | Contact form (POST)                                   |
 | `/calendario`       | Interactive event calendar                            |
 | `/eventos`          | Events listing                                        |
@@ -170,7 +170,7 @@ Key environment variables to configure:
 
 | Variable        | Description                              |
 |-----------------|------------------------------------------|
-| `APP_NAME`      | Association name                         |
+| `APP_NAME`      | Guild name                               |
 | `APP_URL`       | Application URL                          |
 | `CLOUDINARY_URL`| Cloudinary connection string for images  |
 | `MAIL_*`        | Email configuration for contact form     |

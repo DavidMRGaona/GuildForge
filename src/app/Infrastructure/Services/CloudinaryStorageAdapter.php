@@ -159,7 +159,7 @@ final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
 
     /**
      * Extract the folder path from public_id.
-     * e.g., "association/events/2026/01/uuid" -> "association/events/2026/01"
+     * e.g., "guildforge/events/2026/01/uuid" -> "guildforge/events/2026/01"
      */
     private function extractFolder(string $publicId): string
     {

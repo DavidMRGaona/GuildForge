@@ -2,7 +2,7 @@
     "name": "test-module",
     "version": "1.0.0",
     "description": "Test module for automated testing",
-    "author": "Runesword",
+    "author": "GuildForge",
     "namespace": "Modules\\TestModule",
     "provider": "TestModuleServiceProvider",
     "requires": {},

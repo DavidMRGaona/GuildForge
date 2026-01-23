@@ -21,7 +21,7 @@ class CreateUser extends CreateRecord
         // Mark email as verified since admin created the user
         $user->markEmailAsVerified();
 
-        $appName = (string) config('app.name', 'Runesword');
+        $appName = (string) config('app.name', 'GuildForge');
         $user->notify(new WelcomeNotification($appName));
     }
 }

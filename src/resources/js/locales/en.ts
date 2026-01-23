@@ -46,13 +46,13 @@ export default {
         latest: 'Latest articles',
         by: 'By',
         publishedAt: 'Published on',
-        subtitle: 'News and articles from the association',
+        subtitle: 'News and articles from the guild',
         noArticles: 'No articles published',
     },
     gallery: {
         title: 'Gallery',
         photos: 'photos',
-        subtitle: 'Photo gallery of the association',
+        subtitle: 'Photo gallery of the guild',
         noGalleries: 'No galleries published',
         photoOf: 'of',
         close: 'Close',
@@ -91,11 +91,11 @@ export default {
     },
     about: {
         title: 'About {appName}',
-        subtitle: 'Learn about our association',
+        subtitle: 'Learn about our guild',
         history: {
             title: 'Our history',
             content:
-                '{appName} is an association dedicated to creating a welcoming community where everyone can enjoy their passion.',
+                '{appName} is a guild dedicated to creating a welcoming community where everyone can enjoy their passion.',
         },
         whatWeDo: {
             title: 'What we do',

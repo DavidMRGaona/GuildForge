@@ -15,7 +15,7 @@ final class HeroSlideModelTest extends TestCase
     public function test_it_creates_hero_slide_in_database(): void
     {
         $slide = HeroSlideModel::factory()->create([
-            'title' => 'Welcome to Runesword',
+            'title' => 'Welcome to GuildForge',
             'subtitle' => 'Join our gaming community',
             'button_text' => 'Learn More',
             'button_url' => '/about',
@@ -26,7 +26,7 @@ final class HeroSlideModelTest extends TestCase
 
         $this->assertDatabaseHas('hero_slides', [
             'id' => $slide->id,
-            'title' => 'Welcome to Runesword',
+            'title' => 'Welcome to GuildForge',
             'subtitle' => 'Join our gaming community',
             'button_text' => 'Learn More',
             'button_url' => '/about',

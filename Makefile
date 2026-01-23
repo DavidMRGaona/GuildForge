@@ -1,4 +1,4 @@
-# Association website - Makefile
+# GuildForge - Makefile
 
 .PHONY: help up down build restart recreate logs ps shell shell-node shell-db \
         es-test es-logs es-health es-indices \
@@ -15,16 +15,16 @@
 
 # Docker compose command
 DOCKER_COMPOSE := docker compose
-PHP_CONTAINER := association_app
-NODE_CONTAINER := association_node
-DB_CONTAINER := association_db
+PHP_CONTAINER := guildforge_app
+NODE_CONTAINER := guildforge_node
+DB_CONTAINER := guildforge_db
 
 # =============================================================================
 # HELP
 # =============================================================================
 
 help: ## Show this help message
-	@echo "Association website"
+	@echo "GuildForge"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
@@ -75,7 +75,7 @@ shell-node: ## Enter Node container
 	docker exec -it $(NODE_CONTAINER) sh
 
 shell-db: ## Enter PostgreSQL shell
-	docker exec -it $(DB_CONTAINER) psql -U $${DB_USERNAME:-association} -d $${DB_DATABASE:-association}
+	docker exec -it $(DB_CONTAINER) psql -U $${DB_USERNAME:-guildforge} -d $${DB_DATABASE:-guildforge}
 
 # =============================================================================
 # INSTALLATION
@@ -115,7 +115,7 @@ seed: ## Run seeders
 
 db-backup: ## Backup database to ./backups/
 	@mkdir -p backups
-	docker exec $(DB_CONTAINER) pg_dump -U $${DB_USERNAME:-association} $${DB_DATABASE:-association} > backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+	docker exec $(DB_CONTAINER) pg_dump -U $${DB_USERNAME:-guildforge} $${DB_DATABASE:-guildforge} > backups/backup_$$(date +%Y%m%d_%H%M%S).sql
 	@echo "Backup created in ./backups/"
 
 db-restore: ## Restore from latest backup
@@ -125,7 +125,7 @@ db-restore: ## Restore from latest backup
 		exit 1; \
 	fi; \
 	echo "Restoring from $$LATEST"; \
-	cat $$LATEST | docker exec -i $(DB_CONTAINER) psql -U $${DB_USERNAME:-association} -d $${DB_DATABASE:-association}
+	cat $$LATEST | docker exec -i $(DB_CONTAINER) psql -U $${DB_USERNAME:-guildforge} -d $${DB_DATABASE:-guildforge}
 
 # =============================================================================
 # TESTING
@@ -269,7 +269,7 @@ es-test: ## Test Elasticsearch connection and send test logs
 	docker exec $(PHP_CONTAINER) php artisan elasticsearch:test
 
 es-logs: ## View recent Elasticsearch container logs
-	docker logs association_elasticsearch --tail 50
+	docker logs guildforge_elasticsearch --tail 50
 
 es-health: ## Check Elasticsearch cluster health
 	@curl -s http://localhost:9200/_cluster/health?pretty

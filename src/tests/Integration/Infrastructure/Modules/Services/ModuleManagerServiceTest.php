@@ -34,7 +34,7 @@ final class ModuleManagerServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir() . '/runesword-test-modules-' . uniqid();
+        $this->testModulesPath = sys_get_temp_dir() . '/guildforge-test-modules-' . uniqid();
         mkdir($this->testModulesPath, 0755, true);
 
         // Override the modules path in config

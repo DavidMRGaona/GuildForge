@@ -65,8 +65,8 @@ final class SiteSettings extends Page implements HasForms
     protected function getSettingsKeys(): array
     {
         return [
-            'association_name',
-            'association_description',
+            'guild_name',
+            'guild_description',
             'site_logo_light',
             'site_logo_dark',
             'theme_primary_color',
@@ -124,12 +124,12 @@ final class SiteSettings extends Page implements HasForms
                         Tab::make(__('filament.settings.tabs.general'))
                             ->icon('heroicon-o-cog-6-tooth')
                             ->schema([
-                                TextInput::make('association_name')
-                                    ->label(__('filament.settings.about.association_name'))
+                                TextInput::make('guild_name')
+                                    ->label(__('filament.settings.about.guild_name'))
                                     ->maxLength(255)
-                                    ->helperText(__('filament.settings.about.association_name_help')),
+                                    ->helperText(__('filament.settings.about.guild_name_help')),
 
-                                TextInput::make('association_description')
+                                TextInput::make('guild_description')
                                     ->label(__('filament.settings.general.description'))
                                     ->maxLength(500)
                                     ->nullable()

@@ -56,7 +56,7 @@ final class TagSeeder extends Seeder
     {
         $parent = TagModel::create([
             'id' => Str::uuid()->toString(),
-            'name' => 'Juegos de Rol',
+            'name' => 'Juegos de rol',
             'slug' => 'juegos-de-rol',
             'applies_to' => ['events', 'articles', 'galleries'],
             'color' => '#7C3AED',
@@ -87,7 +87,7 @@ final class TagSeeder extends Seeder
     {
         TagModel::create([
             'id' => Str::uuid()->toString(),
-            'name' => 'Juegos de Mesa',
+            'name' => 'Juegos de mesa',
             'slug' => 'juegos-de-mesa',
             'applies_to' => ['events', 'articles', 'galleries'],
             'color' => '#059669',

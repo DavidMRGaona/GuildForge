@@ -11,7 +11,7 @@ import { buildFullScreenHeroImageUrl } from '@/utils/cloudinary';
 import type { Activity, ActivityIcon, JoinStep, SocialMediaLinks } from '@/types/models';
 
 interface Props {
-    associationName: string;
+    guildName: string;
     aboutHistory: string;
     contactEmail: string;
     contactPhone: string;
@@ -34,7 +34,7 @@ const LocationMap = defineAsyncComponent(() => import('@/components/map/Location
 const { t } = useI18n();
 
 useSeo({
-    title: t('about.title', { appName: props.associationName }),
+    title: t('about.title', { appName: props.guildName }),
     description: props.aboutTagline || t('about.subtitle'),
 });
 
@@ -93,7 +93,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
             <img
                 v-if="heroImageUrl"
                 :src="heroImageUrl"
-                :alt="associationName"
+                :alt="guildName"
                 class="absolute inset-0 w-full h-full object-cover"
             />
             <!-- Dark Overlay -->
@@ -104,7 +104,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
             <!-- Content -->
             <div class="relative z-10 text-center px-4">
                 <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white drop-shadow-lg">
-                    {{ t('about.title', { appName: associationName }) }}
+                    {{ t('about.title', { appName: guildName }) }}
                 </h1>
                 <p v-if="aboutTagline" class="mt-3 text-lg md:text-xl text-white/90 drop-shadow">
                     {{ aboutTagline }}
