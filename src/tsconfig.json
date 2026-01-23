@@ -31,7 +31,8 @@
 
         "baseUrl": ".",
         "paths": {
-            "@/*": ["resources/js/*"]
+            "@/*": ["resources/js/*"],
+            "@modules/*": ["modules/*"]
         },
 
         "types": ["vite/client", "node"]
@@ -39,7 +40,9 @@
     "include": [
         "resources/js/**/*.ts",
         "resources/js/**/*.d.ts",
-        "resources/js/**/*.vue"
+        "resources/js/**/*.vue",
+        "modules/*/resources/js/**/*.ts",
+        "modules/*/resources/js/**/*.vue"
     ],
     "exclude": ["node_modules", "public"]
 }

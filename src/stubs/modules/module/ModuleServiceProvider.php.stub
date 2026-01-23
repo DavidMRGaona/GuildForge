@@ -54,6 +54,27 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
     }
 
     /**
+     * Register policies provided by this module.
+     *
+     * @return array<class-string, class-string> Map of model class to policy class
+     */
+    public function registerPolicies(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register Filament navigation groups provided by this module.
+     * Groups will only be added if they don't already exist in core.
+     *
+     * @return array<string, array{icon?: string, sort?: int}> Map of group label to options
+     */
+    public function registerNavigationGroups(): array
+    {
+        return [];
+    }
+
+    /**
      * Register permissions provided by this module.
      *
      * @return array<\App\Application\Modules\DTOs\PermissionDTO>

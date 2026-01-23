@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules;
 
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 abstract class ModuleServiceProvider extends ServiceProvider
@@ -30,6 +31,13 @@ abstract class ModuleServiceProvider extends ServiceProvider
         if (file_exists($configPath)) {
             $this->mergeConfigFrom($configPath, 'modules.' . $this->moduleName());
         }
+
+        // Load module settings into Laravel config
+        $settingsPath = $this->modulePath('config/settings.php');
+        if (file_exists($settingsPath)) {
+            $settings = require $settingsPath;
+            config()->set("modules.settings.{$this->moduleName()}", $settings);
+        }
     }
 
     public function boot(): void
@@ -38,6 +46,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
         $this->loadViews();
         $this->loadTranslations();
         $this->loadMigrations();
+        $this->loadPolicies();
     }
 
     protected function loadRoutes(): void
@@ -81,6 +90,13 @@ abstract class ModuleServiceProvider extends ServiceProvider
         }
     }
 
+    protected function loadPolicies(): void
+    {
+        foreach ($this->registerPolicies() as $model => $policy) {
+            Gate::policy($model, $policy);
+        }
+    }
+
     // ==================
     // Lifecycle Hooks
     // ==================
@@ -104,13 +120,35 @@ abstract class ModuleServiceProvider extends ServiceProvider
     }
 
     // ==================
-    // Future Integration (prepared but not implemented in Phase 1)
+    // Module Integration
     // ==================
+
+    /**
+     * Register policies provided by this module.
+     * Override in subclass to provide model policies.
+     *
+     * @return array<class-string, class-string> Map of model class to policy class
+     */
+    public function registerPolicies(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register Filament navigation groups provided by this module.
+     * Groups will only be added if they don't already exist.
+     *
+     * @return array<string, array{icon?: string, sort?: int}> Map of group label to options
+     */
+    public function registerNavigationGroups(): array
+    {
+        return [];
+    }
 
     /**
      * Register permissions provided by this module.
      *
-     * @return array<string, string> ['permission.key' => 'Description']
+     * @return array<\App\Application\Modules\DTOs\PermissionDTO>
      */
     public function registerPermissions(): array
     {
@@ -120,9 +158,20 @@ abstract class ModuleServiceProvider extends ServiceProvider
     /**
      * Register navigation items provided by this module.
      *
-     * @return array<array{label: string, route: string, icon?: string}>
+     * @return array<\App\Application\Modules\DTOs\NavigationItemDTO>
      */
     public function registerNavigation(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register slot components provided by this module.
+     * Slots allow modules to inject Vue components into layout positions.
+     *
+     * @return array<\App\Application\Modules\DTOs\SlotRegistrationDTO>
+     */
+    public function registerSlots(): array
     {
         return [];
     }

@@ -7,13 +7,13 @@ namespace App\Filament\Pages;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Modules\ModuleLoader;
 use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Illuminate\Support\Facades\App;
 
 /**
  * @property Form $form
@@ -40,6 +40,8 @@ final class ModuleSettingsPage extends Page implements HasForms
     public ?string $moduleDescription = null;
 
     public ?string $moduleProvider = null;
+
+    public ?string $moduleNamespace = null;
 
     public bool $moduleIsEnabled = false;
 
@@ -105,6 +107,7 @@ final class ModuleSettingsPage extends Page implements HasForms
         $this->moduleAuthor = $moduleEntity->author();
         $this->moduleDescription = $moduleEntity->description();
         $this->moduleProvider = $moduleEntity->provider();
+        $this->moduleNamespace = $moduleEntity->namespace();
         $this->moduleIsEnabled = $moduleEntity->isEnabled();
 
         // Load current settings
@@ -126,21 +129,19 @@ final class ModuleSettingsPage extends Page implements HasForms
      */
     protected function getModuleSettingsSchema(): array
     {
-        if ($this->moduleProvider === null) {
+        if ($this->module === '') {
             return [];
         }
 
-        if (!class_exists($this->moduleProvider)) {
+        // Get the already-loaded provider from the ModuleLoader
+        /** @var ModuleLoader $moduleLoader */
+        $moduleLoader = app(ModuleLoader::class);
+
+        $provider = $moduleLoader->getProvider($this->module);
+
+        if ($provider === null) {
             return [];
         }
-
-        // Only process if the provider extends ModuleServiceProvider
-        if (!is_subclass_of($this->moduleProvider, ModuleServiceProvider::class)) {
-            return [];
-        }
-
-        /** @var ModuleServiceProvider $provider */
-        $provider = App::make($this->moduleProvider);
 
         return $provider->getSettingsSchema();
     }

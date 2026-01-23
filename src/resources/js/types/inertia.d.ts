@@ -1,4 +1,5 @@
 import type { AuthSettings, User } from './models';
+import type { ModuleSlots } from './slots';
 
 interface ThemeSettings {
     cssVariables: string;
@@ -26,6 +27,7 @@ declare module '@inertiajs/vue3' {
             info?: string;
         };
         errors: Record<string, string>;
+        moduleSlots: ModuleSlots;
     }
 }
 

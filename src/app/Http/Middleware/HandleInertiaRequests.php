@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use Closure;
@@ -72,6 +73,7 @@ final class HandleInertiaRequests extends Middleware
                 'warning' => fn () => $request->session()->get('warning'),
                 'info' => fn () => $request->session()->get('info'),
             ],
+            'moduleSlots' => fn () => $this->getModuleSlots(),
         ];
     }
 
@@ -181,6 +183,22 @@ final class HandleInertiaRequests extends Middleware
                 'loginEnabled' => true,
                 'emailVerificationRequired' => false,
             ];
+        }
+    }
+
+    /**
+     * Get module slots for frontend.
+     *
+     * @return array<string, array<array<string, mixed>>>
+     */
+    private function getModuleSlots(): array
+    {
+        try {
+            $slotRegistry = app(ModuleSlotRegistryInterface::class);
+
+            return $slotRegistry->toInertiaPayload();
+        } catch (\Throwable) {
+            return [];
         }
     }
 }

@@ -7,6 +7,7 @@ import type { ThemeSettings } from '@/types/inertia';
 import TheHeader from '@/components/layout/TheHeader.vue';
 import TheFooter from '@/components/layout/TheFooter.vue';
 import NotificationToast from '@/components/ui/NotificationToast.vue';
+import ModuleSlot from '@/components/layout/ModuleSlot.vue';
 
 const { t } = useI18n();
 const page = usePage();
@@ -67,11 +68,17 @@ watch(theme, (newTheme) => {
         >
             {{ t('a11y.skipToContent') }}
         </a>
+        <ModuleSlot name="before-header" />
         <TheHeader />
+        <ModuleSlot name="after-header" />
         <main id="main-content" class="flex-1">
+            <ModuleSlot name="before-content" />
             <slot />
+            <ModuleSlot name="after-content" />
         </main>
+        <ModuleSlot name="before-footer" />
         <TheFooter />
+        <ModuleSlot name="after-footer" />
         <NotificationToast />
     </div>
 </template>

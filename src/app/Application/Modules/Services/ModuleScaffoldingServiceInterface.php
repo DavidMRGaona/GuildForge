@@ -46,6 +46,11 @@ interface ModuleScaffoldingServiceInterface
     public function createFilamentResource(string $module, string $name): ScaffoldResultDTO;
 
     /**
+     * Create a new policy for a module.
+     */
+    public function createPolicy(string $module, string $name): ScaffoldResultDTO;
+
+    /**
      * Create a new migration for a module.
      */
     public function createMigration(string $module, string $name, ?string $table = null): ScaffoldResultDTO;
