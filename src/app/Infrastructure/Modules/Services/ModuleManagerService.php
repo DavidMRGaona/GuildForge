@@ -12,10 +12,14 @@ use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Events\ModuleDiscovered;
 use App\Domain\Modules\Events\ModuleDisabled;
 use App\Domain\Modules\Events\ModuleEnabled;
+use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
+use App\Domain\Modules\Exceptions\ModuleCannotUninstallException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -279,6 +283,122 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         }
 
         return $this->migrationRunner->rollback($module, $steps);
+    }
+
+    public function uninstall(ModuleName $name): void
+    {
+        $module = $this->repository->findByName($name);
+
+        if ($module === null) {
+            throw ModuleNotFoundException::withName($name->value);
+        }
+
+        // Check if other enabled modules depend on this one
+        $dependents = $this->getDependents($name);
+        $enabledDependents = [];
+
+        foreach ($dependents->all() as $dependent) {
+            if ($dependent->isEnabled()) {
+                $enabledDependents[] = $dependent->name()->value;
+            }
+        }
+
+        if (!empty($enabledDependents)) {
+            throw ModuleCannotUninstallException::hasDependents($name->value, $enabledDependents);
+        }
+
+        // Disable if enabled
+        if ($module->isEnabled()) {
+            $module->disable();
+            $this->repository->save($module);
+        }
+
+        // Try to rollback migrations
+        try {
+            $this->migrationRunner->rollbackAll($module);
+        } catch (\Throwable $e) {
+            Log::warning("Failed to rollback migrations for module {$name->value}: {$e->getMessage()}");
+        }
+
+        // Store version for event before deleting
+        $version = $module->version()->value();
+
+        // Delete module files
+        $modulePath = $module->path();
+        if (File::isDirectory($modulePath)) {
+            if (!File::deleteDirectory($modulePath)) {
+                throw ModuleCannotUninstallException::deletionFailed($name->value, 'Failed to delete module directory');
+            }
+        }
+
+        // Delete from database
+        $this->repository->delete($module);
+
+        // Invalidate cache
+        $this->invalidateModuleCache();
+
+        // Dispatch event
+        $this->events->dispatch(new ModuleUninstalled(
+            $name->value,
+            $version,
+        ));
+    }
+
+    public function getSettings(ModuleName $name): array
+    {
+        $module = $this->repository->findByName($name);
+
+        if ($module === null) {
+            throw ModuleNotFoundException::withName($name->value);
+        }
+
+        $settingsKey = "modules.settings.{$name->value}";
+
+        return config($settingsKey, []);
+    }
+
+    public function updateSettings(ModuleName $name, array $settings): void
+    {
+        $module = $this->repository->findByName($name);
+
+        if ($module === null) {
+            throw ModuleNotFoundException::withName($name->value);
+        }
+
+        $settingsPath = $module->path() . '/config/settings.php';
+
+        // Store settings in the module's config directory
+        if (!File::isDirectory(dirname($settingsPath))) {
+            File::makeDirectory(dirname($settingsPath), 0755, true);
+        }
+
+        $content = "<?php\n\nreturn " . var_export($settings, true) . ";\n";
+        File::put($settingsPath, $content);
+
+        // Clear config cache so settings are reloaded
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($settingsPath, true);
+        }
+    }
+
+    public function getDependents(ModuleName $name): ModuleCollection
+    {
+        $module = $this->repository->findByName($name);
+
+        if ($module === null) {
+            throw ModuleNotFoundException::withName($name->value);
+        }
+
+        $allModules = $this->repository->all()->all();
+
+        return new ModuleCollection(
+            ...$this->dependencyResolver->getDependents($module, $allModules)
+        );
+    }
+
+    public function findByName(string $name): ?Module
+    {
+        return $this->repository->findByName(new ModuleName($name));
     }
 
     /**

@@ -1,0 +1,13 @@
+{
+    "name": "test-sdk",
+    "version": "1.0.0",
+    "namespace": "Modules\\TestSdk",
+    "provider": "TestSdkServiceProvider",
+    "description": "Test module",
+    "author": "",
+    "requires": {
+        "php": ">=8.2",
+        "laravel": ">=11.0"
+    },
+    "dependencies": []
+}

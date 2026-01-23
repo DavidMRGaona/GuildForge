@@ -85,6 +85,42 @@ final readonly class ModuleMigrationRunner
     }
 
     /**
+     * Rollback all migrations for a module.
+     *
+     * @param Module $module The module to rollback all migrations for
+     * @return int The number of migrations rolled back
+     * @throws ModuleNotFoundException If the module directory does not exist
+     */
+    public function rollbackAll(Module $module): int
+    {
+        $modulePath = $module->path();
+
+        // Fall back to default path if module path is not set
+        if (!is_dir($modulePath)) {
+            $modulePath = $this->modulesPath . '/' . $module->name()->value;
+        }
+
+        if (!is_dir($modulePath)) {
+            throw ModuleNotFoundException::withName($module->name()->value);
+        }
+
+        $migrationsPath = $modulePath . '/database/migrations';
+
+        if (!is_dir($migrationsPath)) {
+            return 0;
+        }
+
+        $migrationFiles = glob($migrationsPath . '/*.php');
+        $count = $migrationFiles !== false ? count($migrationFiles) : 0;
+
+        if ($count === 0) {
+            return 0;
+        }
+
+        return $this->rollbackMigrationsIfPossible($migrationsPath, $count);
+    }
+
+    /**
      * Run migrations if Laravel is fully booted.
      */
     private function runMigrationsIfPossible(string $migrationsPath): void
