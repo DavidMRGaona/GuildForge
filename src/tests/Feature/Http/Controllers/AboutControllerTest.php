@@ -24,12 +24,12 @@ final class AboutControllerTest extends TestCase
     }
 
     /**
-     * Verify the about page receives the association name from settings.
+     * Verify the about page receives the guild name from settings.
      */
-    public function test_about_page_includes_association_name(): void
+    public function test_about_page_includes_guild_name(): void
     {
         // Arrange
-        app(SettingsServiceInterface::class)->set('association_name', 'Runesword');
+        app(SettingsServiceInterface::class)->set('guild_name', 'GuildForge');
 
         // Act
         $response = $this->get('/nosotros');
@@ -38,7 +38,7 @@ final class AboutControllerTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('About')
-                ->where('associationName', 'Runesword')
+                ->where('guildName', 'GuildForge')
         );
     }
 
@@ -68,7 +68,7 @@ final class AboutControllerTest extends TestCase
     {
         // Arrange
         $settings = app(SettingsServiceInterface::class);
-        $settings->set('contact_email', 'info@runesword.com');
+        $settings->set('contact_email', 'info@guildforge.es');
         $settings->set('contact_phone', '+34 123 456 789');
         $settings->set('contact_address', 'Calle Principal 1');
 
@@ -79,19 +79,19 @@ final class AboutControllerTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('About')
-                ->where('contactEmail', 'info@runesword.com')
+                ->where('contactEmail', 'info@guildforge.es')
                 ->where('contactPhone', '+34 123 456 789')
                 ->where('contactAddress', 'Calle Principal 1')
         );
     }
 
     /**
-     * Verify the about page uses app.name config as default when association_name is not set.
+     * Verify the about page uses app.name config as default when guild_name is not set.
      */
     public function test_about_page_uses_app_name_as_default(): void
     {
         // Arrange
-        // Without association_name configured, should use app.name config
+        // Without guild_name configured, should use app.name config
 
         // Act
         $response = $this->get('/nosotros');
@@ -100,7 +100,7 @@ final class AboutControllerTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('About')
-                ->where('associationName', config('app.name'))
+                ->where('guildName', config('app.name'))
         );
     }
 

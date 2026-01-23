@@ -49,7 +49,7 @@ final readonly class AuthService implements AuthServiceInterface
         Event::dispatch(new UserRegistered((string) $user->id, $user->email));
 
         // Send welcome email
-        $appName = (string) config('app.name', 'Runesword');
+        $appName = (string) config('app.name', 'GuildForge');
         $user->notify(new WelcomeNotification($appName));
 
         return $this->dtoFactory->createUserDTO($user);

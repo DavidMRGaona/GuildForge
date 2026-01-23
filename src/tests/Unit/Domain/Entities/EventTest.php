@@ -51,7 +51,7 @@ final class EventTest extends TestCase
         $description = 'Weekly Dungeons & Dragons session.';
         $startDate = new DateTimeImmutable('+2 weeks');
         $endDate = new DateTimeImmutable('+2 weeks +3 days');
-        $location = 'Association Headquarters';
+        $location = 'Guild Headquarters';
         $imagePublicId = 'events/dnd-campaign.jpg';
         $memberPrice = new Price(10.0);
         $nonMemberPrice = new Price(15.0);

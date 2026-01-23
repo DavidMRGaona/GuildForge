@@ -63,7 +63,7 @@ return [
         'images' => [
             'driver' => 'cloudinary',
             'url' => env('CLOUDINARY_URL'),
-            'prefix' => env('CLOUDINARY_PREFIX', 'association'),
+            'prefix' => env('CLOUDINARY_PREFIX', 'guildforge'),
         ],
 
     ],

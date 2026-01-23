@@ -23,7 +23,7 @@ final class ModuleMigrationRunnerTest extends TestCase
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir() . '/runesword_test_modules_migrations_' . uniqid();
+        $this->testModulesPath = sys_get_temp_dir() . '/guildforge_test_modules_migrations_' . uniqid();
         $this->runner = new ModuleMigrationRunner($this->testModulesPath);
     }
 

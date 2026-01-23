@@ -18,7 +18,7 @@ final class ModuleManifestDTOTest extends TestCase
             namespace: 'Modules\\Forum',
             provider: 'Modules\\Forum\\ForumServiceProvider',
             description: 'Forum module for discussions',
-            author: 'Runesword Team',
+            author: 'GuildForge Team',
             requires: ['php' => '^8.2', 'laravel' => '^11.0'],
             dependencies: ['core-auth', 'notifications'],
         );
@@ -28,7 +28,7 @@ final class ModuleManifestDTOTest extends TestCase
         $this->assertEquals('Modules\\Forum', $dto->namespace);
         $this->assertEquals('Modules\\Forum\\ForumServiceProvider', $dto->provider);
         $this->assertEquals('Forum module for discussions', $dto->description);
-        $this->assertEquals('Runesword Team', $dto->author);
+        $this->assertEquals('GuildForge Team', $dto->author);
         $this->assertEquals(['php' => '^8.2', 'laravel' => '^11.0'], $dto->requires);
         $this->assertEquals(['core-auth', 'notifications'], $dto->dependencies);
     }

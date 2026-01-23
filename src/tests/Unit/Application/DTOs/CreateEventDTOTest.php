@@ -37,7 +37,7 @@ final class CreateEventDTOTest extends TestCase
         $title = 'D&D Campaign';
         $description = 'Weekly campaign session.';
         $startDate = new DateTimeImmutable('2024-07-20 18:00:00');
-        $location = 'Association Headquarters';
+        $location = 'Guild Headquarters';
         $imagePublicId = 'events/dnd-campaign.jpg';
 
         $dto = new CreateEventDTO(

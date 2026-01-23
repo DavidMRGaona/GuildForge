@@ -46,13 +46,13 @@ export default {
         latest: 'Últimos artículos',
         by: 'Por',
         publishedAt: 'Publicado el',
-        subtitle: 'Noticias y artículos de la asociación',
+        subtitle: 'Noticias y artículos del gremio',
         noArticles: 'No hay artículos publicados',
     },
     gallery: {
         title: 'Galería',
         photos: 'fotos',
-        subtitle: 'Galería de fotos de la asociación',
+        subtitle: 'Galería de fotos del gremio',
         noGalleries: 'No hay galerías publicadas',
         photoOf: 'de',
         close: 'Cerrar',
@@ -91,11 +91,11 @@ export default {
     },
     about: {
         title: 'Sobre {appName}',
-        subtitle: 'Conoce nuestra asociación',
+        subtitle: 'Conoce nuestro gremio',
         history: {
             title: 'Nuestra historia',
             content:
-                '{appName} es una asociación dedicada a crear una comunidad acogedora donde todos puedan disfrutar de su pasión.',
+                '{appName} es un gremio dedicado a crear una comunidad acogedora donde todos puedan disfrutar de su pasión.',
         },
         whatWeDo: {
             title: '¿Qué hacemos?',

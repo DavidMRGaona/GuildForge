@@ -22,7 +22,7 @@ final class ModuleTest extends TestCase
         $displayName = 'Forum';
         $description = 'Discussion forum module';
         $version = new ModuleVersion(1, 0, 0);
-        $author = 'Runesword Team';
+        $author = 'GuildForge Team';
         $requirements = new ModuleRequirements(
             phpVersion: '>=8.2',
             laravelVersion: '^11.0',

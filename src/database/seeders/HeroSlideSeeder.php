@@ -15,21 +15,21 @@ final class HeroSlideSeeder extends Seeder
     public function run(): void
     {
         HeroSlideModel::factory()->active()->withOrder(1)->create([
-            'title' => 'Bienvenido a Runesword',
+            'title' => 'Bienvenido a GuildForge',
             'subtitle' => 'Tu asociación de juegos de mesa y rol',
             'button_text' => 'Conócenos',
             'button_url' => '/nosotros',
         ]);
 
         HeroSlideModel::factory()->active()->withOrder(2)->create([
-            'title' => 'Próximos Eventos',
+            'title' => 'Próximos eventos',
             'subtitle' => 'Torneos, partidas y talleres',
             'button_text' => 'Ver eventos',
             'button_url' => '/eventos',
         ]);
 
         HeroSlideModel::factory()->active()->withOrder(3)->create([
-            'title' => 'Galería de Fotos',
+            'title' => 'Galería de fotos',
             'subtitle' => 'Revive nuestros mejores momentos',
             'button_text' => 'Ver galería',
             'button_url' => '/galeria',

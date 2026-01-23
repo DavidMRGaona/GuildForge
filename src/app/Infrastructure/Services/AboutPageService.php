@@ -18,7 +18,7 @@ final readonly class AboutPageService implements AboutPageServiceInterface
     public function getAboutPageData(): array
     {
         return [
-            'associationName' => $this->settings->get('association_name', config('app.name')),
+            'guildName' => $this->settings->get('guild_name', config('app.name')),
             'aboutHistory' => $this->settings->get('about_history', ''),
             'contactEmail' => $this->settings->get('contact_email', ''),
             'contactPhone' => $this->settings->get('contact_phone', ''),

@@ -17,13 +17,13 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: runesword
+          POSTGRES_USER: guildforge
           POSTGRES_PASSWORD: secret
-          POSTGRES_DB: runesword_test
+          POSTGRES_DB: guildforge_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U runesword"
+          --health-cmd="pg_isready -U guildforge"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -75,8 +75,8 @@ jobs:
           DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
-          DB_DATABASE: runesword_test
-          DB_USERNAME: runesword
+          DB_DATABASE: guildforge_test
+          DB_USERNAME: guildforge
           DB_PASSWORD: secret
 
       - name: Run tests
@@ -85,8 +85,8 @@ jobs:
           DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
-          DB_DATABASE: runesword_test
-          DB_USERNAME: runesword
+          DB_DATABASE: guildforge_test
+          DB_USERNAME: guildforge
           DB_PASSWORD: secret
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379

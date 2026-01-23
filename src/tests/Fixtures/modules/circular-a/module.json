@@ -2,7 +2,7 @@
     "name": "circular-a",
     "version": "1.0.0",
     "description": "Module A for circular dependency testing",
-    "author": "Runesword",
+    "author": "GuildForge",
     "namespace": "Modules\\CircularA",
     "provider": "CircularAServiceProvider",
     "requires": {},

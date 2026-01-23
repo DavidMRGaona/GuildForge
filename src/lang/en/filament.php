@@ -59,7 +59,7 @@ return [
         ],
         'general' => [
             'title' => 'General Settings',
-            'description' => 'Association description',
+            'description' => 'Guild description',
             'logo_light' => 'Logo (light theme)',
             'logo_light_help' => 'Displayed when light theme is active. Transparent PNG recommended, max 1MB.',
             'logo_dark' => 'Logo (dark theme)',
@@ -123,8 +123,8 @@ return [
         ],
         'about' => [
             'title' => 'About us',
-            'association_name' => 'Association name',
-            'association_name_help' => 'Shown in the "About us" page title',
+            'guild_name' => 'Guild name',
+            'guild_name_help' => 'Shown in the "About us" page title',
             'hero_image' => 'Hero image',
             'hero_image_help' => 'Background image for the hero. If not set, a gradient is shown.',
             'tagline' => 'Tagline',

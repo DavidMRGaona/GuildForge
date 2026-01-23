@@ -21,12 +21,12 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
             'email' => 'john@example.com',
-            'message' => 'I would like to join your association.',
+            'message' => 'I would like to join your guild.',
             'website' => '', // Honeypot should be empty
         ];
 
@@ -35,7 +35,7 @@ final class ContactControllerTest extends TestCase
 
         // Assert
         Mail::assertSent(ContactFormMail::class, function (ContactFormMail $mail) use ($formData): bool {
-            return $mail->hasTo('info@runesword.com')
+            return $mail->hasTo('info@guildforge.es')
                 && $mail->senderName === $formData['name']
                 && $mail->senderEmail === $formData['email']
                 && $mail->messageBody === $formData['message'];
@@ -49,7 +49,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'email' => 'john@example.com',
@@ -72,7 +72,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
@@ -96,7 +96,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
@@ -122,7 +122,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'Bot Name',
@@ -150,7 +150,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
@@ -178,12 +178,12 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
             'email' => 'john@example.com',
-            'message' => 'I would like to join your association.',
+            'message' => 'I would like to join your guild.',
             'website' => '',
         ];
 
@@ -203,7 +203,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
@@ -226,7 +226,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => ['invalid' => 'array'],
@@ -250,7 +250,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
@@ -274,7 +274,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => str_repeat('a', 256), // Assuming 255 max
@@ -298,7 +298,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
@@ -322,7 +322,7 @@ final class ContactControllerTest extends TestCase
     {
         // Arrange
         Mail::fake();
-        app(SettingsServiceInterface::class)->set('contact_email', 'info@runesword.com');
+        app(SettingsServiceInterface::class)->set('contact_email', 'info@guildforge.es');
 
         $formData = [
             'name' => 'John Doe',
