@@ -16,8 +16,6 @@ use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -49,6 +47,23 @@ final class ModulesPage extends Page implements HasForms
      * @var array<int, TemporaryUploadedFile>|null
      */
     public ?array $zipFile = null;
+
+    public function mount(): void
+    {
+        // Show notification from module enable/disable action
+        $notification = session('module_action_notification');
+
+        if ($notification !== null) {
+            $builder = Notification::make()
+                ->title($notification['title']);
+
+            if (($notification['status'] ?? 'info') === 'success') {
+                $builder->success();
+            }
+
+            $builder->send();
+        }
+    }
 
     public static function getNavigationLabel(): string
     {
@@ -153,9 +168,9 @@ final class ModulesPage extends Page implements HasForms
                             );
                         } elseif (is_string($tempFile)) {
                             // Fallback for stored file path
-                            $filePath = storage_path('app/' . $tempFile);
+                            $filePath = storage_path('app/'.$tempFile);
 
-                            if (!file_exists($filePath)) {
+                            if (! file_exists($filePath)) {
                                 throw ModuleInstallationException::invalidZip();
                             }
 
@@ -192,12 +207,20 @@ final class ModulesPage extends Page implements HasForms
     public function enableModule(string $name, ModuleManagerServiceInterface $moduleManager): void
     {
         try {
+            // Get display name before enabling
+            $module = $moduleManager->find(new ModuleName($name));
+            $displayName = $module?->displayName() ?? $name;
+
             $moduleManager->enable(new ModuleName($name));
 
-            Notification::make()
-                ->title(__('modules.filament.notifications.enabled', ['name' => $name]))
-                ->success()
-                ->send();
+            // Store success notification in session for display after redirect
+            session()->flash('module_action_notification', [
+                'title' => __('modules.filament.notifications.enabled', ['name' => $displayName]),
+                'status' => 'success',
+            ]);
+
+            // Force full page reload to rebuild navigation with the new module
+            $this->redirect(self::getUrl(), navigate: false);
         } catch (ModuleNotFoundException|ModuleAlreadyEnabledException|ModuleDependencyException $e) {
             Notification::make()
                 ->title(__('modules.filament.notifications.cannot_enable', ['error' => $e->getMessage()]))
@@ -209,12 +232,20 @@ final class ModulesPage extends Page implements HasForms
     public function disableModule(string $name, ModuleManagerServiceInterface $moduleManager): void
     {
         try {
+            // Get display name before disabling
+            $module = $moduleManager->find(new ModuleName($name));
+            $displayName = $module?->displayName() ?? $name;
+
             $moduleManager->disable(new ModuleName($name));
 
-            Notification::make()
-                ->title(__('modules.filament.notifications.disabled', ['name' => $name]))
-                ->success()
-                ->send();
+            // Store success notification in session for display after redirect
+            session()->flash('module_action_notification', [
+                'title' => __('modules.filament.notifications.disabled', ['name' => $displayName]),
+                'status' => 'success',
+            ]);
+
+            // Force full page reload to rebuild navigation without the disabled module
+            $this->redirect(self::getUrl(), navigate: false);
         } catch (ModuleNotFoundException|ModuleAlreadyDisabledException|ModuleDependencyException $e) {
             Notification::make()
                 ->title(__('modules.filament.notifications.cannot_disable', ['error' => $e->getMessage()]))
