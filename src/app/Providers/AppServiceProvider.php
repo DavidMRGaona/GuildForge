@@ -21,6 +21,7 @@ use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePermissionRegistryInterface;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
+use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
 use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
@@ -30,6 +31,7 @@ use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use App\Infrastructure\Modules\Services\ModuleNavigationRegistry;
 use App\Infrastructure\Modules\Services\ModulePermissionRegistry;
 use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
+use App\Infrastructure\Modules\Services\ModuleSlotRegistry;
 use App\Infrastructure\Modules\Services\StubRenderer;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use App\Domain\Repositories\ArticleRepositoryInterface;
@@ -142,6 +144,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleContextServiceInterface::class, ModuleContextService::class);
         $this->app->singleton(ModulePermissionRegistryInterface::class, ModulePermissionRegistry::class);
         $this->app->singleton(ModuleNavigationRegistryInterface::class, ModuleNavigationRegistry::class);
+        $this->app->singleton(ModuleSlotRegistryInterface::class, ModuleSlotRegistry::class);
 
         // Module loader (for booting enabled modules)
         $this->app->singleton(\App\Modules\ModuleLoader::class, function ($app) {

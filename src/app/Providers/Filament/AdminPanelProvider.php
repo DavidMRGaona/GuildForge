@@ -40,12 +40,7 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
             ->darkMode(true)
-            ->navigationGroups([
-                NavigationGroup::make('Contenido'),
-                NavigationGroup::make('Páginas'),
-                NavigationGroup::make('Configuración'),
-                NavigationGroup::make('Administración'),
-            ])
+            ->navigationGroups($this->getNavigationGroups())
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
@@ -89,13 +84,18 @@ class AdminPanelProvider extends PanelProvider
 
         $resources = [];
 
-        foreach (glob($modulesPath . '/*/src/Filament/Resources') as $resourcesPath) {
+        $resourcesPaths = glob($modulesPath . '/*/src/Filament/Resources');
+        if ($resourcesPaths === false) {
+            return;
+        }
+
+        foreach ($resourcesPaths as $resourcesPath) {
             if (!is_dir($resourcesPath)) {
                 continue;
             }
 
             // Extract module name from path: modules/{module-name}/src/Filament/Resources
-            $modulePath = dirname(dirname(dirname($resourcesPath)));
+            $modulePath = dirname($resourcesPath, 3);
             $moduleName = basename($modulePath);
             $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
             $namespace = "Modules\\{$studlyName}\\Filament\\Resources";
@@ -104,7 +104,12 @@ class AdminPanelProvider extends PanelProvider
             $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath . '/src');
 
             // Find all resource files
-            foreach (glob($resourcesPath . '/*Resource.php') as $file) {
+            $resourceFiles = glob($resourcesPath . '/*Resource.php');
+            if ($resourceFiles === false) {
+                continue;
+            }
+
+            foreach ($resourceFiles as $file) {
                 $className = basename($file, '.php');
                 $resourceClass = $namespace . '\\' . $className;
 
@@ -141,6 +146,122 @@ class AdminPanelProvider extends PanelProvider
                 require_once $file;
             }
         });
+    }
+
+    /**
+     * Get all navigation groups (core + modules).
+     *
+     * @return array<NavigationGroup>
+     */
+    private function getNavigationGroups(): array
+    {
+        // Core navigation groups with sort order
+        $coreGroups = [
+            'Contenido' => ['sort' => 10],
+            'Páginas' => ['sort' => 30],
+            'Configuración' => ['sort' => 40],
+            'Administración' => ['sort' => 50],
+        ];
+
+        // Collect navigation groups from modules
+        $moduleGroups = $this->collectModuleNavigationGroups();
+
+        // Merge groups (modules can add new groups but not override core)
+        $allGroups = array_merge($moduleGroups, $coreGroups);
+
+        // Sort by 'sort' key (default to 100), then alphabetically by label for ties
+        uksort($allGroups, static function (string $labelA, string $labelB) use ($allGroups): int {
+            $sortA = $allGroups[$labelA]['sort'] ?? 100;
+            $sortB = $allGroups[$labelB]['sort'] ?? 100;
+
+            // Primary: sort order
+            if ($sortA !== $sortB) {
+                return $sortA <=> $sortB;
+            }
+
+            // Secondary: alphabetical by label
+            return $labelA <=> $labelB;
+        });
+
+        // Convert to NavigationGroup objects
+        $navigationGroups = [];
+        foreach ($allGroups as $label => $options) {
+            $group = NavigationGroup::make($label);
+
+            if (isset($options['icon'])) {
+                $group->icon($options['icon']);
+            }
+
+            $navigationGroups[] = $group;
+        }
+
+        return $navigationGroups;
+    }
+
+    /**
+     * Collect navigation groups from enabled modules.
+     *
+     * @return array<string, array{icon?: string, sort?: int}>
+     */
+    private function collectModuleNavigationGroups(): array
+    {
+        $groups = [];
+        $modulesPath = config('modules.path', base_path('modules'));
+
+        if (!is_dir($modulesPath)) {
+            return $groups;
+        }
+
+        // Scan module directories for service providers
+        $moduleDirectories = glob($modulesPath . '/*', GLOB_ONLYDIR);
+        if ($moduleDirectories === false) {
+            return $groups;
+        }
+
+        foreach ($moduleDirectories as $modulePath) {
+            $moduleName = basename($modulePath);
+            $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
+
+            // Find the service provider file
+            $providerFile = $modulePath . '/src/' . $studlyName . 'ServiceProvider.php';
+            if (!file_exists($providerFile)) {
+                continue;
+            }
+
+            // Register autoloader and load the provider
+            $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath . '/src');
+
+            $providerClass = "Modules\\{$studlyName}\\{$studlyName}ServiceProvider";
+
+            // Load the provider file
+            require_once $providerFile;
+
+            if (!class_exists($providerClass)) {
+                continue;
+            }
+
+            try {
+                // Load module translations first
+                $langPath = $modulePath . '/lang';
+                if (is_dir($langPath)) {
+                    app('translator')->addNamespace($moduleName, $langPath);
+                }
+
+                /** @var \App\Modules\ModuleServiceProvider $provider */
+                $provider = new $providerClass(app());
+                $moduleGroups = $provider->registerNavigationGroups();
+
+                foreach ($moduleGroups as $label => $options) {
+                    if (!isset($groups[$label])) {
+                        $groups[$label] = $options;
+                    }
+                }
+            } catch (\Throwable) {
+                // Skip modules that fail to instantiate
+            }
+        }
+
+        return $groups;
     }
 
     private function getBrandLogo(string $key): ?string

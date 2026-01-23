@@ -1,0 +1,27 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useModuleSlots } from '@/composables/useModuleSlots';
+import type { SlotPosition } from '@/types/slots';
+
+const props = defineProps<{
+    name: SlotPosition;
+}>();
+
+const { getSlotComponents, hasSlotComponents } = useModuleSlots();
+
+const components = computed(() => getSlotComponents(props.name));
+const hasComponents = computed(() => hasSlotComponents(props.name));
+</script>
+
+<template>
+    <template v-if="hasComponents">
+        <template v-for="item in components" :key="item.key">
+            <Suspense>
+                <component :is="item.component" v-bind="item.props" />
+                <template #fallback>
+                    <!-- Optional loading state -->
+                </template>
+            </Suspense>
+        </template>
+    </template>
+</template>

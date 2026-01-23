@@ -375,7 +375,10 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         $content = "<?php\n\nreturn " . var_export($settings, true) . ";\n";
         File::put($settingsPath, $content);
 
-        // Clear config cache so settings are reloaded
+        // Update config in memory immediately so changes are visible without restart
+        config()->set("modules.settings.{$name->value}", $settings);
+
+        // Invalidate opcache so the file is reloaded on next request
         if (function_exists('opcache_invalidate')) {
             opcache_invalidate($settingsPath, true);
         }

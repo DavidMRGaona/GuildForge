@@ -23,6 +23,7 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': resolve(__dirname, 'resources/js'),
+            '@modules': resolve(__dirname, 'modules'),
         },
     },
     server: {

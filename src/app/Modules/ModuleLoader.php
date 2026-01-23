@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules;
 
+use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use Illuminate\Contracts\Foundation\Application;
@@ -47,11 +48,32 @@ final class ModuleLoader
             return;
         }
 
+        // ServiceProviders require the $app parameter - use direct instantiation
         /** @var ModuleServiceProvider $provider */
-        $provider = $this->app->make($providerClass);
+        $provider = new $providerClass($this->app);
 
         $this->app->register($provider);
         $this->loadedProviders[$module->name()->value] = $provider;
+
+        // Register slots from the provider
+        $this->registerProviderSlots($provider);
+    }
+
+    /**
+     * Register slots from a module provider.
+     */
+    private function registerProviderSlots(ModuleServiceProvider $provider): void
+    {
+        $slots = $provider->registerSlots();
+
+        if ($slots === []) {
+            return;
+        }
+
+        if ($this->app->bound(ModuleSlotRegistryInterface::class)) {
+            $slotRegistry = $this->app->make(ModuleSlotRegistryInterface::class);
+            $slotRegistry->registerMany($slots);
+        }
     }
 
     /**

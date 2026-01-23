@@ -72,6 +72,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'src/Http/Controllers',
             'src/Http/Requests',
             'src/Filament/Resources',
+            'src/Policies',
             'resources/js/pages',
             'resources/js/components',
             'resources/js/types',
@@ -286,8 +287,43 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $translationsResult = $this->createOrUpdateFilamentTranslations($modulePath, $variables);
         $files = array_merge($files, $translationsResult);
 
+        // Create policy for the resource
+        $policyResult = $this->createPolicy($module, $name);
+        if ($policyResult->success) {
+            $files = array_merge($files, $policyResult->files);
+        }
+
         return ScaffoldResultDTO::success(
             "Filament resource '{$name}' created for module '{$module}'.",
+            $files,
+        );
+    }
+
+    public function createPolicy(string $module, string $name): ScaffoldResultDTO
+    {
+        $validation = $this->validateModuleExists($module);
+        if ($validation !== null) {
+            return $validation;
+        }
+
+        $modulePath = $this->modulesPath . '/' . $module;
+        $variables = $this->stubRenderer->getComponentVariables($module, $name);
+        $files = [];
+
+        // Ensure Policies directory exists
+        $policiesDir = $modulePath . '/src/Policies';
+        if (! is_dir($policiesDir)) {
+            mkdir($policiesDir, 0755, true);
+        }
+
+        $destination = "src/Policies/{$variables['nameStudly']}Policy.php";
+        $destPath = $modulePath . '/' . $destination;
+
+        $result = $this->renderStub('policy/policy.php.stub', $destPath, $variables);
+        $files[$destination] = $result;
+
+        return ScaffoldResultDTO::success(
+            "Policy '{$name}' created for module '{$module}'.",
             $files,
         );
     }
@@ -478,6 +514,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'src/Http/Controllers/Api',
             'src/Http/Requests',
             'src/Filament/Resources',
+            'src/Policies',
             'tests/Unit',
             'tests/Feature',
         ];
