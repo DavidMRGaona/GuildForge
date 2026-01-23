@@ -124,6 +124,7 @@ export default {
                 submit: 'Send message',
                 sending: 'Sending...',
                 success: 'Message sent successfully',
+                error: 'Error sending message. Please try again.',
             },
             social: {
                 title: 'Follow us',
@@ -149,6 +150,8 @@ export default {
         systemTheme: 'System',
         lightTheme: 'Light',
         darkTheme: 'Dark',
+        openMenu: 'Open menu',
+        closeMenu: 'Close menu',
     },
     buttons: {
         submit: 'Submit',
@@ -188,6 +191,7 @@ export default {
             submit: 'Create account',
             hasAccount: 'Already have an account?',
             loginLink: 'Sign in',
+            error: 'Error creating account. Please check your information and try again.',
         },
         login: {
             title: 'Sign in',
@@ -199,6 +203,7 @@ export default {
             submit: 'Sign in',
             noAccount: "Don't have an account?",
             registerLink: 'Sign up',
+            error: 'Error signing in. Please check your credentials.',
         },
         forgotPassword: {
             title: 'Forgot password',
@@ -238,6 +243,8 @@ export default {
             updatePassword: 'Update password',
             profileUpdated: 'Profile updated successfully',
             passwordUpdated: 'Password updated successfully',
+            profileError: 'Error updating profile. Please check your information and try again.',
+            passwordError: 'Error changing password. Please check your information and try again.',
         },
         userMenu: {
             openMenu: 'Open user menu',

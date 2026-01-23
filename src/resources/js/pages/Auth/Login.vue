@@ -5,10 +5,12 @@ import AuthLayout from '@/layouts/AuthLayout.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useSeo } from '@/composables/useSeo';
 import { useAuth } from '@/composables/useAuth';
+import { useNotifications } from '@/composables/useNotifications';
 import type { LoginFormData } from '@/types/models';
 
 const { t } = useI18n();
 const { authSettings } = useAuth();
+const notifications = useNotifications();
 
 useSeo({
     title: t('auth.login.title'),
@@ -23,6 +25,7 @@ const form = useForm<LoginFormData>({
 const submit = () => {
     form.post('/login', {
         onFinish: () => form.reset('password'),
+        onError: () => notifications.error(t('auth.login.error')),
     });
 };
 </script>

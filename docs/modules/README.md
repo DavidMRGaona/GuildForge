@@ -340,6 +340,253 @@ public function registerNavigation(): array
 
 ---
 
+## Module Settings
+
+Modules can define configurable settings that appear in the Filament admin panel.
+
+### Defining Default Settings
+
+Create `config/settings.php` in your module:
+
+```php
+// modules/my-module/config/settings.php
+return [
+    'api_key' => env('MY_MODULE_API_KEY', ''),
+    'max_items' => 10,
+    'features' => [
+        'feature_a' => true,
+        'feature_b' => false,
+    ],
+];
+```
+
+### Settings Form Schema
+
+Override `getSettingsSchema()` in your ServiceProvider to define Filament form components:
+
+```php
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+
+public function getSettingsSchema(): array
+{
+    return [
+        Section::make(__('my_module::settings.api'))
+            ->schema([
+                TextInput::make('api_key')
+                    ->label(__('my_module::settings.api_key'))
+                    ->password()
+                    ->required(),
+                TextInput::make('max_items')
+                    ->label(__('my_module::settings.max_items'))
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(100),
+            ]),
+        Section::make(__('my_module::settings.features'))
+            ->schema([
+                Toggle::make('features.feature_a')
+                    ->label(__('my_module::settings.feature_a')),
+                Toggle::make('features.feature_b')
+                    ->label(__('my_module::settings.feature_b')),
+            ]),
+    ];
+}
+```
+
+### Accessing Settings
+
+```php
+use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Modules\ValueObjects\ModuleName;
+
+$moduleManager = app(ModuleManagerServiceInterface::class);
+
+// Get all settings for a module
+$settings = $moduleManager->getSettings(new ModuleName('my-module'));
+
+// Update settings
+$moduleManager->updateSettings(new ModuleName('my-module'), [
+    'api_key' => 'new-key',
+    'max_items' => 20,
+]);
+
+// Access via config helper (after boot)
+$apiKey = config('modules.settings.my-module.api_key');
+```
+
+---
+
+## Filament Integration
+
+### Navigation Groups
+
+Modules can register custom Filament navigation groups:
+
+```php
+public function registerNavigationGroups(): array
+{
+    return [
+        'Game Library' => [
+            'icon' => 'heroicon-o-puzzle-piece',
+            'sort' => 20,
+        ],
+        'Statistics' => [
+            'icon' => 'heroicon-o-chart-bar',
+            'sort' => 30,
+        ],
+    ];
+}
+```
+
+Groups are only added if they don't already exist in core Filament configuration.
+
+### Policy Registration
+
+Register model policies for Filament authorization:
+
+```php
+public function registerPolicies(): array
+{
+    return [
+        \Modules\MyModule\Domain\Entities\Game::class => \Modules\MyModule\Policies\GamePolicy::class,
+        \Modules\MyModule\Domain\Entities\Session::class => \Modules\MyModule\Policies\SessionPolicy::class,
+    ];
+}
+```
+
+### Auto-Discovery
+
+Filament automatically discovers Resources, Pages, and Widgets from enabled modules:
+- **Resources**: `modules/{name}/src/Filament/Resources/`
+- **Pages**: `modules/{name}/src/Filament/Pages/`
+- **Widgets**: `modules/{name}/src/Filament/Widgets/`
+
+---
+
+## Slot Registration
+
+Slots allow modules to inject Vue components into predefined layout positions on the frontend.
+
+### SlotRegistrationDTO Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `slot` | string | Target slot identifier (e.g., `home.sidebar`) |
+| `component` | string | Vue component name |
+| `module` | string | Module name (kebab-case) |
+| `order` | int | Sort order (lower = rendered first) |
+| `props` | array | Props passed to the Vue component |
+| `dataKeys` | array | Required Inertia shared data keys |
+
+### Registering Slot Components
+
+Override `registerSlots()` in your ServiceProvider:
+
+```php
+use App\Application\Modules\DTOs\SlotRegistrationDTO;
+
+public function registerSlots(): array
+{
+    return [
+        new SlotRegistrationDTO(
+            slot: 'home.sidebar',
+            component: 'UpcomingGames',
+            module: 'my-module',
+            order: 10,
+            props: ['limit' => 5],
+            dataKeys: ['upcomingGames'],
+        ),
+        new SlotRegistrationDTO(
+            slot: 'home.featured',
+            component: 'FeaturedGame',
+            module: 'my-module',
+            order: 20,
+            props: [],
+            dataKeys: ['featuredGame'],
+        ),
+    ];
+}
+```
+
+### Frontend Usage
+
+Use the `useModuleSlots` composable in Vue:
+
+```typescript
+import { useModuleSlots } from '@/composables/useModuleSlots';
+
+const { getComponents, hasComponents } = useModuleSlots();
+
+// Get components for a slot
+const sidebarWidgets = getComponents('home.sidebar');
+
+// Check if slot has components
+if (hasComponents('home.sidebar')) {
+  // Render widgets
+}
+```
+
+```vue
+<template>
+  <aside v-if="hasComponents('home.sidebar')">
+    <component
+      v-for="widget in getComponents('home.sidebar')"
+      :key="`${widget.module}-${widget.component}`"
+      :is="resolveComponent(widget.component)"
+      v-bind="widget.props"
+    />
+  </aside>
+</template>
+```
+
+---
+
+## Module Installation
+
+### Installing from Filament Admin
+
+Navigate to **Settings > Modules** in the Filament admin panel. Use the "Install Module" button to upload a ZIP file.
+
+### Programmatic Installation
+
+```php
+use App\Application\Modules\Services\ModuleInstallerInterface;
+
+$moduleInstaller = app(ModuleInstallerInterface::class);
+$manifest = $moduleInstaller->installFromZip($uploadedFile);
+
+// $manifest contains the parsed module.json data
+echo "Installed: {$manifest->name} v{$manifest->version}";
+```
+
+### Uninstallation Process
+
+```php
+use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Modules\ValueObjects\ModuleName;
+
+$moduleManager = app(ModuleManagerServiceInterface::class);
+$moduleManager->uninstall(new ModuleName('my-module'));
+```
+
+**Uninstallation Steps:**
+1. Verify no dependent modules are enabled (fails otherwise)
+2. Revert all module migrations
+3. Delete the module directory
+4. Remove database record
+5. Dispatch `ModuleUninstalled` event
+
+### Installation Events
+
+| Event | Fields | Description |
+|-------|--------|-------------|
+| `ModuleInstalled` | moduleName, moduleVersion, modulePath | Dispatched after successful installation |
+| `ModuleUninstalled` | moduleName | Dispatched after successful uninstallation |
+
+---
+
 ## Testing Modules
 
 ### Using ModuleTestCase
@@ -498,3 +745,16 @@ $path = Module::path('src');
 | `module:make-filament-resource {module} {name}` | Create Filament resource |
 | `module:make-vue-page {module} {name}` | Create Vue page |
 | `module:make-vue-component {module} {name}` | Create Vue component |
+
+### ServiceProvider Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `registerPermissions()` | `PermissionDTO[]` | Module permissions |
+| `registerNavigation()` | `NavigationItemDTO[]` | Navigation items |
+| `registerNavigationGroups()` | `array` | Filament navigation groups |
+| `registerPolicies()` | `array` | Model to policy mappings |
+| `registerSlots()` | `SlotRegistrationDTO[]` | Slot component registrations |
+| `getSettingsSchema()` | `Component[]` | Filament form schema for settings |
+| `onEnable()` | `void` | Called when module is enabled |
+| `onDisable()` | `void` | Called when module is disabled |

@@ -5,10 +5,12 @@ import { useI18n } from 'vue-i18n';
 import type { ContactFormData } from '@/types/models';
 import type { FlashMessages } from '@/types';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import { useNotifications } from '@/composables/useNotifications';
 
 // Composables
 const { t } = useI18n();
 const page = usePage<{ flash: FlashMessages }>();
+const notifications = useNotifications();
 
 // Form state
 const form = useForm<ContactFormData>({
@@ -27,6 +29,7 @@ const submit = (): void => {
         onSuccess: () => {
             form.reset();
         },
+        onError: () => notifications.error(t('about.contact.form.error')),
     });
 };
 </script>

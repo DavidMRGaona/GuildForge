@@ -40,6 +40,6 @@ const navigateToCalendar = (): void => {
 }
 
 .calendar-widget :deep(.fc-toolbar-title) {
-    font-family: var(--font-display), ui-serif, Georgia, serif;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 </style>

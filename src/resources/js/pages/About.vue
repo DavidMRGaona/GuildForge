@@ -3,7 +3,6 @@ import { defineAsyncComponent, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import BaseCard from '@/components/ui/BaseCard.vue';
-import BaseButton from '@/components/ui/BaseButton.vue';
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue';
 import ContactForm from '@/components/contact/ContactForm.vue';
 import { useSeo } from '@/composables/useSeo';
@@ -66,15 +65,6 @@ const hasSocialLinks = computed(
 );
 
 const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroImage));
-
-const scrollToContact = () => {
-    const contactSection = document.getElementById('contact-section');
-    if (contactSection) {
-        contactSection.scrollIntoView({ behavior: 'smooth' });
-    } else if (props.contactEmail) {
-        window.location.href = `mailto:${props.contactEmail}`;
-    }
-};
 
 const activityIconPaths: Record<ActivityIcon, string> = {
     dice: 'M6.5 9a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5 6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5-6a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm-5-3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM4.5 2A2.5 2.5 0 0 0 2 4.5v15A2.5 2.5 0 0 0 4.5 22h15a2.5 2.5 0 0 0 2.5-2.5v-15A2.5 2.5 0 0 0 19.5 2h-15ZM4 4.5a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-15a.5.5 0 0 1-.5-.5v-15Z',
@@ -263,13 +253,6 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- CTA Button -->
-                <div class="text-center">
-                    <BaseButton variant="primary" size="lg" @click="scrollToContact">
-                        {{ $t('about.join.contactUs') }}
-                    </BaseButton>
                 </div>
             </section>
 

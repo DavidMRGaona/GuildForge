@@ -25,7 +25,7 @@ const hasEvents = computed(() => props.events.length > 0);
     <section class="events-section">
         <!-- Section header -->
         <div class="mb-6 flex items-center justify-between">
-            <h2 class="font-display text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+            <h2 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
                 {{ t('home.upcomingEvents') }}
             </h2>
             <Link

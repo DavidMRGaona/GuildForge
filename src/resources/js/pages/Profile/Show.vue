@@ -62,6 +62,7 @@ const updateProfile = () => {
             avatarPreview.value = null;
             notifications.success(t('auth.profile.profileUpdated'));
         },
+        onError: () => notifications.error(t('auth.profile.profileError')),
     });
 };
 
@@ -79,6 +80,7 @@ const changePassword = () => {
             passwordForm.reset();
             notifications.success(t('auth.profile.passwordUpdated'));
         },
+        onError: () => notifications.error(t('auth.profile.passwordError')),
     });
 };
 </script>
