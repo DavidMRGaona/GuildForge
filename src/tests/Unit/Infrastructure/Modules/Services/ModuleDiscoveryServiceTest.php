@@ -12,13 +12,14 @@ use PHPUnit\Framework\TestCase;
 final class ModuleDiscoveryServiceTest extends TestCase
 {
     private ModuleDiscoveryService $service;
+
     private string $testModulesPath;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir() . '/guildforge_test_modules_' . uniqid();
+        $this->testModulesPath = sys_get_temp_dir().'/guildforge_test_modules_'.uniqid();
         $this->service = new ModuleDiscoveryService($this->testModulesPath);
     }
 
@@ -34,7 +35,7 @@ final class ModuleDiscoveryServiceTest extends TestCase
         // Arrange
         mkdir($this->testModulesPath, 0755, true);
 
-        $moduleDir = $this->testModulesPath . '/test-module';
+        $moduleDir = $this->testModulesPath.'/test-module';
         mkdir($moduleDir, 0755, true);
 
         $manifest = [
@@ -47,7 +48,7 @@ final class ModuleDiscoveryServiceTest extends TestCase
         ];
 
         file_put_contents(
-            $moduleDir . '/module.json',
+            $moduleDir.'/module.json',
             json_encode($manifest, JSON_THROW_ON_ERROR)
         );
 
@@ -92,7 +93,7 @@ final class ModuleDiscoveryServiceTest extends TestCase
         // Arrange
         mkdir($this->testModulesPath, 0755, true);
 
-        $moduleDir = $this->testModulesPath . '/advanced-module';
+        $moduleDir = $this->testModulesPath.'/advanced-module';
         mkdir($moduleDir, 0755, true);
 
         $manifest = [
@@ -113,7 +114,7 @@ final class ModuleDiscoveryServiceTest extends TestCase
         ];
 
         file_put_contents(
-            $moduleDir . '/module.json',
+            $moduleDir.'/module.json',
             json_encode($manifest, JSON_THROW_ON_ERROR)
         );
 
@@ -141,10 +142,10 @@ final class ModuleDiscoveryServiceTest extends TestCase
         mkdir($this->testModulesPath, 0755, true);
 
         // Module with module.json
-        $validModuleDir = $this->testModulesPath . '/valid-module';
+        $validModuleDir = $this->testModulesPath.'/valid-module';
         mkdir($validModuleDir, 0755, true);
         file_put_contents(
-            $validModuleDir . '/module.json',
+            $validModuleDir.'/module.json',
             json_encode([
                 'name' => 'valid-module',
                 'version' => '1.0.0',
@@ -154,7 +155,7 @@ final class ModuleDiscoveryServiceTest extends TestCase
         );
 
         // Module without module.json
-        $invalidModuleDir = $this->testModulesPath . '/invalid-module';
+        $invalidModuleDir = $this->testModulesPath.'/invalid-module';
         mkdir($invalidModuleDir, 0755, true);
 
         // Act
@@ -170,12 +171,12 @@ final class ModuleDiscoveryServiceTest extends TestCase
         // Arrange
         mkdir($this->testModulesPath, 0755, true);
 
-        $moduleDir = $this->testModulesPath . '/invalid-json-module';
+        $moduleDir = $this->testModulesPath.'/invalid-json-module';
         mkdir($moduleDir, 0755, true);
 
         // Write invalid JSON
         file_put_contents(
-            $moduleDir . '/module.json',
+            $moduleDir.'/module.json',
             '{"name": "test", invalid json}'
         );
 
@@ -188,18 +189,19 @@ final class ModuleDiscoveryServiceTest extends TestCase
 
     private function removeDirectory(string $path): void
     {
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return;
         }
 
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             unlink($path);
+
             return;
         }
 
         $items = array_diff(scandir($path) ?: [], ['.', '..']);
         foreach ($items as $item) {
-            $itemPath = $path . '/' . $item;
+            $itemPath = $path.'/'.$item;
             if (is_dir($itemPath)) {
                 $this->removeDirectory($itemPath);
             } else {

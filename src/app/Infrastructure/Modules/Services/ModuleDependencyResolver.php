@@ -13,8 +13,8 @@ final readonly class ModuleDependencyResolver
     /**
      * Checks if all dependencies for a module are satisfied.
      *
-     * @param Module $module The module to check
-     * @param array<Module> $availableModules The available modules
+     * @param  Module  $module  The module to check
+     * @param  array<Module>  $availableModules  The available modules
      */
     public function areDependenciesSatisfied(Module $module, array $availableModules): bool
     {
@@ -25,7 +25,7 @@ final readonly class ModuleDependencyResolver
         }
 
         foreach ($requiredModules as $requirement) {
-            if (!$this->isRequirementSatisfied($requirement, $availableModules)) {
+            if (! $this->isRequirementSatisfied($requirement, $availableModules)) {
                 return false;
             }
         }
@@ -36,7 +36,8 @@ final readonly class ModuleDependencyResolver
     /**
      * Detects circular dependencies among modules.
      *
-     * @param array<Module> $modules The modules to check
+     * @param  array<Module>  $modules  The modules to check
+     *
      * @throws ModuleCircularDependencyException When circular dependencies are found
      */
     public function detectCircularDependencies(array $modules): void
@@ -61,8 +62,9 @@ final readonly class ModuleDependencyResolver
     /**
      * Sorts modules by their dependencies (topological sort).
      *
-     * @param array<Module> $modules The modules to sort
+     * @param  array<Module>  $modules  The modules to sort
      * @return array<Module> Modules sorted by dependencies
+     *
      * @throws ModuleCircularDependencyException When circular dependencies are found
      */
     public function sortByDependencies(array $modules): array
@@ -83,8 +85,8 @@ final readonly class ModuleDependencyResolver
     /**
      * Gets all modules that depend on the given module.
      *
-     * @param Module $module The module to find dependents for
-     * @param array<Module> $allModules All available modules
+     * @param  Module  $module  The module to find dependents for
+     * @param  array<Module>  $allModules  All available modules
      * @return array<Module> Modules that depend on the given module
      */
     public function getDependents(Module $module, array $allModules): array
@@ -107,6 +109,7 @@ final readonly class ModuleDependencyResolver
 
                 if ($requirementName === $targetName) {
                     $dependents[] = $candidateModule;
+
                     continue 2; // Move to next candidate
                 }
             }
@@ -123,10 +126,10 @@ final readonly class ModuleDependencyResolver
     /**
      * Validates system requirements for a module.
      *
-     * @param Module $module The module to validate
-     * @param string $phpVersion Current PHP version
-     * @param string $laravelVersion Current Laravel version
-     * @param array<string> $availableExtensions Available PHP extensions
+     * @param  Module  $module  The module to validate
+     * @param  string  $phpVersion  Current PHP version
+     * @param  string  $laravelVersion  Current Laravel version
+     * @param  array<string>  $availableExtensions  Available PHP extensions
      */
     public function validateSystemRequirements(
         Module $module,
@@ -138,19 +141,19 @@ final readonly class ModuleDependencyResolver
 
         // Check PHP version requirement
         $requiredPhp = $requirements->phpVersion();
-        if ($requiredPhp !== null && !$this->versionSatisfiesConstraint($phpVersion, $requiredPhp)) {
+        if ($requiredPhp !== null && ! $this->versionSatisfiesConstraint($phpVersion, $requiredPhp)) {
             return false;
         }
 
         // Check Laravel version requirement
         $requiredLaravel = $requirements->laravelVersion();
-        if ($requiredLaravel !== null && !$this->versionSatisfiesConstraint($laravelVersion, $requiredLaravel)) {
+        if ($requiredLaravel !== null && ! $this->versionSatisfiesConstraint($laravelVersion, $requiredLaravel)) {
             return false;
         }
 
         // Check required extensions
         foreach ($requirements->requiredExtensions() as $extension) {
-            if (!in_array($extension, $availableExtensions, true)) {
+            if (! in_array($extension, $availableExtensions, true)) {
                 return false;
             }
         }
@@ -161,7 +164,7 @@ final readonly class ModuleDependencyResolver
     /**
      * Checks if a single requirement is satisfied.
      *
-     * @param array<Module> $availableModules
+     * @param  array<Module>  $availableModules
      */
     private function isRequirementSatisfied(string $requirement, array $availableModules): bool
     {
@@ -206,7 +209,7 @@ final readonly class ModuleDependencyResolver
     /**
      * Builds a map of module name to module object.
      *
-     * @param array<Module> $modules
+     * @param  array<Module>  $modules
      * @return array<string, Module>
      */
     private function buildModuleMap(array $modules): array
@@ -222,10 +225,11 @@ final readonly class ModuleDependencyResolver
     /**
      * Depth-first search for cycle detection.
      *
-     * @param array<string, Module> $moduleMap
-     * @param array<string, bool> $visited
-     * @param array<string, bool> $recursionStack
-     * @param array<string> $path
+     * @param  array<string, Module>  $moduleMap
+     * @param  array<string, bool>  $visited
+     * @param  array<string, bool>  $recursionStack
+     * @param  array<string>  $path
+     *
      * @throws ModuleCircularDependencyException
      */
     private function dfs(
@@ -253,8 +257,9 @@ final readonly class ModuleDependencyResolver
         $recursionStack[$current] = true;
         $path[] = $current;
 
-        if (!isset($moduleMap[$current])) {
+        if (! isset($moduleMap[$current])) {
             unset($recursionStack[$current]);
+
             return;
         }
 
@@ -272,9 +277,9 @@ final readonly class ModuleDependencyResolver
     /**
      * Topological sort helper using DFS.
      *
-     * @param array<string, Module> $moduleMap
-     * @param array<string, bool> $visited
-     * @param array<Module> $sorted
+     * @param  array<string, Module>  $moduleMap
+     * @param  array<string, bool>  $visited
+     * @param  array<Module>  $sorted
      */
     private function topologicalSort(
         string $name,
@@ -288,7 +293,7 @@ final readonly class ModuleDependencyResolver
 
         $visited[$name] = true;
 
-        if (!isset($moduleMap[$name])) {
+        if (! isset($moduleMap[$name])) {
             return;
         }
 

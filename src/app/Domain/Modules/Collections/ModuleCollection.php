@@ -15,7 +15,7 @@ use Traversable;
 /**
  * @implements IteratorAggregate<string, Module>
  */
-final class ModuleCollection implements IteratorAggregate, Countable
+final class ModuleCollection implements Countable, IteratorAggregate
 {
     /** @var array<string, Module> Keyed by module name */
     private array $modules = [];
@@ -104,7 +104,7 @@ final class ModuleCollection implements IteratorAggregate, Countable
     }
 
     /**
-     * @param callable(Module): void $callback
+     * @param  callable(Module): void  $callback
      */
     public function each(callable $callback): void
     {
@@ -116,7 +116,7 @@ final class ModuleCollection implements IteratorAggregate, Countable
     /**
      * Filter the collection using a callback.
      *
-     * @param callable(Module): bool $callback
+     * @param  callable(Module): bool  $callback
      */
     public function filter(callable $callback): self
     {
@@ -129,7 +129,8 @@ final class ModuleCollection implements IteratorAggregate, Countable
      * Map over the collection.
      *
      * @template T
-     * @param callable(Module): T $callback
+     *
+     * @param  callable(Module): T  $callback
      * @return array<T>
      */
     public function map(callable $callback): array
@@ -140,7 +141,7 @@ final class ModuleCollection implements IteratorAggregate, Countable
     /**
      * Get the first module matching a condition, or the first module if no callback provided.
      *
-     * @param (callable(Module): bool)|null $callback
+     * @param  (callable(Module): bool)|null  $callback
      */
     public function first(?callable $callback = null): ?Module
     {

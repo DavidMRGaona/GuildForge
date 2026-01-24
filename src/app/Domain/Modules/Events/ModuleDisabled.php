@@ -9,6 +9,5 @@ final readonly class ModuleDisabled
     public function __construct(
         public string $moduleId,
         public string $moduleName,
-    ) {
-    }
+    ) {}
 }

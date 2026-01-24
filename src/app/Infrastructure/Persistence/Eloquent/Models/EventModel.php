@@ -31,10 +31,12 @@ use Illuminate\Support\Carbon;
  */
 final class EventModel extends Model
 {
+    use DeletesCloudinaryImages;
+
     /** @use HasFactory<EventModelFactory> */
     use HasFactory;
+
     use HasUuids;
-    use DeletesCloudinaryImages;
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['image_public_id'];

@@ -16,6 +16,7 @@ final class ThemeSettingsServiceTest extends TestCase
     use RefreshDatabase;
 
     private ThemeSettingsServiceInterface $service;
+
     private SettingsServiceInterface $settingsService;
 
     protected function setUp(): void

@@ -4,6 +4,4 @@ declare(strict_types=1);
 
 namespace App\Domain\ValueObjects;
 
-final readonly class ArticleId extends EntityId
-{
-}
+final readonly class ArticleId extends EntityId {}

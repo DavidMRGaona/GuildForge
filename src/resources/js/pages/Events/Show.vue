@@ -11,6 +11,7 @@ import { useEvents } from '@/composables/useEvents';
 import { useTags } from '@/composables/useTags';
 import { useSeo } from '@/composables/useSeo';
 import { buildHeroImageUrl } from '@/utils/cloudinary';
+import ModuleSlot from '@/components/layout/ModuleSlot.vue';
 
 interface Props {
     event: Event;
@@ -187,6 +188,11 @@ useSeo({
                     </div>
                     <div v-else class="mb-6 rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
                         <p class="font-medium text-green-800 dark:text-green-400">{{ t('events.free') }}</p>
+                    </div>
+
+                    <!-- Module slot for event actions (e.g., registration button) -->
+                    <div class="mb-6">
+                        <ModuleSlot name="event-detail-actions" />
                     </div>
 
                     <div class="prose prose-amber max-w-none">

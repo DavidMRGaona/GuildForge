@@ -11,6 +11,5 @@ final readonly class PhotoResponseDTO
         public string $imagePublicId,
         public ?string $caption,
         public int $sortOrder,
-    ) {
-    }
+    ) {}
 }

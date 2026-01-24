@@ -20,8 +20,7 @@ final class Gallery
         private readonly bool $isFeatured = false,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
-    ) {
-    }
+    ) {}
 
     public function id(): GalleryId
     {

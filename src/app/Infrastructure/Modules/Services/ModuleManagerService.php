@@ -9,8 +9,8 @@ use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
-use App\Domain\Modules\Events\ModuleDiscovered;
 use App\Domain\Modules\Events\ModuleDisabled;
+use App\Domain\Modules\Events\ModuleDiscovered;
 use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
@@ -18,8 +18,6 @@ use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleCannotUninstallException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -28,6 +26,8 @@ use App\Domain\Modules\ValueObjects\ModuleVersion;
 use DateTimeImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 
 final readonly class ModuleManagerService implements ModuleManagerServiceInterface
 {
@@ -37,13 +37,12 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private ModuleDependencyResolver $dependencyResolver,
         private ModuleMigrationRunner $migrationRunner,
         private Dispatcher $events,
-    ) {
-    }
+    ) {}
 
     public function discover(): ModuleCollection
     {
         $manifests = $this->discoveryService->discover();
-        $discovered = new ModuleCollection();
+        $discovered = new ModuleCollection;
 
         foreach ($manifests as $manifest) {
             $moduleName = new ModuleName($manifest->name);
@@ -55,6 +54,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 if ($existing !== null) {
                     $discovered->add($existing);
                 }
+
                 continue;
             }
 
@@ -73,11 +73,11 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 requirements: $this->parseRequirements($manifest->requires),
                 status: ModuleStatus::Disabled,
                 enabledAt: null,
-                createdAt: new DateTimeImmutable(),
-                updatedAt: new DateTimeImmutable(),
+                createdAt: new DateTimeImmutable,
+                updatedAt: new DateTimeImmutable,
                 namespace: $manifest->namespace,
                 provider: $manifest->provider,
-                path: $modulesPath . '/' . $manifest->name,
+                path: $modulesPath.'/'.$manifest->name,
                 dependencies: $manifest->dependencies ?? [],
             );
 
@@ -116,11 +116,17 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             );
         }
 
-        // Run migrations if the module directory exists
-        try {
-            $this->migrate($name);
-        } catch (ModuleNotFoundException) {
-            // Module directory doesn't exist yet, that's okay
+        // Run migrations only if the module has not been installed yet
+        // This prevents re-running migrations when enabling a previously disabled module
+        if (! $module->isInstalled()) {
+            try {
+                $this->migrate($name);
+                $module->markInstalled();
+            } catch (ModuleNotFoundException) {
+                // Module directory doesn't exist yet, that's okay
+                // Still mark as installed since there are no migrations to run
+                $module->markInstalled();
+            }
         }
 
         // Enable the module
@@ -162,7 +168,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             }
         }
 
-        if (!empty($enabledDependents)) {
+        if (! empty($enabledDependents)) {
             throw ModuleDependencyException::dependentModulesExist($name->value, $enabledDependents);
         }
 
@@ -216,21 +222,23 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             $moduleName = $this->extractModuleName($requirement);
             $versionConstraint = $this->extractVersionConstraint($requirement);
 
-            if (!isset($availableModules[$moduleName])) {
+            if (! isset($availableModules[$moduleName])) {
                 $missing[] = $moduleName;
+
                 continue;
             }
 
             // Check if module is enabled
             $requiredModule = $availableModules[$moduleName];
-            if (!$requiredModule->isEnabled()) {
+            if (! $requiredModule->isEnabled()) {
                 $missing[] = $moduleName;
+
                 continue;
             }
 
             // Check version constraint if specified
             if ($versionConstraint !== null) {
-                if (!$requiredModule->version()->satisfies($versionConstraint)) {
+                if (! $requiredModule->version()->satisfies($versionConstraint)) {
                     $versionMismatch[$moduleName] = [
                         'required' => $versionConstraint,
                         'current' => $requiredModule->version()->value(),
@@ -285,7 +293,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         return $this->migrationRunner->rollback($module, $steps);
     }
 
-    public function uninstall(ModuleName $name): void
+    public function uninstall(ModuleName $name, bool $deleteData = false): void
     {
         $module = $this->repository->findByName($name);
 
@@ -303,7 +311,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             }
         }
 
-        if (!empty($enabledDependents)) {
+        if (! empty($enabledDependents)) {
             throw ModuleCannotUninstallException::hasDependents($name->value, $enabledDependents);
         }
 
@@ -313,11 +321,13 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             $this->repository->save($module);
         }
 
-        // Try to rollback migrations
-        try {
-            $this->migrationRunner->rollbackAll($module);
-        } catch (\Throwable $e) {
-            Log::warning("Failed to rollback migrations for module {$name->value}: {$e->getMessage()}");
+        // Rollback migrations only if deleteData is true
+        if ($deleteData) {
+            try {
+                $this->migrationRunner->rollbackAll($module);
+            } catch (\Throwable $e) {
+                Log::warning("Failed to rollback migrations for module {$name->value}: {$e->getMessage()}");
+            }
         }
 
         // Store version for event before deleting
@@ -326,7 +336,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         // Delete module files
         $modulePath = $module->path();
         if (File::isDirectory($modulePath)) {
-            if (!File::deleteDirectory($modulePath)) {
+            if (! File::deleteDirectory($modulePath)) {
                 throw ModuleCannotUninstallException::deletionFailed($name->value, 'Failed to delete module directory');
             }
         }
@@ -365,14 +375,14 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             throw ModuleNotFoundException::withName($name->value);
         }
 
-        $settingsPath = $module->path() . '/config/settings.php';
+        $settingsPath = $module->path().'/config/settings.php';
 
         // Store settings in the module's config directory
-        if (!File::isDirectory(dirname($settingsPath))) {
+        if (! File::isDirectory(dirname($settingsPath))) {
             File::makeDirectory(dirname($settingsPath), 0755, true);
         }
 
-        $content = "<?php\n\nreturn " . var_export($settings, true) . ";\n";
+        $content = "<?php\n\nreturn ".var_export($settings, true).";\n";
         File::put($settingsPath, $content);
 
         // Update config in memory immediately so changes are visible without restart
@@ -417,7 +427,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     /**
      * Parse requirements from manifest format to ModuleRequirements.
      *
-     * @param array<string, mixed>|null $requires
+     * @param  array<string, mixed>|null  $requires
      */
     private function parseRequirements(?array $requires): ModuleRequirements
     {
@@ -468,11 +478,11 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
      */
     private function getFirstMissingDependency(DependencyCheckResultDTO $result): string
     {
-        if (!empty($result->missing)) {
+        if (! empty($result->missing)) {
             return $result->missing[0];
         }
 
-        if (!empty($result->versionMismatch)) {
+        if (! empty($result->versionMismatch)) {
             return array_key_first($result->versionMismatch);
         }
 

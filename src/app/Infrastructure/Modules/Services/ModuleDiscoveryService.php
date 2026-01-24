@@ -11,8 +11,7 @@ final readonly class ModuleDiscoveryService
 {
     public function __construct(
         private string $modulesPath,
-    ) {
-    }
+    ) {}
 
     /**
      * Discovers modules from the modules directory.
@@ -21,7 +20,7 @@ final readonly class ModuleDiscoveryService
      */
     public function discover(): array
     {
-        if (!is_dir($this->modulesPath)) {
+        if (! is_dir($this->modulesPath)) {
             return [];
         }
 
@@ -37,13 +36,13 @@ final readonly class ModuleDiscoveryService
                 continue;
             }
 
-            $modulePath = $this->modulesPath . '/' . $dir;
-            if (!is_dir($modulePath)) {
+            $modulePath = $this->modulesPath.'/'.$dir;
+            if (! is_dir($modulePath)) {
                 continue;
             }
 
-            $manifestPath = $modulePath . '/module.json';
-            if (!file_exists($manifestPath)) {
+            $manifestPath = $modulePath.'/module.json';
+            if (! file_exists($manifestPath)) {
                 continue;
             }
 
@@ -64,7 +63,7 @@ final readonly class ModuleDiscoveryService
         $data = json_decode($content, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new InvalidArgumentException('Invalid JSON: ' . json_last_error_msg());
+            throw new InvalidArgumentException('Invalid JSON: '.json_last_error_msg());
         }
 
         return ModuleManifestDTO::fromArray($data);

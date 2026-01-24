@@ -14,8 +14,7 @@ final class CalendarController extends Controller
 {
     public function __construct(
         private readonly EventQueryServiceInterface $eventQueryService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {

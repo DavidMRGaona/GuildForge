@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Domain\Enums;
+
+enum {{ nameStudly }}: string
+{
+    case Pending = 'pending';
+    case Active = 'active';
+    case Completed = 'completed';
+    case Cancelled = 'cancelled';
+
+    /**
+     * Check if a transition to the given state is allowed.
+     */
+    public function canTransitionTo(self $newState): bool
+    {
+        return match ($this) {
+            self::Pending => in_array($newState, [self::Active, self::Cancelled], true),
+            self::Active => in_array($newState, [self::Completed, self::Cancelled], true),
+            self::Completed, self::Cancelled => false,
+        };
+    }
+
+    /**
+     * Get all states that can be transitioned to from current state.
+     *
+     * @return array<self>
+     */
+    public function allowedTransitions(): array
+    {
+        return match ($this) {
+            self::Pending => [self::Active, self::Cancelled],
+            self::Active => [self::Completed, self::Cancelled],
+            self::Completed, self::Cancelled => [],
+        };
+    }
+
+    /**
+     * Check if this is a terminal state (no more transitions allowed).
+     */
+    public function isFinal(): bool
+    {
+        return match ($this) {
+            self::Completed, self::Cancelled => true,
+            default => false,
+        };
+    }
+
+    /**
+     * Get the human-readable label for this state.
+     */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Pending => __('{{ moduleNameSnake }}::messages.states.pending'),
+            self::Active => __('{{ moduleNameSnake }}::messages.states.active'),
+            self::Completed => __('{{ moduleNameSnake }}::messages.states.completed'),
+            self::Cancelled => __('{{ moduleNameSnake }}::messages.states.cancelled'),
+        };
+    }
+
+    /**
+     * Get the color for UI display (Filament badge colors).
+     */
+    public function color(): string
+    {
+        return match ($this) {
+            self::Pending => 'warning',
+            self::Active => 'info',
+            self::Completed => 'success',
+            self::Cancelled => 'danger',
+        };
+    }
+
+    /**
+     * Get the icon for UI display.
+     */
+    public function icon(): string
+    {
+        return match ($this) {
+            self::Pending => 'heroicon-o-clock',
+            self::Active => 'heroicon-o-play',
+            self::Completed => 'heroicon-o-check-circle',
+            self::Cancelled => 'heroicon-o-x-circle',
+        };
+    }
+}

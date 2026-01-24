@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 final class SettingsService implements SettingsServiceInterface
 {
     private const string CACHE_KEY = 'site_settings';
+
     private const int CACHE_TTL = 3600;
 
     /**

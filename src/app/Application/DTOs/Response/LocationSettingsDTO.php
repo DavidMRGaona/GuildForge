@@ -12,13 +12,12 @@ final readonly class LocationSettingsDTO
         public float $lat,
         public float $lng,
         public int $zoom,
-    ) {
-    }
+    ) {}
 
     /**
      * Create from array of settings.
      *
-     * @param array{name?: string, address?: string, lat?: float, lng?: float, zoom?: int} $data
+     * @param  array{name?: string, address?: string, lat?: float, lng?: float, zoom?: int}  $data
      */
     public static function fromArray(array $data): self
     {

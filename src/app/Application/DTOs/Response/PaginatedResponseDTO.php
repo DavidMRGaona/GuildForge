@@ -7,19 +7,18 @@ namespace App\Application\DTOs\Response;
 final readonly class PaginatedResponseDTO
 {
     /**
-     * @param array<int, mixed> $data
-     * @param array{currentPage: int, lastPage: int, perPage: int, total: int} $meta
-     * @param array{first: string, last: string, prev: string|null, next: string|null} $links
+     * @param  array<int, mixed>  $data
+     * @param  array{currentPage: int, lastPage: int, perPage: int, total: int}  $meta
+     * @param  array{first: string, last: string, prev: string|null, next: string|null}  $links
      */
     public function __construct(
         public array $data,
         public array $meta,
         public array $links,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<int, mixed> $data
+     * @param  array<int, mixed>  $data
      */
     public static function create(
         array $data,
@@ -39,10 +38,10 @@ final readonly class PaginatedResponseDTO
                 'total' => $total,
             ],
             links: [
-                'first' => $baseUrl . '?page=1',
-                'last' => $baseUrl . '?page=' . $lastPage,
-                'prev' => $currentPage > 1 ? $baseUrl . '?page=' . ($currentPage - 1) : null,
-                'next' => $currentPage < $lastPage ? $baseUrl . '?page=' . ($currentPage + 1) : null,
+                'first' => $baseUrl.'?page=1',
+                'last' => $baseUrl.'?page='.$lastPage,
+                'prev' => $currentPage > 1 ? $baseUrl.'?page='.($currentPage - 1) : null,
+                'next' => $currentPage < $lastPage ? $baseUrl.'?page='.($currentPage + 1) : null,
             ],
         );
     }

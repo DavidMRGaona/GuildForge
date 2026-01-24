@@ -7,10 +7,10 @@ namespace App\Application\Modules\DTOs;
 final readonly class DependencyCheckResultDTO
 {
     /**
-     * @param array<string> $missing Missing module names
-     * @param array<string, array{required: string, current: string}> $versionMismatch
-     * @param array<array<string>> $circularDependencies List of cycles
-     * @param array<string, string> $unsatisfiedRequirements Requirement key => error message
+     * @param  array<string>  $missing  Missing module names
+     * @param  array<string, array{required: string, current: string}>  $versionMismatch
+     * @param  array<array<string>>  $circularDependencies  List of cycles
+     * @param  array<string, string>  $unsatisfiedRequirements  Requirement key => error message
      */
     public function __construct(
         public bool $satisfied,
@@ -18,12 +18,11 @@ final readonly class DependencyCheckResultDTO
         public array $versionMismatch = [],
         public array $circularDependencies = [],
         public array $unsatisfiedRequirements = [],
-    ) {
-    }
+    ) {}
 
     public function hasErrors(): bool
     {
-        return !$this->satisfied;
+        return ! $this->satisfied;
     }
 
     /**

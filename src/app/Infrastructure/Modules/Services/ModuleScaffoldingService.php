@@ -34,7 +34,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $name;
+        $modulePath = $this->modulesPath.'/'.$name;
         $variables = $this->stubRenderer->getModuleVariables($name, $description, $author);
         $files = [];
         $warnings = [];
@@ -45,7 +45,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         // Create module files
         $fileMap = [
             'module/module.json.stub' => 'module.json',
-            'module/ModuleServiceProvider.php.stub' => 'src/' . $variables['moduleNameStudly'] . 'ServiceProvider.php',
+            'module/ModuleServiceProvider.php.stub' => 'src/'.$variables['moduleNameStudly'].'ServiceProvider.php',
             'module/config.php.stub' => 'config/module.php',
             'module/routes-web.php.stub' => 'routes/web.php',
             'module/routes-api.php.stub' => 'routes/api.php',
@@ -53,7 +53,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         ];
 
         foreach ($fileMap as $stub => $destination) {
-            $destPath = $modulePath . '/' . $destination;
+            $destPath = $modulePath.'/'.$destination;
             $result = $this->renderStub($stub, $destPath, $variables);
             $files[$destination] = $result;
         }
@@ -81,10 +81,10 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         ];
 
         foreach ($emptyDirs as $dir) {
-            $gitkeepPath = $modulePath . '/' . $dir . '/.gitkeep';
+            $gitkeepPath = $modulePath.'/'.$dir.'/.gitkeep';
             if (! file_exists($gitkeepPath)) {
                 file_put_contents($gitkeepPath, '');
-                $files[$dir . '/.gitkeep'] = ScaffoldResultDTO::STATUS_CREATED;
+                $files[$dir.'/.gitkeep'] = ScaffoldResultDTO::STATUS_CREATED;
             }
         }
 
@@ -104,7 +104,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
@@ -118,7 +118,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         ];
 
         foreach ($fileMap as $stub => $destination) {
-            $destPath = $modulePath . '/' . $destination;
+            $destPath = $modulePath.'/'.$destination;
             $result = $this->renderStub($stub, $destPath, $variables);
             $files[$destination] = $result;
         }
@@ -142,7 +142,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
@@ -156,7 +156,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $stub = $stubMap[$type] ?? $stubMap['default'];
         $subDir = $type === 'api' ? 'src/Http/Controllers/Api' : 'src/Http/Controllers';
         $destination = "{$subDir}/{$variables['nameStudly']}Controller.php";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
 
         // Create directory if needed
         $dir = dirname($destPath);
@@ -180,12 +180,12 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
         $destination = "src/Http/Requests/{$variables['nameStudly']}Request.php";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub('http/request.php.stub', $destPath, $variables);
         $files[$destination] = $result;
@@ -203,20 +203,20 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
         // Create service implementation
         $destination = "src/Infrastructure/Services/{$variables['nameStudly']}Service.php";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
         $result = $this->renderStub('application/service.php.stub', $destPath, $variables);
         $files[$destination] = $result;
 
         // Create interface if requested
         if ($withInterface) {
             $interfaceDestination = "src/Application/Services/{$variables['nameStudly']}ServiceInterface.php";
-            $interfaceDestPath = $modulePath . '/' . $interfaceDestination;
+            $interfaceDestPath = $modulePath.'/'.$interfaceDestination;
             $result = $this->renderStub('application/service-interface.php.stub', $interfaceDestPath, $variables);
             $files[$interfaceDestination] = $result;
         }
@@ -234,14 +234,14 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
         $stub = $isResponse ? 'application/response-dto.php.stub' : 'application/dto.php.stub';
         $suffix = $isResponse ? 'ResponseDTO' : 'DTO';
         $destination = "src/Application/DTOs/{$variables['nameStudly']}{$suffix}.php";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
@@ -259,12 +259,12 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
         // Create resource directory
-        $resourceDir = $modulePath . "/src/Filament/Resources/{$variables['nameStudly']}Resource/Pages";
+        $resourceDir = $modulePath."/src/Filament/Resources/{$variables['nameStudly']}Resource/Pages";
         if (! is_dir($resourceDir)) {
             mkdir($resourceDir, 0755, true);
         }
@@ -278,7 +278,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         ];
 
         foreach ($fileMap as $stub => $destination) {
-            $destPath = $modulePath . '/' . $destination;
+            $destPath = $modulePath.'/'.$destination;
             $result = $this->renderStub($stub, $destPath, $variables);
             $files[$destination] = $result;
         }
@@ -306,18 +306,18 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
         // Ensure Policies directory exists
-        $policiesDir = $modulePath . '/src/Policies';
+        $policiesDir = $modulePath.'/src/Policies';
         if (! is_dir($policiesDir)) {
             mkdir($policiesDir, 0755, true);
         }
 
         $destination = "src/Policies/{$variables['nameStudly']}Policy.php";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub('policy/policy.php.stub', $destPath, $variables);
         $files[$destination] = $result;
@@ -335,7 +335,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getModuleVariables($module);
 
         // Generate table name from migration name if not provided
@@ -349,7 +349,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $timestamp = now()->format('Y_m_d_His');
         $migrationName = Str::snake($name);
         $destination = "database/migrations/{$timestamp}_{$migrationName}.php";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub('infrastructure/migration.php.stub', $destPath, $variables);
         $files[$destination] = $result;
@@ -367,7 +367,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
@@ -381,7 +381,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $stub = $stubMap[$type] ?? $stubMap['unit'];
         $dir = str_starts_with($type, 'feature') ? 'Feature' : 'Unit';
         $destination = "tests/{$dir}/{$variables['nameStudly']}Test.php";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
@@ -399,19 +399,19 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
         $destination = "resources/js/pages/{$variables['nameStudly']}.vue";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub('vue/page.vue.stub', $destPath, $variables);
         $files[$destination] = $result;
 
         // Also create types file
         $typesDestination = "resources/js/types/{$variables['nameStudly']}.ts";
-        $typesDestPath = $modulePath . '/' . $typesDestination;
+        $typesDestPath = $modulePath.'/'.$typesDestination;
         $typesResult = $this->renderStub('vue/types.ts.stub', $typesDestPath, $variables);
         $files[$typesDestination] = $typesResult;
 
@@ -428,12 +428,12 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return $validation;
         }
 
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
         $destination = "resources/js/components/{$variables['nameStudly']}.vue";
-        $destPath = $modulePath . '/' . $destination;
+        $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub('vue/component.vue.stub', $destPath, $variables);
         $files[$destination] = $result;
@@ -465,7 +465,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         }
 
         // Check if module already exists
-        $modulePath = $this->modulesPath . '/' . $name;
+        $modulePath = $this->modulesPath.'/'.$name;
         if (is_dir($modulePath)) {
             return ScaffoldResultDTO::failure(
                 "Module '{$name}' already exists.",
@@ -478,7 +478,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
 
     private function validateModuleExists(string $module): ?ScaffoldResultDTO
     {
-        $modulePath = $this->modulesPath . '/' . $module;
+        $modulePath = $this->modulesPath.'/'.$module;
 
         if (! is_dir($modulePath)) {
             return ScaffoldResultDTO::failure(
@@ -520,7 +520,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         ];
 
         foreach ($directories as $dir) {
-            $path = $modulePath . ($dir !== '' ? '/' . $dir : '');
+            $path = $modulePath.($dir !== '' ? '/'.$dir : '');
             if (! is_dir($path)) {
                 mkdir($path, 0755, true);
             }
@@ -556,23 +556,22 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $name = Str::snake($migrationName);
 
         if (preg_match('/^create_(.+)_table$/', $name, $matches)) {
-            return Str::snake(Str::studly($module)) . '_' . $matches[1];
+            return Str::snake(Str::studly($module)).'_'.$matches[1];
         }
 
-        return Str::snake(Str::studly($module)) . '_' . Str::snake($name);
+        return Str::snake(Str::studly($module)).'_'.Str::snake($name);
     }
 
     /**
      * Create or update Filament translations for a resource.
      *
-     * @param array<string, string> $variables
-     *
+     * @param  array<string, string>  $variables
      * @return array<string, string>
      */
     private function createOrUpdateFilamentTranslations(string $modulePath, array $variables): array
     {
         $files = [];
-        $translationFile = $modulePath . '/lang/es/filament.php';
+        $translationFile = $modulePath.'/lang/es/filament.php';
         $nameSnake = $variables['nameSnake'];
 
         // Ensure lang/es directory exists
@@ -621,18 +620,18 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     /**
      * Write translations array to a PHP file.
      *
-     * @param array<string, mixed> $translations
+     * @param  array<string, mixed>  $translations
      */
     private function writeTranslationFile(string $path, array $translations): void
     {
-        $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn " . $this->varExport($translations) . ";\n";
+        $content = "<?php\n\ndeclare(strict_types=1);\n\nreturn ".$this->varExport($translations).";\n";
         file_put_contents($path, $content);
     }
 
     /**
      * Export array with proper formatting.
      *
-     * @param array<string, mixed> $array
+     * @param  array<string, mixed>  $array
      */
     private function varExport(array $array, int $indent = 0): string
     {
@@ -641,19 +640,169 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $output = "[\n";
 
         foreach ($array as $key => $value) {
-            $output .= $innerSpaces . "'" . addslashes((string) $key) . "' => ";
+            $output .= $innerSpaces."'".addslashes((string) $key)."' => ";
 
             if (is_array($value)) {
                 $output .= $this->varExport($value, $indent + 1);
             } else {
-                $output .= "'" . addslashes((string) $value) . "'";
+                $output .= "'".addslashes((string) $value)."'";
             }
 
             $output .= ",\n";
         }
 
-        $output .= $spaces . ']';
+        $output .= $spaces.']';
 
         return $output;
+    }
+
+    public function createEnum(string $module, string $name): ScaffoldResultDTO
+    {
+        $validation = $this->validateModuleExists($module);
+        if ($validation !== null) {
+            return $validation;
+        }
+
+        $modulePath = $this->modulesPath.'/'.$module;
+        $variables = $this->stubRenderer->getComponentVariables($module, $name);
+        $files = [];
+
+        // Ensure Enums directory exists
+        $enumsDir = $modulePath.'/src/Domain/Enums';
+        if (! is_dir($enumsDir)) {
+            mkdir($enumsDir, 0755, true);
+        }
+
+        $destination = "src/Domain/Enums/{$variables['nameStudly']}.php";
+        $destPath = $modulePath.'/'.$destination;
+
+        $result = $this->renderStub('domain/enum.php.stub', $destPath, $variables);
+        $files[$destination] = $result;
+
+        return ScaffoldResultDTO::success(
+            "Enum '{$name}' created for module '{$module}'.",
+            $files,
+        );
+    }
+
+    public function createDomainEvent(string $module, string $name): ScaffoldResultDTO
+    {
+        $validation = $this->validateModuleExists($module);
+        if ($validation !== null) {
+            return $validation;
+        }
+
+        $modulePath = $this->modulesPath.'/'.$module;
+        $variables = $this->stubRenderer->getComponentVariables($module, $name);
+        $files = [];
+
+        // Ensure Events directory exists
+        $eventsDir = $modulePath.'/src/Domain/Events';
+        if (! is_dir($eventsDir)) {
+            mkdir($eventsDir, 0755, true);
+        }
+
+        $destination = "src/Domain/Events/{$variables['nameStudly']}.php";
+        $destPath = $modulePath.'/'.$destination;
+
+        $result = $this->renderStub('domain/domain-event.php.stub', $destPath, $variables);
+        $files[$destination] = $result;
+
+        return ScaffoldResultDTO::success(
+            "Domain event '{$name}' created for module '{$module}'.",
+            $files,
+        );
+    }
+
+    public function createListener(string $module, string $name, string $eventName): ScaffoldResultDTO
+    {
+        $validation = $this->validateModuleExists($module);
+        if ($validation !== null) {
+            return $validation;
+        }
+
+        $modulePath = $this->modulesPath.'/'.$module;
+        $variables = $this->stubRenderer->getComponentVariables($module, $name);
+        $variables['eventNameStudly'] = Str::studly($eventName);
+        $files = [];
+
+        // Ensure Listeners directory exists
+        $listenersDir = $modulePath.'/src/Listeners';
+        if (! is_dir($listenersDir)) {
+            mkdir($listenersDir, 0755, true);
+        }
+
+        $destination = "src/Listeners/{$variables['nameStudly']}.php";
+        $destPath = $modulePath.'/'.$destination;
+
+        $result = $this->renderStub('domain/listener.php.stub', $destPath, $variables);
+        $files[$destination] = $result;
+
+        return ScaffoldResultDTO::success(
+            "Listener '{$name}' created for module '{$module}'.",
+            $files,
+        );
+    }
+
+    public function createRelationManager(string $module, string $name, ?string $resource = null): ScaffoldResultDTO
+    {
+        $validation = $this->validateModuleExists($module);
+        if ($validation !== null) {
+            return $validation;
+        }
+
+        $modulePath = $this->modulesPath.'/'.$module;
+        $variables = $this->stubRenderer->getComponentVariables($module, $name);
+        $variables['relationshipName'] = Str::camel(Str::plural($name));
+        $variables['resourceNameStudly'] = $resource !== null ? Str::studly($resource) : 'Parent';
+        $variables['nameKebab'] = Str::kebab($name);
+        $files = [];
+
+        // Ensure RelationManagers directory exists
+        $relationManagersDir = $modulePath.'/src/Filament/RelationManagers';
+        if (! is_dir($relationManagersDir)) {
+            mkdir($relationManagersDir, 0755, true);
+        }
+
+        $destination = "src/Filament/RelationManagers/{$variables['nameStudly']}RelationManager.php";
+        $destPath = $modulePath.'/'.$destination;
+
+        $result = $this->renderStub('filament/relation-manager.php.stub', $destPath, $variables);
+        $files[$destination] = $result;
+
+        return ScaffoldResultDTO::success(
+            "RelationManager '{$name}' created for module '{$module}'.",
+            $files,
+        );
+    }
+
+    public function createWidget(string $module, string $name): ScaffoldResultDTO
+    {
+        $validation = $this->validateModuleExists($module);
+        if ($validation !== null) {
+            return $validation;
+        }
+
+        $modulePath = $this->modulesPath.'/'.$module;
+        $variables = $this->stubRenderer->getComponentVariables($module, $name);
+        $variables['nameKebab'] = Str::kebab($name);
+        $files = [];
+
+        // Ensure Widgets directory exists
+        $widgetsDir = $modulePath.'/src/Filament/Widgets';
+        if (! is_dir($widgetsDir)) {
+            mkdir($widgetsDir, 0755, true);
+        }
+
+        $destination = "src/Filament/Widgets/{$variables['nameStudly']}Widget.php";
+        $destPath = $modulePath.'/'.$destination;
+
+        $result = $this->renderStub('filament/widget.php.stub', $destPath, $variables);
+        $files[$destination] = $result;
+
+        return ScaffoldResultDTO::success(
+            "Widget '{$name}' created for module '{$module}'.",
+            $files,
+        );
     }
 }

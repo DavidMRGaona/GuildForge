@@ -13,15 +13,14 @@ final readonly class EnsureRegistrationIsEnabled
 {
     public function __construct(
         private SettingsServiceInterface $settings,
-    ) {
-    }
+    ) {}
 
     /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$this->settings->isRegistrationEnabled()) {
+        if (! $this->settings->isRegistrationEnabled()) {
             return redirect('/');
         }
 

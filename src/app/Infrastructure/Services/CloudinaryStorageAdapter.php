@@ -39,7 +39,7 @@ final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
         parent::__construct($cloudinary, $mimeTypeDetector, $prefix);
         $this->cloudinaryInstance = $cloudinary;
         $this->prefixPath = $prefix !== null ? trim($prefix, '/') : '';
-        $this->mimeDetector = $mimeTypeDetector ?? new FinfoMimeTypeDetector();
+        $this->mimeDetector = $mimeTypeDetector ?? new FinfoMimeTypeDetector;
     }
 
     /**
@@ -55,13 +55,13 @@ final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
         $filename = $info['filename'];
 
         // Build public_id: dirname/filename (no extension)
-        $publicId = $dirname !== '.' ? $dirname . '/' . $filename : $filename;
+        $publicId = $dirname !== '.' ? $dirname.'/'.$filename : $filename;
 
         // Apply prefix if configured AND the path doesn't already start with it
         // (Laravel's FilesystemAdapter adds prefix for some operations but not others)
-        if ($this->prefixPath !== '' && !str_starts_with($publicId, $this->prefixPath . '/')) {
+        if ($this->prefixPath !== '' && ! str_starts_with($publicId, $this->prefixPath.'/')) {
             $normalizedId = ltrim($publicId, './\\/');
-            $publicId = $this->prefixPath . ($normalizedId !== '' ? '/' . $normalizedId : '');
+            $publicId = $this->prefixPath.($normalizedId !== '' ? '/'.$normalizedId : '');
         }
 
         // Detect a resource type
@@ -154,7 +154,7 @@ final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
     {
         $mimeType ??= 'application/octet-stream';
 
-        return 'data:' . $mimeType . ';base64,' . base64_encode($contents);
+        return 'data:'.$mimeType.';base64,'.base64_encode($contents);
     }
 
     /**

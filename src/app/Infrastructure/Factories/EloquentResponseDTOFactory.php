@@ -28,7 +28,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 {
     public function createEventDTO(object $model): EventResponseDTO
     {
-        if (!$model instanceof EventModel) {
+        if (! $model instanceof EventModel) {
             throw new InvalidArgumentException('Expected EventModel instance');
         }
 
@@ -62,7 +62,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
     public function createArticleDTO(object $model): ArticleResponseDTO
     {
-        if (!$model instanceof ArticleModel) {
+        if (! $model instanceof ArticleModel) {
             throw new InvalidArgumentException('Expected ArticleModel instance');
         }
 
@@ -96,7 +96,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
     public function createAuthorDTO(object $model): AuthorResponseDTO
     {
-        if (!$model instanceof UserModel) {
+        if (! $model instanceof UserModel) {
             throw new InvalidArgumentException('Expected UserModel instance');
         }
 
@@ -110,7 +110,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
     public function createGalleryDTO(object $model): GalleryResponseDTO
     {
-        if (!$model instanceof GalleryModel) {
+        if (! $model instanceof GalleryModel) {
             throw new InvalidArgumentException('Expected GalleryModel instance');
         }
 
@@ -138,7 +138,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
     public function createGalleryDetailDTO(object $model): GalleryDetailResponseDTO
     {
-        if (!$model instanceof GalleryModel) {
+        if (! $model instanceof GalleryModel) {
             throw new InvalidArgumentException('Expected GalleryModel instance');
         }
 
@@ -170,7 +170,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
     public function createPhotoDTO(object $model): PhotoResponseDTO
     {
-        if (!$model instanceof PhotoModel) {
+        if (! $model instanceof PhotoModel) {
             throw new InvalidArgumentException('Expected PhotoModel instance');
         }
 
@@ -184,7 +184,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
     public function createHeroSlideDTO(object $model): HeroSlideResponseDTO
     {
-        if (!$model instanceof HeroSlideModel) {
+        if (! $model instanceof HeroSlideModel) {
             throw new InvalidArgumentException('Expected HeroSlideModel instance');
         }
 
@@ -202,7 +202,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
     public function createTagDTO(object $model): TagResponseDTO
     {
-        if (!$model instanceof TagModel) {
+        if (! $model instanceof TagModel) {
             throw new InvalidArgumentException('Expected TagModel instance');
         }
 
@@ -222,7 +222,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
 
     public function createUserDTO(object $model): UserResponseDTO
     {
-        if (!$model instanceof UserModel) {
+        if (! $model instanceof UserModel) {
             throw new InvalidArgumentException('Expected UserModel instance');
         }
 
@@ -237,7 +237,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             emailVerified: $model->email_verified_at !== null,
             createdAt: $model->created_at !== null
                 ? DateTimeImmutable::createFromMutable($model->created_at)
-                : new DateTimeImmutable(),
+                : new DateTimeImmutable,
         );
     }
 }

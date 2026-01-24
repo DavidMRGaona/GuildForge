@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Services\Logging;
 
+use App\Application\Services\LogContextProviderInterface;
 use Elastic\Elasticsearch\Client;
 use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Support\Facades\Log;
@@ -27,6 +28,7 @@ final class ElasticsearchHandler extends AbstractProcessingHandler
         private readonly bool $ssl = false,
         int|string|Level $level = Level::Debug,
         bool $bubble = true,
+        private readonly ?LogContextProviderInterface $contextProvider = null,
     ) {
         parent::__construct($level, $bubble);
     }
@@ -49,7 +51,7 @@ final class ElasticsearchHandler extends AbstractProcessingHandler
                     'app_name' => config('app.name'),
                     'environment' => config('app.env'),
                     'hostname' => gethostname(),
-                    'request_id' => request()->header('X-Request-ID'),
+                    'request_id' => $this->contextProvider?->getRequestId(),
                 ],
             ]);
         } catch (Throwable $e) {

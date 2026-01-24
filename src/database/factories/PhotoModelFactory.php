@@ -23,7 +23,7 @@ final class PhotoModelFactory extends Factory
         return [
             'id' => fake()->uuid(),
             'gallery_id' => GalleryModel::factory(),
-            'image_public_id' => 'test/placeholder/' . fake()->uuid(),
+            'image_public_id' => 'test/placeholder/'.fake()->uuid(),
             'caption' => fake()->optional()->sentence(),
             'sort_order' => fake()->numberBetween(0, 100),
         ];

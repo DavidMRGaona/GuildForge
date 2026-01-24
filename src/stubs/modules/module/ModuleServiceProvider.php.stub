@@ -18,15 +18,27 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
 
     /**
      * Register module services.
+     *
+     * IMPORTANT: Register model extensions (macros) here, not in boot().
+     * This ensures they're available before Filament loads Resources.
      */
     public function register(): void
     {
         parent::register();
 
+        // Register model extensions (macros) early
+        // $this->registerModelExtensions();
+
         $this->mergeConfigFrom(
             $this->modulePath('config/module.php'),
             '{{ moduleNameSnake }}'
         );
+
+        // Example: Bind service interfaces to implementations
+        // $this->app->bind(
+        //     MyServiceInterface::class,
+        //     MyService::class
+        // );
     }
 
     /**
@@ -35,7 +47,87 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
     public function boot(): void
     {
         parent::boot();
+
+        // Register Livewire components (required for Filament RelationManagers)
+        // $this->registerLivewireComponents();
+
+        // Extend core Filament Resources with RelationManagers
+        // $this->registerFilamentExtensions();
+
+        // Register domain event listeners
+        // $this->registerEventListeners();
     }
+
+    // ============================================================
+    // EXTENDING CORE FUNCTIONALITY (uncomment and adapt as needed)
+    // ============================================================
+
+    /**
+     * Register dynamic relationships on core models.
+     * Uses resolveRelationUsing() - the correct Laravel way to add relationships dynamically.
+     * Called in register() to ensure relationships are available before Filament loads.
+     *
+     * Example: Add an 'items' relationship to a core model:
+     *
+     *     private function registerModelExtensions(): void
+     *     {
+     *         // resolveRelationUsing is idempotent - calling multiple times is safe
+     *         CoreModel::resolveRelationUsing('items', function (CoreModel $model) {
+     *             return $model->hasMany(ItemModel::class, 'core_id', 'id');
+     *         });
+     *     }
+     *
+     * Note: Don't use Model::macro() for relationships - it forwards to Query Builder.
+     */
+
+    /**
+     * Register Livewire components from the module.
+     * Required for Filament RelationManagers to work properly.
+     *
+     * Example:
+     *
+     *     private function registerLivewireComponents(): void
+     *     {
+     *         if (! class_exists(\Livewire\Livewire::class)) {
+     *             return;
+     *         }
+     *
+     *         \Livewire\Livewire::component(
+     *             'modules.{{ moduleName }}.filament.relation-managers.items-relation-manager',
+     *             ItemsRelationManager::class
+     *         );
+     *     }
+     */
+
+    /**
+     * Extend core Filament Resources with this module's RelationManagers.
+     * Uses the HasExtendableRelations trait on core Resources.
+     *
+     * Example:
+     *
+     *     private function registerFilamentExtensions(): void
+     *     {
+     *         if (class_exists(\App\Filament\Resources\EventResource::class)) {
+     *             \App\Filament\Resources\EventResource::extendRelations([
+     *                 ItemsRelationManager::class,
+     *             ]);
+     *         }
+     *     }
+     */
+
+    /**
+     * Register domain event listeners.
+     *
+     * Example:
+     *
+     *     private function registerEventListeners(): void
+     *     {
+     *         \Illuminate\Support\Facades\Event::listen(
+     *             ItemCreated::class,
+     *             SendItemCreatedNotification::class
+     *         );
+     *     }
+     */
 
     /**
      * Called when the module is enabled.

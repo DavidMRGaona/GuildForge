@@ -45,7 +45,7 @@ final class UserModelTest extends TestCase
             'role',
         ];
 
-        $model = new UserModel();
+        $model = new UserModel;
 
         $this->assertEquals($fillable, $model->getFillable());
     }

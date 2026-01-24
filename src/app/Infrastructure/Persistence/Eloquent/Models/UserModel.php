@@ -30,10 +30,11 @@ use Illuminate\Support\Carbon;
  */
 final class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
+    use DeletesCloudinaryImages;
+
     /** @use HasFactory<UserFactory> */
     use HasFactory;
     use Notifiable;
-    use DeletesCloudinaryImages;
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['avatar_public_id'];

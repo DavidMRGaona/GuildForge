@@ -121,9 +121,9 @@ trait InteractsWithModules
      */
     protected function testModulePath(string $moduleName, string $path = ''): string
     {
-        $basePath = config('modules.path', base_path('modules')) . '/' . $moduleName;
+        $basePath = config('modules.path', base_path('modules')).'/'.$moduleName;
 
-        return $path !== '' ? $basePath . '/' . ltrim($path, '/') : $basePath;
+        return $path !== '' ? $basePath.'/'.ltrim($path, '/') : $basePath;
     }
 
     /**
@@ -160,7 +160,7 @@ trait InteractsWithModules
     {
         $this->assertTrue(
             $result->isSuccess(),
-            "Scaffold failed: {$result->message}. Errors: " . implode(', ', $result->errors)
+            "Scaffold failed: {$result->message}. Errors: ".implode(', ', $result->errors)
         );
     }
 
@@ -183,7 +183,7 @@ trait InteractsWithModules
         $modulesPath = config('modules.path', base_path('modules'));
 
         foreach ($this->createdModules as $moduleName) {
-            $modulePath = $modulesPath . '/' . $moduleName;
+            $modulePath = $modulesPath.'/'.$moduleName;
             if (is_dir($modulePath)) {
                 File::deleteDirectory($modulePath);
             }

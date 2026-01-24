@@ -19,14 +19,13 @@ final class ContactFormMail extends Mailable
         public readonly string $senderName,
         public readonly string $senderEmail,
         public readonly string $messageBody,
-    ) {
-    }
+    ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: __('contact.email_subject'),
             replyTo: [$this->senderEmail],
+            subject: __('contact.email_subject'),
         );
     }
 

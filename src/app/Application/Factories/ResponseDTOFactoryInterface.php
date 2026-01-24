@@ -17,47 +17,47 @@ use App\Application\DTOs\Response\UserResponseDTO;
 interface ResponseDTOFactoryInterface
 {
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createEventDTO(object $model): EventResponseDTO;
 
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createArticleDTO(object $model): ArticleResponseDTO;
 
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createAuthorDTO(object $model): AuthorResponseDTO;
 
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createGalleryDTO(object $model): GalleryResponseDTO;
 
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createGalleryDetailDTO(object $model): GalleryDetailResponseDTO;
 
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createPhotoDTO(object $model): PhotoResponseDTO;
 
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createHeroSlideDTO(object $model): HeroSlideResponseDTO;
 
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createTagDTO(object $model): TagResponseDTO;
 
     /**
-     * @param object $model The underlying model (implementation-specific)
+     * @param  object  $model  The underlying model (implementation-specific)
      */
     public function createUserDTO(object $model): UserResponseDTO;
 }

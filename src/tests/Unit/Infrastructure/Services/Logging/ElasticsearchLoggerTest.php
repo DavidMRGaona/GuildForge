@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Services\Logging;
 
+use App\Application\Services\LogContextProviderInterface;
 use App\Infrastructure\Services\Logging\ElasticsearchHandler;
 use App\Infrastructure\Services\Logging\ElasticsearchLogger;
 use Monolog\Handler\NullHandler;
@@ -28,7 +29,7 @@ final class ElasticsearchLoggerTest extends TestCase
 
     public function test_factory_creates_logger_instance(): void
     {
-        $factory = new ElasticsearchLogger();
+        $factory = new ElasticsearchLogger;
 
         $logger = $factory([
             'level' => 'debug',
@@ -41,7 +42,7 @@ final class ElasticsearchLoggerTest extends TestCase
     {
         config(['elasticsearch.enabled' => false]);
 
-        $factory = new ElasticsearchLogger();
+        $factory = new ElasticsearchLogger;
 
         $logger = $factory([]);
 
@@ -61,7 +62,7 @@ final class ElasticsearchLoggerTest extends TestCase
         config(['elasticsearch.index' => 'app-logs']);
         config(['elasticsearch.ssl' => true]);
 
-        $factory = new ElasticsearchLogger();
+        $factory = new ElasticsearchLogger;
 
         $logger = $factory([
             'level' => 'error',
@@ -80,7 +81,7 @@ final class ElasticsearchLoggerTest extends TestCase
         config(['elasticsearch.port' => 9201]);
         config(['elasticsearch.index' => 'custom-index']);
 
-        $factory = new ElasticsearchLogger();
+        $factory = new ElasticsearchLogger;
 
         $logger = $factory([]);
 
@@ -90,10 +91,37 @@ final class ElasticsearchLoggerTest extends TestCase
 
     public function test_logger_channel_name_is_elasticsearch(): void
     {
-        $factory = new ElasticsearchLogger();
+        $factory = new ElasticsearchLogger;
 
         $logger = $factory([]);
 
         $this->assertEquals('elasticsearch', $logger->getName());
+    }
+
+    public function test_factory_accepts_context_provider(): void
+    {
+        config(['elasticsearch.enabled' => true]);
+
+        $contextProvider = $this->createMock(LogContextProviderInterface::class);
+        $factory = new ElasticsearchLogger($contextProvider);
+
+        $logger = $factory([]);
+
+        $handlers = $logger->getHandlers();
+        $this->assertCount(1, $handlers);
+        $this->assertInstanceOf(ElasticsearchHandler::class, $handlers[0]);
+    }
+
+    public function test_factory_works_without_context_provider(): void
+    {
+        config(['elasticsearch.enabled' => true]);
+
+        $factory = new ElasticsearchLogger(null);
+
+        $logger = $factory([]);
+
+        $handlers = $logger->getHandlers();
+        $this->assertCount(1, $handlers);
+        $this->assertInstanceOf(ElasticsearchHandler::class, $handlers[0]);
     }
 }

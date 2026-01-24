@@ -14,13 +14,13 @@ interface ArticleQueryServiceInterface
     public function getLatestPublished(int $limit = 10): array;
 
     /**
-     * @param array<string>|null $tagSlugs
+     * @param  array<string>|null  $tagSlugs
      * @return array<int, ArticleResponseDTO>
      */
     public function getPublishedPaginated(int $page = 1, int $perPage = 12, ?array $tagSlugs = null): array;
 
     /**
-     * @param array<string>|null $tagSlugs
+     * @param  array<string>|null  $tagSlugs
      */
     public function getPublishedTotal(?array $tagSlugs = null): int;
 

@@ -95,6 +95,9 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             enabledAt: $model->enabled_at !== null
                 ? new DateTimeImmutable($model->enabled_at->toDateTimeString())
                 : null,
+            installedAt: $model->installed_at !== null
+                ? new DateTimeImmutable($model->installed_at->toDateTimeString())
+                : null,
             createdAt: $model->created_at !== null
                 ? new DateTimeImmutable($model->created_at->toDateTimeString())
                 : null,
@@ -114,7 +117,7 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
      * Database format: ['modules' => [...], 'php' => '...']
      * ModuleRequirements format: ['required_modules' => [...], 'php_version' => '...']
      *
-     * @param array<string, mixed>|null $requires
+     * @param  array<string, mixed>|null  $requires
      * @return array<string, mixed>
      */
     private function normalizeRequirements(?array $requires): array
@@ -150,6 +153,7 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             'dependencies' => $module->dependencies(),
             'status' => $module->status()->value,
             'enabled_at' => $module->enabledAt()?->format('Y-m-d H:i:s'),
+            'installed_at' => $module->installedAt()?->format('Y-m-d H:i:s'),
         ];
     }
 }

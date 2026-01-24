@@ -12,14 +12,8 @@ use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
-use App\Domain\Modules\Exceptions\ModuleNotFoundException;
-use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
-use App\Domain\Modules\ValueObjects\ModuleRequirements;
-use App\Domain\Modules\ValueObjects\ModuleVersion;
-use App\Infrastructure\Modules\Services\ModuleManagerService;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
-use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,13 +22,14 @@ final class ModuleManagerServiceTest extends TestCase
     use RefreshDatabase;
 
     private ModuleManagerServiceInterface $service;
+
     private string $testModulesPath;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir() . '/guildforge-test-modules-' . uniqid();
+        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.uniqid();
         mkdir($this->testModulesPath, 0755, true);
 
         // Override the modules path in config
@@ -372,30 +367,150 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertGreaterThanOrEqual(0, $migrationsRun);
     }
 
+    public function test_enable_runs_migrations_only_when_module_is_not_installed(): void
+    {
+        $this->createTestModule('test-module');
+        $this->createTestModuleMigration('test-module', 'create_test_table');
+
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'description' => 'Test module',
+            'author' => 'Test Author',
+            'status' => ModuleStatus::Disabled->value,
+            'requires' => null,
+            'installed_at' => null, // Not installed
+        ]);
+
+        $module = $this->service->enable(ModuleName::fromString('test-module'));
+
+        $this->assertTrue($module->isEnabled());
+        $this->assertTrue($module->isInstalled());
+        $this->assertNotNull($module->installedAt());
+
+        $this->assertDatabaseHas('modules', [
+            'name' => 'test-module',
+            'status' => ModuleStatus::Enabled->value,
+        ]);
+
+        // Verify installed_at is set in database
+        $dbModule = ModuleModel::where('name', 'test-module')->first();
+        $this->assertNotNull($dbModule->installed_at);
+    }
+
+    public function test_enable_does_not_run_migrations_when_module_is_already_installed(): void
+    {
+        $this->createTestModule('test-module');
+        $this->createTestModuleMigration('test-module', 'create_test_table');
+
+        $installedAt = now();
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'description' => 'Test module',
+            'author' => 'Test Author',
+            'status' => ModuleStatus::Disabled->value,
+            'requires' => null,
+            'installed_at' => $installedAt, // Already installed
+        ]);
+
+        $module = $this->service->enable(ModuleName::fromString('test-module'));
+
+        $this->assertTrue($module->isEnabled());
+        $this->assertTrue($module->isInstalled());
+
+        // installed_at should remain the same (not updated)
+        $dbModule = ModuleModel::where('name', 'test-module')->first();
+        $this->assertEquals(
+            $installedAt->format('Y-m-d H:i:s'),
+            $dbModule->installed_at->format('Y-m-d H:i:s')
+        );
+    }
+
+    public function test_uninstall_with_delete_data_resets_installed_at(): void
+    {
+        $this->createTestModule('test-module');
+
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'description' => 'Test module',
+            'author' => 'Test Author',
+            'status' => ModuleStatus::Disabled->value,
+            'requires' => null,
+            'installed_at' => now(),
+        ]);
+
+        // Uninstall with deleteData=true should remove the module from DB
+        $this->service->uninstall(ModuleName::fromString('test-module'), true);
+
+        $this->assertDatabaseMissing('modules', [
+            'name' => 'test-module',
+        ]);
+    }
+
+    public function test_disable_then_enable_does_not_run_migrations_again(): void
+    {
+        $this->createTestModule('test-module');
+
+        // Start with an installed and enabled module
+        $installedAt = now()->subDay();
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'description' => 'Test module',
+            'author' => 'Test Author',
+            'status' => ModuleStatus::Enabled->value,
+            'requires' => null,
+            'enabled_at' => now(),
+            'installed_at' => $installedAt, // Already installed
+        ]);
+
+        // Disable the module
+        $this->service->disable(ModuleName::fromString('test-module'));
+
+        // Enable the module again
+        $module = $this->service->enable(ModuleName::fromString('test-module'));
+
+        $this->assertTrue($module->isEnabled());
+        $this->assertTrue($module->isInstalled());
+
+        // installed_at should remain the same (not updated)
+        $dbModule = ModuleModel::where('name', 'test-module')->first();
+        $this->assertEquals(
+            $installedAt->format('Y-m-d H:i:s'),
+            $dbModule->installed_at->format('Y-m-d H:i:s')
+        );
+    }
+
     private function createTestModule(string $name, array $manifest = []): void
     {
-        $modulePath = $this->testModulesPath . '/' . $name;
+        $modulePath = $this->testModulesPath.'/'.$name;
         mkdir($modulePath, 0755, true);
 
         $defaultManifest = [
             'name' => $name,
             'version' => '1.0.0',
-            'namespace' => 'Modules\\' . str_replace('-', '', ucwords($name, '-')),
-            'provider' => str_replace('-', '', ucwords($name, '-')) . 'ServiceProvider',
+            'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
+            'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'description' => 'Test module',
             'author' => 'Test Author',
         ];
 
         file_put_contents(
-            $modulePath . '/module.json',
+            $modulePath.'/module.json',
             json_encode(array_merge($defaultManifest, $manifest), JSON_PRETTY_PRINT)
         );
     }
 
     private function createTestModuleMigration(string $moduleName, string $migrationName): void
     {
-        $modulePath = $this->testModulesPath . '/' . $moduleName;
-        $migrationsPath = $modulePath . '/database/migrations';
+        $modulePath = $this->testModulesPath.'/'.$moduleName;
+        $migrationsPath = $modulePath.'/database/migrations';
         mkdir($migrationsPath, 0755, true);
 
         $timestamp = date('Y_m_d_His');
@@ -424,14 +539,14 @@ return new class extends Migration
 PHP;
 
         file_put_contents(
-            $migrationsPath . '/' . $timestamp . '_' . $migrationName . '.php',
+            $migrationsPath.'/'.$timestamp.'_'.$migrationName.'.php',
             $migrationContent
         );
     }
 
     private function removeDirectory(string $path): void
     {
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             return;
         }
 
@@ -445,7 +560,7 @@ PHP;
                 continue;
             }
 
-            $itemPath = $path . '/' . $item;
+            $itemPath = $path.'/'.$item;
             if (is_dir($itemPath)) {
                 $this->removeDirectory($itemPath);
             } else {

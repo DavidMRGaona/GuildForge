@@ -28,10 +28,11 @@ use Illuminate\Support\Carbon;
  */
 final class HeroSlideModel extends Model
 {
+    use DeletesCloudinaryImages;
+
     /** @use HasFactory<HeroSlideModelFactory> */
     use HasFactory;
     use HasUuids;
-    use DeletesCloudinaryImages;
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['image_public_id'];
@@ -63,7 +64,7 @@ final class HeroSlideModel extends Model
     /**
      * Scope to get only active slides ordered by sort_order.
      *
-     * @param Builder<static> $query
+     * @param  Builder<static>  $query
      * @return Builder<static>
      */
     public function scopeActiveOrdered(Builder $query): Builder

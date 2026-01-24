@@ -7,8 +7,8 @@ namespace App\Application\Modules\DTOs;
 final readonly class NavigationItemDTO
 {
     /**
-     * @param array<NavigationItemDTO> $children Child navigation items
-     * @param array<string> $permissions Required permissions to view this item
+     * @param  array<NavigationItemDTO>  $children  Child navigation items
+     * @param  array<string>  $permissions  Required permissions to view this item
      */
     public function __construct(
         public string $label,
@@ -22,11 +22,10 @@ final readonly class NavigationItemDTO
         public ?string $module = null,
         public ?string $badge = null,
         public ?string $badgeColor = null,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {

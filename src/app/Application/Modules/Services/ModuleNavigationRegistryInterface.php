@@ -16,7 +16,7 @@ interface ModuleNavigationRegistryInterface
     /**
      * Register multiple navigation items from a module.
      *
-     * @param array<NavigationItemDTO> $items
+     * @param  array<NavigationItemDTO>  $items
      */
     public function registerMany(array $items): void;
 
@@ -51,7 +51,7 @@ interface ModuleNavigationRegistryInterface
     /**
      * Get navigation items filtered by user permissions.
      *
-     * @param array<string> $userPermissions
+     * @param  array<string>  $userPermissions
      * @return array<NavigationItemDTO>
      */
     public function forUser(array $userPermissions): array;

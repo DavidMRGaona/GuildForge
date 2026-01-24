@@ -82,7 +82,7 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->disk('images')
                                     ->directory('about')
                                     ->getUploadedFileNameForStorageUsing(
-                                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
+                                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
                                     )
                                     ->maxSize(2048)
                                     ->nullable()

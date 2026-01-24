@@ -70,6 +70,25 @@ services:
       - VITE_HOST=0.0.0.0
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
 
+  queue:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: guildforge_queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    networks:
+      - guildforge
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PHP_MEMORY_LIMIT=256M
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: guildforge_mailpit

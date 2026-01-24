@@ -15,8 +15,7 @@ final class ForgotPasswordController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
-    ) {
-    }
+    ) {}
 
     public function create(): Response
     {

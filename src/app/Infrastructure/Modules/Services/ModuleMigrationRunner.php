@@ -12,14 +12,14 @@ final readonly class ModuleMigrationRunner
 {
     public function __construct(
         private string $modulesPath,
-    ) {
-    }
+    ) {}
 
     /**
      * Runs migrations for a module.
      *
-     * @param Module $module The module to run migrations for
+     * @param  Module  $module  The module to run migrations for
      * @return int The number of migrations run
+     *
      * @throws ModuleNotFoundException If the module directory does not exist
      */
     public function run(Module $module): int
@@ -27,21 +27,21 @@ final readonly class ModuleMigrationRunner
         $modulePath = $module->path();
 
         // Fall back to default path if module path is not set
-        if (!is_dir($modulePath)) {
-            $modulePath = $this->modulesPath . '/' . $module->name()->value;
+        if (! is_dir($modulePath)) {
+            $modulePath = $this->modulesPath.'/'.$module->name()->value;
         }
 
-        if (!is_dir($modulePath)) {
+        if (! is_dir($modulePath)) {
             throw ModuleNotFoundException::withName($module->name()->value);
         }
 
-        $migrationsPath = $modulePath . '/database/migrations';
+        $migrationsPath = $modulePath.'/database/migrations';
 
-        if (!is_dir($migrationsPath)) {
+        if (! is_dir($migrationsPath)) {
             return 0;
         }
 
-        $migrationFiles = glob($migrationsPath . '/*.php');
+        $migrationFiles = glob($migrationsPath.'/*.php');
 
         if ($migrationFiles === false || empty($migrationFiles)) {
             return 0;
@@ -57,9 +57,10 @@ final readonly class ModuleMigrationRunner
     /**
      * Rollback migrations for a module.
      *
-     * @param Module $module The module to rollback migrations for
-     * @param int $steps Number of migrations to rollback
+     * @param  Module  $module  The module to rollback migrations for
+     * @param  int  $steps  Number of migrations to rollback
      * @return int The number of migrations rolled back
+     *
      * @throws ModuleNotFoundException If the module directory does not exist
      */
     public function rollback(Module $module, int $steps = 1): int
@@ -67,17 +68,17 @@ final readonly class ModuleMigrationRunner
         $modulePath = $module->path();
 
         // Fall back to default path if module path is not set
-        if (!is_dir($modulePath)) {
-            $modulePath = $this->modulesPath . '/' . $module->name()->value;
+        if (! is_dir($modulePath)) {
+            $modulePath = $this->modulesPath.'/'.$module->name()->value;
         }
 
-        if (!is_dir($modulePath)) {
+        if (! is_dir($modulePath)) {
             throw ModuleNotFoundException::withName($module->name()->value);
         }
 
-        $migrationsPath = $modulePath . '/database/migrations';
+        $migrationsPath = $modulePath.'/database/migrations';
 
-        if (!is_dir($migrationsPath)) {
+        if (! is_dir($migrationsPath)) {
             return 0;
         }
 
@@ -87,8 +88,9 @@ final readonly class ModuleMigrationRunner
     /**
      * Rollback all migrations for a module.
      *
-     * @param Module $module The module to rollback all migrations for
+     * @param  Module  $module  The module to rollback all migrations for
      * @return int The number of migrations rolled back
+     *
      * @throws ModuleNotFoundException If the module directory does not exist
      */
     public function rollbackAll(Module $module): int
@@ -96,21 +98,21 @@ final readonly class ModuleMigrationRunner
         $modulePath = $module->path();
 
         // Fall back to default path if module path is not set
-        if (!is_dir($modulePath)) {
-            $modulePath = $this->modulesPath . '/' . $module->name()->value;
+        if (! is_dir($modulePath)) {
+            $modulePath = $this->modulesPath.'/'.$module->name()->value;
         }
 
-        if (!is_dir($modulePath)) {
+        if (! is_dir($modulePath)) {
             throw ModuleNotFoundException::withName($module->name()->value);
         }
 
-        $migrationsPath = $modulePath . '/database/migrations';
+        $migrationsPath = $modulePath.'/database/migrations';
 
-        if (!is_dir($migrationsPath)) {
+        if (! is_dir($migrationsPath)) {
             return 0;
         }
 
-        $migrationFiles = glob($migrationsPath . '/*.php');
+        $migrationFiles = glob($migrationsPath.'/*.php');
         $count = $migrationFiles !== false ? count($migrationFiles) : 0;
 
         if ($count === 0) {
@@ -127,19 +129,19 @@ final readonly class ModuleMigrationRunner
     {
         try {
             // Check if we're in a Laravel application context
-            if (!function_exists('app')) {
+            if (! function_exists('app')) {
                 return;
             }
 
             $app = app();
 
             // Check if the application has the migrator bound (indicates full boot)
-            if (!$app->bound('migrator')) {
+            if (! $app->bound('migrator')) {
                 return;
             }
 
             Artisan::call('migrate', [
-                '--path' => str_replace(base_path() . '/', '', $migrationsPath),
+                '--path' => str_replace(base_path().'/', '', $migrationsPath),
                 '--force' => true,
             ]);
         } catch (\Throwable) {
@@ -154,19 +156,19 @@ final readonly class ModuleMigrationRunner
     {
         try {
             // Check if we're in a Laravel application context
-            if (!function_exists('app')) {
+            if (! function_exists('app')) {
                 return 0;
             }
 
             $app = app();
 
             // Check if the application has the migrator bound (indicates full boot)
-            if (!$app->bound('migrator')) {
+            if (! $app->bound('migrator')) {
                 return 0;
             }
 
             Artisan::call('migrate:rollback', [
-                '--path' => str_replace(base_path() . '/', '', $migrationsPath),
+                '--path' => str_replace(base_path().'/', '', $migrationsPath),
                 '--step' => $steps,
                 '--force' => true,
             ]);

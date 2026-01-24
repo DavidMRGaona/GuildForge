@@ -9,8 +9,16 @@ This guide covers how to create and develop modules for GuildForge using the Mod
 3. [Scaffolding commands](#scaffolding-commands)
 4. [Service provider](#service-provider)
 5. [Permissions & navigation](#permissions--navigation)
-6. [Testing modules](#testing-modules)
-7. [Best practices](#best-practices)
+6. [Module settings](#module-settings)
+7. [Filament integration](#filament-integration)
+8. [Slot registration](#slot-registration)
+9. [Module installation](#module-installation)
+10. [Extending core functionality](#extending-core-functionality)
+11. [Domain events and listeners](#domain-events-and-listeners)
+12. [State machine pattern](#state-machine-pattern)
+13. [Testing modules](#testing-modules)
+14. [Best practices](#best-practices)
+15. [Quick reference](#quick-reference)
 
 ---
 
@@ -173,6 +181,25 @@ php artisan module:make-request my-module StoreGame
 ```bash
 # Create Filament resource with List, Create, Edit pages
 php artisan module:make-filament-resource my-module Game
+
+# Create Filament RelationManager
+php artisan module:make-relation-manager my-module Registrations --resource=Event
+
+# Create Filament Widget
+php artisan module:make-widget my-module RegistrationStats
+```
+
+### Domain events and enums
+
+```bash
+# Create enum
+php artisan module:make-enum my-module RegistrationStatus
+
+# Create domain event
+php artisan module:make-event my-module RegistrationCreated
+
+# Create event listener
+php artisan module:make-listener my-module SendRegistrationConfirmation
 ```
 
 ### Frontend
@@ -715,6 +742,495 @@ $value = Module::config('key');
 $path = Module::path('src');
 ```
 
+### 8. Use domain events for side effects
+
+Don't put email sending or cascading updates in services. Use events and listeners instead:
+
+```php
+// Bad: Side effects in service
+public function createRegistration(CreateRegistrationDTO $dto): Registration
+{
+    $registration = $this->repository->save($registration);
+
+    // Don't do this - couples registration logic to email
+    Mail::to($user)->send(new RegistrationConfirmation($registration));
+
+    return $registration;
+}
+
+// Good: Dispatch event, let listeners handle side effects
+public function createRegistration(CreateRegistrationDTO $dto): Registration
+{
+    $registration = $this->repository->save($registration);
+
+    event(RegistrationCreated::create(
+        $registration->getId()->toString(),
+        $registration->getEventId()->toString(),
+        $registration->getUserId()->toString()
+    ));
+
+    return $registration;
+}
+```
+
+### 9. Validate state transitions in entities
+
+Don't allow invalid state changes. Use enums with `canTransitionTo()`:
+
+```php
+// Bad: No validation
+public function cancel(): void
+{
+    $this->status = RegistrationStatus::Cancelled; // What if already attended?
+}
+
+// Good: Validate transition
+public function cancel(): void
+{
+    if (!$this->status->canTransitionTo(RegistrationStatus::Cancelled)) {
+        throw InvalidStateTransitionException::fromTo(
+            $this->status->value,
+            RegistrationStatus::Cancelled->value,
+            'Cannot cancel registration in current state'
+        );
+    }
+
+    $this->status = RegistrationStatus::Cancelled;
+}
+```
+
+### 10. Register Livewire components for RelationManagers
+
+Without this, RelationManagers won't work:
+
+```php
+private function registerLivewireComponents(): void
+{
+    if (!class_exists(Livewire::class)) {
+        return;
+    }
+
+    Livewire::component(
+        'modules.my-module.filament.relation-managers.registrations-relation-manager',
+        RegistrationsRelationManager::class
+    );
+}
+```
+
+### 11. Use `register()` for model extensions
+
+Dynamic relationships must be registered before Filament boots:
+
+```php
+// Bad: In boot() - too late, Filament already initialized
+public function boot(): void
+{
+    EventModel::resolveRelationUsing('registrations', function ($model) {
+        return $model->hasMany(RegistrationModel::class);
+    });
+}
+
+// Good: In register() - before Filament boots
+public function register(): void
+{
+    parent::register();
+
+    EventModel::resolveRelationUsing('registrations', function ($model) {
+        return $model->hasMany(RegistrationModel::class, 'event_id', 'id');
+    });
+}
+```
+
+---
+
+## Extending core functionality
+
+Modules can extend core entities, Filament resources, and add new relationships without modifying core code.
+
+### Dynamic model relationships
+
+Add relationships to core models (Article, Event, Gallery, Photo, etc.) using `resolveRelationUsing()`:
+
+```php
+use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use Modules\MyModule\Infrastructure\Persistence\Eloquent\Models\RegistrationModel;
+
+public function register(): void
+{
+    parent::register();
+
+    // IMPORTANT: Must be in register(), not boot()
+    // Dynamic relationships must be registered before Filament boots
+    EventModel::resolveRelationUsing('registrations', function (EventModel $model) {
+        return $model->hasMany(RegistrationModel::class, 'event_id', 'id');
+    });
+}
+```
+
+**Important notes:**
+- Must be called in `register()`, not `boot()` (Filament needs these before booting)
+- The method is idempotent (safe to call multiple times)
+- No foreign key constraints between module tables and core tables (use UUIDs)
+- The relationship name becomes accessible as `$event->registrations`
+
+**Real-world example:**
+
+The event-registrations module adds a `registrations` relationship to `EventModel` to track user sign-ups for events.
+
+### Extending Filament resources
+
+Add RelationManagers to existing core Resources using the `HasExtendableRelations` trait:
+
+```php
+use App\Filament\Resources\EventResource;
+use Livewire\Livewire;
+use Modules\MyModule\Filament\Resources\EventResource\RelationManagers\RegistrationsRelationManager;
+
+public function boot(): void
+{
+    parent::boot();
+
+    $this->registerLivewireComponents();
+    $this->registerFilamentExtensions();
+}
+
+private function registerFilamentExtensions(): void
+{
+    // Check if the resource exists (core might not have it loaded)
+    if (class_exists(EventResource::class)) {
+        EventResource::extendRelations([
+            RegistrationsRelationManager::class,
+        ]);
+    }
+}
+
+private function registerLivewireComponents(): void
+{
+    if (!class_exists(Livewire::class)) {
+        return;
+    }
+
+    // Register the RelationManager as a Livewire component
+    // Naming convention: modules.{module-name}.filament.relation-managers.{name}
+    Livewire::component(
+        'modules.my-module.filament.relation-managers.registrations-relation-manager',
+        RegistrationsRelationManager::class
+    );
+}
+```
+
+**Key points:**
+- Core resources that support extension use the `HasExtendableRelations` trait
+- RelationManagers must be registered as Livewire components
+- Use strict naming convention: `modules.{module-name}.filament.relation-managers.{kebab-case-name}`
+- Check for class existence before extending (graceful degradation)
+
+**Validation:**
+
+The `HasExtendableRelations` trait automatically filters out RelationManagers whose relationships don't exist on the model. This prevents errors when a module is disabled but its RelationManager was cached.
+
+### Extending Filament form sections
+
+Add form sections to existing Resources using the `HasExtendableFormSections` trait:
+
+```php
+use App\Filament\Resources\EventResource\Pages\EditEvent;
+
+private function registerFilamentExtensions(): void
+{
+    if (class_exists(EditEvent::class)) {
+        EditEvent::extendFormSections([
+            Section::make(__('my_module::labels.registration_settings'))
+                ->schema([
+                    Toggle::make('registration_enabled')
+                        ->label(__('my_module::labels.allow_registration')),
+                    TextInput::make('max_registrations')
+                        ->numeric()
+                        ->label(__('my_module::labels.capacity')),
+                ])
+        ]);
+    }
+}
+```
+
+---
+
+## Domain events and listeners
+
+Use domain events to decouple side effects from core business logic. Events represent things that have happened in your domain.
+
+### Creating domain events
+
+Domain events are immutable DTOs that capture what happened:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\MyModule\Domain\Events;
+
+use DateTimeImmutable;
+
+final readonly class RegistrationCreated
+{
+    public function __construct(
+        public string $registrationId,
+        public string $eventId,
+        public string $userId,
+        public DateTimeImmutable $occurredAt,
+    ) {}
+
+    public static function create(
+        string $registrationId,
+        string $eventId,
+        string $userId,
+    ): self {
+        return new self(
+            $registrationId,
+            $eventId,
+            $userId,
+            new DateTimeImmutable()
+        );
+    }
+}
+```
+
+**Scaffolding command:**
+```bash
+php artisan module:make-event my-module RegistrationCreated
+```
+
+### Creating event listeners
+
+Listeners handle the side effects when events occur:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\MyModule\Listeners;
+
+use Modules\MyModule\Domain\Events\RegistrationCreated;
+use Modules\MyModule\Notifications\RegistrationConfirmationNotification;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+
+final readonly class SendRegistrationConfirmation
+{
+    public function handle(RegistrationCreated $event): void
+    {
+        $user = UserModel::find($event->userId);
+
+        if ($user !== null) {
+            $user->notify(new RegistrationConfirmationNotification(
+                $event->registrationId,
+                $event->eventId
+            ));
+        }
+    }
+}
+```
+
+**Scaffolding command:**
+```bash
+php artisan module:make-listener my-module SendRegistrationConfirmation
+```
+
+### Registering event listeners
+
+Register listeners in your ServiceProvider's `boot()` method:
+
+```php
+use Illuminate\Support\Facades\Event;
+use Modules\MyModule\Domain\Events\RegistrationCreated;
+use Modules\MyModule\Domain\Events\RegistrationCancelled;
+use Modules\MyModule\Listeners\SendRegistrationConfirmation;
+use Modules\MyModule\Listeners\NotifyEventOrganizer;
+use Modules\MyModule\Listeners\UpdateEventCapacity;
+
+public function boot(): void
+{
+    parent::boot();
+
+    $this->registerEventListeners();
+}
+
+private function registerEventListeners(): void
+{
+    Event::listen(RegistrationCreated::class, SendRegistrationConfirmation::class);
+    Event::listen(RegistrationCreated::class, NotifyEventOrganizer::class);
+    Event::listen(RegistrationCreated::class, UpdateEventCapacity::class);
+
+    Event::listen(RegistrationCancelled::class, UpdateEventCapacity::class);
+}
+```
+
+**Why use events and listeners?**
+- **Decoupling**: The core domain logic doesn't know about email sending
+- **Single Responsibility**: Each listener has one job
+- **Easy to extend**: Add new listeners without modifying existing code
+- **Testable**: Mock events in tests
+
+---
+
+## State machine pattern
+
+State machines ensure entities can only transition through valid states.
+
+### Creating state enums
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\MyModule\Domain\Enums;
+
+enum RegistrationStatus: string
+{
+    case Pending = 'pending';
+    case Confirmed = 'confirmed';
+    case Cancelled = 'cancelled';
+    case Attended = 'attended';
+    case NoShow = 'no_show';
+
+    /**
+     * Determine if transition to new state is allowed.
+     */
+    public function canTransitionTo(self $newState): bool
+    {
+        return match($this) {
+            self::Pending => in_array($newState, [self::Confirmed, self::Cancelled], true),
+            self::Confirmed => in_array($newState, [self::Cancelled, self::Attended, self::NoShow], true),
+            self::Cancelled => false, // Final state
+            self::Attended => false,  // Final state
+            self::NoShow => false,    // Final state
+        };
+    }
+
+    /**
+     * Get all valid next states from current state.
+     *
+     * @return array<self>
+     */
+    public function allowedTransitions(): array
+    {
+        return match($this) {
+            self::Pending => [self::Confirmed, self::Cancelled],
+            self::Confirmed => [self::Cancelled, self::Attended, self::NoShow],
+            self::Cancelled, self::Attended, self::NoShow => [],
+        };
+    }
+
+    /**
+     * Get translated label for the state.
+     */
+    public function label(): string
+    {
+        return match($this) {
+            self::Pending => __('my_module::states.pending'),
+            self::Confirmed => __('my_module::states.confirmed'),
+            self::Cancelled => __('my_module::states.cancelled'),
+            self::Attended => __('my_module::states.attended'),
+            self::NoShow => __('my_module::states.no_show'),
+        };
+    }
+
+    /**
+     * Get CSS color class for badges.
+     */
+    public function color(): string
+    {
+        return match($this) {
+            self::Pending => 'warning',
+            self::Confirmed => 'success',
+            self::Cancelled => 'danger',
+            self::Attended => 'info',
+            self::NoShow => 'gray',
+        };
+    }
+}
+```
+
+**Scaffolding command:**
+```bash
+php artisan module:make-enum my-module RegistrationStatus
+```
+
+### Using state machines in entities
+
+```php
+use Modules\MyModule\Domain\Enums\RegistrationStatus;
+use Modules\MyModule\Domain\Exceptions\InvalidStateTransitionException;
+
+final class Registration
+{
+    public function __construct(
+        private RegistrationId $id,
+        private EventId $eventId,
+        private UserId $userId,
+        private RegistrationStatus $status,
+    ) {}
+
+    public function confirm(): void
+    {
+        $newStatus = RegistrationStatus::Confirmed;
+
+        if (!$this->status->canTransitionTo($newStatus)) {
+            throw InvalidStateTransitionException::fromTo(
+                $this->status->value,
+                $newStatus->value,
+                'Cannot confirm registration in current state'
+            );
+        }
+
+        $this->status = $newStatus;
+    }
+
+    public function cancel(): void
+    {
+        $newStatus = RegistrationStatus::Cancelled;
+
+        if (!$this->status->canTransitionTo($newStatus)) {
+            throw InvalidStateTransitionException::fromTo(
+                $this->status->value,
+                $newStatus->value,
+                'Cannot cancel registration in current state'
+            );
+        }
+
+        $this->status = $newStatus;
+    }
+
+    public function markAttended(): void
+    {
+        $newStatus = RegistrationStatus::Attended;
+
+        if (!$this->status->canTransitionTo($newStatus)) {
+            throw InvalidStateTransitionException::fromTo(
+                $this->status->value,
+                $newStatus->value,
+                'Cannot mark as attended in current state'
+            );
+        }
+
+        $this->status = $newStatus;
+    }
+
+    public function getStatus(): RegistrationStatus
+    {
+        return $this->status;
+    }
+}
+```
+
+**Benefits:**
+- **Compile-time safety**: Invalid transitions are caught immediately
+- **Self-documenting**: The enum shows all possible states and transitions
+- **Easy to test**: Just test the transition logic in one place
+- **Prevents invalid data**: No way to bypass validation
+
 ---
 
 ## Quick reference
@@ -743,6 +1259,11 @@ $path = Module::path('src');
 | `module:make-migration {module} {name}` | Create migration |
 | `module:make-test {module} {name}` | Create test |
 | `module:make-filament-resource {module} {name}` | Create Filament resource |
+| `module:make-relation-manager {module} {name}` | Create Filament RelationManager |
+| `module:make-widget {module} {name}` | Create Filament Widget |
+| `module:make-enum {module} {name}` | Create enum |
+| `module:make-event {module} {name}` | Create domain event |
+| `module:make-listener {module} {name}` | Create event listener |
 | `module:make-vue-page {module} {name}` | Create Vue page |
 | `module:make-vue-component {module} {name}` | Create Vue component |
 

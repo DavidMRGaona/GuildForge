@@ -13,15 +13,14 @@ final readonly class EnsureLoginIsEnabled
 {
     public function __construct(
         private SettingsServiceInterface $settings,
-    ) {
-    }
+    ) {}
 
     /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$this->settings->isLoginEnabled()) {
+        if (! $this->settings->isLoginEnabled()) {
             return redirect('/');
         }
 

@@ -22,11 +22,11 @@ final class ModuleScaffoldingServiceTest extends TestCase
         parent::setUp();
 
         // Create temporary directory for test modules
-        $this->tempModulesPath = sys_get_temp_dir() . '/guildforge-test-modules-' . uniqid();
+        $this->tempModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.uniqid();
         mkdir($this->tempModulesPath, 0755, true);
 
         // Use real stubs path - stubs are in src/stubs/modules
-        $stubsPath = dirname(__DIR__, 5) . '/stubs/modules';
+        $stubsPath = dirname(__DIR__, 5).'/stubs/modules';
         $this->stubRenderer = new StubRenderer($stubsPath);
         $this->service = new ModuleScaffoldingService($this->stubRenderer, $this->tempModulesPath);
     }
@@ -47,9 +47,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertTrue($result->isSuccess());
         $this->assertStringContainsString("Module 'blog' created successfully", $result->message);
-        $this->assertDirectoryExists($this->tempModulesPath . '/blog');
-        $this->assertFileExists($this->tempModulesPath . '/blog/module.json');
-        $this->assertFileExists($this->tempModulesPath . '/blog/src/BlogServiceProvider.php');
+        $this->assertDirectoryExists($this->tempModulesPath.'/blog');
+        $this->assertFileExists($this->tempModulesPath.'/blog/module.json');
+        $this->assertFileExists($this->tempModulesPath.'/blog/src/BlogServiceProvider.php');
     }
 
     public function test_it_creates_module_with_correct_structure(): void
@@ -84,7 +84,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertTrue($result->isSuccess());
 
         // Check that service provider has correct namespace and class name
-        $serviceProviderContent = file_get_contents($this->tempModulesPath . '/inventory/src/InventoryServiceProvider.php');
+        $serviceProviderContent = file_get_contents($this->tempModulesPath.'/inventory/src/InventoryServiceProvider.php');
         $this->assertStringContainsString('namespace Modules\Inventory;', $serviceProviderContent);
         $this->assertStringContainsString('class InventoryServiceProvider', $serviceProviderContent);
     }
@@ -197,7 +197,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertArrayHasKey('src/Http/Controllers/BookController.php', $result->files);
 
         // Check file content has resource methods
-        $content = file_get_contents($this->tempModulesPath . '/library/src/Http/Controllers/BookController.php');
+        $content = file_get_contents($this->tempModulesPath.'/library/src/Http/Controllers/BookController.php');
         $this->assertStringContainsString('class BookController', $content);
     }
 
@@ -209,7 +209,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertTrue($result->isSuccess());
         $this->assertArrayHasKey('src/Http/Controllers/Api/UserController.php', $result->files);
-        $this->assertFileExists($this->tempModulesPath . '/gateway/src/Http/Controllers/Api/UserController.php');
+        $this->assertFileExists($this->tempModulesPath.'/gateway/src/Http/Controllers/Api/UserController.php');
     }
 
     public function test_it_creates_invokable_controller(): void
@@ -477,14 +477,14 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
     private function deleteDirectory(string $dir): void
     {
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             return;
         }
 
         $items = array_diff(scandir($dir), ['.', '..']);
 
         foreach ($items as $item) {
-            $path = $dir . '/' . $item;
+            $path = $dir.'/'.$item;
 
             if (is_dir($path)) {
                 $this->deleteDirectory($path);

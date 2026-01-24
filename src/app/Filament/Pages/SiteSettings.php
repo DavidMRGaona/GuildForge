@@ -146,7 +146,7 @@ final class SiteSettings extends Page implements HasForms
                                     ->disk('images')
                                     ->directory('branding')
                                     ->getUploadedFileNameForStorageUsing(
-                                        fn (TemporaryUploadedFile $file): string => 'logo-light-' . Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
+                                        fn (TemporaryUploadedFile $file): string => 'logo-light-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
                                     )
                                     ->maxSize(1024)
                                     ->nullable()
@@ -159,7 +159,7 @@ final class SiteSettings extends Page implements HasForms
                                     ->disk('images')
                                     ->directory('branding')
                                     ->getUploadedFileNameForStorageUsing(
-                                        fn (TemporaryUploadedFile $file): string => 'logo-dark-' . Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
+                                        fn (TemporaryUploadedFile $file): string => 'logo-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
                                     )
                                     ->maxSize(1024)
                                     ->nullable()

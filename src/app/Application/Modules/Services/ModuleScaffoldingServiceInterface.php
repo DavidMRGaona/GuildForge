@@ -21,7 +21,7 @@ interface ModuleScaffoldingServiceInterface
     /**
      * Create a new controller for a module.
      *
-     * @param string $type Controller type: 'default', 'resource', 'api', 'invokable'
+     * @param  string  $type  Controller type: 'default', 'resource', 'api', 'invokable'
      */
     public function createController(string $module, string $name, string $type = 'default'): ScaffoldResultDTO;
 
@@ -58,7 +58,7 @@ interface ModuleScaffoldingServiceInterface
     /**
      * Create a new test for a module.
      *
-     * @param string $type Test type: 'unit', 'feature'
+     * @param  string  $type  Test type: 'unit', 'feature'
      */
     public function createTest(string $module, string $name, string $type = 'unit'): ScaffoldResultDTO;
 
@@ -71,4 +71,29 @@ interface ModuleScaffoldingServiceInterface
      * Create a new Vue component for a module.
      */
     public function createVueComponent(string $module, string $name): ScaffoldResultDTO;
+
+    /**
+     * Create a new enum for a module.
+     */
+    public function createEnum(string $module, string $name): ScaffoldResultDTO;
+
+    /**
+     * Create a new domain event for a module.
+     */
+    public function createDomainEvent(string $module, string $name): ScaffoldResultDTO;
+
+    /**
+     * Create a new event listener for a module.
+     */
+    public function createListener(string $module, string $name, string $eventName): ScaffoldResultDTO;
+
+    /**
+     * Create a new Filament RelationManager for a module.
+     */
+    public function createRelationManager(string $module, string $name, ?string $resource = null): ScaffoldResultDTO;
+
+    /**
+     * Create a new Filament Widget for a module.
+     */
+    public function createWidget(string $module, string $name): ScaffoldResultDTO;
 }

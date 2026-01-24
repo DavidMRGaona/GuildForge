@@ -171,7 +171,7 @@ class TagResource extends Resource
             ->actions([
                 EditAction::make(),
                 DeleteAction::make()
-                    ->hidden(fn (TagModel $record): bool => !self::getTagQueryService()->canDelete($record->id)),
+                    ->hidden(fn (TagModel $record): bool => ! self::getTagQueryService()->canDelete($record->id)),
             ])
             ->paginated(false)
             ->defaultSort(null);
@@ -236,7 +236,7 @@ class TagResource extends Resource
             return $record->name;
         }
 
-        return str_repeat('-', $depth) . ' ' . $record->name;
+        return str_repeat('-', $depth).' '.$record->name;
     }
 
     /**

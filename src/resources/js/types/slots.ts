@@ -4,7 +4,9 @@ export type SlotPosition =
     | 'before-content'
     | 'after-content'
     | 'before-footer'
-    | 'after-footer';
+    | 'after-footer'
+    // Page-specific slots
+    | 'event-detail-actions';
 
 export interface SlotRegistration {
     slot: string;

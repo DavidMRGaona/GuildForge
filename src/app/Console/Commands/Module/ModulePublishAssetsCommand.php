@@ -65,8 +65,8 @@ final class ModulePublishAssetsCommand extends Command
             return self::FAILURE;
         }
 
-        $sourcePath = $module->path() . '/resources/assets';
-        $destinationPath = public_path('modules/' . $moduleName);
+        $sourcePath = $module->path().'/resources/assets';
+        $destinationPath = public_path('modules/'.$moduleName);
 
         if (! is_dir($sourcePath)) {
             $this->warn("No assets found for module '{$moduleName}'.");
@@ -91,14 +91,14 @@ final class ModulePublishAssetsCommand extends Command
         $published = 0;
 
         foreach ($modules->all() as $module) {
-            $sourcePath = $module->path() . '/resources/assets';
+            $sourcePath = $module->path().'/resources/assets';
 
             if (! is_dir($sourcePath)) {
                 continue;
             }
 
             $moduleName = $module->name()->value;
-            $destinationPath = public_path('modules/' . $moduleName);
+            $destinationPath = public_path('modules/'.$moduleName);
 
             if (is_dir($destinationPath)) {
                 File::deleteDirectory($destinationPath);

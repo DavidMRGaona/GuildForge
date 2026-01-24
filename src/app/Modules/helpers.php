@@ -7,8 +7,6 @@ use App\Application\Modules\Services\ModuleContextServiceInterface;
 if (! function_exists('module')) {
     /**
      * Get the module context service or set the current module.
-     *
-     * @return ModuleContextServiceInterface|string|null
      */
     function module(?string $name = null): ModuleContextServiceInterface|string|null
     {
@@ -55,7 +53,7 @@ if (! function_exists('module_trans')) {
     /**
      * Get a module translation.
      *
-     * @param array<string, mixed> $replace
+     * @param  array<string, mixed>  $replace
      */
     function module_trans(string $module, string $key, array $replace = []): string
     {
@@ -87,7 +85,7 @@ if (! function_exists('module_route')) {
     /**
      * Get a module route URL.
      *
-     * @param array<string, mixed> $parameters
+     * @param  array<string, mixed>  $parameters
      */
     function module_route(string $module, string $name, array $parameters = []): string
     {

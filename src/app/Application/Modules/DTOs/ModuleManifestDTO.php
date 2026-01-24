@@ -9,8 +9,8 @@ use InvalidArgumentException;
 final readonly class ModuleManifestDTO
 {
     /**
-     * @param array<string, string>|null $requires
-     * @param array<string>|null $dependencies
+     * @param  array<string, string>|null  $requires
+     * @param  array<string>|null  $dependencies
      */
     public function __construct(
         public string $name,
@@ -21,17 +21,16 @@ final readonly class ModuleManifestDTO
         public ?string $author = null,
         public ?array $requires = null,
         public ?array $dependencies = null,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {
         $required = ['name', 'version', 'namespace', 'provider'];
         foreach ($required as $field) {
-            if (!isset($data[$field]) || $data[$field] === '') {
+            if (! isset($data[$field]) || $data[$field] === '') {
                 throw new InvalidArgumentException("Missing required field: {$field}");
             }
         }

@@ -14,6 +14,23 @@ class EditEvent extends EditRecord
     protected static string $resource = EventResource::class;
 
     /**
+     * Display relation managers in tabs alongside the form content.
+     * This puts the form in a "Detalles" tab and each RelationManager in its own tab.
+     */
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Label for the main content tab when using combined tabs.
+     */
+    public function getContentTabLabel(): ?string
+    {
+        return __('Detalles');
+    }
+
+    /**
      * @return array<DeleteAction>
      */
     protected function getHeaderActions(): array

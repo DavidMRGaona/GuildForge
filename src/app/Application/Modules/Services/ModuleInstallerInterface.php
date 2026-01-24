@@ -39,8 +39,9 @@ interface ModuleInstallerInterface
     /**
      * Install a module from an uploaded ZIP file.
      *
-     * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
      * @return ModuleManifestDTO The installed module's manifest
+     *
+     * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
      */
     public function installFromZip(UploadedFile $file): ModuleManifestDTO;
 }

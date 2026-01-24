@@ -31,10 +31,11 @@ use Illuminate\Support\Carbon;
  */
 final class ArticleModel extends Model
 {
+    use DeletesCloudinaryImages;
+
     /** @use HasFactory<ArticleModelFactory> */
     use HasFactory;
     use HasUuids;
-    use DeletesCloudinaryImages;
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['featured_image_public_id'];

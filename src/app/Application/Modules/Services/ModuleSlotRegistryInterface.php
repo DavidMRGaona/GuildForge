@@ -16,7 +16,7 @@ interface ModuleSlotRegistryInterface
     /**
      * Register multiple slot components from a module.
      *
-     * @param array<SlotRegistrationDTO> $slots
+     * @param  array<SlotRegistrationDTO>  $slots
      */
     public function registerMany(array $slots): void;
 

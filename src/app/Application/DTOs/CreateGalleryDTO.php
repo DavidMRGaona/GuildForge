@@ -10,11 +10,10 @@ final readonly class CreateGalleryDTO
         public string $title,
         public ?string $description = null,
         public ?string $coverImagePublicId = null,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array{title: string, description?: string|null, cover_image_public_id?: string|null} $data
+     * @param  array{title: string, description?: string|null, cover_image_public_id?: string|null}  $data
      */
     public static function fromArray(array $data): self
     {

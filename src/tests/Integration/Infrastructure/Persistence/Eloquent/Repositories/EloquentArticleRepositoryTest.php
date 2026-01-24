@@ -24,7 +24,7 @@ final class EloquentArticleRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->repository = new EloquentArticleRepository();
+        $this->repository = new EloquentArticleRepository;
     }
 
     public function test_it_implements_article_repository_interface(): void

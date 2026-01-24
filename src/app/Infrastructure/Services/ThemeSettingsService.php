@@ -12,8 +12,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
 {
     public function __construct(
         private SettingsServiceInterface $settingsService,
-    ) {
-    }
+    ) {}
 
     public function getThemeSettings(): ThemeSettingsDTO
     {

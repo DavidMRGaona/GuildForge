@@ -14,13 +14,13 @@ interface EventQueryServiceInterface
     public function getUpcomingEvents(int $limit = 10): array;
 
     /**
-     * @param array<string>|null $tagSlugs
+     * @param  array<string>|null  $tagSlugs
      * @return array<int, EventResponseDTO>
      */
     public function getPublishedEventsPaginated(int $page = 1, int $perPage = 12, ?array $tagSlugs = null): array;
 
     /**
-     * @param array<string>|null $tagSlugs
+     * @param  array<string>|null  $tagSlugs
      */
     public function getPublishedEventsTotal(?array $tagSlugs = null): int;
 

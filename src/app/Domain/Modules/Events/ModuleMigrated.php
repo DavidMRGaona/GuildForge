@@ -10,6 +10,5 @@ final readonly class ModuleMigrated
         public string $moduleId,
         public string $moduleName,
         public int $migrationsRun,
-    ) {
-    }
+    ) {}
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\HasExtendableFormSections;
+use App\Filament\Concerns\HasExtendableRelations;
 use App\Filament\Resources\EventResource\Pages;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
@@ -30,6 +32,9 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class EventResource extends Resource
 {
+    use HasExtendableFormSections;
+    use HasExtendableRelations;
+
     protected static ?string $model = EventModel::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
@@ -103,9 +108,9 @@ class EventResource extends Resource
                     ->label(__('Imagen'))
                     ->image()
                     ->disk('images')
-                    ->directory(fn (): string => 'events/' . now()->format('Y/m'))
+                    ->directory(fn (): string => 'events/'.now()->format('Y/m'))
                     ->getUploadedFileNameForStorageUsing(
-                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
+                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
                     )
                     ->maxSize(2048)
                     ->nullable(),
@@ -149,6 +154,9 @@ class EventResource extends Resource
                 Toggle::make('is_published')
                     ->label(__('Publicado'))
                     ->default(false),
+
+                // Extended form sections from modules
+                ...static::getExtendedFormSections(),
             ]);
     }
 
@@ -169,8 +177,9 @@ class EventResource extends Resource
                     ->label(__('Fecha'))
                     ->formatStateUsing(function ($record) {
                         if ($record->end_date) {
-                            return $record->start_date->format('d/m/Y') . ' - ' . $record->end_date->format('d/m/Y');
+                            return $record->start_date->format('d/m/Y').' - '.$record->end_date->format('d/m/Y');
                         }
+
                         return $record->start_date->format('d/m/Y H:i');
                     })
                     ->sortable(),

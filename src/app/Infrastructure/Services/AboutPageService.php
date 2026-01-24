@@ -12,8 +12,7 @@ final readonly class AboutPageService implements AboutPageServiceInterface
 {
     public function __construct(
         private SettingsServiceInterface $settings,
-    ) {
-    }
+    ) {}
 
     public function getAboutPageData(): array
     {
@@ -37,14 +36,14 @@ final readonly class AboutPageService implements AboutPageServiceInterface
 
     public function parseActivities(mixed $json): array
     {
-        if (!is_string($json) || $json === '') {
+        if (! is_string($json) || $json === '') {
             return [];
         }
 
         try {
             $activities = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
-            if (!is_array($activities)) {
+            if (! is_array($activities)) {
                 return [];
             }
 
@@ -60,14 +59,14 @@ final readonly class AboutPageService implements AboutPageServiceInterface
 
     public function parseJoinSteps(mixed $json): array
     {
-        if (!is_string($json) || $json === '') {
+        if (! is_string($json) || $json === '') {
             return [];
         }
 
         try {
             $joinSteps = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
-            if (!is_array($joinSteps)) {
+            if (! is_array($joinSteps)) {
                 return [];
             }
 
@@ -90,7 +89,7 @@ final readonly class AboutPageService implements AboutPageServiceInterface
 
     public function formatSocialUrl(mixed $url): string
     {
-        if (!is_string($url) || $url === '') {
+        if (! is_string($url) || $url === '') {
             return '';
         }
 
@@ -99,6 +98,6 @@ final readonly class AboutPageService implements AboutPageServiceInterface
             return $url;
         }
 
-        return 'https://' . $url;
+        return 'https://'.$url;
     }
 }

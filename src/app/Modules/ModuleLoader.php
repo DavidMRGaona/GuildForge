@@ -18,8 +18,7 @@ final class ModuleLoader
     public function __construct(
         private readonly Application $app,
         private readonly ModuleRepositoryInterface $repository,
-    ) {
-    }
+    ) {}
 
     /**
      * Boot all enabled modules.
@@ -38,13 +37,13 @@ final class ModuleLoader
      */
     public function bootModule(Module $module): void
     {
-        $providerClass = $module->namespace() . '\\' . $module->provider();
+        $providerClass = $module->namespace().'\\'.$module->provider();
         $modulePath = $module->path();
 
         // Register autoloader for module namespace
-        $this->registerAutoloader($module->namespace(), $modulePath . '/src');
+        $this->registerAutoloader($module->namespace(), $modulePath.'/src');
 
-        if (!class_exists($providerClass)) {
+        if (! class_exists($providerClass)) {
             return;
         }
 
@@ -134,14 +133,14 @@ final class ModuleLoader
     private function registerAutoloader(string $namespace, string $path): void
     {
         spl_autoload_register(function (string $class) use ($namespace, $path): void {
-            $namespace = rtrim($namespace, '\\') . '\\';
+            $namespace = rtrim($namespace, '\\').'\\';
 
-            if (!str_starts_with($class, $namespace)) {
+            if (! str_starts_with($class, $namespace)) {
                 return;
             }
 
             $relativeClass = substr($class, strlen($namespace));
-            $file = $path . '/' . str_replace('\\', '/', $relativeClass) . '.php';
+            $file = $path.'/'.str_replace('\\', '/', $relativeClass).'.php';
 
             if (file_exists($file)) {
                 require_once $file;

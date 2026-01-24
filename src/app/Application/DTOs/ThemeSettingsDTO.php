@@ -28,12 +28,11 @@ final readonly class ThemeSettingsDTO
         public string $buttonStyle = 'solid',
         public bool $darkModeDefault = false,
         public bool $darkModeToggleVisible = true,
-    ) {
-    }
+    ) {}
 
     public static function defaults(): self
     {
-        return new self();
+        return new self;
     }
 
     public static function fromSettings(SettingsServiceInterface $settings): self

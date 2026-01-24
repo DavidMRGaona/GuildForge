@@ -21,8 +21,8 @@ use Tests\TestCase;
  */
 abstract class ModuleTestCase extends TestCase
 {
-    use RefreshDatabase;
     use InteractsWithModules;
+    use RefreshDatabase;
 
     /**
      * The module name being tested.

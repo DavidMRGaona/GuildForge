@@ -23,8 +23,7 @@ final class ModuleContextService implements ModuleContextServiceInterface
         private readonly ViewFactory $viewFactory,
         private readonly Translator $translator,
         private readonly UrlGenerator $urlGenerator,
-    ) {
-    }
+    ) {}
 
     public function current(): ?string
     {
@@ -95,7 +94,7 @@ final class ModuleContextService implements ModuleContextServiceInterface
 
     public function moduleConfig(string $moduleName, string $key, mixed $default = null): mixed
     {
-        $configKey = Str::snake(Str::studly($moduleName)) . '.' . $key;
+        $configKey = Str::snake(Str::studly($moduleName)).'.'.$key;
 
         return $this->config->get($configKey, $default);
     }
@@ -103,9 +102,9 @@ final class ModuleContextService implements ModuleContextServiceInterface
     public function modulePath(string $moduleName, string $path = ''): string
     {
         $modulesPath = $this->config->get('modules.path', base_path('modules'));
-        $basePath = $modulesPath . '/' . $moduleName;
+        $basePath = $modulesPath.'/'.$moduleName;
 
-        return $path !== '' ? $basePath . '/' . ltrim($path, '/') : $basePath;
+        return $path !== '' ? $basePath.'/'.ltrim($path, '/') : $basePath;
     }
 
     /**
@@ -113,7 +112,7 @@ final class ModuleContextService implements ModuleContextServiceInterface
      */
     private function moduleAsset(string $moduleName, string $path): string
     {
-        $assetPath = 'modules/' . $moduleName . '/' . ltrim($path, '/');
+        $assetPath = 'modules/'.$moduleName.'/'.ltrim($path, '/');
 
         return $this->urlGenerator->asset($assetPath);
     }
@@ -121,11 +120,11 @@ final class ModuleContextService implements ModuleContextServiceInterface
     /**
      * Get a route URL for a specific module.
      *
-     * @param array<string, mixed> $parameters
+     * @param  array<string, mixed>  $parameters
      */
     private function moduleRoute(string $moduleName, string $name, array $parameters = []): string
     {
-        $routeName = Str::snake(Str::studly($moduleName)) . '.' . $name;
+        $routeName = Str::snake(Str::studly($moduleName)).'.'.$name;
 
         return $this->urlGenerator->route($routeName, $parameters);
     }
@@ -133,12 +132,12 @@ final class ModuleContextService implements ModuleContextServiceInterface
     /**
      * Get a translation for a specific module.
      *
-     * @param array<string, mixed> $replace
+     * @param  array<string, mixed>  $replace
      */
     private function moduleTrans(string $moduleName, string $key, array $replace = []): string
     {
         $moduleKey = Str::snake(Str::studly($moduleName));
-        $transKey = $moduleKey . '::' . $key;
+        $transKey = $moduleKey.'::'.$key;
 
         return $this->translator->get($transKey, $replace);
     }
@@ -146,12 +145,12 @@ final class ModuleContextService implements ModuleContextServiceInterface
     /**
      * Get a view for a specific module.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     private function moduleView(string $moduleName, string $name, array $data = []): View
     {
         $moduleKey = Str::snake(Str::studly($moduleName));
-        $viewName = $moduleKey . '::' . $name;
+        $viewName = $moduleKey.'::'.$name;
 
         return $this->viewFactory->make($viewName, $data);
     }

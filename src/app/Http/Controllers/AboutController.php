@@ -12,8 +12,7 @@ final class AboutController extends Controller
 {
     public function __construct(
         private readonly AboutPageServiceInterface $aboutPage,
-    ) {
-    }
+    ) {}
 
     public function __invoke(): Response
     {

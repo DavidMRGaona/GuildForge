@@ -40,6 +40,7 @@ final class TagModel extends Model
 {
     /** @use HasFactory<TagModelFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $table = 'tags';
@@ -125,7 +126,7 @@ final class TagModel extends Model
     /**
      * Scope to get only root tags (without parent).
      *
-     * @param Builder<TagModel> $query
+     * @param  Builder<TagModel>  $query
      * @return Builder<TagModel>
      */
     public function scopeRoots(Builder $query): Builder
@@ -136,7 +137,7 @@ final class TagModel extends Model
     /**
      * Scope to filter tags by type (events, articles, galleries).
      *
-     * @param Builder<TagModel> $query
+     * @param  Builder<TagModel>  $query
      * @return Builder<TagModel>
      */
     public function scopeForType(Builder $query, string $type): Builder
@@ -147,7 +148,7 @@ final class TagModel extends Model
     /**
      * Scope to order tags by sort_order then name.
      *
-     * @param Builder<TagModel> $query
+     * @param  Builder<TagModel>  $query
      * @return Builder<TagModel>
      */
     public function scopeOrdered(Builder $query): Builder
@@ -195,6 +196,6 @@ final class TagModel extends Model
             return $this->name;
         }
 
-        return str_repeat('  ', $depth) . $this->name;
+        return str_repeat('  ', $depth).$this->name;
     }
 }

@@ -219,8 +219,27 @@
                             </x-slot>
 
                             <x-slot name="description">
-                                {{ __('modules.filament.confirm.uninstall_description', ['name' => $module->name()->value]) }}
+                                {{ __('modules.filament.confirm.uninstall_description', ['name' => $module->displayName() ?: $module->name()->value]) }}
                             </x-slot>
+
+                            {{-- Delete data checkbox --}}
+                            <div class="mt-4">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        wire:model="deleteDataOptions.{{ $module->name()->value }}"
+                                        class="fi-checkbox-input rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 mt-0.5"
+                                    />
+                                    <span class="text-sm">
+                                        <span class="font-medium text-gray-700 dark:text-gray-200">
+                                            {{ __('modules.filament.confirm.delete_data_label') }}
+                                        </span>
+                                        <span class="block text-gray-500 dark:text-gray-400 mt-1">
+                                            {{ __('modules.filament.confirm.delete_data_help') }}
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
 
                             <x-slot name="footerActions">
                                 <x-filament::button

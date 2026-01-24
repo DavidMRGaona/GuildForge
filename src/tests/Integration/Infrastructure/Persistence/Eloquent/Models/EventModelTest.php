@@ -48,7 +48,7 @@ final class EventModelTest extends TestCase
             'is_published',
         ];
 
-        $model = new EventModel();
+        $model = new EventModel;
 
         $this->assertEquals($fillable, $model->getFillable());
     }

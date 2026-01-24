@@ -1,0 +1,82 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Filament\Widgets;
+
+use Filament\Widgets\StatsOverviewWidget;
+use Filament\Widgets\StatsOverviewWidget\Stat;
+
+/**
+ * Dashboard widget for {{ nameStudly }}.
+ *
+ * To use this widget, register it in your ServiceProvider:
+ *
+ * Livewire::component(
+ *     'modules.{{ moduleName }}.filament.widgets.{{ nameKebab }}-widget',
+ *     {{ nameStudly }}Widget::class
+ * );
+ *
+ * The widget will be auto-discovered by Filament if placed in Filament/Widgets/.
+ */
+final class {{ nameStudly }}Widget extends StatsOverviewWidget
+{
+    protected static ?string $pollingInterval = null;
+
+    protected static ?int $sort = 10;
+
+    protected function getHeading(): ?string
+    {
+        return __('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.heading');
+    }
+
+    protected function getStats(): array
+    {
+        return [
+            Stat::make(
+                label: __('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.total'),
+                value: $this->getTotalCount(),
+            )
+                ->description(__('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.total_description'))
+                ->descriptionIcon('heroicon-m-arrow-trending-up')
+                ->color('success'),
+
+            Stat::make(
+                label: __('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.pending'),
+                value: $this->getPendingCount(),
+            )
+                ->description(__('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.pending_description'))
+                ->descriptionIcon('heroicon-m-clock')
+                ->color('warning'),
+
+            Stat::make(
+                label: __('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.active'),
+                value: $this->getActiveCount(),
+            )
+                ->description(__('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.active_description'))
+                ->descriptionIcon('heroicon-m-check-circle')
+                ->color('info'),
+        ];
+    }
+
+    private function getTotalCount(): int
+    {
+        // TODO: Replace with actual query
+        // return MyModel::count();
+        return 0;
+    }
+
+    private function getPendingCount(): int
+    {
+        // TODO: Replace with actual query
+        // return MyModel::where('state', 'pending')->count();
+        return 0;
+    }
+
+    private function getActiveCount(): int
+    {
+        // TODO: Replace with actual query
+        // return MyModel::where('state', 'active')->count();
+        return 0;
+    }
+}

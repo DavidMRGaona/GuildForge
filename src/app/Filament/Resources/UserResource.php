@@ -75,7 +75,7 @@ class UserResource extends Resource
                     ->label(__('Avatar'))
                     ->image()
                     ->disk('images')
-                    ->directory(fn (): string => 'avatars/' . now()->format('Y/m'))
+                    ->directory(fn (): string => 'avatars/'.now()->format('Y/m'))
                     ->saveUploadedFileUsing(static function (TemporaryUploadedFile $file): string {
                         $imageOptimizer = app(ImageOptimizationServiceInterface::class);
                         $avatarSettings = ImageOptimizationSettingsDTO::withOverrides([
@@ -96,9 +96,9 @@ class UserResource extends Resource
                             $avatarSettings
                         );
 
-                        $directory = 'avatars/' . now()->format('Y/m');
-                        $filename = Str::uuid()->toString() . '.' . $file->getClientOriginalExtension();
-                        $path = $directory . '/' . $filename;
+                        $directory = 'avatars/'.now()->format('Y/m');
+                        $filename = Str::uuid()->toString().'.'.$file->getClientOriginalExtension();
+                        $path = $directory.'/'.$filename;
 
                         Storage::disk('images')->put($path, $optimizedContents);
 

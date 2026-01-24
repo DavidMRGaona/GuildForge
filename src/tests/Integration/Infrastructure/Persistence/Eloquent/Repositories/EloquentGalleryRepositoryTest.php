@@ -22,7 +22,7 @@ final class EloquentGalleryRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->repository = new EloquentGalleryRepository();
+        $this->repository = new EloquentGalleryRepository;
     }
 
     public function test_it_implements_gallery_repository_interface(): void

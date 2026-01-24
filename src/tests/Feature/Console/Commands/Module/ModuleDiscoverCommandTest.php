@@ -45,9 +45,9 @@ final class ModuleDiscoverCommandTest extends TestCase
     public function test_it_discovers_modules_from_filesystem(): void
     {
         // Create test module directory with module.json
-        $modulePath = $this->modulesPath . '/test-discovery-module';
+        $modulePath = $this->modulesPath.'/test-discovery-module';
         File::makeDirectory($modulePath, 0755, true);
-        File::put($modulePath . '/module.json', json_encode([
+        File::put($modulePath.'/module.json', json_encode([
             'name' => 'test-discovery-module',
             'version' => '1.0.0',
             'description' => 'Test discovery module',
@@ -82,15 +82,15 @@ final class ModuleDiscoverCommandTest extends TestCase
         $modules = ['test-discovery-module', 'another-discovery-module'];
 
         foreach ($modules as $moduleName) {
-            $modulePath = $this->modulesPath . '/' . $moduleName;
+            $modulePath = $this->modulesPath.'/'.$moduleName;
             File::makeDirectory($modulePath, 0755, true);
-            File::put($modulePath . '/module.json', json_encode([
+            File::put($modulePath.'/module.json', json_encode([
                 'name' => $moduleName,
                 'version' => '1.0.0',
                 'description' => "Test {$moduleName}",
                 'author' => 'Test Author',
-                'namespace' => 'Modules\\' . str_replace('-', '', ucwords($moduleName, '-')),
-                'provider' => str_replace('-', '', ucwords($moduleName, '-')) . 'ServiceProvider',
+                'namespace' => 'Modules\\'.str_replace('-', '', ucwords($moduleName, '-')),
+                'provider' => str_replace('-', '', ucwords($moduleName, '-')).'ServiceProvider',
             ]));
         }
 

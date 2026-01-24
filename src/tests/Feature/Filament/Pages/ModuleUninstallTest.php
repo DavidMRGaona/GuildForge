@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Pages;
 
+use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
@@ -38,14 +39,12 @@ final class ModuleUninstallTest extends TestCase
 
     public function test_can_uninstall_disabled_module(): void
     {
-        Event::fake([ModuleUninstalled::class]);
-
         $user = UserModel::factory()->admin()->create();
 
         // Create module directory
-        $modulePath = $this->modulesPath . '/test-module';
+        $modulePath = $this->modulesPath.'/test-module';
         File::makeDirectory($modulePath, 0755, true);
-        File::put($modulePath . '/module.json', json_encode(['name' => 'test-module']));
+        File::put($modulePath.'/module.json', json_encode(['name' => 'test-module']));
 
         $module = ModuleModel::factory()->disabled()->create([
             'name' => 'test-module',
@@ -53,6 +52,12 @@ final class ModuleUninstallTest extends TestCase
         ]);
 
         $this->actingAs($user);
+
+        // Fake events and reset the singleton to pick up the fake dispatcher
+        Event::fake([ModuleUninstalled::class]);
+
+        // Force re-resolution of the service so it picks up the faked EventDispatcher
+        $this->app->forgetInstance(ModuleManagerServiceInterface::class);
 
         Livewire::test(ModulesPage::class)
             ->call('uninstallModule', 'test-module')
@@ -74,9 +79,9 @@ final class ModuleUninstallTest extends TestCase
         $user = UserModel::factory()->admin()->create();
 
         // Create base module directory
-        $baseModulePath = $this->modulesPath . '/base-module';
+        $baseModulePath = $this->modulesPath.'/base-module';
         File::makeDirectory($baseModulePath, 0755, true);
-        File::put($baseModulePath . '/module.json', json_encode(['name' => 'base-module']));
+        File::put($baseModulePath.'/module.json', json_encode(['name' => 'base-module']));
 
         ModuleModel::factory()->disabled()->create([
             'name' => 'base-module',
@@ -107,9 +112,9 @@ final class ModuleUninstallTest extends TestCase
     {
         $user = UserModel::factory()->admin()->create();
 
-        $modulePath = $this->modulesPath . '/removable-module';
+        $modulePath = $this->modulesPath.'/removable-module';
         File::makeDirectory($modulePath, 0755, true);
-        File::put($modulePath . '/module.json', json_encode(['name' => 'removable-module']));
+        File::put($modulePath.'/module.json', json_encode(['name' => 'removable-module']));
 
         $module = ModuleModel::factory()->disabled()->create([
             'name' => 'removable-module',
@@ -130,10 +135,10 @@ final class ModuleUninstallTest extends TestCase
     {
         $user = UserModel::factory()->admin()->create();
 
-        $modulePath = $this->modulesPath . '/file-module';
-        File::makeDirectory($modulePath . '/src', 0755, true);
-        File::put($modulePath . '/module.json', json_encode(['name' => 'file-module']));
-        File::put($modulePath . '/src/ServiceProvider.php', '<?php');
+        $modulePath = $this->modulesPath.'/file-module';
+        File::makeDirectory($modulePath.'/src', 0755, true);
+        File::put($modulePath.'/module.json', json_encode(['name' => 'file-module']));
+        File::put($modulePath.'/src/ServiceProvider.php', '<?php');
 
         ModuleModel::factory()->disabled()->create([
             'name' => 'file-module',
@@ -141,8 +146,8 @@ final class ModuleUninstallTest extends TestCase
         ]);
 
         $this->assertTrue(File::isDirectory($modulePath));
-        $this->assertTrue(File::exists($modulePath . '/module.json'));
-        $this->assertTrue(File::exists($modulePath . '/src/ServiceProvider.php'));
+        $this->assertTrue(File::exists($modulePath.'/module.json'));
+        $this->assertTrue(File::exists($modulePath.'/src/ServiceProvider.php'));
 
         $this->actingAs($user);
 
@@ -150,18 +155,16 @@ final class ModuleUninstallTest extends TestCase
             ->call('uninstallModule', 'file-module');
 
         $this->assertFalse(File::isDirectory($modulePath));
-        $this->assertFalse(File::exists($modulePath . '/module.json'));
+        $this->assertFalse(File::exists($modulePath.'/module.json'));
     }
 
     public function test_uninstall_dispatches_event(): void
     {
-        Event::fake([ModuleUninstalled::class]);
-
         $user = UserModel::factory()->admin()->create();
 
-        $modulePath = $this->modulesPath . '/event-module';
+        $modulePath = $this->modulesPath.'/event-module';
         File::makeDirectory($modulePath, 0755, true);
-        File::put($modulePath . '/module.json', json_encode(['name' => 'event-module']));
+        File::put($modulePath.'/module.json', json_encode(['name' => 'event-module']));
 
         ModuleModel::factory()->disabled()->create([
             'name' => 'event-module',
@@ -170,6 +173,10 @@ final class ModuleUninstallTest extends TestCase
         ]);
 
         $this->actingAs($user);
+
+        // Fake events and reset the singleton to pick up the fake dispatcher
+        Event::fake([ModuleUninstalled::class]);
+        $this->app->forgetInstance(ModuleManagerServiceInterface::class);
 
         Livewire::test(ModulesPage::class)
             ->call('uninstallModule', 'event-module');

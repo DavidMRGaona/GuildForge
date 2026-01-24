@@ -15,8 +15,7 @@ final readonly class ModuleVersion implements Stringable
         public int $major,
         public int $minor,
         public int $patch,
-    ) {
-    }
+    ) {}
 
     public static function fromString(string $version): self
     {

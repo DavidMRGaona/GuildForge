@@ -9,7 +9,7 @@ use DomainException;
 final class ModuleCannotUninstallException extends DomainException
 {
     /**
-     * @param array<string> $dependents
+     * @param  array<string>  $dependents
      */
     public static function hasDependents(string $module, array $dependents): self
     {

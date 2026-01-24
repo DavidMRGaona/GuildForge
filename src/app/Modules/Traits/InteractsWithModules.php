@@ -44,7 +44,7 @@ trait InteractsWithModules
     /**
      * Register multiple permissions from a module.
      *
-     * @param array<PermissionDTO> $permissions
+     * @param  array<PermissionDTO>  $permissions
      */
     protected function registerPermissions(array $permissions): void
     {
@@ -62,7 +62,7 @@ trait InteractsWithModules
     /**
      * Register multiple navigation items from a module.
      *
-     * @param array<NavigationItemDTO> $items
+     * @param  array<NavigationItemDTO>  $items
      */
     protected function registerNavigationItems(array $items): void
     {
@@ -102,7 +102,7 @@ trait InteractsWithModules
     /**
      * Get navigation items for a user based on their permissions.
      *
-     * @param array<string> $userPermissions
+     * @param  array<string>  $userPermissions
      * @return array<NavigationItemDTO>
      */
     protected function getNavigationForUser(array $userPermissions): array

@@ -14,7 +14,7 @@ use DateTimeImmutable;
 final class Module
 {
     /**
-     * @param array<string> $dependencies
+     * @param  array<string>  $dependencies
      */
     public function __construct(
         private readonly ModuleId $id,
@@ -26,14 +26,14 @@ final class Module
         private readonly ModuleRequirements $requirements,
         private ModuleStatus $status,
         private ?DateTimeImmutable $enabledAt = null,
+        private ?DateTimeImmutable $installedAt = null,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
         private readonly ?string $namespace = null,
         private readonly ?string $provider = null,
         private readonly ?string $path = null,
         private readonly array $dependencies = [],
-    ) {
-    }
+    ) {}
 
     public function id(): ModuleId
     {
@@ -80,6 +80,11 @@ final class Module
         return $this->enabledAt;
     }
 
+    public function installedAt(): ?DateTimeImmutable
+    {
+        return $this->installedAt;
+    }
+
     public function createdAt(): ?DateTimeImmutable
     {
         return $this->createdAt;
@@ -118,7 +123,7 @@ final class Module
     public function enable(): void
     {
         $this->status = ModuleStatus::Enabled;
-        $this->enabledAt = new DateTimeImmutable();
+        $this->enabledAt = new DateTimeImmutable;
     }
 
     public function disable(): void
@@ -137,9 +142,24 @@ final class Module
         return $this->status === ModuleStatus::Disabled;
     }
 
+    public function isInstalled(): bool
+    {
+        return $this->installedAt !== null;
+    }
+
+    public function markInstalled(): void
+    {
+        $this->installedAt = new DateTimeImmutable;
+    }
+
+    public function markUninstalled(): void
+    {
+        $this->installedAt = null;
+    }
+
     /**
-     * @param list<string> $availableModules
-     * @param list<string> $availableExtensions
+     * @param  list<string>  $availableModules
+     * @param  list<string>  $availableExtensions
      */
     public function requirementsSatisfied(
         string $phpVersion,
@@ -156,8 +176,8 @@ final class Module
     }
 
     /**
-     * @param list<string> $availableModules
-     * @param list<string> $availableExtensions
+     * @param  list<string>  $availableModules
+     * @param  list<string>  $availableExtensions
      * @return list<string>
      */
     public function getUnsatisfiedRequirements(
@@ -182,7 +202,7 @@ final class Module
     {
         $pascalCase = str_replace(' ', '', ucwords(str_replace('-', ' ', $this->name->value)));
 
-        return 'Modules\\' . $pascalCase;
+        return 'Modules\\'.$pascalCase;
     }
 
     /**
@@ -190,6 +210,6 @@ final class Module
      */
     private function generateDefaultPath(): string
     {
-        return base_path('modules/' . $this->name->value);
+        return base_path('modules/'.$this->name->value);
     }
 }

@@ -8,6 +8,5 @@ final readonly class UserLoggedOut
 {
     public function __construct(
         public string $userId,
-    ) {
-    }
+    ) {}
 }

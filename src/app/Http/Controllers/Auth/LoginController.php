@@ -17,8 +17,7 @@ final class LoginController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
-    ) {
-    }
+    ) {}
 
     public function create(): Response
     {
@@ -29,7 +28,7 @@ final class LoginController extends Controller
     {
         $credentials = $request->validated();
 
-        if (!$this->authService->attemptLogin(
+        if (! $this->authService->attemptLogin(
             $credentials['email'],
             $credentials['password'],
             $credentials['remember'] ?? false,

@@ -13,8 +13,7 @@ final readonly class GalleryQueryService implements GalleryQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {
-    }
+    ) {}
 
     public function getFeaturedGallery(int $photoLimit = 12): ?GalleryDetailResponseDTO
     {

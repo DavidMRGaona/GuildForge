@@ -9,6 +9,5 @@ final readonly class ModuleUninstalled
     public function __construct(
         public string $moduleName,
         public string $moduleVersion,
-    ) {
-    }
+    ) {}
 }
