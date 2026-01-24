@@ -103,11 +103,14 @@ final class EventModelFactory extends Factory
 
     /**
      * Indicate that the event is multi-day.
+     *
+     * Uses afterMaking to ensure end_date is calculated from the actual
+     * start_date after all states have been applied (e.g., past()->multiDay()).
      */
     public function multiDay(): static
     {
-        return $this->state(fn (array $attributes): array => [
-            'end_date' => (clone $attributes['start_date'])->modify('+2 days'),
-        ]);
+        return $this->afterMaking(function (EventModel $event): void {
+            $event->end_date = (clone $event->start_date)->modify('+2 days');
+        });
     }
 }
