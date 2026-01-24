@@ -19,9 +19,9 @@ abstract class ModuleServiceProvider extends ServiceProvider
      */
     protected function modulePath(string $path = ''): string
     {
-        $basePath = config('modules.path') . '/' . $this->moduleName();
+        $basePath = config('modules.path').'/'.$this->moduleName();
 
-        return $path !== '' ? $basePath . '/' . ltrim($path, '/') : $basePath;
+        return $path !== '' ? $basePath.'/'.ltrim($path, '/') : $basePath;
     }
 
     public function register(): void
@@ -29,7 +29,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
         $configPath = $this->modulePath('config/module.php');
 
         if (file_exists($configPath)) {
-            $this->mergeConfigFrom($configPath, 'modules.' . $this->moduleName());
+            $this->mergeConfigFrom($configPath, 'modules.'.$this->moduleName());
         }
 
         // Load module settings into Laravel config

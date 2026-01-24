@@ -22,8 +22,7 @@ final class ProfileController extends Controller
     public function __construct(
         private readonly AuthServiceInterface $authService,
         private readonly ResponseDTOFactoryInterface $dtoFactory,
-    ) {
-    }
+    ) {}
 
     public function show(Request $request): Response
     {
@@ -79,7 +78,7 @@ final class ProfileController extends Controller
             $request->validated('password'),
         );
 
-        if (!$result) {
+        if (! $result) {
             return back()->with('error', __('auth.password_incorrect'));
         }
 

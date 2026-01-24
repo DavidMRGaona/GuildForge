@@ -111,7 +111,7 @@ final class ImageOptimizationServiceTest extends TestCase
 
     public function test_format_conversion_to_webp(): void
     {
-        if (!function_exists('imagewebp')) {
+        if (! function_exists('imagewebp')) {
             $this->markTestSkipped('WebP support not available');
         }
 
@@ -290,10 +290,10 @@ final class ImageOptimizationServiceTest extends TestCase
         // Minimal animated GIF with 2 frames (hand-crafted binary)
         // This is a 2x2 pixel animated GIF with 2 frames
         return base64_decode(
-            'R0lGODlhAgACAIAAAP///wAAACH5BAkKAAAAIf8LTkVUU0NBUEUyLjADAQAAACwA' .
-            'AAAAAgACAAACAoRRADs=R0lGODlhAgACAIAAAAAAAP///yH5BAkKAAIALAAAAAAC' .
+            'R0lGODlhAgACAIAAAP///wAAACH5BAkKAAAAIf8LTkVUU0NBUEUyLjADAQAAACwA'.
+            'AAAAAgACAAACAoRRADs=R0lGODlhAgACAIAAAAAAAP///yH5BAkKAAIALAAAAAAC'.
             'AAIAAAIDRAJRADs='
-        ) . "\x00\x21\xF9\x04\x00\x00\x00\x00\x00" . "\x00\x21\xF9\x04\x00\x00\x00\x00\x00";
+        )."\x00\x21\xF9\x04\x00\x00\x00\x00\x00"."\x00\x21\xF9\x04\x00\x00\x00\x00\x00";
     }
 
     /**

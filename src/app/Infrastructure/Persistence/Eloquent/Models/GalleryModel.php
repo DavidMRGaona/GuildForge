@@ -30,6 +30,7 @@ final class GalleryModel extends Model
 {
     /** @use HasFactory<GalleryModelFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $table = 'galleries';
@@ -63,7 +64,7 @@ final class GalleryModel extends Model
     {
         // Delete photos manually before gallery deletion to trigger their Cloudinary cleanup
         // (DB cascade won't fire Eloquent events)
-        static::deleting(function (GalleryModel $gallery): void {
+        self::deleting(function (GalleryModel $gallery): void {
             $gallery->photos()->each(fn (PhotoModel $photo) => $photo->delete());
         });
     }

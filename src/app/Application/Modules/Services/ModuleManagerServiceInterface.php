@@ -56,18 +56,20 @@ interface ModuleManagerServiceInterface
     /**
      * Rollback migrations for a module.
      *
-     * @param int $steps Number of migrations to rollback
+     * @param  int  $steps  Number of migrations to rollback
      * @return int The number of migrations rolled back
      */
     public function rollback(ModuleName $name, int $steps = 1): int;
 
     /**
-     * Uninstall a module (revert migrations, delete files, remove from DB).
+     * Uninstall a module (delete files, remove from DB).
+     *
+     * @param  bool  $deleteData  If true, revert migrations to delete module tables
      *
      * @throws \App\Domain\Modules\Exceptions\ModuleNotFoundException
      * @throws \App\Domain\Modules\Exceptions\ModuleCannotUninstallException
      */
-    public function uninstall(ModuleName $name): void;
+    public function uninstall(ModuleName $name, bool $deleteData = false): void;
 
     /**
      * Get settings for a module.
@@ -79,7 +81,7 @@ interface ModuleManagerServiceInterface
     /**
      * Update settings for a module.
      *
-     * @param array<string, mixed> $settings
+     * @param  array<string, mixed>  $settings
      */
     public function updateSettings(ModuleName $name, array $settings): void;
 

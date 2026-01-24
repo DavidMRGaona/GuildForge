@@ -67,7 +67,7 @@ trait HasModuleContext
     /**
      * Get a route URL for this module.
      *
-     * @param array<string, mixed> $parameters
+     * @param  array<string, mixed>  $parameters
      */
     protected function moduleRoute(string $name, array $parameters = []): string
     {
@@ -77,7 +77,7 @@ trait HasModuleContext
     /**
      * Get a translation for this module.
      *
-     * @param array<string, mixed> $replace
+     * @param  array<string, mixed>  $replace
      */
     protected function moduleTrans(string $key, array $replace = []): string
     {
@@ -87,7 +87,7 @@ trait HasModuleContext
     /**
      * Get a view for this module.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     protected function moduleView(string $name, array $data = []): View
     {

@@ -61,9 +61,9 @@ class HeroSlideResource extends Resource
                     ->label(__('Imagen'))
                     ->image()
                     ->disk('images')
-                    ->directory(fn (): string => 'hero-slides/' . now()->format('Y/m'))
+                    ->directory(fn (): string => 'hero-slides/'.now()->format('Y/m'))
                     ->getUploadedFileNameForStorageUsing(
-                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
+                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
                     )
                     ->maxSize(2048)
                     ->nullable()

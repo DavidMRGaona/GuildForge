@@ -180,6 +180,38 @@ export default {
         all: 'Todos',
         filter: 'Filtrar por etiqueta',
     },
+    eventRegistrations: {
+        register: 'Inscribirse',
+        cancelRegistration: 'Cancelar inscripción',
+        confirmCancel: '¿Estás seguro de que quieres cancelar tu inscripción? Esta acción no se puede deshacer.',
+        registrationClosed: 'Inscripciones cerradas',
+        eventFull: 'Evento completo',
+        joinWaitingList: 'Unirse a lista de espera',
+        yourPosition: 'Tu posición: {position}',
+        yourStatus: 'Tu inscripción',
+        myRegistrations: 'Mis inscripciones',
+        states: {
+            pending: 'Pendiente',
+            confirmed: 'Confirmado',
+            waitingList: 'Lista de espera',
+            cancelled: 'Cancelado',
+            rejected: 'Rechazado',
+        },
+        stats: {
+            confirmed: 'Confirmados',
+        },
+        fields: {
+            position: 'Posición',
+            confirmedAt: 'Confirmado el',
+            createdAt: 'Inscrito el',
+            notes: 'Notas',
+        },
+        errors: {
+            registrationClosed: 'Las inscripciones están cerradas',
+            cannotCancel: 'No se puede cancelar la inscripción',
+            notFound: 'No se encontraron inscripciones',
+        },
+    },
     auth: {
         backToHome: 'Volver al inicio',
         register: {

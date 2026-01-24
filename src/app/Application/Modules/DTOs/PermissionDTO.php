@@ -7,7 +7,7 @@ namespace App\Application\Modules\DTOs;
 final readonly class PermissionDTO
 {
     /**
-     * @param array<string> $roles Roles that have this permission by default
+     * @param  array<string>  $roles  Roles that have this permission by default
      */
     public function __construct(
         public string $name,
@@ -16,11 +16,10 @@ final readonly class PermissionDTO
         public ?string $description = null,
         public ?string $module = null,
         public array $roles = [],
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {

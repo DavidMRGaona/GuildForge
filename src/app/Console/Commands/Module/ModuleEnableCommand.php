@@ -18,7 +18,9 @@ final class ModuleEnableCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'module:enable {module : The name of the module to enable}';
+    protected $signature = 'module:enable
+        {module : The name of the module to enable}
+        {--migrate : Run migrations after enabling the module}';
 
     /**
      * The console command description.
@@ -55,6 +57,18 @@ final class ModuleEnableCommand extends Command
 
             $this->moduleManager->enable($name);
             $this->info("Module \"{$moduleName}\" has been enabled.");
+
+            // Run migrations if --migrate flag is passed
+            if ($this->option('migrate')) {
+                $this->info("Running migrations for \"{$moduleName}\"...");
+                $count = $this->moduleManager->migrate($name);
+
+                if ($count > 0) {
+                    $this->info("Ran {$count} migration(s).");
+                } else {
+                    $this->info('No pending migrations.');
+                }
+            }
 
             return self::SUCCESS;
         } catch (ModuleNotFoundException) {

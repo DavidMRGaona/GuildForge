@@ -19,7 +19,7 @@ interface TagQueryServiceInterface
     /**
      * Get all tags in hierarchical order as a flat collection.
      *
-     * @param string|null $type Filter by type (events, articles, galleries)
+     * @param  string|null  $type  Filter by type (events, articles, galleries)
      * @return array<TagHierarchyDTO>
      */
     public function getAllInHierarchicalOrder(?string $type = null): array;
@@ -27,7 +27,7 @@ interface TagQueryServiceInterface
     /**
      * Get tags formatted for select dropdowns.
      *
-     * @param string|null $type Filter by type (events, articles, galleries)
+     * @param  string|null  $type  Filter by type (events, articles, galleries)
      * @return array<string, string> [id => indented name]
      */
     public function getOptionsForSelect(?string $type = null): array;

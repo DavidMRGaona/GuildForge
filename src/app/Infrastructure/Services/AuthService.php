@@ -33,8 +33,7 @@ final readonly class AuthService implements AuthServiceInterface
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
         private ImageOptimizationServiceInterface $imageOptimizer,
-    ) {
-    }
+    ) {}
 
     public function register(CreateUserDTO $dto): UserResponseDTO
     {
@@ -126,7 +125,7 @@ final readonly class AuthService implements AuthServiceInterface
     {
         $user = UserModel::findOrFail($userId);
 
-        if (!hash_equals(sha1($user->getEmailForVerification()), $hash)) {
+        if (! hash_equals(sha1($user->getEmailForVerification()), $hash)) {
             return false;
         }
 
@@ -176,7 +175,7 @@ final readonly class AuthService implements AuthServiceInterface
     {
         $user = UserModel::findOrFail($userId);
 
-        if (!Hash::check($currentPassword, $user->password)) {
+        if (! Hash::check($currentPassword, $user->password)) {
             return false;
         }
 
@@ -197,7 +196,7 @@ final readonly class AuthService implements AuthServiceInterface
             return false;
         }
 
-        if (!hash_equals(sha1($user->pending_email), $hash)) {
+        if (! hash_equals(sha1($user->pending_email), $hash)) {
             return false;
         }
 
@@ -224,9 +223,9 @@ final readonly class AuthService implements AuthServiceInterface
             $avatarSettings
         );
 
-        $path = 'users/' . $userId;
-        $filename = Str::uuid()->toString() . '.jpg';
-        $fullPath = $path . '/' . $filename;
+        $path = 'users/'.$userId;
+        $filename = Str::uuid()->toString().'.jpg';
+        $fullPath = $path.'/'.$filename;
 
         $stored = Storage::disk('images')->put($fullPath, $optimizedContents);
 

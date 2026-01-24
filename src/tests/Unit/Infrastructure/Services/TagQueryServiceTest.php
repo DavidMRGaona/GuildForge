@@ -19,7 +19,7 @@ final class TagQueryServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new TagQueryService();
+        $this->service = new TagQueryService;
     }
 
     public function test_get_all_in_hierarchical_order_returns_empty_array_when_no_tags(): void

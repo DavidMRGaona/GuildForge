@@ -41,7 +41,7 @@ final class CalendarEventResource extends JsonResource
             'imagePublicId' => $this->resource->imagePublicId,
             'memberPrice' => $this->resource->memberPrice,
             'nonMemberPrice' => $this->resource->nonMemberPrice,
-            'url' => '/eventos/' . $this->resource->slug,
+            'url' => '/eventos/'.$this->resource->slug,
             'backgroundColor' => self::AMBER_500,
             'tags' => $tags,
         ];

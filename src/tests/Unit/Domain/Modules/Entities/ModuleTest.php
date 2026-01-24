@@ -75,7 +75,7 @@ final class ModuleTest extends TestCase
     {
         $module = $this->createModule(
             status: ModuleStatus::Enabled,
-            enabledAt: new DateTimeImmutable()
+            enabledAt: new DateTimeImmutable
         );
 
         $module->disable();
@@ -110,6 +110,40 @@ final class ModuleTest extends TestCase
         $module = $this->createModule(status: ModuleStatus::Enabled);
 
         $this->assertFalse($module->isDisabled());
+    }
+
+    public function test_is_installed_returns_true_when_installed_at_is_set(): void
+    {
+        $module = $this->createModule(installedAt: new DateTimeImmutable);
+
+        $this->assertTrue($module->isInstalled());
+    }
+
+    public function test_is_installed_returns_false_when_installed_at_is_null(): void
+    {
+        $module = $this->createModule(installedAt: null);
+
+        $this->assertFalse($module->isInstalled());
+    }
+
+    public function test_mark_installed_sets_installed_at(): void
+    {
+        $module = $this->createModule(installedAt: null);
+
+        $module->markInstalled();
+
+        $this->assertTrue($module->isInstalled());
+        $this->assertInstanceOf(DateTimeImmutable::class, $module->installedAt());
+    }
+
+    public function test_mark_uninstalled_clears_installed_at(): void
+    {
+        $module = $this->createModule(installedAt: new DateTimeImmutable);
+
+        $module->markUninstalled();
+
+        $this->assertFalse($module->isInstalled());
+        $this->assertNull($module->installedAt());
     }
 
     public function test_requirements_satisfied_returns_true_when_all_met(): void
@@ -212,6 +246,7 @@ final class ModuleTest extends TestCase
         ?ModuleRequirements $requirements = null,
         ModuleStatus $status = ModuleStatus::Disabled,
         ?DateTimeImmutable $enabledAt = null,
+        ?DateTimeImmutable $installedAt = null,
     ): Module {
         return new Module(
             id: $id ?? ModuleId::generate(),
@@ -228,6 +263,7 @@ final class ModuleTest extends TestCase
             ),
             status: $status,
             enabledAt: $enabledAt,
+            installedAt: $installedAt,
         );
     }
 }

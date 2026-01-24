@@ -9,7 +9,7 @@ use DateTimeImmutable;
 final readonly class EventResponseDTO
 {
     /**
-     * @param array<TagResponseDTO> $tags
+     * @param  array<TagResponseDTO>  $tags
      */
     public function __construct(
         public string $id,
@@ -26,6 +26,5 @@ final readonly class EventResponseDTO
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
         public array $tags = [],
-    ) {
-    }
+    ) {}
 }

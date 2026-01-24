@@ -33,7 +33,7 @@ final class SettingsSeeder extends Seeder
         ];
 
         $settings = [
-            'location_name' => env('APP_NAME', 'GuildForge') . ' HQ',
+            'location_name' => env('APP_NAME', 'GuildForge').' HQ',
             'location_address' => 'Your address here',
             'location_lat' => '40.4168',
             'location_lng' => '-3.7038',

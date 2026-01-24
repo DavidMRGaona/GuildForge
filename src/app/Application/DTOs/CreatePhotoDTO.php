@@ -11,11 +11,10 @@ final readonly class CreatePhotoDTO
         public string $imagePublicId,
         public ?string $caption = null,
         public int $sortOrder = 0,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array{gallery_id: string, image_public_id: string, caption?: string|null, sort_order?: int} $data
+     * @param  array{gallery_id: string, image_public_id: string, caption?: string|null, sort_order?: int}  $data
      */
     public static function fromArray(array $data): self
     {

@@ -15,8 +15,7 @@ final class VerifyPendingEmailNotification extends Notification
 
     public function __construct(
         private readonly string $pendingEmail,
-    ) {
-    }
+    ) {}
 
     /**
      * Get the notification's delivery channels.
@@ -36,7 +35,7 @@ final class VerifyPendingEmailNotification extends Notification
         /** @var \App\Infrastructure\Persistence\Eloquent\Models\UserModel $notifiable */
         $verificationUrl = $this->verificationUrl($notifiable);
 
-        return (new MailMessage())
+        return (new MailMessage)
             ->subject(__('auth.verify_email_change_subject'))
             ->line(__('auth.verify_email_change_line1'))
             ->action(__('auth.verify_email_change_action'), $verificationUrl)

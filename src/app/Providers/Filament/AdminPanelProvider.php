@@ -7,18 +7,22 @@ namespace App\Providers\Filament;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Modules\ModuleServiceProvider;
-use Filament\Http\Middleware\{Authenticate,
-    AuthenticateSession,
-    DisableBladeIconComponents,
-    DispatchServingFilamentEvent
-};
+use Filament\Http\Middleware\Authenticate;
+use Filament\Http\Middleware\AuthenticateSession;
+use Filament\Http\Middleware\DisableBladeIconComponents;
+use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
-use Filament\{Pages, Panel, PanelProvider, Widgets};
+use Filament\Pages;
+use Filament\Panel;
+use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Illuminate\Cookie\Middleware\{AddQueuedCookiesToResponse, EncryptCookies};
+use Filament\Widgets;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Throwable;
@@ -46,9 +50,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName(config('app.name') . ' Admin')
-            ->brandLogo(fn(): ?string => $this->getBrandLogo('site_logo_light'))
-            ->darkModeBrandLogo(fn(): ?string => $this->getBrandLogo('site_logo_dark'))
+            ->brandName(config('app.name').' Admin')
+            ->brandLogo(fn (): ?string => $this->getBrandLogo('site_logo_light'))
+            ->darkModeBrandLogo(fn (): ?string => $this->getBrandLogo('site_logo_dark'))
             ->brandLogoHeight('2.5rem')
             ->colors([
                 'primary' => Color::Amber,
@@ -89,7 +93,7 @@ class AdminPanelProvider extends PanelProvider
     {
         try {
             $settingsService = app(SettingsServiceInterface::class);
-            $logoPath = (string)$settingsService->get($key, '');
+            $logoPath = (string) $settingsService->get($key, '');
 
             if ($logoPath === '') {
                 return null;
@@ -158,72 +162,89 @@ class AdminPanelProvider extends PanelProvider
      */
     private function collectModuleNavigationGroups(): array
     {
-        $groups = [];
-        $modulesPath = config('modules.path', base_path('modules'));
+        try {
+            $groups = [];
+            $modulesPath = config('modules.path', base_path('modules'));
 
-        if (!is_dir($modulesPath)) {
-            return $groups;
-        }
-
-        // Get list of enabled module names
-        $enabledModules = $this->getEnabledModuleNames();
-
-        // Scan module directories for service providers
-        $moduleDirectories = glob($modulesPath . '/*', GLOB_ONLYDIR);
-        if ($moduleDirectories === false) {
-            return $groups;
-        }
-
-        foreach ($moduleDirectories as $modulePath) {
-            $moduleName = basename($modulePath);
-
-            // Skip disabled modules
-            if (!in_array($moduleName, $enabledModules, true)) {
-                continue;
+            if (! is_dir($modulesPath)) {
+                return $groups;
             }
 
-            $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
+            // Get list of enabled module names
+            $enabledModules = $this->getEnabledModuleNames();
 
-            // Find the service provider file
-            $providerFile = $modulePath . '/src/' . $studlyName . 'ServiceProvider.php';
-            if (!file_exists($providerFile)) {
-                continue;
+            // If no modules enabled, skip the rest
+            if ($enabledModules === []) {
+                return $groups;
             }
 
-            // Register autoloader and load the provider
-            $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath . '/src');
-
-            $providerClass = "Modules\\{$studlyName}\\{$studlyName}ServiceProvider";
-
-            // Load the provider file
-            require_once $providerFile;
-
-            if (!class_exists($providerClass)) {
-                continue;
+            // Scan module directories for service providers
+            $moduleDirectories = glob($modulesPath.'/*', GLOB_ONLYDIR);
+            if ($moduleDirectories === false) {
+                return $groups;
             }
 
-            try {
-                // Load module translations first
-                $langPath = $modulePath . '/lang';
-                if (is_dir($langPath)) {
-                    app('translator')->addNamespace($moduleName, $langPath);
+            foreach ($moduleDirectories as $modulePath) {
+                $moduleName = basename($modulePath);
+
+                // Skip disabled modules
+                if (! in_array($moduleName, $enabledModules, true)) {
+                    continue;
                 }
 
-                /** @var ModuleServiceProvider $provider */
-                $provider = new $providerClass(app());
-                $moduleGroups = $provider->registerNavigationGroups();
+                try {
+                    $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
 
-                foreach ($moduleGroups as $label => $options) {
-                    if (!isset($groups[$label])) {
-                        $groups[$label] = $options;
+                    // Find the service provider file
+                    $providerFile = $modulePath.'/src/'.$studlyName.'ServiceProvider.php';
+                    if (! file_exists($providerFile)) {
+                        continue;
                     }
-                }
-            } catch (Throwable) {
-                // Skip modules that fail to instantiate
-            }
-        }
 
-        return $groups;
+                    // Register autoloader and load the provider
+                    $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath.'/src');
+
+                    $providerClass = "Modules\\{$studlyName}\\{$studlyName}ServiceProvider";
+
+                    // Load the provider file
+                    require_once $providerFile;
+
+                    if (! class_exists($providerClass)) {
+                        continue;
+                    }
+
+                    // Load module translations first
+                    $langPath = $modulePath.'/lang';
+                    if (is_dir($langPath)) {
+                        app('translator')->addNamespace($moduleName, $langPath);
+                    }
+
+                    /** @var ModuleServiceProvider $provider */
+                    $provider = new $providerClass(app());
+                    $moduleGroups = $provider->registerNavigationGroups();
+
+                    foreach ($moduleGroups as $label => $options) {
+                        if (! isset($groups[$label])) {
+                            $groups[$label] = $options;
+                        }
+                    }
+                } catch (Throwable $e) {
+                    // Log the error but continue with other modules
+                    logger()->warning("[AdminPanelProvider] Failed to load navigation groups for module: {$moduleName}", [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return $groups;
+        } catch (Throwable $e) {
+            // If anything fails, return empty groups and let core groups handle navigation
+            logger()->error('[AdminPanelProvider] Failed to collect module navigation groups', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
     }
 
     /**
@@ -239,9 +260,12 @@ class AdminPanelProvider extends PanelProvider
         }
 
         try {
-            if (!app()->bound(ModuleRepositoryInterface::class)) {
-                logger()->debug('[AdminPanelProvider] ModuleRepositoryInterface not bound yet');
+            // Check if database is available
+            if (! $this->isDatabaseAvailable()) {
+                return $this->enabledModuleNamesCache = [];
+            }
 
+            if (! app()->bound(ModuleRepositoryInterface::class)) {
                 return $this->enabledModuleNamesCache = [];
             }
 
@@ -249,17 +273,27 @@ class AdminPanelProvider extends PanelProvider
             $enabledModules = $repository->enabled()->all();
 
             $names = array_map(
-                fn($module) => $module->name()->value,
+                static fn ($module) => $module->name()->value,
                 $enabledModules
             );
 
-            logger()->debug('[AdminPanelProvider] Enabled modules detected', ['modules' => $names]);
-
             return $this->enabledModuleNamesCache = $names;
-        } catch (Throwable $e) {
-            logger()->debug('[AdminPanelProvider] Failed to get enabled modules', ['error' => $e->getMessage()]);
-
+        } catch (Throwable) {
             return $this->enabledModuleNamesCache = [];
+        }
+    }
+
+    /**
+     * Check if the database connection is available.
+     */
+    private function isDatabaseAvailable(): bool
+    {
+        try {
+            DB::connection()->getPdo();
+
+            return true;
+        } catch (Throwable) {
+            return false;
         }
     }
 
@@ -276,15 +310,15 @@ class AdminPanelProvider extends PanelProvider
         $this->registeredAutoloaders[$namespace] = true;
 
         // Pre-calculate namespace prefix (done once at registration, not per class load)
-        $prefix = rtrim($namespace, '\\') . '\\';
+        $prefix = rtrim($namespace, '\\').'\\';
         $prefixLength = strlen($prefix);
 
         spl_autoload_register(static function (string $class) use ($prefix, $prefixLength, $path): void {
-            if (!str_starts_with($class, $prefix)) {
+            if (! str_starts_with($class, $prefix)) {
                 return;
             }
 
-            $file = $path . '/' . str_replace('\\', '/', substr($class, $prefixLength)) . '.php';
+            $file = $path.'/'.str_replace('\\', '/', substr($class, $prefixLength)).'.php';
 
             if (file_exists($file)) {
                 require_once $file;
@@ -297,63 +331,82 @@ class AdminPanelProvider extends PanelProvider
      */
     private function discoverModuleResources(Panel $panel): void
     {
-        $modulesPath = config('modules.path', base_path('modules'));
+        try {
+            $modulesPath = config('modules.path', base_path('modules'));
 
-        if (!is_dir($modulesPath)) {
-            return;
-        }
-
-        // Get list of enabled module names
-        $enabledModules = $this->getEnabledModuleNames();
-
-        $resources = [];
-
-        $resourcesPaths = glob($modulesPath . '/*/src/Filament/Resources');
-        if ($resourcesPaths === false) {
-            return;
-        }
-
-        foreach ($resourcesPaths as $resourcesPath) {
-            if (!is_dir($resourcesPath)) {
-                continue;
+            if (! is_dir($modulesPath)) {
+                return;
             }
 
-            // Extract module name from path: modules/{module-name}/src/Filament/Resources
-            $modulePath = dirname($resourcesPath, 3);
-            $moduleName = basename($modulePath);
+            // Get list of enabled module names
+            $enabledModules = $this->getEnabledModuleNames();
 
-            // Skip disabled modules
-            if (!in_array($moduleName, $enabledModules, true)) {
-                continue;
+            // If no modules enabled, skip resource discovery
+            if ($enabledModules === []) {
+                return;
             }
 
-            $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
-            $namespace = "Modules\\{$studlyName}\\Filament\\Resources";
+            $resources = [];
 
-            // Register SPL autoloader for this module
-            $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath . '/src');
-
-            // Find all resource files
-            $resourceFiles = glob($resourcesPath . '/*Resource.php');
-            if ($resourceFiles === false) {
-                continue;
+            $resourcesPaths = glob($modulesPath.'/*/src/Filament/Resources');
+            if ($resourcesPaths === false) {
+                return;
             }
 
-            foreach ($resourceFiles as $file) {
-                $className = basename($file, '.php');
-                $resourceClass = $namespace . '\\' . $className;
+            foreach ($resourcesPaths as $resourcesPath) {
+                if (! is_dir($resourcesPath)) {
+                    continue;
+                }
 
-                // Load the class file
-                require_once $file;
+                // Extract module name from path: modules/{module-name}/src/Filament/Resources
+                $modulePath = dirname($resourcesPath, 3);
+                $moduleName = basename($modulePath);
 
-                if (class_exists($resourceClass)) {
-                    $resources[] = $resourceClass;
+                // Skip disabled modules
+                if (! in_array($moduleName, $enabledModules, true)) {
+                    continue;
+                }
+
+                try {
+                    $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
+                    $namespace = "Modules\\{$studlyName}\\Filament\\Resources";
+
+                    // Register SPL autoloader for this module
+                    $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath.'/src');
+
+                    // Find all resource files
+                    $resourceFiles = glob($resourcesPath.'/*Resource.php');
+                    if ($resourceFiles === false) {
+                        continue;
+                    }
+
+                    foreach ($resourceFiles as $file) {
+                        $className = basename($file, '.php');
+                        $resourceClass = $namespace.'\\'.$className;
+
+                        // Load the class file
+                        require_once $file;
+
+                        if (class_exists($resourceClass)) {
+                            $resources[] = $resourceClass;
+                        }
+                    }
+                } catch (Throwable $e) {
+                    // Log the error but continue with other modules
+                    logger()->warning("[AdminPanelProvider] Failed to discover resources for module: {$moduleName}", [
+                        'error' => $e->getMessage(),
+                    ]);
                 }
             }
-        }
 
-        if ($resources !== []) {
-            $panel->resources($resources);
+            if ($resources !== []) {
+                $panel->resources($resources);
+            }
+        } catch (Throwable $e) {
+            // If resource discovery fails completely, log and continue without module resources
+            logger()->error('[AdminPanelProvider] Failed to discover module resources', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

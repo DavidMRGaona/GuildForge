@@ -7,7 +7,7 @@ namespace App\Application\DTOs\Response;
 final readonly class TagHierarchyDTO
 {
     /**
-     * @param array<string> $appliesTo
+     * @param  array<string>  $appliesTo
      */
     public function __construct(
         public string $id,
@@ -24,8 +24,7 @@ final readonly class TagHierarchyDTO
         public string $indentedNameForSelect,
         public string $hierarchySortKey,
         public ?string $description = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Create from TagResponseDTO with computed hierarchical data.
@@ -60,7 +59,7 @@ final readonly class TagHierarchyDTO
             return $name;
         }
 
-        return str_repeat('-', $depth) . ' ' . $name;
+        return str_repeat('-', $depth).' '.$name;
     }
 
     private static function computeIndentedNameForSelect(string $name, int $depth): string
@@ -69,7 +68,7 @@ final readonly class TagHierarchyDTO
             return $name;
         }
 
-        return str_repeat('  ', $depth) . $name;
+        return str_repeat('  ', $depth).$name;
     }
 
     private static function computeHierarchySortKey(int $sortOrder, int $depth): string

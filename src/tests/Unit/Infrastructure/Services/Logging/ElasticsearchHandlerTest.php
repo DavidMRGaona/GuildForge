@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Services\Logging;
 
+use App\Application\Services\LogContextProviderInterface;
 use App\Infrastructure\Services\Logging\ElasticsearchHandler;
 use DateTimeImmutable;
 use Monolog\Level;
 use Monolog\LogRecord;
+use PHPUnit\Framework\MockObject\MockObject;
 use Tests\TestCase;
 
 final class ElasticsearchHandlerTest extends TestCase
@@ -80,7 +82,7 @@ final class ElasticsearchHandlerTest extends TestCase
         );
 
         $record = new LogRecord(
-            datetime: new DateTimeImmutable(),
+            datetime: new DateTimeImmutable,
             channel: 'test',
             level: Level::Error,
             message: 'Test error message',
@@ -107,14 +109,14 @@ final class ElasticsearchHandlerTest extends TestCase
         );
 
         $errorRecord = new LogRecord(
-            datetime: new DateTimeImmutable(),
+            datetime: new DateTimeImmutable,
             channel: 'test',
             level: Level::Error,
             message: 'Error message',
         );
 
         $debugRecord = new LogRecord(
-            datetime: new DateTimeImmutable(),
+            datetime: new DateTimeImmutable,
             channel: 'test',
             level: Level::Debug,
             message: 'Debug message',
@@ -125,5 +127,46 @@ final class ElasticsearchHandlerTest extends TestCase
 
         // Debug is lower than Warning, should not be handled
         $this->assertFalse($handler->isHandling($debugRecord));
+    }
+
+    public function test_handler_constructs_with_context_provider(): void
+    {
+        /** @var LogContextProviderInterface&MockObject $contextProvider */
+        $contextProvider = $this->createMock(LogContextProviderInterface::class);
+        $contextProvider->method('getRequestId')->willReturn('test-request-id-123');
+
+        $handler = new ElasticsearchHandler(
+            host: 'localhost',
+            port: 9200,
+            user: null,
+            password: null,
+            index: 'test-logs',
+            contextProvider: $contextProvider,
+        );
+
+        $this->assertInstanceOf(ElasticsearchHandler::class, $handler);
+    }
+
+    public function test_handler_works_without_context_provider(): void
+    {
+        $handler = new ElasticsearchHandler(
+            host: 'non-existent-host',
+            port: 9999,
+            user: null,
+            password: null,
+            index: 'test-logs',
+            contextProvider: null,
+        );
+
+        $record = new LogRecord(
+            datetime: new DateTimeImmutable,
+            channel: 'test',
+            level: Level::Error,
+            message: 'Test error message',
+        );
+
+        // Should not throw even without context provider
+        $handler->handle($record);
+        $this->assertTrue(true);
     }
 }

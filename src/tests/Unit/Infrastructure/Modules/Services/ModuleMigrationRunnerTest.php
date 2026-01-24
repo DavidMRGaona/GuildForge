@@ -17,13 +17,14 @@ use PHPUnit\Framework\TestCase;
 final class ModuleMigrationRunnerTest extends TestCase
 {
     private ModuleMigrationRunner $runner;
+
     private string $testModulesPath;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir() . '/guildforge_test_modules_migrations_' . uniqid();
+        $this->testModulesPath = sys_get_temp_dir().'/guildforge_test_modules_migrations_'.uniqid();
         $this->runner = new ModuleMigrationRunner($this->testModulesPath);
     }
 
@@ -38,13 +39,13 @@ final class ModuleMigrationRunnerTest extends TestCase
     {
         // Arrange
         $module = $this->createModule('test-module', '1.0.0');
-        $moduleDir = $this->testModulesPath . '/test-module';
-        $migrationsDir = $moduleDir . '/database/migrations';
+        $moduleDir = $this->testModulesPath.'/test-module';
+        $migrationsDir = $moduleDir.'/database/migrations';
 
         mkdir($migrationsDir, 0755, true);
 
         // Create a sample migration file
-        $migrationFile = $migrationsDir . '/2024_01_01_000000_create_test_table.php';
+        $migrationFile = $migrationsDir.'/2024_01_01_000000_create_test_table.php';
         file_put_contents($migrationFile, '<?php // Migration');
 
         // Act
@@ -59,22 +60,22 @@ final class ModuleMigrationRunnerTest extends TestCase
     {
         // Arrange
         $module = $this->createModule('multi-migration-module', '1.0.0');
-        $moduleDir = $this->testModulesPath . '/multi-migration-module';
-        $migrationsDir = $moduleDir . '/database/migrations';
+        $moduleDir = $this->testModulesPath.'/multi-migration-module';
+        $migrationsDir = $moduleDir.'/database/migrations';
 
         mkdir($migrationsDir, 0755, true);
 
         // Create multiple migration files
         file_put_contents(
-            $migrationsDir . '/2024_01_01_000000_create_users_table.php',
+            $migrationsDir.'/2024_01_01_000000_create_users_table.php',
             '<?php // Migration 1'
         );
         file_put_contents(
-            $migrationsDir . '/2024_01_02_000000_create_posts_table.php',
+            $migrationsDir.'/2024_01_02_000000_create_posts_table.php',
             '<?php // Migration 2'
         );
         file_put_contents(
-            $migrationsDir . '/2024_01_03_000000_create_comments_table.php',
+            $migrationsDir.'/2024_01_03_000000_create_comments_table.php',
             '<?php // Migration 3'
         );
 
@@ -89,7 +90,7 @@ final class ModuleMigrationRunnerTest extends TestCase
     {
         // Arrange
         $module = $this->createModule('no-migrations-module', '1.0.0');
-        $moduleDir = $this->testModulesPath . '/no-migrations-module';
+        $moduleDir = $this->testModulesPath.'/no-migrations-module';
 
         mkdir($moduleDir, 0755, true);
         // Don't create migrations directory
@@ -134,26 +135,27 @@ final class ModuleMigrationRunnerTest extends TestCase
             enabledAt: null,
             createdAt: null,
             updatedAt: null,
-            namespace: 'Modules\\' . str_replace(' ', '', ucwords(str_replace('-', ' ', $name))),
+            namespace: 'Modules\\'.str_replace(' ', '', ucwords(str_replace('-', ' ', $name))),
             provider: 'ModuleServiceProvider',
-            path: $this->testModulesPath . '/' . $name,
+            path: $this->testModulesPath.'/'.$name,
         );
     }
 
     private function removeDirectory(string $path): void
     {
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return;
         }
 
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             unlink($path);
+
             return;
         }
 
         $items = array_diff(scandir($path) ?: [], ['.', '..']);
         foreach ($items as $item) {
-            $itemPath = $path . '/' . $item;
+            $itemPath = $path.'/'.$item;
             if (is_dir($itemPath)) {
                 $this->removeDirectory($itemPath);
             } else {

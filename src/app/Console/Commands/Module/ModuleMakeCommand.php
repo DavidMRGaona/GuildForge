@@ -85,7 +85,7 @@ final class ModuleMakeCommand extends Command
         $this->newLine();
         $this->line('Next steps:');
         $this->line('  1. Run <fg=cyan>php artisan module:discover</> to register the module');
-        $this->line('  2. Run <fg=cyan>php artisan module:enable ' . $this->argument('name') . '</> to enable it');
+        $this->line('  2. Run <fg=cyan>php artisan module:enable '.$this->argument('name').'</> to enable it');
 
         return self::SUCCESS;
     }

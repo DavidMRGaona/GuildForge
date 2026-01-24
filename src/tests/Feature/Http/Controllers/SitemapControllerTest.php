@@ -31,11 +31,11 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertSee('<loc>' . url('/') . '</loc>', false);
-        $response->assertSee('<loc>' . url('/nosotros') . '</loc>', false);
-        $response->assertSee('<loc>' . url('/eventos') . '</loc>', false);
-        $response->assertSee('<loc>' . url('/articulos') . '</loc>', false);
-        $response->assertSee('<loc>' . url('/galeria') . '</loc>', false);
+        $response->assertSee('<loc>'.url('/').'</loc>', false);
+        $response->assertSee('<loc>'.url('/nosotros').'</loc>', false);
+        $response->assertSee('<loc>'.url('/eventos').'</loc>', false);
+        $response->assertSee('<loc>'.url('/articulos').'</loc>', false);
+        $response->assertSee('<loc>'.url('/galeria').'</loc>', false);
     }
 
     public function test_sitemap_includes_published_events(): void
@@ -53,8 +53,8 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertSee('<loc>' . url('/eventos/warhammer-tournament') . '</loc>', false);
-        $response->assertSee('<loc>' . url('/eventos/dnd-session') . '</loc>', false);
+        $response->assertSee('<loc>'.url('/eventos/warhammer-tournament').'</loc>', false);
+        $response->assertSee('<loc>'.url('/eventos/dnd-session').'</loc>', false);
     }
 
     public function test_sitemap_excludes_unpublished_events(): void
@@ -69,7 +69,7 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertDontSee('<loc>' . url('/eventos/draft-event') . '</loc>', false);
+        $response->assertDontSee('<loc>'.url('/eventos/draft-event').'</loc>', false);
     }
 
     public function test_sitemap_includes_published_articles(): void
@@ -87,8 +87,8 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertSee('<loc>' . url('/articulos/painting-guide') . '</loc>', false);
-        $response->assertSee('<loc>' . url('/articulos/game-review') . '</loc>', false);
+        $response->assertSee('<loc>'.url('/articulos/painting-guide').'</loc>', false);
+        $response->assertSee('<loc>'.url('/articulos/game-review').'</loc>', false);
     }
 
     public function test_sitemap_excludes_unpublished_articles(): void
@@ -103,7 +103,7 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertDontSee('<loc>' . url('/articulos/draft-article') . '</loc>', false);
+        $response->assertDontSee('<loc>'.url('/articulos/draft-article').'</loc>', false);
     }
 
     public function test_sitemap_includes_published_galleries(): void
@@ -121,8 +121,8 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertSee('<loc>' . url('/galeria/tournament-2024') . '</loc>', false);
-        $response->assertSee('<loc>' . url('/galeria/painted-miniatures') . '</loc>', false);
+        $response->assertSee('<loc>'.url('/galeria/tournament-2024').'</loc>', false);
+        $response->assertSee('<loc>'.url('/galeria/painted-miniatures').'</loc>', false);
     }
 
     public function test_sitemap_excludes_unpublished_galleries(): void
@@ -137,7 +137,7 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertDontSee('<loc>' . url('/galeria/draft-gallery') . '</loc>', false);
+        $response->assertDontSee('<loc>'.url('/galeria/draft-gallery').'</loc>', false);
     }
 
     public function test_sitemap_has_valid_xml_structure(): void
@@ -170,9 +170,9 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertSee('<lastmod>' . $event->updated_at->toAtomString() . '</lastmod>', false);
-        $response->assertSee('<lastmod>' . $article->updated_at->toAtomString() . '</lastmod>', false);
-        $response->assertSee('<lastmod>' . $gallery->updated_at->toAtomString() . '</lastmod>', false);
+        $response->assertSee('<lastmod>'.$event->updated_at->toAtomString().'</lastmod>', false);
+        $response->assertSee('<lastmod>'.$article->updated_at->toAtomString().'</lastmod>', false);
+        $response->assertSee('<lastmod>'.$gallery->updated_at->toAtomString().'</lastmod>', false);
     }
 
     public function test_sitemap_includes_changefreq_and_priority(): void

@@ -12,8 +12,7 @@ class TagPolicy
 {
     public function __construct(
         private readonly TagQueryServiceInterface $tagQueryService,
-    ) {
-    }
+    ) {}
 
     public function viewAny(UserModel $user): bool
     {
@@ -37,7 +36,7 @@ class TagPolicy
 
     public function delete(UserModel $user, TagModel $tag): bool
     {
-        if (!$this->tagQueryService->canDelete($tag->id)) {
+        if (! $this->tagQueryService->canDelete($tag->id)) {
             return false;
         }
 
@@ -51,7 +50,7 @@ class TagPolicy
 
     public function forceDelete(UserModel $user, TagModel $tag): bool
     {
-        if (!$this->tagQueryService->canDelete($tag->id)) {
+        if (! $this->tagQueryService->canDelete($tag->id)) {
             return false;
         }
 

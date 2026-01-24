@@ -10,11 +10,10 @@ final readonly class CreateUserDTO
         public string $name,
         public string $email,
         public string $password,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array{name: string, email: string, password: string} $data
+     * @param  array{name: string, email: string, password: string}  $data
      */
     public static function fromArray(array $data): self
     {

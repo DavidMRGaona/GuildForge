@@ -21,7 +21,7 @@ final class ModuleDependencyException extends DomainException
     }
 
     /**
-     * @param array<string> $dependents
+     * @param  array<string>  $dependents
      */
     public static function dependentModulesExist(string $module, array $dependents): self
     {

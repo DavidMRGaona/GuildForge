@@ -25,8 +25,8 @@ final class ModuleMigrateCommandTest extends TestCase
     protected function tearDown(): void
     {
         // Clean up test module
-        if (File::exists($this->modulesPath . '/test-module')) {
-            File::deleteDirectory($this->modulesPath . '/test-module');
+        if (File::exists($this->modulesPath.'/test-module')) {
+            File::deleteDirectory($this->modulesPath.'/test-module');
         }
 
         parent::tearDown();
@@ -36,16 +36,16 @@ final class ModuleMigrateCommandTest extends TestCase
     {
         $module = ModuleModel::factory()->enabled()->create([
             'name' => 'test-module',
-            'path' => $this->modulesPath . '/test-module',
+            'path' => $this->modulesPath.'/test-module',
         ]);
 
         // Create module directory with migrations folder
-        $modulePath = $this->modulesPath . '/test-module';
-        $migrationsPath = $modulePath . '/database/migrations';
+        $modulePath = $this->modulesPath.'/test-module';
+        $migrationsPath = $modulePath.'/database/migrations';
         File::makeDirectory($migrationsPath, 0755, true);
 
         // Create a simple test migration file
-        $migrationFile = $migrationsPath . '/2024_01_01_000000_create_test_table.php';
+        $migrationFile = $migrationsPath.'/2024_01_01_000000_create_test_table.php';
         File::put(
             $migrationFile,
             <<<'PHP'

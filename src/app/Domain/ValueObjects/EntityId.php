@@ -38,7 +38,7 @@ abstract readonly class EntityId implements Stringable
 
     private function validate(string $value): void
     {
-        if (!Uuid::isValid($value)) {
+        if (! Uuid::isValid($value)) {
             throw new InvalidArgumentException("Invalid UUID: {$value}");
         }
     }

@@ -9,8 +9,8 @@ use DateTimeImmutable;
 final readonly class GalleryDetailResponseDTO
 {
     /**
-     * @param array<int, PhotoResponseDTO> $photos
-     * @param array<TagResponseDTO> $tags
+     * @param  array<int, PhotoResponseDTO>  $photos
+     * @param  array<TagResponseDTO>  $tags
      */
     public function __construct(
         public string $id,
@@ -23,6 +23,5 @@ final readonly class GalleryDetailResponseDTO
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
         public array $tags = [],
-    ) {
-    }
+    ) {}
 }

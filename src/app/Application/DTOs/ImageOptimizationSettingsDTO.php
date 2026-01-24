@@ -16,15 +16,14 @@ final readonly class ImageOptimizationSettingsDTO
         public ?string $format = null,
         public bool $skipAnimatedGif = true,
         public int $minSizeBytes = 51200, // 50KB
-    ) {
-    }
+    ) {}
 
     /**
      * Create an instance with default values.
      */
     public static function defaults(): self
     {
-        return new self();
+        return new self;
     }
 
     /**
@@ -48,7 +47,7 @@ final readonly class ImageOptimizationSettingsDTO
     /**
      * Create an instance with custom values, falling back to config defaults.
      *
-     * @param array{maxWidth?: int, maxHeight?: int, quality?: int, format?: string|null, skipAnimatedGif?: bool, minSizeBytes?: int} $overrides
+     * @param  array{maxWidth?: int, maxHeight?: int, quality?: int, format?: string|null, skipAnimatedGif?: bool, minSizeBytes?: int}  $overrides
      */
     public static function withOverrides(array $overrides): self
     {

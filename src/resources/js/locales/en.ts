@@ -179,6 +179,38 @@ export default {
         all: 'All',
         filter: 'Filter by tag',
     },
+    eventRegistrations: {
+        register: 'Register',
+        cancelRegistration: 'Cancel registration',
+        confirmCancel: 'Are you sure you want to cancel your registration? This action cannot be undone.',
+        registrationClosed: 'Registration closed',
+        eventFull: 'Event full',
+        joinWaitingList: 'Join waiting list',
+        yourPosition: 'Your position: {position}',
+        yourStatus: 'Your registration',
+        myRegistrations: 'My registrations',
+        states: {
+            pending: 'Pending',
+            confirmed: 'Confirmed',
+            waitingList: 'Waiting list',
+            cancelled: 'Cancelled',
+            rejected: 'Rejected',
+        },
+        stats: {
+            confirmed: 'Confirmed',
+        },
+        fields: {
+            position: 'Position',
+            confirmedAt: 'Confirmed on',
+            createdAt: 'Registered on',
+            notes: 'Notes',
+        },
+        errors: {
+            registrationClosed: 'Registration is closed',
+            cannotCancel: 'Cannot cancel registration',
+            notFound: 'No registrations found',
+        },
+    },
     auth: {
         backToHome: 'Back to home',
         register: {

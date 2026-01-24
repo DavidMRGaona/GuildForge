@@ -64,7 +64,7 @@ final readonly class SitemapQueryService implements SitemapQueryServiceInterface
             ->where('is_published', true)
             ->get()
             ->map(fn (EventModel $event) => new SitemapEntryDTO(
-                loc: url('/eventos/' . $event->slug),
+                loc: url('/eventos/'.$event->slug),
                 lastmod: $event->updated_at?->toAtomString(),
                 priority: '0.7',
                 changefreq: 'weekly',
@@ -78,7 +78,7 @@ final readonly class SitemapQueryService implements SitemapQueryServiceInterface
             ->where('is_published', true)
             ->get()
             ->map(fn (ArticleModel $article) => new SitemapEntryDTO(
-                loc: url('/articulos/' . $article->slug),
+                loc: url('/articulos/'.$article->slug),
                 lastmod: $article->updated_at?->toAtomString(),
                 priority: '0.7',
                 changefreq: 'monthly',
@@ -92,7 +92,7 @@ final readonly class SitemapQueryService implements SitemapQueryServiceInterface
             ->where('is_published', true)
             ->get()
             ->map(fn (GalleryModel $gallery) => new SitemapEntryDTO(
-                loc: url('/galeria/' . $gallery->slug),
+                loc: url('/galeria/'.$gallery->slug),
                 lastmod: $gallery->updated_at?->toAtomString(),
                 priority: '0.6',
                 changefreq: 'monthly',

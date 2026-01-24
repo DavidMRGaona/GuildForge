@@ -23,8 +23,7 @@ final class Article
         private ?DateTimeImmutable $publishedAt = null,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
-    ) {
-    }
+    ) {}
 
     public function id(): ArticleId
     {
@@ -88,7 +87,7 @@ final class Article
         }
 
         $this->isPublished = true;
-        $this->publishedAt = new DateTimeImmutable();
+        $this->publishedAt = new DateTimeImmutable;
     }
 
     public function unpublish(): void

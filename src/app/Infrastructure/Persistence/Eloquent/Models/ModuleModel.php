@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property array<string>|null $dependencies
  * @property Carbon|null $discovered_at
  * @property Carbon|null $enabled_at
+ * @property Carbon|null $installed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -32,6 +33,7 @@ final class ModuleModel extends Model
 {
     /** @use HasFactory<ModuleModelFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $table = 'modules';
@@ -51,6 +53,7 @@ final class ModuleModel extends Model
         'dependencies',
         'discovered_at',
         'enabled_at',
+        'installed_at',
     ];
 
     /**
@@ -63,6 +66,7 @@ final class ModuleModel extends Model
             'dependencies' => 'array',
             'discovered_at' => 'datetime',
             'enabled_at' => 'datetime',
+            'installed_at' => 'datetime',
         ];
     }
 

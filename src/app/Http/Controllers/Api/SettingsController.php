@@ -12,8 +12,7 @@ final class SettingsController extends Controller
 {
     public function __construct(
         private readonly SettingsServiceInterface $settingsService,
-    ) {
-    }
+    ) {}
 
     public function location(): JsonResponse
     {

@@ -135,12 +135,17 @@ return [
             'cannot_enable' => 'No se puede habilitar el módulo: :error',
             'cannot_disable' => 'No se puede deshabilitar el módulo: :error',
             'cannot_uninstall' => 'No se puede desinstalar el módulo: :error',
+            'migrations_run' => 'Se ejecutaron :count migración(es).',
+            'migrations_run_first_install' => 'Las migraciones se han ejecutado.',
+            'data_deleted' => 'Los datos del módulo han sido eliminados.',
         ],
         'confirm' => [
             'uninstall_title' => '¿Desinstalar módulo?',
             'uninstall_description' => 'Esta acción eliminará permanentemente el módulo :name y todos sus archivos. Esta acción no se puede deshacer.',
             'uninstall_confirm' => 'Sí, desinstalar',
             'uninstall_cancel' => 'Cancelar',
+            'delete_data_label' => 'Eliminar también los datos del módulo',
+            'delete_data_help' => 'Si marcas esta opción, se eliminarán las tablas y datos creados por el módulo. Si no lo marcas, los datos se conservarán por si decides reinstalarlo en el futuro.',
         ],
         'empty' => [
             'title' => 'No hay módulos',

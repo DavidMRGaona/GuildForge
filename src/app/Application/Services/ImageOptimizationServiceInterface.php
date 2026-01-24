@@ -20,9 +20,9 @@ interface ImageOptimizationServiceInterface
      * Returns the optimized image contents, or the original contents
      * if optimization is disabled, not applicable, or fails.
      *
-     * @param string $contents The raw image file contents
-     * @param string|null $mimeType The MIME type (auto-detected if null)
-     * @param ImageOptimizationSettingsDTO|null $settings Custom settings (uses config defaults if null)
+     * @param  string  $contents  The raw image file contents
+     * @param  string|null  $mimeType  The MIME type (auto-detected if null)
+     * @param  ImageOptimizationSettingsDTO|null  $settings  Custom settings (uses config defaults if null)
      * @return string The optimized (or original) image contents
      */
     public function optimize(string $contents, ?string $mimeType = null, ?ImageOptimizationSettingsDTO $settings = null): string;
@@ -35,7 +35,7 @@ interface ImageOptimizationServiceInterface
     /**
      * Check if a MIME type is eligible for optimization.
      *
-     * @param string|null $mimeType The MIME type to check
+     * @param  string|null  $mimeType  The MIME type to check
      * @return bool True if the MIME type can be optimized
      */
     public function isOptimizableMimeType(?string $mimeType): bool;

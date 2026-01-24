@@ -48,6 +48,11 @@ final class ModulesPage extends Page implements HasForms
      */
     public ?array $zipFile = null;
 
+    /**
+     * @var array<string, bool> Track delete data checkbox state per module
+     */
+    public array $deleteDataOptions = [];
+
     public function mount(): void
     {
         // Show notification from module enable/disable action
@@ -207,15 +212,26 @@ final class ModulesPage extends Page implements HasForms
     public function enableModule(string $name, ModuleManagerServiceInterface $moduleManager): void
     {
         try {
-            // Get display name before enabling
-            $module = $moduleManager->find(new ModuleName($name));
+            // Get display name and installation status before enabling
+            $moduleName = new ModuleName($name);
+            $module = $moduleManager->find($moduleName);
             $displayName = $module?->displayName() ?? $name;
+            $wasInstalled = $module?->isInstalled() ?? false;
 
-            $moduleManager->enable(new ModuleName($name));
+            // Enable will run migrations only if not already installed
+            $moduleManager->enable($moduleName);
+
+            // Build notification message
+            $message = __('modules.filament.notifications.enabled', ['name' => $displayName]);
+
+            // Only mention migrations if this was a fresh install
+            if (! $wasInstalled) {
+                $message .= ' '.__('modules.filament.notifications.migrations_run_first_install');
+            }
 
             // Store success notification in session for display after redirect
             session()->flash('module_action_notification', [
-                'title' => __('modules.filament.notifications.enabled', ['name' => $displayName]),
+                'title' => $message,
                 'status' => 'success',
             ]);
 
@@ -257,12 +273,28 @@ final class ModulesPage extends Page implements HasForms
     public function uninstallModule(string $name, ModuleManagerServiceInterface $moduleManager): void
     {
         try {
-            $moduleManager->uninstall(new ModuleName($name));
+            // Get the deleteData option for this module (defaults to false)
+            $deleteData = $this->deleteDataOptions[$name] ?? false;
+
+            // Get display name before uninstalling
+            $module = $moduleManager->find(new ModuleName($name));
+            $displayName = $module?->displayName() ?? $name;
+
+            $moduleManager->uninstall(new ModuleName($name), $deleteData);
+
+            // Build notification message
+            $message = __('modules.filament.notifications.uninstalled', ['name' => $displayName]);
+            if ($deleteData) {
+                $message .= ' '.__('modules.filament.notifications.data_deleted');
+            }
 
             Notification::make()
-                ->title(__('modules.filament.notifications.uninstalled', ['name' => $name]))
+                ->title($message)
                 ->success()
                 ->send();
+
+            // Clear the option after uninstall
+            unset($this->deleteDataOptions[$name]);
         } catch (ModuleNotFoundException|ModuleCannotUninstallException $e) {
             Notification::make()
                 ->title(__('modules.filament.notifications.cannot_uninstall', ['error' => $e->getMessage()]))

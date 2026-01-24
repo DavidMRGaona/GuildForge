@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Console\Commands\Module\ModuleDisableCommand;
 use App\Console\Commands\Module\ModuleDiscoverCommand;
 use App\Console\Commands\Module\ModuleEnableCommand;
@@ -21,7 +22,6 @@ use App\Console\Commands\Module\ModuleMakeVueComponentCommand;
 use App\Console\Commands\Module\ModuleMakeVuePageCommand;
 use App\Console\Commands\Module\ModuleMigrateCommand;
 use App\Console\Commands\Module\ModulePublishAssetsCommand;
-use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Infrastructure\Modules\Services\ModuleInstaller;
 use App\Modules\ModuleLoader;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +32,7 @@ final class ModulesServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../../config/modules.php',
+            __DIR__.'/../../config/modules.php',
             'modules'
         );
 
@@ -74,14 +74,17 @@ final class ModulesServiceProvider extends ServiceProvider
     {
         try {
             // Skip module booting during migrations or when a database doesn't exist
-            if (!$this->isDatabaseAvailable()) {
+            if (! $this->isDatabaseAvailable()) {
                 return;
             }
 
             $this->app->make(ModuleLoader::class)->boot();
-        } catch (\Throwable) {
-            // Silently fail during migrations, seeding, or when a database doesn't exist yet
-            // This prevents errors during initial setup
+        } catch (\Throwable $e) {
+            // Log the error for debugging (uncomment in development)
+            logger()->error('[ModulesServiceProvider] Module boot failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 

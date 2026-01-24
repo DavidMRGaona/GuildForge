@@ -22,8 +22,7 @@ final class ArticleController extends Controller
     public function __construct(
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly TagQueryServiceInterface $tagQuery,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): Response
     {

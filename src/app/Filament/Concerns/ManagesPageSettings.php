@@ -73,7 +73,7 @@ trait ManagesPageSettings
     /**
      * Save settings to the service, encode JSON fields, and handle image cleanup.
      *
-     * @param array<string, mixed> $formData
+     * @param  array<string, mixed>  $formData
      */
     protected function saveSettings(SettingsServiceInterface $settingsService, array $formData): void
     {
@@ -88,6 +88,7 @@ trait ManagesPageSettings
                 $newValue = (string) $value;
                 $this->cleanupOldImage($settingsService, $key, $newValue);
                 $settingsService->set($key, $newValue);
+
                 continue;
             }
 
@@ -95,6 +96,7 @@ trait ManagesPageSettings
             if (in_array($key, $jsonFields, true)) {
                 $jsonValue = $this->encodeJsonField(is_array($value) ? $value : []);
                 $settingsService->set($key, $jsonValue);
+
                 continue;
             }
 
@@ -118,6 +120,7 @@ trait ManagesPageSettings
 
         try {
             $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+
             return is_array($decoded) ? $decoded : [];
         } catch (JsonException) {
             return [];
@@ -129,7 +132,7 @@ trait ManagesPageSettings
      *
      * Returns an empty string if the array is empty.
      *
-     * @param array<int|string, mixed> $data
+     * @param  array<int|string, mixed>  $data
      */
     protected function encodeJsonField(array $data): string
     {

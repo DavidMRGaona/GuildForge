@@ -15,8 +15,7 @@ final class EmailVerificationController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
-    ) {
-    }
+    ) {}
 
     public function notice(): Response
     {
@@ -25,7 +24,7 @@ final class EmailVerificationController extends Controller
 
     public function verify(Request $request, string $id, string $hash): RedirectResponse
     {
-        if (!$this->authService->verifyEmail($id, $hash)) {
+        if (! $this->authService->verifyEmail($id, $hash)) {
             return redirect()->route('verification.notice')
                 ->with('error', __('auth.verification_failed'));
         }
@@ -50,7 +49,7 @@ final class EmailVerificationController extends Controller
 
     public function verifyPendingEmail(Request $request, string $id, string $hash): RedirectResponse
     {
-        if (!$this->authService->verifyPendingEmail($id, $hash)) {
+        if (! $this->authService->verifyPendingEmail($id, $hash)) {
             return redirect()->route('profile.show')
                 ->with('error', __('auth.email_change_verification_failed'));
         }

@@ -20,7 +20,7 @@ final class StubRenderer
     /**
      * Render a stub template with the given variables.
      *
-     * @param array<string, string> $variables
+     * @param  array<string, string>  $variables
      */
     public function render(string $stubName, array $variables): string
     {
@@ -41,7 +41,7 @@ final class StubRenderer
     /**
      * Render a stub and save it to a file.
      *
-     * @param array<string, string> $variables
+     * @param  array<string, string>  $variables
      */
     public function renderTo(string $stubName, string $destination, array $variables, bool $force = false): bool
     {
@@ -77,7 +77,7 @@ final class StubRenderer
             $stubName .= '.stub';
         }
 
-        return $this->stubsPath . '/' . $stubName;
+        return $this->stubsPath.'/'.$stubName;
     }
 
     /**
@@ -87,7 +87,7 @@ final class StubRenderer
      */
     public function getModuleVariables(string $moduleName, ?string $description = null, ?string $author = null): array
     {
-        $namespace = 'Modules\\' . Str::studly($moduleName);
+        $namespace = 'Modules\\'.Str::studly($moduleName);
 
         return [
             'moduleName' => $moduleName,
@@ -120,21 +120,21 @@ final class StubRenderer
             'namePluralStudly' => Str::studly(Str::plural($name)),
             'namePluralSnake' => Str::snake(Str::plural($name)),
             'nameKebab' => Str::kebab($name),
-            'tableName' => Str::snake(Str::studly($moduleName)) . '_' . Str::snake(Str::plural($name)),
+            'tableName' => Str::snake(Str::studly($moduleName)).'_'.Str::snake(Str::plural($name)),
         ]);
     }
 
     /**
      * Replace variables in content.
      *
-     * @param array<string, string> $variables
+     * @param  array<string, string>  $variables
      */
     private function replaceVariables(string $content, array $variables): string
     {
         foreach ($variables as $key => $value) {
             // Support both {{ variable }} and {{variable}} formats
             $content = str_replace(
-                ['{{ ' . $key . ' }}', '{{' . $key . '}}'],
+                ['{{ '.$key.' }}', '{{'.$key.'}}'],
                 $value,
                 $content
             );

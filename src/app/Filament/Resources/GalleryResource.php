@@ -125,9 +125,9 @@ class GalleryResource extends Resource
                             ->label(__('Imagen'))
                             ->image()
                             ->disk('images')
-                            ->directory(fn (): string => 'galleries/' . now()->format('Y/m'))
+                            ->directory(fn (): string => 'galleries/'.now()->format('Y/m'))
                             ->getUploadedFileNameForStorageUsing(
-                                fn (TemporaryUploadedFile $file): string => Str::uuid()->toString() . '.' . $file->getClientOriginalExtension()
+                                fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
                             )
                             ->maxSize(10240)
                             ->required(),

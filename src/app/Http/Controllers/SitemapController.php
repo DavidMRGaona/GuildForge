@@ -11,8 +11,7 @@ final class SitemapController extends Controller
 {
     public function __construct(
         private readonly SitemapQueryServiceInterface $sitemapQuery,
-    ) {
-    }
+    ) {}
 
     public function __invoke(): Response
     {

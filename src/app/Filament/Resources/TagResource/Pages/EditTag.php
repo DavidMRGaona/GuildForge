@@ -24,7 +24,7 @@ class EditTag extends EditRecord
     {
         return [
             DeleteAction::make()
-                ->hidden(fn (): bool => !$this->getTagQueryService()->canDelete($this->record->id)),
+                ->hidden(fn (): bool => ! $this->getTagQueryService()->canDelete($this->record->id)),
         ];
     }
 

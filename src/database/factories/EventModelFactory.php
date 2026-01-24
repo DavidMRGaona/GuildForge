@@ -29,7 +29,7 @@ final class EventModelFactory extends Factory
             'description' => fake()->paragraphs(3, true),
             'start_date' => $startDate = fake()->dateTimeBetween('+1 week', '+3 months'),
             'end_date' => fake()->boolean(30)
-                ? (clone $startDate)->modify('+' . rand(1, 3) . ' days')
+                ? (clone $startDate)->modify('+'.rand(1, 3).' days')
                 : null,
             'location' => fake()->optional()->address(),
             'image_public_id' => null,
@@ -71,7 +71,7 @@ final class EventModelFactory extends Factory
 
             // Recalculate end_date if it was set
             $endDate = isset($attributes['end_date']) && $attributes['end_date'] !== null
-                ? (clone $startDate)->modify('+' . rand(1, 3) . ' days')
+                ? (clone $startDate)->modify('+'.rand(1, 3).' days')
                 : null;
 
             return [
@@ -91,7 +91,7 @@ final class EventModelFactory extends Factory
 
             // Recalculate end_date if it was set, ensuring it's after start_date
             $endDate = isset($attributes['end_date']) && $attributes['end_date'] !== null
-                ? (clone $startDate)->modify('+' . rand(1, 3) . ' days')
+                ? (clone $startDate)->modify('+'.rand(1, 3).' days')
                 : null;
 
             return [

@@ -19,7 +19,7 @@ final class ModuleModelFactory extends Factory
      */
     public function definition(): array
     {
-        $name = fake()->unique()->word() . '-module';
+        $name = fake()->unique()->word().'-module';
 
         $displayName = str_replace('-', '', ucwords($name, '-'));
 
@@ -32,8 +32,8 @@ final class ModuleModelFactory extends Factory
             'author' => fake()->name(),
             'status' => 'disabled',
             'path' => base_path("modules/{$name}"),
-            'namespace' => 'Modules\\' . $displayName,
-            'provider' => $displayName . 'ServiceProvider',
+            'namespace' => 'Modules\\'.$displayName,
+            'provider' => $displayName.'ServiceProvider',
             'requires' => null,
             'dependencies' => null,
             'discovered_at' => now(),
@@ -66,7 +66,7 @@ final class ModuleModelFactory extends Factory
     /**
      * Set module dependencies.
      *
-     * @param array<string> $dependencies
+     * @param  array<string>  $dependencies
      */
     public function withDependencies(array $dependencies): static
     {
@@ -78,7 +78,7 @@ final class ModuleModelFactory extends Factory
     /**
      * Set module requirements.
      *
-     * @param array<string, string> $requires
+     * @param  array<string, string>  $requires
      */
     public function withRequirements(array $requires): static
     {

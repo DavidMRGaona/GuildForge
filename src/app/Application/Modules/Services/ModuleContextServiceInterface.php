@@ -41,21 +41,21 @@ interface ModuleContextServiceInterface
     /**
      * Get a route URL for the current or specified module.
      *
-     * @param array<string, mixed> $parameters
+     * @param  array<string, mixed>  $parameters
      */
     public function route(string $name, array $parameters = []): string;
 
     /**
      * Get a translation for the current or specified module.
      *
-     * @param array<string, mixed> $replace
+     * @param  array<string, mixed>  $replace
      */
     public function trans(string $key, array $replace = []): string;
 
     /**
      * Get a view for the current or specified module.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function view(string $name, array $data = []): View;
 

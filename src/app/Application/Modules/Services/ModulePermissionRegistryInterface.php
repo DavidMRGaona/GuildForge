@@ -16,7 +16,7 @@ interface ModulePermissionRegistryInterface
     /**
      * Register multiple permissions from a module.
      *
-     * @param array<PermissionDTO> $permissions
+     * @param  array<PermissionDTO>  $permissions
      */
     public function registerMany(array $permissions): void;
 

@@ -13,13 +13,12 @@ final class ModuleViteHelper
     public function __construct(
         private readonly ModuleLoader $loader,
         private readonly string $modulesPath,
-    ) {
-    }
+    ) {}
 
     /**
      * Generate Vite tags for a module's entry points.
      *
-     * @param array<string> $entrypoints
+     * @param  array<string>  $entrypoints
      */
     public function __invoke(string $moduleName, array $entrypoints = []): HtmlString
     {
@@ -85,7 +84,7 @@ final class ModuleViteHelper
     /**
      * Generate development tags using Vite dev server.
      *
-     * @param array<string> $entrypoints
+     * @param  array<string>  $entrypoints
      */
     private function makeDevTags(array $entrypoints): HtmlString
     {
@@ -107,7 +106,7 @@ final class ModuleViteHelper
     /**
      * Generate production tags from manifest.
      *
-     * @param array<string> $entrypoints
+     * @param  array<string>  $entrypoints
      */
     private function makeProductionTags(string $moduleName, array $entrypoints): HtmlString
     {

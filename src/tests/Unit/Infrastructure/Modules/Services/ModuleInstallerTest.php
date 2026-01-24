@@ -51,7 +51,7 @@ final class ModuleInstallerTest extends TestCase
     public function test_rejects_non_zip_content(): void
     {
         // Create a file that is not a valid ZIP (regardless of extension)
-        $filePath = $this->tempDir . '/fake.zip';
+        $filePath = $this->tempDir.'/fake.zip';
         File::put($filePath, 'this is not zip content');
 
         $file = new UploadedFile($filePath, 'fake.zip', 'application/zip', null, true);
@@ -74,7 +74,7 @@ final class ModuleInstallerTest extends TestCase
     public function test_rejects_invalid_zip_file(): void
     {
         // Create an invalid zip file (just a text file with .zip extension)
-        $filePath = $this->tempDir . '/invalid.zip';
+        $filePath = $this->tempDir.'/invalid.zip';
         File::put($filePath, 'not a valid zip content');
 
         $file = new UploadedFile($filePath, 'invalid.zip', 'application/zip', null, true);
@@ -129,7 +129,7 @@ final class ModuleInstallerTest extends TestCase
     public function test_rejects_duplicate_module_name(): void
     {
         // Create existing module directory
-        File::makeDirectory($this->modulesPath . '/existing-module', 0755, true);
+        File::makeDirectory($this->modulesPath.'/existing-module', 0755, true);
 
         $zipPath = $this->createValidZip([
             'module.json' => json_encode([
@@ -154,8 +154,8 @@ final class ModuleInstallerTest extends TestCase
                 'module.json' => json_encode([
                     'name' => $forbiddenName,
                     'version' => '1.0.0',
-                    'namespace' => 'Modules\\' . ucfirst($forbiddenName),
-                    'provider' => 'Modules\\' . ucfirst($forbiddenName) . '\\ServiceProvider',
+                    'namespace' => 'Modules\\'.ucfirst($forbiddenName),
+                    'provider' => 'Modules\\'.ucfirst($forbiddenName).'\\ServiceProvider',
                 ]),
             ]);
 
@@ -193,8 +193,8 @@ final class ModuleInstallerTest extends TestCase
 
         $this->assertEquals('valid-test-module', $manifest->name);
         $this->assertEquals('1.0.0', $manifest->version);
-        $this->assertTrue(File::isDirectory($this->modulesPath . '/valid-test-module'));
-        $this->assertTrue(File::exists($this->modulesPath . '/valid-test-module/module.json'));
+        $this->assertTrue(File::isDirectory($this->modulesPath.'/valid-test-module'));
+        $this->assertTrue(File::exists($this->modulesPath.'/valid-test-module/module.json'));
     }
 
     public function test_finds_manifest_in_subdirectory(): void
@@ -214,17 +214,17 @@ final class ModuleInstallerTest extends TestCase
         $manifest = $this->installer->installFromZip($file);
 
         $this->assertEquals('valid-test-module-2', $manifest->name);
-        $this->assertTrue(File::isDirectory($this->modulesPath . '/valid-test-module-2'));
+        $this->assertTrue(File::isDirectory($this->modulesPath.'/valid-test-module-2'));
     }
 
     /**
-     * @param array<string, string> $files
+     * @param  array<string, string>  $files
      */
     private function createValidZip(array $files): string
     {
-        $zipPath = $this->tempDir . '/test-module-' . uniqid() . '.zip';
+        $zipPath = $this->tempDir.'/test-module-'.uniqid().'.zip';
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($zipPath, ZipArchive::CREATE);
 
         foreach ($files as $name => $content) {

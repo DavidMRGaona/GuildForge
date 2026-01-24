@@ -15,9 +15,9 @@ final readonly class ScaffoldResultDTO
     public const STATUS_FAILED = 'failed';
 
     /**
-     * @param array<string, string> $files Files created/modified with their status
-     * @param array<string> $errors List of error messages
-     * @param array<string> $warnings List of warning messages
+     * @param  array<string, string>  $files  Files created/modified with their status
+     * @param  array<string>  $errors  List of error messages
+     * @param  array<string>  $warnings  List of warning messages
      */
     public function __construct(
         public bool $success,
@@ -25,14 +25,13 @@ final readonly class ScaffoldResultDTO
         public array $files = [],
         public array $errors = [],
         public array $warnings = [],
-    ) {
-    }
+    ) {}
 
     /**
      * Create a successful result.
      *
-     * @param array<string, string> $files
-     * @param array<string> $warnings
+     * @param  array<string, string>  $files
+     * @param  array<string>  $warnings
      */
     public static function success(string $message, array $files = [], array $warnings = []): self
     {
@@ -47,7 +46,7 @@ final readonly class ScaffoldResultDTO
     /**
      * Create a failed result.
      *
-     * @param array<string> $errors
+     * @param  array<string>  $errors
      */
     public static function failure(string $message, array $errors = []): self
     {

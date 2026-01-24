@@ -8,7 +8,6 @@ use App\Application\DTOs\Response\TagHierarchyDTO;
 use App\Application\DTOs\Response\TagResponseDTO;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
-use Illuminate\Support\Collection;
 
 final readonly class TagQueryService implements TagQueryServiceInterface
 {
@@ -78,7 +77,7 @@ final readonly class TagQueryService implements TagQueryServiceInterface
 
     public function canDelete(string $tagId): bool
     {
-        return !$this->hasChildren($tagId) && !$this->isInUse($tagId);
+        return ! $this->hasChildren($tagId) && ! $this->isInUse($tagId);
     }
 
     /**
@@ -106,7 +105,7 @@ final readonly class TagQueryService implements TagQueryServiceInterface
     /**
      * Recursively add a tag and its descendants to the result array.
      *
-     * @param array<TagHierarchyDTO> $result
+     * @param  array<TagHierarchyDTO>  $result
      */
     private function addWithDescendants(
         TagModel $tag,
@@ -145,7 +144,7 @@ final readonly class TagQueryService implements TagQueryServiceInterface
         $children = $childQuery->get();
 
         foreach ($children as $child) {
-            $childPath = $pathSoFar . ' > ' . $child->name;
+            $childPath = $pathSoFar.' > '.$child->name;
             $this->addWithDescendants($child, $result, $depth + 1, $childPath, $type);
         }
     }

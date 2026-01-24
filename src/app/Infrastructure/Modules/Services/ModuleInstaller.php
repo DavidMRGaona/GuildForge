@@ -9,12 +9,9 @@ use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Domain\Modules\Events\ModuleInstalled;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
-use Throwable;
 use ZipArchive;
 
 final readonly class ModuleInstaller implements ModuleInstallerInterface
@@ -23,8 +20,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 
     public function __construct(
         private Dispatcher $events,
-    ) {
-    }
+    ) {}
 
     public function installFromZip(UploadedFile $file): ModuleManifestDTO
     {
@@ -57,7 +53,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         }
 
         // Validate by actually opening as ZIP (more reliable than extension check)
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $result = $zip->open($file->getPathname());
 
         if ($result !== true) {
@@ -70,13 +66,13 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
     private function extractToTemp(UploadedFile $file): string
     {
         $tempId = uniqid('module_', true);
-        $tempPath = storage_path('app/' . self::TEMP_DIRECTORY . '/' . $tempId);
+        $tempPath = storage_path('app/'.self::TEMP_DIRECTORY.'/'.$tempId);
 
-        if (!File::makeDirectory($tempPath, 0755, true)) {
+        if (! File::makeDirectory($tempPath, 0755, true)) {
             throw ModuleInstallationException::extractionFailed('Failed to create temp directory');
         }
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($file->getPathname());
         $zip->extractTo($tempPath);
         $zip->close();
@@ -96,12 +92,12 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         /** @var array<string, mixed>|null $data */
         $data = json_decode($content, true);
 
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             throw ModuleInstallationException::invalidManifestJson();
         }
 
         foreach (self::REQUIRED_MANIFEST_FIELDS as $field) {
-            if (!isset($data[$field]) || $data[$field] === '') {
+            if (! isset($data[$field]) || $data[$field] === '') {
                 throw ModuleInstallationException::missingManifestField($field);
             }
         }
@@ -115,14 +111,14 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 
     private function findManifestPath(string $tempPath): ?string
     {
-        $rootManifest = $tempPath . '/module.json';
+        $rootManifest = $tempPath.'/module.json';
         if (File::exists($rootManifest)) {
             return $rootManifest;
         }
 
         $directories = File::directories($tempPath);
         if (count($directories) === 1) {
-            $subdirManifest = $directories[0] . '/module.json';
+            $subdirManifest = $directories[0].'/module.json';
             if (File::exists($subdirManifest)) {
                 return $subdirManifest;
             }
@@ -140,7 +136,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         }
 
         $modulesPath = config('modules.path', base_path('modules'));
-        $targetPath = $modulesPath . '/' . $manifest->name;
+        $targetPath = $modulesPath.'/'.$manifest->name;
 
         if (File::isDirectory($targetPath)) {
             throw ModuleInstallationException::moduleAlreadyExists($manifest->name);
@@ -150,15 +146,15 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
     private function moveToModulesDirectory(string $tempPath, string $moduleName): string
     {
         $modulesPath = config('modules.path', base_path('modules'));
-        $targetPath = $modulesPath . '/' . $moduleName;
+        $targetPath = $modulesPath.'/'.$moduleName;
 
-        if (!File::isDirectory($modulesPath)) {
+        if (! File::isDirectory($modulesPath)) {
             File::makeDirectory($modulesPath, 0755, true);
         }
 
         $sourcePath = $this->getSourcePath($tempPath);
 
-        if (!File::moveDirectory($sourcePath, $targetPath)) {
+        if (! File::moveDirectory($sourcePath, $targetPath)) {
             throw ModuleInstallationException::extractionFailed('Failed to move module to target directory');
         }
 
@@ -167,12 +163,12 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 
     private function getSourcePath(string $tempPath): string
     {
-        if (File::exists($tempPath . '/module.json')) {
+        if (File::exists($tempPath.'/module.json')) {
             return $tempPath;
         }
 
         $directories = File::directories($tempPath);
-        if (count($directories) === 1 && File::exists($directories[0] . '/module.json')) {
+        if (count($directories) === 1 && File::exists($directories[0].'/module.json')) {
             return $directories[0];
         }
 

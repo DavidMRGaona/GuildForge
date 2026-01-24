@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Domain\Events;
+
+use DateTimeImmutable;
+
+/**
+ * Domain event: {{ nameStudly }}
+ *
+ * Represents something that happened in the domain.
+ * Immutable by design - captures a fact that occurred.
+ */
+final readonly class {{ nameStudly }}
+{
+    public function __construct(
+        public string $aggregateId,
+        public string $userId,
+        public DateTimeImmutable $occurredAt,
+    ) {}
+
+    /**
+     * Factory method for creating the event.
+     */
+    public static function create(string $aggregateId, string $userId): self
+    {
+        return new self(
+            aggregateId: $aggregateId,
+            userId: $userId,
+            occurredAt: new DateTimeImmutable(),
+        );
+    }
+
+    /**
+     * Get the event name for logging/debugging.
+     */
+    public function eventName(): string
+    {
+        return '{{ moduleNameSnake }}.{{ nameSnake }}';
+    }
+
+    /**
+     * Convert to array for serialization.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            'aggregate_id' => $this->aggregateId,
+            'user_id' => $this->userId,
+            'occurred_at' => $this->occurredAt->format('c'),
+        ];
+    }
+}

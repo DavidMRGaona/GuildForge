@@ -7,17 +7,17 @@ namespace Tests\Unit\Infrastructure\Modules\Services;
 use App\Infrastructure\Modules\Services\StubRenderer;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 final class StubRendererTest extends TestCase
 {
     private StubRenderer $renderer;
+
     private string $stubsPath;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->stubsPath = dirname(__DIR__, 5) . '/tests/Fixtures/stubs';
+        $this->stubsPath = dirname(__DIR__, 5).'/tests/Fixtures/stubs';
         $this->renderer = new StubRenderer($this->stubsPath);
     }
 
@@ -150,7 +150,7 @@ final class StubRendererTest extends TestCase
 
     public function test_render_to_creates_file_successfully(): void
     {
-        $destination = sys_get_temp_dir() . '/test-module-service.php';
+        $destination = sys_get_temp_dir().'/test-module-service.php';
         $variables = [
             'moduleName' => 'TestModule',
             'moduleNamespace' => 'Modules\\TestModule',
@@ -172,7 +172,7 @@ final class StubRendererTest extends TestCase
 
     public function test_render_to_does_not_overwrite_existing_file_without_force(): void
     {
-        $destination = sys_get_temp_dir() . '/existing-file.php';
+        $destination = sys_get_temp_dir().'/existing-file.php';
         file_put_contents($destination, 'Original content');
 
         $variables = [
@@ -193,7 +193,7 @@ final class StubRendererTest extends TestCase
 
     public function test_render_to_overwrites_existing_file_with_force(): void
     {
-        $destination = sys_get_temp_dir() . '/force-overwrite.php';
+        $destination = sys_get_temp_dir().'/force-overwrite.php';
         file_put_contents($destination, 'Original content');
 
         $variables = [
@@ -215,8 +215,8 @@ final class StubRendererTest extends TestCase
 
     public function test_render_to_creates_directory_if_not_exists(): void
     {
-        $directory = sys_get_temp_dir() . '/nested/deep/path';
-        $destination = $directory . '/test-file.php';
+        $directory = sys_get_temp_dir().'/nested/deep/path';
+        $destination = $directory.'/test-file.php';
 
         $variables = [
             'moduleName' => 'Deep',

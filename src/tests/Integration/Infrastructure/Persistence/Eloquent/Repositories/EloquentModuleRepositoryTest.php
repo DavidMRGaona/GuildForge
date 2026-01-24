@@ -25,7 +25,7 @@ final class EloquentModuleRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->repository = new EloquentModuleRepository();
+        $this->repository = new EloquentModuleRepository;
     }
 
     public function test_it_saves_a_module(): void

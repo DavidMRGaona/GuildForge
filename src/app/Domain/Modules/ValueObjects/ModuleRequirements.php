@@ -7,16 +7,15 @@ namespace App\Domain\Modules\ValueObjects;
 final readonly class ModuleRequirements
 {
     /**
-     * @param list<string> $requiredModules
-     * @param list<string> $requiredExtensions
+     * @param  list<string>  $requiredModules
+     * @param  list<string>  $requiredExtensions
      */
     public function __construct(
         private ?string $phpVersion,
         private ?string $laravelVersion,
         private array $requiredModules = [],
         private array $requiredExtensions = [],
-    ) {
-    }
+    ) {}
 
     /**
      * @param array{
@@ -81,8 +80,8 @@ final readonly class ModuleRequirements
     }
 
     /**
-     * @param list<string> $availableModules
-     * @param list<string> $availableExtensions
+     * @param  list<string>  $availableModules
+     * @param  list<string>  $availableExtensions
      */
     public function areSatisfied(
         string $phpVersion,
@@ -99,8 +98,8 @@ final readonly class ModuleRequirements
     }
 
     /**
-     * @param list<string> $availableModules
-     * @param list<string> $availableExtensions
+     * @param  list<string>  $availableModules
+     * @param  list<string>  $availableExtensions
      * @return list<string>
      */
     public function getUnsatisfied(
@@ -111,22 +110,22 @@ final readonly class ModuleRequirements
     ): array {
         $unsatisfied = [];
 
-        if ($this->phpVersion !== null && !$this->versionSatisfiesConstraint($phpVersion, $this->phpVersion)) {
+        if ($this->phpVersion !== null && ! $this->versionSatisfiesConstraint($phpVersion, $this->phpVersion)) {
             $unsatisfied[] = "PHP version {$this->phpVersion} required, but {$phpVersion} found";
         }
 
-        if ($this->laravelVersion !== null && !$this->versionSatisfiesConstraint($laravelVersion, $this->laravelVersion)) {
+        if ($this->laravelVersion !== null && ! $this->versionSatisfiesConstraint($laravelVersion, $this->laravelVersion)) {
             $unsatisfied[] = "Laravel version {$this->laravelVersion} required, but {$laravelVersion} found";
         }
 
         foreach ($this->requiredModules as $module) {
-            if (!in_array($module, $availableModules, true)) {
+            if (! in_array($module, $availableModules, true)) {
                 $unsatisfied[] = "Required module: {$module}";
             }
         }
 
         foreach ($this->requiredExtensions as $extension) {
-            if (!in_array($extension, $availableExtensions, true)) {
+            if (! in_array($extension, $availableExtensions, true)) {
                 $unsatisfied[] = "Required extension: {$extension}";
             }
         }

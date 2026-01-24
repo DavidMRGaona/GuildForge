@@ -7,8 +7,8 @@ namespace App\Application\Modules\DTOs;
 final readonly class SlotRegistrationDTO
 {
     /**
-     * @param array<string, mixed> $props Static props to pass to the component
-     * @param array<string> $dataKeys Inertia page props to inject as component props
+     * @param  array<string, mixed>  $props  Static props to pass to the component
+     * @param  array<string>  $dataKeys  Inertia page props to inject as component props
      */
     public function __construct(
         public string $slot,
@@ -17,11 +17,10 @@ final readonly class SlotRegistrationDTO
         public int $order = 0,
         public array $props = [],
         public array $dataKeys = [],
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {

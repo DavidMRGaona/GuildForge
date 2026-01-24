@@ -9,11 +9,11 @@ use DomainException;
 final class ModuleCircularDependencyException extends DomainException
 {
     /**
-     * @param array<string> $cycle
+     * @param  array<string>  $cycle
      */
     public static function detected(array $cycle): self
     {
-        $cycleStr = implode(' -> ', $cycle) . ' -> ' . $cycle[0];
+        $cycleStr = implode(' -> ', $cycle).' -> '.$cycle[0];
 
         return new self("Circular dependency detected: {$cycleStr}");
     }

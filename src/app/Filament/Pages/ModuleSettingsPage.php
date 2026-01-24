@@ -8,7 +8,6 @@ use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Modules\ModuleLoader;
-use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
@@ -148,7 +147,7 @@ final class ModuleSettingsPage extends Page implements HasForms
 
     public function hasSettings(): bool
     {
-        return !empty($this->getModuleSettingsSchema());
+        return ! empty($this->getModuleSettingsSchema());
     }
 
     public function save(): void
@@ -171,7 +170,7 @@ final class ModuleSettingsPage extends Page implements HasForms
      */
     protected function getFormActions(): array
     {
-        if (!$this->hasSettings()) {
+        if (! $this->hasSettings()) {
             return [];
         }
 

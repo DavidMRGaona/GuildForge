@@ -48,7 +48,7 @@ final class TagModelTest extends TestCase
             'sort_order',
         ];
 
-        $model = new TagModel();
+        $model = new TagModel;
 
         $this->assertEquals($fillable, $model->getFillable());
     }

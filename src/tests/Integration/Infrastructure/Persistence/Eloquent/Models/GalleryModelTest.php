@@ -41,7 +41,7 @@ final class GalleryModelTest extends TestCase
             'is_featured',
         ];
 
-        $model = new GalleryModel();
+        $model = new GalleryModel;
 
         $this->assertEquals($fillable, $model->getFillable());
     }
