@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('photos', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('gallery_id');
-            $table->string('path');
+            $table->string('image_public_id');
             $table->string('caption')->nullable();
             $table->integer('sort_order')->default(0);
             $table->timestamps();

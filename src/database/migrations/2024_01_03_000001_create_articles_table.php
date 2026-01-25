@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('content');
             $table->string('excerpt')->nullable();
-            $table->string('featured_image')->nullable();
+            $table->string('featured_image_public_id')->nullable();
             $table->boolean('is_published')->default(false);
             $table->timestamp('published_at')->nullable();
             $table->foreignUuid('author_id')
