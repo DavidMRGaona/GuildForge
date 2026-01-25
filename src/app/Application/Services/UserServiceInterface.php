@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Services;
 
+use App\Application\DTOs\AnonymizeUserDTO;
+
 interface UserServiceInterface
 {
     /**
@@ -18,6 +20,21 @@ interface UserServiceInterface
      * @throws \App\Domain\Exceptions\UserNotFoundException
      */
     public function anonymize(string $userId): void;
+
+    /**
+     * Anonymize user data with content transfer option.
+     * Allows transferring user's content to another user before anonymization.
+     *
+     * @throws \App\Domain\Exceptions\UserNotFoundException
+     */
+    public function anonymizeWithContentTransfer(AnonymizeUserDTO $dto): void;
+
+    /**
+     * Count user's content (articles, etc.).
+     *
+     * @return array{articles: int}
+     */
+    public function countUserContent(string $userId): array;
 
     /**
      * Check if user has admin role.

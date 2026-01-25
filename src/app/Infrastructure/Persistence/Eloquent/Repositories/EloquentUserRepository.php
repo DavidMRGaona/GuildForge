@@ -31,6 +31,11 @@ final readonly class EloquentUserRepository implements UserRepositoryInterface
         return UserModel::query()->find($id->value);
     }
 
+    public function findModelByIdWithTrashed(UserId $id): ?UserModel
+    {
+        return UserModel::query()->withTrashed()->find($id->value);
+    }
+
     public function findByEmail(string $email): ?UserModel
     {
         return UserModel::query()->where('email', $email)->first();

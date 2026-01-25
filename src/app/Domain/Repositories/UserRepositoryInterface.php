@@ -20,6 +20,12 @@ interface UserRepositoryInterface
     public function findModelById(UserId $id): ?UserModel;
 
     /**
+     * Find user model by ID including soft-deleted records.
+     * Used for operations on deactivated users (anonymization, etc.).
+     */
+    public function findModelByIdWithTrashed(UserId $id): ?UserModel;
+
+    /**
      * Find user model by email for authentication purposes.
      * Returns the Eloquent model directly for Laravel Auth compatibility.
      */
