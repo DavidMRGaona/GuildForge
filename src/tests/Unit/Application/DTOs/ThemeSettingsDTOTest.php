@@ -29,7 +29,7 @@ final class ThemeSettingsDTOTest extends TestCase
         $this->assertEquals('Inter', $dto->fontBody);
         $this->assertEquals('16px', $dto->fontSizeBase);
         $this->assertEquals('0.5rem', $dto->borderRadius);
-        $this->assertEquals('subtle', $dto->shadowIntensity);
+        $this->assertEquals('0.5', $dto->shadowIntensity);
         $this->assertEquals('solid', $dto->buttonStyle);
         $this->assertFalse($dto->darkModeDefault);
         $this->assertTrue($dto->darkModeToggleVisible);
@@ -39,23 +39,33 @@ final class ThemeSettingsDTOTest extends TestCase
     {
         $settingsService = $this->createMock(SettingsServiceInterface::class);
         $settingsService->method('get')->willReturnMap([
-            ['theme_primary_color', '#D97706', '#3B82F6'],
-            ['theme_primary_color_dark', '#F59E0B', '#60A5FA'],
-            ['theme_secondary_color', '#57534E', '#64748B'],
-            ['theme_secondary_color_dark', '#A8A29E', '#94A3B8'],
-            ['theme_accent_color', '#D97706', '#EF4444'],
-            ['theme_background_color', '#FAFAF9', '#FAFAFA'],
-            ['theme_background_color_dark', '#1C1917', '#0F172A'],
-            ['theme_surface_color', '#FFFFFF', '#F3F4F6'],
-            ['theme_surface_color_dark', '#292524', '#1E293B'],
-            ['theme_text_color', '#1C1917', '#1F2937'],
-            ['theme_text_color_dark', '#F5F5F4', '#FFFFFF'],
-            ['theme_font_heading', 'Inter', 'Roboto'],
-            ['theme_font_body', 'Inter', 'Open Sans'],
-            ['theme_font_size_base', '16px', '18px'],
-            ['theme_border_radius', '0.5rem', '0.75rem'],
-            ['theme_shadow_intensity', 'subtle', 'medium'],
-            ['theme_button_style', 'solid', 'outlined'],
+            // Color fields use '' as default in getColorOrDefault
+            ['theme_primary_color', '', '#3B82F6'],
+            ['theme_primary_color_dark', '', '#60A5FA'],
+            ['theme_secondary_color', '', '#64748B'],
+            ['theme_secondary_color_dark', '', '#94A3B8'],
+            ['theme_accent_color', '', '#EF4444'],
+            ['theme_background_color', '', '#FAFAFA'],
+            ['theme_background_color_dark', '', '#0F172A'],
+            ['theme_surface_color', '', '#F3F4F6'],
+            ['theme_surface_color_dark', '', '#1E293B'],
+            ['theme_text_color', '', '#1F2937'],
+            ['theme_text_color_dark', '', '#FFFFFF'],
+            ['theme_text_secondary_color', '', '#64748B'],
+            ['theme_text_secondary_color_dark', '', '#94A3B8'],
+            ['theme_text_muted_color', '', '#9CA3AF'],
+            ['theme_text_muted_color_dark', '', '#9CA3AF'],
+            ['theme_border_color', '', '#D1D5DB'],
+            ['theme_border_color_dark', '', '#374151'],
+            // String fields use '' as default in getStringOrDefault
+            ['theme_font_heading', '', 'Roboto'],
+            ['theme_font_body', '', 'Open Sans'],
+            ['theme_button_style', '', 'outlined'],
+            // Mapped fields use descriptors as defaults
+            ['theme_font_size_base', 'normal', 'large'],
+            ['theme_border_radius', 'medium', 'large'],
+            ['theme_shadow_intensity', 'subtle', 'pronounced'],
+            // Boolean fields
             ['theme_dark_mode_default', false, true],
             ['theme_dark_mode_toggle_visible', true, false],
         ]);
@@ -77,7 +87,7 @@ final class ThemeSettingsDTOTest extends TestCase
         $this->assertEquals('Open Sans', $dto->fontBody);
         $this->assertEquals('18px', $dto->fontSizeBase);
         $this->assertEquals('0.75rem', $dto->borderRadius);
-        $this->assertEquals('medium', $dto->shadowIntensity);
+        $this->assertEquals('1.5', $dto->shadowIntensity);
         $this->assertEquals('outlined', $dto->buttonStyle);
         $this->assertTrue($dto->darkModeDefault);
         $this->assertFalse($dto->darkModeToggleVisible);
@@ -107,7 +117,7 @@ final class ThemeSettingsDTOTest extends TestCase
         $this->assertEquals('Inter', $dto->fontBody);
         $this->assertEquals('16px', $dto->fontSizeBase);
         $this->assertEquals('0.5rem', $dto->borderRadius);
-        $this->assertEquals('subtle', $dto->shadowIntensity);
+        $this->assertEquals('0.5', $dto->shadowIntensity);
         $this->assertEquals('solid', $dto->buttonStyle);
         $this->assertFalse($dto->darkModeDefault);
         $this->assertTrue($dto->darkModeToggleVisible);
@@ -162,23 +172,33 @@ final class ThemeSettingsDTOTest extends TestCase
     {
         $settingsService = $this->createMock(SettingsServiceInterface::class);
         $settingsService->method('get')->willReturnMap([
-            ['theme_primary_color', '#D97706', '#D97706'],
-            ['theme_primary_color_dark', '#F59E0B', '#F59E0B'],
-            ['theme_secondary_color', '#57534E', '#57534E'],
-            ['theme_secondary_color_dark', '#A8A29E', '#A8A29E'],
-            ['theme_accent_color', '#D97706', '#D97706'],
-            ['theme_background_color', '#FAFAF9', '#FAFAF9'],
-            ['theme_background_color_dark', '#1C1917', '#1C1917'],
-            ['theme_surface_color', '#FFFFFF', '#FFFFFF'],
-            ['theme_surface_color_dark', '#292524', '#292524'],
-            ['theme_text_color', '#1C1917', '#1C1917'],
-            ['theme_text_color_dark', '#F5F5F4', '#F5F5F4'],
-            ['theme_font_heading', 'Inter', 'Inter'],
-            ['theme_font_body', 'Inter', 'Inter'],
-            ['theme_font_size_base', '16px', '16px'],
-            ['theme_border_radius', '0.5rem', '0.5rem'],
+            // Color fields use '' as default
+            ['theme_primary_color', '', '#D97706'],
+            ['theme_primary_color_dark', '', '#F59E0B'],
+            ['theme_secondary_color', '', '#57534E'],
+            ['theme_secondary_color_dark', '', '#A8A29E'],
+            ['theme_accent_color', '', '#D97706'],
+            ['theme_background_color', '', '#FAFAF9'],
+            ['theme_background_color_dark', '', '#1C1917'],
+            ['theme_surface_color', '', '#FFFFFF'],
+            ['theme_surface_color_dark', '', '#292524'],
+            ['theme_text_color', '', '#1C1917'],
+            ['theme_text_color_dark', '', '#F5F5F4'],
+            ['theme_text_secondary_color', '', '#57534E'],
+            ['theme_text_secondary_color_dark', '', '#D6D3D1'],
+            ['theme_text_muted_color', '', '#A8A29E'],
+            ['theme_text_muted_color_dark', '', '#A8A29E'],
+            ['theme_border_color', '', '#E7E5E4'],
+            ['theme_border_color_dark', '', '#44403C'],
+            // String fields use '' as default
+            ['theme_font_heading', '', 'Inter'],
+            ['theme_font_body', '', 'Inter'],
+            ['theme_button_style', '', 'solid'],
+            // Mapped fields
+            ['theme_font_size_base', 'normal', 'normal'],
+            ['theme_border_radius', 'medium', 'medium'],
             ['theme_shadow_intensity', 'subtle', 'subtle'],
-            ['theme_button_style', 'solid', 'solid'],
+            // Boolean fields - testing string conversion
             ['theme_dark_mode_default', false, '1'],
             ['theme_dark_mode_toggle_visible', true, '0'],
         ]);

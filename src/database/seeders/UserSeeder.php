@@ -21,36 +21,42 @@ final class UserSeeder extends Seeder
         $memberRole = RoleModel::where('name', 'member')->first();
 
         // Create or get admin user
+        $adminAttributes = UserModel::factory()->admin()->raw([
+            'name' => 'Admin User',
+            'display_name' => 'Administrator',
+        ]);
+        unset($adminAttributes['email']); // Remove factory-generated email
         $adminUser = UserModel::firstOrCreate(
             ['email' => 'admin@example.local'],
-            UserModel::factory()->admin()->raw([
-                'name' => 'Admin User',
-                'display_name' => 'Administrator',
-            ]),
+            $adminAttributes,
         );
         if ($adminRole) {
             $adminUser->roles()->syncWithoutDetaching([$adminRole->id]);
         }
 
         // Create or get editor user
+        $editorAttributes = UserModel::factory()->editor()->raw([
+            'name' => 'Editor User',
+            'display_name' => 'Editor',
+        ]);
+        unset($editorAttributes['email']);
         $editorUser = UserModel::firstOrCreate(
             ['email' => 'editor@example.local'],
-            UserModel::factory()->editor()->raw([
-                'name' => 'Editor User',
-                'display_name' => 'Editor',
-            ]),
+            $editorAttributes,
         );
         if ($editorRole) {
             $editorUser->roles()->syncWithoutDetaching([$editorRole->id]);
         }
 
         // Create or get member user
+        $memberAttributes = UserModel::factory()->raw([
+            'name' => 'Member User',
+            'display_name' => 'Member',
+        ]);
+        unset($memberAttributes['email']);
         $memberUser = UserModel::firstOrCreate(
             ['email' => 'member@example.local'],
-            UserModel::factory()->raw([
-                'name' => 'Member User',
-                'display_name' => 'Member',
-            ]),
+            $memberAttributes,
         );
         if ($memberRole) {
             $memberUser->roles()->syncWithoutDetaching([$memberRole->id]);

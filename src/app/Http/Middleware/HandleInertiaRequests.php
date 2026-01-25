@@ -63,6 +63,7 @@ final class HandleInertiaRequests extends Middleware
             'appDescription' => config('app.description'),
             'siteLogoLight' => fn () => $this->getSiteLogo('site_logo_light'),
             'siteLogoDark' => fn () => $this->getSiteLogo('site_logo_dark'),
+            'favicons' => fn () => $this->getFavicons(),
             'theme' => fn () => $this->getThemeSettings(),
             'auth' => [
                 'user' => fn () => $this->getAuthUser($request),
@@ -78,19 +79,55 @@ final class HandleInertiaRequests extends Middleware
         ];
     }
 
-    private function getSiteLogo(string $key): ?string
+    private function getSiteLogo(string $key): string
     {
+        $defaultLogos = [
+            'site_logo_light' => '/images/defaults/logo-light.png',
+            'site_logo_dark' => '/images/defaults/logo-dark.png',
+        ];
+
         try {
             $settingsService = app(SettingsServiceInterface::class);
             $logoPath = (string) $settingsService->get($key, '');
 
             if ($logoPath === '') {
-                return null;
+                return $defaultLogos[$key] ?? '';
             }
 
             return Storage::disk('images')->url($logoPath);
-        } catch (\Throwable) {
-            return null;
+        } catch (\Throwable $e) {
+            $this->logDebugError('getSiteLogo', $e);
+
+            return $defaultLogos[$key] ?? '';
+        }
+    }
+
+    /**
+     * Get favicon URLs for frontend.
+     *
+     * Returns custom favicon URLs if configured, or null for defaults.
+     *
+     * @return array{light: string|null, dark: string|null}
+     */
+    private function getFavicons(): array
+    {
+        try {
+            $settingsService = app(SettingsServiceInterface::class);
+
+            $lightPath = (string) $settingsService->get('site_favicon_light', '');
+            $darkPath = (string) $settingsService->get('site_favicon_dark', '');
+
+            return [
+                'light' => $lightPath !== '' ? Storage::disk('images')->url($lightPath) : null,
+                'dark' => $darkPath !== '' ? Storage::disk('images')->url($darkPath) : null,
+            ];
+        } catch (\Throwable $e) {
+            $this->logDebugError('getFavicons', $e);
+
+            return [
+                'light' => null,
+                'dark' => null,
+            ];
         }
     }
 
@@ -118,7 +155,9 @@ final class HandleInertiaRequests extends Middleware
                 'fontHeading' => $settings->fontHeading,
                 'fontBody' => $settings->fontBody,
             ];
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logDebugError('getThemeSettings', $e);
+
             // Return safe defaults if service fails
             return [
                 'cssVariables' => '',
@@ -165,7 +204,9 @@ final class HandleInertiaRequests extends Middleware
                 'roles' => $roles,
                 'permissions' => $permissions,
             ];
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logDebugError('getAuthUser', $e);
+
             return null;
         }
     }
@@ -185,7 +226,9 @@ final class HandleInertiaRequests extends Middleware
                 'loginEnabled' => $settingsService->isLoginEnabled(),
                 'emailVerificationRequired' => $settingsService->isEmailVerificationRequired(),
             ];
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logDebugError('getAuthSettings', $e);
+
             // Return safe defaults if service fails
             return [
                 'registrationEnabled' => true,
@@ -206,8 +249,24 @@ final class HandleInertiaRequests extends Middleware
             $slotRegistry = app(ModuleSlotRegistryInterface::class);
 
             return $slotRegistry->toInertiaPayload();
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logDebugError('getModuleSlots', $e);
+
             return [];
+        }
+    }
+
+    /**
+     * Log an error in debug mode for troubleshooting.
+     */
+    private function logDebugError(string $method, \Throwable $e): void
+    {
+        if (config('app.debug')) {
+            logger()->debug("[HandleInertiaRequests::{$method}] {$e->getMessage()}", [
+                'exception' => $e::class,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
         }
     }
 }

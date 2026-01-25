@@ -1,0 +1,19 @@
+{
+  "name": "GuildForge",
+  "short_name": "GuildForge",
+  "icons": [
+    {
+      "src": "/favicons/dark/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicons/dark/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#D97706",
+  "background_color": "#1C1917",
+  "display": "standalone"
+}

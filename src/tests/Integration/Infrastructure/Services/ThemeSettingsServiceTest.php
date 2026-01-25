@@ -63,7 +63,7 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertEquals('Inter', $dto->fontBody);
         $this->assertEquals('16px', $dto->fontSizeBase);
         $this->assertEquals('0.5rem', $dto->borderRadius);
-        $this->assertEquals('subtle', $dto->shadowIntensity);
+        $this->assertEquals('0.5', $dto->shadowIntensity);
         $this->assertEquals('solid', $dto->buttonStyle);
         $this->assertFalse($dto->darkModeDefault);
         $this->assertTrue($dto->darkModeToggleVisible);
@@ -115,7 +115,7 @@ final class ThemeSettingsServiceTest extends TestCase
     {
         $this->settingsService->set('theme_font_heading', 'Roboto');
         $this->settingsService->set('theme_font_body', 'Open Sans');
-        $this->settingsService->set('theme_font_size_base', '18px');
+        $this->settingsService->set('theme_font_size_base', 'large');
 
         $css = $this->service->getCssVariables();
 
@@ -129,7 +129,7 @@ final class ThemeSettingsServiceTest extends TestCase
 
     public function test_get_css_variables_includes_appearance_variables(): void
     {
-        $this->settingsService->set('theme_border_radius', '0.75rem');
+        $this->settingsService->set('theme_border_radius', 'large');
         $this->settingsService->set('theme_shadow_intensity', 'medium');
 
         $css = $this->service->getCssVariables();
@@ -137,7 +137,7 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertStringContainsString('--border-radius:', $css);
         $this->assertStringContainsString('--shadow-intensity:', $css);
         $this->assertStringContainsString('0.75rem', $css);
-        $this->assertStringContainsString('medium', $css);
+        $this->assertStringContainsString('1', $css);
     }
 
     public function test_get_css_variables_formats_css_correctly(): void
@@ -189,7 +189,7 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertStringContainsString("--font-body: 'Inter'", $css);
         $this->assertStringContainsString('--font-size-base: 16px;', $css);
         $this->assertStringContainsString('--border-radius: 0.5rem;', $css);
-        $this->assertStringContainsString('--shadow-intensity: subtle;', $css);
+        $this->assertStringContainsString('--shadow-intensity: 0.5;', $css);
     }
 
     public function test_get_css_variables_includes_system_ui_fallback_fonts(): void

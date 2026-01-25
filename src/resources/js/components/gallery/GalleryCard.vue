@@ -54,6 +54,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
                         :tag="categoryTag"
                         :linkable="false"
                         variant="category"
+                        badge-style="overlay"
                         content-type="galleries"
                         class="absolute left-3 top-3"
                     />

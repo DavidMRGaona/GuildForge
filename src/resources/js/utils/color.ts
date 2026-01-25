@@ -25,3 +25,37 @@ export function getContrastTextColor(hex: string): string {
     const luminance = getLuminance(hex);
     return luminance > 0.179 ? '#111827' : '#ffffff';
 }
+
+/**
+ * Convert hex color to RGB object.
+ */
+export function hexToRgb(hex: string): { r: number; g: number; b: number } {
+    const cleanHex = hex.replace('#', '');
+    const r = parseInt(cleanHex.substring(0, 2), 16) || 0;
+    const g = parseInt(cleanHex.substring(2, 4), 16) || 0;
+    const b = parseInt(cleanHex.substring(4, 6), 16) || 0;
+
+    return { r, g, b };
+}
+
+/**
+ * Adjust the brightness of a hex color.
+ *
+ * @param hex - The hex color (e.g., #D97706)
+ * @param percent - Positive to lighten, negative to darken
+ * @returns Adjusted hex color
+ */
+export function adjustColorBrightness(hex: string, percent: number): string {
+    const { r, g, b } = hexToRgb(hex);
+
+    const adjust = (value: number): number => {
+        const adjusted = value + Math.round((value * percent) / 100);
+        return Math.max(0, Math.min(255, adjusted));
+    };
+
+    const newR = adjust(r);
+    const newG = adjust(g);
+    const newB = adjust(b);
+
+    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`.toUpperCase();
+}

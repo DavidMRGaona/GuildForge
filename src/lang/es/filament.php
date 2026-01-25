@@ -5,6 +5,9 @@ declare(strict_types=1);
 return [
     'navigation' => [
         'pages' => 'Páginas',
+        'content' => 'Contenido',
+        'settings' => 'Configuración',
+        'admin' => 'Administración',
     ],
     'pages' => [
         'about' => [
@@ -69,6 +72,15 @@ return [
             'logo_dark' => 'Logo (tema oscuro)',
             'logo_dark_help' => 'Se mostrará cuando el tema oscuro esté activo. PNG transparente recomendado, máx. 1MB.',
         ],
+        'branding' => [
+            'logos_section' => 'Logotipos',
+            'favicons_section' => 'Favicons',
+            'favicons_description' => 'Los favicons personalizados se mostrarán en la pestaña del navegador. Si no se configuran, se usarán los favicons por defecto.',
+            'favicon_light' => 'Favicon (tema claro)',
+            'favicon_light_help' => 'PNG o ICO, tamaño recomendado: 32x32px o 64x64px',
+            'favicon_dark' => 'Favicon (tema oscuro)',
+            'favicon_dark_help' => 'PNG o ICO, tamaño recomendado: 32x32px o 64x64px',
+        ],
         'colors' => [
             'primary_section' => 'Colores primarios',
             'background_section' => 'Colores de fondo',
@@ -84,6 +96,13 @@ return [
             'surface_color_dark' => 'Color de superficie (modo oscuro)',
             'text_color' => 'Color de texto',
             'text_color_dark' => 'Color de texto (modo oscuro)',
+            'text_secondary_color' => 'Color de texto secundario',
+            'text_secondary_color_dark' => 'Color de texto secundario (modo oscuro)',
+            'text_muted_color' => 'Color de texto atenuado',
+            'text_muted_color_dark' => 'Color de texto atenuado (modo oscuro)',
+            'border_section' => 'Colores de borde',
+            'border_color' => 'Color de borde',
+            'border_color_dark' => 'Color de borde (modo oscuro)',
         ],
         'typography' => [
             'font_heading' => 'Fuente para títulos',

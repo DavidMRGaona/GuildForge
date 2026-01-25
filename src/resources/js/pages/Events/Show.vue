@@ -208,8 +208,8 @@ useSeo({
                         <ModuleSlot name="event-detail-actions" />
                     </div>
 
-                    <div class="prose prose-amber max-w-none">
-                        <p class="whitespace-pre-line text-gray-700 dark:text-stone-300">
+                    <div class="prose max-w-none">
+                        <p class="whitespace-pre-line">
                             {{ props.event.description }}
                         </p>
                     </div>

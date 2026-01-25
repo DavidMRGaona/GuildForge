@@ -30,7 +30,7 @@ const footerLinks: FooterLink[] = [
                         v-for="link in footerLinks"
                         :key="link.href"
                         :href="link.href"
-                        class="text-sm text-stone-300 transition-colors hover:text-white dark:text-stone-400 dark:hover:text-stone-200"
+                        class="text-sm text-stone-300 transition-colors hover:text-primary dark:text-stone-400 dark:hover:text-primary"
                     >
                         {{ t(link.key) }}
                     </Link>

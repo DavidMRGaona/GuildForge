@@ -3,7 +3,8 @@ import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { Tag } from '@/types/models';
-import { getLuminance } from '@/utils/color';
+import { hexToRgb, adjustColorBrightness } from '@/utils/color';
+import { useAppStore } from '@/stores/useAppStore';
 
 interface Props {
     tags: Tag[];
@@ -16,13 +17,24 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { t } = useI18n();
+const appStore = useAppStore();
 
 /**
- * Determine if text should be dark or light based on background color.
+ * Get subtle style for a tag.
+ * In dark mode: higher opacity background, much lighter text
+ * In light mode: lower opacity background, darker text
  */
-function getTextColor(hex: string): string {
-    const luminance = getLuminance(hex);
-    return luminance > 0.179 ? '#111827' : '#ffffff';
+function getSubtleStyles(hex: string): { backgroundColor: string; color: string } {
+    const rgb = hexToRgb(hex);
+    const isDark = appStore.isDarkMode;
+    const textColor = isDark
+        ? adjustColorBrightness(hex, 80)
+        : adjustColorBrightness(hex, -35);
+    const bgOpacity = isDark ? 0.4 : 0.2;
+    return {
+        backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${bgOpacity})`,
+        color: textColor,
+    };
 }
 
 /**
@@ -89,8 +101,8 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
             :class="[
                 'rounded-full px-3 py-1 text-sm font-medium transition-colors',
                 !hasActiveTags
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200 dark:bg-stone-700 dark:text-stone-300 dark:hover:bg-stone-600',
+                    ? 'bg-primary-light text-primary font-semibold'
+                    : 'bg-muted text-base-secondary hover:bg-[var(--color-border)]',
             ]"
             @click="clearTags"
         >
@@ -106,8 +118,7 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
                 isActive(tag.slug) ? 'ring-2 ring-offset-1' : 'hover:opacity-80',
             ]"
             :style="{
-                backgroundColor: tag.color,
-                color: getTextColor(tag.color),
+                ...getSubtleStyles(tag.color),
                 '--tw-ring-color': tag.color,
             }"
             @click="toggleTag(tag.slug)"

@@ -144,7 +144,7 @@ useSeo({
                         @see App\Filament\Resources\ArticleResource - content field validation
                         @see App\Domain\Entities\Article - domain entity
                     -->
-                    <div class="prose prose-amber max-w-none" v-html="props.article.content" />
+                    <div class="prose max-w-none" v-html="props.article.content" />
 
                     <div class="mt-8 border-t border-gray-200 pt-6 dark:border-stone-700">
                         <Link href="/articulos">

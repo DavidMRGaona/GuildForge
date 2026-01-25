@@ -53,8 +53,9 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(fn (): ?string => $this->getBrandLogo('site_logo_light'))
             ->darkModeBrandLogo(fn (): ?string => $this->getBrandLogo('site_logo_dark'))
             ->brandLogoHeight('2.5rem')
+            ->favicon(fn (): string => $this->getFavicon())
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => $this->getPrimaryColor(),
             ])
             ->darkMode(true)
             ->navigationGroups($this->getNavigationGroups())
@@ -102,18 +103,58 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
+     * Get the favicon URL for Filament.
+     *
+     * Uses custom light favicon if configured, otherwise falls back to static default.
+     */
+    private function getFavicon(): string
+    {
+        try {
+            $settingsService = app(SettingsServiceInterface::class);
+            $faviconPath = (string) $settingsService->get('site_favicon_light', '');
+
+            if ($faviconPath !== '') {
+                return Storage::disk('images')->url($faviconPath);
+            }
+        } catch (Throwable) {
+            // Fall through to default
+        }
+
+        return '/favicons/light/favicon.ico';
+    }
+
+    /**
+     * Get the primary color for Filament from settings.
+     *
+     * @return array{50: string, 100: string, 200: string, 300: string, 400: string, 500: string, 600: string, 700: string, 800: string, 900: string, 950: string}
+     */
+    private function getPrimaryColor(): array
+    {
+        try {
+            $settingsService = app(SettingsServiceInterface::class);
+            /** @var string $hexColor */
+            $hexColor = $settingsService->get('theme_primary_color', '#D97706');
+
+            return Color::hex($hexColor);
+        } catch (Throwable) {
+            // Fallback to amber if settings are unavailable
+            return Color::Amber;
+        }
+    }
+
+    /**
      * Get all navigation groups (core + modules).
      *
      * @return array<NavigationGroup>
      */
     private function getNavigationGroups(): array
     {
-        // Core navigation groups with sort order
+        // Core navigation groups with sort order (use translations)
         $coreGroups = [
-            'Contenido' => ['sort' => 10],
-            'Páginas' => ['sort' => 30],
-            'Configuración' => ['sort' => 40],
-            'Administración' => ['sort' => 50],
+            __('filament.navigation.content') => ['sort' => 10],
+            __('filament.navigation.pages') => ['sort' => 30],
+            __('filament.navigation.settings') => ['sort' => 40],
+            __('filament.navigation.admin') => ['sort' => 50],
         ];
 
         // Collect navigation groups from modules
