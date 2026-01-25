@@ -12,8 +12,8 @@ final class ModuleViteHelper
 {
     public function __construct(
         private readonly ModuleLoader $loader,
-        private readonly string $modulesPath,
-    ) {}
+    ) {
+    }
 
     /**
      * Generate Vite tags for a module's entry points.

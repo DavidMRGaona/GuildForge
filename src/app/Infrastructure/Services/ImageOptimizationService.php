@@ -139,11 +139,11 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
 
         return match ($targetFormat) {
             'jpg', 'jpeg' => new JpegEncoder($settings->quality),
-            'png' => new PngEncoder,
+            'png' => new PngEncoder(),
             'webp' => new WebpEncoder($settings->quality),
-            'gif' => new GifEncoder,
+            'gif' => new GifEncoder(),
             // AutoEncoder auto-detects format from image, quality is set via separate encoders
-            default => new AutoEncoder,
+            default => new AutoEncoder(),
         };
     }
 
@@ -195,10 +195,10 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
     {
         // Prefer Imagick for better quality and performance
         if (extension_loaded('imagick')) {
-            return new ImageManager(new ImagickDriver);
+            return new ImageManager(new ImagickDriver());
         }
 
         // Fall back to GD
-        return new ImageManager(new GdDriver);
+        return new ImageManager(new GdDriver());
     }
 }

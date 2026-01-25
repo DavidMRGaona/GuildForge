@@ -11,16 +11,18 @@ use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\ImageOptimizationServiceInterface;
-use App\Domain\Enums\UserRole;
 use App\Domain\Events\UserLoggedIn;
 use App\Domain\Events\UserLoggedOut;
 use App\Domain\Events\UserPasswordChanged;
 use App\Domain\Events\UserProfileUpdated;
 use App\Domain\Events\UserRegistered;
+use App\Domain\Repositories\UserRepositoryInterface;
+use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\VerifyPendingEmailNotification;
 use App\Notifications\WelcomeNotification;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
@@ -33,25 +35,27 @@ final readonly class AuthService implements AuthServiceInterface
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
         private ImageOptimizationServiceInterface $imageOptimizer,
-    ) {}
+        private UserRepositoryInterface $userRepository,
+    ) {
+    }
 
     public function register(CreateUserDTO $dto): UserResponseDTO
     {
-        $user = UserModel::create([
-            'name' => $dto->name,
-            'email' => $dto->email,
-            'password' => $dto->password,
-            'role' => UserRole::Member,
-        ]);
+        $user = $this->userRepository->create($dto);
+        $userModel = $this->userRepository->findModelById($user->id());
 
-        event(new Registered($user));
-        Event::dispatch(new UserRegistered((string) $user->id, $user->email));
+        if ($userModel === null) {
+            throw new \RuntimeException('Failed to retrieve user after creation');
+        }
+
+        event(new Registered($userModel));
+        Event::dispatch(new UserRegistered($user->id()->value, $user->email()));
 
         // Send welcome email
         $appName = (string) config('app.name', 'GuildForge');
-        $user->notify(new WelcomeNotification($appName));
+        $userModel->notify(new WelcomeNotification($appName));
 
-        return $this->dtoFactory->createUserDTO($user);
+        return $this->dtoFactory->createUserDTO($userModel);
     }
 
     public function attemptLogin(string $email, string $password, bool $remember = false): bool
@@ -117,91 +121,106 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function sendEmailVerificationNotification(string $userId): void
     {
-        $user = UserModel::findOrFail($userId);
-        $user->sendEmailVerificationNotification();
+        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        if ($userModel === null) {
+            throw new ModelNotFoundException("User not found: $userId");
+        }
+        $userModel->sendEmailVerificationNotification();
     }
 
     public function verifyEmail(string $userId, string $hash): bool
     {
-        $user = UserModel::findOrFail($userId);
+        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        if ($userModel === null) {
+            throw new ModelNotFoundException("User not found: $userId");
+        }
 
-        if (! hash_equals(sha1($user->getEmailForVerification()), $hash)) {
+        if (! hash_equals(sha1($userModel->getEmailForVerification()), $hash)) {
             return false;
         }
 
-        if ($user->hasVerifiedEmail()) {
+        if ($userModel->hasVerifiedEmail()) {
             return true;
         }
 
-        $user->markEmailAsVerified();
+        $userModel->markEmailAsVerified();
 
         return true;
     }
 
     public function updateProfile(string $userId, UpdateUserDTO $dto): UserResponseDTO
     {
-        $user = UserModel::findOrFail($userId);
+        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        if ($userModel === null) {
+            throw new ModelNotFoundException("User not found: $userId");
+        }
 
         // Handle avatar cleanup if avatar is being changed
-        if ($dto->avatarPublicId !== null && $user->avatar_public_id !== null && $user->avatar_public_id !== $dto->avatarPublicId) {
-            Storage::disk('images')->delete($user->avatar_public_id);
+        if ($dto->avatarPublicId !== null && $userModel->avatar_public_id !== null && $userModel->avatar_public_id !== $dto->avatarPublicId) {
+            Storage::disk('images')->delete($userModel->avatar_public_id);
         }
 
         // Check if email is being changed
-        $emailIsChanging = $dto->email !== $user->email;
+        $emailIsChanging = $dto->email !== $userModel->email;
         $pendingEmail = $emailIsChanging ? $dto->email : null;
 
-        $user->update([
+        $userModel->update([
             'name' => $dto->name,
             'display_name' => $dto->displayName,
             'pending_email' => $pendingEmail,
-            'avatar_public_id' => $dto->avatarPublicId ?? $user->avatar_public_id,
+            'avatar_public_id' => $dto->avatarPublicId ?? $userModel->avatar_public_id,
         ]);
 
         // Send verification email if email is changing
         if ($emailIsChanging) {
-            $user->notify(new VerifyPendingEmailNotification($dto->email));
+            $userModel->notify(new VerifyPendingEmailNotification($dto->email));
         }
 
-        Event::dispatch(new UserProfileUpdated((string) $user->id));
+        Event::dispatch(new UserProfileUpdated((string) $userModel->id));
 
         /** @var UserModel $freshUser */
-        $freshUser = $user->fresh();
+        $freshUser = $userModel->fresh();
 
         return $this->dtoFactory->createUserDTO($freshUser);
     }
 
     public function changePassword(string $userId, string $currentPassword, string $newPassword): bool
     {
-        $user = UserModel::findOrFail($userId);
+        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        if ($userModel === null) {
+            throw new ModelNotFoundException("User not found: $userId");
+        }
 
-        if (! Hash::check($currentPassword, $user->password)) {
+        if (! Hash::check($currentPassword, $userModel->password)) {
             return false;
         }
 
-        $user->update([
+        $userModel->update([
             'password' => $newPassword,
         ]);
 
-        Event::dispatch(new UserPasswordChanged((string) $user->id));
+        Event::dispatch(new UserPasswordChanged((string) $userModel->id));
 
         return true;
     }
 
     public function verifyPendingEmail(string $userId, string $hash): bool
     {
-        $user = UserModel::findOrFail($userId);
+        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        if ($userModel === null) {
+            throw new ModelNotFoundException("User not found: $userId");
+        }
 
-        if ($user->pending_email === null) {
+        if ($userModel->pending_email === null) {
             return false;
         }
 
-        if (! hash_equals(sha1($user->pending_email), $hash)) {
+        if (! hash_equals(sha1($userModel->pending_email), $hash)) {
             return false;
         }
 
-        $user->update([
-            'email' => $user->pending_email,
+        $userModel->update([
+            'email' => $userModel->pending_email,
             'pending_email' => null,
         ]);
 

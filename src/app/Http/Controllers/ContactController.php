@@ -14,7 +14,8 @@ final class ContactController extends Controller
 {
     public function __construct(
         private readonly SettingsServiceInterface $settings,
-    ) {}
+    ) {
+    }
 
     public function __invoke(ContactFormRequest $request): RedirectResponse
     {

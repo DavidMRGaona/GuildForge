@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('featured_image')->nullable();
             $table->boolean('is_published')->default(false);
             $table->timestamp('published_at')->nullable();
-            $table->foreignId('author_id')
+            $table->foreignUuid('author_id')
                 ->constrained('users')
                 ->cascadeOnDelete();
             $table->timestamps();

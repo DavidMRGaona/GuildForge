@@ -91,6 +91,7 @@ final class SiteSettings extends Page implements HasForms
             'auth_registration_enabled',
             'auth_login_enabled',
             'auth_email_verification_required',
+            'anonymized_user_name',
         ];
     }
 
@@ -343,6 +344,16 @@ final class SiteSettings extends Page implements HasForms
                                             ->label(__('filament.settings.auth.email_verification_required'))
                                             ->helperText(__('filament.settings.auth.email_verification_required_help'))
                                             ->default(false),
+                                    ]),
+
+                                Section::make(__('filament.settings.auth.section_gdpr'))
+                                    ->description(__('filament.settings.auth.section_gdpr_description'))
+                                    ->schema([
+                                        TextInput::make('anonymized_user_name')
+                                            ->label(__('filament.settings.auth.anonymized_user_name'))
+                                            ->helperText(__('filament.settings.auth.anonymized_user_name_help'))
+                                            ->default('Anónimo')
+                                            ->maxLength(100),
                                     ]),
                             ]),
                     ])

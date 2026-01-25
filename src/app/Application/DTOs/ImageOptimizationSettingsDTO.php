@@ -16,14 +16,15 @@ final readonly class ImageOptimizationSettingsDTO
         public ?string $format = null,
         public bool $skipAnimatedGif = true,
         public int $minSizeBytes = 51200, // 50KB
-    ) {}
+    ) {
+    }
 
     /**
      * Create an instance with default values.
      */
     public static function defaults(): self
     {
-        return new self;
+        return new self();
     }
 
     /**

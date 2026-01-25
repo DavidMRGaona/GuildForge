@@ -18,7 +18,7 @@ final class ModuleCollectionTest extends TestCase
 {
     public function test_can_create_empty_collection(): void
     {
-        $collection = new ModuleCollection;
+        $collection = new ModuleCollection();
 
         $this->assertTrue($collection->isEmpty());
         $this->assertCount(0, $collection);
@@ -37,7 +37,7 @@ final class ModuleCollectionTest extends TestCase
 
     public function test_can_add_module(): void
     {
-        $collection = new ModuleCollection;
+        $collection = new ModuleCollection();
         $module = $this->createModule('test-module');
 
         $collection->add($module);
@@ -59,7 +59,7 @@ final class ModuleCollectionTest extends TestCase
 
     public function test_get_returns_null_for_nonexistent_module(): void
     {
-        $collection = new ModuleCollection;
+        $collection = new ModuleCollection();
 
         $result = $collection->get(new ModuleName('nonexistent'));
 
@@ -87,7 +87,7 @@ final class ModuleCollectionTest extends TestCase
 
     public function test_has_returns_false_for_nonexistent_module(): void
     {
-        $collection = new ModuleCollection;
+        $collection = new ModuleCollection();
 
         $this->assertFalse($collection->has(new ModuleName('nonexistent')));
     }
@@ -241,7 +241,7 @@ final class ModuleCollectionTest extends TestCase
 
     public function test_first_returns_null_for_empty_collection(): void
     {
-        $collection = new ModuleCollection;
+        $collection = new ModuleCollection();
 
         $this->assertNull($collection->first());
     }
@@ -307,7 +307,7 @@ final class ModuleCollectionTest extends TestCase
 
     public function test_get_by_name_returns_null_for_nonexistent(): void
     {
-        $collection = new ModuleCollection;
+        $collection = new ModuleCollection();
 
         $this->assertNull($collection->getByName('nonexistent'));
     }
@@ -326,9 +326,9 @@ final class ModuleCollectionTest extends TestCase
             author: 'Test',
             requirements: ModuleRequirements::fromArray([]),
             status: $status,
-            enabledAt: $status === ModuleStatus::Enabled ? new DateTimeImmutable : null,
-            createdAt: new DateTimeImmutable,
-            updatedAt: new DateTimeImmutable,
+            enabledAt: $status === ModuleStatus::Enabled ? new DateTimeImmutable() : null,
+            createdAt: new DateTimeImmutable(),
+            updatedAt: new DateTimeImmutable(),
             namespace: 'Modules\\'.ucfirst($name),
             provider: ucfirst($name).'ServiceProvider',
             path: '/modules/'.$name,

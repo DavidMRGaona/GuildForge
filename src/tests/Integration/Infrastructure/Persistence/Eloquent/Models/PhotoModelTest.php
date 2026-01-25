@@ -41,7 +41,7 @@ final class PhotoModelTest extends TestCase
             'sort_order',
         ];
 
-        $model = new PhotoModel;
+        $model = new PhotoModel();
 
         $this->assertEquals($fillable, $model->getFillable());
     }

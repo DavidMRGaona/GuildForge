@@ -119,12 +119,12 @@ final class Event
 
     public function isUpcoming(): bool
     {
-        return ($this->endDate ?? $this->startDate) > new DateTimeImmutable;
+        return ($this->endDate ?? $this->startDate) > new DateTimeImmutable();
     }
 
     public function isPast(): bool
     {
-        return ($this->endDate ?? $this->startDate) < new DateTimeImmutable;
+        return ($this->endDate ?? $this->startDate) < new DateTimeImmutable();
     }
 
     public function isMultiDay(): bool

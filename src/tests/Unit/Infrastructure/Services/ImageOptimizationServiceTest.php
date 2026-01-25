@@ -17,7 +17,7 @@ final class ImageOptimizationServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new ImageOptimizationService(new NullLogger);
+        $this->service = new ImageOptimizationService(new NullLogger());
     }
 
     public function test_is_optimizable_mime_type_returns_true_for_jpeg(): void

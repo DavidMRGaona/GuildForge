@@ -21,7 +21,8 @@ final readonly class ModuleManifestDTO
         public ?string $author = null,
         public ?array $requires = null,
         public ?array $dependencies = null,
-    ) {}
+    ) {
+    }
 
     /**
      * @param  array<string, mixed>  $data

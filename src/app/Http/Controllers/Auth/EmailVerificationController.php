@@ -15,7 +15,8 @@ final class EmailVerificationController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
-    ) {}
+    ) {
+    }
 
     public function notice(): Response
     {

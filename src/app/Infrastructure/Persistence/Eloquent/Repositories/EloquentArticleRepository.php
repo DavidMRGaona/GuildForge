@@ -45,7 +45,7 @@ final readonly class EloquentArticleRepository implements ArticleRepositoryInter
             ->map(fn (ArticleModel $model): Article => $this->toDomain($model));
     }
 
-    public function findByAuthor(int $authorId): Collection
+    public function findByAuthor(string $authorId): Collection
     {
         return ArticleModel::query()
             ->where('author_id', $authorId)

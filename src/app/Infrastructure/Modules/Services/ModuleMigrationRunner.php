@@ -12,7 +12,8 @@ final readonly class ModuleMigrationRunner
 {
     public function __construct(
         private string $modulesPath,
-    ) {}
+    ) {
+    }
 
     /**
      * Runs migrations for a module.

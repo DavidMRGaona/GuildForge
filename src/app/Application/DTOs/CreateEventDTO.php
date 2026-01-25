@@ -18,7 +18,8 @@ final readonly class CreateEventDTO
         public ?string $imagePublicId = null,
         public ?float $memberPrice = null,
         public ?float $nonMemberPrice = null,
-    ) {}
+    ) {
+    }
 
     /**
      * @param  array{title: string, description: string, start_date: string, end_date?: string|null, location?: string|null, image_public_id?: string|null, member_price?: float|null, non_member_price?: float|null}  $data

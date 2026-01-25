@@ -77,11 +77,8 @@ trait HasExtendableRelations
      */
     protected static function filterValidRelations(array $relationManagers): array
     {
+        /** @var class-string<\Illuminate\Database\Eloquent\Model> $modelClass */
         $modelClass = static::getModel();
-
-        if ($modelClass === null) {
-            return $relationManagers;
-        }
 
         return array_filter($relationManagers, static function (string $relationManagerClass) use ($modelClass): bool {
             if (! class_exists($relationManagerClass)) {
@@ -101,6 +98,9 @@ trait HasExtendableRelations
 
     /**
      * Check if a model has a relation resolver registered for the given relationship.
+     */
+    /**
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
      */
     private static function hasRelationResolver(string $modelClass, string $relationshipName): bool
     {

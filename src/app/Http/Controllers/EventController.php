@@ -22,7 +22,8 @@ final class EventController extends Controller
     public function __construct(
         private readonly EventQueryServiceInterface $eventQuery,
         private readonly TagQueryServiceInterface $tagQuery,
-    ) {}
+    ) {
+    }
 
     public function index(Request $request): Response
     {

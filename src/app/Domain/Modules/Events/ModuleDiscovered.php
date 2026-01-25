@@ -10,5 +10,6 @@ final readonly class ModuleDiscovered
         public string $moduleId,
         public string $moduleName,
         public string $version,
-    ) {}
+    ) {
+    }
 }

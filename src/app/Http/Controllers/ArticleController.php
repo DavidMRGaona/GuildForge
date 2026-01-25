@@ -17,12 +17,13 @@ final class ArticleController extends Controller
 {
     use BuildsPaginatedResponse;
 
-    private const PER_PAGE = 12;
+    private const int PER_PAGE = 12;
 
     public function __construct(
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly TagQueryServiceInterface $tagQuery,
-    ) {}
+    ) {
+    }
 
     public function index(Request $request): Response
     {

@@ -16,5 +16,6 @@ final readonly class TagResponseDTO
         public array $appliesTo,
         public string $color,
         public int $sortOrder,
-    ) {}
+    ) {
+    }
 }

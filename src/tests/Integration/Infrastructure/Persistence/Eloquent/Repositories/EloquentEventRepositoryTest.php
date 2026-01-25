@@ -24,7 +24,7 @@ final class EloquentEventRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->repository = new EloquentEventRepository;
+        $this->repository = new EloquentEventRepository();
     }
 
     public function test_it_implements_event_repository_interface(): void

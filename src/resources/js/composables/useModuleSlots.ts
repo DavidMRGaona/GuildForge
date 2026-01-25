@@ -24,18 +24,13 @@ interface ModuleSlotsComposable {
 /**
  * Resolve a component path to an async component
  */
-function resolveComponent(
-    module: string,
-    componentPath: string
-): Component | null {
+function resolveComponent(module: string, componentPath: string): Component | null {
     // Build the glob path: ../../../modules/{module}/resources/js/{componentPath}
     const globPath = `../../../modules/${module}/resources/js/${componentPath}`;
 
     const loader = moduleComponents[globPath];
     if (!loader) {
-        console.warn(
-            `[ModuleSlots] Component not found: ${module}/${componentPath}`
-        );
+        console.warn(`[ModuleSlots] Component not found: ${module}/${componentPath}`);
         return null;
     }
 
@@ -90,10 +85,7 @@ export function useModuleSlots(): ModuleSlotsComposable {
 
         return registrations
             .map((registration) => {
-                const component = resolveComponent(
-                    registration.module,
-                    registration.component
-                );
+                const component = resolveComponent(registration.module, registration.component);
 
                 if (!component) {
                     return null;
@@ -102,10 +94,7 @@ export function useModuleSlots(): ModuleSlotsComposable {
                 return {
                     key: `${registration.module}-${registration.component}-${registration.order}`,
                     component,
-                    props: getComponentProps(
-                        registration,
-                        page.props as Record<string, unknown>
-                    ),
+                    props: getComponentProps(registration, page.props as Record<string, unknown>),
                     registration,
                 };
             })

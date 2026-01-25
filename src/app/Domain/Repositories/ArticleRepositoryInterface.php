@@ -22,7 +22,7 @@ interface ArticleRepositoryInterface
     /**
      * @return Collection<int, Article>
      */
-    public function findByAuthor(int $authorId): Collection;
+    public function findByAuthor(string $authorId): Collection;
 
     public function save(Article $article): void;
 

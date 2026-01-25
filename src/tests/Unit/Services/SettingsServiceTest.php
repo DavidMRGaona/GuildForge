@@ -20,7 +20,7 @@ final class SettingsServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->settingsService = new SettingsService;
+        $this->settingsService = new SettingsService();
     }
 
     public function test_get_returns_value_for_existing_key(): void

@@ -60,7 +60,9 @@ useSeo({
                 </Link>
             </div>
 
-            <article class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50">
+            <article
+                class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50"
+            >
                 <img
                     v-if="heroImageUrl"
                     :src="heroImageUrl"
@@ -88,7 +90,9 @@ useSeo({
                 </div>
 
                 <div class="p-6 sm:p-8">
-                    <h1 class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl dark:text-stone-100">
+                    <h1
+                        class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl dark:text-stone-100"
+                    >
                         {{ props.article.title }}
                     </h1>
 

@@ -62,7 +62,9 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
                 </Link>
             </div>
 
-            <div class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50">
+            <div
+                class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50"
+            >
                 <div
                     class="border-b border-gray-200 bg-gradient-to-r from-amber-500 to-slate-600 px-6 py-8 text-white dark:border-stone-700"
                 >

@@ -19,7 +19,7 @@ final class ArticleTest extends TestCase
         $title = 'Introduction to Warhammer 40K';
         $slug = new Slug('introduction-to-warhammer-40k');
         $content = 'Warhammer 40K is a tabletop miniature wargame...';
-        $authorId = 1;
+        $authorId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
         $article = new Article(
             id: $id,
@@ -50,7 +50,7 @@ final class ArticleTest extends TestCase
         $featuredImagePublicId = 'articles/painting-guide.jpg';
         $isPublished = true;
         $publishedAt = new DateTimeImmutable('2024-01-15 10:00:00');
-        $authorId = 1;
+        $authorId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
         $createdAt = new DateTimeImmutable('2024-01-01 10:00:00');
         $updatedAt = new DateTimeImmutable('2024-01-02 15:30:00');
 
@@ -134,9 +134,9 @@ final class ArticleTest extends TestCase
             title: 'Test Article',
             slug: new Slug('test-article'),
             content: 'Test article content.',
-            authorId: 1,
+            authorId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
             isPublished: $isPublished,
-            publishedAt: $isPublished ? ($publishedAt ?? new DateTimeImmutable) : null,
+            publishedAt: $isPublished ? ($publishedAt ?? new DateTimeImmutable()) : null,
         );
     }
 }

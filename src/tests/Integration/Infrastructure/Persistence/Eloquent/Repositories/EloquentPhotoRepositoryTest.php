@@ -23,7 +23,7 @@ final class EloquentPhotoRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->repository = new EloquentPhotoRepository;
+        $this->repository = new EloquentPhotoRepository();
     }
 
     public function test_it_implements_photo_repository_interface(): void

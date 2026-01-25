@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules;
 
+use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
+use App\Application\Authorization\Services\PermissionRegistryInterface;
+use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
@@ -18,7 +21,8 @@ final class ModuleLoader
     public function __construct(
         private readonly Application $app,
         private readonly ModuleRepositoryInterface $repository,
-    ) {}
+    ) {
+    }
 
     /**
      * Boot all enabled modules.
@@ -56,6 +60,9 @@ final class ModuleLoader
 
         // Register slots from the provider
         $this->registerProviderSlots($provider);
+
+        // Register permissions from the provider
+        $this->registerProviderPermissions($provider);
     }
 
     /**
@@ -73,6 +80,59 @@ final class ModuleLoader
             $slotRegistry = $this->app->make(ModuleSlotRegistryInterface::class);
             $slotRegistry->registerMany($slots);
         }
+    }
+
+    /**
+     * Register permissions from a module provider.
+     */
+    private function registerProviderPermissions(ModuleServiceProvider $provider): void
+    {
+        $permissions = $provider->registerPermissions();
+
+        if ($permissions === []) {
+            return;
+        }
+
+        if (! $this->app->bound(PermissionRegistryInterface::class)) {
+            return;
+        }
+
+        /** @var PermissionRegistryInterface $permissionRegistry */
+        $permissionRegistry = $this->app->make(PermissionRegistryInterface::class);
+
+        // Convert module PermissionDTO to PermissionDefinitionDTO
+        $definitions = array_map(
+            fn (PermissionDTO $dto): PermissionDefinitionDTO => $this->convertPermissionDTO($dto),
+            $permissions
+        );
+
+        $permissionRegistry->registerMany($definitions);
+    }
+
+    /**
+     * Convert a module PermissionDTO to a PermissionDefinitionDTO.
+     */
+    private function convertPermissionDTO(PermissionDTO $dto): PermissionDefinitionDTO
+    {
+        // Parse the permission name to extract resource and action
+        // Module permissions use format: "resource.action" (e.g., "announcements.view")
+        $parts = explode('.', $dto->name);
+        $resource = $parts[0];
+        $action = $parts[1] ?? $dto->name;
+
+        // Build the full key with module prefix
+        $key = $dto->module !== null
+            ? "{$dto->module}:{$dto->name}"
+            : $dto->name;
+
+        return new PermissionDefinitionDTO(
+            key: $key,
+            label: $dto->label,
+            resource: $resource,
+            action: $action,
+            module: $dto->module,
+            defaultRoles: $dto->roles,
+        );
     }
 
     /**

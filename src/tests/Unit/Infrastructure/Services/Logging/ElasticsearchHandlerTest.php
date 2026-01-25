@@ -82,7 +82,7 @@ final class ElasticsearchHandlerTest extends TestCase
         );
 
         $record = new LogRecord(
-            datetime: new DateTimeImmutable,
+            datetime: new DateTimeImmutable(),
             channel: 'test',
             level: Level::Error,
             message: 'Test error message',
@@ -109,14 +109,14 @@ final class ElasticsearchHandlerTest extends TestCase
         );
 
         $errorRecord = new LogRecord(
-            datetime: new DateTimeImmutable,
+            datetime: new DateTimeImmutable(),
             channel: 'test',
             level: Level::Error,
             message: 'Error message',
         );
 
         $debugRecord = new LogRecord(
-            datetime: new DateTimeImmutable,
+            datetime: new DateTimeImmutable(),
             channel: 'test',
             level: Level::Debug,
             message: 'Debug message',
@@ -159,7 +159,7 @@ final class ElasticsearchHandlerTest extends TestCase
         );
 
         $record = new LogRecord(
-            datetime: new DateTimeImmutable,
+            datetime: new DateTimeImmutable(),
             channel: 'test',
             level: Level::Error,
             message: 'Test error message',

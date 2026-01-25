@@ -39,7 +39,7 @@ final class CloudinaryStorageAdapter extends BaseCloudinaryStorageAdapter
         parent::__construct($cloudinary, $mimeTypeDetector, $prefix);
         $this->cloudinaryInstance = $cloudinary;
         $this->prefixPath = $prefix !== null ? trim($prefix, '/') : '';
-        $this->mimeDetector = $mimeTypeDetector ?? new FinfoMimeTypeDetector;
+        $this->mimeDetector = $mimeTypeDetector ?? new FinfoMimeTypeDetector();
     }
 
     /**

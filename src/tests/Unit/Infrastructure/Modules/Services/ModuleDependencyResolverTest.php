@@ -22,7 +22,7 @@ final class ModuleDependencyResolverTest extends TestCase
     {
         parent::setUp();
 
-        $this->resolver = new ModuleDependencyResolver;
+        $this->resolver = new ModuleDependencyResolver();
     }
 
     public function test_it_returns_satisfied_when_no_dependencies(): void

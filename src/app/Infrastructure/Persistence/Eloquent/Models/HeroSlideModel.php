@@ -32,6 +32,7 @@ final class HeroSlideModel extends Model
 
     /** @use HasFactory<HeroSlideModelFactory> */
     use HasFactory;
+
     use HasUuids;
 
     /** @var array<string> */

@@ -75,7 +75,7 @@ final class ModuleTest extends TestCase
     {
         $module = $this->createModule(
             status: ModuleStatus::Enabled,
-            enabledAt: new DateTimeImmutable
+            enabledAt: new DateTimeImmutable()
         );
 
         $module->disable();
@@ -114,7 +114,7 @@ final class ModuleTest extends TestCase
 
     public function test_is_installed_returns_true_when_installed_at_is_set(): void
     {
-        $module = $this->createModule(installedAt: new DateTimeImmutable);
+        $module = $this->createModule(installedAt: new DateTimeImmutable());
 
         $this->assertTrue($module->isInstalled());
     }
@@ -138,7 +138,7 @@ final class ModuleTest extends TestCase
 
     public function test_mark_uninstalled_clears_installed_at(): void
     {
-        $module = $this->createModule(installedAt: new DateTimeImmutable);
+        $module = $this->createModule(installedAt: new DateTimeImmutable());
 
         $module->markUninstalled();
 

@@ -23,7 +23,8 @@ final class GalleryController extends Controller
     public function __construct(
         private readonly GalleryQueryServiceInterface $galleryQuery,
         private readonly TagQueryServiceInterface $tagQuery,
-    ) {}
+    ) {
+    }
 
     public function index(Request $request): Response
     {

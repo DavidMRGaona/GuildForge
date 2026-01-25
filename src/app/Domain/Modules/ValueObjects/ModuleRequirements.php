@@ -15,7 +15,8 @@ final readonly class ModuleRequirements
         private ?string $laravelVersion,
         private array $requiredModules = [],
         private array $requiredExtensions = [],
-    ) {}
+    ) {
+    }
 
     /**
      * @param array{

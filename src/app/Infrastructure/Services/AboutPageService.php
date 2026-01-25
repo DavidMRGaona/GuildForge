@@ -12,7 +12,8 @@ final readonly class AboutPageService implements AboutPageServiceInterface
 {
     public function __construct(
         private SettingsServiceInterface $settings,
-    ) {}
+    ) {
+    }
 
     public function getAboutPageData(): array
     {

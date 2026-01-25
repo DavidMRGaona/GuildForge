@@ -527,6 +527,9 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $variables
+     */
     private function renderStub(string $stub, string $destination, array $variables, bool $force = false): string
     {
         // Ensure parent directory exists

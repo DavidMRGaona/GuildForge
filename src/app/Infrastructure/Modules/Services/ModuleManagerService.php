@@ -37,12 +37,13 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private ModuleDependencyResolver $dependencyResolver,
         private ModuleMigrationRunner $migrationRunner,
         private Dispatcher $events,
-    ) {}
+    ) {
+    }
 
     public function discover(): ModuleCollection
     {
         $manifests = $this->discoveryService->discover();
-        $discovered = new ModuleCollection;
+        $discovered = new ModuleCollection();
 
         foreach ($manifests as $manifest) {
             $moduleName = new ModuleName($manifest->name);
@@ -73,8 +74,8 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 requirements: $this->parseRequirements($manifest->requires),
                 status: ModuleStatus::Disabled,
                 enabledAt: null,
-                createdAt: new DateTimeImmutable,
-                updatedAt: new DateTimeImmutable,
+                createdAt: new DateTimeImmutable(),
+                updatedAt: new DateTimeImmutable(),
                 namespace: $manifest->namespace,
                 provider: $manifest->provider,
                 path: $modulesPath.'/'.$manifest->name,

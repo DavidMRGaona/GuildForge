@@ -8,5 +8,6 @@ final readonly class UserPasswordChanged
 {
     public function __construct(
         public string $userId,
-    ) {}
+    ) {
+    }
 }

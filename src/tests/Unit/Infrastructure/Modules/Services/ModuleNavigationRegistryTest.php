@@ -15,7 +15,7 @@ final class ModuleNavigationRegistryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->registry = new ModuleNavigationRegistry;
+        $this->registry = new ModuleNavigationRegistry();
     }
 
     public function test_it_registers_single_navigation_item(): void

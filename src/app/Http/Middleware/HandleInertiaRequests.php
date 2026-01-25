@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
@@ -146,6 +147,11 @@ final class HandleInertiaRequests extends Middleware
             $factory = app(ResponseDTOFactoryInterface::class);
             $userDTO = $factory->createUserDTO($user);
 
+            // Get roles and permissions from authorization service
+            $authService = app(AuthorizationServiceInterface::class);
+            $roles = $authService->getRoles($user);
+            $permissions = $authService->getPermissions($user);
+
             return [
                 'id' => $userDTO->id,
                 'name' => $userDTO->name,
@@ -155,6 +161,9 @@ final class HandleInertiaRequests extends Middleware
                 'role' => $userDTO->role,
                 'emailVerified' => $userDTO->emailVerified,
                 'createdAt' => $userDTO->createdAt->format('c'),
+                // New authorization fields
+                'roles' => $roles,
+                'permissions' => $permissions,
             ];
         } catch (\Throwable) {
             return null;
