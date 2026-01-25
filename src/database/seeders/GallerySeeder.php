@@ -23,37 +23,64 @@ final class GallerySeeder extends Seeder
         $juegosMesaTag = TagModel::where('slug', 'juegos-de-mesa')->first();
 
         // Published galleries
-        $torneoVerano = GalleryModel::factory()->published()->create([
-            'title' => 'Torneo de verano 2024',
-            'slug' => 'torneo-verano-2024',
-            'description' => 'Fotos del torneo de verano de la asociación.',
-        ]);
-        $torneoVerano->tags()->attach(array_filter([$warhammer40kTag?->id, $wargamesTag?->id]));
+        $torneoVerano = $this->firstOrCreateGallery(
+            'torneo-verano-2024',
+            [
+                'title' => 'Torneo de verano 2024',
+                'description' => 'Fotos del torneo de verano de la asociación.',
+            ],
+            fn () => GalleryModel::factory()->published()->raw(),
+        );
+        $torneoVerano->tags()->syncWithoutDetaching(array_filter([$warhammer40kTag?->id, $wargamesTag?->id]));
 
-        $tallerIniciacion = GalleryModel::factory()->published()->create([
-            'title' => 'Taller de iniciación',
-            'slug' => 'taller-iniciacion',
-            'description' => 'Fotos de nuestros talleres de iniciación.',
-        ]);
-        $tallerIniciacion->tags()->attach(array_filter([$juegosRolTag?->id]));
+        $tallerIniciacion = $this->firstOrCreateGallery(
+            'taller-iniciacion',
+            [
+                'title' => 'Taller de iniciación',
+                'description' => 'Fotos de nuestros talleres de iniciación.',
+            ],
+            fn () => GalleryModel::factory()->published()->raw(),
+        );
+        $tallerIniciacion->tags()->syncWithoutDetaching(array_filter([$juegosRolTag?->id]));
 
-        $nuestroLocal = GalleryModel::factory()->published()->create([
-            'title' => 'Nuestro local',
-            'slug' => 'nuestro-local',
-            'description' => 'Fotos de las instalaciones de la asociación.',
-        ]);
-        $nuestroLocal->tags()->attach(array_filter([$wargamesTag?->id, $juegosRolTag?->id, $juegosMesaTag?->id]));
+        $nuestroLocal = $this->firstOrCreateGallery(
+            'nuestro-local',
+            [
+                'title' => 'Nuestro local',
+                'description' => 'Fotos de las instalaciones de la asociación.',
+            ],
+            fn () => GalleryModel::factory()->published()->raw(),
+        );
+        $nuestroLocal->tags()->syncWithoutDetaching(array_filter([$wargamesTag?->id, $juegosRolTag?->id, $juegosMesaTag?->id]));
 
         // Draft gallery
-        $campeonatoPendiente = GalleryModel::factory()->draft()->create([
-            'title' => 'Campeonato regional (pendiente)',
-            'slug' => 'campeonato-regional-pendiente',
-            'description' => 'Fotos del último campeonato regional. En proceso de selección.',
-        ]);
-        $campeonatoPendiente->tags()->attach(array_filter([$warhammer40kTag?->id]));
+        $campeonatoPendiente = $this->firstOrCreateGallery(
+            'campeonato-regional-pendiente',
+            [
+                'title' => 'Campeonato regional (pendiente)',
+                'description' => 'Fotos del último campeonato regional. En proceso de selección.',
+            ],
+            fn () => GalleryModel::factory()->draft()->raw(),
+        );
+        $campeonatoPendiente->tags()->syncWithoutDetaching(array_filter([$warhammer40kTag?->id]));
 
-        // Additional random galleries
-        GalleryModel::factory()->published()->count(2)->create();
-        GalleryModel::factory()->draft()->count(1)->create();
+        // Additional random galleries (only if we have few galleries)
+        $existingCount = GalleryModel::count();
+        if ($existingCount < 7) {
+            GalleryModel::factory()->published()->count(2)->create();
+            GalleryModel::factory()->draft()->count(1)->create();
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @param  callable(): array<string, mixed>  $factoryDefaults
+     */
+    private function firstOrCreateGallery(string $slug, array $attributes, callable $factoryDefaults): GalleryModel
+    {
+        return GalleryModel::firstOrCreate(
+            ['slug' => $slug],
+            array_merge($factoryDefaults(), $attributes),
+        );
     }
 }

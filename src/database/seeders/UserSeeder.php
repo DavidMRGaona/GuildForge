@@ -20,41 +20,50 @@ final class UserSeeder extends Seeder
         $editorRole = RoleModel::where('name', 'editor')->first();
         $memberRole = RoleModel::where('name', 'member')->first();
 
-        // Create admin user
-        $adminUser = UserModel::factory()->admin()->create([
-            'name' => 'Admin User',
-            'display_name' => 'Administrator',
-            'email' => 'admin@example.local',
-        ]);
+        // Create or get admin user
+        $adminUser = UserModel::firstOrCreate(
+            ['email' => 'admin@example.local'],
+            UserModel::factory()->admin()->raw([
+                'name' => 'Admin User',
+                'display_name' => 'Administrator',
+            ]),
+        );
         if ($adminRole) {
-            $adminUser->roles()->attach($adminRole->id);
+            $adminUser->roles()->syncWithoutDetaching([$adminRole->id]);
         }
 
-        // Create editor user
-        $editorUser = UserModel::factory()->editor()->create([
-            'name' => 'Editor User',
-            'display_name' => 'Editor',
-            'email' => 'editor@example.local',
-        ]);
+        // Create or get editor user
+        $editorUser = UserModel::firstOrCreate(
+            ['email' => 'editor@example.local'],
+            UserModel::factory()->editor()->raw([
+                'name' => 'Editor User',
+                'display_name' => 'Editor',
+            ]),
+        );
         if ($editorRole) {
-            $editorUser->roles()->attach($editorRole->id);
+            $editorUser->roles()->syncWithoutDetaching([$editorRole->id]);
         }
 
-        // Create member user
-        $memberUser = UserModel::factory()->create([
-            'name' => 'Member User',
-            'display_name' => 'Member',
-            'email' => 'member@example.local',
-        ]);
+        // Create or get member user
+        $memberUser = UserModel::firstOrCreate(
+            ['email' => 'member@example.local'],
+            UserModel::factory()->raw([
+                'name' => 'Member User',
+                'display_name' => 'Member',
+            ]),
+        );
         if ($memberRole) {
-            $memberUser->roles()->attach($memberRole->id);
+            $memberUser->roles()->syncWithoutDetaching([$memberRole->id]);
         }
 
-        // Create additional random members
-        $randomUsers = UserModel::factory()->count(5)->create();
-        if ($memberRole) {
-            foreach ($randomUsers as $user) {
-                $user->roles()->attach($memberRole->id);
+        // Create additional random members (only if less than 8 users exist)
+        $existingCount = UserModel::count();
+        if ($existingCount < 8) {
+            $randomUsers = UserModel::factory()->count(8 - $existingCount)->create();
+            if ($memberRole) {
+                foreach ($randomUsers as $user) {
+                    $user->roles()->syncWithoutDetaching([$memberRole->id]);
+                }
             }
         }
     }

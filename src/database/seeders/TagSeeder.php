@@ -6,7 +6,6 @@ namespace Database\Seeders;
 
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 final class TagSeeder extends Seeder
 {
@@ -23,15 +22,16 @@ final class TagSeeder extends Seeder
 
     private function createWargamesTags(): void
     {
-        $parent = TagModel::create([
-            'id' => Str::uuid()->toString(),
-            'name' => 'Wargames',
-            'slug' => 'wargames',
-            'applies_to' => ['events', 'articles', 'galleries'],
-            'color' => '#DC2626',
-            'description' => 'Juegos de estrategia con miniaturas',
-            'sort_order' => 1,
-        ]);
+        $parent = TagModel::firstOrCreate(
+            ['slug' => 'wargames'],
+            [
+                'name' => 'Wargames',
+                'applies_to' => ['events', 'articles', 'galleries'],
+                'color' => '#DC2626',
+                'description' => 'Juegos de estrategia con miniaturas',
+                'sort_order' => 1,
+            ],
+        );
 
         $children = [
             ['name' => 'Warhammer 40K', 'slug' => 'warhammer-40k', 'sort_order' => 1],
@@ -40,29 +40,31 @@ final class TagSeeder extends Seeder
         ];
 
         foreach ($children as $child) {
-            TagModel::create([
-                'id' => Str::uuid()->toString(),
-                'name' => $child['name'],
-                'slug' => $child['slug'],
-                'parent_id' => $parent->id,
-                'applies_to' => ['events', 'articles', 'galleries'],
-                'color' => '#DC2626',
-                'sort_order' => $child['sort_order'],
-            ]);
+            TagModel::firstOrCreate(
+                ['slug' => $child['slug']],
+                [
+                    'name' => $child['name'],
+                    'parent_id' => $parent->id,
+                    'applies_to' => ['events', 'articles', 'galleries'],
+                    'color' => '#DC2626',
+                    'sort_order' => $child['sort_order'],
+                ],
+            );
         }
     }
 
     private function createRoleplayingTags(): void
     {
-        $parent = TagModel::create([
-            'id' => Str::uuid()->toString(),
-            'name' => 'Juegos de rol',
-            'slug' => 'juegos-de-rol',
-            'applies_to' => ['events', 'articles', 'galleries'],
-            'color' => '#7C3AED',
-            'description' => 'Juegos de rol de mesa',
-            'sort_order' => 2,
-        ]);
+        $parent = TagModel::firstOrCreate(
+            ['slug' => 'juegos-de-rol'],
+            [
+                'name' => 'Juegos de rol',
+                'applies_to' => ['events', 'articles', 'galleries'],
+                'color' => '#7C3AED',
+                'description' => 'Juegos de rol de mesa',
+                'sort_order' => 2,
+            ],
+        );
 
         $children = [
             ['name' => 'D&D', 'slug' => 'dnd', 'sort_order' => 1],
@@ -71,42 +73,45 @@ final class TagSeeder extends Seeder
         ];
 
         foreach ($children as $child) {
-            TagModel::create([
-                'id' => Str::uuid()->toString(),
-                'name' => $child['name'],
-                'slug' => $child['slug'],
-                'parent_id' => $parent->id,
-                'applies_to' => ['events', 'articles', 'galleries'],
-                'color' => '#7C3AED',
-                'sort_order' => $child['sort_order'],
-            ]);
+            TagModel::firstOrCreate(
+                ['slug' => $child['slug']],
+                [
+                    'name' => $child['name'],
+                    'parent_id' => $parent->id,
+                    'applies_to' => ['events', 'articles', 'galleries'],
+                    'color' => '#7C3AED',
+                    'sort_order' => $child['sort_order'],
+                ],
+            );
         }
     }
 
     private function createBoardGamesTags(): void
     {
-        TagModel::create([
-            'id' => Str::uuid()->toString(),
-            'name' => 'Juegos de mesa',
-            'slug' => 'juegos-de-mesa',
-            'applies_to' => ['events', 'articles', 'galleries'],
-            'color' => '#059669',
-            'description' => 'Juegos de mesa modernos y clásicos',
-            'sort_order' => 3,
-        ]);
+        TagModel::firstOrCreate(
+            ['slug' => 'juegos-de-mesa'],
+            [
+                'name' => 'Juegos de mesa',
+                'applies_to' => ['events', 'articles', 'galleries'],
+                'color' => '#059669',
+                'description' => 'Juegos de mesa modernos y clásicos',
+                'sort_order' => 3,
+            ],
+        );
     }
 
     private function createEventTypeTags(): void
     {
-        $parent = TagModel::create([
-            'id' => Str::uuid()->toString(),
-            'name' => 'Evento',
-            'slug' => 'evento',
-            'applies_to' => ['events'],
-            'color' => '#6B7280',
-            'description' => 'Tipos de evento',
-            'sort_order' => 4,
-        ]);
+        $parent = TagModel::firstOrCreate(
+            ['slug' => 'evento'],
+            [
+                'name' => 'Evento',
+                'applies_to' => ['events'],
+                'color' => '#6B7280',
+                'description' => 'Tipos de evento',
+                'sort_order' => 4,
+            ],
+        );
 
         $children = [
             ['name' => 'Torneo', 'slug' => 'torneo', 'sort_order' => 1],
@@ -115,15 +120,16 @@ final class TagSeeder extends Seeder
         ];
 
         foreach ($children as $child) {
-            TagModel::create([
-                'id' => Str::uuid()->toString(),
-                'name' => $child['name'],
-                'slug' => $child['slug'],
-                'parent_id' => $parent->id,
-                'applies_to' => ['events'],
-                'color' => '#6B7280',
-                'sort_order' => $child['sort_order'],
-            ]);
+            TagModel::firstOrCreate(
+                ['slug' => $child['slug']],
+                [
+                    'name' => $child['name'],
+                    'parent_id' => $parent->id,
+                    'applies_to' => ['events'],
+                    'color' => '#6B7280',
+                    'sort_order' => $child['sort_order'],
+                ],
+            );
         }
     }
 }

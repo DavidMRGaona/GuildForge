@@ -7,24 +7,27 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+/**
+ * Master orchestrator for database seeding.
+ *
+ * - Always seeds production data (roles, tags, settings, hero slides)
+ * - Only seeds development data (users, events, articles, galleries) in local/testing
+ */
 final class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        $this->call([
-            RolesSeeder::class,
-            UserSeeder::class,
-            TagSeeder::class,
-            EventSeeder::class,
-            ArticleSeeder::class,
-            GallerySeeder::class,
-            HeroSlideSeeder::class,
-            SettingsSeeder::class,
-        ]);
+        $this->call(ProductionSeeder::class);
+
+        if ($this->shouldSeedDevelopmentData()) {
+            $this->call(DevelopmentSeeder::class);
+        }
+    }
+
+    private function shouldSeedDevelopmentData(): bool
+    {
+        return app()->environment(['local', 'testing']);
     }
 }
