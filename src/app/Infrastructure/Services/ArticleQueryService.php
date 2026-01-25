@@ -13,7 +13,8 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {}
+    ) {
+    }
 
     public function getLatestPublished(int $limit = 10): array
     {

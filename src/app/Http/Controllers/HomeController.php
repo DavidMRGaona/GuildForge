@@ -22,7 +22,8 @@ final class HomeController extends Controller
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly GalleryQueryServiceInterface $galleryQuery,
         private readonly HeroSlideQueryServiceInterface $heroSlideQuery,
-    ) {}
+    ) {
+    }
 
     public function __invoke(): Response
     {

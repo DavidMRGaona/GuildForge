@@ -16,7 +16,8 @@ final class ResetPasswordController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
-    ) {}
+    ) {
+    }
 
     public function create(Request $request, string $token): Response
     {

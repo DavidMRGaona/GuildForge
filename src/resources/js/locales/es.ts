@@ -183,7 +183,8 @@ export default {
     eventRegistrations: {
         register: 'Inscribirse',
         cancelRegistration: 'Cancelar inscripción',
-        confirmCancel: '¿Estás seguro de que quieres cancelar tu inscripción? Esta acción no se puede deshacer.',
+        confirmCancel:
+            '¿Estás seguro de que quieres cancelar tu inscripción? Esta acción no se puede deshacer.',
         registrationClosed: 'Inscripciones cerradas',
         eventFull: 'Evento completo',
         joinWaitingList: 'Unirse a lista de espera',
@@ -276,8 +277,10 @@ export default {
             updatePassword: 'Actualizar contraseña',
             profileUpdated: 'Perfil actualizado correctamente',
             passwordUpdated: 'Contraseña actualizada correctamente',
-            profileError: 'Error al actualizar el perfil. Por favor, revisa los datos e inténtalo de nuevo.',
-            passwordError: 'Error al cambiar la contraseña. Por favor, revisa los datos e inténtalo de nuevo.',
+            profileError:
+                'Error al actualizar el perfil. Por favor, revisa los datos e inténtalo de nuevo.',
+            passwordError:
+                'Error al cambiar la contraseña. Por favor, revisa los datos e inténtalo de nuevo.',
         },
         userMenu: {
             openMenu: 'Abrir menú de usuario',

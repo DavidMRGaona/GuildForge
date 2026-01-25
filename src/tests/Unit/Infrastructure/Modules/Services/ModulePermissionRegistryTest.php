@@ -15,7 +15,7 @@ final class ModulePermissionRegistryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->registry = new ModulePermissionRegistry;
+        $this->registry = new ModulePermissionRegistry();
     }
 
     public function test_it_registers_single_permission(): void

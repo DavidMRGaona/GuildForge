@@ -12,7 +12,8 @@ final readonly class LocationSettingsDTO
         public float $lat,
         public float $lng,
         public int $zoom,
-    ) {}
+    ) {
+    }
 
     /**
      * Create from array of settings.

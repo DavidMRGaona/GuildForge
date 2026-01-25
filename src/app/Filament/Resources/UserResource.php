@@ -6,21 +6,28 @@ namespace App\Filament\Resources;
 
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
-use App\Domain\Enums\UserRole;
+use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource\Pages;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -105,15 +112,24 @@ class UserResource extends Resource
                         return $path;
                     })
                     ->nullable(),
-                Select::make('role')
-                    ->label(__('Rol'))
-                    ->options(
-                        collect(UserRole::cases())
-                            ->mapWithKeys(fn (UserRole $role): array => [$role->value => $role->label()])
-                            ->toArray()
-                    )
-                    ->required()
-                    ->default(UserRole::Member->value),
+                Section::make(__('filament.users.sections.roles'))
+                    ->description(__('filament.users.sections.rolesDescription'))
+                    ->schema([
+                        CheckboxList::make('roles')
+                            ->label(__('filament.users.fields.roles'))
+                            ->relationship(
+                                name: 'roles',
+                                titleAttribute: 'display_name',
+                            )
+                            ->columns(2)
+                            ->searchable()
+                            ->bulkToggleable()
+                            ->descriptions(
+                                RoleModel::query()
+                                    ->pluck('description', 'id')
+                                    ->toArray()
+                            ),
+                    ]),
             ]);
     }
 
@@ -137,14 +153,14 @@ class UserResource extends Resource
                     ->label(__('Correo electrónico'))
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('role')
-                    ->label(__('Rol'))
+                TextColumn::make('roles.display_name')
+                    ->label(__('filament.users.fields.roles'))
                     ->badge()
-                    ->formatStateUsing(fn (UserRole $state): string => $state->label())
-                    ->color(fn (UserRole $state): string => match ($state) {
-                        UserRole::Admin => 'danger',
-                        UserRole::Editor => 'warning',
-                        UserRole::Member => 'success',
+                    ->separator(', ')
+                    ->color(fn (string $state): string => match ($state) {
+                        'Administrator' => 'danger',
+                        'Editor' => 'warning',
+                        default => 'success',
                     }),
                 IconColumn::make('email_verified_at')
                     ->label(__('filament.users.fields.emailVerified'))
@@ -154,6 +170,24 @@ class UserResource extends Resource
                     ->trueColor('success')
                     ->falseColor('danger')
                     ->getStateUsing(fn (UserModel $record): bool => $record->email_verified_at !== null),
+                TextColumn::make('status')
+                    ->label(__('filament.users.fields.status'))
+                    ->badge()
+                    ->getStateUsing(function (UserModel $record): string {
+                        if ($record->isAnonymized()) {
+                            return __('filament.users.status.anonymized');
+                        }
+                        if ($record->trashed()) {
+                            return __('filament.users.status.deactivated');
+                        }
+
+                        return __('filament.users.status.active');
+                    })
+                    ->color(fn (UserModel $record): string => match (true) {
+                        $record->isAnonymized() => 'gray',
+                        $record->trashed() => 'warning',
+                        default => 'success',
+                    }),
                 TextColumn::make('created_at')
                     ->label(__('Fecha de creación'))
                     ->dateTime('d/m/Y H:i')
@@ -161,51 +195,110 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('role')
-                    ->label(__('Rol'))
-                    ->options(
-                        collect(UserRole::cases())
-                            ->mapWithKeys(fn (UserRole $role): array => [$role->value => $role->label()])
-                            ->toArray()
-                    ),
+                SelectFilter::make('roles')
+                    ->label(__('filament.users.fields.roles'))
+                    ->relationship('roles', 'display_name')
+                    ->multiple()
+                    ->preload(),
+                TrashedFilter::make()
+                    ->label(__('filament.users.filters.status')),
             ])
             ->actions([
-                Action::make('sendVerificationEmail')
-                    ->label(__('filament.users.actions.sendVerificationEmail'))
-                    ->icon('heroicon-o-envelope')
-                    ->color('warning')
-                    ->visible(fn (UserModel $record): bool => $record->email_verified_at === null)
-                    ->requiresConfirmation()
-                    ->modalHeading(__('filament.users.actions.sendVerificationEmail'))
-                    ->modalDescription(__('filament.users.actions.sendVerificationEmailConfirm'))
-                    ->action(function (UserModel $record): void {
-                        $record->sendEmailVerificationNotification();
-                        Notification::make()
-                            ->title(__('filament.users.actions.verificationEmailSent'))
-                            ->success()
-                            ->send();
-                    }),
-                Action::make('sendPasswordResetEmail')
-                    ->label(__('filament.users.actions.sendPasswordResetEmail'))
-                    ->icon('heroicon-o-key')
-                    ->color('info')
-                    ->requiresConfirmation()
-                    ->modalHeading(__('filament.users.actions.sendPasswordResetEmail'))
-                    ->modalDescription(__('filament.users.actions.sendPasswordResetEmailConfirm'))
-                    ->action(function (UserModel $record): void {
-                        $status = Password::sendResetLink(['email' => $record->email]);
-                        if ($status === Password::RESET_LINK_SENT) {
+                EditAction::make(),
+                ActionGroup::make([
+                    Action::make('sendVerificationEmail')
+                        ->label(__('filament.users.actions.sendVerificationEmail'))
+                        ->icon('heroicon-o-envelope')
+                        ->color('warning')
+                        ->visible(fn (UserModel $record): bool => $record->email_verified_at === null && ! $record->trashed())
+                        ->requiresConfirmation()
+                        ->modalHeading(__('filament.users.actions.sendVerificationEmail'))
+                        ->modalDescription(__('filament.users.actions.sendVerificationEmailConfirm'))
+                        ->action(function (UserModel $record): void {
+                            $record->sendEmailVerificationNotification();
                             Notification::make()
-                                ->title(__('filament.users.actions.passwordResetEmailSent'))
+                                ->title(__('filament.users.actions.verificationEmailSent'))
                                 ->success()
                                 ->send();
-                        } else {
+                        }),
+                    Action::make('sendPasswordResetEmail')
+                        ->label(__('filament.users.actions.sendPasswordResetEmail'))
+                        ->icon('heroicon-o-key')
+                        ->color('info')
+                        ->visible(fn (UserModel $record): bool => ! $record->trashed())
+                        ->requiresConfirmation()
+                        ->modalHeading(__('filament.users.actions.sendPasswordResetEmail'))
+                        ->modalDescription(__('filament.users.actions.sendPasswordResetEmailConfirm'))
+                        ->action(function (UserModel $record): void {
+                            $status = Password::sendResetLink(['email' => $record->email]);
+                            if ($status === Password::RESET_LINK_SENT) {
+                                Notification::make()
+                                    ->title(__('filament.users.actions.passwordResetEmailSent'))
+                                    ->success()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title(__('filament.users.actions.passwordResetEmailFailed'))
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                    Action::make('deactivate')
+                        ->label(__('filament.users.actions.deactivate'))
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('warning')
+                        ->visible(fn (UserModel $record): bool => ! $record->trashed() && $record->id !== Auth::id())
+                        ->requiresConfirmation()
+                        ->modalHeading(__('filament.users.actions.deactivate'))
+                        ->modalDescription(__('filament.users.actions.deactivateConfirm'))
+                        ->modalIcon('heroicon-o-no-symbol')
+                        ->modalIconColor('warning')
+                        ->action(function (UserModel $record): void {
+                            if ($record->id === Auth::id()) {
+                                Notification::make()
+                                    ->title(__('filament.users.actions.cannotDeactivateSelf'))
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+                            $record->delete();
                             Notification::make()
-                                ->title(__('filament.users.actions.passwordResetEmailFailed'))
-                                ->danger()
+                                ->title(__('filament.users.actions.deactivated'))
+                                ->success()
                                 ->send();
-                        }
-                    }),
+                        }),
+                    RestoreAction::make()
+                        ->label(__('filament.users.actions.restore'))
+                        ->modalHeading(__('filament.users.actions.restore'))
+                        ->modalDescription(__('filament.users.actions.restoreConfirm'))
+                        ->successNotificationTitle(__('filament.users.actions.restored')),
+                    Action::make('anonymize')
+                        ->label(__('filament.users.actions.anonymize'))
+                        ->icon('heroicon-o-eye-slash')
+                        ->color('danger')
+                        ->visible(fn (UserModel $record): bool => $record->trashed() && ! $record->isAnonymized() && $record->id !== Auth::id())
+                        ->requiresConfirmation()
+                        ->modalHeading(__('filament.users.actions.anonymize'))
+                        ->modalDescription(__('filament.users.actions.anonymizeConfirm'))
+                        ->modalIcon('heroicon-o-exclamation-triangle')
+                        ->modalIconColor('danger')
+                        ->action(function (UserModel $record): void {
+                            if ($record->id === Auth::id()) {
+                                Notification::make()
+                                    ->title(__('filament.users.actions.cannotAnonymizeSelf'))
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+                            app(UserServiceInterface::class)->anonymize($record->id);
+                            Notification::make()
+                                ->title(__('filament.users.actions.anonymized'))
+                                ->success()
+                                ->send();
+                        }),
+                ])->icon('heroicon-m-ellipsis-vertical'),
             ])
             ->defaultSort('created_at', 'desc');
     }

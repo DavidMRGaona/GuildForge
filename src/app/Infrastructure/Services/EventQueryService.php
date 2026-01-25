@@ -13,7 +13,8 @@ final readonly class EventQueryService implements EventQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {}
+    ) {
+    }
 
     public function getUpcomingEvents(int $limit = 10): array
     {

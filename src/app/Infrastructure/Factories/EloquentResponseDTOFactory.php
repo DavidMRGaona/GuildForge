@@ -14,6 +14,7 @@ use App\Application\DTOs\Response\PhotoResponseDTO;
 use App\Application\DTOs\Response\TagResponseDTO;
 use App\Application\DTOs\Response\UserResponseDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Domain\Enums\UserRole;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -233,11 +234,11 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             email: $model->email,
             pendingEmail: $model->pending_email,
             avatarPublicId: $model->avatar_public_id,
-            role: $model->role->value,
+            role: ($model->role ?? UserRole::Member)->value,
             emailVerified: $model->email_verified_at !== null,
             createdAt: $model->created_at !== null
                 ? DateTimeImmutable::createFromMutable($model->created_at)
-                : new DateTimeImmutable,
+                : new DateTimeImmutable(),
         );
     }
 }

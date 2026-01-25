@@ -20,7 +20,8 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 
     public function __construct(
         private Dispatcher $events,
-    ) {}
+    ) {
+    }
 
     public function installFromZip(UploadedFile $file): ModuleManifestDTO
     {
@@ -53,7 +54,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         }
 
         // Validate by actually opening as ZIP (more reliable than extension check)
-        $zip = new ZipArchive;
+        $zip = new ZipArchive();
         $result = $zip->open($file->getPathname());
 
         if ($result !== true) {
@@ -72,7 +73,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
             throw ModuleInstallationException::extractionFailed('Failed to create temp directory');
         }
 
-        $zip = new ZipArchive;
+        $zip = new ZipArchive();
         $zip->open($file->getPathname());
         $zip->extractTo($tempPath);
         $zip->close();

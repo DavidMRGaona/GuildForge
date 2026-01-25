@@ -11,7 +11,8 @@ final readonly class ModuleDiscoveryService
 {
     public function __construct(
         private string $modulesPath,
-    ) {}
+    ) {
+    }
 
     /**
      * Discovers modules from the modules directory.

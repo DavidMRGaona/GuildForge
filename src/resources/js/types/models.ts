@@ -5,11 +5,17 @@ export interface User {
     email: string;
     pendingEmail: string | null;
     avatarPublicId: string | null;
+    /** @deprecated Use roles array instead */
     role: UserRole;
     emailVerified: boolean;
     createdAt: string;
+    /** Array of role names assigned to the user */
+    roles?: string[];
+    /** Array of permission keys the user has */
+    permissions?: string[];
 }
 
+/** @deprecated Use roles array on User instead */
 export type UserRole = 'admin' | 'editor' | 'member';
 
 export interface AuthSettings {

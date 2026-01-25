@@ -182,7 +182,8 @@ export default {
     eventRegistrations: {
         register: 'Register',
         cancelRegistration: 'Cancel registration',
-        confirmCancel: 'Are you sure you want to cancel your registration? This action cannot be undone.',
+        confirmCancel:
+            'Are you sure you want to cancel your registration? This action cannot be undone.',
         registrationClosed: 'Registration closed',
         eventFull: 'Event full',
         joinWaitingList: 'Join waiting list',

@@ -12,7 +12,8 @@ final readonly class CreateArticleDTO
         public int $authorId,
         public ?string $excerpt = null,
         public ?string $featuredImagePublicId = null,
-    ) {}
+    ) {
+    }
 
     /**
      * @param  array{title: string, content: string, author_id: int, excerpt?: string|null, featured_image_public_id?: string|null}  $data

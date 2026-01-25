@@ -224,7 +224,7 @@ final class ModuleInstallerTest extends TestCase
     {
         $zipPath = $this->tempDir.'/test-module-'.uniqid().'.zip';
 
-        $zip = new ZipArchive;
+        $zip = new ZipArchive();
         $zip->open($zipPath, ZipArchive::CREATE);
 
         foreach ($files as $name => $content) {

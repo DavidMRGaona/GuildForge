@@ -29,7 +29,7 @@ final class ElasticsearchLoggerTest extends TestCase
 
     public function test_factory_creates_logger_instance(): void
     {
-        $factory = new ElasticsearchLogger;
+        $factory = new ElasticsearchLogger();
 
         $logger = $factory([
             'level' => 'debug',
@@ -42,7 +42,7 @@ final class ElasticsearchLoggerTest extends TestCase
     {
         config(['elasticsearch.enabled' => false]);
 
-        $factory = new ElasticsearchLogger;
+        $factory = new ElasticsearchLogger();
 
         $logger = $factory([]);
 
@@ -62,7 +62,7 @@ final class ElasticsearchLoggerTest extends TestCase
         config(['elasticsearch.index' => 'app-logs']);
         config(['elasticsearch.ssl' => true]);
 
-        $factory = new ElasticsearchLogger;
+        $factory = new ElasticsearchLogger();
 
         $logger = $factory([
             'level' => 'error',
@@ -81,7 +81,7 @@ final class ElasticsearchLoggerTest extends TestCase
         config(['elasticsearch.port' => 9201]);
         config(['elasticsearch.index' => 'custom-index']);
 
-        $factory = new ElasticsearchLogger;
+        $factory = new ElasticsearchLogger();
 
         $logger = $factory([]);
 
@@ -91,7 +91,7 @@ final class ElasticsearchLoggerTest extends TestCase
 
     public function test_logger_channel_name_is_elasticsearch(): void
     {
-        $factory = new ElasticsearchLogger;
+        $factory = new ElasticsearchLogger();
 
         $logger = $factory([]);
 

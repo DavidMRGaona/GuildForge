@@ -11,14 +11,14 @@ final class SearchRequestTest extends TestCase
 {
     public function test_authorize_returns_true(): void
     {
-        $request = new SearchRequest;
+        $request = new SearchRequest();
 
         $this->assertTrue($request->authorize());
     }
 
     public function test_rules_validates_q_parameter(): void
     {
-        $request = new SearchRequest;
+        $request = new SearchRequest();
 
         $rules = $request->rules();
 

@@ -12,7 +12,8 @@ final readonly class HeroSlideQueryService implements HeroSlideQueryServiceInter
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {}
+    ) {
+    }
 
     public function getActiveSlides(): array
     {

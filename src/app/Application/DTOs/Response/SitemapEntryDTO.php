@@ -11,7 +11,8 @@ final readonly class SitemapEntryDTO
         public ?string $lastmod,
         public string $priority,
         public string $changefreq,
-    ) {}
+    ) {
+    }
 
     /**
      * @return array{loc: string, lastmod: string|null, priority: string, changefreq: string}

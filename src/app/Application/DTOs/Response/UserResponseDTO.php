@@ -18,5 +18,6 @@ final readonly class UserResponseDTO
         public string $role,
         public bool $emailVerified,
         public DateTimeImmutable $createdAt,
-    ) {}
+    ) {
+    }
 }

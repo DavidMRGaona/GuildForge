@@ -49,7 +49,7 @@ final class HeroSlideModelTest extends TestCase
             'sort_order',
         ];
 
-        $model = new HeroSlideModel;
+        $model = new HeroSlideModel();
 
         $this->assertEquals($fillable, $model->getFillable());
     }

@@ -26,5 +26,6 @@ final readonly class EventResponseDTO
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
         public array $tags = [],
-    ) {}
+    ) {
+    }
 }

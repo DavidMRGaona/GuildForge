@@ -60,7 +60,9 @@ useSeo({
                 </Link>
             </div>
 
-            <article class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50">
+            <article
+                class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50"
+            >
                 <img
                     v-if="heroImageUrl"
                     :src="heroImageUrl"
@@ -103,7 +105,9 @@ useSeo({
                         </span>
                     </div>
 
-                    <h1 class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl dark:text-stone-100">
+                    <h1
+                        class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl dark:text-stone-100"
+                    >
                         {{ props.event.title }}
                     </h1>
 
@@ -122,7 +126,9 @@ useSeo({
                         />
                     </div>
 
-                    <div class="mb-6 flex flex-col gap-3 text-gray-600 sm:flex-row sm:gap-6 dark:text-stone-400">
+                    <div
+                        class="mb-6 flex flex-col gap-3 text-gray-600 sm:flex-row sm:gap-6 dark:text-stone-400"
+                    >
                         <div class="flex items-center">
                             <span class="sr-only">{{ t('events.date') }}:</span>
                             <svg
@@ -174,20 +180,27 @@ useSeo({
                         v-if="props.event.memberPrice !== null"
                         class="mb-6 rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20"
                     >
-                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-stone-100">{{ t('events.pricing') }}</h3>
+                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-stone-100">
+                            {{ t('events.pricing') }}
+                        </h3>
                         <div class="flex flex-col gap-1 sm:flex-row sm:gap-6">
                             <p class="text-gray-700 dark:text-stone-300">
                                 <span class="font-medium">{{ t('events.memberPrice') }}:</span>
                                 {{ formatPrice(props.event.memberPrice) }}
                             </p>
-                            <p v-if="props.event.nonMemberPrice !== null" class="text-gray-700 dark:text-stone-300">
+                            <p
+                                v-if="props.event.nonMemberPrice !== null"
+                                class="text-gray-700 dark:text-stone-300"
+                            >
                                 <span class="font-medium">{{ t('events.nonMemberPrice') }}:</span>
                                 {{ formatPrice(props.event.nonMemberPrice) }}
                             </p>
                         </div>
                     </div>
                     <div v-else class="mb-6 rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
-                        <p class="font-medium text-green-800 dark:text-green-400">{{ t('events.free') }}</p>
+                        <p class="font-medium text-green-800 dark:text-green-400">
+                            {{ t('events.free') }}
+                        </p>
                     </div>
 
                     <!-- Module slot for event actions (e.g., registration button) -->

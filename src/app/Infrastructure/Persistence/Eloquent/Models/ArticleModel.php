@@ -23,7 +23,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $featured_image_public_id
  * @property bool $is_published
  * @property Carbon|null $published_at
- * @property int $author_id
+ * @property string $author_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read UserModel $author
@@ -35,6 +35,7 @@ final class ArticleModel extends Model
 
     /** @use HasFactory<ArticleModelFactory> */
     use HasFactory;
+
     use HasUuids;
 
     /** @var array<string> */

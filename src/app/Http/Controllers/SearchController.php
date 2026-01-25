@@ -19,7 +19,8 @@ final class SearchController extends Controller
     public function __construct(
         private readonly EventQueryServiceInterface $eventQuery,
         private readonly ArticleQueryServiceInterface $articleQuery,
-    ) {}
+    ) {
+    }
 
     public function __invoke(SearchRequest $request): Response
     {

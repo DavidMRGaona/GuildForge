@@ -36,6 +36,7 @@ final class UserModelTest extends TestCase
     public function test_it_has_correct_fillable_attributes(): void
     {
         $fillable = [
+            'id',
             'name',
             'display_name',
             'email',
@@ -43,9 +44,10 @@ final class UserModelTest extends TestCase
             'password',
             'avatar_public_id',
             'role',
+            'anonymized_at',
         ];
 
-        $model = new UserModel;
+        $model = new UserModel();
 
         $this->assertEquals($fillable, $model->getFillable());
     }

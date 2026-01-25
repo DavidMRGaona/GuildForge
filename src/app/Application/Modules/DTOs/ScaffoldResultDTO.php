@@ -25,7 +25,8 @@ final readonly class ScaffoldResultDTO
         public array $files = [],
         public array $errors = [],
         public array $warnings = [],
-    ) {}
+    ) {
+    }
 
     /**
      * Create a successful result.

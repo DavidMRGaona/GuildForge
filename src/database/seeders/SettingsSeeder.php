@@ -47,6 +47,7 @@ final class SettingsSeeder extends Seeder
             'contact_email' => 'info@guildforge.es',
             'contact_phone' => '+34 612 345 678',
             'contact_address' => 'Calle de la Forja, 42, Local 3, 28001 Madrid',
+            'anonymized_user_name' => 'Anónimo',
         ];
 
         foreach ($settings as $key => $value) {

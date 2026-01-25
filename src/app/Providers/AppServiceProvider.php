@@ -23,11 +23,13 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
+use App\Application\Services\UserServiceInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\Repositories\GalleryRepositoryInterface;
 use App\Domain\Repositories\PhotoRepositoryInterface;
+use App\Domain\Repositories\UserRepositoryInterface;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Modules\Services\ModuleContextService;
 use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
@@ -43,6 +45,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentArticleRepository;
@@ -50,6 +53,7 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentEventRepository
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentGalleryRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentPhotoRepository;
+use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
 use App\Infrastructure\Services\AboutPageService;
 use App\Infrastructure\Services\ArticleQueryService;
 use App\Infrastructure\Services\AuthService;
@@ -63,10 +67,12 @@ use App\Infrastructure\Services\SettingsService;
 use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
+use App\Infrastructure\Services\UserService;
 use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
 use App\Policies\HeroSlidePolicy;
+use App\Policies\RolePolicy;
 use App\Policies\TagPolicy;
 use App\Policies\UserPolicy;
 use Cloudinary\Cloudinary;
@@ -91,12 +97,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(EventRepositoryInterface::class, EloquentEventRepository::class);
         $this->app->bind(GalleryRepositoryInterface::class, EloquentGalleryRepository::class);
         $this->app->bind(PhotoRepositoryInterface::class, EloquentPhotoRepository::class);
+        $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
 
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
         $this->app->singleton(ThemeSettingsServiceInterface::class, ThemeSettingsService::class);
         $this->app->singleton(ImageOptimizationServiceInterface::class, ImageOptimizationService::class);
         $this->app->singleton(AuthServiceInterface::class, AuthService::class);
+        $this->app->singleton(UserServiceInterface::class, UserService::class);
 
         // Log context provider (uses request scoped binding)
         $this->app->bind(LogContextProviderInterface::class, function ($app) {
@@ -125,7 +133,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ModuleDependencyResolver::class, function () {
-            return new ModuleDependencyResolver;
+            return new ModuleDependencyResolver();
         });
 
         $this->app->singleton(ModuleMigrationRunner::class, function ($app) {
@@ -174,6 +182,7 @@ class AppServiceProvider extends ServiceProvider
         );
 
         Gate::policy(UserModel::class, UserPolicy::class);
+        Gate::policy(RoleModel::class, RolePolicy::class);
         Gate::policy(EventModel::class, EventPolicy::class);
         Gate::policy(ArticleModel::class, ArticlePolicy::class);
         Gate::policy(GalleryModel::class, GalleryPolicy::class);

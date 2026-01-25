@@ -14,7 +14,8 @@ final class WelcomeNotification extends Notification
 
     public function __construct(
         private readonly string $appName,
-    ) {}
+    ) {
+    }
 
     /**
      * Get the notification's delivery channels.
@@ -34,7 +35,7 @@ final class WelcomeNotification extends Notification
         /** @var \App\Infrastructure\Persistence\Eloquent\Models\UserModel $notifiable */
         $loginUrl = route('login');
 
-        return (new MailMessage)
+        return (new MailMessage())
             ->subject(__('auth.welcome_subject', ['app' => $this->appName]))
             ->greeting(__('auth.welcome_greeting', ['name' => $notifiable->name]))
             ->line(__('auth.welcome_line1', ['app' => $this->appName]))

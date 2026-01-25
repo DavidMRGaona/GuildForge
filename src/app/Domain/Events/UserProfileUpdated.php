@@ -8,5 +8,6 @@ final readonly class UserProfileUpdated
 {
     public function __construct(
         public string $userId,
-    ) {}
+    ) {
+    }
 }

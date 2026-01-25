@@ -15,5 +15,6 @@ final readonly class HeroSlideResponseDTO
         public string $imagePublicId,
         public bool $isActive,
         public int $sortOrder,
-    ) {}
+    ) {
+    }
 }

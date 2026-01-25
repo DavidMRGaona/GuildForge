@@ -22,7 +22,8 @@ final class ProfileController extends Controller
     public function __construct(
         private readonly AuthServiceInterface $authService,
         private readonly ResponseDTOFactoryInterface $dtoFactory,
-    ) {}
+    ) {
+    }
 
     public function show(Request $request): Response
     {

@@ -28,6 +28,7 @@ final class PhotoModel extends Model
 
     /** @use HasFactory<PhotoModelFactory> */
     use HasFactory;
+
     use HasUuids;
 
     /** @var array<string> */

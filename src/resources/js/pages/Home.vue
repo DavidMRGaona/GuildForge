@@ -60,7 +60,9 @@ function openLightbox(index: number): void {
             <!-- Latest Articles Section -->
             <section class="mb-16">
                 <div class="mb-6 flex items-center justify-between">
-                    <h2 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+                    <h2
+                        class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100"
+                    >
                         {{ t('articles.latest') }}
                     </h2>
                     <Link
@@ -111,7 +113,9 @@ function openLightbox(index: number): void {
             <!-- Featured Gallery Section -->
             <section>
                 <div class="mb-6 flex items-center justify-between">
-                    <h2 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+                    <h2
+                        class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100"
+                    >
                         {{ t('home.featuredGallery') }}
                     </h2>
                     <Link
@@ -217,7 +221,10 @@ function openLightbox(index: number): void {
                     <h3 class="mt-4 text-lg font-medium text-stone-900 dark:text-stone-100">
                         {{ props.featuredGallery.title }}
                     </h3>
-                    <p v-if="props.featuredGallery.description" class="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                    <p
+                        v-if="props.featuredGallery.description"
+                        class="mt-1 text-sm text-stone-500 dark:text-stone-400"
+                    >
                         {{ props.featuredGallery.description }}
                     </p>
                     <p class="mt-2 text-sm text-stone-400 dark:text-stone-500">

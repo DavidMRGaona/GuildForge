@@ -33,7 +33,8 @@ final class Module
         private readonly ?string $provider = null,
         private readonly ?string $path = null,
         private readonly array $dependencies = [],
-    ) {}
+    ) {
+    }
 
     public function id(): ModuleId
     {
@@ -123,7 +124,7 @@ final class Module
     public function enable(): void
     {
         $this->status = ModuleStatus::Enabled;
-        $this->enabledAt = new DateTimeImmutable;
+        $this->enabledAt = new DateTimeImmutable();
     }
 
     public function disable(): void
@@ -149,7 +150,7 @@ final class Module
 
     public function markInstalled(): void
     {
-        $this->installedAt = new DateTimeImmutable;
+        $this->installedAt = new DateTimeImmutable();
     }
 
     public function markUninstalled(): void
