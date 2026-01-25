@@ -6,11 +6,18 @@ namespace Tests\Feature\Http\Controllers\Api;
 
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 final class SettingsControllerTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Cache::flush();
+    }
 
     public function test_location_returns_json_response(): void
     {
