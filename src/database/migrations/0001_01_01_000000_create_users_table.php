@@ -16,14 +16,17 @@ return new class extends Migration
         Schema::create('users', static function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name');
-            $table->string('display_name');
+            $table->string('display_name')->nullable();
             $table->string('email')->unique();
+            $table->string('pending_email')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->string('avatar')->nullable();
+            $table->string('avatar_public_id')->nullable();
             $table->string('role')->default('member');
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
+            $table->timestamp('anonymized_at')->nullable();
         });
 
         Schema::create('password_reset_tokens', static function (Blueprint $table) {

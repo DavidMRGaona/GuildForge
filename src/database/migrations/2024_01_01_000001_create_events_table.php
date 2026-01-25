@@ -18,13 +18,16 @@ return new class extends Migration
             $table->string('title');
             $table->string('slug')->unique();
             $table->text('description');
-            $table->dateTime('event_date');
+            $table->dateTime('start_date');
+            $table->dateTime('end_date')->nullable();
             $table->string('location')->nullable();
-            $table->string('image')->nullable();
+            $table->decimal('member_price', 8, 2)->nullable();
+            $table->decimal('non_member_price', 8, 2)->nullable();
+            $table->string('image_public_id')->nullable();
             $table->boolean('is_published')->default(false);
             $table->timestamps();
 
-            $table->index('event_date');
+            $table->index('start_date');
             $table->index('is_published');
         });
     }
