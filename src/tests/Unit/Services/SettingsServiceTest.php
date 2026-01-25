@@ -20,6 +20,7 @@ final class SettingsServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Cache::flush();
         $this->settingsService = new SettingsService();
     }
 
