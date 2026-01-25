@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Infrastructure\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Entities\User;
@@ -132,7 +133,7 @@ final class UserServiceTest extends TestCase
         $userModel->avatar_public_id = 'some-avatar-id';
 
         $this->userRepository
-            ->shouldReceive('findModelById')
+            ->shouldReceive('findModelByIdWithTrashed')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
             ->andReturn($userModel);
@@ -159,7 +160,7 @@ final class UserServiceTest extends TestCase
         $userId = UserId::generate();
 
         $this->userRepository
-            ->shouldReceive('findModelById')
+            ->shouldReceive('findModelByIdWithTrashed')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
             ->andReturn(null);
@@ -226,6 +227,27 @@ final class UserServiceTest extends TestCase
         $result = $this->service->isAdmin($userId->value());
 
         $this->assertFalse($result);
+    }
+
+    public function test_anonymize_with_content_transfer_throws_exception_when_user_not_found(): void
+    {
+        $userId = UserId::generate();
+
+        $dto = new AnonymizeUserDTO(
+            userId: $userId->value(),
+            contentAction: 'anonymize',
+            transferToUserId: null,
+        );
+
+        $this->userRepository
+            ->shouldReceive('findModelByIdWithTrashed')
+            ->once()
+            ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
+            ->andReturn(null);
+
+        $this->expectException(UserNotFoundException::class);
+
+        $this->service->anonymizeWithContentTransfer($dto);
     }
 
     protected function tearDown(): void

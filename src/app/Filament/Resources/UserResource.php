@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\UserServiceInterface;
@@ -12,9 +13,12 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
@@ -27,6 +31,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
@@ -201,7 +207,8 @@ class UserResource extends Resource
                     ->multiple()
                     ->preload(),
                 TrashedFilter::make()
-                    ->label(__('filament.users.filters.status')),
+                    ->label(__('filament.users.filters.status'))
+                    ->default('with'),
             ])
             ->actions([
                 EditAction::make(),
@@ -278,12 +285,55 @@ class UserResource extends Resource
                         ->icon('heroicon-o-eye-slash')
                         ->color('danger')
                         ->visible(fn (UserModel $record): bool => $record->trashed() && ! $record->isAnonymized() && $record->id !== Auth::id())
-                        ->requiresConfirmation()
-                        ->modalHeading(__('filament.users.actions.anonymize'))
-                        ->modalDescription(__('filament.users.actions.anonymizeConfirm'))
+                        ->modalHeading(fn (UserModel $record): string => __('filament.users.actions.anonymizeModal.heading', ['name' => $record->display_name ?? $record->name]))
+                        ->modalDescription(function (UserModel $record): string {
+                            $userService = app(UserServiceInterface::class);
+                            $contentCounts = $userService->countUserContent($record->id);
+                            $articlesCount = $contentCounts['articles'];
+
+                            if ($articlesCount === 0) {
+                                return __('filament.users.actions.anonymizeModal.noContent');
+                            }
+
+                            $contentText = trans_choice('filament.users.actions.anonymizeModal.articlesCount', $articlesCount, ['count' => $articlesCount]);
+
+                            return __('filament.users.actions.anonymizeModal.hasContent', ['content' => $contentText]);
+                        })
                         ->modalIcon('heroicon-o-exclamation-triangle')
                         ->modalIconColor('danger')
-                        ->action(function (UserModel $record): void {
+                        ->form(function (UserModel $record): array {
+                            $userService = app(UserServiceInterface::class);
+                            $contentCounts = $userService->countUserContent($record->id);
+                            $articlesCount = $contentCounts['articles'];
+
+                            if ($articlesCount === 0) {
+                                return [];
+                            }
+
+                            return [
+                                Radio::make('content_action')
+                                    ->label(__('filament.users.actions.anonymizeModal.contentActionLabel'))
+                                    ->options([
+                                        'transfer' => __('filament.users.actions.anonymizeModal.transfer'),
+                                        'anonymize' => __('filament.users.actions.anonymizeModal.keepAnonymized'),
+                                    ])
+                                    ->default('anonymize')
+                                    ->required()
+                                    ->live(),
+                                Select::make('transfer_to_user_id')
+                                    ->label(__('filament.users.actions.anonymizeModal.transferTo'))
+                                    ->options(fn () => UserModel::query()
+                                        ->whereNull('deleted_at')
+                                        ->whereNull('anonymized_at')
+                                        ->where('id', '!=', $record->id)
+                                        ->pluck('name', 'id'))
+                                    ->searchable()
+                                    ->required()
+                                    ->visible(fn (Get $get): bool => $get('content_action') === 'transfer'),
+                            ];
+                        })
+                        ->modalSubmitActionLabel(__('filament.users.actions.anonymizeModal.confirm'))
+                        ->action(function (UserModel $record, array $data): void {
                             if ($record->id === Auth::id()) {
                                 Notification::make()
                                     ->title(__('filament.users.actions.cannotAnonymizeSelf'))
@@ -292,7 +342,22 @@ class UserResource extends Resource
 
                                 return;
                             }
-                            app(UserServiceInterface::class)->anonymize($record->id);
+
+                            $userService = app(UserServiceInterface::class);
+                            $contentCounts = $userService->countUserContent($record->id);
+                            $articlesCount = $contentCounts['articles'];
+
+                            if ($articlesCount === 0) {
+                                $userService->anonymize($record->id);
+                            } else {
+                                $dto = new AnonymizeUserDTO(
+                                    userId: $record->id,
+                                    contentAction: $data['content_action'] ?? 'anonymize',
+                                    transferToUserId: $data['transfer_to_user_id'] ?? null,
+                                );
+                                $userService->anonymizeWithContentTransfer($dto);
+                            }
+
                             Notification::make()
                                 ->title(__('filament.users.actions.anonymized'))
                                 ->success()
@@ -310,5 +375,16 @@ class UserResource extends Resource
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * @return Builder<UserModel>
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 }

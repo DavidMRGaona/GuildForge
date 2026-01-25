@@ -217,6 +217,18 @@ return [
             'anonymized' => 'Usuario anonimizado',
             'cannotAnonymizeSelf' => 'No puedes anonimizar tu propia cuenta',
             'cannotDeactivateSelf' => 'No puedes desactivar tu propia cuenta',
+            'anonymizeModal' => [
+                'heading' => 'Eliminar usuario: :name',
+                'noContent' => 'Este usuario no tiene contenido asociado. ¿Estás seguro de que deseas anonimizarlo? Esta acción es IRREVERSIBLE.',
+                'hasContent' => 'Este usuario tiene contenido asociado: :content. ¿Qué deseas hacer con el contenido?',
+                'articlesCount' => '{1} 1 artículo|[2,*] :count artículos',
+                'contentActionLabel' => '¿Qué deseas hacer con el contenido?',
+                'transfer' => 'Transferir a otro usuario',
+                'keepAnonymized' => 'Mantener como "Anónimo"',
+                'transferTo' => 'Transferir a',
+                'confirm' => 'Continuar',
+                'warning' => 'Esta acción es IRREVERSIBLE. Se eliminarán todos los datos personales del usuario.',
+            ],
         ],
         'status' => [
             'active' => 'Activo',
