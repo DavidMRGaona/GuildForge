@@ -9,12 +9,18 @@ interface ThemeSettings {
     fontBody: string;
 }
 
+interface FaviconSettings {
+    light: string | null;
+    dark: string | null;
+}
+
 declare module '@inertiajs/vue3' {
     interface PageProps {
         appName: string;
         appDescription: string;
         siteLogoLight: string | null;
         siteLogoDark: string | null;
+        favicons: FaviconSettings;
         theme: ThemeSettings;
         auth: {
             user: User | null;
@@ -31,4 +37,4 @@ declare module '@inertiajs/vue3' {
     }
 }
 
-export type { ThemeSettings };
+export type { ThemeSettings, FaviconSettings };

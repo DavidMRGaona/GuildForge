@@ -18,8 +18,8 @@ const isMobileMenuOpen = ref(false);
 const isThemeMenuOpen = ref(false);
 
 const appName = computed(() => page.props.appName as string);
-const siteLogoLight = computed(() => page.props.siteLogoLight as string | null);
-const siteLogoDark = computed(() => page.props.siteLogoDark as string | null);
+const siteLogoLight = computed(() => page.props.siteLogoLight as string);
+const siteLogoDark = computed(() => page.props.siteLogoDark as string);
 
 const currentLogo = computed(() => {
     return appStore.isDarkMode ? siteLogoDark.value : siteLogoLight.value;
@@ -48,14 +48,14 @@ function selectTheme(mode: ThemeMode): void {
 </script>
 
 <template>
-    <header class="bg-white shadow-sm dark:bg-stone-900 dark:shadow-stone-800/50">
+    <header class="bg-surface shadow-sm dark:shadow-stone-800/50">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex h-16 items-center justify-between">
                 <!-- Logo -->
                 <div class="shrink-0">
                     <Link href="/" class="flex items-center">
                         <img v-if="currentLogo" :src="currentLogo" :alt="appName" class="h-8" />
-                        <span v-else class="text-xl font-bold text-amber-600 dark:text-amber-500">
+                        <span v-else class="text-xl font-bold text-primary">
                             {{ t('layout.brand') }}
                         </span>
                     </Link>
@@ -69,7 +69,7 @@ function selectTheme(mode: ThemeMode): void {
                     <Link
                         href="/buscar"
                         :aria-label="t('search.title')"
-                        class="p-2 rounded-md text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white dark:focus:ring-amber-400"
+                        class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     >
                         <svg
                             class="h-5 w-5"
@@ -93,7 +93,7 @@ function selectTheme(mode: ThemeMode): void {
                             type="button"
                             :aria-label="t('layout.selectTheme')"
                             :aria-expanded="isThemeMenuOpen"
-                            class="p-2 rounded-md text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white dark:focus:ring-amber-400"
+                            class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                             @click="toggleThemeMenu"
                             @blur="closeThemeMenu"
                         >
@@ -150,7 +150,7 @@ function selectTheme(mode: ThemeMode): void {
                         <!-- Dropdown menu -->
                         <div
                             v-if="isThemeMenuOpen"
-                            class="absolute right-0 mt-2 w-36 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-stone-800 dark:ring-stone-700 z-50"
+                            class="absolute right-0 mt-2 w-36 rounded-md bg-surface shadow-lg ring-1 ring-black ring-opacity-5 border-default z-50"
                             role="menu"
                             :aria-label="t('layout.selectTheme')"
                             @mousedown.prevent
@@ -244,7 +244,7 @@ function selectTheme(mode: ThemeMode): void {
                 <div class="md:hidden">
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center rounded-md p-2 text-stone-600 hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white dark:focus:ring-amber-400 dark:focus:ring-offset-stone-900"
+                        class="inline-flex items-center justify-center rounded-md p-2 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 dark:focus:ring-offset-[var(--color-bg-page)]"
                         :aria-expanded="isMobileMenuOpen"
                         @click="toggleMobileMenu"
                     >
@@ -299,7 +299,7 @@ function selectTheme(mode: ThemeMode): void {
                 <!-- Search link -->
                 <Link
                     href="/buscar"
-                    class="flex items-center px-3 py-2 text-base font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900 rounded-md dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
+                    class="flex items-center px-3 py-2 text-base font-medium text-base-secondary hover:bg-muted hover:text-base-primary rounded-md"
                     @click="closeMobileMenu"
                 >
                     <svg
@@ -322,7 +322,7 @@ function selectTheme(mode: ThemeMode): void {
                 <!-- Theme selector -->
                 <div v-if="appStore.isThemeToggleVisible" class="px-3 py-2">
                     <span
-                        class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400"
+                        class="text-xs font-semibold uppercase tracking-wider text-base-muted"
                     >
                         {{ t('layout.selectTheme') }}
                     </span>
@@ -332,8 +332,8 @@ function selectTheme(mode: ThemeMode): void {
                             class="flex flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
                             :class="
                                 appStore.themeMode === 'system'
-                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'
+                                    ? 'bg-primary-light text-primary'
+                                    : 'text-base-secondary hover:bg-muted'
                             "
                             @click="selectTheme('system')"
                         >
@@ -357,8 +357,8 @@ function selectTheme(mode: ThemeMode): void {
                             class="flex flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
                             :class="
                                 appStore.themeMode === 'light'
-                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'
+                                    ? 'bg-primary-light text-primary'
+                                    : 'text-base-secondary hover:bg-muted'
                             "
                             @click="selectTheme('light')"
                         >
@@ -382,8 +382,8 @@ function selectTheme(mode: ThemeMode): void {
                             class="flex flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors"
                             :class="
                                 appStore.themeMode === 'dark'
-                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                                    : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'
+                                    ? 'bg-primary-light text-primary'
+                                    : 'text-base-secondary hover:bg-muted'
                             "
                             @click="selectTheme('dark')"
                         >

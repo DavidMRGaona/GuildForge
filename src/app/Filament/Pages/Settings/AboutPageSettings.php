@@ -31,8 +31,6 @@ final class AboutPageSettings extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Páginas';
-
     protected static ?int $navigationSort = 10;
 
     protected static string $view = 'filament.pages.settings.about-page-settings';
@@ -290,6 +288,35 @@ final class AboutPageSettings extends Page implements HasForms
     protected function getImageFields(): array
     {
         return ['about_hero_image'];
+    }
+
+    /**
+     * Get the default values for settings.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getDefaultSettings(): array
+    {
+        return [
+            'about_hero_image' => '',
+            'about_tagline' => '',
+            'about_activities' => [],
+            'about_history' => '',
+            'join_steps' => [],
+            'location_name' => '',
+            'location_address' => '',
+            'location_lat' => '',
+            'location_lng' => '',
+            'location_zoom' => '15',
+            'contact_email' => '',
+            'contact_phone' => '',
+            'contact_address' => '',
+            'social_facebook' => '',
+            'social_instagram' => '',
+            'social_twitter' => '',
+            'social_discord' => '',
+            'social_tiktok' => '',
+        ];
     }
 
     /**

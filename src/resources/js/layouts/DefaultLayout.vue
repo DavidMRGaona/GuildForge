@@ -3,6 +3,7 @@ import { computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { usePage } from '@inertiajs/vue3';
 import { useAppStore } from '@/stores/useAppStore';
+import { useFavicons } from '@/composables/useFavicons';
 import type { ThemeSettings } from '@/types/inertia';
 import TheHeader from '@/components/layout/TheHeader.vue';
 import TheFooter from '@/components/layout/TheFooter.vue';
@@ -12,6 +13,9 @@ import ModuleSlot from '@/components/layout/ModuleSlot.vue';
 const { t } = useI18n();
 const page = usePage();
 const appStore = useAppStore();
+
+// Initialize dynamic favicon switching based on theme
+useFavicons();
 
 const theme = computed(() => page.props.theme as ThemeSettings | undefined);
 const cssVariables = computed(() => theme.value?.cssVariables ?? '');
@@ -52,7 +56,7 @@ watch(theme, (newTheme) => {
 
 <template>
     <div
-        class="flex min-h-screen flex-col bg-stone-50 dark:bg-stone-900 transition-colors duration-200"
+        class="flex min-h-screen flex-col bg-page transition-colors duration-200"
     >
         <!-- Inject CSS Variables -->
         <component :is="'style'" v-if="cssVariables">{{ cssVariables }}</component>
@@ -64,7 +68,7 @@ watch(theme, (newTheme) => {
 
         <a
             href="#main-content"
-            class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-amber-600 focus:ring-2 focus:ring-amber-500 dark:focus:bg-stone-800 dark:focus:text-amber-400"
+            class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-surface focus:px-4 focus:py-2 focus:text-primary focus:ring-2 focus:ring-[var(--color-primary)]"
         >
             {{ t('a11y.skipToContent') }}
         </a>

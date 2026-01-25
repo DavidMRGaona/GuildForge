@@ -48,7 +48,19 @@ trait ManagesPageSettings
     abstract protected function getImageFields(): array;
 
     /**
+     * Get the default values for settings.
+     *
+     * When a setting has not been saved yet, the default value will be used
+     * instead of an empty string. This ensures forms show the intended defaults.
+     *
+     * @return array<string, mixed>
+     */
+    abstract protected function getDefaultSettings(): array;
+
+    /**
      * Load settings from the service and decode JSON fields.
+     *
+     * Uses defaults from getDefaultSettings() when a setting has not been saved.
      *
      * @return array<string, mixed>
      */
@@ -56,9 +68,17 @@ trait ManagesPageSettings
     {
         $data = [];
         $jsonFields = $this->getJsonFields();
+        $defaults = $this->getDefaultSettings();
 
         foreach ($this->getSettingsKeys() as $key) {
-            $value = $settingsService->get($key, '');
+            $value = $settingsService->get($key, null);
+
+            // If setting has not been saved, use default
+            if ($value === null) {
+                $data[$key] = $defaults[$key] ?? (in_array($key, $jsonFields, true) ? [] : '');
+
+                continue;
+            }
 
             if (in_array($key, $jsonFields, true)) {
                 $data[$key] = $this->decodeJsonField((string) $value);

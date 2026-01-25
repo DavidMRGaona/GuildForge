@@ -47,6 +47,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
                 :tag="categoryTag"
                 :linkable="false"
                 variant="category"
+                badge-style="overlay"
                 content-type="articles"
                 class="absolute left-3 top-3"
             />

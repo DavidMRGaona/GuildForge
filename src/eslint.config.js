@@ -32,6 +32,7 @@ export default [
                 MediaQueryListEvent: 'readonly',
                 URL: 'readonly',
                 File: 'readonly',
+                HTMLLinkElement: 'readonly',
             },
         },
         plugins: {

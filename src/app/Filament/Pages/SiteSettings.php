@@ -33,8 +33,6 @@ final class SiteSettings extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static ?string $navigationGroup = 'Administración';
-
     protected static ?int $navigationSort = 100;
 
     protected static string $view = 'filament.pages.site-settings';
@@ -47,6 +45,11 @@ final class SiteSettings extends Page implements HasForms
     public static function getNavigationLabel(): string
     {
         return __('filament.settings.title');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('filament.navigation.admin');
     }
 
     public function getTitle(): string
@@ -69,6 +72,8 @@ final class SiteSettings extends Page implements HasForms
             'guild_description',
             'site_logo_light',
             'site_logo_dark',
+            'site_favicon_light',
+            'site_favicon_dark',
             'theme_primary_color',
             'theme_primary_color_dark',
             'theme_secondary_color',
@@ -80,6 +85,12 @@ final class SiteSettings extends Page implements HasForms
             'theme_surface_color_dark',
             'theme_text_color',
             'theme_text_color_dark',
+            'theme_text_secondary_color',
+            'theme_text_secondary_color_dark',
+            'theme_text_muted_color',
+            'theme_text_muted_color_dark',
+            'theme_border_color',
+            'theme_border_color_dark',
             'theme_font_heading',
             'theme_font_body',
             'theme_font_size_base',
@@ -108,7 +119,51 @@ final class SiteSettings extends Page implements HasForms
      */
     protected function getImageFields(): array
     {
-        return ['site_logo_light', 'site_logo_dark'];
+        return ['site_logo_light', 'site_logo_dark', 'site_favicon_light', 'site_favicon_dark'];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getDefaultSettings(): array
+    {
+        return [
+            'guild_name' => '',
+            'guild_description' => '',
+            'site_logo_light' => '',
+            'site_logo_dark' => '',
+            'site_favicon_light' => '',
+            'site_favicon_dark' => '',
+            'theme_primary_color' => '#D97706',
+            'theme_primary_color_dark' => '#F59E0B',
+            'theme_secondary_color' => '#57534E',
+            'theme_secondary_color_dark' => '#A8A29E',
+            'theme_accent_color' => '#D97706',
+            'theme_background_color' => '#FAFAF9',
+            'theme_background_color_dark' => '#1C1917',
+            'theme_surface_color' => '#FFFFFF',
+            'theme_surface_color_dark' => '#292524',
+            'theme_text_color' => '#1C1917',
+            'theme_text_color_dark' => '#F5F5F4',
+            'theme_text_secondary_color' => '#57534E',
+            'theme_text_secondary_color_dark' => '#D6D3D1',
+            'theme_text_muted_color' => '#A8A29E',
+            'theme_text_muted_color_dark' => '#A8A29E',
+            'theme_border_color' => '#E7E5E4',
+            'theme_border_color_dark' => '#44403C',
+            'theme_font_heading' => 'Inter',
+            'theme_font_body' => 'Inter',
+            'theme_font_size_base' => 'normal',
+            'theme_border_radius' => 'medium',
+            'theme_shadow_intensity' => 'medium',
+            'theme_button_style' => 'solid',
+            'theme_dark_mode_default' => false,
+            'theme_dark_mode_toggle_visible' => true,
+            'auth_registration_enabled' => true,
+            'auth_login_enabled' => true,
+            'auth_email_verification_required' => false,
+            'anonymized_user_name' => 'Anónimo',
+        ];
     }
 
     public function mount(SettingsServiceInterface $settingsService): void
@@ -140,31 +195,67 @@ final class SiteSettings extends Page implements HasForms
                         Tab::make(__('filament.settings.tabs.logos'))
                             ->icon('heroicon-o-photo')
                             ->schema([
-                                FileUpload::make('site_logo_light')
-                                    ->label(__('filament.settings.general.logo_light'))
-                                    ->helperText(__('filament.settings.general.logo_light_help'))
-                                    ->image()
-                                    ->disk('images')
-                                    ->directory('branding')
-                                    ->getUploadedFileNameForStorageUsing(
-                                        fn (TemporaryUploadedFile $file): string => 'logo-light-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                                    )
-                                    ->maxSize(1024)
-                                    ->nullable()
-                                    ->columnSpanFull(),
+                                Section::make(__('filament.settings.branding.logos_section'))
+                                    ->schema([
+                                        FileUpload::make('site_logo_light')
+                                            ->label(__('filament.settings.general.logo_light'))
+                                            ->helperText(__('filament.settings.general.logo_light_help'))
+                                            ->image()
+                                            ->disk('images')
+                                            ->directory('branding')
+                                            ->getUploadedFileNameForStorageUsing(
+                                                fn (TemporaryUploadedFile $file): string => 'logo-light-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                            )
+                                            ->maxSize(1024)
+                                            ->nullable()
+                                            ->columnSpanFull(),
 
-                                FileUpload::make('site_logo_dark')
-                                    ->label(__('filament.settings.general.logo_dark'))
-                                    ->helperText(__('filament.settings.general.logo_dark_help'))
-                                    ->image()
-                                    ->disk('images')
-                                    ->directory('branding')
-                                    ->getUploadedFileNameForStorageUsing(
-                                        fn (TemporaryUploadedFile $file): string => 'logo-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                                    )
-                                    ->maxSize(1024)
-                                    ->nullable()
-                                    ->columnSpanFull(),
+                                        FileUpload::make('site_logo_dark')
+                                            ->label(__('filament.settings.general.logo_dark'))
+                                            ->helperText(__('filament.settings.general.logo_dark_help'))
+                                            ->image()
+                                            ->disk('images')
+                                            ->directory('branding')
+                                            ->getUploadedFileNameForStorageUsing(
+                                                fn (TemporaryUploadedFile $file): string => 'logo-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                            )
+                                            ->maxSize(1024)
+                                            ->nullable()
+                                            ->columnSpanFull(),
+                                    ]),
+
+                                Section::make(__('filament.settings.branding.favicons_section'))
+                                    ->description(__('filament.settings.branding.favicons_description'))
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                FileUpload::make('site_favicon_light')
+                                                    ->label(__('filament.settings.branding.favicon_light'))
+                                                    ->helperText(__('filament.settings.branding.favicon_light_help'))
+                                                    ->image()
+                                                    ->disk('images')
+                                                    ->directory('branding')
+                                                    ->getUploadedFileNameForStorageUsing(
+                                                        fn (TemporaryUploadedFile $file): string => 'favicon-light-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                                    )
+                                                    ->maxSize(512)
+                                                    ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'])
+                                                    ->nullable(),
+
+                                                FileUpload::make('site_favicon_dark')
+                                                    ->label(__('filament.settings.branding.favicon_dark'))
+                                                    ->helperText(__('filament.settings.branding.favicon_dark_help'))
+                                                    ->image()
+                                                    ->disk('images')
+                                                    ->directory('branding')
+                                                    ->getUploadedFileNameForStorageUsing(
+                                                        fn (TemporaryUploadedFile $file): string => 'favicon-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                                    )
+                                                    ->maxSize(512)
+                                                    ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'])
+                                                    ->nullable(),
+                                            ]),
+                                    ]),
                             ]),
 
                         Tab::make(__('filament.settings.tabs.colors'))
@@ -235,6 +326,42 @@ final class SiteSettings extends Page implements HasForms
                                                 ColorPicker::make('theme_text_color_dark')
                                                     ->label(__('filament.settings.colors.text_color_dark'))
                                                     ->default('#F5F5F4'),
+                                            ]),
+
+                                        Grid::make(2)
+                                            ->schema([
+                                                ColorPicker::make('theme_text_secondary_color')
+                                                    ->label(__('filament.settings.colors.text_secondary_color'))
+                                                    ->default('#57534E'),
+
+                                                ColorPicker::make('theme_text_secondary_color_dark')
+                                                    ->label(__('filament.settings.colors.text_secondary_color_dark'))
+                                                    ->default('#D6D3D1'),
+                                            ]),
+
+                                        Grid::make(2)
+                                            ->schema([
+                                                ColorPicker::make('theme_text_muted_color')
+                                                    ->label(__('filament.settings.colors.text_muted_color'))
+                                                    ->default('#A8A29E'),
+
+                                                ColorPicker::make('theme_text_muted_color_dark')
+                                                    ->label(__('filament.settings.colors.text_muted_color_dark'))
+                                                    ->default('#A8A29E'),
+                                            ]),
+                                    ]),
+
+                                Section::make(__('filament.settings.colors.border_section'))
+                                    ->schema([
+                                        Grid::make(2)
+                                            ->schema([
+                                                ColorPicker::make('theme_border_color')
+                                                    ->label(__('filament.settings.colors.border_color'))
+                                                    ->default('#E7E5E4'),
+
+                                                ColorPicker::make('theme_border_color_dark')
+                                                    ->label(__('filament.settings.colors.border_color_dark'))
+                                                    ->default('#44403C'),
                                             ]),
                                     ]),
                             ]),

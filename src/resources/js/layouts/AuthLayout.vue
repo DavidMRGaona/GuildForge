@@ -51,7 +51,7 @@ watch(theme, (newTheme) => {
 
 <template>
     <div
-        class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-stone-50 dark:bg-stone-900 transition-colors duration-200"
+        class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-page transition-colors duration-200"
     >
         <!-- Inject CSS Variables -->
         <component :is="'style'" v-if="cssVariables">{{ cssVariables }}</component>
@@ -63,7 +63,7 @@ watch(theme, (newTheme) => {
 
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
             <Link href="/" class="flex justify-center">
-                <span class="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                <span class="text-2xl font-bold text-primary">
                     {{ page.props.appName }}
                 </span>
             </Link>
@@ -81,7 +81,7 @@ watch(theme, (newTheme) => {
         </div>
 
         <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-            <div class="bg-white dark:bg-stone-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div class="bg-surface py-8 px-4 shadow sm:rounded-lg sm:px-10">
                 <slot />
             </div>
         </div>
@@ -89,7 +89,7 @@ watch(theme, (newTheme) => {
         <div class="mt-8 text-center">
             <Link
                 href="/"
-                class="text-sm text-stone-600 dark:text-stone-400 hover:text-amber-600 dark:hover:text-amber-400"
+                class="text-sm text-base-secondary hover:text-primary transition-colors"
             >
                 ← {{ t('auth.backToHome') }}
             </Link>

@@ -87,6 +87,7 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 150));
                     :tag="categoryTag"
                     :linkable="false"
                     variant="category"
+                    badge-style="overlay"
                     content-type="events"
                     class="absolute right-3 top-3"
                 />
@@ -166,6 +167,7 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 150));
                         :tag="categoryTag"
                         :linkable="false"
                         variant="category"
+                        badge-style="overlay"
                         content-type="events"
                         class="absolute left-3 top-3"
                     />

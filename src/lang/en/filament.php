@@ -5,6 +5,9 @@ declare(strict_types=1);
 return [
     'navigation' => [
         'pages' => 'Pages',
+        'content' => 'Content',
+        'settings' => 'Settings',
+        'admin' => 'Administration',
     ],
     'pages' => [
         'about' => [
@@ -56,6 +59,7 @@ return [
             'colors' => 'Colors',
             'typography' => 'Typography',
             'appearance' => 'Appearance',
+            'authentication' => 'Authentication',
         ],
         'general' => [
             'title' => 'General Settings',
@@ -64,6 +68,15 @@ return [
             'logo_light_help' => 'Displayed when light theme is active. Transparent PNG recommended, max 1MB.',
             'logo_dark' => 'Logo (dark theme)',
             'logo_dark_help' => 'Displayed when dark theme is active. Transparent PNG recommended, max 1MB.',
+        ],
+        'branding' => [
+            'logos_section' => 'Logos',
+            'favicons_section' => 'Favicons',
+            'favicons_description' => 'Custom favicons will be displayed in the browser tab. If not set, default favicons will be used.',
+            'favicon_light' => 'Favicon (light theme)',
+            'favicon_light_help' => 'PNG or ICO, recommended size: 32x32px or 64x64px',
+            'favicon_dark' => 'Favicon (dark theme)',
+            'favicon_dark_help' => 'PNG or ICO, recommended size: 32x32px or 64x64px',
         ],
         'colors' => [
             'primary_section' => 'Primary Colors',
@@ -80,6 +93,13 @@ return [
             'surface_color_dark' => 'Surface color (dark mode)',
             'text_color' => 'Text color',
             'text_color_dark' => 'Text color (dark mode)',
+            'text_secondary_color' => 'Secondary text color',
+            'text_secondary_color_dark' => 'Secondary text color (dark mode)',
+            'text_muted_color' => 'Muted text color',
+            'text_muted_color_dark' => 'Muted text color (dark mode)',
+            'border_section' => 'Border colors',
+            'border_color' => 'Border color',
+            'border_color_dark' => 'Border color (dark mode)',
         ],
         'typography' => [
             'font_heading' => 'Heading font',
@@ -166,6 +186,22 @@ return [
             'twitter' => 'X (Twitter)',
             'discord' => 'Discord',
             'tiktok' => 'TikTok',
+        ],
+        'auth' => [
+            'section_public' => 'Public access',
+            'section_public_description' => 'Control whether visitors can register and log in to the site.',
+            'section_security' => 'Security',
+            'section_security_description' => 'Additional security options for user authentication.',
+            'section_gdpr' => 'Privacy (GDPR)',
+            'section_gdpr_description' => 'Settings related to user privacy and data protection.',
+            'registration_enabled' => 'Allow registration',
+            'registration_enabled_help' => 'If disabled, new users will not be able to register on the site.',
+            'login_enabled' => 'Allow login',
+            'login_enabled_help' => 'If disabled, users will not be able to log in (except in the admin panel).',
+            'email_verification_required' => 'Require email verification',
+            'email_verification_required_help' => 'Users will need to verify their email before accessing all features.',
+            'anonymized_user_name' => 'Anonymized user name',
+            'anonymized_user_name_help' => 'Name that will be displayed for users who have been anonymized (e.g., "Anonymous", "Editorial").',
         ],
     ],
 ];

@@ -12,20 +12,20 @@ const props = withDefaults(defineProps<Props>(), {
 
 <template>
     <div
-        class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50"
+        class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-stone-900/50"
     >
         <div
             v-if="$slots.header || props.title"
-            class="border-b border-stone-200 px-6 py-4 dark:border-stone-700"
+            class="border-b border-default px-6 py-4"
         >
             <slot name="header">
                 <h3
                     v-if="props.title"
-                    class="text-lg font-semibold text-stone-900 dark:text-stone-100"
+                    class="text-lg font-semibold text-base-primary"
                 >
                     {{ props.title }}
                 </h3>
-                <p v-if="props.subtitle" class="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                <p v-if="props.subtitle" class="mt-1 text-sm text-base-muted">
                     {{ props.subtitle }}
                 </p>
             </slot>
@@ -37,7 +37,7 @@ const props = withDefaults(defineProps<Props>(), {
 
         <div
             v-if="$slots.footer"
-            class="border-t border-stone-200 bg-stone-50 px-6 py-4 dark:border-stone-700 dark:bg-stone-900"
+            class="border-t border-default bg-muted px-6 py-4"
         >
             <slot name="footer" />
         </div>
