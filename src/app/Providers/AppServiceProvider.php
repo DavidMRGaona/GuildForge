@@ -68,6 +68,7 @@ use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
 use App\Infrastructure\Services\UserService;
+use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
@@ -79,6 +80,7 @@ use Cloudinary\Cloudinary;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
@@ -175,6 +177,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register custom UUID-aware user provider to handle old integer-based cookies gracefully
+        Auth::provider('uuid-eloquent', function ($app, array $config) {
+            return new UuidEloquentUserProvider($app['hash'], $config['model']);
+        });
+
         // Rate limiter for contact form: 3 submissions per minute per IP
         RateLimiter::for(
             'contact',

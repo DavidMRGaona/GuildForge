@@ -79,10 +79,20 @@ final readonly class EloquentPermissionRepository implements PermissionRepositor
 
     public function save(Permission $permission): void
     {
-        PermissionModel::query()->updateOrCreate(
-            ['id' => $permission->id()->value],
-            $this->toArray($permission),
-        );
+        $existing = PermissionModel::query()->where('key', $permission->key()->value)->first();
+
+        if ($existing !== null) {
+            // Update existing permission (don't change the ID)
+            $existing->update([
+                'label' => $permission->label(),
+                'resource' => $permission->resource(),
+                'action' => $permission->action(),
+                'module' => $permission->module(),
+            ]);
+        } else {
+            // Create new permission with the provided ID
+            PermissionModel::query()->create($this->toArray($permission));
+        }
     }
 
     /**
