@@ -25,6 +25,7 @@ use App\Console\Commands\Module\ModulePublishAssetsCommand;
 use App\Infrastructure\Modules\Services\ModuleInstaller;
 use App\Modules\ModuleLoader;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 final class ModulesServiceProvider extends ServiceProvider
@@ -92,6 +93,11 @@ final class ModulesServiceProvider extends ServiceProvider
     {
         try {
             DB::connection()->getPdo();
+
+            // Also check if the modules table exists (needed for fresh installs)
+            if (! Schema::hasTable('modules')) {
+                return false;
+            }
 
             return true;
         } catch (\Throwable) {
