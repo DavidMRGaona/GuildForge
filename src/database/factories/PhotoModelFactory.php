@@ -21,11 +21,11 @@ final class PhotoModelFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => fake()->uuid(),
+            'id' => $this->faker->uuid(),
             'gallery_id' => GalleryModel::factory(),
-            'image_public_id' => 'test/placeholder/'.fake()->uuid(),
-            'caption' => fake()->optional()->sentence(),
-            'sort_order' => fake()->numberBetween(0, 100),
+            'image_public_id' => 'test/placeholder/'.$this->faker->uuid(),
+            'caption' => $this->faker->optional()->sentence(),
+            'sort_order' => $this->faker->numberBetween(0, 100),
         ];
     }
 

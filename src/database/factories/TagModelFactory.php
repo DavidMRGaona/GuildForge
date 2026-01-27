@@ -20,16 +20,16 @@ final class TagModelFactory extends Factory
      */
     public function definition(): array
     {
-        $name = fake()->unique()->words(2, true);
+        $name = $this->faker->unique()->words(2, true);
 
         return [
-            'id' => fake()->uuid(),
+            'id' => $this->faker->uuid(),
             'name' => ucfirst($name),
             'slug' => Str::slug($name),
             'parent_id' => null,
             'applies_to' => ['events', 'articles', 'galleries'],
-            'color' => fake()->hexColor(),
-            'description' => fake()->optional()->sentence(),
+            'color' => $this->faker->hexColor(),
+            'description' => $this->faker->optional()->sentence(),
             'sort_order' => 0,
         ];
     }

@@ -20,11 +20,11 @@ final class HeroSlideModelFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => fake()->uuid(),
-            'title' => fake()->sentence(3),
-            'subtitle' => fake()->optional()->sentence(5),
-            'button_text' => fake()->optional()->words(2, true),
-            'button_url' => fake()->optional()->url(),
+            'id' => $this->faker->uuid(),
+            'title' => $this->faker->sentence(3),
+            'subtitle' => $this->faker->optional()->sentence(5),
+            'button_text' => $this->faker->optional()->words(2, true),
+            'button_url' => $this->faker->optional()->url(),
             'image_public_id' => null,
             'is_active' => false,
             'sort_order' => 0,

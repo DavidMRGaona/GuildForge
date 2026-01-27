@@ -20,20 +20,20 @@ final class EventModelFactory extends Factory
      */
     public function definition(): array
     {
-        $title = fake()->sentence(3);
+        $title = $this->faker->sentence(3);
 
         return [
-            'id' => fake()->uuid(),
+            'id' => $this->faker->uuid(),
             'title' => $title,
             'slug' => Str::slug($title),
-            'description' => fake()->paragraphs(3, true),
-            'start_date' => $startDate = fake()->dateTimeBetween('+1 week', '+3 months'),
+            'description' => $this->faker->paragraphs(3, true),
+            'start_date' => $startDate = $this->faker->dateTimeBetween('+1 week', '+3 months'),
             'end_date' => (clone $startDate)->modify('+'.rand(0, 3).' days'),
-            'location' => fake()->optional()->address(),
+            'location' => $this->faker->optional()->address(),
             'image_public_id' => null,
-            'member_price' => fake()->optional(0.7)->randomFloat(2, 5, 50),
+            'member_price' => $this->faker->optional(0.7)->randomFloat(2, 5, 50),
             'non_member_price' => fn (array $attr) => $attr['member_price'] !== null
-                ? $attr['member_price'] + fake()->randomFloat(2, 2, 10)
+                ? $attr['member_price'] + $this->faker->randomFloat(2, 2, 10)
                 : null,
             'is_published' => false,
         ];
@@ -65,7 +65,7 @@ final class EventModelFactory extends Factory
     public function upcoming(): static
     {
         return $this->state(function (array $attributes): array {
-            $startDate = fake()->dateTimeBetween('+1 day', '+3 months');
+            $startDate = $this->faker->dateTimeBetween('+1 day', '+3 months');
 
             return [
                 'start_date' => $startDate,
@@ -80,7 +80,7 @@ final class EventModelFactory extends Factory
     public function past(): static
     {
         return $this->state(function (array $attributes): array {
-            $startDate = fake()->dateTimeBetween('-3 months', '-1 day');
+            $startDate = $this->faker->dateTimeBetween('-3 months', '-1 day');
 
             return [
                 'start_date' => $startDate,

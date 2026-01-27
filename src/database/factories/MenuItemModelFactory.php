@@ -23,18 +23,18 @@ final class MenuItemModelFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => fake()->uuid(),
+            'id' => $this->faker->uuid(),
             'location' => MenuLocation::Header,
             'parent_id' => null,
-            'label' => fake()->words(2, true),
-            'url' => fake()->optional()->url(),
+            'label' => $this->faker->words(2, true),
+            'url' => $this->faker->optional()->url(),
             'route' => null,
             'route_params' => [],
             'icon' => null,
             'target' => LinkTarget::Self,
             'visibility' => MenuVisibility::Public,
             'permissions' => [],
-            'sort_order' => fake()->numberBetween(0, 100),
+            'sort_order' => $this->faker->numberBetween(0, 100),
             'is_active' => true,
             'module' => null,
         ];
