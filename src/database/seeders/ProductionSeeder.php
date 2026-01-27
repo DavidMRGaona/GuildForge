@@ -22,6 +22,8 @@ final class ProductionSeeder extends Seeder
             TagSeeder::class,
             HeroSlideSeeder::class,
             SettingsSeeder::class,
+            LegalSettingsSeeder::class,
+            MenuItemSeeder::class,
         ]);
     }
 }

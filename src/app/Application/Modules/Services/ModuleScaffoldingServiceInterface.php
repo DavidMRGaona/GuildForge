@@ -85,7 +85,12 @@ interface ModuleScaffoldingServiceInterface
     /**
      * Create a new event listener for a module.
      */
-    public function createListener(string $module, string $name, string $eventName): ScaffoldResultDTO;
+    public function createListener(string $module, string $name, string $eventName, bool $queued = false): ScaffoldResultDTO;
+
+    /**
+     * Create a new notification for a module.
+     */
+    public function createNotification(string $module, string $name): ScaffoldResultDTO;
 
     /**
      * Create a new Filament RelationManager for a module.

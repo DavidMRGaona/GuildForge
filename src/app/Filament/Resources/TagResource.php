@@ -109,6 +109,15 @@ class TagResource extends Resource
                 TextColumn::make('name')
                     ->label(__('filament.tags.fields.name'))
                     ->formatStateUsing(fn (TagModel $record): string => self::formatIndentedNameForTable($record))
+                    ->html()
+                    ->description(function (TagModel $record): string {
+                        if ($record->parent_id === null) {
+                            return '';
+                        }
+                        $parentName = $record->parent->name ?? '';
+
+                        return '↳ '.__('filament.tags.child_of', ['parent' => $parentName]);
+                    })
                     ->searchable()
                     ->sortable(),
                 ColorColumn::make('color')
@@ -230,13 +239,13 @@ class TagResource extends Resource
      */
     private static function formatIndentedNameForTable(TagModel $record): string
     {
-        $depth = self::computeDepth($record);
+        $name = e($record->name);
 
-        if ($depth === 0) {
-            return $record->name;
+        if ($record->parent_id === null) {
+            return '<strong>'.$name.'</strong>';
         }
 
-        return str_repeat('-', $depth).' '.$record->name;
+        return $name;
     }
 
     /**

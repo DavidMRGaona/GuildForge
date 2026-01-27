@@ -54,6 +54,13 @@ interface ModuleManagerServiceInterface
     public function migrate(ModuleName $name): int;
 
     /**
+     * Run seeders for a module.
+     *
+     * @return int The number of seeders run
+     */
+    public function seed(ModuleName $name): int;
+
+    /**
      * Rollback migrations for a module.
      *
      * @param  int  $steps  Number of migrations to rollback

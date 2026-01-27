@@ -508,8 +508,10 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'src/Domain/Repositories',
             'src/Application/DTOs',
             'src/Application/Services',
+            'src/Infrastructure/Listeners',
             'src/Infrastructure/Persistence/Eloquent',
             'src/Infrastructure/Services',
+            'src/Notifications',
             'src/Http/Controllers',
             'src/Http/Controllers/Api',
             'src/Http/Requests',
@@ -717,7 +719,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         );
     }
 
-    public function createListener(string $module, string $name, string $eventName): ScaffoldResultDTO
+    public function createListener(string $module, string $name, string $eventName, bool $queued = false): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
         if ($validation !== null) {
@@ -730,19 +732,49 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $files = [];
 
         // Ensure Listeners directory exists
-        $listenersDir = $modulePath.'/src/Listeners';
+        $listenersDir = $modulePath.'/src/Infrastructure/Listeners';
         if (! is_dir($listenersDir)) {
             mkdir($listenersDir, 0755, true);
         }
 
-        $destination = "src/Listeners/{$variables['nameStudly']}.php";
+        $stub = $queued ? 'domain/listener-queued.php.stub' : 'domain/listener.php.stub';
+        $destination = "src/Infrastructure/Listeners/{$variables['nameStudly']}.php";
         $destPath = $modulePath.'/'.$destination;
 
-        $result = $this->renderStub('domain/listener.php.stub', $destPath, $variables);
+        $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
 
         return ScaffoldResultDTO::success(
             "Listener '{$name}' created for module '{$module}'.",
+            $files,
+        );
+    }
+
+    public function createNotification(string $module, string $name): ScaffoldResultDTO
+    {
+        $validation = $this->validateModuleExists($module);
+        if ($validation !== null) {
+            return $validation;
+        }
+
+        $modulePath = $this->modulesPath.'/'.$module;
+        $variables = $this->stubRenderer->getComponentVariables($module, $name);
+        $files = [];
+
+        // Ensure Notifications directory exists
+        $notificationsDir = $modulePath.'/src/Notifications';
+        if (! is_dir($notificationsDir)) {
+            mkdir($notificationsDir, 0755, true);
+        }
+
+        $destination = "src/Notifications/{$variables['nameStudly']}.php";
+        $destPath = $modulePath.'/'.$destination;
+
+        $result = $this->renderStub('domain/notification.php.stub', $destPath, $variables);
+        $files[$destination] = $result;
+
+        return ScaffoldResultDTO::success(
+            "Notification '{$name}' created for module '{$module}'.",
             $files,
         );
     }

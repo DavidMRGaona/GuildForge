@@ -8,9 +8,13 @@ use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Modules\Services\ModuleContextServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
+use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModulePermissionRegistryInterface;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
+use App\Application\Navigation\Services\MenuItemHrefResolverInterface;
+use App\Application\Navigation\Services\MenuServiceInterface;
+use App\Application\Navigation\Services\RouteRegistryInterface;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\AuthServiceInterface;
@@ -25,6 +29,7 @@ use App\Application\Services\TagQueryServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\Repositories\GalleryRepositoryInterface;
@@ -37,9 +42,16 @@ use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
 use App\Infrastructure\Modules\Services\ModuleManagerService;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use App\Infrastructure\Modules\Services\ModuleNavigationRegistry;
+use App\Infrastructure\Modules\Services\ModulePageRegistry;
+use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use App\Infrastructure\Modules\Services\ModulePermissionRegistry;
 use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
 use App\Infrastructure\Modules\Services\ModuleSlotRegistry;
+use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
+use App\Infrastructure\Navigation\Persistence\Eloquent\Repositories\EloquentMenuItemRepository;
+use App\Infrastructure\Navigation\Services\MenuItemHrefResolver;
+use App\Infrastructure\Navigation\Services\MenuService;
+use App\Infrastructure\Navigation\Services\RouteRegistry;
 use App\Infrastructure\Modules\Services\StubRenderer;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
@@ -73,6 +85,7 @@ use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
 use App\Policies\HeroSlidePolicy;
+use App\Policies\MenuItemPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TagPolicy;
 use App\Policies\UserPolicy;
@@ -144,6 +157,12 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(ModuleSeederRunner::class, function ($app) {
+            return new ModuleSeederRunner(
+                modulesPath: config('modules.path'),
+            );
+        });
+
         $this->app->singleton(ModuleManagerServiceInterface::class, ModuleManagerService::class);
 
         // Module SDK services
@@ -162,6 +181,13 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ModulePermissionRegistryInterface::class, ModulePermissionRegistry::class);
         $this->app->singleton(ModuleNavigationRegistryInterface::class, ModuleNavigationRegistry::class);
         $this->app->singleton(ModuleSlotRegistryInterface::class, ModuleSlotRegistry::class);
+        $this->app->singleton(ModulePageRegistryInterface::class, ModulePageRegistry::class);
+
+        // Navigation system bindings
+        $this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);
+        $this->app->singleton(MenuItemHrefResolverInterface::class, MenuItemHrefResolver::class);
+        $this->app->singleton(MenuServiceInterface::class, MenuService::class);
+        $this->app->singleton(RouteRegistryInterface::class, RouteRegistry::class);
 
         // Module loader (for booting enabled modules)
         $this->app->singleton(\App\Modules\ModuleLoader::class, function ($app) {
@@ -195,6 +221,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(GalleryModel::class, GalleryPolicy::class);
         Gate::policy(HeroSlideModel::class, HeroSlidePolicy::class);
         Gate::policy(TagModel::class, TagPolicy::class);
+        Gate::policy(MenuItemModel::class, MenuItemPolicy::class);
 
         // Override cloudinary driver with a safe adapter that:
         // - Generates URLs directly (no Admin API calls)

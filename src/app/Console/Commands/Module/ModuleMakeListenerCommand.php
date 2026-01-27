@@ -18,7 +18,8 @@ final class ModuleMakeListenerCommand extends Command
     protected $signature = 'module:make-listener
         {module : The name of the module}
         {name : The name of the listener}
-        {--event= : The domain event to listen for}';
+        {--event= : The domain event to listen for}
+        {--queued : Create a queued (async) listener}';
 
     /**
      * The console command description.
@@ -49,9 +50,12 @@ final class ModuleMakeListenerCommand extends Command
             $event = $this->ask('What domain event should this listener handle?', 'SomeEvent');
         }
 
+        /** @var bool $queued */
+        $queued = $this->option('queued');
+
         $this->info("Creating listener '{$name}' for event '{$event}' in module '{$module}'...");
 
-        $result = $this->scaffoldingService->createListener($module, $name, $event);
+        $result = $this->scaffoldingService->createListener($module, $name, $event, $queued);
 
         return $this->outputResult($result);
     }

@@ -9,6 +9,9 @@ return [
         'settings' => 'Configuración',
         'admin' => 'Administración',
     ],
+    'navigation_groups' => [
+        'system' => 'Sistema',
+    ],
     'pages' => [
         'about' => [
             'title' => 'Nosotros',
@@ -20,6 +23,30 @@ return [
                 'location' => 'Ubicación',
                 'contact' => 'Contacto',
                 'social' => 'Redes sociales',
+            ],
+        ],
+        'legal' => [
+            'title' => 'Páginas legales',
+            'saved' => 'Páginas legales guardadas correctamente',
+            'tabs' => [
+                'entity' => 'Datos de la asociación',
+                'privacy' => 'Política de privacidad',
+                'notice' => 'Aviso legal',
+                'cookies' => 'Política de cookies',
+                'terms' => 'Términos y condiciones',
+            ],
+            'fields' => [
+                'entity_name' => 'Nombre de la asociación',
+                'entity_cif' => 'CIF/NIF',
+                'entity_address' => 'Domicilio social',
+                'entity_email' => 'Email de contacto',
+                'entity_phone' => 'Teléfono',
+                'entity_dpo_email' => 'Email del DPO',
+                'entity_registry' => 'Registro',
+                'entity_domain' => 'Dominio web',
+                'published' => 'Publicada',
+                'content' => 'Contenido',
+                'content_help' => 'Puedes usar los placeholders: {{nombre}}, {{cif}}, {{direccion}}, {{email}}, {{telefono}}, {{email_dpo}}, {{registro}}, {{dominio}}',
             ],
         ],
     ],
@@ -53,6 +80,7 @@ return [
         'hints' => [
             'parent_not_editable' => 'La etiqueta padre no se puede cambiar una vez creada.',
         ],
+        'child_of' => 'Subcategoría de :parent',
     ],
     'settings' => [
         'title' => 'Configuración del sitio',
@@ -257,6 +285,52 @@ return [
         'filters' => [
             'status' => 'Estado',
             'withTrashed' => 'Incluir desactivados',
+        ],
+    ],
+    'menu_items' => [
+        'navigation' => 'Navegación',
+        'singular' => 'elemento de menú',
+        'plural' => 'Elementos de menú',
+        'submenu_of' => 'Submenú de :parent',
+        'fields' => [
+            'location' => 'Ubicación',
+            'parent' => 'Elemento padre',
+            'parent_help' => 'Déjalo vacío para un elemento de nivel superior.',
+            'label' => 'Etiqueta',
+            'page' => 'Página',
+            'page_help' => 'Selecciona la página de destino del enlace',
+            'route' => 'Ruta',
+            'route_help' => 'Nombre de ruta de Laravel (ej: home, events.index)',
+            'url' => 'URL externa',
+            'url_help' => 'URL completa para enlaces externos',
+            'icon' => 'Icono',
+            'icon_help' => 'Nombre del icono Heroicon (ej: heroicon-o-home)',
+            'target' => 'Abrir en',
+            'sort_order' => 'Orden',
+            'visibility' => 'Visibilidad',
+            'permissions' => 'Permisos requeridos',
+            'permissions_help' => 'El usuario debe tener al menos uno de estos permisos',
+            'is_active' => 'Activo',
+            'is_active_help' => 'Los elementos inactivos no se mostrarán en el menú',
+            'link' => 'Enlace',
+            'module' => 'Módulo',
+        ],
+        'modules' => [
+            'core' => 'Core',
+        ],
+        'locations' => [
+            'header' => 'Cabecera',
+            'footer' => 'Pie de página',
+        ],
+        'targets' => [
+            'self' => 'Misma pestaña',
+            'blank' => 'Nueva pestaña',
+        ],
+        'visibility' => [
+            'public' => 'Público',
+            'authenticated' => 'Solo autenticados',
+            'guests' => 'Solo invitados',
+            'permission' => 'Por permiso',
         ],
     ],
     'roles' => [

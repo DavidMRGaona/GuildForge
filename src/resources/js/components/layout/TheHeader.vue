@@ -321,9 +321,7 @@ function selectTheme(mode: ThemeMode): void {
 
                 <!-- Theme selector -->
                 <div v-if="appStore.isThemeToggleVisible" class="px-3 py-2">
-                    <span
-                        class="text-xs font-semibold uppercase tracking-wider text-base-muted"
-                    >
+                    <span class="text-xs font-semibold uppercase tracking-wider text-base-muted">
                         {{ t('layout.selectTheme') }}
                     </span>
                     <div class="mt-2 flex gap-2">

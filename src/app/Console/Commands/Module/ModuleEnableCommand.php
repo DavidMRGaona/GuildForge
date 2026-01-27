@@ -20,7 +20,8 @@ final class ModuleEnableCommand extends Command
      */
     protected $signature = 'module:enable
         {module : The name of the module to enable}
-        {--migrate : Run migrations after enabling the module}';
+        {--migrate : Run migrations after enabling the module}
+        {--seed : Run seeders after enabling the module}';
 
     /**
      * The console command description.
@@ -67,6 +68,18 @@ final class ModuleEnableCommand extends Command
                     $this->info("Ran {$count} migration(s).");
                 } else {
                     $this->info('No pending migrations.');
+                }
+            }
+
+            // Run seeders if --seed flag is passed
+            if ($this->option('seed')) {
+                $this->info("Running seeders for \"{$moduleName}\"...");
+                $count = $this->moduleManager->seed($name);
+
+                if ($count > 0) {
+                    $this->info("Ran {$count} seeder(s).");
+                } else {
+                    $this->info('No seeders found.');
                 }
             }
 

@@ -17,9 +17,11 @@ const hasComponents = computed(() => hasSlotComponents(props.name));
     <template v-if="hasComponents">
         <template v-for="item in components" :key="item.key">
             <Suspense>
-                <component :is="item.component" v-bind="item.props" />
+                <div>
+                    <component :is="item.component" v-bind="item.props" />
+                </div>
                 <template #fallback>
-                    <!-- Optional loading state -->
+                    <div></div>
                 </template>
             </Suspense>
         </template>

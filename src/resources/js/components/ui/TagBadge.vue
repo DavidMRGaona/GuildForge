@@ -95,7 +95,7 @@ const urlMap: Record<string, string> = {
 
 const tagUrl = computed(() => {
     const basePath = urlMap[props.contentType];
-    return `${basePath}?tag=${props.tag.slug}`;
+    return `${basePath}?tags=${props.tag.slug}`;
 });
 </script>
 

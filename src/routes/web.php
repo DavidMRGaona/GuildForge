@@ -15,6 +15,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +37,10 @@ Route::get('/galeria/{slug}', [GalleryController::class, 'show'])->name('galleri
 Route::get('/buscar', SearchController::class)->name('search');
 
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
+Route::get('/{slug}', [LegalPageController::class, 'show'])
+    ->where('slug', 'politica-de-privacidad|aviso-legal|politica-de-cookies|terminos-y-condiciones')
+    ->name('legal.show');
 
 // Guest routes
 Route::middleware('guest')->group(function (): void {

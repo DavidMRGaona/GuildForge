@@ -27,9 +27,7 @@ const appStore = useAppStore();
 function getSubtleStyles(hex: string): { backgroundColor: string; color: string } {
     const rgb = hexToRgb(hex);
     const isDark = appStore.isDarkMode;
-    const textColor = isDark
-        ? adjustColorBrightness(hex, 80)
-        : adjustColorBrightness(hex, -35);
+    const textColor = isDark ? adjustColorBrightness(hex, 80) : adjustColorBrightness(hex, -35);
     const bgOpacity = isDark ? 0.4 : 0.2;
     return {
         backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${bgOpacity})`,

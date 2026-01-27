@@ -36,6 +36,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private ModuleDiscoveryService $discoveryService,
         private ModuleDependencyResolver $dependencyResolver,
         private ModuleMigrationRunner $migrationRunner,
+        private ModuleSeederRunner $seederRunner,
         private Dispatcher $events,
     ) {
     }
@@ -117,11 +118,12 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             );
         }
 
-        // Run migrations only if the module has not been installed yet
-        // This prevents re-running migrations when enabling a previously disabled module
+        // Run migrations and seeders only if the module has not been installed yet
+        // This prevents re-running migrations/seeders when enabling a previously disabled module
         if (! $module->isInstalled()) {
             try {
                 $this->migrate($name);
+                $this->seed($name);
                 $module->markInstalled();
             } catch (ModuleNotFoundException) {
                 // Module directory doesn't exist yet, that's okay
@@ -281,6 +283,17 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         }
 
         return $this->migrationRunner->run($module);
+    }
+
+    public function seed(ModuleName $name): int
+    {
+        $module = $this->repository->findByName($name);
+
+        if ($module === null) {
+            throw ModuleNotFoundException::withName($name->value);
+        }
+
+        return $this->seederRunner->run($module);
     }
 
     public function rollback(ModuleName $name, int $steps = 1): int

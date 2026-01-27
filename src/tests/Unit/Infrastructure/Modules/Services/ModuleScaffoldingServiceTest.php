@@ -475,6 +475,102 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString("with {$createdCount} files", $result->message);
     }
 
+    public function test_it_creates_domain_event(): void
+    {
+        $this->service->createModule('alerts');
+
+        $result = $this->service->createDomainEvent('alerts', 'AlertTriggered');
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertStringContainsString("Domain event 'AlertTriggered' created for module 'alerts'", $result->message);
+        $this->assertArrayHasKey('src/Domain/Events/AlertTriggered.php', $result->files);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['src/Domain/Events/AlertTriggered.php']);
+
+        // Verify content uses Dispatchable pattern
+        $content = file_get_contents($this->tempModulesPath.'/alerts/src/Domain/Events/AlertTriggered.php');
+        $this->assertStringContainsString('use Dispatchable;', $content);
+        $this->assertStringContainsString('use SerializesModels;', $content);
+        $this->assertStringNotContainsString('final readonly class', $content);
+    }
+
+    public function test_it_creates_domain_event_validates_module_exists(): void
+    {
+        $result = $this->service->createDomainEvent('nonexistent', 'SomeEvent');
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Module 'nonexistent' does not exist", $result->message);
+    }
+
+    public function test_it_creates_listener_in_infrastructure_namespace(): void
+    {
+        $this->service->createModule('tasks');
+
+        $result = $this->service->createListener('tasks', 'HandleTaskCreated', 'TaskCreated');
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertStringContainsString("Listener 'HandleTaskCreated' created for module 'tasks'", $result->message);
+        $this->assertArrayHasKey('src/Infrastructure/Listeners/HandleTaskCreated.php', $result->files);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['src/Infrastructure/Listeners/HandleTaskCreated.php']);
+
+        // Verify content uses synchronous pattern
+        $content = file_get_contents($this->tempModulesPath.'/tasks/src/Infrastructure/Listeners/HandleTaskCreated.php');
+        $this->assertStringContainsString('final readonly class HandleTaskCreated', $content);
+        $this->assertStringContainsString('namespace Modules\Tasks\Infrastructure\Listeners;', $content);
+        // The uncommented class declaration should not implement ShouldQueue
+        $this->assertMatchesRegularExpression('/^final readonly class/m', $content);
+    }
+
+    public function test_it_creates_queued_listener(): void
+    {
+        $this->service->createModule('mailer');
+
+        $result = $this->service->createListener('mailer', 'SendWelcomeEmail', 'UserRegistered', true);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertArrayHasKey('src/Infrastructure/Listeners/SendWelcomeEmail.php', $result->files);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['src/Infrastructure/Listeners/SendWelcomeEmail.php']);
+
+        // Verify content uses queued pattern
+        $content = file_get_contents($this->tempModulesPath.'/mailer/src/Infrastructure/Listeners/SendWelcomeEmail.php');
+        $this->assertStringContainsString('implements ShouldQueue', $content);
+        $this->assertStringContainsString('public function failed(', $content);
+        $this->assertStringContainsString("public string \$queue = 'listeners';", $content);
+    }
+
+    public function test_it_creates_listener_validates_module_exists(): void
+    {
+        $result = $this->service->createListener('nonexistent', 'SomeListener', 'SomeEvent');
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Module 'nonexistent' does not exist", $result->message);
+    }
+
+    public function test_it_creates_notification(): void
+    {
+        $this->service->createModule('comms');
+
+        $result = $this->service->createNotification('comms', 'WelcomeNotification');
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertStringContainsString("Notification 'WelcomeNotification' created for module 'comms'", $result->message);
+        $this->assertArrayHasKey('src/Notifications/WelcomeNotification.php', $result->files);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['src/Notifications/WelcomeNotification.php']);
+
+        // Verify content
+        $content = file_get_contents($this->tempModulesPath.'/comms/src/Notifications/WelcomeNotification.php');
+        $this->assertStringContainsString('extends Notification', $content);
+        $this->assertStringContainsString('use Queueable;', $content);
+        $this->assertStringContainsString('public function toMail(', $content);
+    }
+
+    public function test_it_creates_notification_validates_module_exists(): void
+    {
+        $result = $this->service->createNotification('nonexistent', 'SomeNotification');
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Module 'nonexistent' does not exist", $result->message);
+    }
+
     private function deleteDirectory(string $dir): void
     {
         if (! is_dir($dir)) {
