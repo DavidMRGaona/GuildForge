@@ -8,11 +8,11 @@ use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource\Pages;
 use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\{{ nameStudly }}Model;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Tables;
 use Filament\Tables\Table;
 
-final class {{ nameStudly }}Resource extends Resource
+final class {{ nameStudly }}Resource extends BaseResource
 {
     protected static ?string $model = {{ nameStudly }}Model::class;
 

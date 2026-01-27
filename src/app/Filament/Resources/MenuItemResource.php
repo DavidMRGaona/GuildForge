@@ -16,7 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Actions\EditAction;
@@ -28,11 +28,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
-class MenuItemResource extends Resource
+class MenuItemResource extends BaseResource
 {
     protected static ?string $model = MenuItemModel::class;
-
-    protected static bool $hasTitleCaseModelLabel = false;
 
     protected static ?string $navigationIcon = 'heroicon-o-bars-3';
 
