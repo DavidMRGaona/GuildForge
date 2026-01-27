@@ -97,14 +97,18 @@ modules/my-module/
 │   ├── MyModuleServiceProvider.php
 │   ├── Domain/
 │   │   ├── Entities/
+│   │   ├── Enums/
+│   │   ├── Events/
 │   │   ├── ValueObjects/
 │   │   └── Repositories/
 │   ├── Application/
 │   │   ├── DTOs/
 │   │   └── Services/
 │   ├── Infrastructure/
+│   │   ├── Listeners/
 │   │   ├── Persistence/Eloquent/
 │   │   └── Services/
+│   ├── Notifications/
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   └── Requests/
@@ -193,7 +197,7 @@ php artisan module:make-relation-manager my-module Registrations --resource=Even
 php artisan module:make-widget my-module RegistrationStats
 ```
 
-### Domain events and enums
+### Domain events, enums, and notifications
 
 ```bash
 # Create enum
@@ -202,8 +206,14 @@ php artisan module:make-enum my-module RegistrationStatus
 # Create domain event
 php artisan module:make-event my-module RegistrationCreated
 
-# Create event listener
-php artisan module:make-listener my-module SendRegistrationConfirmation
+# Create event listener (synchronous by default)
+php artisan module:make-listener my-module SendRegistrationConfirmation --event=RegistrationCreated
+
+# Create queued (async) event listener
+php artisan module:make-listener my-module ProcessHeavyTask --event=RegistrationCreated --queued
+
+# Create notification
+php artisan module:make-notification my-module RegistrationConfirmation
 ```
 
 ### Frontend
@@ -831,11 +841,11 @@ public function createRegistration(CreateRegistrationDTO $dto): Registration
 {
     $registration = $this->repository->save($registration);
 
-    event(RegistrationCreated::create(
+    RegistrationCreated::dispatch(
         $registration->getId()->toString(),
         $registration->getEventId()->toString(),
         $registration->getUserId()->toString()
-    ));
+    );
 
     return $registration;
 }
@@ -1029,7 +1039,7 @@ Use domain events to decouple side effects from core business logic. Events repr
 
 ### Creating domain events
 
-Domain events are immutable DTOs that capture what happened:
+Domain events use Laravel's `Dispatchable` and `SerializesModels` traits:
 
 ```php
 <?php
@@ -1038,29 +1048,19 @@ declare(strict_types=1);
 
 namespace Modules\MyModule\Domain\Events;
 
-use DateTimeImmutable;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 
-final readonly class RegistrationCreated
+final class RegistrationCreated
 {
-    public function __construct(
-        public string $registrationId,
-        public string $eventId,
-        public string $userId,
-        public DateTimeImmutable $occurredAt,
-    ) {}
+    use Dispatchable;
+    use SerializesModels;
 
-    public static function create(
-        string $registrationId,
-        string $eventId,
-        string $userId,
-    ): self {
-        return new self(
-            $registrationId,
-            $eventId,
-            $userId,
-            new DateTimeImmutable()
-        );
-    }
+    public function __construct(
+        public readonly string $registrationId,
+        public readonly string $eventId,
+        public readonly string $userId,
+    ) {}
 }
 ```
 
@@ -1071,14 +1071,16 @@ php artisan module:make-event my-module RegistrationCreated
 
 ### Creating event listeners
 
-Listeners handle the side effects when events occur:
+Listeners live in `Infrastructure\Listeners` and handle side effects when events occur.
+
+**Synchronous listener** (default):
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Modules\MyModule\Listeners;
+namespace Modules\MyModule\Infrastructure\Listeners;
 
 use Modules\MyModule\Domain\Events\RegistrationCreated;
 use Modules\MyModule\Notifications\RegistrationConfirmationNotification;
@@ -1100,9 +1102,86 @@ final readonly class SendRegistrationConfirmation
 }
 ```
 
+**Queued (async) listener:**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\MyModule\Infrastructure\Listeners;
+
+use Modules\MyModule\Domain\Events\RegistrationCreated;
+use Illuminate\Contracts\Queue\ShouldQueue;
+
+final class ProcessHeavyTask implements ShouldQueue
+{
+    public string $queue = 'listeners';
+
+    public function handle(RegistrationCreated $event): void
+    {
+        // Heavy processing logic
+    }
+
+    public function failed(RegistrationCreated $event, \Throwable $exception): void
+    {
+        report($exception);
+    }
+}
+```
+
+**Scaffolding commands:**
+```bash
+# Synchronous (default)
+php artisan module:make-listener my-module SendRegistrationConfirmation --event=RegistrationCreated
+
+# Queued (async)
+php artisan module:make-listener my-module ProcessHeavyTask --event=RegistrationCreated --queued
+```
+
+### Creating notifications
+
+Notifications use Laravel's notification system with i18n support:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\MyModule\Notifications;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
+
+final class RegistrationConfirmation extends Notification
+{
+    use Queueable;
+
+    public function __construct(
+        public readonly string $registrationId,
+        public readonly string $eventId,
+    ) {}
+
+    /** @return array<int, string> */
+    public function via(object $notifiable): array
+    {
+        return ['mail'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage())
+            ->subject(__('my_module::emails.registration_confirmation.subject'))
+            ->greeting(__('my_module::emails.registration_confirmation.greeting'))
+            ->line(__('my_module::emails.registration_confirmation.intro'));
+    }
+}
+```
+
 **Scaffolding command:**
 ```bash
-php artisan module:make-listener my-module SendRegistrationConfirmation
+php artisan module:make-notification my-module RegistrationConfirmation
 ```
 
 ### Registering event listeners
@@ -1113,9 +1192,9 @@ Register listeners in your ServiceProvider's `boot()` method:
 use Illuminate\Support\Facades\Event;
 use Modules\MyModule\Domain\Events\RegistrationCreated;
 use Modules\MyModule\Domain\Events\RegistrationCancelled;
-use Modules\MyModule\Listeners\SendRegistrationConfirmation;
-use Modules\MyModule\Listeners\NotifyEventOrganizer;
-use Modules\MyModule\Listeners\UpdateEventCapacity;
+use Modules\MyModule\Infrastructure\Listeners\SendRegistrationConfirmation;
+use Modules\MyModule\Infrastructure\Listeners\NotifyEventOrganizer;
+use Modules\MyModule\Infrastructure\Listeners\UpdateEventCapacity;
 
 public function boot(): void
 {
@@ -1136,7 +1215,7 @@ private function registerEventListeners(): void
 
 **Why use events and listeners?**
 - **Decoupling**: The core domain logic doesn't know about email sending
-- **Single Responsibility**: Each listener has one job
+- **Single responsibility**: Each listener has one job
 - **Easy to extend**: Add new listeners without modifying existing code
 - **Testable**: Mock events in tests
 
@@ -1333,7 +1412,8 @@ final class Registration
 | `module:make-widget {module} {name}` | Create Filament Widget |
 | `module:make-enum {module} {name}` | Create enum |
 | `module:make-event {module} {name}` | Create domain event |
-| `module:make-listener {module} {name}` | Create event listener |
+| `module:make-listener {module} {name}` | Create event listener (`--queued` for async) |
+| `module:make-notification {module} {name}` | Create notification |
 | `module:make-vue-page {module} {name}` | Create Vue page |
 | `module:make-vue-component {module} {name}` | Create Vue component |
 
