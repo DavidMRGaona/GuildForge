@@ -17,7 +17,7 @@ final readonly class EventResponseDTO
         public string $slug,
         public ?string $description,
         public DateTimeImmutable $startDate,
-        public ?DateTimeImmutable $endDate,
+        public DateTimeImmutable $endDate,
         public ?string $location,
         public ?float $memberPrice,
         public ?float $nonMemberPrice,

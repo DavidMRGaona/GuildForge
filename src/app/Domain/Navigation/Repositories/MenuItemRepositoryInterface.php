@@ -64,6 +64,16 @@ interface MenuItemRepositoryInterface
     public function deleteByModule(string $module): void;
 
     /**
+     * Deactivate all menu items from a module.
+     */
+    public function deactivateByModule(string $module): void;
+
+    /**
+     * Activate all menu items from a module.
+     */
+    public function activateByModule(string $module): void;
+
+    /**
      * Get the maximum sort order for a location.
      */
     public function maxSortOrder(MenuLocation $location, ?MenuItemId $parentId = null): int;

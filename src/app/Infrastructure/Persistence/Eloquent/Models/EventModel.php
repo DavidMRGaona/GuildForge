@@ -21,7 +21,7 @@ use Modules\GameTables\Infrastructure\Persistence\Eloquent\Models\GameTableModel
  * @property string $slug
  * @property string $description
  * @property Carbon $start_date
- * @property Carbon|null $end_date
+ * @property Carbon $end_date
  * @property string|null $location
  * @property string|null $image_public_id
  * @property string|null $member_price

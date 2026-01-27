@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Navigation\Services;
 
+use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Navigation\Services\RouteRegistryInterface;
 
 /**
@@ -11,10 +12,26 @@ use App\Application\Navigation\Services\RouteRegistryInterface;
  */
 final readonly class RouteRegistry implements RouteRegistryInterface
 {
+    public function __construct(
+        private ModuleRouteRegistryInterface $moduleRouteRegistry,
+    ) {
+    }
+
     /**
      * @inheritDoc
      */
     public function getAvailableRoutes(): array
+    {
+        $coreRoutes = $this->getCoreRoutes();
+        $moduleRoutes = $this->moduleRouteRegistry->toRouteOptions();
+
+        return array_merge($moduleRoutes, $coreRoutes);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function getCoreRoutes(): array
     {
         return [
             // Páginas principales
@@ -34,6 +51,12 @@ final readonly class RouteRegistry implements RouteRegistryInterface
             // Galería
             'galleries.index' => __('navigation.routes.galleries'),
             'galleries.show' => __('navigation.routes.gallery_detail'),
+
+            // Páginas legales
+            'legal.show:aviso-legal' => __('navigation.routes.legal_notice'),
+            'legal.show:politica-de-privacidad' => __('navigation.routes.privacy_policy'),
+            'legal.show:politica-de-cookies' => __('navigation.routes.cookie_policy'),
+            'legal.show:terminos-y-condiciones' => __('navigation.routes.terms_and_conditions'),
 
             // Auth
             'login' => __('navigation.routes.login'),

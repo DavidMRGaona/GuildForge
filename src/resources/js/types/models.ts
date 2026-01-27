@@ -75,7 +75,7 @@ export interface Event {
     slug: string;
     description: string;
     startDate: string;
-    endDate: string | null;
+    endDate: string;
     location: string | null;
     imagePublicId: string | null;
     memberPrice: number | null;
@@ -157,7 +157,7 @@ export interface CalendarEvent {
     slug: string;
     description: string;
     start: string;
-    end: string | null;
+    end: string;
     location: string | null;
     imagePublicId: string | null;
     memberPrice: number | null;

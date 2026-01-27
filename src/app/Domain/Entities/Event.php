@@ -19,7 +19,7 @@ final class Event
         private readonly Slug $slug,
         private readonly string $description,
         private readonly DateTimeImmutable $startDate,
-        private readonly ?DateTimeImmutable $endDate = null,
+        private readonly DateTimeImmutable $endDate,
         private readonly ?string $location = null,
         private readonly ?string $imagePublicId = null,
         private readonly ?Price $memberPrice = null,
@@ -33,7 +33,7 @@ final class Event
 
     private function validateDates(): void
     {
-        if ($this->endDate !== null && $this->endDate < $this->startDate) {
+        if ($this->endDate < $this->startDate) {
             throw InvalidEventDatesException::endDateBeforeStartDate();
         }
     }
@@ -63,7 +63,7 @@ final class Event
         return $this->startDate;
     }
 
-    public function endDate(): ?DateTimeImmutable
+    public function endDate(): DateTimeImmutable
     {
         return $this->endDate;
     }
@@ -119,17 +119,17 @@ final class Event
 
     public function isUpcoming(): bool
     {
-        return ($this->endDate ?? $this->startDate) > new DateTimeImmutable();
+        return $this->endDate > new DateTimeImmutable();
     }
 
     public function isPast(): bool
     {
-        return ($this->endDate ?? $this->startDate) < new DateTimeImmutable();
+        return $this->endDate < new DateTimeImmutable();
     }
 
     public function isMultiDay(): bool
     {
-        return $this->endDate !== null && $this->endDate > $this->startDate;
+        return $this->endDate > $this->startDate;
     }
 
     public function isFree(): bool

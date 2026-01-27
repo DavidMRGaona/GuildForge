@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Navigation\Persistence\Eloquent\Repositories;
 
 use App\Domain\Navigation\Entities\MenuItem;
-use App\Domain\Navigation\Enums\LinkTarget;
 use App\Domain\Navigation\Enums\MenuLocation;
-use App\Domain\Navigation\Enums\MenuVisibility;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Domain\Navigation\ValueObjects\MenuItemId;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
@@ -108,6 +106,16 @@ final readonly class EloquentMenuItemRepository implements MenuItemRepositoryInt
     public function deleteByModule(string $module): void
     {
         MenuItemModel::query()->where('module', $module)->delete();
+    }
+
+    public function deactivateByModule(string $module): void
+    {
+        MenuItemModel::query()->where('module', $module)->update(['is_active' => false]);
+    }
+
+    public function activateByModule(string $module): void
+    {
+        MenuItemModel::query()->where('module', $module)->update(['is_active' => true]);
     }
 
     public function maxSortOrder(MenuLocation $location, ?MenuItemId $parentId = null): int

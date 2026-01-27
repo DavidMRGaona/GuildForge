@@ -10,6 +10,7 @@ use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModulePermissionRegistryInterface;
+use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuItemHrefResolverInterface;
@@ -35,6 +36,7 @@ use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\Repositories\GalleryRepositoryInterface;
 use App\Domain\Repositories\PhotoRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
+use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Modules\Services\ModuleContextService;
 use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
@@ -43,16 +45,17 @@ use App\Infrastructure\Modules\Services\ModuleManagerService;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use App\Infrastructure\Modules\Services\ModuleNavigationRegistry;
 use App\Infrastructure\Modules\Services\ModulePageRegistry;
-use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use App\Infrastructure\Modules\Services\ModulePermissionRegistry;
+use App\Infrastructure\Modules\Services\ModuleRouteRegistry;
 use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
+use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use App\Infrastructure\Modules\Services\ModuleSlotRegistry;
+use App\Infrastructure\Modules\Services\StubRenderer;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Repositories\EloquentMenuItemRepository;
 use App\Infrastructure\Navigation\Services\MenuItemHrefResolver;
 use App\Infrastructure\Navigation\Services\MenuService;
 use App\Infrastructure\Navigation\Services\RouteRegistry;
-use App\Infrastructure\Modules\Services\StubRenderer;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -80,7 +83,6 @@ use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
 use App\Infrastructure\Services\UserService;
-use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
@@ -94,6 +96,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
@@ -182,6 +185,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleNavigationRegistryInterface::class, ModuleNavigationRegistry::class);
         $this->app->singleton(ModuleSlotRegistryInterface::class, ModuleSlotRegistry::class);
         $this->app->singleton(ModulePageRegistryInterface::class, ModulePageRegistry::class);
+        $this->app->singleton(ModuleRouteRegistryInterface::class, ModuleRouteRegistry::class);
 
         // Navigation system bindings
         $this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);
@@ -222,6 +226,19 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(HeroSlideModel::class, HeroSlidePolicy::class);
         Gate::policy(TagModel::class, TagPolicy::class);
         Gate::policy(MenuItemModel::class, MenuItemPolicy::class);
+
+        Event::listen(
+            \App\Domain\Modules\Events\ModuleDisabled::class,
+            \App\Infrastructure\Navigation\Listeners\DeactivateMenuItemsOnModuleDisabled::class,
+        );
+        Event::listen(
+            \App\Domain\Modules\Events\ModuleEnabled::class,
+            \App\Infrastructure\Navigation\Listeners\ActivateMenuItemsOnModuleEnabled::class,
+        );
+        Event::listen(
+            \App\Domain\Modules\Events\ModuleUninstalled::class,
+            \App\Infrastructure\Navigation\Listeners\DeleteMenuItemsOnModuleUninstalled::class,
+        );
 
         // Override cloudinary driver with a safe adapter that:
         // - Generates URLs directly (no Admin API calls)

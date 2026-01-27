@@ -247,20 +247,4 @@ class TagResource extends BaseResource
 
         return $name;
     }
-
-    /**
-     * Compute the depth of a tag by traversing the parent relationship.
-     */
-    private static function computeDepth(TagModel $tag): int
-    {
-        $depth = 0;
-        $current = $tag;
-
-        while ($current->parent !== null) {
-            $depth++;
-            $current = $current->parent;
-        }
-
-        return $depth;
-    }
 }

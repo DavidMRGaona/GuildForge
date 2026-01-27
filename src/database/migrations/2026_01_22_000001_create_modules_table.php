@@ -28,6 +28,7 @@ return new class extends Migration
             $table->json('dependencies')->nullable();
             $table->timestamp('discovered_at')->nullable();
             $table->timestamp('enabled_at')->nullable();
+            $table->timestamp('installed_at')->nullable();
             $table->timestamps();
 
             $table->index('status');

@@ -3,7 +3,7 @@ import type { Event } from '@/types/models';
 
 interface UseEventsReturn {
     formatEventDate: (dateString: string) => string;
-    formatDateRange: (startDate: string, endDate: string | null) => string;
+    formatDateRange: (startDate: string, endDate: string) => string;
     formatPrice: (price: number | null) => string;
     isUpcoming: (event: Event) => boolean;
     getExcerpt: (description: string, maxLength?: number) => string;
@@ -23,11 +23,11 @@ export function useEvents(): UseEventsReturn {
         });
     }
 
-    function formatDateRange(startDate: string, endDate: string | null): string {
+    function formatDateRange(startDate: string, endDate: string): string {
         const start = new Date(startDate);
-        const end = endDate ? new Date(endDate) : null;
+        const end = new Date(endDate);
 
-        if (!end || start.toDateString() === end.toDateString()) {
+        if (start.toDateString() === end.toDateString()) {
             // Single day: "15 de enero de 2026"
             return start.toLocaleDateString(locale.value, {
                 day: 'numeric',

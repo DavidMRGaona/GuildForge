@@ -28,9 +28,7 @@ final class EventModelFactory extends Factory
             'slug' => Str::slug($title),
             'description' => fake()->paragraphs(3, true),
             'start_date' => $startDate = fake()->dateTimeBetween('+1 week', '+3 months'),
-            'end_date' => fake()->boolean(30)
-                ? (clone $startDate)->modify('+'.rand(1, 3).' days')
-                : null,
+            'end_date' => (clone $startDate)->modify('+'.rand(0, 3).' days'),
             'location' => fake()->optional()->address(),
             'image_public_id' => null,
             'member_price' => fake()->optional(0.7)->randomFloat(2, 5, 50),
@@ -69,14 +67,9 @@ final class EventModelFactory extends Factory
         return $this->state(function (array $attributes): array {
             $startDate = fake()->dateTimeBetween('+1 day', '+3 months');
 
-            // Recalculate end_date if it was set
-            $endDate = isset($attributes['end_date']) && $attributes['end_date'] !== null
-                ? (clone $startDate)->modify('+'.rand(1, 3).' days')
-                : null;
-
             return [
                 'start_date' => $startDate,
-                'end_date' => $endDate,
+                'end_date' => (clone $startDate)->modify('+'.rand(0, 3).' days'),
             ];
         });
     }
@@ -89,14 +82,9 @@ final class EventModelFactory extends Factory
         return $this->state(function (array $attributes): array {
             $startDate = fake()->dateTimeBetween('-3 months', '-1 day');
 
-            // Recalculate end_date if it was set, ensuring it's after start_date
-            $endDate = isset($attributes['end_date']) && $attributes['end_date'] !== null
-                ? (clone $startDate)->modify('+'.rand(1, 3).' days')
-                : null;
-
             return [
                 'start_date' => $startDate,
-                'end_date' => $endDate,
+                'end_date' => (clone $startDate)->modify('+'.rand(0, 3).' days'),
             ];
         });
     }

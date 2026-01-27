@@ -200,4 +200,15 @@ abstract class ModuleServiceProvider extends ServiceProvider
     {
         return [];
     }
+
+    /**
+     * Register public routes for menu item configuration.
+     * Allows module routes to appear in the menu item dropdown.
+     *
+     * @return array<\App\Application\Modules\DTOs\ModuleRouteDTO>
+     */
+    public function registerRoutes(): array
+    {
+        return [];
+    }
 }

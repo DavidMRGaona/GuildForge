@@ -46,13 +46,13 @@ final class CalendarControllerTest extends TestCase
         EventModel::factory()->published()->create([
             'title' => 'Published Event',
             'start_date' => '2025-01-15 10:00:00',
-            'end_date' => null,
+            'end_date' => '2025-01-15 18:00:00',
         ]);
 
         EventModel::factory()->draft()->create([
             'title' => 'Draft Event',
             'start_date' => '2025-01-16 10:00:00',
-            'end_date' => null,
+            'end_date' => '2025-01-16 18:00:00',
         ]);
 
         $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
@@ -68,19 +68,19 @@ final class CalendarControllerTest extends TestCase
         EventModel::factory()->published()->create([
             'title' => 'Event in Range',
             'start_date' => '2025-01-15 10:00:00',
-            'end_date' => null,
+            'end_date' => '2025-01-15 18:00:00',
         ]);
 
         EventModel::factory()->published()->create([
             'title' => 'Event Before Range',
             'start_date' => '2024-12-15 10:00:00',
-            'end_date' => null,
+            'end_date' => '2024-12-15 18:00:00',
         ]);
 
         EventModel::factory()->published()->create([
             'title' => 'Event After Range',
             'start_date' => '2025-02-15 10:00:00',
-            'end_date' => null,
+            'end_date' => '2025-02-15 18:00:00',
         ]);
 
         $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
@@ -155,7 +155,7 @@ final class CalendarControllerTest extends TestCase
         EventModel::factory()->published()->create([
             'title' => 'Single Day Event',
             'start_date' => '2025-01-15 10:00:00',
-            'end_date' => null,
+            'end_date' => '2025-01-15 18:00:00',
         ]);
 
         $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
@@ -166,7 +166,7 @@ final class CalendarControllerTest extends TestCase
         $json = $response->json();
 
         $this->assertStringContainsString('2025-01-15T10:00:00', $json[0]['start']);
-        $this->assertNull($json[0]['end']);
+        $this->assertStringContainsString('2025-01-15T18:00:00', $json[0]['end']);
     }
 
     public function test_index_requires_start_parameter(): void
@@ -202,7 +202,7 @@ final class CalendarControllerTest extends TestCase
     {
         EventModel::factory()->published()->create([
             'start_date' => '2024-12-15 10:00:00',
-            'end_date' => null,
+            'end_date' => '2024-12-15 18:00:00',
         ]);
 
         $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');

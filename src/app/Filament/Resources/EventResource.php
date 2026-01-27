@@ -82,6 +82,7 @@ class EventResource extends BaseResource
                             ->displayFormat('d/m/Y H:i'),
                         DateTimePicker::make('end_date')
                             ->label(__('Fecha de fin'))
+                            ->required()
                             ->native(false)
                             ->displayFormat('d/m/Y H:i')
                             ->after('start_date'),
@@ -175,13 +176,7 @@ class EventResource extends BaseResource
                     ->limit(50),
                 TextColumn::make('start_date')
                     ->label(__('Fecha'))
-                    ->formatStateUsing(function ($record) {
-                        if ($record->end_date) {
-                            return $record->start_date->format('d/m/Y').' - '.$record->end_date->format('d/m/Y');
-                        }
-
-                        return $record->start_date->format('d/m/Y H:i');
-                    })
+                    ->formatStateUsing(fn ($record) => $record->start_date->format('d/m/Y').' - '.$record->end_date->format('d/m/Y'))
                     ->sortable(),
                 TextColumn::make('location')
                     ->label(__('Ubicación'))

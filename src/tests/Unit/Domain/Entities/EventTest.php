@@ -21,6 +21,7 @@ final class EventTest extends TestCase
         $slug = new Slug('warhammer-tournament');
         $description = 'Annual Warhammer 40k tournament for all skill levels.';
         $startDate = new DateTimeImmutable('+1 week');
+        $endDate = new DateTimeImmutable('+1 week +1 day');
 
         $event = new Event(
             id: $id,
@@ -28,6 +29,7 @@ final class EventTest extends TestCase
             slug: $slug,
             description: $description,
             startDate: $startDate,
+            endDate: $endDate,
         );
 
         $this->assertEquals($id, $event->id());
@@ -35,7 +37,7 @@ final class EventTest extends TestCase
         $this->assertEquals($slug, $event->slug());
         $this->assertEquals($description, $event->description());
         $this->assertEquals($startDate, $event->startDate());
-        $this->assertNull($event->endDate());
+        $this->assertEquals($endDate, $event->endDate());
         $this->assertNull($event->location());
         $this->assertNull($event->imagePublicId());
         $this->assertNull($event->memberPrice());
@@ -116,8 +118,10 @@ final class EventTest extends TestCase
 
     public function test_it_detects_single_day_event(): void
     {
+        $sameDate = new DateTimeImmutable('2024-06-01 10:00:00');
         $event = $this->createEvent(
-            startDate: new DateTimeImmutable('2024-06-01 10:00:00'),
+            startDate: $sameDate,
+            endDate: $sameDate,
         );
 
         $this->assertFalse($event->isMultiDay());
@@ -246,13 +250,15 @@ final class EventTest extends TestCase
         ?Price $nonMemberPrice = null,
         bool $isPublished = false,
     ): Event {
+        $start = $startDate ?? new DateTimeImmutable('+1 week');
+
         return new Event(
             id: EventId::generate(),
             title: 'Test Event',
             slug: new Slug('test-event'),
             description: 'Test event description.',
-            startDate: $startDate ?? new DateTimeImmutable('+1 week'),
-            endDate: $endDate,
+            startDate: $start,
+            endDate: $endDate ?? $start,
             memberPrice: $memberPrice,
             nonMemberPrice: $nonMemberPrice,
             isPublished: $isPublished,

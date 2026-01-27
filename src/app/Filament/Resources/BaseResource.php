@@ -9,4 +9,9 @@ use Filament\Resources\Resource;
 abstract class BaseResource extends Resource
 {
     protected static bool $hasTitleCaseModelLabel = false;
+
+    public static function getTitleCaseModelLabel(): string
+    {
+        return mb_lcfirst(static::getModelLabel());
+    }
 }

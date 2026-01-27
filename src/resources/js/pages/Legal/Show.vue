@@ -21,10 +21,7 @@ useSeo({ title: props.title });
 
     <section class="py-12 sm:py-16">
         <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-            <div
-                class="prose prose-stone dark:prose-invert max-w-none"
-                v-html="content"
-            />
+            <div class="prose prose-stone dark:prose-invert max-w-none" v-html="content" />
             <p v-if="lastUpdated" class="mt-8 text-sm text-muted">
                 {{ $t('legal.last_updated') }}: {{ lastUpdated }}
             </p>

@@ -36,7 +36,7 @@ final class CalendarEventResource extends JsonResource
             'slug' => $this->resource->slug,
             'description' => $this->resource->description,
             'start' => $this->resource->startDate->format('c'),
-            'end' => $this->resource->endDate?->format('c'),
+            'end' => $this->resource->endDate->format('c'),
             'location' => $this->resource->location,
             'imagePublicId' => $this->resource->imagePublicId,
             'memberPrice' => $this->resource->memberPrice,
