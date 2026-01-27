@@ -19,17 +19,17 @@ final class ModuleModelFactory extends Factory
      */
     public function definition(): array
     {
-        $name = fake()->unique()->word().'-module';
+        $name = $this->faker->unique()->word().'-module';
 
         $displayName = str_replace('-', '', ucwords($name, '-'));
 
         return [
-            'id' => fake()->uuid(),
+            'id' => $this->faker->uuid(),
             'name' => $name,
             'display_name' => $displayName,
-            'version' => fake()->semver(),
-            'description' => fake()->sentence(),
-            'author' => fake()->name(),
+            'version' => $this->faker->semver(),
+            'description' => $this->faker->sentence(),
+            'author' => $this->faker->name(),
             'status' => 'disabled',
             'path' => base_path("modules/{$name}"),
             'namespace' => 'Modules\\'.$displayName,

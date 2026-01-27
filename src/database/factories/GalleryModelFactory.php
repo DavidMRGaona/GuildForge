@@ -20,13 +20,13 @@ final class GalleryModelFactory extends Factory
      */
     public function definition(): array
     {
-        $title = fake()->sentence(3);
+        $title = $this->faker->sentence(3);
 
         return [
-            'id' => fake()->uuid(),
+            'id' => $this->faker->uuid(),
             'title' => $title,
             'slug' => Str::slug($title),
-            'description' => fake()->optional()->paragraphs(2, true),
+            'description' => $this->faker->optional()->paragraphs(2, true),
             'is_published' => false,
         ];
     }

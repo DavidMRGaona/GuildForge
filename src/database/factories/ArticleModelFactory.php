@@ -21,14 +21,14 @@ final class ArticleModelFactory extends Factory
      */
     public function definition(): array
     {
-        $title = fake()->sentence(4);
+        $title = $this->faker->sentence(4);
 
         return [
-            'id' => fake()->uuid(),
+            'id' => $this->faker->uuid(),
             'title' => $title,
             'slug' => Str::slug($title),
-            'content' => fake()->paragraphs(5, true),
-            'excerpt' => fake()->optional()->sentence(),
+            'content' => $this->faker->paragraphs(5, true),
+            'excerpt' => $this->faker->optional()->sentence(),
             'featured_image_public_id' => null,
             'is_published' => false,
             'published_at' => null,
@@ -43,7 +43,7 @@ final class ArticleModelFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'is_published' => true,
-            'published_at' => fake()->dateTimeBetween('-1 month', 'now'),
+            'published_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
         ]);
     }
 
