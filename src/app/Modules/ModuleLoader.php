@@ -7,6 +7,7 @@ namespace App\Modules;
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
+use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
@@ -63,6 +64,9 @@ final class ModuleLoader
 
         // Register permissions from the provider
         $this->registerProviderPermissions($provider);
+
+        // Register page prefixes from the provider
+        $this->registerProviderPagePrefixes($provider);
     }
 
     /**
@@ -107,6 +111,23 @@ final class ModuleLoader
         );
 
         $permissionRegistry->registerMany($definitions);
+    }
+
+    /**
+     * Register page prefixes from a module provider.
+     */
+    private function registerProviderPagePrefixes(ModuleServiceProvider $provider): void
+    {
+        $prefixes = $provider->registerPagePrefixes();
+
+        if ($prefixes === []) {
+            return;
+        }
+
+        if ($this->app->bound(ModulePageRegistryInterface::class)) {
+            $pageRegistry = $this->app->make(ModulePageRegistryInterface::class);
+            $pageRegistry->registerMany($prefixes);
+        }
     }
 
     /**

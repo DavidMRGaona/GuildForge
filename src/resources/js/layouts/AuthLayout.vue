@@ -87,10 +87,7 @@ watch(theme, (newTheme) => {
         </div>
 
         <div class="mt-8 text-center">
-            <Link
-                href="/"
-                class="text-sm text-base-secondary hover:text-primary transition-colors"
-            >
+            <Link href="/" class="text-sm text-base-secondary hover:text-primary transition-colors">
                 ← {{ t('auth.backToHome') }}
             </Link>
         </div>

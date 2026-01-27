@@ -2,56 +2,27 @@
 
 declare(strict_types=1);
 
-namespace {{ moduleNamespace }}\Listeners;
+namespace {{ moduleNamespace }}\Infrastructure\Listeners;
 
 use {{ moduleNamespace }}\Domain\Events\{{ eventNameStudly }};
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-/**
- * Listener for {{ eventNameStudly }} domain event.
- *
- * Handles side effects when the event occurs.
- * Implements ShouldQueue to process asynchronously (remove if synchronous processing is needed).
- */
-final class {{ nameStudly }} implements ShouldQueue
+// To make this listener asynchronous, implement ShouldQueue:
+// use Illuminate\Contracts\Queue\ShouldQueue;
+//
+// final readonly class {{ nameStudly }} implements ShouldQueue
+// {
+//     public string $queue = 'listeners';
+//     ...
+// }
+
+final readonly class {{ nameStudly }}
 {
-    /**
-     * The name of the queue the job should be sent to.
-     */
-    public string $queue = 'listeners';
+    public function __construct(
+        // Inject required services via constructor
+    ) {}
 
-    /**
-     * Handle the event.
-     */
     public function handle({{ eventNameStudly }} $event): void
     {
         // TODO: Implement event handling logic
-        //
-        // Examples:
-        // - Send notification email
-        // - Update related records
-        // - Dispatch another event
-        // - Log the action
-        //
-        // $user = User::find($event->userId);
-        // $user->notify(new SomeNotification($event));
-    }
-
-    /**
-     * Determine whether the listener should be queued.
-     */
-    public function shouldQueue({{ eventNameStudly }} $event): bool
-    {
-        // Return false to handle synchronously
-        return true;
-    }
-
-    /**
-     * Handle a job failure.
-     */
-    public function failed({{ eventNameStudly }} $event, \Throwable $exception): void
-    {
-        // Log or report the failure
-        report($exception);
     }
 }

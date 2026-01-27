@@ -55,9 +55,7 @@ watch(theme, (newTheme) => {
 </script>
 
 <template>
-    <div
-        class="flex min-h-screen flex-col bg-page transition-colors duration-200"
-    >
+    <div class="flex min-h-screen flex-col bg-page transition-colors duration-200">
         <!-- Inject CSS Variables -->
         <component :is="'style'" v-if="cssVariables">{{ cssVariables }}</component>
 

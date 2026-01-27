@@ -47,11 +47,14 @@ After creating a module, you must discover and enable it:
 # Register the module in the database
 php artisan module:discover
 
-# Enable the module
+# Enable the module (runs migrations and seeders automatically on first install)
 php artisan module:enable my-module
 
-# Run any module migrations
+# Manually run migrations (if needed)
 php artisan module:migrate my-module
+
+# Manually run seeders (if needed)
+php artisan module:seed my-module
 ```
 
 ### Listing modules
@@ -76,7 +79,8 @@ modules/my-module/
 ├── config/
 │   └── module.php           # Module configuration
 ├── database/
-│   └── migrations/          # Database migrations
+│   ├── migrations/          # Database migrations
+│   └── seeders/             # Database seeders
 ├── lang/
 │   └── es/
 │       └── messages.php     # Translations
@@ -218,6 +222,54 @@ php artisan module:make-vue-component my-module GameCard
 # Create migration
 php artisan module:make-migration my-module create_games_table --create=my_module_games
 ```
+
+### Seeders
+
+Create seeders manually in `database/seeders/`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\MyModule\Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
+use Modules\MyModule\Infrastructure\Persistence\Eloquent\Models\CategoryModel;
+
+final class CategoriesSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $categories = [
+            ['name' => 'Strategy', 'slug' => 'strategy'],
+            ['name' => 'RPG', 'slug' => 'rpg'],
+        ];
+
+        foreach ($categories as $category) {
+            CategoryModel::query()->updateOrCreate(
+                ['slug' => $category['slug']],
+                array_merge($category, ['id' => Str::uuid()->toString()]),
+            );
+        }
+    }
+}
+```
+
+**Running seeders:**
+
+```bash
+# Run seeders for a specific module
+php artisan module:seed my-module
+
+# Run seeders when enabling (forced)
+php artisan module:enable my-module --seed
+```
+
+**Automatic seeding:**
+
+When a module is enabled for the first time (`module:enable`), seeders are automatically run after migrations. This happens only on first install, not on subsequent enables.
 
 ### Testing
 
@@ -364,6 +416,22 @@ public function registerNavigation(): array
     ];
 }
 ```
+
+### How navigation sync works
+
+When a module is enabled, `MenuService.syncModuleNavigation()` creates `MenuItem` records in the `menu_items` table:
+
+1. Module registers navigation via `registerNavigation()`
+2. Items are stored in `ModuleNavigationRegistry`
+3. On module enable, `syncModuleNavigation()` is called within a transaction
+4. For each registered item, a `MenuItem` entity is created if it doesn't exist
+5. Items are linked to the module via the `module` column
+
+**Key points:**
+- Navigation items are persisted as `MenuItem` entities (not just config)
+- Admins can edit module-created menu items in Filament
+- When a module is disabled, its menu items remain but can be manually deleted
+- The `module` column tracks which module created each item
 
 ---
 
@@ -1241,9 +1309,11 @@ final class Registration
 |---------|-------------|
 | `module:list` | List all modules |
 | `module:discover` | Scan for new modules |
-| `module:enable {module}` | Enable a module |
+| `module:enable {module}` | Enable a module (runs migrations and seeders on first install) |
+| `module:enable {module} --seed` | Enable and force run seeders |
 | `module:disable {module}` | Disable a module |
 | `module:migrate {module}` | Run module migrations |
+| `module:seed {module}` | Run module seeders |
 | `module:publish-assets` | Publish module assets |
 
 ### Scaffolding commands

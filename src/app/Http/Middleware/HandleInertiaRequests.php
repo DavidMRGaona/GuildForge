@@ -6,7 +6,9 @@ namespace App\Http\Middleware;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
+use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use Closure;
@@ -76,6 +78,8 @@ final class HandleInertiaRequests extends Middleware
                 'info' => fn () => $request->session()->get('info'),
             ],
             'moduleSlots' => fn () => $this->getModuleSlots(),
+            'modulePages' => fn () => $this->getModulePages(),
+            'navigation' => fn () => $this->getNavigation($request),
         ];
     }
 
@@ -253,6 +257,52 @@ final class HandleInertiaRequests extends Middleware
             $this->logDebugError('getModuleSlots', $e);
 
             return [];
+        }
+    }
+
+    /**
+     * Get module page prefixes for frontend page resolution.
+     *
+     * @return array<string, string>
+     */
+    private function getModulePages(): array
+    {
+        try {
+            $pageRegistry = app(ModulePageRegistryInterface::class);
+
+            return $pageRegistry->toInertiaPayload();
+        } catch (\Throwable $e) {
+            $this->logDebugError('getModulePages', $e);
+
+            return [];
+        }
+    }
+
+    /**
+     * Get navigation menus for frontend.
+     *
+     * @return array{header: array<array<string, mixed>>, footer: array<array<string, mixed>>}
+     */
+    private function getNavigation(Request $request): array
+    {
+        try {
+            $menuService = app(MenuServiceInterface::class);
+            $user = $request->user();
+
+            $headerItems = $menuService->getHeaderMenu($user);
+            $footerItems = $menuService->getFooterMenu($user);
+
+            return [
+                'header' => array_map(fn ($item) => $item->toArray(), $headerItems),
+                'footer' => array_map(fn ($item) => $item->toArray(), $footerItems),
+            ];
+        } catch (\Throwable $e) {
+            $this->logDebugError('getNavigation', $e);
+
+            return [
+                'header' => [],
+                'footer' => [],
+            ];
         }
     }
 

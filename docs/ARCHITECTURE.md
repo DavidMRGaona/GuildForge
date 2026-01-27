@@ -498,6 +498,11 @@ $this->app->bind(EventRepositoryInterface::class, EloquentEventRepository::class
 $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
 $this->app->bind(UserServiceInterface::class, UserService::class);
 
+// Navigation system
+$this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);
+$this->app->singleton(MenuItemHrefResolverInterface::class, MenuItemHrefResolver::class);
+$this->app->singleton(MenuServiceInterface::class, MenuService::class);
+
 // app/Providers/AuthorizationServiceProvider.php
 $this->app->singleton(PermissionRegistryInterface::class, PermissionRegistry::class);
 $this->app->bind(AuthorizationServiceInterface::class, AuthorizationService::class);
@@ -505,3 +510,56 @@ $this->app->bind(RoleServiceInterface::class, RoleService::class);
 $this->app->bind(PermissionRepositoryInterface::class, EloquentPermissionRepository::class);
 $this->app->bind(RoleRepositoryInterface::class, EloquentRoleRepository::class);
 ```
+
+## Navigation system
+
+The navigation system manages dynamic menu items for header and footer.
+
+### Architecture
+
+```
+MenuItem (Domain Entity) → MenuItemRepository → MenuService → MenuItemDTO → Frontend
+```
+
+**Key design decisions:**
+- `MenuItem` is an immutable domain entity with no framework dependencies
+- URL resolution (route → URL) happens in `MenuItemHrefResolver` (Infrastructure layer)
+- Visibility filtering (public, authenticated, permission-based) happens in `MenuService`
+- Query scopes are private methods in the Repository, not in the Eloquent Model
+
+### Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `MenuItem` | Domain/Navigation/Entities | Immutable domain entity |
+| `MenuItemId` | Domain/Navigation/ValueObjects | UUID identifier |
+| `MenuLocation` | Domain/Navigation/Enums | Header or Footer |
+| `MenuVisibility` | Domain/Navigation/Enums | Public, Authenticated, Guests, Permission |
+| `MenuItemRepositoryInterface` | Domain/Navigation/Repositories | Repository contract |
+| `MenuItemHrefResolverInterface` | Application/Navigation/Services | URL resolution contract |
+| `MenuServiceInterface` | Application/Navigation/Services | Menu retrieval contract |
+| `EloquentMenuItemRepository` | Infrastructure/.../Repositories | Eloquent implementation |
+| `MenuItemHrefResolver` | Infrastructure/Navigation/Services | Resolves route names to URLs |
+| `MenuService` | Infrastructure/Navigation/Services | Fetches and filters menus |
+| `MenuItemDTO` | Application/Navigation/DTOs | Data for frontend |
+
+### Module integration
+
+Modules can register navigation items via their ServiceProvider:
+
+```php
+public function registerNavigation(): array
+{
+    return [
+        new NavigationItemDTO(
+            label: 'My Feature',
+            route: 'my_module.index',
+            icon: 'heroicon-o-star',
+            module: 'my-module',
+            permissions: ['my-module.view'],
+        ),
+    ];
+}
+```
+
+When a module is enabled, `MenuService.syncModuleNavigation()` creates corresponding `MenuItem` records in the database. This happens within a transaction to ensure data integrity.

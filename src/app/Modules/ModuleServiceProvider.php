@@ -55,11 +55,14 @@ abstract class ModuleServiceProvider extends ServiceProvider
         $apiRoutes = $this->modulePath('routes/api.php');
 
         if (file_exists($webRoutes)) {
-            $this->loadRoutesFrom($webRoutes);
+            \Illuminate\Support\Facades\Route::middleware('web')
+                ->group($webRoutes);
         }
 
         if (file_exists($apiRoutes)) {
-            $this->loadRoutesFrom($apiRoutes);
+            \Illuminate\Support\Facades\Route::middleware('api')
+                ->prefix('api')
+                ->group($apiRoutes);
         }
     }
 
@@ -183,6 +186,17 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<\Filament\Forms\Components\Component>
      */
     public function getSettingsSchema(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register page prefixes provided by this module.
+     * Allows module Vue pages to be resolved by Inertia.
+     *
+     * @return array<\App\Application\Modules\DTOs\PagePrefixDTO>
+     */
+    public function registerPagePrefixes(): array
     {
         return [];
     }

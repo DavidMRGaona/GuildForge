@@ -1,23 +1,59 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
+import type { MenuItem, Navigation } from '@/types/navigation';
 
 const { t } = useI18n();
+const page = usePage();
 
 const currentYear = computed(() => new Date().getFullYear());
 
-interface FooterLink {
-    key: string;
-    href: string;
-}
-
-const footerLinks: FooterLink[] = [
-    { key: 'common.events', href: '/eventos' },
-    { key: 'common.articles', href: '/articulos' },
-    { key: 'common.gallery', href: '/galeria' },
-    { key: 'common.about', href: '/nosotros' },
+// Fallback footer links if none configured
+const fallbackLinks: MenuItem[] = [
+    {
+        id: 'events',
+        label: t('common.events'),
+        href: '/eventos',
+        target: '_self',
+        icon: null,
+        children: [],
+        isActive: true,
+    },
+    {
+        id: 'articles',
+        label: t('common.articles'),
+        href: '/articulos',
+        target: '_self',
+        icon: null,
+        children: [],
+        isActive: true,
+    },
+    {
+        id: 'gallery',
+        label: t('common.gallery'),
+        href: '/galeria',
+        target: '_self',
+        icon: null,
+        children: [],
+        isActive: true,
+    },
+    {
+        id: 'about',
+        label: t('common.about'),
+        href: '/nosotros',
+        target: '_self',
+        icon: null,
+        children: [],
+        isActive: true,
+    },
 ];
+
+const navigation = computed(() => page.props.navigation as Navigation | undefined);
+const footerLinks = computed(() => {
+    const items = navigation.value?.footer;
+    return items && items.length > 0 ? items : fallbackLinks;
+});
 </script>
 
 <template>
@@ -28,11 +64,12 @@ const footerLinks: FooterLink[] = [
                 <nav class="flex flex-wrap justify-center gap-x-6 gap-y-2 md:justify-start">
                     <Link
                         v-for="link in footerLinks"
-                        :key="link.href"
+                        :key="link.id"
                         :href="link.href"
+                        :target="link.target"
                         class="text-sm text-stone-300 transition-colors hover:text-primary dark:text-stone-400 dark:hover:text-primary"
                     >
-                        {{ t(link.key) }}
+                        {{ link.label }}
                     </Link>
                 </nav>
 

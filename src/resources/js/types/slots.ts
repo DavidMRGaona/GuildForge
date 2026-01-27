@@ -6,7 +6,9 @@ export type SlotPosition =
     | 'before-footer'
     | 'after-footer'
     // Page-specific slots
-    | 'event-detail-actions';
+    | 'event-detail-actions'
+    | 'game-table-registration'
+    | 'campaign-detail-actions';
 
 export interface SlotRegistration {
     slot: string;
