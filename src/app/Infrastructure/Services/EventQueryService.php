@@ -101,14 +101,10 @@ final readonly class EventQueryService implements EventQueryServiceInterface
                 // Event starts within range
                 $query->whereBetween('start_date', [$start, $end])
                     // Event ends within range (for events starting before range)
-                    ->orWhere(function ($q) use ($start, $end): void {
-                        $q->whereNotNull('end_date')
-                            ->whereBetween('end_date', [$start, $end]);
-                    })
-                    // Event spans the entire range (must have end_date)
+                    ->orWhereBetween('end_date', [$start, $end])
+                    // Event spans the entire range
                     ->orWhere(function ($q) use ($start, $end): void {
                         $q->where('start_date', '<', $start)
-                            ->whereNotNull('end_date')
                             ->where('end_date', '>', $end);
                     });
             })

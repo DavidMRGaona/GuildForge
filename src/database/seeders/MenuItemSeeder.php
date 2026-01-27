@@ -22,37 +22,37 @@ final class MenuItemSeeder extends Seeder
                 'label' => 'Inicio',
                 'route' => 'home',
                 'icon' => 'heroicon-o-home',
-                'sort_order' => 1,
+                'sort_order' => 10,
             ],
             [
                 'label' => 'Eventos',
                 'route' => 'events.index',
                 'icon' => 'heroicon-o-calendar-days',
-                'sort_order' => 2,
+                'sort_order' => 20,
             ],
             [
                 'label' => 'Calendario',
                 'route' => 'calendar',
                 'icon' => 'heroicon-o-calendar',
-                'sort_order' => 3,
+                'sort_order' => 30,
             ],
             [
                 'label' => 'Artículos',
                 'route' => 'articles.index',
                 'icon' => 'heroicon-o-newspaper',
-                'sort_order' => 4,
+                'sort_order' => 40,
             ],
             [
                 'label' => 'Galería',
                 'route' => 'galleries.index',
                 'icon' => 'heroicon-o-photo',
-                'sort_order' => 5,
+                'sort_order' => 50,
             ],
             [
                 'label' => 'Nosotros',
                 'route' => 'about',
                 'icon' => 'heroicon-o-user-group',
-                'sort_order' => 6,
+                'sort_order' => 60,
             ],
         ];
 
@@ -78,22 +78,22 @@ final class MenuItemSeeder extends Seeder
             [
                 'label' => 'Eventos',
                 'route' => 'events.index',
-                'sort_order' => 1,
+                'sort_order' => 51,
             ],
             [
                 'label' => 'Artículos',
                 'route' => 'articles.index',
-                'sort_order' => 2,
+                'sort_order' => 52,
             ],
             [
                 'label' => 'Galería',
                 'route' => 'galleries.index',
-                'sort_order' => 3,
+                'sort_order' => 53,
             ],
             [
                 'label' => 'Nosotros',
                 'route' => 'about',
-                'sort_order' => 4,
+                'sort_order' => 54,
             ],
         ];
 

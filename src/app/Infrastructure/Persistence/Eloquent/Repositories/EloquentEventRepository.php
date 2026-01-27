@@ -65,14 +65,10 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
                 // Event starts within range
                 $query->whereBetween('start_date', [$start, $end])
                     // OR event ends within range (multi-day event)
-                    ->orWhere(function ($q) use ($start, $end) {
-                        $q->whereNotNull('end_date')
-                            ->whereBetween('end_date', [$start, $end]);
-                    })
+                    ->orWhereBetween('end_date', [$start, $end])
                     // OR event spans the entire range
                     ->orWhere(function ($q) use ($start, $end) {
                         $q->where('start_date', '<=', $start)
-                            ->whereNotNull('end_date')
                             ->where('end_date', '>=', $end);
                     });
             })
@@ -105,9 +101,7 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
             location: $model->location,
             imagePublicId: $model->image_public_id,
             isPublished: $model->is_published,
-            endDate: $model->end_date !== null
-                ? new DateTimeImmutable($model->end_date->toDateTimeString())
-                : null,
+            endDate: new DateTimeImmutable($model->end_date->toDateTimeString()),
             memberPrice: $model->member_price !== null
                 ? new Price((float) $model->member_price)
                 : null,
@@ -137,7 +131,7 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
             'location' => $event->location(),
             'image_public_id' => $event->imagePublicId(),
             'is_published' => $event->isPublished(),
-            'end_date' => $event->endDate()?->format('Y-m-d H:i:s'),
+            'end_date' => $event->endDate()->format('Y-m-d H:i:s'),
             'member_price' => $event->memberPrice()?->value,
             'non_member_price' => $event->nonMemberPrice()?->value,
         ];

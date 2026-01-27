@@ -136,12 +136,14 @@ final class EloquentEventRepositoryTest extends TestCase
     public function test_it_saves_new_event(): void
     {
         $id = EventId::generate();
+        $startDate = new DateTimeImmutable('+1 week');
         $event = new Event(
             id: $id,
             title: 'New Event',
             slug: new Slug('new-event'),
             description: 'A brand new event.',
-            startDate: new DateTimeImmutable('+1 week'),
+            startDate: $startDate,
+            endDate: $startDate,
             location: 'Main Hall',
             imagePublicId: 'events/new-event.jpg',
             isPublished: true,
@@ -168,12 +170,14 @@ final class EloquentEventRepositoryTest extends TestCase
             'is_published' => false,
         ]);
 
+        $startDate = new DateTimeImmutable('+2 weeks');
         $event = new Event(
             id: new EventId($model->id),
             title: 'Updated Title',
             slug: new Slug('updated-slug'),
             description: 'Updated description.',
-            startDate: new DateTimeImmutable('+2 weeks'),
+            startDate: $startDate,
+            endDate: $startDate,
             location: 'New Location',
             isPublished: true,
         );
@@ -240,6 +244,7 @@ final class EloquentEventRepositoryTest extends TestCase
     public function test_it_saves_event_with_prices(): void
     {
         $id = EventId::generate();
+        $startDate = new DateTimeImmutable('+1 week');
         $memberPrice = new Price(15.50);
         $nonMemberPrice = new Price(20.00);
 
@@ -248,7 +253,8 @@ final class EloquentEventRepositoryTest extends TestCase
             title: 'Priced Event',
             slug: new Slug('priced-event'),
             description: 'This event has pricing.',
-            startDate: new DateTimeImmutable('+1 week'),
+            startDate: $startDate,
+            endDate: $startDate,
             memberPrice: $memberPrice,
             nonMemberPrice: $nonMemberPrice,
             isPublished: true,
@@ -292,28 +298,28 @@ final class EloquentEventRepositoryTest extends TestCase
 
     public function test_find_by_date_range_finds_events_starting_in_range(): void
     {
-        // Create events with start dates in the range
+        // Create events with start dates in the range (single-day: end_date = start_date)
         EventModel::factory()->published()->create([
             'title' => 'Event in Range 1',
             'start_date' => now()->addDays(5),
-            'end_date' => null,
+            'end_date' => now()->addDays(5),
         ]);
         EventModel::factory()->published()->create([
             'title' => 'Event in Range 2',
             'start_date' => now()->addDays(8),
-            'end_date' => null,
+            'end_date' => now()->addDays(8),
         ]);
 
-        // Create events outside the range (explicitly single-day)
+        // Create events outside the range (single-day)
         EventModel::factory()->published()->create([
             'title' => 'Event Before Range',
             'start_date' => now()->addDays(1),
-            'end_date' => null,
+            'end_date' => now()->addDays(1),
         ]);
         EventModel::factory()->published()->create([
             'title' => 'Event After Range',
             'start_date' => now()->addDays(15),
-            'end_date' => null,
+            'end_date' => now()->addDays(15),
         ]);
 
         $start = new DateTimeImmutable('+3 days');

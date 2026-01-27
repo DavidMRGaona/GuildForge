@@ -1,36 +1,47 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { LMap, LTileLayer, LMarker, LPopup } from '@vue-leaflet/vue-leaflet';
-import LoadingSpinner from '@/components/ui/LoadingSpinner.vue';
-import { useMap } from '@/composables/useMap';
+
+interface LocationData {
+    name: string;
+    address: string;
+    lat: number;
+    lng: number;
+    zoom: number;
+}
+
+const props = defineProps<{
+    location: LocationData | null;
+}>();
 
 const { t } = useI18n();
 
-const { location, isLoading, error, getLeafletIcon } = useMap({ autoLoad: true });
-const markerIcon = getLeafletIcon();
-
 const center = computed((): [number, number] => {
-    if (!location.value) return [0, 0];
-    return [location.value.lat, location.value.lng];
+    if (!props.location) return [0, 0];
+    return [props.location.lat, props.location.lng];
 });
 
-const errorMessage = computed((): string => {
-    return error.value ? t('about.location.error') : '';
+const markerIcon = L.icon({
+    iconUrl,
+    iconRetinaUrl,
+    shadowUrl,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
 });
 </script>
 
 <template>
     <div class="h-full w-full">
-        <LoadingSpinner v-if="isLoading" />
-
-        <div v-else-if="errorMessage" class="flex items-center justify-center h-full text-red-600">
-            {{ errorMessage }}
-        </div>
-
         <LMap
-            v-else-if="location"
+            v-if="location"
             role="region"
             :aria-label="t('about.location.title')"
             :zoom="location.zoom"

@@ -13,7 +13,7 @@ final readonly class CreateEventDTO
         public string $title,
         public string $description,
         public DateTimeImmutable $startDate,
-        public ?DateTimeImmutable $endDate = null,
+        public DateTimeImmutable $endDate,
         public ?string $location = null,
         public ?string $imagePublicId = null,
         public ?float $memberPrice = null,
@@ -22,7 +22,7 @@ final readonly class CreateEventDTO
     }
 
     /**
-     * @param  array{title: string, description: string, start_date: string, end_date?: string|null, location?: string|null, image_public_id?: string|null, member_price?: float|null, non_member_price?: float|null}  $data
+     * @param  array{title: string, description: string, start_date: string, end_date: string, location?: string|null, image_public_id?: string|null, member_price?: float|null, non_member_price?: float|null}  $data
      *
      * @throws DateMalformedStringException
      */
@@ -32,7 +32,7 @@ final readonly class CreateEventDTO
             title: $data['title'],
             description: $data['description'],
             startDate: new DateTimeImmutable($data['start_date']),
-            endDate: isset($data['end_date']) ? new DateTimeImmutable($data['end_date']) : null,
+            endDate: new DateTimeImmutable($data['end_date']),
             location: $data['location'] ?? null,
             imagePublicId: $data['image_public_id'] ?? null,
             memberPrice: $data['member_price'] ?? null,

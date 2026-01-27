@@ -32,6 +32,7 @@ final readonly class AboutPageService implements AboutPageServiceInterface
             'socialTwitter' => $this->formatSocialUrl($this->settings->get('social_twitter', '')),
             'socialDiscord' => $this->formatSocialUrl($this->settings->get('social_discord', '')),
             'socialTiktok' => $this->formatSocialUrl($this->settings->get('social_tiktok', '')),
+            'location' => $this->settings->getLocationSettings()->toArray(),
         ];
     }
 

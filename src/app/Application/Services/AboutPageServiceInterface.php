@@ -24,6 +24,7 @@ interface AboutPageServiceInterface
      *     socialTwitter: string,
      *     socialDiscord: string,
      *     socialTiktok: string,
+     *     location: array{name: string, address: string, lat: float, lng: float, zoom: int},
      * }
      */
     public function getAboutPageData(): array;

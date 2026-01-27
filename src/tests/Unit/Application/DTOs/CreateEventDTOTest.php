@@ -15,19 +15,21 @@ final class CreateEventDTOTest extends TestCase
         $title = 'Warhammer Tournament';
         $description = 'Annual Warhammer 40k tournament.';
         $startDate = new DateTimeImmutable('2024-06-15 10:00:00');
+        $endDate = new DateTimeImmutable('2024-06-15 18:00:00');
 
         $dto = new CreateEventDTO(
             title: $title,
             description: $description,
             startDate: $startDate,
+            endDate: $endDate,
         );
 
         $this->assertEquals($title, $dto->title);
         $this->assertEquals($description, $dto->description);
         $this->assertEquals($startDate, $dto->startDate);
+        $this->assertEquals($endDate, $dto->endDate);
         $this->assertNull($dto->location);
         $this->assertNull($dto->imagePublicId);
-        $this->assertNull($dto->endDate);
         $this->assertNull($dto->memberPrice);
         $this->assertNull($dto->nonMemberPrice);
     }
@@ -37,6 +39,7 @@ final class CreateEventDTOTest extends TestCase
         $title = 'D&D Campaign';
         $description = 'Weekly campaign session.';
         $startDate = new DateTimeImmutable('2024-07-20 18:00:00');
+        $endDate = new DateTimeImmutable('2024-07-20 22:00:00');
         $location = 'Guild Headquarters';
         $imagePublicId = 'events/dnd-campaign.jpg';
 
@@ -44,6 +47,7 @@ final class CreateEventDTOTest extends TestCase
             title: $title,
             description: $description,
             startDate: $startDate,
+            endDate: $endDate,
             location: $location,
             imagePublicId: $imagePublicId,
         );
@@ -51,6 +55,7 @@ final class CreateEventDTOTest extends TestCase
         $this->assertEquals($title, $dto->title);
         $this->assertEquals($description, $dto->description);
         $this->assertEquals($startDate, $dto->startDate);
+        $this->assertEquals($endDate, $dto->endDate);
         $this->assertEquals($location, $dto->location);
         $this->assertEquals($imagePublicId, $dto->imagePublicId);
     }
@@ -61,6 +66,7 @@ final class CreateEventDTOTest extends TestCase
             'title' => 'Board Games Night',
             'description' => 'Monthly board games event.',
             'start_date' => '2024-08-10 19:00:00',
+            'end_date' => '2024-08-10 23:00:00',
             'location' => 'Main Hall',
             'image_public_id' => 'events/board-games.jpg',
         ];
@@ -70,6 +76,7 @@ final class CreateEventDTOTest extends TestCase
         $this->assertEquals('Board Games Night', $dto->title);
         $this->assertEquals('Monthly board games event.', $dto->description);
         $this->assertEquals(new DateTimeImmutable('2024-08-10 19:00:00'), $dto->startDate);
+        $this->assertEquals(new DateTimeImmutable('2024-08-10 23:00:00'), $dto->endDate);
         $this->assertEquals('Main Hall', $dto->location);
         $this->assertEquals('events/board-games.jpg', $dto->imagePublicId);
     }
@@ -80,6 +87,7 @@ final class CreateEventDTOTest extends TestCase
             'title' => 'Minimal Event',
             'description' => 'Event with minimal data.',
             'start_date' => '2024-09-01 12:00:00',
+            'end_date' => '2024-09-01 18:00:00',
         ];
 
         $dto = CreateEventDTO::fromArray($data);
@@ -87,6 +95,7 @@ final class CreateEventDTOTest extends TestCase
         $this->assertEquals('Minimal Event', $dto->title);
         $this->assertEquals('Event with minimal data.', $dto->description);
         $this->assertEquals(new DateTimeImmutable('2024-09-01 12:00:00'), $dto->startDate);
+        $this->assertEquals(new DateTimeImmutable('2024-09-01 18:00:00'), $dto->endDate);
         $this->assertNull($dto->location);
         $this->assertNull($dto->imagePublicId);
     }
@@ -114,6 +123,7 @@ final class CreateEventDTOTest extends TestCase
         $title = 'Tournament with Entry Fee';
         $description = 'Competitive tournament.';
         $startDate = new DateTimeImmutable('2024-11-15 10:00:00');
+        $endDate = new DateTimeImmutable('2024-11-15 18:00:00');
         $memberPrice = 5.00;
         $nonMemberPrice = 10.00;
 
@@ -121,6 +131,7 @@ final class CreateEventDTOTest extends TestCase
             title: $title,
             description: $description,
             startDate: $startDate,
+            endDate: $endDate,
             memberPrice: $memberPrice,
             nonMemberPrice: $nonMemberPrice,
         );

@@ -105,7 +105,16 @@ class MenuItemResource extends BaseResource
                             ->searchable()
                             ->nullable()
                             ->native(false)
-                            ->helperText(__('filament.menu_items.fields.page_help')),
+                            ->helperText(__('filament.menu_items.fields.page_help'))
+                            ->afterStateHydrated(function (Select $component, ?string $state, ?MenuItemModel $record): void {
+                                if ($record === null || $state === null) {
+                                    return;
+                                }
+                                $routeParams = $record->route_params;
+                                if (isset($routeParams['slug'])) {
+                                    $component->state($state . ':' . $routeParams['slug']);
+                                }
+                            }),
 
                         TextInput::make('url')
                             ->label(__('filament.menu_items.fields.url'))
@@ -190,8 +199,13 @@ class MenuItemResource extends BaseResource
                     ->formatStateUsing(function (MenuItemModel $record): string {
                         if ($record->route) {
                             $routes = resolve(RouteRegistryInterface::class)->getAvailableRoutes();
+                            $key = $record->route;
+                            $routeParams = $record->route_params;
+                            if (isset($routeParams['slug'])) {
+                                $key .= ':' . $routeParams['slug'];
+                            }
 
-                            return $routes[$record->route] ?? $record->route;
+                            return $routes[$key] ?? $routes[$record->route] ?? $record->route;
                         }
                         if ($record->url) {
                             return $record->url;
@@ -279,6 +293,28 @@ class MenuItemResource extends BaseResource
             'create' => Pages\CreateMenuItem::route('/create'),
             'edit' => Pages\EditMenuItem::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Parse route keys with embedded params (e.g. "legal.show:aviso-legal")
+     * into separate route name and route_params fields.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function splitRouteParams(array $data): array
+    {
+        $route = $data['route'] ?? null;
+
+        if ($route !== null && str_contains($route, ':')) {
+            [$routeName, $slug] = explode(':', $route, 2);
+            $data['route'] = $routeName;
+            $data['route_params'] = ['slug' => $slug];
+        } else {
+            $data['route_params'] = null;
+        }
+
+        return $data;
     }
 
     /**

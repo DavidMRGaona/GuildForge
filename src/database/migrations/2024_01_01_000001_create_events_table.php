@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('description');
             $table->dateTime('start_date');
-            $table->dateTime('end_date')->nullable();
+            $table->dateTime('end_date');
             $table->string('location')->nullable();
             $table->decimal('member_price', 8, 2)->nullable();
             $table->decimal('non_member_price', 8, 2)->nullable();

@@ -263,4 +263,33 @@ final class AboutControllerTest extends TestCase
                 ->where('joinSteps', [])
         );
     }
+
+    /**
+     * Verify the about page receives location settings.
+     */
+    public function test_about_page_includes_location(): void
+    {
+        // Arrange
+        $settings = app(SettingsServiceInterface::class);
+        $settings->set('location_name', 'Test HQ');
+        $settings->set('location_address', 'Test Address, City');
+        $settings->set('location_lat', '42.5956');
+        $settings->set('location_lng', '-8.7644');
+        $settings->set('location_zoom', '15');
+
+        // Act
+        $response = $this->get('/nosotros');
+
+        // Assert
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('About')
+                ->has('location')
+                ->where('location.name', 'Test HQ')
+                ->where('location.address', 'Test Address, City')
+                ->where('location.lat', 42.5956)
+                ->where('location.lng', -8.7644)
+                ->where('location.zoom', 15)
+        );
+    }
 }

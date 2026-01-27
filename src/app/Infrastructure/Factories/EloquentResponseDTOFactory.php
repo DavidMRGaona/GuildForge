@@ -43,9 +43,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             slug: $model->slug,
             description: $model->description,
             startDate: DateTimeImmutable::createFromMutable($model->start_date),
-            endDate: $model->end_date !== null
-                ? DateTimeImmutable::createFromMutable($model->end_date)
-                : null,
+            endDate: DateTimeImmutable::createFromMutable($model->end_date),
             location: $model->location,
             memberPrice: $model->member_price !== null ? (float) $model->member_price : null,
             nonMemberPrice: $model->non_member_price !== null ? (float) $model->non_member_price : null,

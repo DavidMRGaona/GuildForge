@@ -198,6 +198,28 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
     }
 
     /**
+     * Register public routes for menu item configuration.
+     * Allows module routes to appear in the menu item dropdown.
+     *
+     * @return array<\App\Application\Modules\DTOs\ModuleRouteDTO>
+     */
+    public function registerRoutes(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register page prefixes provided by this module.
+     * Allows module Vue pages to be resolved by Inertia.
+     *
+     * @return array<\App\Application\Modules\DTOs\PagePrefixDTO>
+     */
+    public function registerPagePrefixes(): array
+    {
+        return [];
+    }
+
+    /**
      * Get the Filament form schema for module settings.
      * Override to provide configurable settings that appear in the admin panel.
      *

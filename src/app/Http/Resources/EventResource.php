@@ -26,7 +26,7 @@ final class EventResource extends JsonResource
             'slug' => $this->resource->slug,
             'description' => $this->resource->description,
             'startDate' => $this->resource->startDate->format('c'),
-            'endDate' => $this->resource->endDate?->format('c'),
+            'endDate' => $this->resource->endDate->format('c'),
             'location' => $this->resource->location,
             'memberPrice' => $this->resource->memberPrice,
             'nonMemberPrice' => $this->resource->nonMemberPrice,

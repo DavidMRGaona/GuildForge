@@ -6,7 +6,6 @@ import BaseCard from '@/components/ui/BaseCard.vue';
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue';
 import ContactForm from '@/components/contact/ContactForm.vue';
 import { useSeo } from '@/composables/useSeo';
-import { useMap } from '@/composables/useMap';
 import { buildFullScreenHeroImageUrl } from '@/utils/cloudinary';
 import type { Activity, ActivityIcon, JoinStep, SocialMediaLinks } from '@/types/models';
 
@@ -25,6 +24,7 @@ interface Props {
     socialTwitter: string;
     socialDiscord: string;
     socialTiktok: string;
+    location: { name: string; address: string; lat: number; lng: number; zoom: number } | null;
 }
 
 const props = defineProps<Props>();
@@ -38,11 +38,10 @@ useSeo({
     description: props.aboutTagline || t('about.subtitle'),
 });
 
-const { location, getOpenStreetMapUrl } = useMap({ autoLoad: true });
-
 const openStreetMapUrl = computed(() => {
-    if (!location.value) return 'https://www.openstreetmap.org';
-    return getOpenStreetMapUrl();
+    if (!props.location) return 'https://www.openstreetmap.org';
+    const { lat, lng, zoom } = props.location;
+    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${zoom}/${lat}/${lng}`;
 });
 
 const hasJoinSteps = computed(() => props.joinSteps.length > 0);
@@ -479,7 +478,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                     :aria-label="t('about.location.title')"
                 >
                     <Suspense>
-                        <LocationMap />
+                        <LocationMap :location="location" />
                         <template #fallback>
                             <div
                                 class="h-full flex items-center justify-center bg-stone-100 dark:bg-stone-800"
