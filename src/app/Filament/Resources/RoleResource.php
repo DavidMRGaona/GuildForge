@@ -13,14 +13,14 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class RoleResource extends Resource
+class RoleResource extends BaseResource
 {
     protected static ?string $model = RoleModel::class;
 

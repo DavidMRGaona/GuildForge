@@ -16,7 +16,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
-class GalleryResource extends Resource
+class GalleryResource extends BaseResource
 {
     protected static ?string $model = GalleryModel::class;
 

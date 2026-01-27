@@ -10,7 +10,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -18,7 +18,7 @@ use Filament\Tables\Table;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
-class HeroSlideResource extends Resource
+class HeroSlideResource extends BaseResource
 {
     protected static ?string $model = HeroSlideModel::class;
 

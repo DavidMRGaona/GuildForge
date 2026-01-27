@@ -19,7 +19,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -30,7 +30,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
-class EventResource extends Resource
+class EventResource extends BaseResource
 {
     use HasExtendableFormSections;
     use HasExtendableRelations;

@@ -15,7 +15,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Forms\Set;
-use Filament\Resources\Resource;
+use App\Filament\Resources\BaseResource;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\ColorColumn;
@@ -25,7 +25,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
-class TagResource extends Resource
+class TagResource extends BaseResource
 {
     protected static ?string $model = TagModel::class;
 
