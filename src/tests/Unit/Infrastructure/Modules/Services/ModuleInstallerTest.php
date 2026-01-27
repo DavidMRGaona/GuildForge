@@ -10,6 +10,7 @@ use App\Infrastructure\Modules\Services\ModuleInstaller;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use JsonException;
 use Mockery;
 use Tests\TestCase;
 use ZipArchive;
@@ -215,6 +216,47 @@ final class ModuleInstallerTest extends TestCase
 
         $this->assertEquals('valid-test-module-2', $manifest->name);
         $this->assertTrue(File::isDirectory($this->modulesPath.'/valid-test-module-2'));
+    }
+
+    /**
+     * @throws JsonException
+     */
+    public function test_can_install_module_when_move_directory_fails(): void
+    {
+        $zipPath = $this->createValidZip([
+            'module.json' => json_encode([
+                'name' => 'fallback-test-module',
+                'version' => '1.0.0',
+                'namespace' => 'Modules\\FallbackTestModule',
+                'provider' => 'Modules\\FallbackTestModule\\FallbackTestModuleServiceProvider',
+            ], JSON_THROW_ON_ERROR),
+            'src/FallbackTestModuleServiceProvider.php' => '<?php namespace Modules\\FallbackTestModule;',
+        ]);
+
+        $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
+
+        // Store the real File facade implementation
+        $realFilesystem = File::getFacadeRoot();
+
+        // Create a partial mock that intercepts specific methods
+        File::partialMock()
+            ->shouldReceive('moveDirectory')
+            ->once()
+            ->andReturn(false) // Simulate move failure
+            ->shouldReceive('copyDirectory')
+            ->once()
+            ->andReturnUsing(fn ($source, $target) => $realFilesystem->copyDirectory($source, $target))
+            ->shouldReceive('deleteDirectory')
+            ->atLeast()
+            ->times(2) // At least: once for source after copy, once for temp cleanup (tearDown adds more)
+            ->andReturnUsing(fn ($path) => $realFilesystem->deleteDirectory($path));
+
+        $manifest = $this->installer->installFromZip($file);
+
+        $this->assertEquals('fallback-test-module', $manifest->name);
+        $this->assertEquals('1.0.0', $manifest->version);
+        $this->assertTrue($realFilesystem->isDirectory($this->modulesPath.'/fallback-test-module'));
+        $this->assertTrue($realFilesystem->exists($this->modulesPath.'/fallback-test-module/module.json'));
     }
 
     /**

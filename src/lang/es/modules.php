@@ -132,6 +132,7 @@ return [
             'disabled' => 'Módulo ":name" deshabilitado correctamente.',
             'installed' => 'Módulo ":name" instalado correctamente.',
             'uninstalled' => 'Módulo ":name" desinstalado correctamente.',
+            'cannot_install' => 'No se puede instalar el módulo: :error',
             'cannot_enable' => 'No se puede habilitar el módulo: :error',
             'cannot_disable' => 'No se puede deshabilitar el módulo: :error',
             'cannot_uninstall' => 'No se puede desinstalar el módulo: :error',
