@@ -132,6 +132,7 @@ return [
             'disabled' => 'Module ":name" disabled successfully.',
             'installed' => 'Module ":name" installed successfully.',
             'uninstalled' => 'Module ":name" uninstalled successfully.',
+            'cannot_install' => 'Cannot install module: :error',
             'cannot_enable' => 'Cannot enable module: :error',
             'cannot_disable' => 'Cannot disable module: :error',
             'cannot_uninstall' => 'Cannot uninstall module: :error',

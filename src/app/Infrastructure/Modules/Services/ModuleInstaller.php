@@ -149,14 +149,18 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         $modulesPath = config('modules.path', base_path('modules'));
         $targetPath = $modulesPath.'/'.$moduleName;
 
-        if (! File::isDirectory($modulesPath)) {
-            File::makeDirectory($modulesPath, 0755, true);
+        if (!File::isDirectory($modulesPath) && !File::makeDirectory($modulesPath, 0755, true)) {
+            throw ModuleInstallationException::extractionFailed('Failed to create modules directory');
         }
 
         $sourcePath = $this->getSourcePath($tempPath);
 
+        // Try rename first (fast, same-filesystem), fall back to copy+delete (cross-filesystem/Docker)
         if (! File::moveDirectory($sourcePath, $targetPath)) {
-            throw ModuleInstallationException::extractionFailed('Failed to move module to target directory');
+            if (! File::copyDirectory($sourcePath, $targetPath)) {
+                throw ModuleInstallationException::extractionFailed('Failed to move module to target directory');
+            }
+            File::deleteDirectory($sourcePath);
         }
 
         return $targetPath;

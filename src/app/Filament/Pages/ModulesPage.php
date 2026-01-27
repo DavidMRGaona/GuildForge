@@ -201,7 +201,7 @@ final class ModulesPage extends Page implements HasForms
                             ->send();
                     } catch (ModuleInstallationException $e) {
                         Notification::make()
-                            ->title(__('modules.filament.notifications.cannot_enable', ['error' => $e->getMessage()]))
+                            ->title(__('modules.filament.notifications.cannot_install', ['error' => $e->getMessage()]))
                             ->danger()
                             ->send();
                     }
