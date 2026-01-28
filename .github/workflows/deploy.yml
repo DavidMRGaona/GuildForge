@@ -14,7 +14,8 @@ jobs:
     strategy:
       matrix:
         webhook_secret: [ WEBHOOK_URL_SERVER_1, WEBHOOK_URL_SERVER_2 ]
-      steps:
+
+    steps:
         - name: Trigger deployment
           run: |
             curl -X POST "${{ secrets[matrix.webhook_secret] }}" \
