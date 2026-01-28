@@ -72,6 +72,7 @@ final class SiteSettings extends Page implements HasForms
             'guild_description',
             'site_logo_light',
             'site_logo_dark',
+            'site_logo_email',
             'site_favicon_light',
             'site_favicon_dark',
             'theme_primary_color',
@@ -119,7 +120,7 @@ final class SiteSettings extends Page implements HasForms
      */
     protected function getImageFields(): array
     {
-        return ['site_logo_light', 'site_logo_dark', 'site_favicon_light', 'site_favicon_dark'];
+        return ['site_logo_light', 'site_logo_dark', 'site_logo_email', 'site_favicon_light', 'site_favicon_dark'];
     }
 
     /**
@@ -132,6 +133,7 @@ final class SiteSettings extends Page implements HasForms
             'guild_description' => '',
             'site_logo_light' => '',
             'site_logo_dark' => '',
+            'site_logo_email' => '',
             'site_favicon_light' => '',
             'site_favicon_dark' => '',
             'theme_primary_color' => '#D97706',
@@ -218,6 +220,19 @@ final class SiteSettings extends Page implements HasForms
                                             ->directory('branding')
                                             ->getUploadedFileNameForStorageUsing(
                                                 fn (TemporaryUploadedFile $file): string => 'logo-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                            )
+                                            ->maxSize(1024)
+                                            ->nullable()
+                                            ->columnSpanFull(),
+
+                                        FileUpload::make('site_logo_email')
+                                            ->label(__('filament.settings.general.logo_email'))
+                                            ->helperText(__('filament.settings.general.logo_email_help'))
+                                            ->image()
+                                            ->disk('images')
+                                            ->directory('branding')
+                                            ->getUploadedFileNameForStorageUsing(
+                                                fn (TemporaryUploadedFile $file): string => 'logo-email-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
                                             )
                                             ->maxSize(1024)
                                             ->nullable()
