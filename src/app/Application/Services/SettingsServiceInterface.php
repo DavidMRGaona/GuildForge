@@ -42,4 +42,9 @@ interface SettingsServiceInterface
      * Check if email verification is required.
      */
     public function isEmailVerificationRequired(): bool;
+
+    /**
+     * Get the email logo URL with fallback to light logo.
+     */
+    public function getEmailLogoUrl(): ?string;
 }
