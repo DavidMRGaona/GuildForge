@@ -235,6 +235,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Domain\Modules\Events\ModuleEnabled::class,
             \App\Infrastructure\Navigation\Listeners\ActivateMenuItemsOnModuleEnabled::class,
         );
+
+        // Clear Laravel caches when modules change (required for cached routes in production)
+        Event::listen(
+            \App\Domain\Modules\Events\ModuleEnabled::class,
+            \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+        );
+        Event::listen(
+            \App\Domain\Modules\Events\ModuleDisabled::class,
+            \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+        );
         Event::listen(
             \App\Domain\Modules\Events\ModuleUninstalled::class,
             \App\Infrastructure\Navigation\Listeners\DeleteMenuItemsOnModuleUninstalled::class,
