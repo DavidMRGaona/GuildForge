@@ -63,6 +63,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
+                ...$this->discoverModulePages(),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->middleware([
@@ -444,6 +445,88 @@ class AdminPanelProvider extends PanelProvider
             logger()->error('[AdminPanelProvider] Failed to discover module resources', [
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Discover and collect Filament pages from enabled modules.
+     *
+     * @return array<class-string<\Filament\Pages\Page>>
+     */
+    private function discoverModulePages(): array
+    {
+        try {
+            $modulesPath = config('modules.path', base_path('modules'));
+
+            if (! is_dir($modulesPath)) {
+                return [];
+            }
+
+            // Get list of enabled module names
+            $enabledModules = $this->getEnabledModuleNames();
+
+            // If no modules enabled, skip page discovery
+            if ($enabledModules === []) {
+                return [];
+            }
+
+            $pages = [];
+
+            $moduleDirectories = glob($modulesPath.'/*', GLOB_ONLYDIR);
+            if ($moduleDirectories === false) {
+                return [];
+            }
+
+            foreach ($moduleDirectories as $modulePath) {
+                $moduleName = basename($modulePath);
+
+                // Skip disabled modules
+                if (! in_array($moduleName, $enabledModules, true)) {
+                    continue;
+                }
+
+                try {
+                    $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
+
+                    // Find the service provider file
+                    $providerFile = $modulePath.'/src/'.$studlyName.'ServiceProvider.php';
+                    if (! file_exists($providerFile)) {
+                        continue;
+                    }
+
+                    // Register autoloader and load the provider
+                    $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath.'/src');
+
+                    $providerClass = "Modules\\{$studlyName}\\{$studlyName}ServiceProvider";
+
+                    // Load the provider file
+                    require_once $providerFile;
+
+                    if (! class_exists($providerClass)) {
+                        continue;
+                    }
+
+                    /** @var ModuleServiceProvider $provider */
+                    $provider = new $providerClass(app());
+
+                    $modulePages = $provider->registerFilamentPages();
+                    $pages = array_merge($pages, $modulePages);
+                } catch (Throwable $e) {
+                    // Log the error but continue with other modules
+                    logger()->warning("[AdminPanelProvider] Failed to discover pages for module: {$moduleName}", [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return $pages;
+        } catch (Throwable $e) {
+            // If page discovery fails completely, log and continue without module pages
+            logger()->error('[AdminPanelProvider] Failed to discover module pages', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
         }
     }
 }
