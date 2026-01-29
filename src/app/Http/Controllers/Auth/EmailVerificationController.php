@@ -38,12 +38,13 @@ final class EmailVerificationController extends Controller
     {
         /** @var \App\Infrastructure\Persistence\Eloquent\Models\UserModel $user */
         $user = $request->user();
+        $userId = (string) $user->id;
 
-        if ($user->hasVerifiedEmail()) {
+        if ($this->authService->hasVerifiedEmail($userId)) {
             return redirect()->route('home');
         }
 
-        $this->authService->sendEmailVerificationNotification((string) $user->id);
+        $this->authService->sendEmailVerificationNotification($userId);
 
         return back()->with('success', __('auth.verification_link_sent'));
     }

@@ -102,4 +102,61 @@ final class SlugTest extends TestCase
 
         $this->assertFalse($slug1->equals($slug2));
     }
+
+    public function test_from_title_and_uuid_creates_valid_slug(): void
+    {
+        $uuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+        $slug = Slug::fromTitleAndUuid('My Event Title', $uuid);
+
+        $this->assertEquals('my-event-title-a1b2c3d4', $slug->value);
+    }
+
+    public function test_from_title_and_uuid_uses_default_8_characters(): void
+    {
+        $uuid = 'abcdefgh-1234-5678-90ab-cdef12345678';
+        $slug = Slug::fromTitleAndUuid('Test', $uuid);
+
+        $this->assertEquals('test-abcdefgh', $slug->value);
+    }
+
+    public function test_from_title_and_uuid_respects_custom_length(): void
+    {
+        $uuid = 'abcdefgh12345678-90ab-cdef12345678';
+        $slug = Slug::fromTitleAndUuid('Test', $uuid, 12);
+
+        $this->assertEquals('test-abcdefgh1234', $slug->value);
+    }
+
+    public function test_from_title_and_uuid_handles_empty_title(): void
+    {
+        $uuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+        $slug = Slug::fromTitleAndUuid('', $uuid);
+
+        $this->assertEquals('item-a1b2c3d4', $slug->value);
+    }
+
+    public function test_from_title_and_uuid_handles_special_characters(): void
+    {
+        $uuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+        $slug = Slug::fromTitleAndUuid('¡Torneo de Warhammer 40K!', $uuid);
+
+        $this->assertEquals('torneo-de-warhammer-40k-a1b2c3d4', $slug->value);
+    }
+
+    public function test_from_title_and_uuid_handles_only_special_characters(): void
+    {
+        $uuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+        // Str::slug converts !!! to empty but special chars like @ become "at"
+        $slug = Slug::fromTitleAndUuid('!!!', $uuid);
+
+        $this->assertEquals('item-a1b2c3d4', $slug->value);
+    }
+
+    public function test_from_title_and_uuid_handles_accented_characters(): void
+    {
+        $uuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+        $slug = Slug::fromTitleAndUuid('Reunión Ñoño', $uuid);
+
+        $this->assertEquals('reunion-nono-a1b2c3d4', $slug->value);
+    }
 }

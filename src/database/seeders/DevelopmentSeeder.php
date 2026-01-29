@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Modules\ValueObjects\ModuleName;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -23,5 +25,19 @@ final class DevelopmentSeeder extends Seeder
             ArticleSeeder::class,
             GallerySeeder::class,
         ]);
+
+        $this->seedModules();
+    }
+
+    /**
+     * Seed all enabled modules.
+     */
+    private function seedModules(): void
+    {
+        $moduleManager = app(ModuleManagerServiceInterface::class);
+
+        foreach ($moduleManager->enabled() as $module) {
+            $moduleManager->seed(new ModuleName($module->name()->value));
+        }
     }
 }

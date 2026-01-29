@@ -74,4 +74,9 @@ interface AuthServiceInterface
      * @return string|null The avatar public ID, or null if upload failed
      */
     public function uploadAvatar(string $userId, string $contents, string $mimeType): ?string;
+
+    /**
+     * Check if the user has verified their email address.
+     */
+    public function hasVerifiedEmail(string $userId): bool;
 }

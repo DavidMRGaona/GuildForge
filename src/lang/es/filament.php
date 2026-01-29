@@ -99,6 +99,8 @@ return [
             'logo_light_help' => 'Se mostrará cuando el tema claro esté activo. PNG transparente recomendado, máx. 1MB.',
             'logo_dark' => 'Logo (tema oscuro)',
             'logo_dark_help' => 'Se mostrará cuando el tema oscuro esté activo. PNG transparente recomendado, máx. 1MB.',
+            'logo_email' => 'Logo para correos',
+            'logo_email_help' => 'Logo que aparecerá en los correos electrónicos. Si no se configura, se usará el logo del modo claro.',
         ],
         'branding' => [
             'logos_section' => 'Logotipos',

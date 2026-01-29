@@ -68,6 +68,8 @@ return [
             'logo_light_help' => 'Displayed when light theme is active. Transparent PNG recommended, max 1MB.',
             'logo_dark' => 'Logo (dark theme)',
             'logo_dark_help' => 'Displayed when dark theme is active. Transparent PNG recommended, max 1MB.',
+            'logo_email' => 'Email logo',
+            'logo_email_help' => 'Logo that will appear in emails. If not configured, the light mode logo will be used.',
         ],
         'branding' => [
             'logos_section' => 'Logos',

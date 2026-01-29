@@ -250,4 +250,11 @@ final readonly class AuthService implements AuthServiceInterface
 
         return $stored !== false ? $fullPath : null;
     }
+
+    public function hasVerifiedEmail(string $userId): bool
+    {
+        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+
+        return $userModel !== null && $userModel->hasVerifiedEmail();
+    }
 }

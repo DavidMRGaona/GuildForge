@@ -18,6 +18,7 @@ final class ProductionSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            ModulesSeeder::class,
             RolesSeeder::class,
             TagSeeder::class,
             HeroSlideSeeder::class,
