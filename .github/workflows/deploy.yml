@@ -19,5 +19,5 @@ jobs:
       - name: Trigger deployment
         run: |
           curl -X POST "${{ secrets[matrix.webhook_secret] }}" \
-            -H "Authorization: Bearer ${{ secrets DEPLOY_API_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOY_API_TOKEN }}" \
             --fail --silent --show-error
