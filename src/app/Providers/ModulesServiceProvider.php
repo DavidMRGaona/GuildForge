@@ -67,8 +67,38 @@ final class ModulesServiceProvider extends ServiceProvider
             ]);
         }
 
+        // Always load module migrations from filesystem (needed for migrate:fresh)
+        $this->loadAllModuleMigrations();
+
         // Boot enabled modules (only when database is available)
         $this->bootEnabledModules();
+    }
+
+    /**
+     * Load migrations from all modules in the filesystem.
+     * This ensures migrations run during migrate:fresh even when the modules table doesn't exist.
+     */
+    private function loadAllModuleMigrations(): void
+    {
+        $modulesPath = config('modules.path', base_path('modules'));
+
+        if (! is_dir($modulesPath)) {
+            return;
+        }
+
+        $directories = glob($modulesPath.'/*', GLOB_ONLYDIR);
+
+        if ($directories === false) {
+            return;
+        }
+
+        foreach ($directories as $moduleDir) {
+            $migrationsPath = $moduleDir.'/database/migrations';
+
+            if (is_dir($migrationsPath)) {
+                $this->loadMigrationsFrom($migrationsPath);
+            }
+        }
     }
 
     private function bootEnabledModules(): void
