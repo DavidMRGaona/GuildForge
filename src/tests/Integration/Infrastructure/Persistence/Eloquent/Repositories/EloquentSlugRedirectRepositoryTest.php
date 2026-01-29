@@ -70,14 +70,14 @@ final class EloquentSlugRedirectRepositoryTest extends TestCase
             'old_slug' => 'same-slug',
             'new_slug' => 'new-article-slug',
             'entity_type' => 'article',
-            'entity_id' => 'entity-1',
+            'entity_id' => 'eeeeeeee-1111-1111-1111-111111111111',
         ]);
         SlugRedirectModel::query()->create([
             'id' => 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
             'old_slug' => 'same-slug',
             'new_slug' => 'new-event-slug',
             'entity_type' => 'event',
-            'entity_id' => 'entity-2',
+            'entity_id' => 'eeeeeeee-2222-2222-2222-222222222222',
         ]);
 
         $articleRedirect = $this->repository->findByOldSlugAndType(
@@ -151,34 +151,34 @@ final class EloquentSlugRedirectRepositoryTest extends TestCase
     {
         // Create redirects pointing to 'slug-b'
         SlugRedirectModel::query()->create([
-            'id' => 'redirect-1',
+            'id' => '11111111-1111-1111-1111-111111111111',
             'old_slug' => 'slug-a',
             'new_slug' => 'slug-b',
             'entity_type' => 'article',
-            'entity_id' => 'entity-1',
+            'entity_id' => 'eeeeeeee-1111-1111-1111-111111111111',
         ]);
         SlugRedirectModel::query()->create([
-            'id' => 'redirect-2',
+            'id' => '22222222-2222-2222-2222-222222222222',
             'old_slug' => 'slug-x',
             'new_slug' => 'slug-b',
             'entity_type' => 'article',
-            'entity_id' => 'entity-1',
+            'entity_id' => 'eeeeeeee-1111-1111-1111-111111111111',
         ]);
         // This one points to different slug, should not be updated
         SlugRedirectModel::query()->create([
-            'id' => 'redirect-3',
+            'id' => '33333333-3333-3333-3333-333333333333',
             'old_slug' => 'slug-y',
             'new_slug' => 'slug-z',
             'entity_type' => 'article',
-            'entity_id' => 'entity-2',
+            'entity_id' => 'eeeeeeee-2222-2222-2222-222222222222',
         ]);
         // Same old target but different entity type, should not be updated
         SlugRedirectModel::query()->create([
-            'id' => 'redirect-4',
+            'id' => '44444444-4444-4444-4444-444444444444',
             'old_slug' => 'slug-m',
             'new_slug' => 'slug-b',
             'entity_type' => 'event',
-            'entity_id' => 'entity-3',
+            'entity_id' => 'eeeeeeee-3333-3333-3333-333333333333',
         ]);
 
         $this->repository->updateAllPointingTo(
@@ -189,21 +189,21 @@ final class EloquentSlugRedirectRepositoryTest extends TestCase
 
         // These should be updated
         $this->assertDatabaseHas('slug_redirects', [
-            'id' => 'redirect-1',
+            'id' => '11111111-1111-1111-1111-111111111111',
             'new_slug' => 'slug-c',
         ]);
         $this->assertDatabaseHas('slug_redirects', [
-            'id' => 'redirect-2',
+            'id' => '22222222-2222-2222-2222-222222222222',
             'new_slug' => 'slug-c',
         ]);
 
         // These should remain unchanged
         $this->assertDatabaseHas('slug_redirects', [
-            'id' => 'redirect-3',
+            'id' => '33333333-3333-3333-3333-333333333333',
             'new_slug' => 'slug-z',
         ]);
         $this->assertDatabaseHas('slug_redirects', [
-            'id' => 'redirect-4',
+            'id' => '44444444-4444-4444-4444-444444444444',
             'new_slug' => 'slug-b',
         ]);
     }
@@ -211,39 +211,39 @@ final class EloquentSlugRedirectRepositoryTest extends TestCase
     public function test_delete_by_entity_id_removes_redirects(): void
     {
         SlugRedirectModel::query()->create([
-            'id' => 'redirect-1',
+            'id' => '11111111-1111-1111-1111-111111111111',
             'old_slug' => 'old-1',
             'new_slug' => 'new-1',
             'entity_type' => 'article',
-            'entity_id' => 'entity-to-delete',
+            'entity_id' => 'dddddddd-dddd-dddd-dddd-dddddddddddd',
         ]);
         SlugRedirectModel::query()->create([
-            'id' => 'redirect-2',
+            'id' => '22222222-2222-2222-2222-222222222222',
             'old_slug' => 'old-2',
             'new_slug' => 'new-2',
             'entity_type' => 'article',
-            'entity_id' => 'entity-to-delete',
+            'entity_id' => 'dddddddd-dddd-dddd-dddd-dddddddddddd',
         ]);
         SlugRedirectModel::query()->create([
-            'id' => 'redirect-3',
+            'id' => '33333333-3333-3333-3333-333333333333',
             'old_slug' => 'old-3',
             'new_slug' => 'new-3',
             'entity_type' => 'article',
-            'entity_id' => 'other-entity',
+            'entity_id' => 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         ]);
         SlugRedirectModel::query()->create([
-            'id' => 'redirect-4',
+            'id' => '44444444-4444-4444-4444-444444444444',
             'old_slug' => 'old-4',
             'new_slug' => 'new-4',
             'entity_type' => 'event',
-            'entity_id' => 'entity-to-delete',
+            'entity_id' => 'dddddddd-dddd-dddd-dddd-dddddddddddd',
         ]);
 
-        $this->repository->deleteByEntityId('entity-to-delete', 'article');
+        $this->repository->deleteByEntityId('dddddddd-dddd-dddd-dddd-dddddddddddd', 'article');
 
-        $this->assertDatabaseMissing('slug_redirects', ['id' => 'redirect-1']);
-        $this->assertDatabaseMissing('slug_redirects', ['id' => 'redirect-2']);
-        $this->assertDatabaseHas('slug_redirects', ['id' => 'redirect-3']);
-        $this->assertDatabaseHas('slug_redirects', ['id' => 'redirect-4']);
+        $this->assertDatabaseMissing('slug_redirects', ['id' => '11111111-1111-1111-1111-111111111111']);
+        $this->assertDatabaseMissing('slug_redirects', ['id' => '22222222-2222-2222-2222-222222222222']);
+        $this->assertDatabaseHas('slug_redirects', ['id' => '33333333-3333-3333-3333-333333333333']);
+        $this->assertDatabaseHas('slug_redirects', ['id' => '44444444-4444-4444-4444-444444444444']);
     }
 }
