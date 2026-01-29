@@ -211,4 +211,15 @@ abstract class ModuleServiceProvider extends ServiceProvider
     {
         return [];
     }
+
+    /**
+     * Register Filament pages provided by this module.
+     * Override in subclass to provide Filament pages.
+     *
+     * @return array<class-string<\Filament\Pages\Page>>
+     */
+    public function registerFilamentPages(): array
+    {
+        return [];
+    }
 }
