@@ -98,16 +98,16 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
             slug: new Slug($model->slug),
             description: $model->description,
             startDate: new DateTimeImmutable($model->start_date->toDateTimeString()),
+            endDate: new DateTimeImmutable($model->end_date->toDateTimeString()),
             location: $model->location,
             imagePublicId: $model->image_public_id,
-            isPublished: $model->is_published,
-            endDate: new DateTimeImmutable($model->end_date->toDateTimeString()),
             memberPrice: $model->member_price !== null
                 ? new Price((float) $model->member_price)
                 : null,
             nonMemberPrice: $model->non_member_price !== null
                 ? new Price((float) $model->non_member_price)
                 : null,
+            isPublished: $model->is_published,
             createdAt: $model->created_at !== null
                 ? new DateTimeImmutable($model->created_at->toDateTimeString())
                 : null,

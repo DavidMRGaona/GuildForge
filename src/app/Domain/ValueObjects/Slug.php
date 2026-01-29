@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\ValueObjects;
 
 use App\Domain\Exceptions\InvalidSlugException;
+use Illuminate\Support\Str;
 use Stringable;
 
 final readonly class Slug implements Stringable
@@ -15,6 +16,19 @@ final readonly class Slug implements Stringable
         public string $value,
     ) {
         $this->validate($value);
+    }
+
+    public static function fromTitleAndUuid(string $title, string $uuid, int $uuidLength = 8): self
+    {
+        $baseSlug = Str::slug($title);
+
+        if ($baseSlug === '') {
+            $baseSlug = 'item';
+        }
+
+        $shortUuid = substr($uuid, 0, $uuidLength);
+
+        return new self("{$baseSlug}-{$shortUuid}");
     }
 
     public function __toString(): string

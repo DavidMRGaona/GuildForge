@@ -19,6 +19,8 @@ use App\Application\Navigation\Services\RouteRegistryInterface;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\AuthServiceInterface;
+use App\Application\Services\ContactServiceInterface;
+use App\Application\Services\LegalPageServiceInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\GalleryQueryServiceInterface;
 use App\Application\Services\HeroSlideQueryServiceInterface;
@@ -26,6 +28,8 @@ use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\LogContextProviderInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
+use App\Application\Services\SlugRedirectService;
+use App\Application\Services\SlugRedirectServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\UserServiceInterface;
@@ -35,6 +39,7 @@ use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\Repositories\GalleryRepositoryInterface;
 use App\Domain\Repositories\PhotoRepositoryInterface;
+use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
@@ -68,10 +73,13 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentEventRepository
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentGalleryRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentPhotoRepository;
+use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentSlugRedirectRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
 use App\Infrastructure\Services\AboutPageService;
 use App\Infrastructure\Services\ArticleQueryService;
 use App\Infrastructure\Services\AuthService;
+use App\Infrastructure\Services\ContactService;
+use App\Infrastructure\Services\LegalPageService;
 use App\Infrastructure\Services\CloudinaryStorageAdapter;
 use App\Infrastructure\Services\EventQueryService;
 use App\Infrastructure\Services\GalleryQueryService;
@@ -116,6 +124,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GalleryRepositoryInterface::class, EloquentGalleryRepository::class);
         $this->app->bind(PhotoRepositoryInterface::class, EloquentPhotoRepository::class);
         $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
+        $this->app->bind(SlugRedirectRepositoryInterface::class, EloquentSlugRedirectRepository::class);
+
+        // Slug redirect system
+        $this->app->singleton(SlugRedirectServiceInterface::class, SlugRedirectService::class);
 
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
@@ -123,6 +135,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ImageOptimizationServiceInterface::class, ImageOptimizationService::class);
         $this->app->singleton(AuthServiceInterface::class, AuthService::class);
         $this->app->singleton(UserServiceInterface::class, UserService::class);
+        $this->app->singleton(LegalPageServiceInterface::class, LegalPageService::class);
+        $this->app->singleton(ContactServiceInterface::class, ContactService::class);
 
         // Log context provider (uses request scoped binding)
         $this->app->bind(LogContextProviderInterface::class, function ($app) {

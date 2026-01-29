@@ -57,19 +57,6 @@ final class HasExtendableRelationsTest extends TestCase
     }
 
     #[Test]
-    public function it_includes_relation_managers_for_macro_relationships(): void
-    {
-        // Skip: Eloquent Model macros require full Laravel bootstrap to work correctly.
-        // The macro functionality works in real scenarios (see EventRegistrationsServiceProvider)
-        // but cannot be tested in isolation without the full application context.
-        // The important filter behavior (filtering out nonexistent relationships) is tested above.
-        $this->markTestSkipped(
-            'Eloquent Model macros require full Laravel bootstrap context. '
-            .'The filter works correctly in production - see filterValidRelations().'
-        );
-    }
-
-    #[Test]
     public function it_filters_out_nonexistent_relation_manager_classes(): void
     {
         TestResource::clearExtendedRelations();

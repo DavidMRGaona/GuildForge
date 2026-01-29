@@ -7,6 +7,7 @@ interface SeoOptions {
     description?: string | null;
     image?: string | null;
     url?: string;
+    canonical?: string;
     type?: 'website' | 'article';
 }
 
@@ -30,14 +31,19 @@ export function useSeo(options: SeoOptions): void {
     const url = options.url ?? (typeof window !== 'undefined' ? window.location.href : '');
     const image = options.image ?? null;
 
+    // Build canonical URL: use provided canonical path or fall back to url
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const canonicalUrl = options.canonical ? `${baseUrl}${options.canonical}` : url;
+
     useHead({
         title: fullTitle,
+        link: [{ rel: 'canonical', href: canonicalUrl }],
         meta: [
             { name: 'description', content: truncatedDescription },
             { property: 'og:title', content: title },
             { property: 'og:description', content: truncatedDescription },
             { property: 'og:type', content: type },
-            { property: 'og:url', content: url },
+            { property: 'og:url', content: canonicalUrl },
             { property: 'og:site_name', content: siteName },
             { name: 'twitter:card', content: image ? 'summary_large_image' : 'summary' },
             { name: 'twitter:title', content: title },

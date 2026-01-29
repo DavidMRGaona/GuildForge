@@ -2,9 +2,9 @@ name: Deploy
 
 on:
   workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+    workflows: [ CI ]
+    types: [ completed ]
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -16,7 +16,8 @@ jobs:
         webhook_secret: [ WEBHOOK_URL_SERVER_1, WEBHOOK_URL_SERVER_2 ]
 
     steps:
-        - name: Trigger deployment
-          run: |
-            curl -X POST "${{ secrets[matrix.webhook_secret] }}" \
-              --fail --silent --show-error
+      - name: Trigger deployment
+        run: |
+          curl -X POST "${{ secrets[matrix.webhook_secret] }}" \
+            -H "Authorization: Bearer ${{ secrets DEPLOY_API_TOKEN }}" \
+            --fail --silent --show-error
