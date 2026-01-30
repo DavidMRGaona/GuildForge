@@ -4,42 +4,28 @@ declare(strict_types=1);
 
 namespace App\Application\Services;
 
+use App\Application\DTOs\Response\AboutPageResponseDTO;
+use App\Application\DTOs\Response\ActivityDTO;
+use App\Application\DTOs\Response\JoinStepDTO;
+
 interface AboutPageServiceInterface
 {
     /**
      * Get all data needed for the About page.
-     *
-     * @return array{
-     *     guildName: string,
-     *     aboutHistory: string,
-     *     contactEmail: string,
-     *     contactPhone: string,
-     *     contactAddress: string,
-     *     aboutHeroImage: string,
-     *     aboutTagline: string,
-     *     activities: array<int, array{icon: string, title: string, description: string}>,
-     *     joinSteps: array<int, array{title: string, description: string|null}>,
-     *     socialFacebook: string,
-     *     socialInstagram: string,
-     *     socialTwitter: string,
-     *     socialDiscord: string,
-     *     socialTiktok: string,
-     *     location: array{name: string, address: string, lat: float, lng: float, zoom: int},
-     * }
      */
-    public function getAboutPageData(): array;
+    public function getAboutPageData(): AboutPageResponseDTO;
 
     /**
-     * Parse activities JSON string into array.
+     * Parse activities JSON string into array of ActivityDTOs.
      *
-     * @return array<int, array{icon: string, title: string, description: string}>
+     * @return array<ActivityDTO>
      */
     public function parseActivities(mixed $json): array;
 
     /**
-     * Parse join steps JSON string into array.
+     * Parse join steps JSON string into array of JoinStepDTOs.
      *
-     * @return array<int, array{title: string, description: string|null}>
+     * @return array<JoinStepDTO>
      */
     public function parseJoinSteps(mixed $json): array;
 

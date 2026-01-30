@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Services;
 
+use App\Application\DTOs\Response\AboutPageResponseDTO;
+use App\Application\DTOs\Response\ActivityDTO;
+use App\Application\DTOs\Response\JoinStepDTO;
+use App\Application\DTOs\Response\SocialLinksDTO;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use JsonException;
@@ -15,25 +19,27 @@ final readonly class AboutPageService implements AboutPageServiceInterface
     ) {
     }
 
-    public function getAboutPageData(): array
+    public function getAboutPageData(): AboutPageResponseDTO
     {
-        return [
-            'guildName' => $this->settings->get('guild_name', config('app.name')),
-            'aboutHistory' => $this->settings->get('about_history', ''),
-            'contactEmail' => $this->settings->get('contact_email', ''),
-            'contactPhone' => $this->settings->get('contact_phone', ''),
-            'contactAddress' => $this->settings->get('contact_address', ''),
-            'aboutHeroImage' => $this->settings->get('about_hero_image', ''),
-            'aboutTagline' => $this->settings->get('about_tagline', ''),
-            'activities' => $this->parseActivities($this->settings->get('about_activities', '')),
-            'joinSteps' => $this->parseJoinSteps($this->settings->get('join_steps', '')),
-            'socialFacebook' => $this->formatSocialUrl($this->settings->get('social_facebook', '')),
-            'socialInstagram' => $this->formatSocialUrl($this->settings->get('social_instagram', '')),
-            'socialTwitter' => $this->formatSocialUrl($this->settings->get('social_twitter', '')),
-            'socialDiscord' => $this->formatSocialUrl($this->settings->get('social_discord', '')),
-            'socialTiktok' => $this->formatSocialUrl($this->settings->get('social_tiktok', '')),
-            'location' => $this->settings->getLocationSettings()->toArray(),
-        ];
+        return new AboutPageResponseDTO(
+            guildName: $this->settings->get('guild_name', config('app.name')),
+            aboutHistory: $this->settings->get('about_history', ''),
+            contactEmail: $this->settings->get('contact_email', ''),
+            contactPhone: $this->settings->get('contact_phone', ''),
+            contactAddress: $this->settings->get('contact_address', ''),
+            aboutHeroImage: $this->settings->get('about_hero_image', ''),
+            aboutTagline: $this->settings->get('about_tagline', ''),
+            activities: $this->parseActivities($this->settings->get('about_activities', '')),
+            joinSteps: $this->parseJoinSteps($this->settings->get('join_steps', '')),
+            socialLinks: new SocialLinksDTO(
+                facebook: $this->formatSocialUrl($this->settings->get('social_facebook', '')),
+                instagram: $this->formatSocialUrl($this->settings->get('social_instagram', '')),
+                twitter: $this->formatSocialUrl($this->settings->get('social_twitter', '')),
+                discord: $this->formatSocialUrl($this->settings->get('social_discord', '')),
+                tiktok: $this->formatSocialUrl($this->settings->get('social_tiktok', '')),
+            ),
+            location: $this->settings->getLocationSettings(),
+        );
     }
 
     public function parseActivities(mixed $json): array
@@ -49,10 +55,15 @@ final readonly class AboutPageService implements AboutPageServiceInterface
                 return [];
             }
 
-            return array_values(array_filter(
+            $filtered = array_filter(
                 $activities,
                 fn ($activity) => is_array($activity)
                     && isset($activity['icon'], $activity['title'], $activity['description'])
+            );
+
+            return array_values(array_map(
+                fn (array $activity): ActivityDTO => ActivityDTO::fromArray($activity),
+                $filtered
             ));
         } catch (JsonException) {
             return [];
@@ -78,10 +89,10 @@ final readonly class AboutPageService implements AboutPageServiceInterface
             );
 
             return array_values(array_map(
-                fn (array $step): array => [
+                fn (array $step): JoinStepDTO => JoinStepDTO::fromArray([
                     'title' => (string) $step['title'],
                     'description' => isset($step['description']) ? (string) $step['description'] : null,
-                ],
+                ]),
                 $filtered
             ));
         } catch (JsonException) {

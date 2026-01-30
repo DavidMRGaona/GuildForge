@@ -149,7 +149,9 @@ function uploadAvatar(): void {
                     <p class="mt-1 text-stone-600 dark:text-stone-400">
                         {{ user.email }}
                     </p>
-                    <p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-200 px-3 py-1 text-sm text-stone-600 dark:bg-stone-700 dark:text-stone-400">
+                    <p
+                        class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-200 px-3 py-1 text-sm text-stone-600 dark:bg-stone-700 dark:text-stone-400"
+                    >
                         <svg
                             class="h-4 w-4"
                             fill="none"

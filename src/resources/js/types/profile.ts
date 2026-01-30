@@ -6,13 +6,7 @@ export interface ProfileTab {
     isModuleTab?: boolean;
 }
 
-export type ProfileTabIcon =
-    | 'user'
-    | 'lock'
-    | 'dice'
-    | 'trophy'
-    | 'calendar'
-    | 'cog';
+export type ProfileTabIcon = 'user' | 'lock' | 'dice' | 'trophy' | 'calendar' | 'cog';
 
 export interface ProfileTabMetadata {
     icon: ProfileTabIcon;
