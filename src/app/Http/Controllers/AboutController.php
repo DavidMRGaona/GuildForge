@@ -17,6 +17,6 @@ final class AboutController extends Controller
 
     public function __invoke(): Response
     {
-        return Inertia::render('About', $this->aboutPage->getAboutPageData());
+        return Inertia::render('About', $this->aboutPage->getAboutPageData()->toArray());
     }
 }

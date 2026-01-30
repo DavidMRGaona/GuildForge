@@ -3,7 +3,7 @@
 .PHONY: help up down build restart recreate logs ps shell shell-node shell-db \
         es-test es-logs es-health es-indices \
         install setup fresh migrate migrate-rollback seed db-backup db-restore \
-        test test-unit test-feature test-coverage test-filter test-parallel \
+        test test-unit test-feature test-coverage test-filter test-serial \
         check check-fix cs cs-fix phpstan lint-js lint-js-fix types \
         check-q test-q lint format db-reset \
         dev build-assets cache cache-clear routes tinker ide-helper \
@@ -128,26 +128,26 @@ db-restore: ## Restore from latest backup
 	cat $$LATEST | docker exec -i $(DB_CONTAINER) psql -U $${DB_USERNAME:-guildforge} -d $${DB_DATABASE:-guildforge}
 
 # =============================================================================
-# TESTING
+# TESTING (all tests run in parallel with 8 processes)
 # =============================================================================
 
-test: ## Run all tests
-	docker exec $(PHP_CONTAINER) php artisan test
+test: ## Run all tests (parallel)
+	docker exec $(PHP_CONTAINER) php artisan test --parallel --processes=8
 
-test-unit: ## Run unit tests only
-	docker exec $(PHP_CONTAINER) php artisan test --testsuite=Unit
+test-unit: ## Run unit tests only (parallel)
+	docker exec $(PHP_CONTAINER) php artisan test --testsuite=Unit --parallel --processes=8
 
-test-feature: ## Run feature tests only
-	docker exec $(PHP_CONTAINER) php artisan test --testsuite=Feature
+test-feature: ## Run feature tests only (parallel)
+	docker exec $(PHP_CONTAINER) php artisan test --testsuite=Feature --parallel --processes=8
 
-test-coverage: ## Run tests with coverage report
-	docker exec $(PHP_CONTAINER) php artisan test --coverage --coverage-html=coverage
+test-coverage: ## Run tests with coverage report (parallel)
+	docker exec $(PHP_CONTAINER) php artisan test --parallel --processes=8 --coverage --coverage-html=coverage
 
 test-filter: ## Run specific test (usage: make test-filter FILTER=EventTest)
 	docker exec $(PHP_CONTAINER) php artisan test --filter=$(FILTER)
 
-test-parallel: ## Run tests in parallel (8 processes)
-	docker exec $(PHP_CONTAINER) php artisan test --parallel --processes=8
+test-serial: ## Run all tests without parallelization
+	docker exec $(PHP_CONTAINER) php artisan test
 
 # =============================================================================
 # CODE QUALITY
@@ -187,8 +187,8 @@ check-q: ## Check with minimal output
 	@docker exec $(NODE_CONTAINER) npm run lint --silent && echo "✓ ESLint" || echo "✗ ESLint"
 	@docker exec $(NODE_CONTAINER) npm run type-check --silent && echo "✓ Types" || echo "✗ Types"
 
-test-q: ## Tests with compact output
-	@docker exec $(PHP_CONTAINER) php artisan test --compact
+test-q: ## Tests with compact output (parallel)
+	@docker exec $(PHP_CONTAINER) php artisan test --parallel --processes=8 --compact
 
 lint: check ## Alias for check
 

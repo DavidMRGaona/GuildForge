@@ -45,7 +45,10 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
         <ProfileHeader :user="user" />
 
         <!-- Flash messages -->
-        <div v-if="successMessage || errorMessage" class="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <div
+            v-if="successMessage || errorMessage"
+            class="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8"
+        >
             <div v-if="successMessage" class="rounded-md bg-green-50 p-4 dark:bg-green-900/30">
                 <p class="text-sm text-green-700 dark:text-green-400">{{ successMessage }}</p>
             </div>
@@ -56,11 +59,7 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
 
         <!-- Mobile tab bar (visible on < lg) -->
         <div class="lg:hidden">
-            <ProfileTabBar
-                :tabs="tabs"
-                :active-tab-id="activeTabId"
-                @select-tab="setActiveTab"
-            />
+            <ProfileTabBar :tabs="tabs" :active-tab-id="activeTabId" @select-tab="setActiveTab" />
         </div>
 
         <!-- Main content area -->
@@ -78,10 +77,7 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                 <!-- Tab content -->
                 <main class="min-w-0">
                     <!-- Account tab -->
-                    <ProfileAccountTab
-                        v-if="activeTabId === 'account'"
-                        :user="user"
-                    />
+                    <ProfileAccountTab v-if="activeTabId === 'account'" :user="user" />
 
                     <!-- Module tabs -->
                     <template v-if="hasModuleTabs">
@@ -90,7 +86,9 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                                 <component :is="item.component" v-bind="item.props" />
                                 <template #fallback>
                                     <div class="flex items-center justify-center py-12">
-                                        <div class="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+                                        <div
+                                            class="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"
+                                        />
                                     </div>
                                 </template>
                             </Suspense>
