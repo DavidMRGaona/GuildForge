@@ -7,13 +7,13 @@ namespace Tests\Feature\Http\Controllers;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class GalleryControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     public function test_index_displays_published_galleries(): void
     {

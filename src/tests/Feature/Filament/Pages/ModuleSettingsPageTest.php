@@ -8,13 +8,13 @@ use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 
 final class ModuleSettingsPageTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     public function test_settings_page_requires_admin(): void
     {

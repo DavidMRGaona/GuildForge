@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers;
 
 use App\Application\Services\SettingsServiceInterface;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 final class LegalPageControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     #[Test]
     #[DataProvider('legalPagesProvider')]

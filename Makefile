@@ -146,8 +146,8 @@ test-coverage: ## Run tests with coverage report
 test-filter: ## Run specific test (usage: make test-filter FILTER=EventTest)
 	docker exec $(PHP_CONTAINER) php artisan test --filter=$(FILTER)
 
-test-parallel: ## Run tests in parallel
-	docker exec $(PHP_CONTAINER) php artisan test --parallel
+test-parallel: ## Run tests in parallel (8 processes)
+	docker exec $(PHP_CONTAINER) php artisan test --parallel --processes=8
 
 # =============================================================================
 # CODE QUALITY

@@ -9,7 +9,7 @@ use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
@@ -17,7 +17,7 @@ use Tests\TestCase;
 
 final class ModuleUninstallTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private string $modulesPath;
 

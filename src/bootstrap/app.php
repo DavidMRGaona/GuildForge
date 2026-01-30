@@ -30,9 +30,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
+        // Bot protection - runs on ALL requests
+        $middleware->append(\App\Http\Middleware\BlockBotsMiddleware::class);
+
         $middleware->alias([
             'registration.enabled' => \App\Http\Middleware\EnsureRegistrationIsEnabled::class,
             'login.enabled' => \App\Http\Middleware\EnsureLoginIsEnabled::class,
+            'bot-protection' => \App\Http\Middleware\BlockBotsMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

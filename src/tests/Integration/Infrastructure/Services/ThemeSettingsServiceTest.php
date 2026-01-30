@@ -8,12 +8,12 @@ use App\Application\DTOs\ThemeSettingsDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Infrastructure\Services\ThemeSettingsService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class ThemeSettingsServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private ThemeSettingsServiceInterface $service;
 

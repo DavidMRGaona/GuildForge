@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Infrastructure\Services;
+namespace Tests\Integration\Infrastructure\Services;
 
 use App\Application\DTOs\Response\TagHierarchyDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Services\TagQueryService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class TagQueryServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private TagQueryService $service;
 
@@ -26,7 +26,6 @@ final class TagQueryServiceTest extends TestCase
     {
         $result = $this->service->getAllInHierarchicalOrder();
 
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 
@@ -94,7 +93,6 @@ final class TagQueryServiceTest extends TestCase
 
         $result = $this->service->getOptionsForSelect();
 
-        $this->assertIsArray($result);
         $this->assertCount(2, $result);
         $this->assertArrayHasKey($parent->id, $result);
         $this->assertEquals('Parent', $result[$parent->id]);

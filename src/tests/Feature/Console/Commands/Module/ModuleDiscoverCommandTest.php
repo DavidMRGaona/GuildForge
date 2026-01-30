@@ -7,13 +7,13 @@ namespace Tests\Feature\Console\Commands\Module;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 final class ModuleDiscoverCommandTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private string $modulesPath;
 

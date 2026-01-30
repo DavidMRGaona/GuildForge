@@ -14,12 +14,12 @@ use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class ModuleManagerServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private ModuleManagerServiceInterface $service;
 

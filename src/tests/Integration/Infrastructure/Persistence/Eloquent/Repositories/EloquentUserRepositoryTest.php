@@ -10,12 +10,12 @@ use App\Domain\Repositories\UserRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class EloquentUserRepositoryTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private EloquentUserRepository $repository;
 

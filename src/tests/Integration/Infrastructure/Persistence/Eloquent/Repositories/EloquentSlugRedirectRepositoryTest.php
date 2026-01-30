@@ -10,12 +10,12 @@ use App\Domain\ValueObjects\Slug;
 use App\Infrastructure\Persistence\Eloquent\Models\SlugRedirectModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentSlugRedirectRepository;
 use DateTimeImmutable;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class EloquentSlugRedirectRepositoryTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private EloquentSlugRedirectRepository $repository;
 

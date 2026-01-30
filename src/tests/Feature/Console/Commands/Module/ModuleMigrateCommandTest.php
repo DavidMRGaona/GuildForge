@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Console\Commands\Module;
 
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class ModuleMigrateCommandTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private string $modulesPath;
 

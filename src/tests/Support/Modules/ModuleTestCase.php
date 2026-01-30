@@ -10,7 +10,7 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePermissionRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\ValueObjects\ModuleName;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -22,7 +22,7 @@ use Tests\TestCase;
 abstract class ModuleTestCase extends TestCase
 {
     use InteractsWithModules;
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     /**
      * The module name being tested.

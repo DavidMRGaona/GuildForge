@@ -11,12 +11,12 @@ use App\Domain\ValueObjects\PhotoId;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentPhotoRepository;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class EloquentPhotoRepositoryTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private EloquentPhotoRepository $repository;
 

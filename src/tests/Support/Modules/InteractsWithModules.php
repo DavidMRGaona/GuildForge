@@ -118,12 +118,30 @@ trait InteractsWithModules
 
     /**
      * Get the path to a test module.
+     *
+     * Uses process-unique paths when running in parallel to prevent conflicts.
      */
     protected function testModulePath(string $moduleName, string $path = ''): string
     {
-        $basePath = config('modules.path', base_path('modules')).'/'.$moduleName;
+        $basePath = $this->getTestModulesBasePath().'/'.$moduleName;
 
         return $path !== '' ? $basePath.'/'.ltrim($path, '/') : $basePath;
+    }
+
+    /**
+     * Get the base path for test modules.
+     *
+     * When running in parallel (TEST_TOKEN is set), uses a unique path per process.
+     */
+    protected function getTestModulesBasePath(): string
+    {
+        $testToken = getenv('TEST_TOKEN');
+
+        if ($testToken !== false) {
+            return base_path('modules_test_'.$testToken);
+        }
+
+        return config('modules.path', base_path('modules'));
     }
 
     /**
@@ -180,7 +198,7 @@ trait InteractsWithModules
      */
     protected function cleanupTestModules(): void
     {
-        $modulesPath = config('modules.path', base_path('modules'));
+        $modulesPath = $this->getTestModulesBasePath();
 
         foreach ($this->createdModules as $moduleName) {
             $modulePath = $modulesPath.'/'.$moduleName;
@@ -189,7 +207,21 @@ trait InteractsWithModules
             }
         }
 
+        // Clean up the parallel test directory if empty
+        $testToken = getenv('TEST_TOKEN');
+        if ($testToken !== false && is_dir($modulesPath) && $this->isDirectoryEmpty($modulesPath)) {
+            File::deleteDirectory($modulesPath);
+        }
+
         $this->createdModules = [];
+    }
+
+    /**
+     * Check if a directory is empty.
+     */
+    private function isDirectoryEmpty(string $path): bool
+    {
+        return count(scandir($path)) <= 2; // Only . and ..
     }
 
     /**

@@ -269,6 +269,9 @@ export default {
             pendingEmailNotice:
                 'A verification email has been sent to {email}. Click the link in the email to confirm the change.',
             avatar: 'Avatar',
+            changeAvatar: 'Change avatar',
+            avatarUpdated: 'Avatar updated successfully',
+            avatarError: 'Error updating avatar. Please try again.',
             changePassword: 'Change password',
             currentPassword: 'Current password',
             newPassword: 'New password',
@@ -278,6 +281,12 @@ export default {
             passwordUpdated: 'Password updated successfully',
             profileError: 'Error updating profile. Please check your information and try again.',
             passwordError: 'Error changing password. Please check your information and try again.',
+            memberSince: 'Member since {date}',
+            security: 'Security',
+            tabs: {
+                account: 'Account',
+                gameTables: 'Tables',
+            },
         },
         userMenu: {
             openMenu: 'Open user menu',

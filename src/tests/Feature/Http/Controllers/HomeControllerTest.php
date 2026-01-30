@@ -10,13 +10,13 @@ use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class HomeControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     public function test_index_displays_upcoming_published_events(): void
     {
