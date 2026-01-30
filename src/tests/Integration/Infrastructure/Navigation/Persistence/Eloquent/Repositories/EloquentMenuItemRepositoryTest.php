@@ -6,12 +6,12 @@ namespace Tests\Integration\Infrastructure\Navigation\Persistence\Eloquent\Repos
 
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Repositories\EloquentMenuItemRepository;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class EloquentMenuItemRepositoryTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private EloquentMenuItemRepository $repository;
 

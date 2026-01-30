@@ -9,6 +9,7 @@ final readonly class SlotRegistrationDTO
     /**
      * @param  array<string, mixed>  $props  Static props to pass to the component
      * @param  array<string>  $dataKeys  Inertia page props to inject as component props
+     * @param  array<string, mixed>|null  $profileTab  Tab metadata for profile-sections slot
      */
     public function __construct(
         public string $slot,
@@ -17,6 +18,7 @@ final readonly class SlotRegistrationDTO
         public int $order = 0,
         public array $props = [],
         public array $dataKeys = [],
+        public ?array $profileTab = null,
     ) {
     }
 
@@ -32,6 +34,7 @@ final readonly class SlotRegistrationDTO
             order: $data['order'] ?? 0,
             props: $data['props'] ?? [],
             dataKeys: $data['dataKeys'] ?? [],
+            profileTab: $data['profileTab'] ?? null,
         );
     }
 
@@ -40,7 +43,7 @@ final readonly class SlotRegistrationDTO
      */
     public function toArray(): array
     {
-        return [
+        $result = [
             'slot' => $this->slot,
             'component' => $this->component,
             'module' => $this->module,
@@ -48,5 +51,11 @@ final readonly class SlotRegistrationDTO
             'props' => $this->props,
             'dataKeys' => $this->dataKeys,
         ];
+
+        if ($this->profileTab !== null) {
+            $result['profileTab'] = $this->profileTab;
+        }
+
+        return $result;
     }
 }

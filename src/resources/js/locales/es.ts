@@ -270,6 +270,9 @@ export default {
             pendingEmailNotice:
                 'Se ha enviado un correo de verificación a {email}. Haz clic en el enlace del correo para confirmar el cambio.',
             avatar: 'Avatar',
+            changeAvatar: 'Cambiar avatar',
+            avatarUpdated: 'Avatar actualizado correctamente',
+            avatarError: 'Error al actualizar el avatar. Por favor, inténtalo de nuevo.',
             changePassword: 'Cambiar contraseña',
             currentPassword: 'Contraseña actual',
             newPassword: 'Nueva contraseña',
@@ -281,6 +284,12 @@ export default {
                 'Error al actualizar el perfil. Por favor, revisa los datos e inténtalo de nuevo.',
             passwordError:
                 'Error al cambiar la contraseña. Por favor, revisa los datos e inténtalo de nuevo.',
+            memberSince: 'Miembro desde {date}',
+            security: 'Seguridad',
+            tabs: {
+                account: 'Cuenta',
+                gameTables: 'Mesas',
+            },
         },
         userMenu: {
             openMenu: 'Abrir menú de usuario',

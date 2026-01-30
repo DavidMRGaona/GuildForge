@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers;
 
 use App\Application\Services\SettingsServiceInterface;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class AboutControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     public function test_about_page_renders_successfully(): void
     {

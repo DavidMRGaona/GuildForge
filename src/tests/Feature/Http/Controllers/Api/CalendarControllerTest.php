@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers\Api;
 
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class CalendarControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     public function test_index_returns_json_response(): void
     {

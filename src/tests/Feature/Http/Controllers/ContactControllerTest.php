@@ -6,13 +6,13 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Application\Services\SettingsServiceInterface;
 use App\Mail\ContactFormMail;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 final class ContactControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     /**
      * Verify successful contact form submission sends email with correct data.

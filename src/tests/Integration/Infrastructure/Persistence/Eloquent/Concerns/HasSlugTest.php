@@ -9,13 +9,13 @@ use App\Infrastructure\Persistence\Eloquent\Concerns\HasSlug;
 use App\Infrastructure\Persistence\Eloquent\Models\SlugRedirectModel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class HasSlugTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     protected function setUp(): void
     {

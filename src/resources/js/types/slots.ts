@@ -1,3 +1,5 @@
+import type { ProfileTabIcon } from './profile';
+
 export type SlotPosition =
     | 'before-header'
     | 'after-header'
@@ -8,7 +10,14 @@ export type SlotPosition =
     // Page-specific slots
     | 'event-detail-actions'
     | 'game-table-registration'
-    | 'campaign-detail-actions';
+    | 'campaign-detail-actions'
+    | 'profile-sections';
+
+export interface ProfileTabMeta {
+    icon: ProfileTabIcon;
+    labelKey: string;
+    badgeKey?: string;
+}
 
 export interface SlotRegistration {
     slot: string;
@@ -17,6 +26,7 @@ export interface SlotRegistration {
     order: number;
     props: Record<string, unknown>;
     dataKeys: string[];
+    profileTab?: ProfileTabMeta;
 }
 
 export type ModuleSlots = Record<string, SlotRegistration[]>;

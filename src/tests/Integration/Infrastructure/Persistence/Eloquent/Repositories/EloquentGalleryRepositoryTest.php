@@ -10,12 +10,12 @@ use App\Domain\ValueObjects\GalleryId;
 use App\Domain\ValueObjects\Slug;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentGalleryRepository;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class EloquentGalleryRepositoryTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private EloquentGalleryRepository $repository;
 

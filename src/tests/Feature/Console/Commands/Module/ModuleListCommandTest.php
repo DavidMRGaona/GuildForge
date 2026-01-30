@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Console\Commands\Module;
 
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 final class ModuleListCommandTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     public function test_it_lists_all_modules(): void
     {
