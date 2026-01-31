@@ -33,6 +33,8 @@ interface MenuServiceInterface
     /**
      * Sync module-contributed navigation items to the database.
      * This merges module items with existing database items.
+     *
+     * @param  string|null  $moduleName  If provided, only sync items for this module
      */
-    public function syncModuleNavigation(): void;
+    public function syncModuleNavigation(?string $moduleName = null): void;
 }

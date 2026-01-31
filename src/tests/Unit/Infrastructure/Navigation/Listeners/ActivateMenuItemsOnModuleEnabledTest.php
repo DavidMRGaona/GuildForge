@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Navigation\Listeners;
 
+use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Infrastructure\Navigation\Listeners\ActivateMenuItemsOnModuleEnabled;
@@ -28,7 +29,12 @@ final class ActivateMenuItemsOnModuleEnabledTest extends TestCase
             ->once()
             ->with('blog');
 
-        $listener = new ActivateMenuItemsOnModuleEnabled($repository);
+        $menuService = Mockery::mock(MenuServiceInterface::class);
+        $menuService->shouldReceive('syncModuleNavigation')
+            ->once()
+            ->with('blog');
+
+        $listener = new ActivateMenuItemsOnModuleEnabled($repository, $menuService);
         $event = new ModuleEnabled(
             moduleId: 'blog',
             moduleName: 'blog'

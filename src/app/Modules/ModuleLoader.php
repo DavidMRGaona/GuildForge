@@ -7,6 +7,7 @@ namespace App\Modules;
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
+use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
@@ -71,6 +72,9 @@ final class ModuleLoader
 
         // Register routes from the provider
         $this->registerProviderRoutes($provider);
+
+        // Register navigation from the provider
+        $this->registerProviderNavigation($provider);
     }
 
     /**
@@ -148,6 +152,23 @@ final class ModuleLoader
         if ($this->app->bound(ModuleRouteRegistryInterface::class)) {
             $routeRegistry = $this->app->make(ModuleRouteRegistryInterface::class);
             $routeRegistry->registerMany($routes);
+        }
+    }
+
+    /**
+     * Register navigation from a module provider.
+     */
+    private function registerProviderNavigation(ModuleServiceProvider $provider): void
+    {
+        $navigation = $provider->registerNavigation();
+
+        if ($navigation === []) {
+            return;
+        }
+
+        if ($this->app->bound(ModuleNavigationRegistryInterface::class)) {
+            $navigationRegistry = $this->app->make(ModuleNavigationRegistryInterface::class);
+            $navigationRegistry->registerMany($navigation);
         }
     }
 

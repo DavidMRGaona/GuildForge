@@ -110,6 +110,52 @@ final class MenuItemSeeder extends Seeder
                     'sort_order' => $item['sort_order'],
                     'target' => LinkTarget::Self,
                     'visibility' => MenuVisibility::Public,
+                    'is_active' => false,
+                ],
+            );
+        }
+
+        $legalFooterItems = [
+            [
+                'label' => 'Aviso legal',
+                'route' => 'legal.show',
+                'route_params' => ['slug' => 'aviso-legal'],
+                'sort_order' => 60,
+            ],
+            [
+                'label' => 'Política de privacidad',
+                'route' => 'legal.show',
+                'route_params' => ['slug' => 'politica-de-privacidad'],
+                'sort_order' => 61,
+            ],
+            [
+                'label' => 'Política de cookies',
+                'route' => 'legal.show',
+                'route_params' => ['slug' => 'politica-de-cookies'],
+                'sort_order' => 62,
+            ],
+            [
+                'label' => 'Términos y condiciones',
+                'route' => 'legal.show',
+                'route_params' => ['slug' => 'terminos-y-condiciones'],
+                'sort_order' => 63,
+            ],
+        ];
+
+        foreach ($legalFooterItems as $item) {
+            MenuItemModel::firstOrCreate(
+                [
+                    'location' => MenuLocation::Footer,
+                    'label' => $item['label'],
+                    'module' => 'core',
+                ],
+                [
+                    'route' => $item['route'],
+                    'route_params' => $item['route_params'],
+                    'icon' => null,
+                    'sort_order' => $item['sort_order'],
+                    'target' => LinkTarget::Self,
+                    'visibility' => MenuVisibility::Public,
                     'is_active' => true,
                 ],
             );

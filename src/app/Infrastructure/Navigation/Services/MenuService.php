@@ -51,13 +51,15 @@ final readonly class MenuService implements MenuServiceInterface
         };
     }
 
-    public function syncModuleNavigation(): void
+    public function syncModuleNavigation(?string $moduleName = null): void
     {
         if ($this->moduleNavigationRegistry === null) {
             return;
         }
 
-        $moduleItems = $this->moduleNavigationRegistry->all();
+        $moduleItems = $moduleName !== null
+            ? $this->moduleNavigationRegistry->forModule($moduleName)
+            : $this->moduleNavigationRegistry->all();
 
         DB::transaction(function () use ($moduleItems): void {
             foreach ($moduleItems as $navItem) {
@@ -140,9 +142,9 @@ final readonly class MenuService implements MenuServiceInterface
             routeParams: [],
             icon: $navItem->icon,
             target: LinkTarget::Self,
-            visibility: $navItem->permissions !== [] ? MenuVisibility::Permission : MenuVisibility::Authenticated,
+            visibility: $navItem->permissions !== [] ? MenuVisibility::Permission : MenuVisibility::Public,
             permissions: $navItem->permissions,
-            sortOrder: $this->repository->maxSortOrder(MenuLocation::Header) + 1,
+            sortOrder: $navItem->sort !== 0 ? $navItem->sort : $this->repository->maxSortOrder(MenuLocation::Header) + 1,
             isActive: true,
             module: $navItem->module,
         );
