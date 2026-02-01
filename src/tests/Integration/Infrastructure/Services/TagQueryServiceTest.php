@@ -273,7 +273,7 @@ final class TagQueryServiceTest extends TestCase
 
     public function test_get_usage_count_returns_zero_for_nonexistent_tag(): void
     {
-        $result = $this->service->getUsageCount('nonexistent-uuid');
+        $result = $this->service->getUsageCount('00000000-0000-0000-0000-000000000000');
 
         $this->assertEquals(0, $result);
     }
