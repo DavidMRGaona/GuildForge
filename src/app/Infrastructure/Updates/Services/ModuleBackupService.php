@@ -19,7 +19,8 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
 {
     public function __construct(
         private ModuleManagerServiceInterface $moduleManager,
-    ) {}
+    ) {
+    }
 
     public function createBackup(ModuleName $name): string
     {

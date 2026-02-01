@@ -14,7 +14,8 @@ final readonly class CoreUpdateChecker implements CoreUpdateCheckerInterface
     public function __construct(
         private CoreVersionServiceInterface $versionService,
         private GitHubReleaseFetcherInterface $githubFetcher,
-    ) {}
+    ) {
+    }
 
     public function checkForUpdate(): ?GitHubReleaseInfo
     {

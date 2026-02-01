@@ -8,13 +8,13 @@ use App\Application\DTOs\Response\EventResponseDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Support\QueryHelpers;
 
 final readonly class EventQueryService implements EventQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {
-    }
+    ) {}
 
     public function getUpcomingEvents(int $limit = 10): array
     {
@@ -31,20 +31,14 @@ final readonly class EventQueryService implements EventQueryServiceInterface
 
     public function getPublishedEventsPaginated(int $page = 1, int $perPage = 12, ?array $tagSlugs = null): array
     {
-        $offset = ($page - 1) * $perPage;
-
         $query = EventModel::query()
             ->with('tags')
             ->where('is_published', true);
 
-        if ($tagSlugs !== null && count($tagSlugs) > 0) {
-            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
-        }
+        QueryHelpers::applyTagFilter($query, $tagSlugs);
 
-        $events = $query
+        $events = QueryHelpers::applyPagination($query, $page, $perPage)
             ->orderBy('start_date', 'desc')
-            ->offset($offset)
-            ->limit($perPage)
             ->get();
 
         return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
@@ -55,11 +49,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
         $query = EventModel::query()
             ->where('is_published', true);
 
-        if ($tagSlugs !== null && count($tagSlugs) > 0) {
-            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
-        }
-
-        return $query->count();
+        return QueryHelpers::applyTagFilter($query, $tagSlugs)->count();
     }
 
     public function findPublishedBySlug(string $slug): ?EventResponseDTO

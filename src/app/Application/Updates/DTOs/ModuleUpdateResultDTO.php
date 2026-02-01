@@ -25,7 +25,8 @@ final readonly class ModuleUpdateResultDTO
         public ?string $errorMessage,
         public ?string $backupPath,
         public string $historyId,
-    ) {}
+    ) {
+    }
 
     public function isSuccess(): bool
     {

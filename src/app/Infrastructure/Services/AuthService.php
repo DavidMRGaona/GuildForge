@@ -17,16 +17,16 @@ use App\Domain\Events\UserLoggedOut;
 use App\Domain\Events\UserPasswordChanged;
 use App\Domain\Events\UserProfileUpdated;
 use App\Domain\Events\UserRegistered;
+use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\Repositories\UserRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\VerifyPendingEmailNotification;
 use App\Notifications\WelcomeNotification;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
@@ -39,8 +39,7 @@ final readonly class AuthService implements AuthServiceInterface
         private ImageOptimizationServiceInterface $imageOptimizer,
         private UserRepositoryInterface $userRepository,
         private UserModelQueryServiceInterface $userModelQuery,
-    ) {
-    }
+    ) {}
 
     public function register(CreateUserDTO $dto): UserResponseDTO
     {
@@ -124,19 +123,13 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function sendEmailVerificationNotification(string $userId): void
     {
-        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
-        if ($userModel === null) {
-            throw new ModelNotFoundException("User not found: $userId");
-        }
+        $userModel = $this->getUserModelOrFail($userId);
         $userModel->sendEmailVerificationNotification();
     }
 
     public function verifyEmail(string $userId, string $hash): bool
     {
-        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
-        if ($userModel === null) {
-            throw new ModelNotFoundException("User not found: $userId");
-        }
+        $userModel = $this->getUserModelOrFail($userId);
 
         if (! hash_equals(sha1($userModel->getEmailForVerification()), $hash)) {
             return false;
@@ -153,10 +146,7 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function updateProfile(string $userId, UpdateUserDTO $dto): UserResponseDTO
     {
-        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
-        if ($userModel === null) {
-            throw new ModelNotFoundException("User not found: $userId");
-        }
+        $userModel = $this->getUserModelOrFail($userId);
 
         // Handle avatar cleanup if avatar is being changed
         if ($dto->avatarPublicId !== null && $userModel->avatar_public_id !== null && $userModel->avatar_public_id !== $dto->avatarPublicId) {
@@ -189,10 +179,7 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function changePassword(string $userId, string $currentPassword, string $newPassword): bool
     {
-        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
-        if ($userModel === null) {
-            throw new ModelNotFoundException("User not found: $userId");
-        }
+        $userModel = $this->getUserModelOrFail($userId);
 
         if (! Hash::check($currentPassword, $userModel->password)) {
             return false;
@@ -209,10 +196,7 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function verifyPendingEmail(string $userId, string $hash): bool
     {
-        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
-        if ($userModel === null) {
-            throw new ModelNotFoundException("User not found: $userId");
-        }
+        $userModel = $this->getUserModelOrFail($userId);
 
         if ($userModel->pending_email === null) {
             return false;
@@ -268,5 +252,21 @@ final readonly class AuthService implements AuthServiceInterface
         $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
         return $userModel !== null && $userModel->hasVerifiedEmail();
+    }
+
+    /**
+     * @throws UserNotFoundException
+     */
+    private function getUserModelOrFail(string $userId): UserModel
+    {
+        $userModel = $this->userModelQuery->findModelById(
+            UserId::fromString($userId)
+        );
+
+        if ($userModel === null) {
+            throw UserNotFoundException::withId($userId);
+        }
+
+        return $userModel;
     }
 }

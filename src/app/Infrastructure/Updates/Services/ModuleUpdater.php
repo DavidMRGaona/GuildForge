@@ -34,7 +34,16 @@ use ZipArchive;
 final class ModuleUpdater implements ModuleUpdaterInterface
 {
     private const string LOCK_PREFIX = 'module_update_lock:';
+
     private const int LOCK_TTL = 600; // 10 minutes
+
+    private readonly string $tempPath;
+
+    private readonly bool $verifyChecksum;
+
+    private readonly bool $healthCheck;
+
+    private readonly bool $autoRollback;
 
     public function __construct(
         private readonly ModuleRepositoryInterface $moduleRepository,
@@ -43,7 +52,12 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         private readonly ModuleBackupServiceInterface $backupService,
         private readonly ModuleHealthCheckerInterface $healthChecker,
         private readonly Dispatcher $events,
-    ) {}
+    ) {
+        $this->tempPath = (string) config('updates.temp_path', storage_path('app/temp/updates'));
+        $this->verifyChecksum = (bool) config('updates.behavior.verify_checksum', true);
+        $this->healthCheck = (bool) config('updates.behavior.health_check', true);
+        $this->autoRollback = (bool) config('updates.behavior.auto_rollback', true);
+    }
 
     public function preview(ModuleName $name): UpdatePreviewDTO
     {
@@ -102,7 +116,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         }
 
         // Acquire lock
-        $lockKey = self::LOCK_PREFIX . $name->value;
+        $lockKey = self::LOCK_PREFIX.$name->value;
         $lock = Cache::lock($lockKey, self::LOCK_TTL);
 
         if (! $lock->get()) {
@@ -161,14 +175,13 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             $this->updateStatus($history, UpdateStatus::Downloading);
             $this->log($history->id, 'download', 'started', 'Downloading update...');
 
-            $tempPath = config('updates.temp_path', storage_path('app/temp/updates'));
-            $downloadPath = "{$tempPath}/{$name->value}-{$toVersion}.zip";
+            $downloadPath = "{$this->tempPath}/{$name->value}-{$toVersion}.zip";
 
             $this->githubFetcher->downloadRelease($release, $downloadPath);
             $this->log($history->id, 'download', 'completed', 'Download complete');
 
             // Step 4: Verify checksum
-            if (config('updates.behavior.verify_checksum', true) && $release->hasChecksum()) {
+            if ($this->verifyChecksum && $release->hasChecksum()) {
                 $this->updateStatus($history, UpdateStatus::Verifying);
                 $this->log($history->id, 'verify', 'started', 'Verifying checksum...');
 
@@ -201,7 +214,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             });
 
             // Step 7: Health check
-            if (config('updates.behavior.health_check', true)) {
+            if ($this->healthCheck) {
                 $this->updateStatus($history, UpdateStatus::HealthChecking);
                 $this->log($history->id, 'health', 'started', 'Running health check...');
 
@@ -259,7 +272,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
 
             // Attempt rollback
             $wasRolledBack = false;
-            if (config('updates.behavior.auto_rollback', true) && $backupPath !== null) {
+            if ($this->autoRollback && $backupPath !== null) {
                 try {
                     $this->log($history->id, 'rollback', 'started', 'Attempting rollback...');
                     $this->backupService->restoreBackup($name, $backupPath);
@@ -351,14 +364,14 @@ final class ModuleUpdater implements ModuleUpdaterInterface
 
     public function isUpdateInProgress(ModuleName $name): bool
     {
-        $lockKey = self::LOCK_PREFIX . $name->value;
+        $lockKey = self::LOCK_PREFIX.$name->value;
 
         return Cache::has($lockKey);
     }
 
     public function cancelUpdate(ModuleName $name): bool
     {
-        $lockKey = self::LOCK_PREFIX . $name->value;
+        $lockKey = self::LOCK_PREFIX.$name->value;
 
         return Cache::forget($lockKey);
     }
@@ -398,9 +411,9 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         }
 
         // Extract new version
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($zipPath) !== true) {
-            throw UpdateException::extractionFailed(basename($modulePath), "Cannot open ZIP file");
+            throw UpdateException::extractionFailed(basename($modulePath), 'Cannot open ZIP file');
         }
 
         // The ZIP contains a folder like "module-name-1.0.0/"
@@ -408,7 +421,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         $zip->close();
 
         // Rename extracted folder to module name
-        $extractedFolders = glob(dirname($modulePath) . '/*', GLOB_ONLYDIR);
+        $extractedFolders = glob(dirname($modulePath).'/*', GLOB_ONLYDIR);
         foreach ($extractedFolders as $folder) {
             if (str_contains(basename($folder), '-') && ! File::isDirectory($modulePath)) {
                 File::move($folder, $modulePath);
@@ -427,7 +440,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             return [];
         }
 
-        $migrationPath = $module->path() . '/database/migrations';
+        $migrationPath = $module->path().'/database/migrations';
         if (! File::isDirectory($migrationPath)) {
             return [];
         }
@@ -461,7 +474,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             return [];
         }
 
-        $seederPath = $module->path() . '/database/seeders';
+        $seederPath = $module->path().'/database/seeders';
         if (! File::isDirectory($seederPath)) {
             return [];
         }
@@ -476,7 +489,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             }
 
             $className = $file->getFilenameWithoutExtension();
-            $fullClassName = $module->namespace() . '\\Database\\Seeders\\' . $className;
+            $fullClassName = $module->namespace().'\\Database\\Seeders\\'.$className;
 
             if (in_array($fullClassName, $executedSeeders, true)) {
                 continue;

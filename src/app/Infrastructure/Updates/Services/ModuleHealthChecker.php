@@ -15,7 +15,8 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
 {
     public function __construct(
         private ModuleManagerServiceInterface $moduleManager,
-    ) {}
+    ) {
+    }
 
     public function check(ModuleName $name): HealthCheckResultDTO
     {

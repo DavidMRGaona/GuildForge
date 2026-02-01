@@ -8,13 +8,13 @@ use App\Application\DTOs\Response\GalleryDetailResponseDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\GalleryQueryServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
+use App\Infrastructure\Support\QueryHelpers;
 
 final readonly class GalleryQueryService implements GalleryQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {
-    }
+    ) {}
 
     public function getFeaturedGallery(int $photoLimit = 12): ?GalleryDetailResponseDTO
     {
@@ -35,21 +35,15 @@ final readonly class GalleryQueryService implements GalleryQueryServiceInterface
 
     public function getPublishedPaginated(int $page = 1, int $perPage = 12, ?array $tagSlugs = null): array
     {
-        $offset = ($page - 1) * $perPage;
-
         $query = GalleryModel::query()
             ->with('tags')
             ->withCount('photos')
             ->where('is_published', true);
 
-        if ($tagSlugs !== null && count($tagSlugs) > 0) {
-            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
-        }
+        QueryHelpers::applyTagFilter($query, $tagSlugs);
 
-        $galleries = $query
+        $galleries = QueryHelpers::applyPagination($query, $page, $perPage)
             ->orderBy('created_at', 'desc')
-            ->offset($offset)
-            ->limit($perPage)
             ->get();
 
         return $galleries->map(fn (GalleryModel $gallery) => $this->dtoFactory->createGalleryDTO($gallery))->all();
@@ -60,11 +54,7 @@ final readonly class GalleryQueryService implements GalleryQueryServiceInterface
         $query = GalleryModel::query()
             ->where('is_published', true);
 
-        if ($tagSlugs !== null && count($tagSlugs) > 0) {
-            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
-        }
-
-        return $query->count();
+        return QueryHelpers::applyTagFilter($query, $tagSlugs)->count();
     }
 
     public function findPublishedBySlug(string $slug): ?GalleryDetailResponseDTO

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Updates\Exceptions;
 
-use Exception;
+use DomainException;
 
 /**
  * Base exception for update-related errors.
  */
-class UpdateException extends Exception
+final class UpdateException extends DomainException
 {
     public static function downloadFailed(string $moduleName, string $reason): self
     {

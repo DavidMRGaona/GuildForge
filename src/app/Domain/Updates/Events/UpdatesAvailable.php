@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Updates\Events;
 
-use Illuminate\Foundation\Events\Dispatchable;
-
 final readonly class UpdatesAvailable
 {
-    use Dispatchable;
-
     /**
      * @param  array<string, array{current: string, available: string}>  $moduleUpdates
      */
