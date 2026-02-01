@@ -208,7 +208,15 @@
 /* Border utilities */
 .border-default { border-color: var(--color-border); }
 .border-strong { border-color: var(--color-border-strong); }
+.hover\:border-strong:hover { border-color: var(--color-border-strong); }
 .border-primary { border-color: var(--color-primary); }
+
+/* Fix for Chrome hover on HeadlessUI Listbox buttons
+   Chrome loses hover tracking after aria-expanded interactions;
+   targeting data-headlessui-state forces recalculation */
+button[data-headlessui-state]:hover {
+    border-color: var(--color-border-strong);
+}
 
 /* Status text utilities */
 .text-success { color: var(--color-success); }
