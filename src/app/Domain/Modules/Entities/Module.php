@@ -21,7 +21,7 @@ final class Module
         private readonly ModuleName $name,
         private readonly string $displayName,
         private readonly string $description,
-        private readonly ModuleVersion $version,
+        private ModuleVersion $version,
         private readonly string $author,
         private readonly ModuleRequirements $requirements,
         private ModuleStatus $status,
@@ -33,6 +33,10 @@ final class Module
         private readonly ?string $provider = null,
         private readonly ?string $path = null,
         private readonly array $dependencies = [],
+        private ?string $sourceOwner = null,
+        private ?string $sourceRepo = null,
+        private ?string $latestAvailableVersion = null,
+        private ?DateTimeImmutable $lastUpdateCheckAt = null,
     ) {
     }
 
@@ -119,6 +123,67 @@ final class Module
     public function dependencies(): array
     {
         return $this->dependencies;
+    }
+
+    public function sourceOwner(): ?string
+    {
+        return $this->sourceOwner;
+    }
+
+    public function sourceRepo(): ?string
+    {
+        return $this->sourceRepo;
+    }
+
+    public function latestAvailableVersion(): ?string
+    {
+        return $this->latestAvailableVersion;
+    }
+
+    public function lastUpdateCheckAt(): ?DateTimeImmutable
+    {
+        return $this->lastUpdateCheckAt;
+    }
+
+    public function hasUpdateSource(): bool
+    {
+        return $this->sourceOwner !== null && $this->sourceRepo !== null;
+    }
+
+    public function hasAvailableUpdate(): bool
+    {
+        if ($this->latestAvailableVersion === null) {
+            return false;
+        }
+
+        try {
+            $latestVersion = ModuleVersion::fromString($this->latestAvailableVersion);
+
+            return $latestVersion->isGreaterThan($this->version);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    public function updateSourceInfo(string $owner, string $repo): void
+    {
+        $this->sourceOwner = $owner;
+        $this->sourceRepo = $repo;
+    }
+
+    public function updateLatestAvailableVersion(string $version): void
+    {
+        $this->latestAvailableVersion = $version;
+    }
+
+    public function updateLastCheckAt(DateTimeImmutable $timestamp): void
+    {
+        $this->lastUpdateCheckAt = $timestamp;
+    }
+
+    public function updateVersion(ModuleVersion $version): void
+    {
+        $this->version = $version;
     }
 
     public function enable(): void

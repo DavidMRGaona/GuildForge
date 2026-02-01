@@ -34,6 +34,13 @@ use App\Application\Services\TagQueryServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Application\Updates\Services\CoreUpdateCheckerInterface;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
+use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
+use App\Application\Updates\Services\ModuleBackupServiceInterface;
+use App\Application\Updates\Services\ModuleHealthCheckerInterface;
+use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
+use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Domain\Repositories\ArticleRepositoryInterface;
@@ -93,6 +100,13 @@ use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
 use App\Infrastructure\Services\UserModelQueryService;
 use App\Infrastructure\Services\UserService;
+use App\Infrastructure\Updates\Services\CoreUpdateChecker;
+use App\Infrastructure\Updates\Services\CoreVersionService;
+use App\Infrastructure\Updates\Services\GitHubReleaseFetcher;
+use App\Infrastructure\Updates\Services\ModuleBackupService;
+use App\Infrastructure\Updates\Services\ModuleHealthChecker;
+use App\Infrastructure\Updates\Services\ModuleUpdateChecker;
+use App\Infrastructure\Updates\Services\ModuleUpdater;
 use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
@@ -209,6 +223,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(MenuItemHrefResolverInterface::class, MenuItemHrefResolver::class);
         $this->app->singleton(MenuServiceInterface::class, MenuService::class);
         $this->app->singleton(RouteRegistryInterface::class, RouteRegistry::class);
+
+        // Update system bindings
+        $this->app->singleton(GitHubReleaseFetcherInterface::class, GitHubReleaseFetcher::class);
+        $this->app->singleton(ModuleBackupServiceInterface::class, ModuleBackupService::class);
+        $this->app->singleton(ModuleHealthCheckerInterface::class, ModuleHealthChecker::class);
+        $this->app->singleton(ModuleUpdateCheckerInterface::class, ModuleUpdateChecker::class);
+        $this->app->singleton(ModuleUpdaterInterface::class, ModuleUpdater::class);
+        $this->app->singleton(CoreVersionServiceInterface::class, CoreVersionService::class);
+        $this->app->singleton(CoreUpdateCheckerInterface::class, CoreUpdateChecker::class);
 
         // Module loader (for booting enabled modules)
         $this->app->singleton(\App\Modules\ModuleLoader::class, function ($app) {

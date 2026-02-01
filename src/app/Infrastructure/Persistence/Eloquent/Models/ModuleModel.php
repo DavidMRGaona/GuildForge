@@ -23,6 +23,10 @@ use Illuminate\Support\Carbon;
  * @property string|null $provider
  * @property array<string, string>|null $requires
  * @property array<string>|null $dependencies
+ * @property string|null $source_owner
+ * @property string|null $source_repo
+ * @property string|null $latest_available_version
+ * @property Carbon|null $last_update_check_at
  * @property Carbon|null $discovered_at
  * @property Carbon|null $enabled_at
  * @property Carbon|null $installed_at
@@ -51,6 +55,10 @@ final class ModuleModel extends Model
         'provider',
         'requires',
         'dependencies',
+        'source_owner',
+        'source_repo',
+        'latest_available_version',
+        'last_update_check_at',
         'discovered_at',
         'enabled_at',
         'installed_at',
@@ -64,6 +72,7 @@ final class ModuleModel extends Model
         return [
             'requires' => 'array',
             'dependencies' => 'array',
+            'last_update_check_at' => 'datetime',
             'discovered_at' => 'datetime',
             'enabled_at' => 'datetime',
             'installed_at' => 'datetime',
