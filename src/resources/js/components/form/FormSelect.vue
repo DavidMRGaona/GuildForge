@@ -114,7 +114,7 @@ function handleChange(value: string | number | null): void {
                     <li
                         class="relative cursor-pointer select-none px-4 py-2.5 text-base-muted
                                transition-colors duration-150
-                               hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                               hover:bg-neutral-200 dark:hover:bg-neutral-700"
                         :class="{ 'bg-primary-50 dark:bg-primary-900/20': active }"
                     >
                         {{ placeholder }}
@@ -136,7 +136,7 @@ function handleChange(value: string | number | null): void {
                                 ? 'bg-primary-100 dark:bg-primary-900/30 hover:bg-primary-200 dark:hover:bg-primary-800/40'
                                 : active
                                     ? 'bg-primary-50 dark:bg-primary-900/20'
-                                    : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                    : 'hover:bg-neutral-200 dark:hover:bg-neutral-700'
                         ]"
                     >
                         <span

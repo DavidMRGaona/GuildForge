@@ -13,8 +13,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 final class CalendarEventResource extends JsonResource
 {
-    private const AMBER_500 = '#f59e0b';
-
     /**
      * Transform the resource into an array for calendar display.
      *
@@ -42,7 +40,6 @@ final class CalendarEventResource extends JsonResource
             'memberPrice' => $this->resource->memberPrice,
             'nonMemberPrice' => $this->resource->nonMemberPrice,
             'url' => '/eventos/'.$this->resource->slug,
-            'backgroundColor' => self::AMBER_500,
             'tags' => $tags,
         ];
     }

@@ -163,7 +163,6 @@ export interface CalendarEvent {
     memberPrice: number | null;
     nonMemberPrice: number | null;
     url: string;
-    backgroundColor: string;
     tags: Tag[];
 }
 

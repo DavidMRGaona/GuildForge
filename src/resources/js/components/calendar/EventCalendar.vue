@@ -52,7 +52,6 @@ const fetchEvents = async (
             start: string;
             end?: string;
             url: string;
-            backgroundColor: string;
         }>
     ) => void,
     failureCallback: (error: Error) => void
@@ -88,7 +87,6 @@ const fetchEvents = async (
                 title: event.title,
                 start: event.start,
                 url: event.url,
-                backgroundColor: event.backgroundColor,
             };
             return event.end !== null ? { ...baseEvent, end: event.end } : baseEvent;
         });
