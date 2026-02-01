@@ -109,7 +109,9 @@ function handleChange(value: string | number | null): void {
                     as="template"
                 >
                     <li
-                        class="relative cursor-pointer select-none px-4 py-2.5 text-base-muted"
+                        class="relative cursor-pointer select-none px-4 py-2.5 text-base-muted
+                               transition-colors duration-150
+                               hover:bg-neutral-100 dark:hover:bg-neutral-800"
                         :class="{ 'bg-primary-50 dark:bg-primary-900/20': active }"
                     >
                         {{ placeholder }}
@@ -124,10 +126,14 @@ function handleChange(value: string | number | null): void {
                     as="template"
                 >
                     <li
-                        class="relative cursor-pointer select-none px-4 py-2.5 transition-colors"
+                        class="relative cursor-pointer select-none px-4 py-2.5
+                               transition-colors duration-150"
                         :class="[
-                            active ? 'bg-primary-50 dark:bg-primary-900/20' : '',
-                            selected ? 'bg-primary-100 dark:bg-primary-900/30' : ''
+                            selected
+                                ? 'bg-primary-100 dark:bg-primary-900/30 hover:bg-primary-200 dark:hover:bg-primary-800/40'
+                                : active
+                                    ? 'bg-primary-50 dark:bg-primary-900/20'
+                                    : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
                         ]"
                     >
                         <span

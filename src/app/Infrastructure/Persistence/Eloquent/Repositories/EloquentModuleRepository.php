@@ -108,6 +108,12 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             provider: $model->provider,
             path: $model->path,
             dependencies: $model->dependencies ?? [],
+            sourceOwner: $model->source_owner,
+            sourceRepo: $model->source_repo,
+            latestAvailableVersion: $model->latest_available_version,
+            lastUpdateCheckAt: $model->last_update_check_at !== null
+                ? new DateTimeImmutable($model->last_update_check_at->toDateTimeString())
+                : null,
         );
     }
 
@@ -151,6 +157,10 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             'path' => $module->path(),
             'requires' => $module->requirements()->toArray(),
             'dependencies' => $module->dependencies(),
+            'source_owner' => $module->sourceOwner(),
+            'source_repo' => $module->sourceRepo(),
+            'latest_available_version' => $module->latestAvailableVersion(),
+            'last_update_check_at' => $module->lastUpdateCheckAt()?->format('Y-m-d H:i:s'),
             'status' => $module->status()->value,
             'enabled_at' => $module->enabledAt()?->format('Y-m-d H:i:s'),
             'installed_at' => $module->installedAt()?->format('Y-m-d H:i:s'),

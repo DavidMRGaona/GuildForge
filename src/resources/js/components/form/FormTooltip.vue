@@ -1,17 +1,29 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         content: string;
         position?: 'top' | 'bottom' | 'left' | 'right';
+        maxWidth?: 'xs' | 'sm' | 'md' | 'lg';
     }>(),
     {
         position: 'top',
+        maxWidth: 'md',
     }
 );
 
 const isVisible = ref(false);
+
+const widthClass = computed(() => {
+    const widths = {
+        xs: 'w-64',       // 256px
+        sm: 'w-80',       // 320px
+        md: 'w-96',       // 384px
+        lg: 'w-[28rem]',  // 448px
+    };
+    return widths[props.maxWidth];
+});
 
 function show(): void {
     isVisible.value = true;
@@ -45,15 +57,18 @@ function hide(): void {
             <div
                 v-if="isVisible && content"
                 role="tooltip"
-                class="absolute z-30 max-w-xs rounded-lg bg-neutral-900 dark:bg-neutral-100
+                class="absolute z-30 rounded-lg bg-neutral-900 dark:bg-neutral-100
                        px-3 py-2 text-sm text-white dark:text-neutral-900
-                       shadow-lg pointer-events-none"
-                :class="{
-                    'bottom-full left-1/2 -translate-x-1/2 mb-2': position === 'top',
-                    'top-full left-1/2 -translate-x-1/2 mt-2': position === 'bottom',
-                    'right-full top-1/2 -translate-y-1/2 mr-2': position === 'left',
-                    'left-full top-1/2 -translate-y-1/2 ml-2': position === 'right',
-                }"
+                       shadow-lg pointer-events-none whitespace-normal"
+                :class="[
+                    widthClass,
+                    {
+                        'bottom-full left-1/2 -translate-x-1/2 mb-2': position === 'top',
+                        'top-full left-1/2 -translate-x-1/2 mt-2': position === 'bottom',
+                        'right-full top-1/2 -translate-y-1/2 mr-2': position === 'left',
+                        'left-full top-1/2 -translate-y-1/2 ml-2': position === 'right',
+                    }
+                ]"
             >
                 {{ content }}
 
