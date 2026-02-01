@@ -36,7 +36,6 @@ final class CalendarControllerTest extends TestCase
                 'memberPrice',
                 'nonMemberPrice',
                 'url',
-                'backgroundColor',
             ],
         ]);
     }
@@ -146,8 +145,6 @@ final class CalendarControllerTest extends TestCase
         $this->assertStringContainsString('2025-01-15T10:00:00', $json[0]['start']);
         $this->assertStringContainsString('2025-01-15T18:00:00', $json[0]['end']);
         $this->assertEquals('/eventos/fullcalendar-event', $json[0]['url']);
-        $this->assertArrayHasKey('backgroundColor', $json[0]);
-        $this->assertMatchesRegularExpression('/^#[0-9a-f]{6}$/i', $json[0]['backgroundColor']);
     }
 
     public function test_index_handles_single_day_events(): void
