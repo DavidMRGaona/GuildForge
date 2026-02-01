@@ -11,6 +11,10 @@ import en from '@/locales/en';
 import { createPageResolver, setModulePageMapping } from '@/utils/resolveModulePage';
 import { loadAllModuleTranslations } from '@/utils/moduleTranslations';
 
+// Direct import of module translations for merging
+import gameTablesEs from '../../modules/game-tables/resources/js/locales/es';
+import gameTablesEn from '../../modules/game-tables/resources/js/locales/en';
+
 const appName = import.meta.env.VITE_APP_NAME ?? 'Laravel';
 
 const i18n = createI18n({
@@ -18,8 +22,8 @@ const i18n = createI18n({
     locale: 'es',
     fallbackLocale: 'en',
     messages: {
-        es,
-        en,
+        es: { ...es, ...gameTablesEs },
+        en: { ...en, ...gameTablesEn },
     },
 });
 

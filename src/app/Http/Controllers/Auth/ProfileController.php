@@ -13,7 +13,6 @@ use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,13 +42,9 @@ final class ProfileController extends Controller
         $avatarPublicId = null;
 
         if ($request->hasFile('avatar')) {
-            /** @var UploadedFile $file */
-            $file = $request->file('avatar');
-
-            $avatarPublicId = $this->authService->uploadAvatar(
+            $avatarPublicId = $this->authService->uploadAvatarFromFile(
                 (string) $user->id,
-                $file->getContent(),
-                $file->getMimeType() ?? 'image/jpeg'
+                $request->file('avatar')
             );
         }
 

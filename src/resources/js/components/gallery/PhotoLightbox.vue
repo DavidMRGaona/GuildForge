@@ -129,7 +129,7 @@ onUnmounted(() => {
                 <button
                     ref="closeButtonRef"
                     type="button"
-                    class="absolute right-4 top-4 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-stone-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
+                    class="absolute right-4 top-4 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-neutral-900"
                     :aria-label="t('gallery.close')"
                     @click="emit('close')"
                 >
@@ -153,7 +153,7 @@ onUnmounted(() => {
                 <button
                     v-if="hasMultiplePhotos"
                     type="button"
-                    class="absolute left-4 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-stone-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
+                    class="absolute left-4 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-neutral-900"
                     :aria-label="t('gallery.previous')"
                     @click="emit('prev')"
                 >
@@ -185,7 +185,7 @@ onUnmounted(() => {
                 <button
                     v-if="hasMultiplePhotos"
                     type="button"
-                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-stone-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-3 text-white transition-colors hover:bg-white/10 hover:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-neutral-900"
                     :aria-label="t('gallery.next')"
                     @click="emit('next')"
                 >

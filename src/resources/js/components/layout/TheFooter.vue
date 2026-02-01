@@ -57,7 +57,7 @@ const footerLinks = computed(() => {
 </script>
 
 <template>
-    <footer class="bg-stone-800 dark:bg-stone-950">
+    <footer class="bg-neutral-800 dark:bg-neutral-900">
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="md:flex md:items-center md:justify-between">
                 <!-- Footer links -->
@@ -67,7 +67,7 @@ const footerLinks = computed(() => {
                         :key="link.id"
                         :href="link.href"
                         :target="link.target"
-                        class="text-sm text-stone-300 transition-colors hover:text-primary dark:text-stone-400 dark:hover:text-primary"
+                        class="text-sm text-neutral-300 transition-colors hover:text-primary dark:text-neutral-400 dark:hover:text-primary"
                     >
                         {{ link.label }}
                     </Link>
@@ -75,10 +75,10 @@ const footerLinks = computed(() => {
 
                 <!-- Copyright -->
                 <div class="mt-6 text-center md:mt-0 md:text-right">
-                    <p class="text-sm text-stone-300 dark:text-stone-400">
+                    <p class="text-sm text-neutral-300 dark:text-neutral-400">
                         {{ t('layout.copyright', { year: currentYear }) }}
                     </p>
-                    <p class="mt-1 text-xs text-stone-500 dark:text-stone-600">
+                    <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-600">
                         {{ t('layout.madeWith') }}
                     </p>
                 </div>

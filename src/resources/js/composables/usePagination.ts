@@ -1,4 +1,4 @@
-import { computed, toValue, type ComputedRef, type MaybeRefOrGetter } from 'vue';
+import { computed, ref, toValue, type ComputedRef, type MaybeRefOrGetter, type Ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import type { PaginatedResponse } from '@/types';
 
@@ -11,11 +11,18 @@ interface UsePaginationReturn {
     goToNext: () => void;
     canGoPrev: ComputedRef<boolean>;
     canGoNext: ComputedRef<boolean>;
+    /** Navigation state for loading indicators */
+    isNavigating: Ref<boolean>;
+    /** Wrapped navigation handlers that set isNavigating */
+    handlePrev: () => void;
+    handleNext: () => void;
 }
 
 export function usePagination<T>(
     paginated: MaybeRefOrGetter<PaginatedResponse<T>>
 ): UsePaginationReturn {
+    const isNavigating = ref(false);
+
     function goToPage(url: string | null): void {
         if (url) {
             router.visit(url);
@@ -28,6 +35,16 @@ export function usePagination<T>(
 
     function goToNext(): void {
         goToPage(toValue(paginated).links.next);
+    }
+
+    function handlePrev(): void {
+        isNavigating.value = true;
+        goToPrev();
+    }
+
+    function handleNext(): void {
+        isNavigating.value = true;
+        goToNext();
     }
 
     const firstItemNumber = computed((): number => {
@@ -61,5 +78,8 @@ export function usePagination<T>(
         goToNext,
         canGoPrev,
         canGoNext,
+        isNavigating,
+        handlePrev,
+        handleNext,
     };
 }

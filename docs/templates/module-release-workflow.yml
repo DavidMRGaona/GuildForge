@@ -1,0 +1,17 @@
+# Template: Release workflow for GuildForge modules
+# Copy this file to .github/workflows/release.yml in your module repository
+# and change MODULE_NAME to your module's name (kebab-case)
+
+name: Module release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+jobs:
+  release:
+    uses: DavidMRGaona/runesword/.github/workflows/reusable-module-release.yml@main
+    with:
+      module_name: 'MODULE_NAME'  # TODO: Change to your module name (e.g., 'announcements')
+    permissions:
+      contents: write

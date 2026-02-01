@@ -41,7 +41,7 @@ const hasSlides = computed(() => props.slides.length > 0);
     >
         <!-- Fallback gradient when no slides -->
         <template v-if="!hasSlides">
-            <div class="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600">
+            <div class="absolute inset-0 bg-gradient-to-r from-primary-500 to-primary-600">
                 <div class="flex h-full items-center justify-center">
                     <div class="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
                         <h1
@@ -49,7 +49,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                         >
                             {{ t('home.welcome') }}
                         </h1>
-                        <p class="mt-4 text-xl font-light text-amber-50 sm:text-2xl">
+                        <p class="mt-4 text-xl font-light text-primary-50 sm:text-2xl">
                             {{ t('home.subtitle') }}
                         </p>
                     </div>
@@ -77,7 +77,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                     <!-- Fallback gradient if no image -->
                     <div
                         v-else
-                        class="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600"
+                        class="absolute inset-0 bg-gradient-to-r from-primary-500 to-primary-600"
                     />
                     <!-- Dark overlay -->
                     <div
@@ -107,14 +107,14 @@ const hasSlides = computed(() => props.slides.length > 0);
                         </h1>
                         <p
                             v-if="currentSlide.subtitle"
-                            class="mt-4 text-xl font-light text-stone-200 sm:text-2xl"
+                            class="mt-4 text-xl font-light text-neutral-200 sm:text-2xl"
                         >
                             {{ currentSlide.subtitle }}
                         </p>
                         <div v-if="currentSlide.buttonText && currentSlide.buttonUrl" class="mt-8">
                             <Link
                                 :href="currentSlide.buttonUrl"
-                                class="inline-flex items-center rounded-lg bg-amber-500 px-6 py-3 text-lg font-semibold text-white transition-colors hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-stone-900"
+                                class="inline-flex items-center rounded-lg bg-primary-500 px-6 py-3 text-lg font-semibold text-white transition-colors hover:bg-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-neutral-900"
                             >
                                 {{ currentSlide.buttonText }}
                             </Link>
@@ -128,7 +128,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                 <!-- Previous arrow -->
                 <button
                     type="button"
-                    class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
+                    class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-neutral-900"
                     :aria-label="t('common.previous')"
                     @click="prev"
                 >
@@ -151,7 +151,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                 <!-- Next arrow -->
                 <button
                     type="button"
-                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-colors hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-neutral-900"
                     :aria-label="t('common.next')"
                     @click="next"
                 >
@@ -186,7 +186,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                     role="tab"
                     :aria-selected="index === currentIndex"
                     :aria-label="t('common.goToSlide', { number: index + 1 })"
-                    class="h-3 w-3 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-stone-900"
+                    class="h-3 w-3 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-neutral-900"
                     :class="[
                         index === currentIndex ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/70',
                     ]"

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AboutController;
+use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -25,6 +26,7 @@ Route::get('/nosotros', AboutController::class)->name('about');
 Route::post('/contacto', ContactController::class)->middleware('throttle:contact')->name('contact.store');
 Route::get('/calendario', CalendarPageController::class)->name('calendar');
 
+Route::get('/eventos/calendario', [CalendarController::class, 'index'])->name('events.calendar');
 Route::get('/eventos', [EventController::class, 'index'])->name('events.index');
 Route::get('/eventos/{slug}', [EventController::class, 'show'])->name('events.show');
 
@@ -52,8 +54,8 @@ Route::middleware('guest')->group(function (): void {
 
     // Login (with rate limiting)
     Route::middleware(['login.enabled', 'throttle:5,1'])->group(function (): void {
-        Route::get('/login', [LoginController::class, 'create'])->name('login');
-        Route::post('/login', [LoginController::class, 'store']);
+        Route::get('/iniciar-sesion', [LoginController::class, 'create'])->name('login');
+        Route::post('/iniciar-sesion', [LoginController::class, 'store']);
     });
 
     // Password reset
@@ -67,7 +69,7 @@ Route::middleware('guest')->group(function (): void {
 
 // Authenticated routes
 Route::middleware('auth')->group(function (): void {
-    Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+    Route::post('/cerrar-sesion', [LoginController::class, 'destroy'])->name('logout');
 
     // Email verification
     Route::get('/verificar-email', [EmailVerificationController::class, 'notice'])->name('verification.notice');

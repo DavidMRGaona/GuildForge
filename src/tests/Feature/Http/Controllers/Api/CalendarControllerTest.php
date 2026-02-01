@@ -19,7 +19,7 @@ final class CalendarControllerTest extends TestCase
             'end_date' => '2025-01-15 18:00:00',
         ]);
 
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/json');
@@ -55,7 +55,7 @@ final class CalendarControllerTest extends TestCase
             'end_date' => '2025-01-16 18:00:00',
         ]);
 
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
 
         $response->assertStatus(200);
         $response->assertJsonCount(1);
@@ -83,7 +83,7 @@ final class CalendarControllerTest extends TestCase
             'end_date' => '2025-02-15 18:00:00',
         ]);
 
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
 
         $response->assertStatus(200);
         $response->assertJsonCount(1);
@@ -115,7 +115,7 @@ final class CalendarControllerTest extends TestCase
             'end_date' => '2025-01-15 18:00:00',
         ]);
 
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
 
         $response->assertStatus(200);
         $response->assertJsonCount(3);
@@ -133,7 +133,7 @@ final class CalendarControllerTest extends TestCase
             'end_date' => '2025-01-15 18:00:00',
         ]);
 
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
 
         $response->assertStatus(200);
         $response->assertJsonCount(1);
@@ -158,7 +158,7 @@ final class CalendarControllerTest extends TestCase
             'end_date' => '2025-01-15 18:00:00',
         ]);
 
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
 
         $response->assertStatus(200);
         $response->assertJsonCount(1);
@@ -171,7 +171,7 @@ final class CalendarControllerTest extends TestCase
 
     public function test_index_requires_start_parameter(): void
     {
-        $response = $this->getJson('/api/events/calendar?end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?end=2025-01-31');
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['start']);
@@ -179,7 +179,7 @@ final class CalendarControllerTest extends TestCase
 
     public function test_index_requires_end_parameter(): void
     {
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01');
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['end']);
@@ -187,12 +187,12 @@ final class CalendarControllerTest extends TestCase
 
     public function test_index_validates_date_format(): void
     {
-        $response = $this->getJson('/api/events/calendar?start=invalid-date&end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?start=invalid-date&end=2025-01-31');
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['start']);
 
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=not-a-date');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=not-a-date');
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['end']);
@@ -205,7 +205,7 @@ final class CalendarControllerTest extends TestCase
             'end_date' => '2024-12-15 18:00:00',
         ]);
 
-        $response = $this->getJson('/api/events/calendar?start=2025-01-01&end=2025-01-31');
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
 
         $response->assertStatus(200);
         $response->assertJsonCount(0);

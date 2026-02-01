@@ -17,24 +17,24 @@ const iconPaths: Record<NotificationType, string> = {
 
 const colorClasses: Record<NotificationType, { bg: string; icon: string; text: string }> = {
     success: {
-        bg: 'bg-green-50 dark:bg-green-900/30',
-        icon: 'text-green-400 dark:text-green-300',
-        text: 'text-green-800 dark:text-green-200',
+        bg: 'bg-success-light',
+        icon: 'text-success',
+        text: 'text-success',
     },
     error: {
-        bg: 'bg-red-50 dark:bg-red-900/30',
-        icon: 'text-red-400 dark:text-red-300',
-        text: 'text-red-800 dark:text-red-200',
+        bg: 'bg-error-light',
+        icon: 'text-error',
+        text: 'text-error',
     },
     warning: {
-        bg: 'bg-amber-50 dark:bg-amber-900/30',
-        icon: 'text-amber-400 dark:text-amber-300',
-        text: 'text-amber-800 dark:text-amber-200',
+        bg: 'bg-warning-light',
+        icon: 'text-warning',
+        text: 'text-warning',
     },
     info: {
-        bg: 'bg-blue-50 dark:bg-blue-900/30',
-        icon: 'text-blue-400 dark:text-blue-300',
-        text: 'text-blue-800 dark:text-blue-200',
+        bg: 'bg-info-light',
+        icon: 'text-info',
+        text: 'text-info',
     },
 };
 
@@ -50,6 +50,7 @@ function getIconPath(notification: Notification) {
 <template>
     <Teleport to="body">
         <div
+            v-if="notifications.length > 0"
             aria-live="assertive"
             class="pointer-events-none fixed inset-0 z-50 flex flex-col items-end px-4 py-6 sm:p-6"
         >
@@ -99,7 +100,7 @@ function getIconPath(notification: Notification) {
                             <div class="ml-4 flex shrink-0">
                                 <button
                                     type="button"
-                                    class="inline-flex rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                                    class="inline-flex rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                                     :class="getColors(notification).text"
                                     @click="removeNotification(notification.id)"
                                 >

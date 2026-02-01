@@ -7,15 +7,13 @@ namespace Tests\Unit\Infrastructure\Services;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
-use App\Domain\Entities\User;
 use App\Domain\Enums\UserRole;
 use App\Domain\Exceptions\UserNotFoundException;
-use App\Domain\Repositories\UserRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Services\UserService;
-use DateTimeImmutable;
 use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -23,7 +21,7 @@ use Tests\TestCase;
 final class UserServiceTest extends TestCase
 {
     private UserServiceInterface $service;
-    private UserRepositoryInterface&MockInterface $userRepository;
+    private UserModelQueryServiceInterface&MockInterface $userModelQuery;
     private AuthorizationServiceInterface&MockInterface $authService;
     private SettingsServiceInterface&MockInterface $settingsService;
 
@@ -31,12 +29,12 @@ final class UserServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->userRepository = Mockery::mock(UserRepositoryInterface::class);
+        $this->userModelQuery = Mockery::mock(UserModelQueryServiceInterface::class);
         $this->authService = Mockery::mock(AuthorizationServiceInterface::class);
         $this->settingsService = Mockery::mock(SettingsServiceInterface::class);
 
         $this->service = new UserService(
-            $this->userRepository,
+            $this->userModelQuery,
             $this->authService,
             $this->settingsService
         );
@@ -47,7 +45,7 @@ final class UserServiceTest extends TestCase
         $userId = UserId::generate();
         $userModel = Mockery::mock(UserModel::class);
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelById')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -70,7 +68,7 @@ final class UserServiceTest extends TestCase
         $userModel = Mockery::mock(UserModel::class)->makePartial();
         $userModel->role = UserRole::Admin;
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelById')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -93,7 +91,7 @@ final class UserServiceTest extends TestCase
         $userModel = Mockery::mock(UserModel::class)->makePartial();
         $userModel->role = UserRole::Member;
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelById')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -114,7 +112,7 @@ final class UserServiceTest extends TestCase
     {
         $userId = UserId::generate();
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelById')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -132,7 +130,7 @@ final class UserServiceTest extends TestCase
         $userModel->id = $userId->value();
         $userModel->avatar_public_id = 'some-avatar-id';
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelByIdWithTrashed')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -159,7 +157,7 @@ final class UserServiceTest extends TestCase
     {
         $userId = UserId::generate();
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelByIdWithTrashed')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -175,7 +173,7 @@ final class UserServiceTest extends TestCase
         $userId = UserId::generate();
         $userModel = Mockery::mock(UserModel::class);
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelById')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -197,7 +195,7 @@ final class UserServiceTest extends TestCase
         $userId = UserId::generate();
         $userModel = Mockery::mock(UserModel::class);
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelById')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -218,7 +216,7 @@ final class UserServiceTest extends TestCase
     {
         $userId = UserId::generate();
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelById')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
@@ -239,7 +237,7 @@ final class UserServiceTest extends TestCase
             transferToUserId: null,
         );
 
-        $this->userRepository
+        $this->userModelQuery
             ->shouldReceive('findModelByIdWithTrashed')
             ->once()
             ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))

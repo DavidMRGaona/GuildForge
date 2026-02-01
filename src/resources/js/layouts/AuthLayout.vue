@@ -3,6 +3,7 @@ import { computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { usePage, Link } from '@inertiajs/vue3';
 import { useAppStore } from '@/stores/useAppStore';
+import { useRoutes } from '@/composables/useRoutes';
 import type { ThemeSettings } from '@/types/inertia';
 
 interface Props {
@@ -15,6 +16,7 @@ const props = defineProps<Props>();
 const { t } = useI18n();
 const page = usePage();
 const appStore = useAppStore();
+const routes = useRoutes();
 
 const theme = computed(() => page.props.theme as ThemeSettings | undefined);
 const cssVariables = computed(() => theme.value?.cssVariables ?? '');
@@ -62,20 +64,15 @@ watch(theme, (newTheme) => {
         </Teleport>
 
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
-            <Link href="/" class="flex justify-center">
+            <Link :href="routes.home" class="flex justify-center">
                 <span class="text-2xl font-bold text-primary">
                     {{ page.props.appName }}
                 </span>
             </Link>
-            <h1
-                class="mt-6 text-center text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100"
-            >
+            <h1 class="mt-6 text-center text-3xl font-bold tracking-tight text-base-primary">
                 {{ props.title }}
             </h1>
-            <p
-                v-if="props.subtitle"
-                class="mt-2 text-center text-sm text-stone-600 dark:text-stone-400"
-            >
+            <p v-if="props.subtitle" class="mt-2 text-center text-sm text-base-secondary">
                 {{ props.subtitle }}
             </p>
         </div>
@@ -87,7 +84,7 @@ watch(theme, (newTheme) => {
         </div>
 
         <div class="mt-8 text-center">
-            <Link href="/" class="text-sm text-base-secondary hover:text-primary transition-colors">
+            <Link :href="routes.home" class="text-sm text-base-secondary hover:text-primary transition-colors">
                 ← {{ t('auth.backToHome') }}
             </Link>
         </div>

@@ -12,7 +12,7 @@ const navigateToCalendar = (): void => {
 
 <template>
     <div
-        class="calendar-widget flex flex-col justify-center rounded-lg bg-white p-4 dark:bg-stone-800"
+        class="calendar-widget flex flex-col justify-center rounded-lg bg-surface p-4"
     >
         <EventCalendar
             compact
@@ -25,7 +25,7 @@ const navigateToCalendar = (): void => {
         <div class="mt-3 text-center">
             <button
                 type="button"
-                class="text-sm font-medium text-amber-600 transition-colors hover:text-amber-700 dark:text-amber-500 dark:hover:text-amber-400"
+                class="text-sm font-medium text-primary-600 transition-colors hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
                 @click="navigateToCalendar"
             >
                 {{ t('calendar.viewFullCalendar') }} &rarr;

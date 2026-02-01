@@ -17,6 +17,7 @@
         "@fullcalendar/daygrid": "^6.1.20",
         "@fullcalendar/interaction": "^6.1.20",
         "@fullcalendar/vue3": "^6.1.20",
+        "@headlessui/vue": "^1.7.23",
         "@inertiajs/vue3": "^2.3.10",
         "@unhead/vue": "^2.1.2",
         "@vue-leaflet/vue-leaflet": "^0.10.1",

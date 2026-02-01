@@ -18,6 +18,7 @@ export default {
         edit: 'Editar',
         create: 'Crear',
         back: 'Volver',
+        close: 'Cerrar',
         next: 'Siguiente',
         previous: 'Anterior',
         readMore: 'Leer más',
@@ -46,13 +47,13 @@ export default {
         latest: 'Últimos artículos',
         by: 'Por',
         publishedAt: 'Publicado el',
-        subtitle: 'Noticias y artículos del gremio',
+        subtitle: 'Noticias y artículos de la asociación',
         noArticles: 'No hay artículos publicados',
     },
     gallery: {
         title: 'Galería',
         photos: 'fotos',
-        subtitle: 'Galería de fotos del gremio',
+        subtitle: 'Galería de fotos de la asociación',
         noGalleries: 'No hay galerías publicadas',
         photoOf: 'de',
         close: 'Cerrar',
@@ -91,11 +92,11 @@ export default {
     },
     about: {
         title: 'Sobre {appName}',
-        subtitle: 'Conoce nuestro gremio',
+        subtitle: 'Conoce nuestra asociación',
         history: {
             title: 'Nuestra historia',
             content:
-                '{appName} es un gremio dedicado a crear una comunidad acogedora donde todos puedan disfrutar de su pasión.',
+                '{appName} es una asociación dedicado a crear una comunidad acogedora donde todos puedan disfrutar de su pasión.',
         },
         whatWeDo: {
             title: '¿Qué hacemos?',
@@ -119,7 +120,7 @@ export default {
                 title: 'Envíanos un mensaje',
                 name: 'Nombre',
                 namePlaceholder: 'Tu nombre',
-                emailPlaceholder: 'tu@email.com',
+                emailPlaceholder: "tu{'@'}email.com",
                 message: 'Mensaje',
                 messagePlaceholder: 'Escribe tu mensaje aquí...',
                 submit: 'Enviar mensaje',

@@ -60,7 +60,7 @@ const changePassword = () => {
                 <template #header>
                     <div class="flex items-center gap-3">
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
                         >
                             <svg
                                 class="h-5 w-5"
@@ -89,7 +89,7 @@ const changePassword = () => {
                     <div>
                         <label
                             for="name"
-                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                            class="block text-sm font-medium text-base-secondary"
                         >
                             {{ t('auth.profile.name') }}
                         </label>
@@ -98,11 +98,11 @@ const changePassword = () => {
                             v-model="profileForm.name"
                             type="text"
                             required
-                            class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
                         <p
                             v-if="profileForm.errors.name"
-                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                            class="mt-1 text-sm text-error"
                         >
                             {{ profileForm.errors.name }}
                         </p>
@@ -111,7 +111,7 @@ const changePassword = () => {
                     <div>
                         <label
                             for="display_name"
-                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                            class="block text-sm font-medium text-base-secondary"
                         >
                             {{ t('auth.profile.displayName') }}
                         </label>
@@ -119,14 +119,14 @@ const changePassword = () => {
                             id="display_name"
                             v-model="profileForm.display_name"
                             type="text"
-                            class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
-                        <p class="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                        <p class="mt-1 text-sm text-base-muted">
                             {{ t('auth.profile.displayNameHelp') }}
                         </p>
                         <p
                             v-if="profileForm.errors.display_name"
-                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                            class="mt-1 text-sm text-error"
                         >
                             {{ profileForm.errors.display_name }}
                         </p>
@@ -135,7 +135,7 @@ const changePassword = () => {
                     <div>
                         <label
                             for="email"
-                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                            class="block text-sm font-medium text-base-secondary"
                         >
                             {{ t('auth.profile.email') }}
                         </label>
@@ -144,17 +144,17 @@ const changePassword = () => {
                             v-model="profileForm.email"
                             type="email"
                             required
-                            class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
                         <p
                             v-if="profileForm.errors.email"
-                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                            class="mt-1 text-sm text-error"
                         >
                             {{ profileForm.errors.email }}
                         </p>
                         <p
                             v-if="props.user.pendingEmail"
-                            class="mt-2 text-sm text-amber-600 dark:text-amber-400"
+                            class="mt-2 text-sm text-primary-600 dark:text-primary-400"
                         >
                             {{
                                 t('auth.profile.pendingEmailNotice', {
@@ -181,7 +181,7 @@ const changePassword = () => {
                 <template #header>
                     <div class="flex items-center gap-3">
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
                         >
                             <svg
                                 class="h-5 w-5"
@@ -210,7 +210,7 @@ const changePassword = () => {
                     <div>
                         <label
                             for="current_password"
-                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                            class="block text-sm font-medium text-base-secondary"
                         >
                             {{ t('auth.profile.currentPassword') }}
                         </label>
@@ -220,11 +220,11 @@ const changePassword = () => {
                             type="password"
                             required
                             autocomplete="current-password"
-                            class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
                         <p
                             v-if="passwordForm.errors.current_password"
-                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                            class="mt-1 text-sm text-error"
                         >
                             {{ passwordForm.errors.current_password }}
                         </p>
@@ -233,7 +233,7 @@ const changePassword = () => {
                     <div>
                         <label
                             for="new_password"
-                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                            class="block text-sm font-medium text-base-secondary"
                         >
                             {{ t('auth.profile.newPassword') }}
                         </label>
@@ -243,11 +243,11 @@ const changePassword = () => {
                             type="password"
                             required
                             autocomplete="new-password"
-                            class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
                         <p
                             v-if="passwordForm.errors.password"
-                            class="mt-1 text-sm text-red-600 dark:text-red-400"
+                            class="mt-1 text-sm text-error"
                         >
                             {{ passwordForm.errors.password }}
                         </p>
@@ -256,7 +256,7 @@ const changePassword = () => {
                     <div>
                         <label
                             for="password_confirmation"
-                            class="block text-sm font-medium text-stone-700 dark:text-stone-300"
+                            class="block text-sm font-medium text-base-secondary"
                         >
                             {{ t('auth.profile.confirmPassword') }}
                         </label>
@@ -266,7 +266,7 @@ const changePassword = () => {
                             type="password"
                             required
                             autocomplete="new-password"
-                            class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
                     </div>
 

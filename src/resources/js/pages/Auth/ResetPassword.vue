@@ -37,10 +37,7 @@ const submit = () => {
     <AuthLayout :title="t('auth.resetPassword.title')" :subtitle="t('auth.resetPassword.subtitle')">
         <form @submit.prevent="submit" class="space-y-6">
             <div>
-                <label
-                    for="email"
-                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
-                >
+                <label for="email" class="block text-sm font-medium text-base-secondary">
                     {{ t('auth.resetPassword.email') }}
                 </label>
                 <input
@@ -49,18 +46,15 @@ const submit = () => {
                     type="email"
                     required
                     autocomplete="email"
-                    class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                    class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                 />
-                <p v-if="form.errors.email" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                <p v-if="form.errors.email" class="mt-1 text-sm text-error">
                     {{ form.errors.email }}
                 </p>
             </div>
 
             <div>
-                <label
-                    for="password"
-                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
-                >
+                <label for="password" class="block text-sm font-medium text-base-secondary">
                     {{ t('auth.resetPassword.password') }}
                 </label>
                 <input
@@ -69,18 +63,15 @@ const submit = () => {
                     type="password"
                     required
                     autocomplete="new-password"
-                    class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                    class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                 />
-                <p v-if="form.errors.password" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                <p v-if="form.errors.password" class="mt-1 text-sm text-error">
                     {{ form.errors.password }}
                 </p>
             </div>
 
             <div>
-                <label
-                    for="password_confirmation"
-                    class="block text-sm font-medium text-stone-700 dark:text-stone-300"
-                >
+                <label for="password_confirmation" class="block text-sm font-medium text-base-secondary">
                     {{ t('auth.resetPassword.passwordConfirm') }}
                 </label>
                 <input
@@ -89,7 +80,7 @@ const submit = () => {
                     type="password"
                     required
                     autocomplete="new-password"
-                    class="mt-1 block w-full rounded-md border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 px-3 py-2 text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:border-amber-500 focus:outline-none focus:ring-amber-500"
+                    class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                 />
             </div>
 

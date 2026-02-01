@@ -1,11 +1,17 @@
 /**
  * Glob import for all module locale files.
  * Each module can have locales at modules/<module>/resources/js/locales/es.ts (and en.ts)
+ * Using the same relative path pattern as app.ts uses for module pages.
  */
 const moduleLocales = import.meta.glob<{ default: Record<string, unknown> }>(
-    '../../../modules/*/resources/js/locales/*.ts',
+    '../../../modules/*/resources/js/locales/{es,en}.ts',
     { eager: true }
 );
+
+// Debug: log what files were matched
+if (import.meta.env.DEV) {
+    console.log('[i18n] Module locales found:', Object.keys(moduleLocales));
+}
 
 /**
  * Track which modules have already had their translations loaded.

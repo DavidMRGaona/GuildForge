@@ -5,14 +5,26 @@ declare(strict_types=1);
 namespace App\Infrastructure\Services;
 
 use App\Application\DTOs\ThemeSettingsDTO;
+use App\Application\Services\ColorPaletteGeneratorInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
+use App\Domain\ValueObjects\ColorPalette;
+use App\Domain\ValueObjects\HexColor;
+use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 
 final readonly class ThemeSettingsService implements ThemeSettingsServiceInterface
 {
+    private const string DEFAULT_PRIMARY_COLOR = '#D97706';
+
+    private const string DEFAULT_ACCENT_COLOR = '#0EA5E9';
+
+    private ColorPaletteGeneratorInterface $paletteGenerator;
+
     public function __construct(
         private SettingsServiceInterface $settingsService,
+        ?ColorPaletteGeneratorInterface $paletteGenerator = null,
     ) {
+        $this->paletteGenerator = $paletteGenerator ?? new OklchColorPaletteGenerator();
     }
 
     public function getThemeSettings(): ThemeSettingsDTO
@@ -23,31 +35,58 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
     public function getCssVariables(): string
     {
         $theme = $this->getThemeSettings();
+        $primaryPalette = $this->getPrimaryPalette();
+        $accentPalette = $this->getAccentPalette();
+        $neutralPalette = $this->getNeutralPalette();
 
-        // Generate hover variants by darkening primary color
-        $primaryHover = $this->adjustBrightness($theme->primaryColor, -15);
-        $primaryHoverDark = $this->adjustBrightness($theme->primaryColorDark, 15);
+        // Generate palette CSS
+        $primaryCss = $this->generatePaletteCss($primaryPalette);
+        $accentCss = $this->generatePaletteCss($accentPalette);
+        $neutralCss = $this->generatePaletteCss($neutralPalette);
 
         return <<<CSS
         :root {
-          /* Legacy variables (backward compatibility) */
-          --color-primary: {$theme->primaryColor};
-          --color-secondary: {$theme->secondaryColor};
-          --color-accent: {$theme->accentColor};
-          --color-background: {$theme->backgroundColor};
-          --color-surface: {$theme->surfaceColor};
-          --color-text: {$theme->textColor};
+          /* Primary palette */
+          {$primaryCss}
 
-          /* Semantic variables (used by utility classes in app.css) */
-          --color-primary-hover: {$primaryHover};
-          --color-bg-page: {$theme->backgroundColor};
-          --color-bg-surface: {$theme->surfaceColor};
-          --color-bg-muted: {$theme->backgroundColor};
-          --color-text-primary: {$theme->textColor};
-          --color-text-secondary: {$theme->textSecondaryColor};
-          --color-text-muted: {$theme->textMutedColor};
-          --color-border: {$theme->borderColor};
-          --color-border-strong: {$theme->borderColor};
+          /* Accent palette */
+          {$accentCss}
+
+          /* Neutral palette */
+          {$neutralCss}
+
+          /* Contextual variables (Light mode) */
+          --color-primary-action: var(--color-primary-600);
+          --color-primary-action-hover: var(--color-primary-700);
+          --color-primary-link: var(--color-primary-700);
+          --color-primary-subtle: var(--color-primary-100);
+          --color-primary-badge: var(--color-primary-200);
+          --color-primary-glow: var(--color-primary-500);
+
+          /* Surface variables (Light mode) */
+          --color-bg-page: var(--color-neutral-50);
+          --color-bg-surface: #FFFFFF;
+          --color-bg-muted: var(--color-neutral-100);
+          --color-bg-elevated: #FFFFFF;
+
+          /* Text variables (Light mode) */
+          --color-text-primary: var(--color-neutral-900);
+          --color-text-secondary: var(--color-neutral-600);
+          --color-text-muted: var(--color-neutral-400);
+
+          /* Border variables (Light mode) */
+          --color-border: var(--color-neutral-200);
+          --color-border-strong: var(--color-neutral-300);
+
+          /* Semantic colors (fixed for universal recognition) */
+          --color-success: #16A34A;
+          --color-success-bg: #DCFCE7;
+          --color-error: #DC2626;
+          --color-error-bg: #FEE2E2;
+          --color-warning: #CA8A04;
+          --color-warning-bg: #FEF9C3;
+          --color-info: #2563EB;
+          --color-info-bg: #DBEAFE;
 
           /* Typography */
           --font-heading: '{$theme->fontHeading}', system-ui, sans-serif;
@@ -60,48 +99,94 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         }
 
         .dark {
-          /* Legacy variables (backward compatibility) */
-          --color-primary: {$theme->primaryColorDark};
-          --color-secondary: {$theme->secondaryColorDark};
-          --color-accent: {$theme->primaryColorDark};
-          --color-background: {$theme->backgroundColorDark};
-          --color-surface: {$theme->surfaceColorDark};
-          --color-text: {$theme->textColorDark};
+          /* Contextual variables (Dark mode) */
+          --color-primary-action: var(--color-primary-500);
+          --color-primary-action-hover: var(--color-primary-400);
+          --color-primary-link: var(--color-primary-400);
+          --color-primary-subtle: var(--color-primary-950);
+          --color-primary-badge: var(--color-primary-900);
+          --color-primary-glow: var(--color-primary-400);
 
-          /* Semantic variables (used by utility classes in app.css) */
-          --color-primary-hover: {$primaryHoverDark};
-          --color-bg-page: {$theme->backgroundColorDark};
-          --color-bg-surface: {$theme->surfaceColorDark};
-          --color-bg-muted: {$theme->surfaceColorDark};
-          --color-text-primary: {$theme->textColorDark};
-          --color-text-secondary: {$theme->textSecondaryColorDark};
-          --color-text-muted: {$theme->textMutedColorDark};
-          --color-border: {$theme->borderColorDark};
-          --color-border-strong: {$theme->borderColorDark};
+          /* Surface variables (Dark mode) */
+          --color-bg-page: var(--color-neutral-950);
+          --color-bg-surface: var(--color-neutral-900);
+          --color-bg-muted: var(--color-neutral-900);
+          --color-bg-elevated: var(--color-neutral-800);
+
+          /* Text variables (Dark mode) */
+          --color-text-primary: var(--color-neutral-50);
+          --color-text-secondary: var(--color-neutral-300);
+          --color-text-muted: var(--color-neutral-500);
+
+          /* Border variables (Dark mode) */
+          --color-border: var(--color-neutral-700);
+          --color-border-strong: var(--color-neutral-600);
+
+          /* Semantic colors (Dark mode) */
+          --color-success: #4ADE80;
+          --color-success-bg: #14532D;
+          --color-error: #F87171;
+          --color-error-bg: #7F1D1D;
+          --color-warning: #FACC15;
+          --color-warning-bg: #713F12;
+          --color-info: #60A5FA;
+          --color-info-bg: #1E3A8A;
         }
         CSS;
     }
 
     /**
-     * Adjust the brightness of a hex color.
-     *
-     * @param string $hexColor The hex color (e.g., #D97706)
-     * @param int $percent Positive to lighten, negative to darken
+     * Get the primary color palette.
      */
-    private function adjustBrightness(string $hexColor, int $percent): string
+    public function getPrimaryPalette(): ColorPalette
     {
-        $hex = ltrim($hexColor, '#');
+        $baseColor = $this->getPrimaryBaseColor();
 
-        // Convert to RGB
-        $r = hexdec(substr($hex, 0, 2));
-        $g = hexdec(substr($hex, 2, 2));
-        $b = hexdec(substr($hex, 4, 2));
+        return $this->paletteGenerator->generate('primary', $baseColor);
+    }
 
-        // Adjust brightness
-        $r = max(0, min(255, $r + (int) ($r * $percent / 100)));
-        $g = max(0, min(255, $g + (int) ($g * $percent / 100)));
-        $b = max(0, min(255, $b + (int) ($b * $percent / 100)));
+    /**
+     * Get the accent color palette.
+     */
+    public function getAccentPalette(): ColorPalette
+    {
+        $baseColor = $this->getAccentBaseColor();
 
-        return sprintf('#%02X%02X%02X', $r, $g, $b);
+        return $this->paletteGenerator->generate('accent', $baseColor);
+    }
+
+    /**
+     * Get the neutral color palette (derived from accent).
+     */
+    public function getNeutralPalette(): ColorPalette
+    {
+        $accentColor = $this->getAccentBaseColor();
+
+        return $this->paletteGenerator->generateNeutral('neutral', $accentColor);
+    }
+
+    private function getPrimaryBaseColor(): HexColor
+    {
+        $color = $this->settingsService->get('theme_primary_base_color', self::DEFAULT_PRIMARY_COLOR);
+
+        return new HexColor((string) $color ?: self::DEFAULT_PRIMARY_COLOR);
+    }
+
+    private function getAccentBaseColor(): HexColor
+    {
+        $color = $this->settingsService->get('theme_accent_base_color', self::DEFAULT_ACCENT_COLOR);
+
+        return new HexColor((string) $color ?: self::DEFAULT_ACCENT_COLOR);
+    }
+
+    private function generatePaletteCss(ColorPalette $palette): string
+    {
+        $lines = [];
+
+        foreach ($palette->shades() as $shade => $color) {
+            $lines[] = "--color-{$palette->name()}-{$shade}: {$color->value};";
+        }
+
+        return implode("\n          ", $lines);
     }
 }

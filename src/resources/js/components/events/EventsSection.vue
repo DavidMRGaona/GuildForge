@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import type { Event } from '@/types/models';
 import EventCard from './EventCard.vue';
 import CalendarWidget from '@/components/calendar/CalendarWidget.vue';
+import { useRoutes } from '@/composables/useRoutes';
 
 interface Props {
     events: Event[];
@@ -16,6 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { t } = useI18n();
+const routes = useRoutes();
 
 const displayEvents = computed(() => props.events.slice(0, props.maxEvents));
 const hasEvents = computed(() => props.events.length > 0);
@@ -25,13 +27,13 @@ const hasEvents = computed(() => props.events.length > 0);
     <section class="events-section">
         <!-- Section header -->
         <div class="mb-6 flex items-center justify-between">
-            <h2 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+            <h2 class="text-3xl font-bold tracking-tight text-base-primary">
                 {{ t('home.upcomingEvents') }}
             </h2>
             <Link
                 v-if="hasEvents"
-                href="/eventos"
-                class="text-sm font-medium text-amber-600 transition-colors hover:text-amber-700"
+                :href="routes.events.index"
+                class="text-sm font-medium text-primary-600 transition-colors hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
             >
                 {{ t('common.viewAll') }} &rarr;
             </Link>
@@ -55,11 +57,11 @@ const hasEvents = computed(() => props.events.length > 0);
                 <!-- Empty state (compact) -->
                 <div
                     v-else
-                    class="flex flex-1 items-center justify-center rounded-lg border border-dashed border-stone-300 bg-stone-50 p-8 dark:border-stone-600 dark:bg-stone-800"
+                    class="flex flex-1 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-8 dark:border-neutral-600 dark:bg-muted"
                 >
                     <div class="text-center">
                         <svg
-                            class="mx-auto h-8 w-8 text-stone-400 dark:text-stone-500"
+                            class="mx-auto h-8 w-8 text-neutral-400 dark:text-neutral-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -72,7 +74,7 @@ const hasEvents = computed(() => props.events.length > 0);
                                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                         </svg>
-                        <p class="mt-2 text-sm text-stone-500 dark:text-stone-400">
+                        <p class="mt-2 text-sm text-base-muted">
                             {{ t('home.noEventsCompact') }}
                         </p>
                     </div>

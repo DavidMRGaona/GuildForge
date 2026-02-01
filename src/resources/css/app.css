@@ -18,30 +18,64 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: 'Playfair Display', ui-serif, Georgia, serif;
 
-    /* Base Colors - Stone palette for warmer, natural feel */
-    --color-stone-50: #FAFAF9;
-    --color-stone-100: #F5F5F4;
-    --color-stone-200: #E7E5E4;
-    --color-stone-300: #D6D3D1;
-    --color-stone-400: #A8A29E;
-    --color-stone-500: #78716C;
-    --color-stone-600: #57534E;
-    --color-stone-700: #44403C;
-    --color-stone-800: #292524;
-    --color-stone-900: #1C1917;
+    /* Semantic colors as Tailwind tokens (enables bg-page, text-base-primary, etc.) */
+    --color-page: var(--color-bg-page);
+    --color-surface: var(--color-bg-surface);
+    --color-muted: var(--color-bg-muted);
+    --color-elevated: var(--color-bg-elevated);
+    --color-base-primary: var(--color-text-primary);
+    --color-base-secondary: var(--color-text-secondary);
+    --color-base-muted: var(--color-text-muted);
+    --color-base-inverted: var(--color-text-inverted);
 
-    /* Primary - Amber palette */
-    --color-amber-50: #FFFBEB;
-    --color-amber-100: #FEF3C7;
-    --color-amber-200: #FDE68A;
-    --color-amber-300: #FCD34D;
-    --color-amber-400: #FBBF24;
-    --color-amber-500: #F59E0B;
-    --color-amber-600: #D97706;
-    --color-amber-700: #B45309;
-    --color-amber-800: #92400E;
-    --color-amber-900: #78350F;
-    --color-amber-950: #451A03;
+    /* Primary palette shades (generated from admin settings) */
+    --color-primary-50: var(--color-primary-50);
+    --color-primary-100: var(--color-primary-100);
+    --color-primary-200: var(--color-primary-200);
+    --color-primary-300: var(--color-primary-300);
+    --color-primary-400: var(--color-primary-400);
+    --color-primary-500: var(--color-primary-500);
+    --color-primary-600: var(--color-primary-600);
+    --color-primary-700: var(--color-primary-700);
+    --color-primary-800: var(--color-primary-800);
+    --color-primary-900: var(--color-primary-900);
+    --color-primary-950: var(--color-primary-950);
+
+    /* Accent palette shades */
+    --color-accent-50: var(--color-accent-50);
+    --color-accent-100: var(--color-accent-100);
+    --color-accent-200: var(--color-accent-200);
+    --color-accent-300: var(--color-accent-300);
+    --color-accent-400: var(--color-accent-400);
+    --color-accent-500: var(--color-accent-500);
+    --color-accent-600: var(--color-accent-600);
+    --color-accent-700: var(--color-accent-700);
+    --color-accent-800: var(--color-accent-800);
+    --color-accent-900: var(--color-accent-900);
+    --color-accent-950: var(--color-accent-950);
+
+    /* Neutral palette shades */
+    --color-neutral-50: var(--color-neutral-50);
+    --color-neutral-100: var(--color-neutral-100);
+    --color-neutral-200: var(--color-neutral-200);
+    --color-neutral-300: var(--color-neutral-300);
+    --color-neutral-400: var(--color-neutral-400);
+    --color-neutral-500: var(--color-neutral-500);
+    --color-neutral-600: var(--color-neutral-600);
+    --color-neutral-700: var(--color-neutral-700);
+    --color-neutral-800: var(--color-neutral-800);
+    --color-neutral-900: var(--color-neutral-900);
+    --color-neutral-950: var(--color-neutral-950);
+
+    /* Semantic status colors */
+    --color-success: var(--color-success);
+    --color-success-bg: var(--color-success-bg);
+    --color-error: var(--color-error);
+    --color-error-bg: var(--color-error-bg);
+    --color-warning: var(--color-warning);
+    --color-warning-bg: var(--color-warning-bg);
+    --color-info: var(--color-info);
+    --color-info-bg: var(--color-info-bg);
 
     /* Transitions */
     --transition-card: 200ms ease-in-out;
@@ -118,11 +152,11 @@
     --color-secondary-hover: #D6D3D1;   /* stone-300 */
     --color-secondary-light: #57534E;   /* stone-600 */
 
-    /* Background Colors - Deep warm blacks, NOT pure black */
-    --color-bg-page: #1C1917;           /* stone-900 - main background */
-    --color-bg-surface: #292524;        /* stone-800 - cards */
-    --color-bg-elevated: #44403C;       /* stone-700 - modals, dropdowns */
-    --color-bg-muted: #292524;          /* stone-800 - subtle sections */
+    /* Background Colors - Lighter dark mode (L=0.18/0.25/0.32) for reduced eye strain */
+    --color-bg-page: #252220;           /* neutral-950 - main background (was #1C1917) */
+    --color-bg-surface: #302D2A;        /* neutral-900 - cards (was #292524) */
+    --color-bg-elevated: #3D3936;       /* neutral-800 - modals, dropdowns (was #44403C) */
+    --color-bg-muted: #302D2A;          /* neutral-900 - subtle sections (same as surface) */
 
     /* Text Colors - WCAG AA compliant */
     --color-text-primary: #F5F5F4;      /* stone-100 - 15:1 AAA */
@@ -174,32 +208,23 @@
 .border-strong { border-color: var(--color-border-strong); }
 .border-primary { border-color: var(--color-primary); }
 
-/* ==========================================================================
-   Legacy Theme Utilities (for backward compatibility)
-   These map to CSS variables for dynamic theme from admin settings
-   ========================================================================== */
-.text-theme-primary { color: var(--color-primary); }
-.bg-theme-primary { background-color: var(--color-primary); }
-.border-theme-primary { border-color: var(--color-primary); }
+/* Status text utilities */
+.text-success { color: var(--color-success); }
+.text-error { color: var(--color-error); }
+.text-warning { color: var(--color-warning); }
+.text-info { color: var(--color-info); }
 
-.text-theme-secondary { color: var(--color-secondary); }
-.bg-theme-secondary { background-color: var(--color-secondary); }
-.border-theme-secondary { border-color: var(--color-secondary); }
+/* Status background utilities (light) */
+.bg-success-light { background-color: var(--color-success-bg); }
+.bg-error-light { background-color: var(--color-error-bg); }
+.bg-warning-light { background-color: var(--color-warning-bg); }
+.bg-info-light { background-color: var(--color-info-bg); }
 
-.text-theme-accent { color: var(--color-accent); }
-.bg-theme-accent { background-color: var(--color-accent); }
-.border-theme-accent { border-color: var(--color-accent); }
-
-.text-theme-text { color: var(--color-text); }
-.bg-theme-background { background-color: var(--color-background); }
-.bg-theme-surface { background-color: var(--color-surface); }
-
-/* Dynamic font family */
-.font-theme-heading { font-family: var(--font-heading); }
-.font-theme-body { font-family: var(--font-body); }
-
-/* Dynamic border radius */
-.rounded-theme { border-radius: var(--border-radius); }
+/* Status border utilities */
+.border-success { border-color: var(--color-success); }
+.border-error { border-color: var(--color-error); }
+.border-warning { border-color: var(--color-warning); }
+.border-info { border-color: var(--color-info); }
 
 /* ==========================================================================
    Badge & Tag Design System
@@ -274,22 +299,22 @@
 
 /* ===== LIGHT MODE ===== */
 .event-calendar .fc {
-    --fc-border-color: #e7e5e4;
-    --fc-button-bg-color: #f59e0b;
-    --fc-button-border-color: #f59e0b;
-    --fc-button-hover-bg-color: #d97706;
-    --fc-button-hover-border-color: #d97706;
-    --fc-button-active-bg-color: #b45309;
-    --fc-button-active-border-color: #b45309;
-    --fc-event-bg-color: #f59e0b;
-    --fc-event-border-color: #f59e0b;
-    --fc-today-bg-color: #fef3c7;
-    --fc-page-bg-color: #ffffff;
-    --fc-neutral-bg-color: #fafaf9;
+    --fc-border-color: var(--color-border);
+    --fc-button-bg-color: var(--color-primary-500);
+    --fc-button-border-color: var(--color-primary-500);
+    --fc-button-hover-bg-color: var(--color-primary-600);
+    --fc-button-hover-border-color: var(--color-primary-600);
+    --fc-button-active-bg-color: var(--color-primary-700);
+    --fc-button-active-border-color: var(--color-primary-700);
+    --fc-event-bg-color: var(--color-primary-500);
+    --fc-event-border-color: var(--color-primary-500);
+    --fc-today-bg-color: var(--color-primary-100);
+    --fc-page-bg-color: var(--color-bg-surface);
+    --fc-neutral-bg-color: var(--color-bg-page);
 }
 
 .event-calendar .fc-theme-standard th {
-    background-color: #fef3c7;
+    background-color: var(--color-primary-100);
     border-color: var(--fc-border-color);
 }
 
@@ -301,7 +326,7 @@
 .event-calendar .fc-toolbar-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1c1917;
+    color: var(--color-text-primary);
 }
 
 .event-calendar .fc-button {
@@ -328,75 +353,75 @@
 }
 
 .event-calendar .fc-daygrid-day-number {
-    color: #1c1917;
+    color: var(--color-text-primary);
 }
 
 .event-calendar .fc-day-other .fc-daygrid-day-number {
-    color: #a8a29e;
+    color: var(--color-text-muted);
 }
 
 /* ===== DARK MODE ===== */
 .dark .event-calendar .fc {
-    --fc-border-color: #44403c;
-    --fc-today-bg-color: #451a03;
-    --fc-page-bg-color: #292524;
-    --fc-neutral-bg-color: #1c1917;
-    --fc-button-text-color: #f5f5f4;
+    --fc-border-color: var(--color-border);
+    --fc-today-bg-color: var(--color-primary-950);
+    --fc-page-bg-color: var(--color-bg-surface);
+    --fc-neutral-bg-color: var(--color-bg-page);
+    --fc-button-text-color: var(--color-text-primary);
 }
 
 .dark .event-calendar .fc-view-harness,
 .dark .event-calendar .fc-scrollgrid,
 .dark .event-calendar .fc-scrollgrid-section-body table {
-    background-color: #292524;
+    background-color: var(--color-bg-surface);
 }
 
 .dark .event-calendar .fc-theme-standard th,
 .dark .event-calendar .fc-col-header,
 .dark .event-calendar .fc-col-header-cell {
-    background-color: #44403c;
-    border-color: #44403c;
+    background-color: var(--color-neutral-700);
+    border-color: var(--color-border);
 }
 
 .dark .event-calendar .fc-theme-standard td,
 .dark .event-calendar .fc-daygrid-day,
 .dark .event-calendar .fc-daygrid-day-frame {
-    background-color: #292524;
-    border-color: #44403c;
+    background-color: var(--color-bg-surface);
+    border-color: var(--color-border);
 }
 
 .dark .event-calendar .fc-day-today,
 .dark .event-calendar .fc-day-today .fc-daygrid-day-frame {
-    background-color: #451a03;
+    background-color: var(--color-primary-950);
 }
 
 .dark .event-calendar .fc-day-other,
 .dark .event-calendar .fc-day-other .fc-daygrid-day-frame {
-    background-color: #1c1917;
+    background-color: var(--color-bg-page);
 }
 
 .dark .event-calendar .fc-toolbar-title {
-    color: #f5f5f4;
+    color: var(--color-text-primary);
 }
 
 .dark .event-calendar .fc-daygrid-day-number {
-    color: #f5f5f4;
+    color: var(--color-text-primary);
 }
 
 .dark .event-calendar .fc-day-other .fc-daygrid-day-number {
-    color: #a8a29e;  /* stone-400 - WCAG AA compliant */
+    color: var(--color-text-muted);
 }
 
 .dark .event-calendar .fc-col-header-cell-cushion {
-    color: #d6d3d1;
+    color: var(--color-text-secondary);
 }
 
 .dark .event-calendar .fc-event-title,
 .dark .event-calendar .fc-event-time {
-    color: #ffffff;
+    color: var(--color-text-inverted);
 }
 
 .dark .event-calendar .fc-daygrid-more-link {
-    color: #f59e0b;
+    color: var(--color-primary-action);
 }
 
 /* ===== COMPACT MODE ===== */
@@ -415,13 +440,13 @@
 .event-calendar--compact .fc-button {
     background: none;
     border: none;
-    color: #a8a29e;  /* stone-400 - WCAG AA compliant */
+    color: var(--color-text-muted);
     padding: 0.25rem 0.5rem;
     box-shadow: none;
 }
 
 .event-calendar--compact .fc-button:hover {
-    color: #f59e0b;
+    color: var(--color-primary-action);
     background: none;
 }
 
@@ -430,11 +455,11 @@
 }
 
 .dark .event-calendar--compact .fc-button {
-    color: #a8a29e;
+    color: var(--color-text-muted);
 }
 
 .dark .event-calendar--compact .fc-button:hover {
-    color: #fbbf24;
+    color: var(--color-primary-action-hover);
 }
 
 .event-calendar--compact .fc-col-header-cell {
@@ -445,12 +470,12 @@
 .event-calendar--compact .fc-col-header-cell-cushion {
     font-size: 0.75rem;
     font-weight: 500;
-    color: #a8a29e;  /* stone-400 - WCAG AA compliant */
+    color: var(--color-text-muted);
     text-transform: uppercase;
 }
 
 .dark .event-calendar--compact .fc-col-header-cell-cushion {
-    color: #a8a29e;
+    color: var(--color-text-muted);
 }
 
 .event-calendar--compact .fc-daygrid-day {
@@ -481,33 +506,33 @@
     justify-content: center;
     border-radius: 50%;
     transition: background-color 0.15s ease;
-    color: #1c1917;
+    color: var(--color-text-primary);
 }
 
 .dark .event-calendar--compact .fc-daygrid-day-number {
-    color: #d6d3d1;
+    color: var(--color-text-secondary);
 }
 
 .event-calendar--compact .fc-daygrid-day:not(.fc-day-today):hover .fc-daygrid-day-number {
-    background-color: #f5f5f4;
+    background-color: var(--color-neutral-100);
 }
 
 .dark .event-calendar--compact .fc-daygrid-day:not(.fc-day-today):hover .fc-daygrid-day-number {
-    background-color: #44403c;
+    background-color: var(--color-neutral-700);
 }
 
 .event-calendar--compact .fc-day-today .fc-daygrid-day-number {
-    background-color: #f59e0b;
-    color: white;
+    background-color: var(--color-primary-action);
+    color: var(--color-text-inverted);
     font-weight: 600;
 }
 
 .event-calendar--compact .fc-day-other .fc-daygrid-day-number {
-    color: #a8a29e;
+    color: var(--color-text-muted);
 }
 
 .dark .event-calendar--compact .fc-day-other .fc-daygrid-day-number {
-    color: #57534e;
+    color: var(--color-neutral-600);
 }
 
 .event-calendar--compact .fc-day-other .fc-daygrid-event-dot {
@@ -542,7 +567,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: #f59e0b;
+    background-color: var(--color-primary-action);
     border: none;
     margin: 0;
 }

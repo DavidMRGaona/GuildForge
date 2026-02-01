@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
@@ -10,30 +9,23 @@ import ProfileAccountTab from '@/components/profile/ProfileAccountTab.vue';
 import { useSeo } from '@/composables/useSeo';
 import { useProfileTabs } from '@/composables/useProfileTabs';
 import { useModuleSlots } from '@/composables/useModuleSlots';
+import { useFlashMessages } from '@/composables/useFlashMessages';
 import type { User } from '@/types/models';
 
 interface Props {
     user: User;
 }
 
-interface FlashProps {
-    flash?: { success?: string; error?: string };
-}
-
 defineProps<Props>();
 
 const { t } = useI18n();
-const page = usePage();
-const pageProps = page.props as FlashProps;
 const { tabs, activeTabId, setActiveTab } = useProfileTabs();
 const { getSlotComponents, hasSlotComponents } = useModuleSlots();
+const { success: successMessage, error: errorMessage } = useFlashMessages();
 
 useSeo({
     title: t('auth.profile.title'),
 });
-
-const successMessage = computed(() => pageProps.flash?.success);
-const errorMessage = computed(() => pageProps.flash?.error);
 
 const moduleComponents = computed(() => getSlotComponents('profile-sections'));
 const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
@@ -49,11 +41,11 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
             v-if="successMessage || errorMessage"
             class="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8"
         >
-            <div v-if="successMessage" class="rounded-md bg-green-50 p-4 dark:bg-green-900/30">
-                <p class="text-sm text-green-700 dark:text-green-400">{{ successMessage }}</p>
+            <div v-if="successMessage" class="rounded-md bg-success-light p-4">
+                <p class="text-sm text-success">{{ successMessage }}</p>
             </div>
-            <div v-if="errorMessage" class="rounded-md bg-red-50 p-4 dark:bg-red-900/30">
-                <p class="text-sm text-red-700 dark:text-red-400">{{ errorMessage }}</p>
+            <div v-if="errorMessage" class="rounded-md bg-error-light p-4">
+                <p class="text-sm text-error">{{ errorMessage }}</p>
             </div>
         </div>
 
@@ -82,12 +74,12 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                     <!-- Module tabs -->
                     <template v-if="hasModuleTabs">
                         <template v-for="item in moduleComponents" :key="item.key">
-                            <Suspense v-if="activeTabId === item.registration.module">
+                            <Suspense v-if="activeTabId === (item.registration.profileTab?.tabId ?? item.registration.module)">
                                 <component :is="item.component" v-bind="item.props" />
                                 <template #fallback>
                                     <div class="flex items-center justify-center py-12">
                                         <div
-                                            class="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"
+                                            class="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"
                                         />
                                     </div>
                                 </template>

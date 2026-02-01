@@ -33,12 +33,4 @@ trait BuildsPaginatedResponse
 
         return $paginated->toArray();
     }
-
-    /**
-     * Get the current page from request.
-     */
-    protected function getCurrentPage(): int
-    {
-        return max(1, (int) request()->query('page', 1));
-    }
 }

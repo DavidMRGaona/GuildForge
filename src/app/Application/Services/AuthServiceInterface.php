@@ -76,6 +76,15 @@ interface AuthServiceInterface
     public function uploadAvatar(string $userId, string $contents, string $mimeType): ?string;
 
     /**
+     * Upload and optimize a user avatar from an uploaded file.
+     *
+     * @param  string  $userId  The user ID
+     * @param  \Illuminate\Http\UploadedFile  $file  The uploaded file
+     * @return string|null The avatar public ID, or null if upload failed
+     */
+    public function uploadAvatarFromFile(string $userId, \Illuminate\Http\UploadedFile $file): ?string;
+
+    /**
      * Check if the user has verified their email address.
      */
     public function hasVerifiedEmail(string $userId): bool;

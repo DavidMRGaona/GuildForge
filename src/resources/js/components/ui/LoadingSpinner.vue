@@ -8,7 +8,7 @@ interface Props {
 
 withDefaults(defineProps<Props>(), {
     size: 'md',
-    color: 'text-amber-600',
+    color: 'text-primary',
 });
 
 const { t } = useI18n();

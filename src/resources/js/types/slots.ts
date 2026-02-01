@@ -14,9 +14,11 @@ export type SlotPosition =
     | 'profile-sections';
 
 export interface ProfileTabMeta {
+    tabId?: string;
     icon: ProfileTabIcon;
     labelKey: string;
     badgeKey?: string;
+    parentId?: string;
 }
 
 export interface SlotRegistration {

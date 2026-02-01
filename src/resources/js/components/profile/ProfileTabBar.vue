@@ -20,7 +20,7 @@ function handleTabClick(tabId: string): void {
 
 <template>
     <nav
-        class="flex gap-1 overflow-x-auto border-b border-stone-200 bg-white px-4 dark:border-stone-700 dark:bg-stone-900"
+        class="flex gap-1 overflow-x-auto border-b border-default bg-surface px-4"
         aria-label="Profile navigation"
     >
         <button
@@ -30,8 +30,8 @@ function handleTabClick(tabId: string): void {
             :class="[
                 'relative flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
                 activeTabId === tab.id
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-300',
+                    ? 'text-primary-600 dark:text-primary-400'
+                    : 'text-base-muted hover:text-base-secondary',
             ]"
             :aria-current="activeTabId === tab.id ? 'page' : undefined"
             @click="handleTabClick(tab.id)"
@@ -40,7 +40,7 @@ function handleTabClick(tabId: string): void {
             <span>{{ tab.label }}</span>
             <span
                 v-if="tab.badge !== undefined && tab.badge > 0"
-                class="inline-flex items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-semibold text-white"
+                class="inline-flex items-center justify-center rounded-full bg-primary-500 px-1.5 py-0.5 text-xs font-semibold text-white"
             >
                 {{ tab.badge }}
             </span>
@@ -48,7 +48,7 @@ function handleTabClick(tabId: string): void {
             <!-- Active indicator -->
             <span
                 v-if="activeTabId === tab.id"
-                class="absolute inset-x-0 bottom-0 h-0.5 bg-amber-500"
+                class="absolute inset-x-0 bottom-0 h-0.5 bg-primary-500"
                 aria-hidden="true"
             />
         </button>

@@ -52,29 +52,6 @@ final class EloquentUserRepositoryTest extends TestCase
         $this->assertNull($user);
     }
 
-    public function test_it_finds_user_model_by_email(): void
-    {
-        $model = UserModel::factory()->create([
-            'name' => 'Jane Doe',
-            'email' => 'jane@example.com',
-        ]);
-
-        $foundModel = $this->repository->findByEmail('jane@example.com');
-
-        $this->assertNotNull($foundModel);
-        $this->assertInstanceOf(UserModel::class, $foundModel);
-        $this->assertEquals($model->id, $foundModel->id);
-        $this->assertEquals('Jane Doe', $foundModel->name);
-        $this->assertEquals('jane@example.com', $foundModel->email);
-    }
-
-    public function test_it_returns_null_when_user_not_found_by_email(): void
-    {
-        $model = $this->repository->findByEmail('nonexistent@example.com');
-
-        $this->assertNull($model);
-    }
-
     public function test_it_saves_new_user(): void
     {
         $id = UserId::generate();

@@ -15,9 +15,11 @@ use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\View;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
+use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Str;
@@ -30,6 +32,21 @@ final class SiteSettings extends Page implements HasForms
 {
     use InteractsWithForms;
     use ManagesPageSettings;
+
+    /**
+     * Predefined theme color palettes with WCAG AA contrast compliance.
+     *
+     * @var array<string, array{primary: string, accent: string}>
+     */
+    private const array THEME_PRESETS = [
+        'clasico-dorado' => ['primary' => '#D97706', 'accent' => '#0EA5E9'],
+        'llamas-dragon' => ['primary' => '#DC2626', 'accent' => '#F59E0B'],
+        'bosque-elfico' => ['primary' => '#059669', 'accent' => '#84CC16'],
+        'profundidades-oceanicas' => ['primary' => '#0284C7', 'accent' => '#06B6D4'],
+        'purpura-real' => ['primary' => '#9333EA', 'accent' => '#EC4899'],
+        'reino-sombrio' => ['primary' => '#475569', 'accent' => '#8B5CF6'],
+        'acero-forja' => ['primary' => '#0F766E', 'accent' => '#FB923C'],
+    ];
 
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
 
@@ -75,23 +92,8 @@ final class SiteSettings extends Page implements HasForms
             'site_logo_email',
             'site_favicon_light',
             'site_favicon_dark',
-            'theme_primary_color',
-            'theme_primary_color_dark',
-            'theme_secondary_color',
-            'theme_secondary_color_dark',
-            'theme_accent_color',
-            'theme_background_color',
-            'theme_background_color_dark',
-            'theme_surface_color',
-            'theme_surface_color_dark',
-            'theme_text_color',
-            'theme_text_color_dark',
-            'theme_text_secondary_color',
-            'theme_text_secondary_color_dark',
-            'theme_text_muted_color',
-            'theme_text_muted_color_dark',
-            'theme_border_color',
-            'theme_border_color_dark',
+            'theme_primary_base_color',
+            'theme_accent_base_color',
             'theme_font_heading',
             'theme_font_body',
             'theme_font_size_base',
@@ -136,23 +138,8 @@ final class SiteSettings extends Page implements HasForms
             'site_logo_email' => '',
             'site_favicon_light' => '',
             'site_favicon_dark' => '',
-            'theme_primary_color' => '#D97706',
-            'theme_primary_color_dark' => '#F59E0B',
-            'theme_secondary_color' => '#57534E',
-            'theme_secondary_color_dark' => '#A8A29E',
-            'theme_accent_color' => '#D97706',
-            'theme_background_color' => '#FAFAF9',
-            'theme_background_color_dark' => '#1C1917',
-            'theme_surface_color' => '#FFFFFF',
-            'theme_surface_color_dark' => '#292524',
-            'theme_text_color' => '#1C1917',
-            'theme_text_color_dark' => '#F5F5F4',
-            'theme_text_secondary_color' => '#57534E',
-            'theme_text_secondary_color_dark' => '#D6D3D1',
-            'theme_text_muted_color' => '#A8A29E',
-            'theme_text_muted_color_dark' => '#A8A29E',
-            'theme_border_color' => '#E7E5E4',
-            'theme_border_color_dark' => '#44403C',
+            'theme_primary_base_color' => '#D97706',
+            'theme_accent_base_color' => '#0EA5E9',
             'theme_font_heading' => 'Inter',
             'theme_font_body' => 'Inter',
             'theme_font_size_base' => 'normal',
@@ -276,108 +263,53 @@ final class SiteSettings extends Page implements HasForms
                         Tab::make(__('filament.settings.tabs.colors'))
                             ->icon('heroicon-o-swatch')
                             ->schema([
-                                Section::make(__('filament.settings.colors.primary_section'))
+                                Section::make(__('filament.settings.colors.brand_section'))
+                                    ->description(__('filament.settings.colors.brand_description'))
                                     ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                ColorPicker::make('theme_primary_color')
-                                                    ->label(__('filament.settings.colors.primary_color'))
-                                                    ->default('#D97706'),
-
-                                                ColorPicker::make('theme_primary_color_dark')
-                                                    ->label(__('filament.settings.colors.primary_color_dark'))
-                                                    ->default('#F59E0B'),
-                                            ]),
-
-                                        Grid::make(2)
-                                            ->schema([
-                                                ColorPicker::make('theme_secondary_color')
-                                                    ->label(__('filament.settings.colors.secondary_color'))
-                                                    ->default('#57534E'),
-
-                                                ColorPicker::make('theme_secondary_color_dark')
-                                                    ->label(__('filament.settings.colors.secondary_color_dark'))
-                                                    ->default('#A8A29E'),
-                                            ]),
-
-                                        ColorPicker::make('theme_accent_color')
-                                            ->label(__('filament.settings.colors.accent_color'))
-                                            ->default('#D97706'),
-                                    ]),
-
-                                Section::make(__('filament.settings.colors.background_section'))
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                ColorPicker::make('theme_background_color')
-                                                    ->label(__('filament.settings.colors.background_color'))
-                                                    ->default('#FAFAF9'),
-
-                                                ColorPicker::make('theme_background_color_dark')
-                                                    ->label(__('filament.settings.colors.background_color_dark'))
-                                                    ->default('#1C1917'),
-                                            ]),
+                                        Select::make('theme_preset')
+                                            ->label(__('filament.settings.colors.preset'))
+                                            ->helperText(__('filament.settings.colors.preset_help'))
+                                            ->options([
+                                                'clasico-dorado' => __('filament.settings.colors.presets.clasico_dorado'),
+                                                'llamas-dragon' => __('filament.settings.colors.presets.llamas_dragon'),
+                                                'bosque-elfico' => __('filament.settings.colors.presets.bosque_elfico'),
+                                                'profundidades-oceanicas' => __('filament.settings.colors.presets.profundidades_oceanicas'),
+                                                'purpura-real' => __('filament.settings.colors.presets.purpura_real'),
+                                                'reino-sombrio' => __('filament.settings.colors.presets.reino_sombrio'),
+                                                'acero-forja' => __('filament.settings.colors.presets.acero_forja'),
+                                            ])
+                                            ->placeholder(__('filament.settings.colors.preset_placeholder'))
+                                            ->native(false)
+                                            ->live()
+                                            ->afterStateUpdated(function (Set $set, ?string $state): void {
+                                                if ($state !== null && isset(self::THEME_PRESETS[$state])) {
+                                                    $preset = self::THEME_PRESETS[$state];
+                                                    $set('theme_primary_base_color', $preset['primary']);
+                                                    $set('theme_accent_base_color', $preset['accent']);
+                                                }
+                                            })
+                                            ->columnSpanFull(),
 
                                         Grid::make(2)
                                             ->schema([
-                                                ColorPicker::make('theme_surface_color')
-                                                    ->label(__('filament.settings.colors.surface_color'))
-                                                    ->default('#FFFFFF'),
+                                                ColorPicker::make('theme_primary_base_color')
+                                                    ->label(__('filament.settings.colors.primary_base'))
+                                                    ->helperText(__('filament.settings.colors.primary_base_help'))
+                                                    ->default('#D97706')
+                                                    ->live(),
 
-                                                ColorPicker::make('theme_surface_color_dark')
-                                                    ->label(__('filament.settings.colors.surface_color_dark'))
-                                                    ->default('#292524'),
+                                                ColorPicker::make('theme_accent_base_color')
+                                                    ->label(__('filament.settings.colors.accent_base'))
+                                                    ->helperText(__('filament.settings.colors.accent_base_help'))
+                                                    ->default('#0EA5E9')
+                                                    ->live(),
                                             ]),
                                     ]),
 
-                                Section::make(__('filament.settings.colors.text_section'))
+                                Section::make(__('filament.settings.colors.preview_section'))
+                                    ->description(__('filament.settings.colors.preview_description'))
                                     ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                ColorPicker::make('theme_text_color')
-                                                    ->label(__('filament.settings.colors.text_color'))
-                                                    ->default('#1C1917'),
-
-                                                ColorPicker::make('theme_text_color_dark')
-                                                    ->label(__('filament.settings.colors.text_color_dark'))
-                                                    ->default('#F5F5F4'),
-                                            ]),
-
-                                        Grid::make(2)
-                                            ->schema([
-                                                ColorPicker::make('theme_text_secondary_color')
-                                                    ->label(__('filament.settings.colors.text_secondary_color'))
-                                                    ->default('#57534E'),
-
-                                                ColorPicker::make('theme_text_secondary_color_dark')
-                                                    ->label(__('filament.settings.colors.text_secondary_color_dark'))
-                                                    ->default('#D6D3D1'),
-                                            ]),
-
-                                        Grid::make(2)
-                                            ->schema([
-                                                ColorPicker::make('theme_text_muted_color')
-                                                    ->label(__('filament.settings.colors.text_muted_color'))
-                                                    ->default('#A8A29E'),
-
-                                                ColorPicker::make('theme_text_muted_color_dark')
-                                                    ->label(__('filament.settings.colors.text_muted_color_dark'))
-                                                    ->default('#A8A29E'),
-                                            ]),
-                                    ]),
-
-                                Section::make(__('filament.settings.colors.border_section'))
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                ColorPicker::make('theme_border_color')
-                                                    ->label(__('filament.settings.colors.border_color'))
-                                                    ->default('#E7E5E4'),
-
-                                                ColorPicker::make('theme_border_color_dark')
-                                                    ->label(__('filament.settings.colors.border_color_dark'))
-                                                    ->default('#44403C'),
-                                            ]),
+                                        View::make('filament.components.color-palette-preview'),
                                     ]),
                             ]),
 
