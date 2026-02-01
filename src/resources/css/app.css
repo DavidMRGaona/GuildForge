@@ -14,7 +14,8 @@
    ========================================================================== */
 @theme {
     /* Typography */
-    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans:
+        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: 'Playfair Display', ui-serif, Georgia, serif;
 
@@ -88,46 +89,46 @@
    ========================================================================== */
 :root {
     /* Primary Colors */
-    --color-primary: #D97706;           /* amber-600 - richer amber for light mode */
-    --color-primary-hover: #B45309;     /* amber-700 */
-    --color-primary-light: #FEF3C7;     /* amber-100 - subtle backgrounds */
-    --color-primary-light-hover: #FDE68A; /* amber-200 - hover for light backgrounds */
-    --color-primary-dark: #92400E;      /* amber-800 */
+    --color-primary: #d97706; /* amber-600 - richer amber for light mode */
+    --color-primary-hover: #b45309; /* amber-700 */
+    --color-primary-light: #fef3c7; /* amber-100 - subtle backgrounds */
+    --color-primary-light-hover: #fde68a; /* amber-200 - hover for light backgrounds */
+    --color-primary-dark: #92400e; /* amber-800 */
 
     /* Secondary Colors */
-    --color-secondary: #57534E;         /* stone-600 */
-    --color-secondary-hover: #44403C;   /* stone-700 */
-    --color-secondary-light: #A8A29E;   /* stone-400 */
+    --color-secondary: #57534e; /* stone-600 */
+    --color-secondary-hover: #44403c; /* stone-700 */
+    --color-secondary-light: #a8a29e; /* stone-400 */
 
     /* Background Colors */
-    --color-bg-page: #FAFAF9;           /* stone-50 - warm white */
-    --color-bg-surface: #FFFFFF;        /* white for cards */
-    --color-bg-elevated: #FFFFFF;       /* modals, dropdowns */
-    --color-bg-muted: #F5F5F4;          /* stone-100 - subtle sections */
+    --color-bg-page: #fafaf9; /* stone-50 - warm white */
+    --color-bg-surface: #ffffff; /* white for cards */
+    --color-bg-elevated: #ffffff; /* modals, dropdowns */
+    --color-bg-muted: #f5f5f4; /* stone-100 - subtle sections */
 
     /* Text Colors */
-    --color-text-primary: #1C1917;      /* stone-900 */
-    --color-text-secondary: #57534E;    /* stone-600 */
-    --color-text-muted: #A8A29E;        /* stone-400 */
-    --color-text-inverted: #FFFFFF;     /* white on dark bg */
+    --color-text-primary: #1c1917; /* stone-900 */
+    --color-text-secondary: #57534e; /* stone-600 */
+    --color-text-muted: #a8a29e; /* stone-400 */
+    --color-text-inverted: #ffffff; /* white on dark bg */
 
     /* Border Colors */
-    --color-border: #E7E5E4;            /* stone-200 */
-    --color-border-strong: #D6D3D1;     /* stone-300 */
+    --color-border: #e7e5e4; /* stone-200 */
+    --color-border-strong: #d6d3d1; /* stone-300 */
 
     /* Status Colors - Light Mode */
-    --color-success: #16A34A;           /* green-600 */
-    --color-success-bg: #DCFCE7;        /* green-100 */
-    --color-warning: #CA8A04;           /* yellow-600 */
-    --color-warning-bg: #FEF9C3;        /* yellow-100 */
-    --color-error: #DC2626;             /* red-600 */
-    --color-error-bg: #FEE2E2;          /* red-100 */
-    --color-info: #2563EB;              /* blue-600 */
-    --color-info-bg: #DBEAFE;           /* blue-100 */
+    --color-success: #16a34a; /* green-600 */
+    --color-success-bg: #dcfce7; /* green-100 */
+    --color-warning: #ca8a04; /* yellow-600 */
+    --color-warning-bg: #fef9c3; /* yellow-100 */
+    --color-error: #dc2626; /* red-600 */
+    --color-error-bg: #fee2e2; /* red-100 */
+    --color-info: #2563eb; /* blue-600 */
+    --color-info-bg: #dbeafe; /* blue-100 */
 
     /* Focus Ring */
-    --color-focus-ring: #F59E0B;        /* amber-500 */
-    --color-focus-ring-offset: #FFFFFF;
+    --color-focus-ring: #f59e0b; /* amber-500 */
+    --color-focus-ring-offset: #ffffff;
 }
 
 /* ==========================================================================
@@ -143,46 +144,46 @@
    ========================================================================== */
 .dark {
     /* Primary Colors - Glowing amber for dark backgrounds */
-    --color-primary: #F59E0B;           /* amber-500 - brighter, glowing */
-    --color-primary-hover: #FBBF24;     /* amber-400 - lighter on hover */
-    --color-primary-light: #451A03;     /* amber-950 - muted background */
-    --color-primary-light-hover: #78350F; /* amber-900 - hover for light backgrounds in dark mode */
-    --color-primary-dark: #D97706;      /* amber-600 */
+    --color-primary: #f59e0b; /* amber-500 - brighter, glowing */
+    --color-primary-hover: #fbbf24; /* amber-400 - lighter on hover */
+    --color-primary-light: #451a03; /* amber-950 - muted background */
+    --color-primary-light-hover: #78350f; /* amber-900 - hover for light backgrounds in dark mode */
+    --color-primary-dark: #d97706; /* amber-600 */
 
     /* Secondary Colors */
-    --color-secondary: #A8A29E;         /* stone-400 - lighter in dark mode */
-    --color-secondary-hover: #D6D3D1;   /* stone-300 */
-    --color-secondary-light: #57534E;   /* stone-600 */
+    --color-secondary: #a8a29e; /* stone-400 - lighter in dark mode */
+    --color-secondary-hover: #d6d3d1; /* stone-300 */
+    --color-secondary-light: #57534e; /* stone-600 */
 
     /* Background Colors - Lighter dark mode (L=0.18/0.25/0.32) for reduced eye strain */
-    --color-bg-page: #252220;           /* neutral-950 - main background (was #1C1917) */
-    --color-bg-surface: #302D2A;        /* neutral-900 - cards (was #292524) */
-    --color-bg-elevated: #3D3936;       /* neutral-800 - modals, dropdowns (was #44403C) */
-    --color-bg-muted: #302D2A;          /* neutral-900 - subtle sections (same as surface) */
+    --color-bg-page: #252220; /* neutral-950 - main background (was #1C1917) */
+    --color-bg-surface: #302d2a; /* neutral-900 - cards (was #292524) */
+    --color-bg-elevated: #3d3936; /* neutral-800 - modals, dropdowns (was #44403C) */
+    --color-bg-muted: #302d2a; /* neutral-900 - subtle sections (same as surface) */
 
     /* Text Colors - WCAG AA compliant */
-    --color-text-primary: #F5F5F4;      /* stone-100 - 15:1 AAA */
-    --color-text-secondary: #D6D3D1;    /* stone-300 - 11:1 AAA */
-    --color-text-muted: #A8A29E;        /* stone-400 - 5.2:1 AA (was stone-500, failed) */
-    --color-text-inverted: #1C1917;     /* stone-900 */
+    --color-text-primary: #f5f5f4; /* stone-100 - 15:1 AAA */
+    --color-text-secondary: #d6d3d1; /* stone-300 - 11:1 AAA */
+    --color-text-muted: #a8a29e; /* stone-400 - 5.2:1 AA (was stone-500, failed) */
+    --color-text-inverted: #1c1917; /* stone-900 */
 
     /* Border Colors */
-    --color-border: #44403C;            /* stone-700 */
-    --color-border-strong: #57534E;     /* stone-600 */
+    --color-border: #44403c; /* stone-700 */
+    --color-border-strong: #57534e; /* stone-600 */
 
     /* Status Colors - Dark Mode (slightly reduced saturation) */
-    --color-success: #4ADE80;           /* green-400 */
-    --color-success-bg: #14532D;        /* green-900 */
-    --color-warning: #FACC15;           /* yellow-400 */
-    --color-warning-bg: #713F12;        /* yellow-900 */
-    --color-error: #F87171;             /* red-400 */
-    --color-error-bg: #7F1D1D;          /* red-900 */
-    --color-info: #60A5FA;              /* blue-400 */
-    --color-info-bg: #1E3A8A;           /* blue-900 */
+    --color-success: #4ade80; /* green-400 */
+    --color-success-bg: #14532d; /* green-900 */
+    --color-warning: #facc15; /* yellow-400 */
+    --color-warning-bg: #713f12; /* yellow-900 */
+    --color-error: #f87171; /* red-400 */
+    --color-error-bg: #7f1d1d; /* red-900 */
+    --color-info: #60a5fa; /* blue-400 */
+    --color-info-bg: #1e3a8a; /* blue-900 */
 
     /* Focus Ring */
-    --color-focus-ring: #FBBF24;        /* amber-400 */
-    --color-focus-ring-offset: #1C1917; /* stone-900 */
+    --color-focus-ring: #fbbf24; /* amber-400 */
+    --color-focus-ring-offset: #1c1917; /* stone-900 */
 }
 
 /* ==========================================================================
@@ -191,25 +192,55 @@
    ========================================================================== */
 
 /* Background utilities */
-.bg-page { background-color: var(--color-bg-page); }
-.bg-surface { background-color: var(--color-bg-surface); }
-.bg-elevated { background-color: var(--color-bg-elevated); }
-.bg-muted { background-color: var(--color-bg-muted); }
-.bg-primary { background-color: var(--color-primary); }
-.bg-primary-light { background-color: var(--color-primary-light); }
+.bg-page {
+    background-color: var(--color-bg-page);
+}
+.bg-surface {
+    background-color: var(--color-bg-surface);
+}
+.bg-elevated {
+    background-color: var(--color-bg-elevated);
+}
+.bg-muted {
+    background-color: var(--color-bg-muted);
+}
+.bg-primary {
+    background-color: var(--color-primary);
+}
+.bg-primary-light {
+    background-color: var(--color-primary-light);
+}
 
 /* Text utilities */
-.text-base-primary { color: var(--color-text-primary); }
-.text-base-secondary { color: var(--color-text-secondary); }
-.text-base-muted { color: var(--color-text-muted); }
-.text-base-inverted { color: var(--color-text-inverted); }
-.text-primary { color: var(--color-primary); }
+.text-base-primary {
+    color: var(--color-text-primary);
+}
+.text-base-secondary {
+    color: var(--color-text-secondary);
+}
+.text-base-muted {
+    color: var(--color-text-muted);
+}
+.text-base-inverted {
+    color: var(--color-text-inverted);
+}
+.text-primary {
+    color: var(--color-primary);
+}
 
 /* Border utilities */
-.border-default { border-color: var(--color-border); }
-.border-strong { border-color: var(--color-border-strong); }
-.hover\:border-strong:hover { border-color: var(--color-border-strong); }
-.border-primary { border-color: var(--color-primary); }
+.border-default {
+    border-color: var(--color-border);
+}
+.border-strong {
+    border-color: var(--color-border-strong);
+}
+.hover\:border-strong:hover {
+    border-color: var(--color-border-strong);
+}
+.border-primary {
+    border-color: var(--color-primary);
+}
 
 /* Fix for Chrome hover on HeadlessUI Listbox buttons
    Chrome loses hover tracking after aria-expanded interactions;
@@ -219,22 +250,46 @@ button[data-headlessui-state]:hover {
 }
 
 /* Status text utilities */
-.text-success { color: var(--color-success); }
-.text-error { color: var(--color-error); }
-.text-warning { color: var(--color-warning); }
-.text-info { color: var(--color-info); }
+.text-success {
+    color: var(--color-success);
+}
+.text-error {
+    color: var(--color-error);
+}
+.text-warning {
+    color: var(--color-warning);
+}
+.text-info {
+    color: var(--color-info);
+}
 
 /* Status background utilities (light) */
-.bg-success-light { background-color: var(--color-success-bg); }
-.bg-error-light { background-color: var(--color-error-bg); }
-.bg-warning-light { background-color: var(--color-warning-bg); }
-.bg-info-light { background-color: var(--color-info-bg); }
+.bg-success-light {
+    background-color: var(--color-success-bg);
+}
+.bg-error-light {
+    background-color: var(--color-error-bg);
+}
+.bg-warning-light {
+    background-color: var(--color-warning-bg);
+}
+.bg-info-light {
+    background-color: var(--color-info-bg);
+}
 
 /* Status border utilities */
-.border-success { border-color: var(--color-success); }
-.border-error { border-color: var(--color-error); }
-.border-warning { border-color: var(--color-warning); }
-.border-info { border-color: var(--color-info); }
+.border-success {
+    border-color: var(--color-success);
+}
+.border-error {
+    border-color: var(--color-error);
+}
+.border-warning {
+    border-color: var(--color-warning);
+}
+.border-info {
+    border-color: var(--color-info);
+}
 
 /* ==========================================================================
    Badge & Tag Design System
@@ -275,7 +330,7 @@ button[data-headlessui-state]:hover {
    ========================================================================== */
 
 /* Input fields dark mode */
-.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark input:not([type='checkbox']):not([type='radio']),
 .dark textarea,
 .dark select {
     background-color: var(--color-bg-surface);
@@ -283,14 +338,14 @@ button[data-headlessui-state]:hover {
     color: var(--color-text-primary);
 }
 
-.dark input:not([type="checkbox"]):not([type="radio"]):focus,
+.dark input:not([type='checkbox']):not([type='radio']):focus,
 .dark textarea:focus,
 .dark select:focus {
     border-color: var(--color-primary);
     --tw-ring-color: var(--color-primary);
 }
 
-.dark input:not([type="checkbox"]):not([type="radio"]):disabled,
+.dark input:not([type='checkbox']):not([type='radio']):disabled,
 .dark textarea:disabled,
 .dark select:disabled {
     background-color: var(--color-bg-muted);
@@ -298,17 +353,17 @@ button[data-headlessui-state]:hover {
 }
 
 /* Date/time input icons for dark mode */
-.dark input[type="date"]::-webkit-calendar-picker-indicator,
-.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-.dark input[type="time"]::-webkit-calendar-picker-indicator {
+.dark input[type='date']::-webkit-calendar-picker-indicator,
+.dark input[type='datetime-local']::-webkit-calendar-picker-indicator,
+.dark input[type='time']::-webkit-calendar-picker-indicator {
     filter: invert(1);
     opacity: 0.7;
     cursor: pointer;
 }
 
-.dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
-.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
-.dark input[type="time"]::-webkit-calendar-picker-indicator:hover {
+.dark input[type='date']::-webkit-calendar-picker-indicator:hover,
+.dark input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+.dark input[type='time']::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
 }
 
@@ -616,46 +671,63 @@ button[data-headlessui-state]:hover {
     color: var(--color-text-primary) !important;
 }
 
-.prose :where(p, li, td, th, dt, dd, figcaption):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose
+    :where(p, li, td, th, dt, dd, figcaption):not(
+        :where([class~='not-prose'], [class~='not-prose'] *)
+    ) {
     color: inherit !important;
 }
 
-.prose :where(strong, b):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose :where(strong, b):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
     color: var(--color-text-primary);
     font-weight: 600;
 }
 
-.prose :where(h1, h2, h3, h4, h5, h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose :where(h1, h2, h3, h4, h5, h6):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
     color: var(--color-text-primary);
 }
 
-.prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
     color: var(--color-primary);
     text-decoration: underline;
 }
 
-.prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)):hover {
+.prose :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)):hover {
     color: var(--color-primary-hover);
 }
 
-.prose :where(blockquote):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose :where(blockquote):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
     color: var(--color-text-secondary);
     border-left-color: var(--color-border);
 }
 
-.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose :where(code):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
     color: var(--color-text-primary);
 }
 
-.prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose :where(pre):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
     background-color: var(--color-bg-muted);
     color: var(--color-text-secondary);
 }
 
-.prose :where(hr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+.prose :where(hr):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
     border-color: var(--color-border);
 }
 
-.prose :where(ul > li, ol > li):not(:where([class~="not-prose"], [class~="not-prose"] *))::marker {
+.prose :where(ul > li, ol > li):not(:where([class~='not-prose'], [class~='not-prose'] *))::marker {
     color: var(--color-text-muted);
+}
+
+/* ==========================================================================
+   Hide Number Input Spinners
+   Custom +/- buttons replace native browser spinners
+   ========================================================================== */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type='number'] {
+    -moz-appearance: textfield;
 }
