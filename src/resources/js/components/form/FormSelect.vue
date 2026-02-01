@@ -19,12 +19,14 @@ const props = withDefaults(
         disabled?: boolean;
         error?: string;
         id?: string;
+        name?: string;
     }>(),
     {
         placeholder: '',
         disabled: false,
         error: '',
         id: '',
+        name: '',
     }
 );
 
@@ -55,6 +57,7 @@ function handleChange(value: string | number | null): void {
     >
         <ListboxButton
             :id="id"
+            :name="name"
             class="relative w-full rounded-lg border bg-surface px-4 py-2.5 pr-10
                    text-left transition-colors duration-150
                    focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500

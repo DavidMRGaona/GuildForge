@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Updates\Services;
 
-use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
@@ -22,7 +21,6 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
 
     public function __construct(
         private ModuleRepositoryInterface $moduleRepository,
-        private ModuleManagerServiceInterface $moduleManager,
         private GitHubReleaseFetcherInterface $githubFetcher,
     ) {
         $this->allowPrereleases = (bool) config('updates.behavior.allow_prereleases', false);
@@ -63,7 +61,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
         }
 
         // Update the last check timestamp
-        $module->updateLastCheckAt(new DateTimeImmutable);
+        $module->updateLastCheckAt(new DateTimeImmutable());
         $module->updateLatestAvailableVersion($latestRelease->version->value());
         $this->moduleRepository->save($module);
 
@@ -84,7 +82,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
     public function checkAllForUpdates(): Collection
     {
         $modules = $this->moduleRepository->all();
-        $updates = new Collection;
+        $updates = new Collection();
 
         // Collect repos to check
         $reposToCheck = [];
@@ -134,7 +132,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
             }
 
             // Update tracking info
-            $module->updateLastCheckAt(new DateTimeImmutable);
+            $module->updateLastCheckAt(new DateTimeImmutable());
             $module->updateLatestAvailableVersion($release->version->value());
             $this->moduleRepository->save($module);
 

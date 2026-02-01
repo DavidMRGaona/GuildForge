@@ -26,6 +26,8 @@ interface EventQueryServiceInterface
 
     public function findPublishedBySlug(string $slug): ?EventResponseDTO;
 
+    public function findById(string $id): ?EventResponseDTO;
+
     /**
      * @return array<int, EventResponseDTO>
      */

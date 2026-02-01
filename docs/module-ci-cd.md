@@ -165,7 +165,7 @@ jobs:
 | guildforge-event-registrations | ✅ Configurado |
 | guildforge-game-tables | ✅ Configurado |
 | guildforge-memberships | ✅ Configurado |
-| guildforge-tournaments | ⏳ Pendiente (repo no creado) |
+| guildforge-tournaments | ✅ Configurado |
 
 ## Troubleshooting
 

@@ -53,6 +53,9 @@ final class ModuleUpdateLogModel extends Model
         return $this->belongsTo(ModuleUpdateHistoryModel::class, 'update_history_id');
     }
 
+    /**
+     * @param  array<string, mixed>|null  $context
+     */
     public static function log(
         string $historyId,
         string $step,

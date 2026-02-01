@@ -91,6 +91,7 @@
     --color-primary: #D97706;           /* amber-600 - richer amber for light mode */
     --color-primary-hover: #B45309;     /* amber-700 */
     --color-primary-light: #FEF3C7;     /* amber-100 - subtle backgrounds */
+    --color-primary-light-hover: #FDE68A; /* amber-200 - hover for light backgrounds */
     --color-primary-dark: #92400E;      /* amber-800 */
 
     /* Secondary Colors */
@@ -145,6 +146,7 @@
     --color-primary: #F59E0B;           /* amber-500 - brighter, glowing */
     --color-primary-hover: #FBBF24;     /* amber-400 - lighter on hover */
     --color-primary-light: #451A03;     /* amber-950 - muted background */
+    --color-primary-light-hover: #78350F; /* amber-900 - hover for light backgrounds in dark mode */
     --color-primary-dark: #D97706;      /* amber-600 */
 
     /* Secondary Colors */

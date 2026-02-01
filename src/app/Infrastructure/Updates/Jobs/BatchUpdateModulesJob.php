@@ -196,6 +196,9 @@ final class BatchUpdateModulesJob implements ShouldQueue
         return false;
     }
 
+    /**
+     * @return array<string>
+     */
     public function tags(): array
     {
         return ['updates', 'batch-update'];

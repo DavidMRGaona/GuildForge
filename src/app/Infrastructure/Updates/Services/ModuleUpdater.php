@@ -71,10 +71,14 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             throw UpdateException::noSourceConfigured($name->value);
         }
 
-        $release = $this->githubFetcher->getLatestRelease(
-            $module->sourceOwner(),
-            $module->sourceRepo()
-        );
+        $sourceOwner = $module->sourceOwner();
+        $sourceRepo = $module->sourceRepo();
+
+        if ($sourceOwner === null || $sourceRepo === null) {
+            throw UpdateException::noSourceConfigured($name->value);
+        }
+
+        $release = $this->githubFetcher->getLatestRelease($sourceOwner, $sourceRepo);
 
         if ($release === null || ! $release->version->isGreaterThan($module->version())) {
             throw UpdateException::noUpdateAvailable($name->value);
@@ -131,10 +135,13 @@ final class ModuleUpdater implements ModuleUpdaterInterface
 
         try {
             // Get latest release
-            $release = $this->githubFetcher->getLatestRelease(
-                $module->sourceOwner(),
-                $module->sourceRepo()
-            );
+            // We can assert non-null because hasUpdateSource() was checked above
+            /** @var string $sourceOwner */
+            $sourceOwner = $module->sourceOwner();
+            /** @var string $sourceRepo */
+            $sourceRepo = $module->sourceRepo();
+
+            $release = $this->githubFetcher->getLatestRelease($sourceOwner, $sourceRepo);
 
             if ($release === null || ! $release->version->isGreaterThan($module->version())) {
                 throw UpdateException::noUpdateAvailable($name->value);
@@ -393,6 +400,9 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         $history->updateStatus($status);
     }
 
+    /**
+     * @param  array<string, mixed>|null  $context
+     */
     private function log(
         string $historyId,
         string $step,
@@ -411,7 +421,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         }
 
         // Extract new version
-        $zip = new ZipArchive;
+        $zip = new ZipArchive();
         if ($zip->open($zipPath) !== true) {
             throw UpdateException::extractionFailed(basename($modulePath), 'Cannot open ZIP file');
         }
@@ -422,8 +432,13 @@ final class ModuleUpdater implements ModuleUpdaterInterface
 
         // Rename extracted folder to module name
         $extractedFolders = glob(dirname($modulePath).'/*', GLOB_ONLYDIR);
+
+        if ($extractedFolders === false) {
+            throw UpdateException::extractionFailed(basename($modulePath), 'Failed to list extracted folders');
+        }
+
         foreach ($extractedFolders as $folder) {
-            if (str_contains(basename($folder), '-') && ! File::isDirectory($modulePath)) {
+            if (! File::isDirectory($modulePath) && str_contains(basename($folder), '-')) {
                 File::move($folder, $modulePath);
                 break;
             }

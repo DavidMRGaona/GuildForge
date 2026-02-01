@@ -73,7 +73,7 @@ final class ModuleUpdateHistoryModel extends Model
     public function markCompleted(): void
     {
         $this->status = UpdateStatus::Completed;
-        $this->completed_at = now();
+        $this->completed_at = now()->toImmutable();
         $this->save();
     }
 
@@ -81,14 +81,14 @@ final class ModuleUpdateHistoryModel extends Model
     {
         $this->status = UpdateStatus::Failed;
         $this->error_message = $errorMessage;
-        $this->completed_at = now();
+        $this->completed_at = now()->toImmutable();
         $this->save();
     }
 
     public function markRolledBack(): void
     {
         $this->status = UpdateStatus::RolledBack;
-        $this->completed_at = now();
+        $this->completed_at = now()->toImmutable();
         $this->save();
     }
 

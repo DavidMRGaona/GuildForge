@@ -17,7 +17,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
 
 final class ModuleUpdatesPage extends Page implements HasTable
@@ -51,17 +50,17 @@ final class ModuleUpdatesPage extends Page implements HasTable
         return __('filament.updates.modules.navigation');
     }
 
-    public function getTitle(): string|Htmlable
+    public function getTitle(): string
     {
         return __('filament.updates.modules.title');
     }
 
-    public function getHeading(): string|Htmlable
+    public function getHeading(): string
     {
         return __('filament.updates.modules.heading');
     }
 
-    public function getSubheading(): string|Htmlable|null
+    public function getSubheading(): string
     {
         return __('filament.updates.modules.subheading');
     }
@@ -150,7 +149,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                     ->title(__('filament.updates.modules.notifications.update_failed', [
                         'module' => $moduleName,
                     ]))
-                    ->body($message)
+                    ->body(is_string($message) ? $message : null)
                     ->danger()
                     ->send();
             }

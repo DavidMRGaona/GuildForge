@@ -21,18 +21,25 @@ final class ModuleUninstallTest extends TestCase
 
     private string $modulesPath;
 
+    private string $testId;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->modulesPath = storage_path('app/test-modules-uninstall');
-        File::makeDirectory($this->modulesPath, 0755, true, true);
+        // Use unique ID for parallel test isolation
+        $this->testId = uniqid('uninstall_', true);
+        $this->modulesPath = storage_path("app/test-modules-uninstall-{$this->testId}");
+        File::ensureDirectoryExists($this->modulesPath);
         config(['modules.path' => $this->modulesPath]);
     }
 
     protected function tearDown(): void
     {
-        File::deleteDirectory($this->modulesPath);
+        // Clean up unique directory for this test
+        if (File::isDirectory($this->modulesPath)) {
+            File::deleteDirectory($this->modulesPath);
+        }
 
         parent::tearDown();
     }
@@ -43,7 +50,7 @@ final class ModuleUninstallTest extends TestCase
 
         // Create module directory
         $modulePath = $this->modulesPath.'/test-module';
-        File::makeDirectory($modulePath, 0755, true);
+        File::ensureDirectoryExists($modulePath);
         File::put($modulePath.'/module.json', json_encode(['name' => 'test-module']));
 
         $module = ModuleModel::factory()->disabled()->create([

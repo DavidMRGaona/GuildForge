@@ -71,6 +71,9 @@ final class CheckModuleUpdatesJob implements ShouldQueue
         }
     }
 
+    /**
+     * @return array<string>
+     */
     public function tags(): array
     {
         return ['updates', 'module-updates'];

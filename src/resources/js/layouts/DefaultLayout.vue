@@ -66,7 +66,7 @@ watch(theme, (newTheme) => {
 
         <a
             href="#main-content"
-            class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-surface focus:px-4 focus:py-2 focus:text-primary focus:ring-2 focus:ring-[var(--color-primary)]"
+            class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-surface focus:px-4 focus:py-2 focus:text-primary focus:ring-2 focus:ring-primary-500"
         >
             {{ t('a11y.skipToContent') }}
         </a>

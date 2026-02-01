@@ -55,6 +55,13 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           /* Neutral palette */
           {$neutralCss}
 
+          /* Semantic aliases (override app.css hardcoded values) */
+          --color-primary: var(--color-primary-600);
+          --color-primary-hover: var(--color-primary-700);
+          --color-primary-light: var(--color-primary-100);
+          --color-primary-light-hover: var(--color-primary-200);
+          --color-primary-dark: var(--color-primary-800);
+
           /* Contextual variables (Light mode) */
           --color-primary-action: var(--color-primary-600);
           --color-primary-action-hover: var(--color-primary-700);
@@ -99,6 +106,13 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         }
 
         .dark {
+          /* Semantic aliases (override app.css hardcoded values) */
+          --color-primary: var(--color-primary-500);
+          --color-primary-hover: var(--color-primary-400);
+          --color-primary-light: var(--color-primary-950);
+          --color-primary-light-hover: var(--color-primary-900);
+          --color-primary-dark: var(--color-primary-600);
+
           /* Contextual variables (Dark mode) */
           --color-primary-action: var(--color-primary-500);
           --color-primary-action-hover: var(--color-primary-400);

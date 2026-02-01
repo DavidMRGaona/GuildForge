@@ -35,7 +35,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
         $this->versionService->shouldReceive('getCurrentVersion')
             ->andReturn(ModuleVersion::fromString('1.0.0'));
 
-        $this->updateChecker->shouldReceive('checkForUpdates')
+        $this->updateChecker->shouldReceive('checkForUpdate')
             ->andReturn(null);
 
         $this->artisan('core:check-updates')
@@ -48,7 +48,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
         $this->versionService->shouldReceive('getCurrentVersion')
             ->andReturn(ModuleVersion::fromString('2.0.0'));
 
-        $this->updateChecker->shouldReceive('checkForUpdates')
+        $this->updateChecker->shouldReceive('checkForUpdate')
             ->andReturn(null);
 
         $this->artisan('core:check-updates')
@@ -74,7 +74,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
             isPrerelease: false,
         );
 
-        $this->updateChecker->shouldReceive('checkForUpdates')
+        $this->updateChecker->shouldReceive('checkForUpdate')
             ->andReturn($release);
 
         $this->artisan('core:check-updates')
@@ -100,7 +100,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
             isPrerelease: false,
         );
 
-        $this->updateChecker->shouldReceive('checkForUpdates')
+        $this->updateChecker->shouldReceive('checkForUpdate')
             ->andReturn($release);
 
         $this->artisan('core:check-updates')
@@ -134,7 +134,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
             isPrerelease: true,
         );
 
-        $this->updateChecker->shouldReceive('checkForUpdates')
+        $this->updateChecker->shouldReceive('checkForUpdate')
             ->andReturn($release);
 
         $this->artisan('core:check-updates')
@@ -168,7 +168,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
             isPrerelease: false,
         );
 
-        $this->updateChecker->shouldReceive('checkForUpdates')
+        $this->updateChecker->shouldReceive('checkForUpdate')
             ->andReturn($release);
 
         $this->artisan('core:check-updates')
@@ -182,7 +182,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
         $this->versionService->shouldReceive('getCurrentVersion')
             ->andReturn(ModuleVersion::fromString('1.0.0'));
 
-        $this->updateChecker->shouldReceive('checkForUpdates')
+        $this->updateChecker->shouldReceive('checkForUpdate')
             ->andReturn(null);
 
         $this->artisan('core:check-updates')

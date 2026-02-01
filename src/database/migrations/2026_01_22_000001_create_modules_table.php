@@ -26,6 +26,10 @@ return new class extends Migration
             $table->string('provider')->nullable();
             $table->json('requires')->nullable();
             $table->json('dependencies')->nullable();
+            $table->string('source_owner')->nullable();
+            $table->string('source_repo')->nullable();
+            $table->string('latest_available_version')->nullable();
+            $table->timestamp('last_update_check_at')->nullable();
             $table->timestamp('discovered_at')->nullable();
             $table->timestamp('enabled_at')->nullable();
             $table->timestamp('installed_at')->nullable();

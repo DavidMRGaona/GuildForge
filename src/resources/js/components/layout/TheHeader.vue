@@ -71,7 +71,7 @@ function selectTheme(mode: ThemeMode): void {
                     <Link
                         :href="routes.search"
                         :aria-label="t('search.title')"
-                        class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                        class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                         <svg
                             class="h-5 w-5"
@@ -95,7 +95,7 @@ function selectTheme(mode: ThemeMode): void {
                             type="button"
                             :aria-label="t('layout.selectTheme')"
                             :aria-expanded="isThemeMenuOpen"
-                            class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                            class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
                             @click="toggleThemeMenu"
                             @blur="closeThemeMenu"
                         >
@@ -243,7 +243,7 @@ function selectTheme(mode: ThemeMode): void {
                 <div class="md:hidden">
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center rounded-md p-2 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 dark:focus:ring-offset-[var(--color-bg-page)]"
+                        class="inline-flex items-center justify-center rounded-md p-2 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                         :aria-expanded="isMobileMenuOpen"
                         @click="toggleMobileMenu"
                     >

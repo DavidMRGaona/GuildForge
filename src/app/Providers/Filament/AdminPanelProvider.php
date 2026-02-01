@@ -16,6 +16,9 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -66,6 +69,7 @@ class AdminPanelProvider extends PanelProvider
                 ...$this->discoverModulePages(),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            ->widgets($this->discoverModuleWidgets())
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -79,7 +83,118 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): string => Blade::render('
+                    <style>
+                        /* Time picker input wrapper - focus ring with Filament primary color */
+                        .time-picker-input-wrapper:focus-within {
+                            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+                            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+                            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+                            --tw-ring-color: rgb(var(--primary-600));
+                        }
+
+                        /* Time wheel picker - iOS style with infinite scroll */
+
+                        /* Header with background */
+                        .time-wheel-header {
+                            background: rgb(249 250 251);
+                        }
+                        .dark .time-wheel-header {
+                            background: rgb(55 65 81);
+                        }
+
+                        .time-wheel-container {
+                            position: relative;
+                            height: 160px; /* 5 items visible */
+                        }
+
+                        /* Scrollable wheel */
+                        .time-wheel {
+                            height: 100%;
+                            overflow-y: scroll;
+                            -webkit-overflow-scrolling: touch;
+                            scrollbar-width: none;
+                            -ms-overflow-style: none;
+                        }
+                        .time-wheel::-webkit-scrollbar {
+                            display: none;
+                        }
+
+                        /* Each time item */
+                        .time-wheel-item {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            height: 32px;
+                            width: 100%;
+                            font-size: 1rem;
+                            font-weight: 500;
+                            color: rgb(55 65 81);
+                            background: transparent;
+                            border: none;
+                            cursor: pointer;
+                            transition: color 0.15s ease;
+                        }
+                        .time-wheel-item:hover {
+                            color: rgb(17 24 39);
+                        }
+                        .dark .time-wheel-item {
+                            color: rgb(156 163 175);
+                        }
+                        .dark .time-wheel-item:hover {
+                            color: rgb(229 231 235);
+                        }
+
+                        /* Selection indicator bar - centered at 64px (2 items from top) */
+                        .time-wheel-indicator {
+                            position: absolute;
+                            top: 64px;
+                            left: 0;
+                            right: 0;
+                            height: 32px;
+                            border-top: 1px solid rgb(209 213 219);
+                            border-bottom: 1px solid rgb(209 213 219);
+                            background: rgba(249 250 251 / 0.5);
+                            pointer-events: none;
+                            z-index: 1;
+                        }
+                        .dark .time-wheel-indicator {
+                            border-color: rgb(75 85 99);
+                            background: rgba(55 65 81 / 0.5);
+                        }
+
+                        /* Fade masks for top and bottom */
+                        .time-wheel-container::before,
+                        .time-wheel-container::after {
+                            content: "";
+                            position: absolute;
+                            left: 0;
+                            right: 0;
+                            height: 40px;
+                            pointer-events: none;
+                            z-index: 2;
+                        }
+                        .time-wheel-container::before {
+                            top: 0;
+                            background: linear-gradient(to bottom, rgb(255 255 255) 0%, transparent 100%);
+                        }
+                        .time-wheel-container::after {
+                            bottom: 0;
+                            background: linear-gradient(to top, rgb(255 255 255) 0%, transparent 100%);
+                        }
+                        .dark .time-wheel-container::before {
+                            background: linear-gradient(to bottom, rgb(31 41 55) 0%, transparent 100%);
+                        }
+                        .dark .time-wheel-container::after {
+                            background: linear-gradient(to top, rgb(31 41 55) 0%, transparent 100%);
+                        }
+                    </style>
+                    <script src="{{ asset(\'js/filament/time-picker.js\') }}"></script>
+                ')
+            );
 
         // Discover resources from enabled modules
         $this->discoverModuleResources($panel);
@@ -445,6 +560,91 @@ class AdminPanelProvider extends PanelProvider
             logger()->error('[AdminPanelProvider] Failed to discover module resources', [
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Discover and collect Filament widgets from enabled modules.
+     *
+     * @return array<class-string<\Filament\Widgets\Widget>>
+     */
+    private function discoverModuleWidgets(): array
+    {
+        try {
+            $modulesPath = config('modules.path', base_path('modules'));
+
+            if (! is_dir($modulesPath)) {
+                return [];
+            }
+
+            // Get list of enabled module names
+            $enabledModules = $this->getEnabledModuleNames();
+
+            // If no modules enabled, skip widget discovery
+            if ($enabledModules === []) {
+                return [];
+            }
+
+            $widgets = [];
+
+            $moduleDirectories = glob($modulesPath.'/*', GLOB_ONLYDIR);
+            if ($moduleDirectories === false) {
+                return [];
+            }
+
+            foreach ($moduleDirectories as $modulePath) {
+                $moduleName = basename($modulePath);
+
+                // Skip disabled modules
+                if (! in_array($moduleName, $enabledModules, true)) {
+                    continue;
+                }
+
+                try {
+                    $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
+
+                    // Find the service provider file
+                    $providerFile = $modulePath.'/src/'.$studlyName.'ServiceProvider.php';
+                    if (! file_exists($providerFile)) {
+                        continue;
+                    }
+
+                    // Register autoloader and load the provider
+                    $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath.'/src');
+
+                    $providerClass = "Modules\\{$studlyName}\\{$studlyName}ServiceProvider";
+
+                    // Load the provider file
+                    require_once $providerFile;
+
+                    if (! class_exists($providerClass)) {
+                        continue;
+                    }
+
+                    /** @var ModuleServiceProvider $provider */
+                    $provider = new $providerClass(app());
+
+                    // Check if the provider has registerFilamentWidgets method
+                    if (method_exists($provider, 'registerFilamentWidgets')) {
+                        $moduleWidgets = $provider->registerFilamentWidgets();
+                        $widgets = array_merge($widgets, $moduleWidgets);
+                    }
+                } catch (Throwable $e) {
+                    // Log the error but continue with other modules
+                    logger()->warning("[AdminPanelProvider] Failed to discover widgets for module: {$moduleName}", [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return $widgets;
+        } catch (Throwable $e) {
+            // If widget discovery fails completely, log and continue without module widgets
+            logger()->error('[AdminPanelProvider] Failed to discover module widgets', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
         }
     }
 
