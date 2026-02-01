@@ -8,13 +8,13 @@ use App\Application\DTOs\Response\ArticleResponseDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
+use App\Infrastructure\Support\QueryHelpers;
 
 final readonly class ArticleQueryService implements ArticleQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {
-    }
+    ) {}
 
     public function getLatestPublished(int $limit = 10): array
     {
@@ -30,20 +30,14 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
 
     public function getPublishedPaginated(int $page = 1, int $perPage = 12, ?array $tagSlugs = null): array
     {
-        $offset = ($page - 1) * $perPage;
-
         $query = ArticleModel::query()
             ->with(['author', 'tags'])
             ->where('is_published', true);
 
-        if ($tagSlugs !== null && count($tagSlugs) > 0) {
-            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
-        }
+        QueryHelpers::applyTagFilter($query, $tagSlugs);
 
-        $articles = $query
+        $articles = QueryHelpers::applyPagination($query, $page, $perPage)
             ->orderBy('published_at', 'desc')
-            ->offset($offset)
-            ->limit($perPage)
             ->get();
 
         return $articles->map(fn (ArticleModel $article) => $this->dtoFactory->createArticleDTO($article))->all();
@@ -54,11 +48,7 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
         $query = ArticleModel::query()
             ->where('is_published', true);
 
-        if ($tagSlugs !== null && count($tagSlugs) > 0) {
-            $query->whereHas('tags', fn ($q) => $q->whereIn('slug', $tagSlugs));
-        }
-
-        return $query->count();
+        return QueryHelpers::applyTagFilter($query, $tagSlugs)->count();
     }
 
     public function findPublishedBySlug(string $slug): ?ArticleResponseDTO

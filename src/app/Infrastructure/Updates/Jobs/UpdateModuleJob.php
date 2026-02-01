@@ -26,7 +26,8 @@ final class UpdateModuleJob implements ShouldQueue
 
     public function __construct(
         public readonly string $moduleName,
-    ) {}
+    ) {
+    }
 
     public function handle(ModuleUpdaterInterface $updater): void
     {

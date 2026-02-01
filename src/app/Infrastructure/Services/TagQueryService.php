@@ -17,8 +17,11 @@ final readonly class TagQueryService implements TagQueryServiceInterface
     public function getAllInHierarchicalOrder(?string $type = null): array
     {
         $result = [];
+
+        // Load all tags in a single query with recursive eager loading
         $query = TagModel::query()
             ->whereNull('parent_id')
+            ->with(['children' => $this->buildChildrenEagerLoader($type)])
             ->orderBy('sort_order')
             ->orderBy('name');
 
@@ -29,10 +32,27 @@ final readonly class TagQueryService implements TagQueryServiceInterface
         $roots = $query->get();
 
         foreach ($roots as $root) {
-            $this->addWithDescendants($root, $result, 0, $root->name, $type);
+            $this->addWithDescendantsFromEager($root, $result, 0, $root->name, $type);
         }
 
         return $result;
+    }
+
+    /**
+     * Build a recursive eager loader for children relationships.
+     */
+    private function buildChildrenEagerLoader(?string $type): \Closure
+    {
+        return function ($query) use ($type): void {
+            $query->orderBy('sort_order')->orderBy('name');
+
+            if ($type !== null) {
+                $query->whereJsonContains('applies_to', $type);
+            }
+
+            // Recursively eager load children
+            $query->with(['children' => $this->buildChildrenEagerLoader($type)]);
+        };
     }
 
     /**
@@ -52,15 +72,22 @@ final readonly class TagQueryService implements TagQueryServiceInterface
 
     public function getUsageCount(string $tagId): int
     {
-        $tag = TagModel::query()->find($tagId);
+        $tag = TagModel::query()
+            ->withCount(['events', 'articles', 'galleries'])
+            ->find($tagId);
 
         if ($tag === null) {
             return 0;
         }
 
-        return $tag->events()->count()
-            + $tag->articles()->count()
-            + $tag->galleries()->count();
+        /** @var int $eventsCount */
+        $eventsCount = $tag->events_count;
+        /** @var int $articlesCount */
+        $articlesCount = $tag->articles_count;
+        /** @var int $galleriesCount */
+        $galleriesCount = $tag->galleries_count;
+
+        return $eventsCount + $articlesCount + $galleriesCount;
     }
 
     public function hasChildren(string $tagId): bool
@@ -103,23 +130,26 @@ final readonly class TagQueryService implements TagQueryServiceInterface
     }
 
     /**
-     * Recursively add a tag and its descendants to the result array.
+     * Recursively add a tag and its descendants to the result array using eager-loaded relations.
      *
      * @param  array<TagHierarchyDTO>  $result
      */
-    private function addWithDescendants(
+    private function addWithDescendantsFromEager(
         TagModel $tag,
         array &$result,
         int $depth,
         string $pathSoFar,
         ?string $type = null,
     ): void {
+        // Derive parent name from path for efficiency (avoid loading parent relation)
+        $parentName = $depth > 0 ? $this->extractParentNameFromPath($pathSoFar) : null;
+
         $tagResponseDTO = new TagResponseDTO(
             id: $tag->id,
             name: $tag->name,
             slug: $tag->slug,
             parentId: $tag->parent_id,
-            parentName: $tag->parent?->name,
+            parentName: $parentName,
             appliesTo: $tag->applies_to,
             color: $tag->color,
             sortOrder: $tag->sort_order,
@@ -132,20 +162,26 @@ final readonly class TagQueryService implements TagQueryServiceInterface
             description: $tag->description,
         );
 
-        $childQuery = TagModel::query()
-            ->where('parent_id', $tag->id)
-            ->orderBy('sort_order')
-            ->orderBy('name');
-
-        if ($type !== null) {
-            $childQuery->whereJsonContains('applies_to', $type);
-        }
-
-        $children = $childQuery->get();
-
-        foreach ($children as $child) {
+        // Use eager-loaded children (already filtered and ordered)
+        foreach ($tag->children as $child) {
             $childPath = $pathSoFar.' > '.$child->name;
-            $this->addWithDescendants($child, $result, $depth + 1, $childPath, $type);
+            $this->addWithDescendantsFromEager($child, $result, $depth + 1, $childPath, $type);
         }
+    }
+
+    /**
+     * Extract the parent name from a path like "Root > Parent > Current".
+     */
+    private function extractParentNameFromPath(string $path): ?string
+    {
+        $parts = explode(' > ', $path);
+        $count = count($parts);
+
+        if ($count < 2) {
+            return null;
+        }
+
+        // Return the second-to-last part (the parent)
+        return $parts[$count - 2];
     }
 }

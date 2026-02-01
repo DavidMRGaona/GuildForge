@@ -16,11 +16,18 @@ use Illuminate\Support\Facades\Log;
 
 final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
 {
+    private bool $allowPrereleases;
+
+    private bool $batchCheck;
+
     public function __construct(
         private ModuleRepositoryInterface $moduleRepository,
         private ModuleManagerServiceInterface $moduleManager,
         private GitHubReleaseFetcherInterface $githubFetcher,
-    ) {}
+    ) {
+        $this->allowPrereleases = (bool) config('updates.behavior.allow_prereleases', false);
+        $this->batchCheck = (bool) config('updates.batch_check', true);
+    }
 
     public function checkForUpdate(ModuleName $name): ?AvailableUpdateDTO
     {
@@ -45,7 +52,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
         }
 
         // Skip prereleases unless configured to allow them
-        if ($latestRelease->isPrerelease && ! config('updates.behavior.allow_prereleases', false)) {
+        if ($latestRelease->isPrerelease && ! $this->allowPrereleases) {
             return null;
         }
 
@@ -56,7 +63,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
         }
 
         // Update the last check timestamp
-        $module->updateLastCheckAt(new DateTimeImmutable());
+        $module->updateLastCheckAt(new DateTimeImmutable);
         $module->updateLatestAvailableVersion($latestRelease->version->value());
         $this->moduleRepository->save($module);
 
@@ -77,7 +84,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
     public function checkAllForUpdates(): Collection
     {
         $modules = $this->moduleRepository->all();
-        $updates = new Collection();
+        $updates = new Collection;
 
         // Collect repos to check
         $reposToCheck = [];
@@ -101,7 +108,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
         }
 
         // Batch fetch all releases
-        $releases = config('updates.batch_check', true)
+        $releases = $this->batchCheck
             ? $this->githubFetcher->batchFetchLatestReleases($reposToCheck)
             : $this->fetchReleasesIndividually($reposToCheck);
 
@@ -116,7 +123,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
             }
 
             // Skip prereleases unless configured
-            if ($release->isPrerelease && ! config('updates.behavior.allow_prereleases', false)) {
+            if ($release->isPrerelease && ! $this->allowPrereleases) {
                 continue;
             }
 
@@ -127,7 +134,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
             }
 
             // Update tracking info
-            $module->updateLastCheckAt(new DateTimeImmutable());
+            $module->updateLastCheckAt(new DateTimeImmutable);
             $module->updateLatestAvailableVersion($release->version->value());
             $this->moduleRepository->save($module);
 

@@ -19,7 +19,8 @@ final readonly class HealthCheckResultDTO
         public bool $filamentRegisters,
         public array $errors = [],
         public array $warnings = [],
-    ) {}
+    ) {
+    }
 
     public function passes(): bool
     {

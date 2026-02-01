@@ -20,7 +20,8 @@ final readonly class GitHubReleaseInfo
         public string $releaseNotes,
         public DateTimeImmutable $publishedAt,
         public bool $isPrerelease,
-    ) {}
+    ) {
+    }
 
     /**
      * Create from GitHub API response.

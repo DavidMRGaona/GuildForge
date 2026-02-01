@@ -31,7 +31,8 @@ final class BatchUpdateModulesJob implements ShouldQueue
      */
     public function __construct(
         public readonly ?array $moduleNames = null,
-    ) {}
+    ) {
+    }
 
     public function handle(
         ModuleUpdateCheckerInterface $updateChecker,
