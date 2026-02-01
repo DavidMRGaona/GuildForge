@@ -10,5 +10,6 @@ final readonly class ModuleUpdateCompleted
         public string $moduleName,
         public string $fromVersion,
         public string $toVersion,
-    ) {}
+    ) {
+    }
 }

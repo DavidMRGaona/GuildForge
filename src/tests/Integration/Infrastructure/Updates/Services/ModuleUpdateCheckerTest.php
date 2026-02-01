@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
-use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
@@ -26,8 +25,6 @@ final class ModuleUpdateCheckerTest extends TestCase
 {
     private MockInterface&ModuleRepositoryInterface $moduleRepository;
 
-    private MockInterface&ModuleManagerServiceInterface $moduleManager;
-
     private MockInterface&GitHubReleaseFetcherInterface $githubFetcher;
 
     private ModuleUpdateChecker $service;
@@ -37,12 +34,10 @@ final class ModuleUpdateCheckerTest extends TestCase
         parent::setUp();
 
         $this->moduleRepository = Mockery::mock(ModuleRepositoryInterface::class);
-        $this->moduleManager = Mockery::mock(ModuleManagerServiceInterface::class);
         $this->githubFetcher = Mockery::mock(GitHubReleaseFetcherInterface::class);
 
         $this->service = new ModuleUpdateChecker(
             $this->moduleRepository,
-            $this->moduleManager,
             $this->githubFetcher
         );
 
@@ -152,7 +147,6 @@ final class ModuleUpdateCheckerTest extends TestCase
         // Create a fresh service instance to pick up the new config
         $service = new ModuleUpdateChecker(
             $this->moduleRepository,
-            $this->moduleManager,
             $this->githubFetcher
         );
 

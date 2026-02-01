@@ -15,7 +15,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Illuminate\Contracts\Support\Htmlable;
 
 final class CoreUpdatesPage extends Page implements HasTable
 {
@@ -48,17 +47,17 @@ final class CoreUpdatesPage extends Page implements HasTable
         return __('filament.updates.core.navigation');
     }
 
-    public function getTitle(): string|Htmlable
+    public function getTitle(): string
     {
         return __('filament.updates.core.title');
     }
 
-    public function getHeading(): string|Htmlable
+    public function getHeading(): string
     {
         return __('filament.updates.core.heading');
     }
 
-    public function getSubheading(): string|Htmlable|null
+    public function getSubheading(): string
     {
         return __('filament.updates.core.subheading');
     }
@@ -80,7 +79,7 @@ final class CoreUpdatesPage extends Page implements HasTable
 
         try {
             $updateChecker = app(CoreUpdateCheckerInterface::class);
-            $this->latestRelease = $updateChecker->checkForUpdates();
+            $this->latestRelease = $updateChecker->checkForUpdate();
 
             if ($this->latestRelease === null) {
                 Notification::make()
@@ -115,7 +114,7 @@ final class CoreUpdatesPage extends Page implements HasTable
         $currentParts = explode('.', $this->currentVersion);
         $newParts = explode('.', $this->latestRelease->version->value());
 
-        return ($currentParts[0] ?? '0') !== ($newParts[0] ?? '0');
+        return $currentParts[0] !== $newParts[0];
     }
 
     public function table(Table $table): Table

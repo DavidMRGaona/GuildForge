@@ -179,18 +179,25 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
             throw new \RuntimeException("Cannot create ZIP file: {$destinationPath}");
         }
 
-        $sourcePath = realpath($sourcePath);
+        $realSourcePath = realpath($sourcePath);
+
+        if ($realSourcePath === false) {
+            throw new \RuntimeException("Source path does not exist: {$sourcePath}");
+        }
+
         $files = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($sourcePath, \RecursiveDirectoryIterator::SKIP_DOTS),
+            new \RecursiveDirectoryIterator($realSourcePath, \RecursiveDirectoryIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::LEAVES_ONLY
         );
 
         foreach ($files as $file) {
             if (! $file->isDir()) {
                 $filePath = $file->getRealPath();
-                $relativePath = substr($filePath, strlen($sourcePath) + 1);
 
-                $zip->addFile($filePath, $relativePath);
+                if ($filePath !== false) {
+                    $relativePath = substr($filePath, strlen($realSourcePath) + 1);
+                    $zip->addFile($filePath, $relativePath);
+                }
             }
         }
 

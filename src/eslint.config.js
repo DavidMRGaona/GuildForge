@@ -16,6 +16,23 @@ export default [
         ],
     },
     {
+        files: ['**/*.js'],
+        languageOptions: {
+            parserOptions: {
+                ecmaVersion: 'latest',
+                sourceType: 'module',
+            },
+            globals: {
+                console: 'readonly',
+                document: 'readonly',
+                window: 'readonly',
+                Alpine: 'readonly',
+                setTimeout: 'readonly',
+                clearTimeout: 'readonly',
+            },
+        },
+    },
+    {
         files: ['**/*.ts'],
         languageOptions: {
             parser: typescriptParser,

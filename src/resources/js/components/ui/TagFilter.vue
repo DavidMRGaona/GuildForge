@@ -100,7 +100,7 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
                 'rounded-full px-3 py-1 text-sm font-medium transition-colors',
                 !hasActiveTags
                     ? 'bg-primary-light text-primary font-semibold'
-                    : 'bg-muted text-base-secondary hover:bg-[var(--color-border)]',
+                    : 'bg-muted text-base-secondary hover:bg-neutral-200 dark:hover:bg-neutral-700',
             ]"
             @click="clearTags"
         >

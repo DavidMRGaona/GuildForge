@@ -30,6 +30,8 @@ final class ModuleBackupServiceTest extends TestCase
 
     private string $backupDir;
 
+    private string $testId;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -37,19 +39,28 @@ final class ModuleBackupServiceTest extends TestCase
         $this->moduleManager = Mockery::mock(ModuleManagerServiceInterface::class);
         $this->service = new ModuleBackupService($this->moduleManager);
 
-        $this->tempDir = storage_path('app/test-modules');
-        $this->backupDir = storage_path('app/backups/modules');
+        // Use unique ID for parallel test isolation
+        $this->testId = uniqid('test_', true);
+        $this->tempDir = storage_path("app/test-modules-{$this->testId}");
+        $this->backupDir = storage_path("app/backups-{$this->testId}/modules");
 
-        config(['updates.backup_path' => storage_path('app/backups')]);
+        config(['updates.backup_path' => storage_path("app/backups-{$this->testId}")]);
         config(['updates.backup_retention' => 3]);
 
+        // Ensure test directories exist
         File::ensureDirectoryExists($this->tempDir);
+        File::ensureDirectoryExists($this->backupDir);
     }
 
     protected function tearDown(): void
     {
-        File::deleteDirectory($this->tempDir);
-        File::deleteDirectory($this->backupDir);
+        // Clean up unique directories for this test
+        if (File::isDirectory($this->tempDir)) {
+            File::deleteDirectory($this->tempDir);
+        }
+        if (File::isDirectory(dirname($this->backupDir))) {
+            File::deleteDirectory(dirname($this->backupDir));
+        }
 
         parent::tearDown();
     }
@@ -143,18 +154,22 @@ final class ModuleBackupServiceTest extends TestCase
 
     public function test_it_lists_backups_for_module(): void
     {
-        $modulePath = $this->createTestModule('events', '1.0.0');
-        $module = $this->createRealModule('events', '1.0.0', $modulePath);
+        $modulePath = $this->createTestModule('listbackups', '1.0.0');
+
+        // Verify directory was created
+        $this->assertDirectoryExists($modulePath, "Module directory was not created at: {$modulePath}");
+
+        $module = $this->createRealModule('listbackups', '1.0.0', $modulePath);
 
         $this->moduleManager->shouldReceive('find')
             ->andReturn($module);
 
         // Create multiple backups
-        $this->service->createBackup(ModuleName::fromString('events'));
+        $this->service->createBackup(ModuleName::fromString('listbackups'));
         sleep(1);
-        $this->service->createBackup(ModuleName::fromString('events'));
+        $this->service->createBackup(ModuleName::fromString('listbackups'));
 
-        $backups = $this->service->listBackups(ModuleName::fromString('events'));
+        $backups = $this->service->listBackups(ModuleName::fromString('listbackups'));
 
         $this->assertCount(2, $backups);
         $this->assertArrayHasKey('path', $backups->first());
@@ -226,9 +241,19 @@ final class ModuleBackupServiceTest extends TestCase
     {
         $modulePath = "{$this->tempDir}/{$name}";
 
-        File::ensureDirectoryExists("{$modulePath}/src");
-        File::ensureDirectoryExists("{$modulePath}/config");
-        File::ensureDirectoryExists("{$modulePath}/database/migrations");
+        // Create directories with explicit recursive flag
+        if (! File::isDirectory($modulePath)) {
+            File::makeDirectory($modulePath, 0755, true, true);
+        }
+        if (! File::isDirectory("{$modulePath}/src")) {
+            File::makeDirectory("{$modulePath}/src", 0755, true, true);
+        }
+        if (! File::isDirectory("{$modulePath}/config")) {
+            File::makeDirectory("{$modulePath}/config", 0755, true, true);
+        }
+        if (! File::isDirectory("{$modulePath}/database/migrations")) {
+            File::makeDirectory("{$modulePath}/database/migrations", 0755, true, true);
+        }
 
         File::put("{$modulePath}/module.json", json_encode([
             'name' => $name,

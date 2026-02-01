@@ -39,7 +39,8 @@ final readonly class AuthService implements AuthServiceInterface
         private ImageOptimizationServiceInterface $imageOptimizer,
         private UserRepositoryInterface $userRepository,
         private UserModelQueryServiceInterface $userModelQuery,
-    ) {}
+    ) {
+    }
 
     public function register(CreateUserDTO $dto): UserResponseDTO
     {

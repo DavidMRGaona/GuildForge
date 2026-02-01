@@ -60,6 +60,9 @@ final class UpdateModuleJob implements ShouldQueue
         }
     }
 
+    /**
+     * @return array<string>
+     */
     public function tags(): array
     {
         return ['updates', 'module-update', "module:{$this->moduleName}"];

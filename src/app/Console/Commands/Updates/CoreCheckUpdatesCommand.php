@@ -23,7 +23,7 @@ final class CoreCheckUpdatesCommand extends Command
         $this->info("Current core version: v{$currentVersion->value()}");
         $this->info('Checking for updates...');
 
-        $latestRelease = $updateChecker->checkForUpdates();
+        $latestRelease = $updateChecker->checkForUpdate();
 
         if ($latestRelease === null) {
             $this->info('You are running the latest version.');

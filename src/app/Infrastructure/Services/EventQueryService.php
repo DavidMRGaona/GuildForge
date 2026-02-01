@@ -14,7 +14,8 @@ final readonly class EventQueryService implements EventQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {}
+    ) {
+    }
 
     public function getUpcomingEvents(int $limit = 10): array
     {
@@ -59,6 +60,15 @@ final readonly class EventQueryService implements EventQueryServiceInterface
             ->where('slug', $slug)
             ->where('is_published', true)
             ->first();
+
+        return $event ? $this->dtoFactory->createEventDTO($event) : null;
+    }
+
+    public function findById(string $id): ?EventResponseDTO
+    {
+        $event = EventModel::query()
+            ->with('tags')
+            ->find($id);
 
         return $event ? $this->dtoFactory->createEventDTO($event) : null;
     }
