@@ -1,0 +1,223 @@
+name: Reusable module release
+
+on:
+  workflow_call:
+    inputs:
+      module_name:
+        description: 'Module name (kebab-case)'
+        required: true
+        type: string
+      php_version:
+        description: 'PHP version'
+        required: false
+        type: string
+        default: '8.4'
+      run_tests:
+        description: 'Run tests before release'
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      version:
+        description: 'Released version'
+        value: ${{ jobs.release.outputs.version }}
+      release_url:
+        description: 'GitHub Release URL'
+        value: ${{ jobs.release.outputs.release_url }}
+
+jobs:
+  validate:
+    name: Validate module
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.manifest.outputs.version }}
+      is_prerelease: ${{ steps.manifest.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate module.json exists
+        run: |
+          if [ ! -f "module.json" ]; then
+            echo "::error::module.json not found"
+            exit 1
+          fi
+
+      - name: Extract and validate version
+        id: manifest
+        run: |
+          VERSION=$(jq -r '.version' module.json)
+          NAME=$(jq -r '.name' module.json)
+
+          if [ "$VERSION" = "null" ] || [ -z "$VERSION" ]; then
+            echo "::error::Version not found in module.json"
+            exit 1
+          fi
+
+          if [ "$NAME" != "${{ inputs.module_name }}" ]; then
+            echo "::error::Module name mismatch: expected '${{ inputs.module_name }}', got '$NAME'"
+            exit 1
+          fi
+
+          # Validate semver format
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "::error::Invalid semver format: $VERSION"
+            exit 1
+          fi
+
+          # Check if tag matches version
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$TAG_VERSION" != "$VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) doesn't match module.json version ($VERSION)"
+            exit 1
+          fi
+
+          # Check if prerelease
+          IS_PRERELEASE="false"
+          if echo "$VERSION" | grep -q '-'; then
+            IS_PRERELEASE="true"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION (prerelease: $IS_PRERELEASE)"
+
+  test:
+    name: Test module
+    needs: validate
+    if: inputs.run_tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php_version }}
+          extensions: mbstring, xml, ctype, json
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: |
+          if [ -f "composer.json" ]; then
+            composer install --prefer-dist --no-progress
+          fi
+
+      - name: Run Pint
+        run: |
+          if [ -f "vendor/bin/pint" ]; then
+            vendor/bin/pint --test
+          elif command -v pint &> /dev/null; then
+            pint --test
+          else
+            echo "Pint not available, skipping lint"
+          fi
+
+      - name: Run tests
+        run: |
+          if [ -d "tests" ] && [ -f "vendor/bin/pest" ]; then
+            vendor/bin/pest
+          elif [ -d "tests" ] && [ -f "vendor/bin/phpunit" ]; then
+            vendor/bin/phpunit
+          else
+            echo "No tests found, skipping"
+          fi
+
+  release:
+    name: Create release
+    needs: [validate, test]
+    if: always() && needs.validate.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ needs.validate.outputs.version }}
+      release_url: ${{ steps.create_release.outputs.html_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create ZIP package
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          PACKAGE_DIR="${MODULE_NAME}-${VERSION}"
+          ZIP_NAME="${MODULE_NAME}-${VERSION}.zip"
+
+          mkdir -p "$PACKAGE_DIR"
+
+          # Copy module files (excluding dev files)
+          rsync -av --progress . "$PACKAGE_DIR/" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='tests' \
+            --exclude='node_modules' \
+            --exclude='.env*' \
+            --exclude='*.log' \
+            --exclude='.phpunit*' \
+            --exclude='phpunit.xml' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            --exclude="$PACKAGE_DIR"
+
+          # Create ZIP
+          zip -r "$ZIP_NAME" "$PACKAGE_DIR"
+
+          # Generate checksum
+          sha256sum "$ZIP_NAME" > "${ZIP_NAME}.sha256"
+
+          echo "Created: $ZIP_NAME"
+          echo "Checksum: $(cat ${ZIP_NAME}.sha256)"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -n "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" "$PREV_TAG"..HEAD)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" -10)
+          fi
+
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ inputs.module_name }} v${{ needs.validate.outputs.version }}"
+          body: |
+            ## Cambios
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## Instalación
+
+            1. Descarga `${{ inputs.module_name }}-${{ needs.validate.outputs.version }}.zip`
+            2. Ve al panel de administración → Módulos → Instalar desde ZIP
+            3. Sube el archivo ZIP
+
+            ## Verificación
+
+            ```bash
+            sha256sum -c ${{ inputs.module_name }}-${{ needs.validate.outputs.version }}.zip.sha256
+            ```
+          files: |
+            ${{ inputs.module_name }}-${{ needs.validate.outputs.version }}.zip
+            ${{ inputs.module_name }}-${{ needs.validate.outputs.version }}.zip.sha256
+          prerelease: ${{ needs.validate.outputs.is_prerelease }}
+          generate_release_notes: false

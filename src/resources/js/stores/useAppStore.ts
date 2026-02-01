@@ -12,6 +12,10 @@ export const useAppStore = defineStore('app', () => {
     const systemPrefersDark = ref(false);
     const themeSettings = ref<ThemeSettings | null>(null);
 
+    // Track media query listener for cleanup
+    let mediaQueryList: MediaQueryList | null = null;
+    let mediaQueryHandler: ((e: MediaQueryListEvent) => void) | null = null;
+
     const currentLocale = computed(() => locale.value);
 
     const isDarkMode = computed(() => {
@@ -60,12 +64,20 @@ export const useAppStore = defineStore('app', () => {
             themeMode.value = 'system';
         }
 
-        systemPrefersDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Clean up existing listener if initTheme is called again
+        if (mediaQueryList && mediaQueryHandler) {
+            mediaQueryList.removeEventListener('change', mediaQueryHandler);
+        }
 
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
+        systemPrefersDark.value = mediaQueryList.matches;
+
+        mediaQueryHandler = (e: MediaQueryListEvent): void => {
             systemPrefersDark.value = e.matches;
             applyTheme();
-        });
+        };
+
+        mediaQueryList.addEventListener('change', mediaQueryHandler);
 
         applyTheme();
     }

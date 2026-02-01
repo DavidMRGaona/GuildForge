@@ -66,7 +66,7 @@ const fetchEvents = async (
             end: info.endStr,
         });
 
-        const response = await fetch(`/api/events/calendar?${params}`);
+        const response = await fetch(`/eventos/calendario?${params}`);
         if (!response.ok) {
             throw new Error('Failed to fetch events');
         }
@@ -198,9 +198,9 @@ watch(tooltipVisible, (visible) => {
         <div
             v-if="error"
             role="alert"
-            class="mb-4 rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20"
+            class="mb-4 rounded-lg bg-error-light p-4 text-center"
         >
-            <p class="text-sm font-medium text-red-800 dark:text-red-300">
+            <p class="text-sm font-medium text-error">
                 {{ error }}
             </p>
         </div>
@@ -208,13 +208,13 @@ watch(tooltipVisible, (visible) => {
         <div class="relative">
             <div
                 v-if="isLoading"
-                class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 dark:bg-stone-900/70"
+                class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 dark:bg-surface/70"
             >
                 <div class="text-center">
                     <div
-                        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"
+                        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"
                     ></div>
-                    <p class="mt-2 text-sm text-stone-600 dark:text-stone-400">
+                    <p class="mt-2 text-sm text-base-secondary">
                         {{ t('calendar.loading') }}
                     </p>
                 </div>

@@ -44,7 +44,7 @@ const sizeClasses: Record<
  */
 const solidTextColor = computed(() => {
     const luminance = getLuminance(props.tag.color);
-    return luminance > 0.179 ? 'text-stone-900' : 'text-white';
+    return luminance > 0.179 ? 'text-neutral-900' : 'text-white';
 });
 
 /**

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
 import { useArticles } from '@/composables/useArticles';
 import { useTags } from '@/composables/useTags';
+import { useRoutes } from '@/composables/useRoutes';
 import ImagePlaceholder from '@/components/ui/ImagePlaceholder.vue';
 import TagBadge from '@/components/ui/TagBadge.vue';
 import TagList from '@/components/ui/TagList.vue';
@@ -18,6 +19,7 @@ const props = defineProps<Props>();
 
 const { t } = useI18n();
 const { getAuthorDisplayName, formatPublishedDate, getExcerpt } = useArticles();
+const routes = useRoutes();
 
 const articleImageUrl = computed(() => buildCardImageUrl(props.article.featuredImagePublicId));
 
@@ -26,9 +28,9 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
 
 <template>
     <Link
-        :href="`/articulos/${props.article.slug}`"
+        :href="routes.articles.show(props.article.slug)"
         :aria-label="t('a11y.viewArticle', { title: props.article.title })"
-        class="group block overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:border-stone-700 dark:bg-stone-800 dark:shadow-stone-900/50 dark:focus:ring-offset-stone-900"
+        class="group block overflow-hidden rounded-lg border-default bg-surface shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:shadow-neutral-900/50 dark:focus:ring-offset-page"
     >
         <!-- Image -->
         <div class="relative">
@@ -56,7 +58,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
         <!-- Content -->
         <div class="p-4">
             <h3
-                class="mb-2 line-clamp-2 text-lg font-semibold text-stone-900 group-hover:text-amber-600 dark:text-stone-100 dark:group-hover:text-amber-500"
+                class="mb-2 line-clamp-2 text-lg font-semibold text-base-primary group-hover:text-primary-600 dark:group-hover:text-primary-500"
             >
                 {{ props.article.title }}
             </h3>
@@ -72,13 +74,13 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
 
             <p
                 v-if="props.article.publishedAt"
-                class="mb-2 text-sm text-stone-500 dark:text-stone-400"
+                class="mb-2 text-sm text-base-muted"
             >
                 {{ t('articles.by') }} {{ getAuthorDisplayName(props.article) }} ·
                 {{ formatPublishedDate(props.article.publishedAt) }}
             </p>
 
-            <p class="line-clamp-2 text-sm text-stone-600 dark:text-stone-300">
+            <p class="line-clamp-2 text-sm text-base-secondary">
                 {{ getExcerpt(props.article, 100) }}
             </p>
         </div>

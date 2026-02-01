@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { useAuth } from '@/composables/useAuth';
+import { useRoutes } from '@/composables/useRoutes';
 
 interface Props {
     mobile?: boolean;
@@ -15,6 +16,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const { authSettings } = useAuth();
+const routes = useRoutes();
 
 function handleNavigate(): void {
     emit('navigate');
@@ -27,8 +29,8 @@ function handleNavigate(): void {
         <div class="space-y-1">
             <Link
                 v-if="authSettings.loginEnabled"
-                href="/login"
-                class="flex items-center px-3 py-2 text-base font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900 rounded-md dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
+                :href="routes.auth.login"
+                class="flex items-center px-3 py-2 text-base font-medium text-base-secondary hover:bg-muted hover:text-base-primary rounded-md"
                 @click="handleNavigate"
             >
                 <svg
@@ -49,8 +51,8 @@ function handleNavigate(): void {
             </Link>
             <Link
                 v-if="authSettings.registrationEnabled"
-                href="/registro"
-                class="flex items-center px-3 py-2 text-base font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900 rounded-md dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white"
+                :href="routes.auth.register"
+                class="flex items-center px-3 py-2 text-base font-medium text-base-secondary hover:bg-muted hover:text-base-primary rounded-md"
                 @click="handleNavigate"
             >
                 <svg
@@ -77,19 +79,19 @@ function handleNavigate(): void {
         <div class="flex items-center space-x-2">
             <Link
                 v-if="authSettings.registrationEnabled"
-                href="/registro"
+                :href="routes.auth.register"
                 :class="
                     authSettings.loginEnabled
-                        ? 'rounded-md px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-white'
-                        : 'rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600'
+                        ? 'rounded-md px-3 py-2 text-sm font-medium text-base-primary hover:bg-muted'
+                        : 'rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600'
                 "
             >
                 {{ t('auth.register.title') }}
             </Link>
             <Link
                 v-if="authSettings.loginEnabled"
-                href="/login"
-                class="rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
+                :href="routes.auth.login"
+                class="rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600"
             >
                 {{ t('auth.login.title') }}
             </Link>

@@ -68,7 +68,7 @@ const closeMobileModal = (): void => {
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- Page header -->
             <div class="mb-8">
-                <h1 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+                <h1 class="text-3xl font-bold tracking-tight text-base-primary">
                     {{ t('calendar.title') }}
                 </h1>
             </div>
@@ -129,14 +129,14 @@ const closeMobileModal = (): void => {
                     >
                         <div
                             v-if="showMobileModal"
-                            class="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-xl bg-white dark:bg-stone-800 p-4 shadow-xl"
+                            class="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-xl bg-surface p-4 shadow-xl"
                             @click.stop
                         >
                             <!-- Close button -->
                             <div class="mb-4 flex justify-end">
                                 <button
                                     type="button"
-                                    class="rounded-full p-2 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 hover:text-stone-500 dark:hover:text-stone-300"
+                                    class="rounded-full p-2 text-base-muted hover:bg-muted hover:text-base-secondary"
                                     @click="closeMobileModal"
                                 >
                                     <span class="sr-only">{{ t('buttons.close') }}</span>

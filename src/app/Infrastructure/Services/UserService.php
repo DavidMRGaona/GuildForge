@@ -7,9 +7,9 @@ namespace App\Infrastructure\Services;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Exceptions\UserNotFoundException;
-use App\Domain\Repositories\UserRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 final readonly class UserService implements UserServiceInterface
 {
     public function __construct(
-        private UserRepositoryInterface $userRepository,
+        private UserModelQueryServiceInterface $userModelQuery,
         private AuthorizationServiceInterface $authService,
         private SettingsServiceInterface $settingsService,
     ) {
@@ -25,7 +25,7 @@ final readonly class UserService implements UserServiceInterface
 
     public function canAccessPanel(string $userId): bool
     {
-        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
         if ($userModel === null) {
             return false;
@@ -40,7 +40,7 @@ final readonly class UserService implements UserServiceInterface
 
     public function anonymize(string $userId): void
     {
-        $userModel = $this->userRepository->findModelByIdWithTrashed(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelByIdWithTrashed(UserId::fromString($userId));
 
         if ($userModel === null) {
             throw UserNotFoundException::withId($userId);
@@ -53,7 +53,7 @@ final readonly class UserService implements UserServiceInterface
 
     public function isAdmin(string $userId): bool
     {
-        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
         if ($userModel === null) {
             return false;
@@ -71,7 +71,7 @@ final readonly class UserService implements UserServiceInterface
 
     public function anonymizeWithContentTransfer(AnonymizeUserDTO $dto): void
     {
-        $userModel = $this->userRepository->findModelByIdWithTrashed(UserId::fromString($dto->userId));
+        $userModel = $this->userModelQuery->findModelByIdWithTrashed(UserId::fromString($dto->userId));
 
         if ($userModel === null) {
             throw UserNotFoundException::withId($dto->userId);

@@ -10,6 +10,7 @@ import TagList from '@/components/ui/TagList.vue';
 import { useArticles } from '@/composables/useArticles';
 import { useTags } from '@/composables/useTags';
 import { useSeo } from '@/composables/useSeo';
+import { useRoutes } from '@/composables/useRoutes';
 import { buildHeroImageUrl, buildAvatarUrl } from '@/utils/cloudinary';
 
 interface Props {
@@ -20,6 +21,7 @@ const props = defineProps<Props>();
 
 const { t } = useI18n();
 const { formatPublishedDate, getAuthorDisplayName } = useArticles();
+const routes = useRoutes();
 
 const heroImageUrl = computed(() => buildHeroImageUrl(props.article.featuredImagePublicId));
 const authorAvatarUrl = computed(() => buildAvatarUrl(props.article.author.avatarPublicId, 40));
@@ -39,8 +41,8 @@ useSeo({
         <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="mb-6">
                 <Link
-                    href="/articulos"
-                    class="inline-flex items-center rounded text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:text-stone-400 dark:hover:text-stone-300 dark:focus:ring-offset-stone-900"
+                    :href="routes.articles.index"
+                    class="inline-flex items-center rounded text-sm text-base-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-page"
                 >
                     <svg
                         class="mr-1 h-4 w-4"
@@ -61,7 +63,7 @@ useSeo({
             </div>
 
             <article
-                class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50"
+                class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-neutral-900/50"
             >
                 <img
                     v-if="heroImageUrl"
@@ -71,7 +73,7 @@ useSeo({
                 />
                 <div
                     v-else
-                    class="flex h-48 w-full items-center justify-center bg-linear-to-br from-amber-400 to-slate-600 sm:h-64 md:h-80 lg:h-96"
+                    class="flex h-48 w-full items-center justify-center bg-linear-to-br from-primary-400 to-neutral-600 sm:h-64 md:h-80 lg:h-96"
                 >
                     <svg
                         class="h-24 w-24 text-white/50"
@@ -91,12 +93,12 @@ useSeo({
 
                 <div class="p-6 sm:p-8">
                     <h1
-                        class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl dark:text-stone-100"
+                        class="mb-4 text-3xl font-bold text-base-primary sm:text-4xl"
                     >
                         {{ props.article.title }}
                     </h1>
 
-                    <div class="mb-6 flex items-center text-gray-600 dark:text-stone-400">
+                    <div class="mb-6 flex items-center text-base-secondary">
                         <img
                             v-if="authorAvatarUrl"
                             :src="authorAvatarUrl"
@@ -105,17 +107,17 @@ useSeo({
                         />
                         <div
                             v-else
-                            class="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                            class="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
                         >
                             <span class="text-sm font-medium">
                                 {{ getAuthorDisplayName(props.article).charAt(0).toUpperCase() }}
                             </span>
                         </div>
                         <div>
-                            <p class="font-medium text-gray-900 dark:text-stone-100">
+                            <p class="font-medium text-base-primary">
                                 {{ getAuthorDisplayName(props.article) }}
                             </p>
-                            <p v-if="props.article.publishedAt" class="text-sm text-amber-600">
+                            <p v-if="props.article.publishedAt" class="text-sm text-primary-600">
                                 {{ t('articles.publishedAt') }}
                                 {{ formatPublishedDate(props.article.publishedAt) }}
                             </p>
@@ -146,8 +148,8 @@ useSeo({
                     -->
                     <div class="prose max-w-none" v-html="props.article.content" />
 
-                    <div class="mt-8 border-t border-gray-200 pt-6 dark:border-stone-700">
-                        <Link href="/articulos">
+                    <div class="mt-8 border-t border-default pt-6">
+                        <Link :href="routes.articles.index">
                             <BaseButton variant="primary">
                                 {{ t('common.viewAll') }} {{ t('common.articles').toLowerCase() }}
                             </BaseButton>

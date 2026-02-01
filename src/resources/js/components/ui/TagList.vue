@@ -35,7 +35,7 @@ const hiddenCount = computed(() => Math.max(0, props.tags.length - props.maxVisi
             :variant="variant"
             :content-type="contentType"
         />
-        <span v-if="hiddenCount > 0" class="text-xs text-stone-500 dark:text-stone-400">
+        <span v-if="hiddenCount > 0" class="text-xs text-base-muted">
             +{{ hiddenCount }}
         </span>
     </div>

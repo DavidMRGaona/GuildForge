@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Gallery, PaginatedResponse, Tag } from '@/types';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
@@ -8,6 +7,7 @@ import BaseButton from '@/components/ui/BaseButton.vue';
 import TagFilter from '@/components/ui/TagFilter.vue';
 import { useSeo } from '@/composables/useSeo';
 import { usePagination } from '@/composables/usePagination';
+import { useRoutes } from '@/composables/useRoutes';
 
 interface Props {
     galleries: PaginatedResponse<Gallery>;
@@ -21,36 +21,33 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { t } = useI18n();
+const routes = useRoutes();
 
 useSeo({
     title: t('gallery.title'),
     description: t('gallery.subtitle'),
 });
 
-const isNavigating = ref(false);
-
-const { firstItemNumber, lastItemNumber, hasPagination, goToPrev, goToNext, canGoPrev, canGoNext } =
-    usePagination(() => props.galleries);
-
-function handlePrev(): void {
-    isNavigating.value = true;
-    goToPrev();
-}
-
-function handleNext(): void {
-    isNavigating.value = true;
-    goToNext();
-}
+const {
+    firstItemNumber,
+    lastItemNumber,
+    hasPagination,
+    canGoPrev,
+    canGoNext,
+    isNavigating,
+    handlePrev,
+    handleNext,
+} = usePagination(() => props.galleries);
 </script>
 
 <template>
     <DefaultLayout>
-        <div class="bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50">
+        <div class="bg-surface shadow dark:shadow-neutral-900/50">
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+                <h1 class="text-3xl font-bold tracking-tight text-base-primary">
                     {{ t('gallery.title') }}
                 </h1>
-                <p class="mt-2 text-lg text-stone-600 dark:text-stone-400">
+                <p class="mt-2 text-lg text-base-secondary">
                     {{ t('gallery.subtitle') }}
                 </p>
             </div>
@@ -60,7 +57,7 @@ function handleNext(): void {
             <TagFilter
                 :tags="props.tags"
                 :current-tags="props.currentTags"
-                base-path="/galeria"
+                :base-path="routes.gallery.index"
                 class="mb-6"
             />
 
@@ -68,9 +65,9 @@ function handleNext(): void {
 
             <div
                 v-if="hasPagination"
-                class="mt-8 flex items-center justify-between border-t border-stone-200 pt-6 dark:border-stone-700"
+                class="mt-8 flex items-center justify-between border-t border-default pt-6"
             >
-                <p class="text-sm text-stone-700 dark:text-stone-300">
+                <p class="text-sm text-base-secondary">
                     {{ t('common.showing') }}
                     <span class="font-medium">
                         {{ firstItemNumber }}

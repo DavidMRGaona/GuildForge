@@ -68,13 +68,13 @@ function uploadAvatar(): void {
 </script>
 
 <template>
-    <div class="bg-stone-100 py-8 dark:bg-stone-800 sm:py-12">
+    <div class="bg-neutral-100 py-8 dark:bg-muted sm:py-12">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
                 <!-- Avatar (clickable) -->
                 <button
                     type="button"
-                    class="group relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-stone-200 ring-4 ring-amber-500 transition-all hover:ring-amber-400 dark:bg-stone-700 sm:h-32 sm:w-32"
+                    class="group relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-neutral-200 ring-4 ring-primary-500 transition-all hover:ring-primary-400 dark:bg-neutral-700 sm:h-32 sm:w-32"
                     :disabled="avatarForm.processing"
                     :title="t('auth.profile.changeAvatar')"
                     @click="triggerFileInput"
@@ -87,7 +87,7 @@ function uploadAvatar(): void {
                     />
                     <svg
                         v-else
-                        class="h-12 w-12 text-stone-400 sm:h-16 sm:w-16"
+                        class="h-12 w-12 text-neutral-400 sm:h-16 sm:w-16"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                         aria-hidden="true"
@@ -143,14 +143,14 @@ function uploadAvatar(): void {
 
                 <!-- User info -->
                 <div class="text-center sm:text-left">
-                    <h1 class="text-2xl font-bold text-stone-900 dark:text-stone-100 sm:text-3xl">
+                    <h1 class="text-2xl font-bold text-base-primary sm:text-3xl">
                         {{ displayName }}
                     </h1>
-                    <p class="mt-1 text-stone-600 dark:text-stone-400">
+                    <p class="mt-1 text-base-secondary">
                         {{ user.email }}
                     </p>
                     <p
-                        class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-200 px-3 py-1 text-sm text-stone-600 dark:bg-stone-700 dark:text-stone-400"
+                        class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-neutral-200 px-3 py-1 text-sm text-base-secondary dark:bg-neutral-700"
                     >
                         <svg
                             class="h-4 w-4"

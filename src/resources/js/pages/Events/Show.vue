@@ -10,6 +10,7 @@ import TagList from '@/components/ui/TagList.vue';
 import { useEvents } from '@/composables/useEvents';
 import { useTags } from '@/composables/useTags';
 import { useSeo } from '@/composables/useSeo';
+import { useRoutes } from '@/composables/useRoutes';
 import { buildHeroImageUrl } from '@/utils/cloudinary';
 import ModuleSlot from '@/components/layout/ModuleSlot.vue';
 
@@ -21,6 +22,7 @@ const props = defineProps<Props>();
 
 const { t } = useI18n();
 const { formatDateRange, formatPrice, isUpcoming } = useEvents();
+const routes = useRoutes();
 
 const heroImageUrl = computed(() => buildHeroImageUrl(props.event.imagePublicId));
 
@@ -39,8 +41,8 @@ useSeo({
         <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="mb-6">
                 <Link
-                    href="/eventos"
-                    class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:text-stone-400 dark:hover:text-stone-300 dark:focus:ring-offset-stone-900"
+                    :href="routes.events.index"
+                    class="inline-flex items-center text-sm text-base-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-page"
                 >
                     <svg
                         class="mr-1 h-4 w-4"
@@ -61,7 +63,7 @@ useSeo({
             </div>
 
             <article
-                class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50"
+                class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-neutral-900/50"
             >
                 <img
                     v-if="heroImageUrl"
@@ -71,7 +73,7 @@ useSeo({
                 />
                 <div
                     v-else
-                    class="flex h-48 w-full items-center justify-center bg-gradient-to-br from-amber-400 to-amber-600 sm:h-64 md:h-80 lg:h-96"
+                    class="flex h-48 w-full items-center justify-center bg-gradient-to-br from-primary-400 to-primary-600 sm:h-64 md:h-80 lg:h-96"
                 >
                     <svg
                         class="h-24 w-24 text-white/50"
@@ -93,20 +95,20 @@ useSeo({
                     <div class="mb-4 flex items-center gap-2">
                         <span
                             v-if="isUpcoming(props.event)"
-                            class="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            class="rounded-full bg-success-light px-3 py-1 text-sm font-medium text-success"
                         >
                             {{ t('events.upcoming') }}
                         </span>
                         <span
                             v-else
-                            class="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-stone-700 dark:text-stone-300"
+                            class="rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-800 dark:bg-neutral-700 dark:text-neutral-300"
                         >
                             {{ t('events.past') }}
                         </span>
                     </div>
 
                     <h1
-                        class="mb-4 text-3xl font-bold text-gray-900 sm:text-4xl dark:text-stone-100"
+                        class="mb-4 text-3xl font-bold text-base-primary sm:text-4xl"
                     >
                         {{ props.event.title }}
                     </h1>
@@ -127,12 +129,12 @@ useSeo({
                     </div>
 
                     <div
-                        class="mb-6 flex flex-col gap-3 text-gray-600 sm:flex-row sm:gap-6 dark:text-stone-400"
+                        class="mb-6 flex flex-col gap-3 text-base-secondary sm:flex-row sm:gap-6"
                     >
                         <div class="flex items-center">
                             <span class="sr-only">{{ t('events.date') }}:</span>
                             <svg
-                                class="mr-2 h-5 w-5 text-amber-600"
+                                class="mr-2 h-5 w-5 text-primary-600"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -153,7 +155,7 @@ useSeo({
                         <div v-if="props.event.location" class="flex items-center">
                             <span class="sr-only">{{ t('events.location') }}:</span>
                             <svg
-                                class="mr-2 h-5 w-5 text-amber-600"
+                                class="mr-2 h-5 w-5 text-primary-600"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -178,27 +180,27 @@ useSeo({
 
                     <div
                         v-if="props.event.memberPrice !== null"
-                        class="mb-6 rounded-lg bg-amber-50 p-4 dark:bg-amber-900/20"
+                        class="mb-6 rounded-lg bg-primary-50 p-4 dark:bg-primary-900/20"
                     >
-                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-stone-100">
+                        <h3 class="mb-2 font-semibold text-base-primary">
                             {{ t('events.pricing') }}
                         </h3>
                         <div class="flex flex-col gap-1 sm:flex-row sm:gap-6">
-                            <p class="text-gray-700 dark:text-stone-300">
+                            <p class="text-base-secondary">
                                 <span class="font-medium">{{ t('events.memberPrice') }}:</span>
                                 {{ formatPrice(props.event.memberPrice) }}
                             </p>
                             <p
                                 v-if="props.event.nonMemberPrice !== null"
-                                class="text-gray-700 dark:text-stone-300"
+                                class="text-base-secondary"
                             >
                                 <span class="font-medium">{{ t('events.nonMemberPrice') }}:</span>
                                 {{ formatPrice(props.event.nonMemberPrice) }}
                             </p>
                         </div>
                     </div>
-                    <div v-else class="mb-6 rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
-                        <p class="font-medium text-green-800 dark:text-green-400">
+                    <div v-else class="mb-6 rounded-lg bg-success-light p-4">
+                        <p class="font-medium text-success">
                             {{ t('events.free') }}
                         </p>
                     </div>
@@ -214,8 +216,8 @@ useSeo({
                         </p>
                     </div>
 
-                    <div class="mt-8 border-t border-gray-200 pt-6 dark:border-stone-700">
-                        <Link href="/eventos">
+                    <div class="mt-8 border-t border-default pt-6">
+                        <Link :href="routes.events.index">
                             <BaseButton variant="primary">
                                 {{ t('common.viewAll') }} {{ t('common.events').toLowerCase() }}
                             </BaseButton>

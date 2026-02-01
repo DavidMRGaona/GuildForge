@@ -12,7 +12,7 @@ interface UseEventsReturn {
 }
 
 export function useEvents(): UseEventsReturn {
-    const { locale } = useI18n();
+    const { locale, t } = useI18n();
     function formatEventDate(dateString: string): string {
         const date = new Date(dateString);
         return date.toLocaleDateString(locale.value, {
@@ -48,7 +48,7 @@ export function useEvents(): UseEventsReturn {
     }
 
     function formatPrice(price: number | null): string {
-        if (price === null) return 'Gratuito';
+        if (price === null) return t('events.free');
         return `${price.toFixed(2)} €`;
     }
 

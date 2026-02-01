@@ -28,12 +28,12 @@ const resend = () => {
 
 <template>
     <AuthLayout :title="t('auth.verifyEmail.title')" :subtitle="t('auth.verifyEmail.subtitle')">
-        <div v-if="successMessage" class="mb-4 rounded-md bg-green-50 dark:bg-green-900/30 p-4">
-            <p class="text-sm text-green-700 dark:text-green-400">{{ successMessage }}</p>
+        <div v-if="successMessage" class="mb-4 rounded-md bg-success-light p-4">
+            <p class="text-sm text-success">{{ successMessage }}</p>
         </div>
 
         <div class="space-y-6">
-            <p class="text-sm text-stone-600 dark:text-stone-400">
+            <p class="text-sm text-base-secondary">
                 {{ t('auth.verifyEmail.description') }}
             </p>
 

@@ -47,13 +47,13 @@
         @if($modules->isEmpty())
             <x-filament::section>
                 <div class="flex flex-col items-center justify-center py-8 text-center">
-                    <div class="mb-3 rounded-full bg-gray-100 p-3 dark:bg-gray-800">
-                        <x-heroicon-o-puzzle-piece class="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                    <div class="mb-3 rounded-full bg-neutral-100 p-3 dark:bg-neutral-800">
+                        <x-heroicon-o-puzzle-piece class="h-6 w-6 text-neutral-400 dark:text-neutral-500" />
                     </div>
-                    <h3 class="text-base font-medium text-gray-900 dark:text-white">
+                    <h3 class="text-base font-medium text-neutral-900 dark:text-white">
                         {{ __('modules.filament.empty.title') }}
                     </h3>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                         {{ __('modules.filament.empty.description') }}
                     </p>
                 </div>
@@ -68,15 +68,15 @@
                         $depCheck = $moduleManager->checkDependencies($module->name());
                     @endphp
                     <x-filament::section
-                        class="transition-all duration-200 hover:shadow-md {{ $module->isEnabled() ? 'border-l-4 border-l-green-500 dark:border-l-green-400' : 'border-l-4 border-l-gray-300 dark:border-l-gray-600' }}"
+                        class="transition-all duration-200 hover:shadow-md {{ $module->isEnabled() ? 'border-l-4 border-l-green-500 dark:border-l-green-400' : 'border-l-4 border-l-neutral-300 dark:border-l-neutral-600' }}"
                     >
                         {{-- Header: Module Name + Status Badge --}}
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0 flex-1">
-                                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                                <h3 class="text-xl font-semibold text-neutral-900 dark:text-white">
                                     {{ $module->displayName() ?: $module->name()->value }}
                                 </h3>
-                                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                <p class="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
                                     v{{ $module->version()->value() }}
                                     @if($module->author())
                                         <span class="mx-1">•</span>
@@ -110,7 +110,7 @@
                         {{-- Description --}}
                         @if($module->description())
                             <div class="py-4">
-                                <p class="line-clamp-2 text-sm leading-relaxed text-gray-600 dark:text-gray-200">
+                                <p class="line-clamp-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-200">
                                     {{ $module->description() }}
                                 </p>
                             </div>
@@ -121,7 +121,7 @@
                             <div class="mt-5 space-y-2">
                                 @if(!empty($dependencies))
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <span class="text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                             {{ __('modules.filament.card.dependencies') }}:
                                         </span>
                                         @foreach($dependencies as $dep)
@@ -134,7 +134,7 @@
 
                                 @if(!empty($dependents))
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <span class="text-xs font-medium text-neutral-500 dark:text-neutral-400">
                                             {{ __('modules.filament.card.required_by') }}:
                                         </span>
                                         @foreach($dependents as $dependent)
@@ -160,7 +160,7 @@
                         @endif
 
                         {{-- Actions --}}
-                        <div class="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+                        <div class="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-neutral-200 pt-4 dark:border-neutral-700">
                             @if($module->isEnabled())
                                 <x-filament::button
                                     color="gray"
@@ -228,13 +228,13 @@
                                     <input
                                         type="checkbox"
                                         wire:model="deleteDataOptions.{{ $module->name()->value }}"
-                                        class="fi-checkbox-input rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 mt-0.5"
+                                        class="fi-checkbox-input rounded border-neutral-300 text-primary-600 shadow-sm focus:ring-primary-500 dark:border-neutral-600 dark:bg-neutral-700 mt-0.5"
                                     />
                                     <span class="text-sm">
-                                        <span class="font-medium text-gray-700 dark:text-gray-200">
+                                        <span class="font-medium text-neutral-700 dark:text-neutral-200">
                                             {{ __('modules.filament.confirm.delete_data_label') }}
                                         </span>
-                                        <span class="block text-gray-500 dark:text-gray-400 mt-1">
+                                        <span class="block text-neutral-500 dark:text-neutral-400 mt-1">
                                             {{ __('modules.filament.confirm.delete_data_help') }}
                                         </span>
                                     </span>

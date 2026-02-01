@@ -29,16 +29,12 @@ final class ThemeSettingsServiceTest extends TestCase
 
     public function test_get_theme_settings_returns_dto_with_values_from_settings(): void
     {
-        $this->settingsService->set('theme_primary_color', '#3B82F6');
-        $this->settingsService->set('theme_primary_color_dark', '#60A5FA');
         $this->settingsService->set('theme_font_heading', 'Roboto');
         $this->settingsService->set('theme_dark_mode_default', '1');
 
         $dto = $this->service->getThemeSettings();
 
         $this->assertInstanceOf(ThemeSettingsDTO::class, $dto);
-        $this->assertEquals('#3B82F6', $dto->primaryColor);
-        $this->assertEquals('#60A5FA', $dto->primaryColorDark);
         $this->assertEquals('Roboto', $dto->fontHeading);
         $this->assertTrue($dto->darkModeDefault);
     }
@@ -48,17 +44,6 @@ final class ThemeSettingsServiceTest extends TestCase
         $dto = $this->service->getThemeSettings();
 
         $this->assertInstanceOf(ThemeSettingsDTO::class, $dto);
-        $this->assertEquals('#D97706', $dto->primaryColor);
-        $this->assertEquals('#F59E0B', $dto->primaryColorDark);
-        $this->assertEquals('#57534E', $dto->secondaryColor);
-        $this->assertEquals('#A8A29E', $dto->secondaryColorDark);
-        $this->assertEquals('#D97706', $dto->accentColor);
-        $this->assertEquals('#FAFAF9', $dto->backgroundColor);
-        $this->assertEquals('#1C1917', $dto->backgroundColorDark);
-        $this->assertEquals('#FFFFFF', $dto->surfaceColor);
-        $this->assertEquals('#292524', $dto->surfaceColorDark);
-        $this->assertEquals('#1C1917', $dto->textColor);
-        $this->assertEquals('#F5F5F4', $dto->textColorDark);
         $this->assertEquals('Inter', $dto->fontHeading);
         $this->assertEquals('Inter', $dto->fontBody);
         $this->assertEquals('16px', $dto->fontSizeBase);
@@ -76,39 +61,52 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertIsString($css);
         $this->assertStringContainsString(':root {', $css);
         $this->assertStringContainsString('.dark {', $css);
-        $this->assertStringContainsString('--color-primary:', $css);
-        $this->assertStringContainsString('--color-secondary:', $css);
-        $this->assertStringContainsString('--color-accent:', $css);
-        $this->assertStringContainsString('--color-background:', $css);
-        $this->assertStringContainsString('--color-surface:', $css);
-        $this->assertStringContainsString('--color-text:', $css);
+        // New palette variables
+        $this->assertStringContainsString('--color-primary-500:', $css);
+        $this->assertStringContainsString('--color-accent-500:', $css);
+        $this->assertStringContainsString('--color-neutral-500:', $css);
     }
 
-    public function test_get_css_variables_includes_light_mode_variables(): void
+    public function test_get_css_variables_includes_palette_shades(): void
     {
-        $this->settingsService->set('theme_primary_color', '#3B82F6');
-        $this->settingsService->set('theme_background_color', '#FAFAFA');
-        $this->settingsService->set('theme_text_color', '#1F2937');
+        $this->settingsService->set('theme_primary_base_color', '#3B82F6');
 
         $css = $this->service->getCssVariables();
 
-        $this->assertStringContainsString('--color-primary: #3B82F6;', $css);
-        $this->assertStringContainsString('--color-background: #FAFAFA;', $css);
-        $this->assertStringContainsString('--color-text: #1F2937;', $css);
+        // Primary palette shades
+        $this->assertStringContainsString('--color-primary-50:', $css);
+        $this->assertStringContainsString('--color-primary-100:', $css);
+        $this->assertStringContainsString('--color-primary-200:', $css);
+        $this->assertStringContainsString('--color-primary-300:', $css);
+        $this->assertStringContainsString('--color-primary-400:', $css);
+        $this->assertStringContainsString('--color-primary-500:', $css);
+        $this->assertStringContainsString('--color-primary-600:', $css);
+        $this->assertStringContainsString('--color-primary-700:', $css);
+        $this->assertStringContainsString('--color-primary-800:', $css);
+        $this->assertStringContainsString('--color-primary-900:', $css);
+        $this->assertStringContainsString('--color-primary-950:', $css);
     }
 
-    public function test_get_css_variables_includes_dark_mode_variables(): void
+    public function test_get_css_variables_includes_contextual_variables(): void
     {
-        $this->settingsService->set('theme_primary_color_dark', '#60A5FA');
-        $this->settingsService->set('theme_background_color_dark', '#0F172A');
-        $this->settingsService->set('theme_text_color_dark', '#FFFFFF');
-
         $css = $this->service->getCssVariables();
 
-        $this->assertStringContainsString('.dark {', $css);
-        $this->assertStringContainsString('--color-primary: #60A5FA;', $css);
-        $this->assertStringContainsString('--color-background: #0F172A;', $css);
-        $this->assertStringContainsString('--color-text: #FFFFFF;', $css);
+        $lightModeSection = $this->extractLightModeSection($css);
+
+        $this->assertStringContainsString('--color-primary-action:', $lightModeSection);
+        $this->assertStringContainsString('--color-primary-action-hover:', $lightModeSection);
+        $this->assertStringContainsString('--color-primary-link:', $lightModeSection);
+        $this->assertStringContainsString('--color-primary-subtle:', $lightModeSection);
+    }
+
+    public function test_get_css_variables_includes_surface_variables(): void
+    {
+        $css = $this->service->getCssVariables();
+
+        $this->assertStringContainsString('--color-bg-page:', $css);
+        $this->assertStringContainsString('--color-bg-surface:', $css);
+        $this->assertStringContainsString('--color-bg-muted:', $css);
+        $this->assertStringContainsString('--color-bg-elevated:', $css);
     }
 
     public function test_get_css_variables_includes_typography_variables(): void
@@ -150,41 +148,33 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertStringContainsString('.dark {', $css);
     }
 
-    public function test_get_css_variables_includes_all_color_variables_in_light_mode(): void
-    {
-        $css = $this->service->getCssVariables();
-
-        $lightModeSection = $this->extractLightModeSection($css);
-
-        $this->assertStringContainsString('--color-primary:', $lightModeSection);
-        $this->assertStringContainsString('--color-secondary:', $lightModeSection);
-        $this->assertStringContainsString('--color-accent:', $lightModeSection);
-        $this->assertStringContainsString('--color-background:', $lightModeSection);
-        $this->assertStringContainsString('--color-surface:', $lightModeSection);
-        $this->assertStringContainsString('--color-text:', $lightModeSection);
-    }
-
-    public function test_get_css_variables_includes_all_color_variables_in_dark_mode(): void
+    public function test_get_css_variables_includes_dark_mode_overrides(): void
     {
         $css = $this->service->getCssVariables();
 
         $darkModeSection = $this->extractDarkModeSection($css);
 
-        $this->assertStringContainsString('--color-primary:', $darkModeSection);
-        $this->assertStringContainsString('--color-secondary:', $darkModeSection);
-        $this->assertStringContainsString('--color-accent:', $darkModeSection);
-        $this->assertStringContainsString('--color-background:', $darkModeSection);
-        $this->assertStringContainsString('--color-surface:', $darkModeSection);
-        $this->assertStringContainsString('--color-text:', $darkModeSection);
+        $this->assertStringContainsString('--color-primary-action:', $darkModeSection);
+        $this->assertStringContainsString('--color-bg-page:', $darkModeSection);
+        $this->assertStringContainsString('--color-text-primary:', $darkModeSection);
     }
 
-    public function test_get_css_variables_uses_default_values_when_no_settings_exist(): void
+    public function test_get_css_variables_includes_semantic_colors(): void
     {
         $css = $this->service->getCssVariables();
 
-        $this->assertStringContainsString('--color-primary: #D97706;', $css);
-        $this->assertStringContainsString('--color-background: #FAFAF9;', $css);
-        $this->assertStringContainsString('--color-text: #1C1917;', $css);
+        $this->assertStringContainsString('--color-success:', $css);
+        $this->assertStringContainsString('--color-error:', $css);
+        $this->assertStringContainsString('--color-warning:', $css);
+        $this->assertStringContainsString('--color-info:', $css);
+    }
+
+    public function test_get_css_variables_uses_default_colors_when_no_settings_exist(): void
+    {
+        $css = $this->service->getCssVariables();
+
+        // Default amber color #D97706 should be used for palette generation
+        $this->assertStringContainsString('#D97706', $css);
         $this->assertStringContainsString("--font-heading: 'Inter'", $css);
         $this->assertStringContainsString("--font-body: 'Inter'", $css);
         $this->assertStringContainsString('--font-size-base: 16px;', $css);

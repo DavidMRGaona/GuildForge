@@ -5,12 +5,14 @@ import { useI18n } from 'vue-i18n';
 import { useAppStore } from '@/stores/useAppStore';
 import type { ThemeMode } from '@/stores/useAppStore';
 import { useAuth } from '@/composables/useAuth';
+import { useRoutes } from '@/composables/useRoutes';
 import TheNavigation from './TheNavigation.vue';
 import UserDropdown from './UserDropdown.vue';
 import AuthLinks from './AuthLinks.vue';
 
 const { t } = useI18n();
 const { isAuthenticated } = useAuth();
+const routes = useRoutes();
 const page = usePage();
 const appStore = useAppStore();
 
@@ -48,12 +50,12 @@ function selectTheme(mode: ThemeMode): void {
 </script>
 
 <template>
-    <header class="bg-surface shadow-sm dark:shadow-stone-800/50">
+    <header class="bg-surface shadow-sm dark:shadow-neutral-800/50">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex h-16 items-center justify-between">
                 <!-- Logo -->
                 <div class="shrink-0">
-                    <Link href="/" class="flex items-center">
+                    <Link :href="routes.home" class="flex items-center">
                         <img v-if="currentLogo" :src="currentLogo" :alt="appName" class="h-8" />
                         <span v-else class="text-xl font-bold text-primary">
                             {{ t('layout.brand') }}
@@ -67,7 +69,7 @@ function selectTheme(mode: ThemeMode): void {
 
                     <!-- Search button -->
                     <Link
-                        href="/buscar"
+                        :href="routes.search"
                         :aria-label="t('search.title')"
                         class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     >
@@ -158,10 +160,9 @@ function selectTheme(mode: ThemeMode): void {
                             <div class="py-1">
                                 <button
                                     type="button"
-                                    class="flex w-full items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-700"
+                                    class="flex w-full items-center px-4 py-2 text-sm text-base-primary hover:bg-muted"
                                     :class="{
-                                        'bg-stone-100 dark:bg-stone-700':
-                                            appStore.themeMode === 'system',
+                                        'bg-muted': appStore.themeMode === 'system',
                                     }"
                                     role="menuitem"
                                     @click="selectTheme('system')"
@@ -183,10 +184,9 @@ function selectTheme(mode: ThemeMode): void {
                                 </button>
                                 <button
                                     type="button"
-                                    class="flex w-full items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-700"
+                                    class="flex w-full items-center px-4 py-2 text-sm text-base-primary hover:bg-muted"
                                     :class="{
-                                        'bg-stone-100 dark:bg-stone-700':
-                                            appStore.themeMode === 'light',
+                                        'bg-muted': appStore.themeMode === 'light',
                                     }"
                                     role="menuitem"
                                     @click="selectTheme('light')"
@@ -208,10 +208,9 @@ function selectTheme(mode: ThemeMode): void {
                                 </button>
                                 <button
                                     type="button"
-                                    class="flex w-full items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-700"
+                                    class="flex w-full items-center px-4 py-2 text-sm text-base-primary hover:bg-muted"
                                     :class="{
-                                        'bg-stone-100 dark:bg-stone-700':
-                                            appStore.themeMode === 'dark',
+                                        'bg-muted': appStore.themeMode === 'dark',
                                     }"
                                     role="menuitem"
                                     @click="selectTheme('dark')"
@@ -291,14 +290,14 @@ function selectTheme(mode: ThemeMode): void {
         <!-- Mobile menu -->
         <div
             v-if="isMobileMenuOpen"
-            class="border-t border-stone-200 md:hidden dark:border-stone-700"
+            class="border-t border-default md:hidden"
         >
             <div class="space-y-1 px-4 py-3">
                 <TheNavigation mobile @navigate="closeMobileMenu" />
 
                 <!-- Search link -->
                 <Link
-                    href="/buscar"
+                    :href="routes.search"
                     class="flex items-center px-3 py-2 text-base font-medium text-base-secondary hover:bg-muted hover:text-base-primary rounded-md"
                     @click="closeMobileMenu"
                 >
@@ -404,7 +403,7 @@ function selectTheme(mode: ThemeMode): void {
                 </div>
 
                 <!-- Mobile Auth: User dropdown or login/register links -->
-                <div class="border-t border-stone-200 dark:border-stone-700 pt-3 mt-3">
+                <div class="border-t border-default pt-3 mt-3">
                     <UserDropdown v-if="isAuthenticated" @navigate="closeMobileMenu" />
                     <AuthLinks v-else mobile @navigate="closeMobileMenu" />
                 </div>

@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-    <div class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-stone-900/50">
+    <div class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-neutral-900/50">
         <div v-if="$slots.header || props.title" class="border-b border-default px-6 py-4">
             <slot name="header">
                 <h3 v-if="props.title" class="text-lg font-semibold text-base-primary">

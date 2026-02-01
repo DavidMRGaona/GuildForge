@@ -57,11 +57,11 @@ function handleKeydown(event: KeyboardEvent): void {
         <button
             type="button"
             :class="[
-                'flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-stone-900',
+                'flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-page',
                 mobile ? 'w-full justify-between' : '',
                 isParentActive()
-                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-stone-100',
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                    : 'text-base-secondary hover:bg-muted hover:text-base-primary',
             ]"
             :aria-expanded="isOpen"
             aria-haspopup="true"
@@ -96,7 +96,7 @@ function handleKeydown(event: KeyboardEvent): void {
         >
             <div
                 v-show="isOpen"
-                class="absolute left-0 z-50 mt-2 w-48 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-stone-800 dark:ring-stone-700"
+                class="absolute left-0 z-50 mt-2 w-48 origin-top-left rounded-md bg-surface shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none border-default"
             >
                 <div class="py-1">
                     <Link
@@ -107,8 +107,8 @@ function handleKeydown(event: KeyboardEvent): void {
                         :class="[
                             'block px-4 py-2 text-sm transition-colors',
                             isActive(child.href)
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                : 'text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-700',
+                                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                                : 'text-base-primary hover:bg-muted',
                         ]"
                         @click="handleNavigate"
                     >
@@ -137,8 +137,8 @@ function handleKeydown(event: KeyboardEvent): void {
                     :class="[
                         'block rounded-md px-3 py-2 text-sm font-medium transition-colors',
                         isActive(child.href)
-                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                            : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-stone-100',
+                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                            : 'text-base-secondary hover:bg-muted hover:text-base-primary',
                     ]"
                     @click="handleNavigate"
                 >

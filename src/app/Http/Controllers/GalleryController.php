@@ -7,10 +7,10 @@ namespace App\Http\Controllers;
 use App\Application\Services\GalleryQueryServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Http\Concerns\BuildsPaginatedResponse;
+use App\Http\Requests\TagFilterRequest;
 use App\Http\Resources\GalleryResource;
 use App\Http\Resources\GalleryWithPhotosResource;
 use App\Http\Resources\TagResource;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,14 +26,10 @@ final class GalleryController extends Controller
     ) {
     }
 
-    public function index(Request $request): Response
+    public function index(TagFilterRequest $request): Response
     {
-        $page = $this->getCurrentPage();
-        $tagsParam = $request->query('tags');
-        $tagSlugs = null;
-        if (is_string($tagsParam) && $tagsParam !== '') {
-            $tagSlugs = array_filter(explode(',', $tagsParam));
-        }
+        $page = $request->getPage();
+        $tagSlugs = $request->getTagSlugs();
 
         $galleries = $this->galleryQuery->getPublishedPaginated($page, self::PER_PAGE, $tagSlugs);
         $total = $this->galleryQuery->getPublishedTotal($tagSlugs);

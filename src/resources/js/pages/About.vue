@@ -86,7 +86,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
         <!-- Hero Section -->
         <div
             class="relative h-64 md:h-80 flex items-center justify-center overflow-hidden"
-            :class="{ 'bg-gradient-to-r from-amber-500 to-amber-600': !heroImageUrl }"
+            :class="{ 'bg-gradient-to-r from-primary-500 to-primary-600': !heroImageUrl }"
         >
             <!-- Background Image -->
             <img
@@ -115,18 +115,18 @@ const activityIconPaths: Record<ActivityIcon, string> = {
         <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- Activities Section -->
             <section v-if="activities.length > 0" class="mb-8">
-                <h2 class="text-2xl font-bold text-stone-900 dark:text-stone-100 mb-6">
+                <h2 class="text-2xl font-bold text-base-primary mb-6">
                     {{ t('about.whatWeDo.title') }}
                 </h2>
                 <div class="flex flex-wrap justify-center gap-6">
                     <div
                         v-for="(activity, index) in activities"
                         :key="index"
-                        class="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] xl:w-[calc(25%-1.125rem)] bg-white dark:bg-stone-800 rounded-lg shadow-sm border border-stone-200 dark:border-stone-700 p-6 hover:shadow-md transition-shadow"
+                        class="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)] xl:w-[calc(25%-1.125rem)] bg-surface rounded-lg shadow-sm border-default p-6 hover:shadow-md transition-shadow"
                     >
                         <div class="flex items-start gap-4">
                             <div
-                                class="flex-shrink-0 rounded-lg bg-amber-100 dark:bg-amber-900/40 p-3 text-amber-600 dark:text-amber-400"
+                                class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary-600 dark:text-primary-400"
                             >
                                 <svg
                                     class="h-6 w-6"
@@ -138,11 +138,11 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                 </svg>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <h3 class="font-semibold text-stone-900 dark:text-stone-100 mb-1">
+                                <h3 class="font-semibold text-base-primary mb-1">
                                     {{ activity.title }}
                                 </h3>
                                 <p
-                                    class="text-sm text-stone-600 dark:text-stone-400 leading-relaxed"
+                                    class="text-sm text-base-secondary leading-relaxed"
                                 >
                                     {{ activity.description }}
                                 </p>
@@ -170,7 +170,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
             <!-- Join Section -->
             <section v-if="hasJoinSteps" class="space-y-12 mb-8">
                 <div class="text-center">
-                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    <h2 class="text-3xl font-bold text-base-primary">
                         {{ $t('about.join.title') }}
                     </h2>
                 </div>
@@ -180,7 +180,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                     <div class="relative">
                         <!-- Connection line -->
                         <div
-                            class="absolute left-0 right-0 top-6 h-0.5 bg-amber-200 dark:bg-amber-900"
+                            class="absolute left-0 right-0 top-6 h-0.5 bg-primary-200 dark:bg-primary-900"
                         />
 
                         <!-- Steps -->
@@ -193,19 +193,19 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                             >
                                 <!-- Number circle -->
                                 <div
-                                    class="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-xl font-bold text-white shadow-lg"
+                                    class="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-primary-500 text-xl font-bold text-white shadow-lg"
                                 >
                                     {{ index + 1 }}
                                 </div>
 
                                 <!-- Content -->
                                 <div class="mt-4 max-w-[200px]">
-                                    <h3 class="font-semibold text-gray-900 dark:text-white">
+                                    <h3 class="font-semibold text-base-primary">
                                         {{ step.title }}
                                     </h3>
                                     <p
                                         v-if="step.description"
-                                        class="mt-1 text-sm text-gray-600 dark:text-gray-400"
+                                        class="mt-1 text-sm text-base-secondary"
                                     >
                                         {{ step.description }}
                                     </p>
@@ -220,7 +220,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                     <div class="relative ml-6">
                         <!-- Connection line -->
                         <div
-                            class="absolute bottom-0 left-0 top-0 w-0.5 bg-amber-200 dark:bg-amber-900"
+                            class="absolute bottom-0 left-0 top-0 w-0.5 bg-primary-200 dark:bg-primary-900"
                         />
 
                         <!-- Steps -->
@@ -232,19 +232,19 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                             >
                                 <!-- Number circle -->
                                 <div
-                                    class="relative z-10 -ml-6 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 text-xl font-bold text-white shadow-lg"
+                                    class="relative z-10 -ml-6 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-500 text-xl font-bold text-white shadow-lg"
                                 >
                                     {{ index + 1 }}
                                 </div>
 
                                 <!-- Content -->
                                 <div class="pt-2">
-                                    <h3 class="font-semibold text-gray-900 dark:text-white">
+                                    <h3 class="font-semibold text-base-primary">
                                         {{ step.title }}
                                     </h3>
                                     <p
                                         v-if="step.description"
-                                        class="mt-1 text-sm text-gray-600 dark:text-gray-400"
+                                        class="mt-1 text-sm text-base-secondary"
                                     >
                                         {{ step.description }}
                                     </p>
@@ -257,7 +257,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
 
             <!-- Contact Section - Two Column Layout -->
             <section id="contact-section" class="mb-8">
-                <h2 class="text-2xl font-bold text-stone-900 dark:text-stone-100 mb-6">
+                <h2 class="text-2xl font-bold text-base-primary mb-6">
                     {{ t('about.contact.title') }}
                 </h2>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
@@ -267,7 +267,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                             <!-- Email -->
                             <div v-if="contactEmail" class="flex items-start gap-4">
                                 <div
-                                    class="flex-shrink-0 rounded-lg bg-amber-100 dark:bg-amber-900/40 p-3 text-amber-600 dark:text-amber-400"
+                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary-600 dark:text-primary-400"
                                 >
                                     <svg
                                         class="h-6 w-6"
@@ -284,12 +284,12 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-stone-900 dark:text-stone-100">
+                                    <h3 class="font-semibold text-base-primary">
                                         {{ t('about.contact.email') }}
                                     </h3>
                                     <a
                                         :href="'mailto:' + contactEmail"
-                                        class="text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300 underline"
+                                        class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 underline"
                                     >
                                         {{ contactEmail }}
                                     </a>
@@ -299,7 +299,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                             <!-- Phone -->
                             <div v-if="contactPhone" class="flex items-start gap-4">
                                 <div
-                                    class="flex-shrink-0 rounded-lg bg-amber-100 dark:bg-amber-900/40 p-3 text-amber-600 dark:text-amber-400"
+                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary-600 dark:text-primary-400"
                                 >
                                     <svg
                                         class="h-6 w-6"
@@ -316,12 +316,12 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-stone-900 dark:text-stone-100">
+                                    <h3 class="font-semibold text-base-primary">
                                         {{ t('about.contact.phone') }}
                                     </h3>
                                     <a
                                         :href="'tel:' + contactPhone"
-                                        class="text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300 underline"
+                                        class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 underline"
                                     >
                                         {{ contactPhone }}
                                     </a>
@@ -331,7 +331,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                             <!-- Address -->
                             <div v-if="contactAddress" class="flex items-start gap-4">
                                 <div
-                                    class="flex-shrink-0 rounded-lg bg-amber-100 dark:bg-amber-900/40 p-3 text-amber-600 dark:text-amber-400"
+                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary-600 dark:text-primary-400"
                                 >
                                     <svg
                                         class="h-6 w-6"
@@ -353,10 +353,10 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-stone-900 dark:text-stone-100">
+                                    <h3 class="font-semibold text-base-primary">
                                         {{ t('about.contact.address') }}
                                     </h3>
-                                    <p class="text-stone-600 dark:text-stone-400">
+                                    <p class="text-base-secondary">
                                         {{ contactAddress }}
                                     </p>
                                 </div>
@@ -365,9 +365,9 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                             <!-- Social Media Links -->
                             <div
                                 v-if="hasSocialLinks"
-                                class="pt-4 border-t border-stone-200 dark:border-stone-700"
+                                class="pt-4 border-t border-default"
                             >
-                                <h3 class="font-semibold text-stone-900 dark:text-stone-100 mb-4">
+                                <h3 class="font-semibold text-base-primary mb-4">
                                     {{ t('about.contact.social.title') }}
                                 </h3>
                                 <div class="flex gap-4">
@@ -376,7 +376,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                         :href="socialLinks.facebook"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="rounded-lg bg-stone-100 dark:bg-stone-700 p-3 text-stone-600 dark:text-stone-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                        class="rounded-lg bg-neutral-100 dark:bg-neutral-700 p-3 text-neutral-600 dark:text-neutral-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                                         aria-label="Facebook"
                                     >
                                         <svg
@@ -394,7 +394,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                         :href="socialLinks.instagram"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="rounded-lg bg-stone-100 dark:bg-stone-700 p-3 text-stone-600 dark:text-stone-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                        class="rounded-lg bg-neutral-100 dark:bg-neutral-700 p-3 text-neutral-600 dark:text-neutral-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                                         aria-label="Instagram"
                                     >
                                         <svg
@@ -412,7 +412,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                         :href="socialLinks.twitter"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="rounded-lg bg-stone-100 dark:bg-stone-700 p-3 text-stone-600 dark:text-stone-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                        class="rounded-lg bg-neutral-100 dark:bg-neutral-700 p-3 text-neutral-600 dark:text-neutral-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                                         aria-label="X (Twitter)"
                                     >
                                         <svg
@@ -430,7 +430,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                         :href="socialLinks.discord"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="rounded-lg bg-stone-100 dark:bg-stone-700 p-3 text-stone-600 dark:text-stone-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                        class="rounded-lg bg-neutral-100 dark:bg-neutral-700 p-3 text-neutral-600 dark:text-neutral-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                                         aria-label="Discord"
                                     >
                                         <svg
@@ -448,7 +448,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                         :href="socialLinks.tiktok"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="rounded-lg bg-stone-100 dark:bg-stone-700 p-3 text-stone-600 dark:text-stone-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                        class="rounded-lg bg-neutral-100 dark:bg-neutral-700 p-3 text-neutral-600 dark:text-neutral-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                                         aria-label="TikTok"
                                     >
                                         <svg
@@ -481,19 +481,19 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                         <LocationMap :location="location" />
                         <template #fallback>
                             <div
-                                class="h-full flex items-center justify-center bg-stone-100 dark:bg-stone-800"
+                                class="h-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-800"
                             >
                                 <LoadingSpinner />
                             </div>
                         </template>
                     </Suspense>
                 </div>
-                <p class="mt-4 text-sm text-stone-600 dark:text-stone-400">
+                <p class="mt-4 text-sm text-base-secondary">
                     <a
                         :href="openStreetMapUrl"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300"
+                        class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
                     >
                         {{ t('about.location.viewOnMap') }} →
                     </a>

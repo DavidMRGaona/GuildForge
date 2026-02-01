@@ -15,17 +15,17 @@
             <x-filament::section>
                 <div class="flex items-start gap-4">
                     <div class="flex-1">
-                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">
                             {{ $moduleDisplayName ?: $module }}
                         </h2>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                             {{ __('modules.filament.card.version') }}: {{ $moduleVersion }}
                             @if($moduleAuthor)
                                 | {{ __('modules.filament.card.author') }}: {{ $moduleAuthor }}
                             @endif
                         </p>
                         @if($moduleDescription)
-                            <p class="mt-2 text-gray-600 dark:text-gray-300">
+                            <p class="mt-2 text-neutral-600 dark:text-neutral-300">
                                 {{ $moduleDescription }}
                             </p>
                         @endif
@@ -51,10 +51,10 @@
         @else
             <x-filament::section>
                 <div class="flex flex-col items-center justify-center py-8 text-center">
-                    <div class="mb-3 rounded-full bg-gray-100 p-3 dark:bg-gray-800">
-                        <x-heroicon-o-cog-6-tooth class="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                    <div class="mb-3 rounded-full bg-neutral-100 p-3 dark:bg-neutral-800">
+                        <x-heroicon-o-cog-6-tooth class="h-6 w-6 text-neutral-400 dark:text-neutral-500" />
                     </div>
-                    <h3 class="text-base font-medium text-gray-900 dark:text-white">
+                    <h3 class="text-base font-medium text-neutral-900 dark:text-white">
                         {{ __('modules.filament.settings_page.no_settings') }}
                     </h3>
                 </div>

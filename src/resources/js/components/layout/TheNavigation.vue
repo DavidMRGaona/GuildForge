@@ -116,11 +116,11 @@ function handleNavigate(): void {
                 :target="item.target"
                 :aria-current="isActive(item.href) ? 'page' : undefined"
                 :class="[
-                    'rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-stone-900',
+                    'rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-page',
                     mobile ? 'block w-full' : '',
                     isActive(item.href)
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                        : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-stone-100',
+                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                        : 'text-base-secondary hover:bg-muted hover:text-base-primary',
                 ]"
                 @click="handleNavigate"
             >

@@ -34,7 +34,7 @@ function pluralize(count: number, key: string): string {
     <DefaultLayout>
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- Page Title -->
-            <h1 class="mb-6 text-3xl font-bold text-gray-900">
+            <h1 class="mb-6 text-3xl font-bold text-base-primary">
                 {{ t('search.title') }}
             </h1>
 
@@ -45,13 +45,13 @@ function pluralize(count: number, key: string): string {
 
             <!-- Results for Query -->
             <div v-if="query" class="mb-6">
-                <h2 class="text-xl font-semibold text-gray-700">
+                <h2 class="text-xl font-semibold text-base-secondary">
                     {{ t('search.resultsFor', { query }) }}
                 </h2>
             </div>
 
             <!-- Min Chars Warning -->
-            <div v-if="error === 'minChars'" class="rounded-lg bg-amber-50 p-4 text-amber-800">
+            <div v-if="error === 'minChars'" class="rounded-lg bg-primary-50 p-4 text-primary-800 dark:bg-primary-900/20 dark:text-primary-300">
                 <p class="flex items-center gap-2">
                     <svg
                         class="h-5 w-5"
@@ -72,9 +72,9 @@ function pluralize(count: number, key: string): string {
             </div>
 
             <!-- No Results -->
-            <div v-else-if="query && !hasResults" class="rounded-lg bg-gray-50 p-8 text-center">
+            <div v-else-if="query && !hasResults" class="rounded-lg bg-muted p-8 text-center">
                 <svg
-                    class="mx-auto mb-4 h-16 w-16 text-gray-400"
+                    class="mx-auto mb-4 h-16 w-16 text-neutral-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -87,14 +87,14 @@ function pluralize(count: number, key: string): string {
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
                 </svg>
-                <p class="text-lg text-gray-600">
+                <p class="text-lg text-base-secondary">
                     {{ t('search.noResults', { query }) }}
                 </p>
             </div>
 
             <!-- Events Section -->
             <section v-if="events.length > 0" class="mb-12">
-                <h2 class="mb-4 text-2xl font-bold text-gray-900">
+                <h2 class="mb-4 text-2xl font-bold text-base-primary">
                     {{ pluralize(events.length, 'search.eventsFound') }}
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -104,7 +104,7 @@ function pluralize(count: number, key: string): string {
 
             <!-- Articles Section -->
             <section v-if="articles.length > 0" class="mb-12">
-                <h2 class="mb-4 text-2xl font-bold text-gray-900">
+                <h2 class="mb-4 text-2xl font-bold text-base-primary">
                     {{ pluralize(articles.length, 'search.articlesFound') }}
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

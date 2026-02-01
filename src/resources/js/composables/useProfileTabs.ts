@@ -35,8 +35,11 @@ export function useProfileTabs(): UseProfileTabsReturn {
                     ? (slot.props[meta.badgeKey] as number | undefined)
                     : undefined;
 
+                // Use explicit tabId if provided, otherwise fall back to module name
+                const tabId = meta.tabId ?? slot.registration.module;
+
                 const tab: ProfileTab = {
-                    id: slot.registration.module,
+                    id: tabId,
                     label: t(meta.labelKey),
                     icon: meta.icon,
                     isModuleTab: true,
@@ -44,6 +47,11 @@ export function useProfileTabs(): UseProfileTabsReturn {
 
                 if (badge !== undefined) {
                     tab.badge = badge;
+                }
+
+                // Add parentId if specified for visual hierarchy
+                if (meta.parentId) {
+                    tab.parentId = meta.parentId;
                 }
 
                 baseTabs.push(tab);

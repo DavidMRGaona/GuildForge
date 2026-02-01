@@ -10,6 +10,7 @@ import { useLightbox } from '@/composables/useLightbox';
 import { useGallery } from '@/composables/useGallery';
 import { useTags } from '@/composables/useTags';
 import { useSeo } from '@/composables/useSeo';
+import { useRoutes } from '@/composables/useRoutes';
 import { buildGalleryImageUrl } from '@/utils/cloudinary';
 
 const PhotoLightbox = defineAsyncComponent(() => import('@/components/gallery/PhotoLightbox.vue'));
@@ -22,6 +23,7 @@ const props = defineProps<Props>();
 
 const { t } = useI18n();
 const { formatGalleryDate } = useGallery();
+const routes = useRoutes();
 
 useSeo({
     title: props.gallery.title,
@@ -47,8 +49,8 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="mb-6">
                 <Link
-                    href="/galeria"
-                    class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 rounded dark:text-stone-400 dark:hover:text-stone-300 dark:focus:ring-offset-stone-900"
+                    :href="routes.gallery.index"
+                    class="inline-flex items-center text-sm text-base-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded dark:focus:ring-offset-page"
                 >
                     <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -63,15 +65,15 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
             </div>
 
             <div
-                class="overflow-hidden rounded-lg bg-white shadow dark:bg-stone-800 dark:shadow-stone-900/50"
+                class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-neutral-900/50"
             >
                 <div
-                    class="border-b border-gray-200 bg-gradient-to-r from-amber-500 to-slate-600 px-6 py-8 text-white dark:border-stone-700"
+                    class="border-b border-default bg-gradient-to-r from-primary-500 to-neutral-600 px-6 py-8 text-white"
                 >
                     <h1 class="text-3xl font-bold sm:text-4xl">
                         {{ props.gallery.title }}
                     </h1>
-                    <p v-if="props.gallery.description" class="mt-4 text-lg text-amber-100">
+                    <p v-if="props.gallery.description" class="mt-4 text-lg text-primary-100">
                         {{ props.gallery.description }}
                     </p>
 
@@ -90,7 +92,7 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
                         />
                     </div>
 
-                    <p class="mt-4 text-sm text-amber-100/80">
+                    <p class="mt-4 text-sm text-primary-100/80">
                         {{ formatGalleryDate(props.gallery.createdAt) }} · {{ photos.length }}
                         {{ t('gallery.photos') }}
                     </p>
@@ -111,7 +113,7 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
                                     caption: photo.caption ?? '',
                                 })
                             "
-                            class="group relative aspect-square overflow-hidden rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:bg-stone-700 dark:focus:ring-offset-stone-900"
+                            class="group relative aspect-square overflow-hidden rounded-lg bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:bg-neutral-700 dark:focus:ring-offset-page"
                             @click="openLightbox(index)"
                         >
                             <img
@@ -137,7 +139,7 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
 
                     <div v-else class="py-12 text-center">
                         <svg
-                            class="mx-auto h-12 w-12 text-gray-400 dark:text-stone-500"
+                            class="mx-auto h-12 w-12 text-neutral-400 dark:text-neutral-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -149,7 +151,7 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
                                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                         </svg>
-                        <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-stone-100">
+                        <h3 class="mt-4 text-lg font-medium text-base-primary">
                             {{ t('common.noResults') }}
                         </h3>
                     </div>

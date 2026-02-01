@@ -57,10 +57,10 @@ onMounted(() => {
                 type="search"
                 :placeholder="t('search.placeholder')"
                 :aria-label="t('search.placeholder')"
-                class="w-full rounded-lg border border-stone-300 py-2 pl-10 pr-4 focus:border-amber-500 focus:ring-2 focus:ring-amber-500 dark:border-stone-600 dark:bg-stone-800 dark:text-white"
+                class="w-full rounded-lg border border-neutral-300 py-2 pl-10 pr-4 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 dark:border-neutral-600 dark:bg-surface dark:text-white"
             />
             <svg
-                class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400 dark:text-stone-500"
+                class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400 dark:text-neutral-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -76,7 +76,7 @@ onMounted(() => {
         </div>
         <p
             v-if="query.length > 0 && query.length < 2"
-            class="mt-2 text-sm text-stone-500 dark:text-stone-400"
+            class="mt-2 text-sm text-base-muted"
             role="status"
         >
             {{ t('search.minCharsWarning') }}

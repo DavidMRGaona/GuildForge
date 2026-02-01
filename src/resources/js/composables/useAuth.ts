@@ -123,7 +123,7 @@ export function useAuth(): AuthComposable {
     };
 
     const logout = (): void => {
-        router.post('/logout');
+        router.post('/cerrar-sesion');
     };
 
     return {

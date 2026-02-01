@@ -11,6 +11,7 @@ use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\ImageOptimizationServiceInterface;
+use App\Application\Services\UserModelQueryServiceInterface;
 use App\Domain\Events\UserLoggedIn;
 use App\Domain\Events\UserLoggedOut;
 use App\Domain\Events\UserPasswordChanged;
@@ -25,6 +26,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
@@ -36,13 +38,14 @@ final readonly class AuthService implements AuthServiceInterface
         private ResponseDTOFactoryInterface $dtoFactory,
         private ImageOptimizationServiceInterface $imageOptimizer,
         private UserRepositoryInterface $userRepository,
+        private UserModelQueryServiceInterface $userModelQuery,
     ) {
     }
 
     public function register(CreateUserDTO $dto): UserResponseDTO
     {
         $user = $this->userRepository->create($dto);
-        $userModel = $this->userRepository->findModelById($user->id());
+        $userModel = $this->userModelQuery->findModelById($user->id());
 
         if ($userModel === null) {
             throw new \RuntimeException('Failed to retrieve user after creation');
@@ -121,7 +124,7 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function sendEmailVerificationNotification(string $userId): void
     {
-        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
         if ($userModel === null) {
             throw new ModelNotFoundException("User not found: $userId");
         }
@@ -130,7 +133,7 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function verifyEmail(string $userId, string $hash): bool
     {
-        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
         if ($userModel === null) {
             throw new ModelNotFoundException("User not found: $userId");
         }
@@ -150,7 +153,7 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function updateProfile(string $userId, UpdateUserDTO $dto): UserResponseDTO
     {
-        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
         if ($userModel === null) {
             throw new ModelNotFoundException("User not found: $userId");
         }
@@ -186,7 +189,7 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function changePassword(string $userId, string $currentPassword, string $newPassword): bool
     {
-        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
         if ($userModel === null) {
             throw new ModelNotFoundException("User not found: $userId");
         }
@@ -206,7 +209,7 @@ final readonly class AuthService implements AuthServiceInterface
 
     public function verifyPendingEmail(string $userId, string $hash): bool
     {
-        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
         if ($userModel === null) {
             throw new ModelNotFoundException("User not found: $userId");
         }
@@ -251,9 +254,18 @@ final readonly class AuthService implements AuthServiceInterface
         return $stored !== false ? $fullPath : null;
     }
 
+    public function uploadAvatarFromFile(string $userId, UploadedFile $file): ?string
+    {
+        return $this->uploadAvatar(
+            $userId,
+            $file->getContent(),
+            $file->getMimeType() ?? 'image/jpeg'
+        );
+    }
+
     public function hasVerifiedEmail(string $userId): bool
     {
-        $userModel = $this->userRepository->findModelById(UserId::fromString($userId));
+        $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
         return $userModel !== null && $userModel->hasVerifiedEmail();
     }

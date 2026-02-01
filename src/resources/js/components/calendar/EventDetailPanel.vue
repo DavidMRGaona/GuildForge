@@ -53,12 +53,12 @@ const truncatedDescription = computed(() => {
 
 <template>
     <div
-        class="flex h-full flex-col rounded-lg border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800 dark:shadow-stone-900/50"
+        class="flex h-full flex-col rounded-lg border-default bg-surface p-4 shadow-sm dark:shadow-neutral-900/50"
     >
         <!-- Empty state -->
         <div v-if="!event" class="flex flex-1 flex-col items-center justify-center text-center">
             <svg
-                class="mx-auto h-12 w-12 text-stone-300 dark:text-stone-600"
+                class="mx-auto h-12 w-12 text-neutral-300 dark:text-neutral-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -70,7 +70,7 @@ const truncatedDescription = computed(() => {
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
             </svg>
-            <p class="mt-3 text-sm text-stone-500 dark:text-stone-400">
+            <p class="mt-3 text-sm text-base-muted">
                 {{ t('calendar.selectEvent') }}
             </p>
         </div>
@@ -89,7 +89,7 @@ const truncatedDescription = computed(() => {
             <!-- Event content -->
             <div class="flex-1">
                 <!-- Title -->
-                <h3 class="text-lg font-semibold text-stone-900 dark:text-stone-100">
+                <h3 class="text-lg font-semibold text-base-primary">
                     {{ event.title }}
                 </h3>
 
@@ -103,9 +103,9 @@ const truncatedDescription = computed(() => {
                 />
 
                 <!-- Date -->
-                <div class="mt-2 flex items-center text-sm text-stone-600 dark:text-stone-300">
+                <div class="mt-2 flex items-center text-sm text-base-secondary">
                     <svg
-                        class="mr-2 h-4 w-4 text-stone-400 dark:text-stone-500"
+                        class="mr-2 h-4 w-4 text-base-muted"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -123,10 +123,10 @@ const truncatedDescription = computed(() => {
                 <!-- Location -->
                 <div
                     v-if="event.location"
-                    class="mt-2 flex items-center text-sm text-stone-600 dark:text-stone-300"
+                    class="mt-2 flex items-center text-sm text-base-secondary"
                 >
                     <svg
-                        class="mr-2 h-4 w-4 text-stone-400 dark:text-stone-500"
+                        class="mr-2 h-4 w-4 text-base-muted"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -150,7 +150,7 @@ const truncatedDescription = computed(() => {
                 <!-- Description -->
                 <p
                     v-if="truncatedDescription"
-                    class="mt-3 text-sm text-stone-600 dark:text-stone-300"
+                    class="mt-3 text-sm text-base-secondary"
                 >
                     {{ truncatedDescription }}
                 </p>
@@ -158,7 +158,7 @@ const truncatedDescription = computed(() => {
                 <!-- Pricing -->
                 <div v-if="priceDisplay" class="mt-3 flex items-center text-sm">
                     <svg
-                        class="mr-2 h-4 w-4 text-stone-400 dark:text-stone-500"
+                        class="mr-2 h-4 w-4 text-base-muted"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -170,12 +170,12 @@ const truncatedDescription = computed(() => {
                             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                     </svg>
-                    <span class="text-stone-600 dark:text-stone-300">{{ priceDisplay }}</span>
+                    <span class="text-base-secondary">{{ priceDisplay }}</span>
                 </div>
             </div>
 
             <!-- Action button -->
-            <div class="mt-4 pt-4 border-t border-stone-100 dark:border-stone-700">
+            <div class="mt-4 pt-4 border-t border-default">
                 <Link :href="event.url" class="block">
                     <BaseButton variant="primary" size="sm" class="w-full">
                         {{ t('calendar.viewEvent') }}

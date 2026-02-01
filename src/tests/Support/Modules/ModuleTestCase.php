@@ -98,11 +98,20 @@ abstract class ModuleTestCase extends TestCase
     }
 
     /**
-     * Enable a module by name.
+     * Enable a module by name and boot its service provider.
+     *
+     * This method enables the module in the database AND boots its service provider,
+     * which is necessary for tests since module boot happens before test setUp().
      */
     protected function enableModule(string $moduleName): Module
     {
-        return $this->moduleManager()->enable(new ModuleName($moduleName));
+        $module = $this->moduleManager()->enable(new ModuleName($moduleName));
+
+        // Boot the module's service provider since app boot already happened
+        $moduleLoader = app(\App\Modules\ModuleLoader::class);
+        $moduleLoader->bootModule($module);
+
+        return $module;
     }
 
     /**

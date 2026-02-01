@@ -226,11 +226,15 @@ trait InteractsWithModules
 
     /**
      * Clean up after each test if the trait is used.
-     *
-     * @after
      */
+    #[\PHPUnit\Framework\Attributes\After]
     protected function cleanupModulesAfterTest(): void
     {
+        // Skip cleanup if no modules were created during this test
+        if (empty($this->createdModules)) {
+            return;
+        }
+
         $this->cleanupTestModules();
     }
 }
