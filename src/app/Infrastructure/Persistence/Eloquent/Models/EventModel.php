@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
+use App\Infrastructure\Persistence\Eloquent\Concerns\HasSlug;
 use Database\Factories\EventModelFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -38,6 +39,7 @@ final class EventModel extends Model
     /** @use HasFactory<EventModelFactory> */
     use HasFactory;
 
+    use HasSlug;
     use HasUuids;
 
     /** @var array<string> */
@@ -93,5 +95,21 @@ final class EventModel extends Model
     public function gameTables(): HasMany
     {
         return $this->hasMany(GameTableModel::class, 'event_id');
+    }
+
+    /**
+     * Get the entity type for slug redirects.
+     */
+    public function getSlugEntityType(): string
+    {
+        return 'event';
+    }
+
+    /**
+     * Get the route key name for route model binding.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
     }
 }
