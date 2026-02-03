@@ -163,7 +163,7 @@ jobs:
           MODULE_NAME: ${{ inputs.module_name }}
         run: |
           echo "Installing dependencies for module: $MODULE_NAME"
-          npm ci
+          npm install
 
           # Create the expected output directory structure
           mkdir -p "public/build/modules/$MODULE_NAME"
