@@ -156,7 +156,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
-          cache: 'npm'
 
       - name: Build Vue components
         if: hashFiles('package.json') != ''
