@@ -20,11 +20,11 @@ use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\ContactServiceInterface;
-use App\Application\Services\LegalPageServiceInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\GalleryQueryServiceInterface;
 use App\Application\Services\HeroSlideQueryServiceInterface;
 use App\Application\Services\ImageOptimizationServiceInterface;
+use App\Application\Services\LegalPageServiceInterface;
 use App\Application\Services\LogContextProviderInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
@@ -51,6 +51,7 @@ use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
+use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
 use App\Infrastructure\Modules\Services\ModuleContextService;
 use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
 use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
@@ -86,13 +87,13 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
 use App\Infrastructure\Services\AboutPageService;
 use App\Infrastructure\Services\ArticleQueryService;
 use App\Infrastructure\Services\AuthService;
-use App\Infrastructure\Services\ContactService;
-use App\Infrastructure\Services\LegalPageService;
 use App\Infrastructure\Services\CloudinaryStorageAdapter;
+use App\Infrastructure\Services\ContactService;
 use App\Infrastructure\Services\EventQueryService;
 use App\Infrastructure\Services\GalleryQueryService;
 use App\Infrastructure\Services\HeroSlideQueryService;
 use App\Infrastructure\Services\ImageOptimizationService;
+use App\Infrastructure\Services\LegalPageService;
 use App\Infrastructure\Services\Logging\HttpLogContextProvider;
 use App\Infrastructure\Services\SettingsService;
 use App\Infrastructure\Services\SitemapQueryService;
@@ -181,8 +182,14 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(ModuleAssetBuilder::class, function ($app) {
+            return new ModuleAssetBuilder(
+                modulesPath: config('modules.path'),
+            );
+        });
+
         $this->app->singleton(ModuleDependencyResolver::class, function () {
-            return new ModuleDependencyResolver();
+            return new ModuleDependencyResolver;
         });
 
         $this->app->singleton(ModuleMigrationRunner::class, function ($app) {
@@ -280,6 +287,11 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(
             \App\Domain\Modules\Events\ModuleEnabled::class,
             \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+        );
+        // Build module Vue component assets when enabled (runs async via queue)
+        Event::listen(
+            \App\Domain\Modules\Events\ModuleEnabled::class,
+            \App\Infrastructure\Modules\Listeners\BuildModuleAssetsOnEnabled::class,
         );
         Event::listen(
             \App\Domain\Modules\Events\ModuleDisabled::class,

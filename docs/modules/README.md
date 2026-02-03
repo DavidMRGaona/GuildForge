@@ -12,13 +12,14 @@ This guide covers how to create and develop modules for GuildForge using the Mod
 6. [Module settings](#module-settings)
 7. [Filament integration](#filament-integration)
 8. [Slot registration](#slot-registration)
-9. [Module installation](#module-installation)
-10. [Extending core functionality](#extending-core-functionality)
-11. [Domain events and listeners](#domain-events-and-listeners)
-12. [State machine pattern](#state-machine-pattern)
-13. [Testing modules](#testing-modules)
-14. [Best practices](#best-practices)
-15. [Quick reference](#quick-reference)
+9. [Building module assets](#building-module-assets)
+10. [Module installation](#module-installation)
+11. [Extending core functionality](#extending-core-functionality)
+12. [Domain events and listeners](#domain-events-and-listeners)
+13. [State machine pattern](#state-machine-pattern)
+14. [Testing modules](#testing-modules)
+15. [Best practices](#best-practices)
+16. [Quick reference](#quick-reference)
 
 ---
 
@@ -76,6 +77,9 @@ A typical module follows this structure:
 ```
 modules/my-module/
 ├── module.json              # Module manifest
+├── package.json             # NPM dependencies (for Vue components)
+├── vite.config.ts           # Vite build configuration
+├── tsconfig.json            # TypeScript configuration
 ├── config/
 │   └── module.php           # Module configuration
 ├── database/
@@ -645,6 +649,187 @@ if (hasComponents('home.sidebar')) {
   </aside>
 </template>
 ```
+
+---
+
+## Building module assets
+
+Modules with Vue components need their assets built so they can be loaded at runtime. The build system uses Vite to compile Vue components into optimized bundles.
+
+### Why module builds are needed
+
+The main application uses Vite's `import.meta.glob` to discover module components at build time. However, modules installed after the main app build (via Filament admin or manual upload) won't be included in that glob.
+
+The solution is a **hybrid loading strategy**:
+1. **Build-time glob**: Loads modules present during `npm run build`
+2. **Runtime fallback**: Loads module bundles dynamically from `/build/modules/{moduleName}/`
+
+### Module build configuration
+
+Each module with Vue components needs three files:
+
+**package.json** - Dependencies for building:
+
+```json
+{
+    "name": "@guildforge/module-my-module",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^5.2.0",
+        "vite": "^6.0.0",
+        "vue": "^3.5.0"
+    }
+}
+```
+
+**vite.config.ts** - Build configuration:
+
+```typescript
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { resolve } from 'path';
+import { readdirSync, statSync, existsSync } from 'fs';
+
+const MODULE_NAME = 'my-module';
+
+function discoverComponents(dir: string): Record<string, string> {
+    if (!existsSync(dir)) {
+        return {};
+    }
+
+    const entries: Record<string, string> = {};
+
+    function scanDir(currentDir: string, prefix = ''): void {
+        const files = readdirSync(currentDir);
+
+        for (const file of files) {
+            const filePath = resolve(currentDir, file);
+            const stat = statSync(filePath);
+
+            if (stat.isDirectory()) {
+                scanDir(filePath, prefix ? `${prefix}/${file}` : file);
+            } else if (file.endsWith('.vue')) {
+                const relativePath = prefix ? `${prefix}/${file}` : file;
+                entries[`resources/js/components/${relativePath}`] = filePath;
+            }
+        }
+    }
+
+    scanDir(dir);
+    return entries;
+}
+
+const componentsDir = resolve(__dirname, 'resources/js/components');
+const componentEntries = discoverComponents(componentsDir);
+
+export default defineConfig({
+    plugins: [vue()],
+    build: {
+        outDir: `../../public/build/modules/${MODULE_NAME}`,
+        emptyOutDir: true,
+        manifest: true,
+        rollupOptions: {
+            input: componentEntries,
+            output: {
+                entryFileNames: 'assets/[name]-[hash].js',
+                chunkFileNames: 'assets/[name]-[hash].js',
+                assetFileNames: 'assets/[name]-[hash].[ext]',
+            },
+            external: ['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3'],
+        },
+    },
+    resolve: {
+        alias: {
+            '@': resolve(__dirname, 'resources/js'),
+        },
+    },
+});
+```
+
+**tsconfig.json** - TypeScript configuration:
+
+```json
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "jsx": "preserve",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "paths": {
+            "@/*": ["./resources/js/*"]
+        },
+        "types": ["vite/client"]
+    },
+    "include": ["resources/js/**/*"],
+    "exclude": ["node_modules"]
+}
+```
+
+### Building module assets
+
+**Using artisan command:**
+
+```bash
+# Build a specific module
+php artisan module:build my-module
+
+# Build all modules with Vue components
+php artisan module:build --all
+
+# Force rebuild even if assets exist
+php artisan module:build my-module --force
+```
+
+**Manual build:**
+
+```bash
+cd modules/my-module
+npm install
+npm run build
+```
+
+### Automatic builds
+
+When a module is enabled via `php artisan module:enable` or the Filament admin panel, its assets are automatically built if:
+- The module has a `package.json` file
+- The module has Vue components in `resources/js/components/`
+- The build output doesn't already exist (or `--force` is used)
+
+The build listener is queued, so asset compilation happens asynchronously.
+
+### Build output structure
+
+After building, assets are placed in:
+
+```
+public/build/modules/my-module/
+├── .vite/
+│   └── manifest.json    # Maps component paths to built assets
+└── assets/
+    ├── ComponentName-[hash].js
+    └── ComponentName-[hash].css
+```
+
+The `manifest.json` is used by `useModuleSlots` composable to resolve component paths at runtime.
+
+### Component loading flow
+
+1. **Page loads** → `useModuleSlots` checks registered slots
+2. **For each slot component**:
+   - Try build-time glob first (fastest)
+   - If not found, fetch `/build/modules/{module}/.vite/manifest.json`
+   - Resolve component path from manifest
+   - Load component dynamically via `import()`
+3. **Component renders** with props from slot registration
 
 ---
 
@@ -1393,6 +1578,8 @@ final class Registration
 | `module:disable {module}` | Disable a module |
 | `module:migrate {module}` | Run module migrations |
 | `module:seed {module}` | Run module seeders |
+| `module:build {module}` | Build module Vue assets |
+| `module:build --all` | Build all modules with Vue components |
 | `module:publish-assets` | Publish module assets |
 
 ### Scaffolding commands

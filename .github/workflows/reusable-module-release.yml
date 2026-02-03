@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: '8.4'
+      node_version:
+        description: 'Node.js version for building Vue components'
+        required: false
+        type: string
+        default: '20'
       run_tests:
         description: 'Run tests before release'
         required: false
@@ -146,6 +151,37 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js
+        if: hashFiles('package.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+
+      - name: Build Vue components
+        if: hashFiles('package.json') != ''
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
+        run: |
+          echo "Installing dependencies for module: $MODULE_NAME"
+          npm ci
+
+          # Create the expected output directory structure
+          mkdir -p "public/build/modules/$MODULE_NAME"
+
+          echo "Building Vue components..."
+          # Override output directory for standalone build (vite.config assumes module is in src/modules/)
+          npx vite build --outDir "public/build/modules/$MODULE_NAME"
+
+          # Verify build output
+          if [ -f "public/build/modules/$MODULE_NAME/.vite/manifest.json" ]; then
+            echo "Build successful. Assets in public/build/modules/$MODULE_NAME/"
+            ls -la "public/build/modules/$MODULE_NAME/"
+          else
+            echo "::error::Build completed but manifest.json not found"
+            exit 1
+          fi
+
       - name: Create ZIP package
         env:
           MODULE_NAME: ${{ inputs.module_name }}
@@ -156,7 +192,7 @@ jobs:
 
           mkdir -p "$PACKAGE_DIR"
 
-          # Copy module files (excluding dev files)
+          # Copy module files (excluding dev files, including pre-built assets)
           rsync -av --progress . "$PACKAGE_DIR/" \
             --exclude='.git' \
             --exclude='.github' \
@@ -168,6 +204,9 @@ jobs:
             --exclude='phpunit.xml' \
             --exclude='.gitignore' \
             --exclude='.gitattributes' \
+            --exclude='vite.config.ts' \
+            --exclude='tsconfig.json' \
+            --exclude='package-lock.json' \
             --exclude="$PACKAGE_DIR"
 
           # Create ZIP

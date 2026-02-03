@@ -50,6 +50,9 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'module/routes-web.php.stub' => 'routes/web.php',
             'module/routes-api.php.stub' => 'routes/api.php',
             'module/lang-messages.php.stub' => 'lang/es/messages.php',
+            'module/vite.config.ts.stub' => 'vite.config.ts',
+            'module/package.json.stub' => 'package.json',
+            'module/tsconfig.json.stub' => 'tsconfig.json',
         ];
 
         foreach ($fileMap as $stub => $destination) {

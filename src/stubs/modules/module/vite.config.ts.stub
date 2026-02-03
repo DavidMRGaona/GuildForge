@@ -1,0 +1,74 @@
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { resolve } from 'path';
+import { readdirSync, statSync, existsSync } from 'fs';
+
+const MODULE_NAME = '{{ moduleName }}';
+
+/**
+ * Auto-discover Vue components in the components directory.
+ * Returns an object mapping component names to their file paths.
+ */
+function discoverComponents(dir: string): Record<string, string> {
+    if (!existsSync(dir)) {
+        return {};
+    }
+
+    const entries: Record<string, string> = {};
+
+    function scanDir(currentDir: string, prefix = ''): void {
+        const files = readdirSync(currentDir);
+
+        for (const file of files) {
+            const filePath = resolve(currentDir, file);
+            const stat = statSync(filePath);
+
+            if (stat.isDirectory()) {
+                // Recurse into subdirectories
+                scanDir(filePath, prefix ? `${prefix}/${file}` : file);
+            } else if (file.endsWith('.vue')) {
+                // Add Vue component
+                const relativePath = prefix ? `${prefix}/${file}` : file;
+                entries[`resources/js/components/${relativePath}`] = filePath;
+            }
+        }
+    }
+
+    scanDir(dir);
+    return entries;
+}
+
+const componentsDir = resolve(__dirname, 'resources/js/components');
+const componentEntries = discoverComponents(componentsDir);
+
+// Exit early if no components to build
+if (Object.keys(componentEntries).length === 0) {
+    console.warn(`[${MODULE_NAME}] No Vue components found in resources/js/components/`);
+}
+
+export default defineConfig({
+    plugins: [vue()],
+    build: {
+        // Output to public/build/modules/{moduleName}/
+        outDir: `../../public/build/modules/${MODULE_NAME}`,
+        emptyOutDir: true,
+        manifest: true,
+        rollupOptions: {
+            input: componentEntries,
+            output: {
+                // Use content hashing for cache busting
+                entryFileNames: 'assets/[name]-[hash].js',
+                chunkFileNames: 'assets/[name]-[hash].js',
+                assetFileNames: 'assets/[name]-[hash].[ext]',
+            },
+            // Mark framework dependencies as external - they're provided by the main app
+            external: ['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3'],
+        },
+    },
+    // Resolve aliases to match the main app
+    resolve: {
+        alias: {
+            '@': resolve(__dirname, 'resources/js'),
+        },
+    },
+});
