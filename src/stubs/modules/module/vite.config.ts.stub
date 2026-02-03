@@ -46,11 +46,18 @@ if (Object.keys(componentEntries).length === 0) {
     console.warn(`[${MODULE_NAME}] No Vue components found in resources/js/components/`);
 }
 
+// Detect if running in standalone repo (no ../../public) or inside main app (src/modules/)
+const isStandalone = !existsSync(resolve(__dirname, '../../public'));
+const outDir = isStandalone
+    ? `public/build/modules/${MODULE_NAME}`
+    : `../../public/build/modules/${MODULE_NAME}`;
+
 export default defineConfig({
     plugins: [vue()],
+    publicDir: isStandalone ? false : 'public',
     build: {
         // Output to public/build/modules/{moduleName}/
-        outDir: `../../public/build/modules/${MODULE_NAME}`,
+        outDir,
         emptyOutDir: true,
         manifest: true,
         rollupOptions: {

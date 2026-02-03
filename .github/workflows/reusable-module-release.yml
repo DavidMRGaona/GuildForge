@@ -165,13 +165,8 @@ jobs:
           echo "Installing dependencies for module: $MODULE_NAME"
           npm install
 
-          # Create the expected output directory structure
-          mkdir -p "public/build/modules/$MODULE_NAME"
-
           echo "Building Vue components..."
-          # Override output directory for standalone build (vite.config assumes module is in src/modules/)
-          # Use --copyPublicDir false to avoid infinite recursion when outDir is under publicDir
-          npx vite build --outDir "public/build/modules/$MODULE_NAME" --copyPublicDir false
+          npm run build
 
           # Verify build output
           if [ -f "public/build/modules/$MODULE_NAME/.vite/manifest.json" ]; then
