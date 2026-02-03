@@ -68,8 +68,18 @@ export default defineConfig({
                 chunkFileNames: 'assets/[name]-[hash].js',
                 assetFileNames: 'assets/[name]-[hash].[ext]',
             },
-            // Mark framework dependencies as external - they're provided by the main app
-            external: ['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3'],
+            // Mark framework dependencies and main app imports as external - they're provided by the main app
+            external: (id) => {
+                // Framework dependencies
+                if (['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3'].includes(id)) {
+                    return true;
+                }
+                // Main app imports (composables, utils, components from @/)
+                if (id.startsWith('@/')) {
+                    return true;
+                }
+                return false;
+            },
         },
     },
     // Resolve aliases to match the main app
