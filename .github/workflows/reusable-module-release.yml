@@ -170,7 +170,8 @@ jobs:
 
           echo "Building Vue components..."
           # Override output directory for standalone build (vite.config assumes module is in src/modules/)
-          npx vite build --outDir "public/build/modules/$MODULE_NAME"
+          # Use --copyPublicDir false to avoid infinite recursion when outDir is under publicDir
+          npx vite build --outDir "public/build/modules/$MODULE_NAME" --copyPublicDir false
 
           # Verify build output
           if [ -f "public/build/modules/$MODULE_NAME/.vite/manifest.json" ]; then
