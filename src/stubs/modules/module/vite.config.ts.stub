@@ -63,11 +63,16 @@ export default defineConfig({
         rollupOptions: {
             input: componentEntries,
             output: {
+                format: 'es',
                 // Use content hashing for cache busting
                 entryFileNames: 'assets/[name]-[hash].js',
                 chunkFileNames: 'assets/[name]-[hash].js',
                 assetFileNames: 'assets/[name]-[hash].[ext]',
+                // Preserve exports from entry points
+                preserveModules: false,
             },
+            // Preserve entry point exports
+            preserveEntrySignatures: 'exports-only',
             // Mark framework dependencies and main app imports as external - they're provided by the main app
             external: (id) => {
                 // Framework dependencies
