@@ -7,7 +7,15 @@ import { resolve } from 'path';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.ts'],
+            input: [
+                'resources/css/app.css',
+                'resources/js/app.ts',
+                // Vendor exports for module runtime loading (import maps)
+                'resources/js/vendor-exports/vue.ts',
+                'resources/js/vendor-exports/pinia.ts',
+                'resources/js/vendor-exports/vue-i18n.ts',
+                'resources/js/vendor-exports/inertia.ts',
+            ],
             refresh: true,
         }),
         vue({
@@ -46,6 +54,8 @@ export default defineConfig({
                     'vendor-head': ['@unhead/vue'],
                 },
             },
+            // Preserve exports from vendor-export entry points for import maps
+            preserveEntrySignatures: 'exports-only',
         },
     },
 });
