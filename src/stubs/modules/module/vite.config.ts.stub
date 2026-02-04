@@ -59,7 +59,7 @@ export default defineConfig({
         // Output to public/build/modules/{moduleName}/
         outDir,
         emptyOutDir: true,
-        manifest: true,
+        manifest: 'manifest.json',
         rollupOptions: {
             input: componentEntries,
             output: {
