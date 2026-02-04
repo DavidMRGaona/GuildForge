@@ -47,9 +47,10 @@ if (Object.keys(componentEntries).length === 0) {
 }
 
 // Detect if running in standalone repo (no ../../public) or inside main app (src/modules/)
+// Standalone mode outputs to public/build/ - nginx will route /build/modules/{name}/ to this path
 const isStandalone = !existsSync(resolve(__dirname, '../../public'));
 const outDir = isStandalone
-    ? `public/build/modules/${MODULE_NAME}`
+    ? 'public/build'
     : `../../public/build/modules/${MODULE_NAME}`;
 
 export default defineConfig({
