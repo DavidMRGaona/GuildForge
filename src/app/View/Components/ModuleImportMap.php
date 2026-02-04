@@ -26,6 +26,9 @@ final class ModuleImportMap extends Component
     /**
      * Build import map from the main app's Vite manifest.
      *
+     * Maps bare import specifiers (vue, pinia, etc.) to the built
+     * vendor-export entry points that properly re-export all symbols.
+     *
      * @return array<string, string>
      */
     private function getImportMap(): array
@@ -42,45 +45,29 @@ final class ModuleImportMap extends Component
             return [];
         }
 
-        /** @var array<string, array{file?: string, name?: string}>|null $manifest */
+        /** @var array<string, array{file?: string}>|null $manifest */
         $manifest = json_decode($content, true);
 
         if ($manifest === null) {
             return [];
         }
 
-        $vendorVue = $this->findChunkByName($manifest, 'vendor-vue');
-        $vendorInertia = $this->findChunkByName($manifest, 'vendor-inertia');
+        // Map vendor-exports entry points to their import specifiers
+        $mappings = [
+            'resources/js/vendor-exports/vue.ts' => 'vue',
+            'resources/js/vendor-exports/pinia.ts' => 'pinia',
+            'resources/js/vendor-exports/vue-i18n.ts' => 'vue-i18n',
+            'resources/js/vendor-exports/inertia.ts' => '@inertiajs/vue3',
+        ];
 
         $imports = [];
 
-        if ($vendorVue !== null) {
-            // vue, pinia, vue-i18n are bundled together in the vendor-vue chunk
-            $imports['vue'] = "/build/{$vendorVue}";
-            $imports['pinia'] = "/build/{$vendorVue}";
-            $imports['vue-i18n'] = "/build/{$vendorVue}";
-        }
-
-        if ($vendorInertia !== null) {
-            $imports['@inertiajs/vue3'] = "/build/{$vendorInertia}";
-        }
-
-        return $imports;
-    }
-
-    /**
-     * Find a chunk file path by its name in the manifest.
-     *
-     * @param  array<string, array{file?: string, name?: string}>  $manifest
-     */
-    private function findChunkByName(array $manifest, string $name): ?string
-    {
-        foreach ($manifest as $entry) {
-            if (isset($entry['name'], $entry['file']) && $entry['name'] === $name) {
-                return $entry['file'];
+        foreach ($mappings as $entryPoint => $importSpecifier) {
+            if (isset($manifest[$entryPoint]['file'])) {
+                $imports[$importSpecifier] = '/build/' . $manifest[$entryPoint]['file'];
             }
         }
 
-        return null;
+        return $imports;
     }
 }
