@@ -41,12 +41,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
                 loading="lazy"
                 class="aspect-video h-40 w-full object-cover"
             />
-            <ImagePlaceholder
-                v-else
-                variant="gallery"
-                height="h-40"
-                icon-size="h-12 w-12"
-            />
+            <ImagePlaceholder v-else variant="gallery" height="h-40" icon-size="h-12 w-12" />
 
             <!-- Category badge as overlay on image -->
             <TagBadge
@@ -84,10 +79,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
                 class="mb-2"
             />
 
-            <p
-                v-if="props.gallery.description"
-                class="line-clamp-2 text-sm text-base-secondary"
-            >
+            <p v-if="props.gallery.description" class="line-clamp-2 text-sm text-base-secondary">
                 {{ getGalleryExcerpt(props.gallery.description) }}
             </p>
         </div>

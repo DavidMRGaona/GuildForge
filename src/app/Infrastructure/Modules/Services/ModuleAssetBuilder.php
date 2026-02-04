@@ -14,7 +14,8 @@ final readonly class ModuleAssetBuilder
 {
     public function __construct(
         private string $modulesPath,
-    ) {}
+    ) {
+    }
 
     /**
      * Check if a module has Vue components that need building.

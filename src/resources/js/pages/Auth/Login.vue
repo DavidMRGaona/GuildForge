@@ -106,7 +106,10 @@ const submit = () => {
                 class="text-center text-sm text-base-secondary"
             >
                 {{ t('auth.login.noAccount') }}
-                <Link :href="routes.auth.register" class="font-medium text-primary hover:opacity-80">
+                <Link
+                    :href="routes.auth.register"
+                    class="font-medium text-primary hover:opacity-80"
+                >
                     {{ t('auth.login.registerLink') }}
                 </Link>
             </p>

@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import {
-    Listbox,
-    ListboxButton,
-    ListboxOptions,
-    ListboxOption,
-} from '@headlessui/vue';
+import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue';
 
 interface Option {
     value: string | number;
@@ -58,17 +53,12 @@ function handleChange(value: string | number | null): void {
         <ListboxButton
             :id="id"
             :name="name"
-            class="relative w-full rounded-lg border bg-surface px-4 py-2.5 pr-10
-                   text-left transition-colors duration-150
-                   focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-                   disabled:bg-muted disabled:cursor-not-allowed"
+            class="relative w-full rounded-lg border bg-surface px-4 py-2.5 pr-10 text-left transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-muted disabled:cursor-not-allowed"
             :class="[
                 error
                     ? 'border-error focus:ring-error focus:border-error'
                     : 'border-default hover:border-strong',
-                modelValue === null || modelValue === ''
-                    ? 'text-base-muted'
-                    : 'text-base-primary'
+                modelValue === null || modelValue === '' ? 'text-base-muted' : 'text-base-primary',
             ]"
         >
             <span class="block truncate">
@@ -82,11 +72,7 @@ function handleChange(value: string | number | null): void {
                     stroke="currentColor"
                     stroke-width="2"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M19 9l-7 7-7-7"
-                    />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
             </span>
         </ListboxButton>
@@ -100,21 +86,12 @@ function handleChange(value: string | number | null): void {
             leave-to-class="transform scale-95 opacity-0"
         >
             <ListboxOptions
-                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg
-                       bg-surface border border-default shadow-lg
-                       focus:outline-none"
+                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-surface border border-default shadow-lg focus:outline-none"
             >
                 <!-- Placeholder option to allow clearing -->
-                <ListboxOption
-                    v-if="placeholder"
-                    :value="''"
-                    v-slot="{ active }"
-                    as="template"
-                >
+                <ListboxOption v-if="placeholder" :value="''" v-slot="{ active }" as="template">
                     <li
-                        class="relative cursor-pointer select-none px-4 py-2.5 text-base-muted
-                               transition-colors duration-150
-                               hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                        class="relative cursor-pointer select-none px-4 py-2.5 text-base-muted transition-colors duration-150 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                         :class="{ 'bg-primary-50 dark:bg-primary-900/20': active }"
                     >
                         {{ placeholder }}
@@ -129,20 +106,21 @@ function handleChange(value: string | number | null): void {
                     as="template"
                 >
                     <li
-                        class="relative cursor-pointer select-none px-4 py-2.5
-                               transition-colors duration-150"
+                        class="relative cursor-pointer select-none px-4 py-2.5 transition-colors duration-150"
                         :class="[
                             selected
                                 ? 'bg-primary-100 dark:bg-primary-900/30 hover:bg-primary-200 dark:hover:bg-primary-800/40'
                                 : active
-                                    ? 'bg-primary-50 dark:bg-primary-900/20'
-                                    : 'hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                                  ? 'bg-primary-50 dark:bg-primary-900/20'
+                                  : 'hover:bg-neutral-200 dark:hover:bg-neutral-700',
                         ]"
                     >
                         <span
                             class="block truncate"
                             :class="[
-                                selected ? 'font-semibold text-primary-700 dark:text-primary-300' : 'text-base-primary'
+                                selected
+                                    ? 'font-semibold text-primary-700 dark:text-primary-300'
+                                    : 'text-base-primary',
                             ]"
                         >
                             {{ option.label }}

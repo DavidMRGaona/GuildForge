@@ -30,9 +30,7 @@ const iconPath = computed((): string => {
 </script>
 
 <template>
-    <div
-        class="rounded-lg bg-surface p-12 text-center shadow dark:shadow-neutral-900/50"
-    >
+    <div class="rounded-lg bg-surface p-12 text-center shadow dark:shadow-neutral-900/50">
         <svg
             class="mx-auto h-12 w-12 text-neutral-400 dark:text-neutral-500"
             fill="none"

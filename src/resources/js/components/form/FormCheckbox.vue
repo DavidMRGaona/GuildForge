@@ -56,8 +56,12 @@ function toggle(): void {
                 modelValue
                     ? 'bg-primary-600 border-primary-600 dark:bg-primary-500 dark:border-primary-500'
                     : 'bg-surface border-neutral-300 dark:border-neutral-600',
-                !disabled && !modelValue && 'group-hover:border-primary-400 dark:group-hover:border-primary-500',
-                !disabled && modelValue && 'group-hover:bg-primary-700 dark:group-hover:bg-primary-400',
+                !disabled &&
+                    !modelValue &&
+                    'group-hover:border-primary-400 dark:group-hover:border-primary-500',
+                !disabled &&
+                    modelValue &&
+                    'group-hover:bg-primary-700 dark:group-hover:bg-primary-400',
             ]"
         >
             <!-- Checkmark with animation -->

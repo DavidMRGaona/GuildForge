@@ -38,7 +38,10 @@ function isChildItem(tab: ProfileTab): boolean {
             :aria-current="activeTabId === tab.id ? 'page' : undefined"
             @click="handleTabClick(tab.id)"
         >
-            <ProfileTabIcon :icon="tab.icon" :class="isChildItem(tab) ? 'h-4 w-4 shrink-0' : 'h-5 w-5 shrink-0'" />
+            <ProfileTabIcon
+                :icon="tab.icon"
+                :class="isChildItem(tab) ? 'h-4 w-4 shrink-0' : 'h-5 w-5 shrink-0'"
+            />
             <span class="flex-1">{{ tab.label }}</span>
             <span
                 v-if="tab.badge !== undefined && tab.badge > 0"

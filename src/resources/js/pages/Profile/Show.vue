@@ -74,7 +74,13 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                     <!-- Module tabs -->
                     <template v-if="hasModuleTabs">
                         <template v-for="item in moduleComponents" :key="item.key">
-                            <Suspense v-if="activeTabId === (item.registration.profileTab?.tabId ?? item.registration.module)">
+                            <Suspense
+                                v-if="
+                                    activeTabId ===
+                                    (item.registration.profileTab?.tabId ??
+                                        item.registration.module)
+                                "
+                            >
                                 <component :is="item.component" v-bind="item.props" />
                                 <template #fallback>
                                     <div class="flex items-center justify-center py-12">

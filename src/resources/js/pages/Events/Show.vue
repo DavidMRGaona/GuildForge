@@ -107,9 +107,7 @@ useSeo({
                         </span>
                     </div>
 
-                    <h1
-                        class="mb-4 text-3xl font-bold text-base-primary sm:text-4xl"
-                    >
+                    <h1 class="mb-4 text-3xl font-bold text-base-primary sm:text-4xl">
                         {{ props.event.title }}
                     </h1>
 
@@ -128,9 +126,7 @@ useSeo({
                         />
                     </div>
 
-                    <div
-                        class="mb-6 flex flex-col gap-3 text-base-secondary sm:flex-row sm:gap-6"
-                    >
+                    <div class="mb-6 flex flex-col gap-3 text-base-secondary sm:flex-row sm:gap-6">
                         <div class="flex items-center">
                             <span class="sr-only">{{ t('events.date') }}:</span>
                             <svg

@@ -87,10 +87,7 @@ const changePassword = () => {
 
                 <form @submit.prevent="updateProfile" class="space-y-4">
                     <div>
-                        <label
-                            for="name"
-                            class="block text-sm font-medium text-base-secondary"
-                        >
+                        <label for="name" class="block text-sm font-medium text-base-secondary">
                             {{ t('auth.profile.name') }}
                         </label>
                         <input
@@ -100,10 +97,7 @@ const changePassword = () => {
                             required
                             class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
-                        <p
-                            v-if="profileForm.errors.name"
-                            class="mt-1 text-sm text-error"
-                        >
+                        <p v-if="profileForm.errors.name" class="mt-1 text-sm text-error">
                             {{ profileForm.errors.name }}
                         </p>
                     </div>
@@ -124,19 +118,13 @@ const changePassword = () => {
                         <p class="mt-1 text-sm text-base-muted">
                             {{ t('auth.profile.displayNameHelp') }}
                         </p>
-                        <p
-                            v-if="profileForm.errors.display_name"
-                            class="mt-1 text-sm text-error"
-                        >
+                        <p v-if="profileForm.errors.display_name" class="mt-1 text-sm text-error">
                             {{ profileForm.errors.display_name }}
                         </p>
                     </div>
 
                     <div>
-                        <label
-                            for="email"
-                            class="block text-sm font-medium text-base-secondary"
-                        >
+                        <label for="email" class="block text-sm font-medium text-base-secondary">
                             {{ t('auth.profile.email') }}
                         </label>
                         <input
@@ -146,10 +134,7 @@ const changePassword = () => {
                             required
                             class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
-                        <p
-                            v-if="profileForm.errors.email"
-                            class="mt-1 text-sm text-error"
-                        >
+                        <p v-if="profileForm.errors.email" class="mt-1 text-sm text-error">
                             {{ profileForm.errors.email }}
                         </p>
                         <p
@@ -245,10 +230,7 @@ const changePassword = () => {
                             autocomplete="new-password"
                             class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
-                        <p
-                            v-if="passwordForm.errors.password"
-                            class="mt-1 text-sm text-error"
-                        >
+                        <p v-if="passwordForm.errors.password" class="mt-1 text-sm text-error">
                             {{ passwordForm.errors.password }}
                         </p>
                     </div>

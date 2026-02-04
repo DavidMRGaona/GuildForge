@@ -38,7 +38,7 @@ final class ModuleImportMapTest extends TestCase
             $this->markTestSkipped('Cannot test missing manifest when production manifest exists');
         }
 
-        $component = new ModuleImportMap;
+        $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
 
@@ -54,7 +54,7 @@ final class ModuleImportMapTest extends TestCase
             ],
         ]);
 
-        $component = new ModuleImportMap;
+        $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
 
@@ -73,7 +73,7 @@ final class ModuleImportMapTest extends TestCase
             ],
         ]);
 
-        $component = new ModuleImportMap;
+        $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
 
@@ -98,7 +98,7 @@ final class ModuleImportMapTest extends TestCase
             ],
         ]);
 
-        $component = new ModuleImportMap;
+        $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
 
@@ -118,7 +118,7 @@ final class ModuleImportMapTest extends TestCase
             ],
         ]);
 
-        $component = new ModuleImportMap;
+        $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
 
@@ -135,7 +135,7 @@ final class ModuleImportMapTest extends TestCase
         File::put($this->manifestPath, 'not valid json {{{');
         File::put(dirname($this->manifestPath).'/.test-manifest', '1');
 
-        $component = new ModuleImportMap;
+        $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
 

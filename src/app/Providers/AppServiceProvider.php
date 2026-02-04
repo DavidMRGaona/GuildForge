@@ -189,7 +189,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ModuleDependencyResolver::class, function () {
-            return new ModuleDependencyResolver;
+            return new ModuleDependencyResolver();
         });
 
         $this->app->singleton(ModuleMigrationRunner::class, function ($app) {

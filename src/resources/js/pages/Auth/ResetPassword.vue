@@ -71,7 +71,10 @@ const submit = () => {
             </div>
 
             <div>
-                <label for="password_confirmation" class="block text-sm font-medium text-base-secondary">
+                <label
+                    for="password_confirmation"
+                    class="block text-sm font-medium text-base-secondary"
+                >
                     {{ t('auth.resetPassword.passwordConfirm') }}
                 </label>
                 <input

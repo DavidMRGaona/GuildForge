@@ -90,9 +90,7 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
 
 <template>
     <div v-if="tags.length > 0" class="flex flex-wrap items-center gap-2">
-        <span class="text-sm font-medium text-base-secondary">
-            {{ t('tags.filter') }}:
-        </span>
+        <span class="text-sm font-medium text-base-secondary"> {{ t('tags.filter') }}: </span>
 
         <button
             type="button"

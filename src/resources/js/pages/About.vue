@@ -141,9 +141,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                                 <h3 class="font-semibold text-base-primary mb-1">
                                     {{ activity.title }}
                                 </h3>
-                                <p
-                                    class="text-sm text-base-secondary leading-relaxed"
-                                >
+                                <p class="text-sm text-base-secondary leading-relaxed">
                                     {{ activity.description }}
                                 </p>
                             </div>
@@ -363,10 +361,7 @@ const activityIconPaths: Record<ActivityIcon, string> = {
                             </div>
 
                             <!-- Social Media Links -->
-                            <div
-                                v-if="hasSocialLinks"
-                                class="pt-4 border-t border-default"
-                            >
+                            <div v-if="hasSocialLinks" class="pt-4 border-t border-default">
                                 <h3 class="font-semibold text-base-primary mb-4">
                                     {{ t('about.contact.social.title') }}
                                 </h3>
