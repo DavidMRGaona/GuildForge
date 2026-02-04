@@ -17,6 +17,9 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|playfair-display:400,700" rel="stylesheet" />
 
+        {{-- Import map for dynamic module loading (resolves vue, pinia, etc.) --}}
+        <x-module-import-map />
+
         @vite(['resources/css/app.css', 'resources/js/app.ts'])
         @inertiaHead
     </head>
