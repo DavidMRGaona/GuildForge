@@ -32,7 +32,7 @@ async function getModuleManifest(module: string): Promise<Record<string, Manifes
         return manifestCache.get(module)!;
     }
 
-    const manifestUrl = `/build/modules/${module}/.vite/manifest.json`;
+    const manifestUrl = `/build/modules/${module}/manifest.json`;
 
     const promise = fetch(manifestUrl)
         .then((response) => {

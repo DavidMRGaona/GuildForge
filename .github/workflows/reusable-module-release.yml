@@ -169,7 +169,7 @@ jobs:
           npm run build
 
           # Verify build output
-          if [ -f "public/build/modules/$MODULE_NAME/.vite/manifest.json" ]; then
+          if [ -f "public/build/modules/$MODULE_NAME/manifest.json" ]; then
             echo "Build successful. Assets in public/build/modules/$MODULE_NAME/"
             ls -la "public/build/modules/$MODULE_NAME/"
           else
