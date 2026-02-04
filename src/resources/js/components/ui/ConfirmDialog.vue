@@ -78,18 +78,10 @@ function handleKeydown(event: KeyboardEvent): void {
                     {{ message }}
                 </p>
                 <div class="mt-6 flex justify-end gap-3">
-                    <BaseButton
-                        variant="secondary"
-                        size="sm"
-                        @click="handleCancel"
-                    >
+                    <BaseButton variant="secondary" size="sm" @click="handleCancel">
                         {{ cancelLabel }}
                     </BaseButton>
-                    <BaseButton
-                        :variant="confirmVariant"
-                        size="sm"
-                        @click="handleConfirm"
-                    >
+                    <BaseButton :variant="confirmVariant" size="sm" @click="handleConfirm">
                         {{ confirmLabel }}
                     </BaseButton>
                 </div>

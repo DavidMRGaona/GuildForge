@@ -33,9 +33,7 @@ const submit = (): void => {
 </script>
 
 <template>
-    <div
-        class="bg-surface rounded-lg shadow-md p-6 h-full dark:shadow-neutral-900/50"
-    >
+    <div class="bg-surface rounded-lg shadow-md p-6 h-full dark:shadow-neutral-900/50">
         <h2 class="text-2xl font-bold text-base-primary mb-6">
             {{ t('about.contact.form.title') }}
         </h2>

@@ -72,10 +72,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.article.tag
                 class="mb-2"
             />
 
-            <p
-                v-if="props.article.publishedAt"
-                class="mb-2 text-sm text-base-muted"
-            >
+            <p v-if="props.article.publishedAt" class="mb-2 text-sm text-base-muted">
                 {{ t('articles.by') }} {{ getAuthorDisplayName(props.article) }} ·
                 {{ formatPublishedDate(props.article.publishedAt) }}
             </p>

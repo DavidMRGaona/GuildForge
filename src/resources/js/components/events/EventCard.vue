@@ -54,12 +54,7 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 120));
                 loading="lazy"
                 :class="['aspect-video w-full object-cover', imageHeight]"
             />
-            <ImagePlaceholder
-                v-else
-                variant="event"
-                :height="imageHeight"
-                :icon-size="iconSize"
-            />
+            <ImagePlaceholder v-else variant="event" :height="imageHeight" :icon-size="iconSize" />
 
             <!-- Compact: Date badge overlay (left) -->
             <div
@@ -122,19 +117,13 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 120));
             />
 
             <!-- Default: Date as text -->
-            <p
-                v-if="!isCompact"
-                class="mb-2 text-sm text-primary-600 dark:text-primary-500"
-            >
+            <p v-if="!isCompact" class="mb-2 text-sm text-primary-600 dark:text-primary-500">
                 <span class="sr-only">{{ t('events.date') }}:</span>
                 {{ formatDateRange(props.event.startDate, props.event.endDate) }}
             </p>
 
             <!-- Location -->
-            <p
-                v-if="props.event.location"
-                class="mb-2 flex items-center text-sm text-base-muted"
-            >
+            <p v-if="props.event.location" class="mb-2 flex items-center text-sm text-base-muted">
                 <svg
                     class="mr-1.5 h-4 w-4 flex-shrink-0"
                     fill="none"

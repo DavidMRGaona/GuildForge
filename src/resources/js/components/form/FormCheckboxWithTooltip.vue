@@ -44,13 +44,11 @@ function toggle(): void {
 
         <!-- Custom checkbox visual -->
         <div
-            class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 flex items-center justify-center
-                   transition-all duration-150
-                   peer-focus:ring-2 peer-focus:ring-primary-500 peer-focus:ring-offset-2"
+            class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 flex items-center justify-center transition-all duration-150 peer-focus:ring-2 peer-focus:ring-primary-500 peer-focus:ring-offset-2"
             :class="[
                 isChecked()
                     ? 'bg-primary-600 border-primary-600 dark:bg-primary-500 dark:border-primary-500 group-hover:bg-primary-700 dark:group-hover:bg-primary-400'
-                    : 'bg-surface border-neutral-300 dark:border-neutral-600 group-hover:border-primary-400 dark:group-hover:border-primary-500 group-hover:shadow-sm'
+                    : 'bg-surface border-neutral-300 dark:border-neutral-600 group-hover:border-primary-400 dark:group-hover:border-primary-500 group-hover:shadow-sm',
             ]"
         >
             <!-- Checkmark with animation -->
@@ -77,11 +75,7 @@ function toggle(): void {
             <FormTooltip v-if="description" :content="description" position="top">
                 <button
                     type="button"
-                    class="inline-flex items-center justify-center h-4 w-4
-                           rounded-full bg-neutral-200 dark:bg-neutral-700
-                           text-base-muted hover:text-base-secondary
-                           transition-colors focus:outline-none focus:ring-2
-                           focus:ring-primary-500 focus:ring-offset-1"
+                    class="inline-flex items-center justify-center h-4 w-4 rounded-full bg-neutral-200 dark:bg-neutral-700 text-base-muted hover:text-base-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
                     aria-label="Más información"
                     @click.prevent
                 >

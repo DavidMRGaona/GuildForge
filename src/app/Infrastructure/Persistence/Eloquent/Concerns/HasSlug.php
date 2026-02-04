@@ -25,11 +25,11 @@ trait HasSlug
     public static function bootHasSlug(): void
     {
         static::creating(function (self $model): void {
-            if ($model->id === null) {
+            if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
             }
 
-            if ($model->slug === null) {
+            if (empty($model->slug)) {
                 $model->slug = $model->generateUniqueSlug(
                     $model->{$model->getSlugSourceField()},
                     $model->id,

@@ -148,10 +148,7 @@ const truncatedDescription = computed(() => {
                 </div>
 
                 <!-- Description -->
-                <p
-                    v-if="truncatedDescription"
-                    class="mt-3 text-sm text-base-secondary"
-                >
+                <p v-if="truncatedDescription" class="mt-3 text-sm text-base-secondary">
                     {{ truncatedDescription }}
                 </p>
 

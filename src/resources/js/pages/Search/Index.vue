@@ -51,7 +51,10 @@ function pluralize(count: number, key: string): string {
             </div>
 
             <!-- Min Chars Warning -->
-            <div v-if="error === 'minChars'" class="rounded-lg bg-primary-50 p-4 text-primary-800 dark:bg-primary-900/20 dark:text-primary-300">
+            <div
+                v-if="error === 'minChars'"
+                class="rounded-lg bg-primary-50 p-4 text-primary-800 dark:bg-primary-900/20 dark:text-primary-300"
+            >
                 <p class="flex items-center gap-2">
                     <svg
                         class="h-5 w-5"

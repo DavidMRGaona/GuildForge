@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-    Disclosure,
-    DisclosureButton,
-    DisclosurePanel,
-} from '@headlessui/vue';
+import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue';
 
 export interface CheckboxOption {
     id: string;
@@ -108,7 +104,7 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                     class="flex w-full items-center justify-between px-4 py-3 text-left transition-colors"
                     :class="[
                         getSeverityClasses(group.severity).bg,
-                        'hover:brightness-95 dark:hover:brightness-110'
+                        'hover:brightness-95 dark:hover:brightness-110',
                     ]"
                 >
                     <div class="flex items-center gap-3">
@@ -120,7 +116,13 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             :class="getSeverityClasses(group.severity).badge"
                         >
-                            {{ group.severity === 'mild' ? 'Leve' : group.severity === 'moderate' ? 'Moderado' : 'Severo' }}
+                            {{
+                                group.severity === 'mild'
+                                    ? 'Leve'
+                                    : group.severity === 'moderate'
+                                      ? 'Moderado'
+                                      : 'Severo'
+                            }}
                         </span>
                     </div>
                     <div class="flex items-center gap-3">
@@ -157,8 +159,7 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                             <label
                                 v-for="option in group.options"
                                 :key="option.id"
-                                class="flex items-start gap-3 cursor-pointer rounded-md p-2
-                                       hover:bg-muted transition-colors group/checkbox"
+                                class="flex items-start gap-3 cursor-pointer rounded-md p-2 hover:bg-muted transition-colors group/checkbox"
                             >
                                 <!-- Hidden input for accessibility -->
                                 <input
@@ -170,19 +171,21 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
 
                                 <!-- Custom checkbox visual -->
                                 <div
-                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 flex items-center justify-center
-                                           transition-all duration-150
-                                           peer-focus:ring-2 peer-focus:ring-primary-500 peer-focus:ring-offset-2"
+                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 flex items-center justify-center transition-all duration-150 peer-focus:ring-2 peer-focus:ring-primary-500 peer-focus:ring-offset-2"
                                     :class="[
                                         isChecked(option.id)
                                             ? 'bg-primary-600 border-primary-600 dark:bg-primary-500 dark:border-primary-500 group-hover/checkbox:bg-primary-700 dark:group-hover/checkbox:bg-primary-400'
-                                            : 'bg-surface border-neutral-300 dark:border-neutral-600 group-hover/checkbox:border-primary-400 dark:group-hover/checkbox:border-primary-500 group-hover/checkbox:shadow-sm'
+                                            : 'bg-surface border-neutral-300 dark:border-neutral-600 group-hover/checkbox:border-primary-400 dark:group-hover/checkbox:border-primary-500 group-hover/checkbox:shadow-sm',
                                     ]"
                                 >
                                     <!-- Checkmark with animation -->
                                     <svg
                                         class="h-3 w-3 transition-all duration-150"
-                                        :class="isChecked(option.id) ? 'opacity-100 scale-100' : 'opacity-0 scale-0'"
+                                        :class="
+                                            isChecked(option.id)
+                                                ? 'opacity-100 scale-100'
+                                                : 'opacity-0 scale-0'
+                                        "
                                         viewBox="0 0 12 12"
                                         fill="none"
                                     >
@@ -231,7 +234,13 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                         class="rounded-full px-2 py-0.5 text-xs font-medium"
                         :class="getSeverityClasses(group.severity).badge"
                     >
-                        {{ group.severity === 'mild' ? 'Leve' : group.severity === 'moderate' ? 'Moderado' : 'Severo' }}
+                        {{
+                            group.severity === 'mild'
+                                ? 'Leve'
+                                : group.severity === 'moderate'
+                                  ? 'Moderado'
+                                  : 'Severo'
+                        }}
                     </span>
                     <span class="text-sm text-base-muted ml-auto">
                         {{ selectedCount(group) }}/{{ group.options.length }}
@@ -241,8 +250,7 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                     <label
                         v-for="option in group.options"
                         :key="option.id"
-                        class="flex items-start gap-3 cursor-pointer rounded-md p-2
-                               hover:bg-muted transition-colors group/checkbox"
+                        class="flex items-start gap-3 cursor-pointer rounded-md p-2 hover:bg-muted transition-colors group/checkbox"
                     >
                         <!-- Hidden input for accessibility -->
                         <input
@@ -254,19 +262,21 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
 
                         <!-- Custom checkbox visual -->
                         <div
-                            class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 flex items-center justify-center
-                                   transition-all duration-150
-                                   peer-focus:ring-2 peer-focus:ring-primary-500 peer-focus:ring-offset-2"
+                            class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 flex items-center justify-center transition-all duration-150 peer-focus:ring-2 peer-focus:ring-primary-500 peer-focus:ring-offset-2"
                             :class="[
                                 isChecked(option.id)
                                     ? 'bg-primary-600 border-primary-600 dark:bg-primary-500 dark:border-primary-500 group-hover/checkbox:bg-primary-700 dark:group-hover/checkbox:bg-primary-400'
-                                    : 'bg-surface border-neutral-300 dark:border-neutral-600 group-hover/checkbox:border-primary-400 dark:group-hover/checkbox:border-primary-500 group-hover/checkbox:shadow-sm'
+                                    : 'bg-surface border-neutral-300 dark:border-neutral-600 group-hover/checkbox:border-primary-400 dark:group-hover/checkbox:border-primary-500 group-hover/checkbox:shadow-sm',
                             ]"
                         >
                             <!-- Checkmark with animation -->
                             <svg
                                 class="h-3 w-3 transition-all duration-150"
-                                :class="isChecked(option.id) ? 'opacity-100 scale-100' : 'opacity-0 scale-0'"
+                                :class="
+                                    isChecked(option.id)
+                                        ? 'opacity-100 scale-100'
+                                        : 'opacity-0 scale-0'
+                                "
                                 viewBox="0 0 12 12"
                                 fill="none"
                             >
@@ -284,10 +294,7 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                             <span class="text-sm text-base-primary">
                                 {{ option.name }}
                             </span>
-                            <p
-                                v-if="option.description"
-                                class="text-xs text-base-muted mt-0.5"
-                            >
+                            <p v-if="option.description" class="text-xs text-base-muted mt-0.5">
                                 {{ option.description }}
                             </p>
                         </div>

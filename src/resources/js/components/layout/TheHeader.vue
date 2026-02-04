@@ -288,10 +288,7 @@ function selectTheme(mode: ThemeMode): void {
         </div>
 
         <!-- Mobile menu -->
-        <div
-            v-if="isMobileMenuOpen"
-            class="border-t border-default md:hidden"
-        >
+        <div v-if="isMobileMenuOpen" class="border-t border-default md:hidden">
             <div class="space-y-1 px-4 py-3">
                 <TheNavigation mobile @navigate="closeMobileMenu" />
 

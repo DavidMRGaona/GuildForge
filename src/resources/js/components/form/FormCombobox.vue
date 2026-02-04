@@ -41,18 +41,14 @@ const query = ref('');
 
 const selectedOption = computed(() => {
     if (props.modelValue === null || props.modelValue === '') return null;
-    return props.options.find(
-        (option) => option[props.optionValue] === props.modelValue
-    ) ?? null;
+    return props.options.find((option) => option[props.optionValue] === props.modelValue) ?? null;
 });
 
 const filteredOptions = computed(() => {
     if (!query.value || !props.searchable) return props.options;
     const normalizedQuery = query.value.toLowerCase().trim();
     return props.options.filter((option) =>
-        String(option[props.optionLabel])
-            .toLowerCase()
-            .includes(normalizedQuery)
+        String(option[props.optionLabel]).toLowerCase().includes(normalizedQuery)
     );
 });
 
@@ -66,9 +62,12 @@ function handleChange(value: unknown): void {
 }
 
 // Reset query when selection changes
-watch(() => props.modelValue, () => {
-    query.value = '';
-});
+watch(
+    () => props.modelValue,
+    () => {
+        query.value = '';
+    }
+);
 </script>
 
 <template>
@@ -82,15 +81,11 @@ watch(() => props.modelValue, () => {
         <div class="relative">
             <ComboboxInput
                 :id="id"
-                class="w-full rounded-lg border bg-surface px-4 py-2.5 pr-10
-                       text-base-primary placeholder-base-muted
-                       transition-colors duration-150
-                       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-                       disabled:bg-muted disabled:cursor-not-allowed"
+                class="w-full rounded-lg border bg-surface px-4 py-2.5 pr-10 text-base-primary placeholder-base-muted transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-muted disabled:cursor-not-allowed"
                 :class="[
                     error
                         ? 'border-error focus:ring-error focus:border-error'
-                        : 'border-default hover:border-strong'
+                        : 'border-default hover:border-strong',
                 ]"
                 :display-value="() => displayValue"
                 :placeholder="placeholder"
@@ -108,11 +103,7 @@ watch(() => props.modelValue, () => {
                     stroke="currentColor"
                     stroke-width="2"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M19 9l-7 7-7-7"
-                    />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
             </ComboboxButton>
         </div>
@@ -126,9 +117,7 @@ watch(() => props.modelValue, () => {
             leave-to-class="transform scale-95 opacity-0"
         >
             <ComboboxOptions
-                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg
-                       bg-surface border border-default shadow-lg
-                       focus:outline-none"
+                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-surface border border-default shadow-lg focus:outline-none"
             >
                 <div
                     v-if="filteredOptions.length === 0 && query !== ''"
@@ -145,20 +134,21 @@ watch(() => props.modelValue, () => {
                     as="template"
                 >
                     <li
-                        class="relative cursor-pointer select-none px-4 py-2.5
-                               transition-colors duration-150"
+                        class="relative cursor-pointer select-none px-4 py-2.5 transition-colors duration-150"
                         :class="[
                             selected
                                 ? 'bg-primary-100 dark:bg-primary-900/30 hover:bg-primary-200 dark:hover:bg-primary-800/40'
                                 : active
-                                    ? 'bg-primary-50 dark:bg-primary-900/20'
-                                    : 'hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                                  ? 'bg-primary-50 dark:bg-primary-900/20'
+                                  : 'hover:bg-neutral-100 dark:hover:bg-neutral-800',
                         ]"
                     >
                         <span
                             class="block truncate"
                             :class="[
-                                selected ? 'font-semibold text-primary-700 dark:text-primary-300' : 'text-base-primary'
+                                selected
+                                    ? 'font-semibold text-primary-700 dark:text-primary-300'
+                                    : 'text-base-primary',
                             ]"
                         >
                             {{ option[optionLabel] }}

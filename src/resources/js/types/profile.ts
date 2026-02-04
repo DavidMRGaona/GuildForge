@@ -7,7 +7,14 @@ export interface ProfileTab {
     parentId?: string;
 }
 
-export type ProfileTabIcon = 'user' | 'lock' | 'dice' | 'trophy' | 'calendar' | 'cog' | 'pencil-square';
+export type ProfileTabIcon =
+    | 'user'
+    | 'lock'
+    | 'dice'
+    | 'trophy'
+    | 'calendar'
+    | 'cog'
+    | 'pencil-square';
 
 export interface ProfileTabMetadata {
     icon: ProfileTabIcon;

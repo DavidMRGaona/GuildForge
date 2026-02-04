@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import {
-    RadioGroup,
-    RadioGroupOption,
-} from '@headlessui/vue';
+import { RadioGroup, RadioGroupOption } from '@headlessui/vue';
 
 export interface RadioOption {
     value: string;
@@ -42,10 +39,7 @@ function handleChange(value: string): void {
         :disabled="disabled"
         :name="name"
     >
-        <label
-            v-if="label"
-            class="block text-sm font-medium text-base-primary mb-2"
-        >
+        <label v-if="label" class="block text-sm font-medium text-base-primary mb-2">
             {{ label }}
         </label>
 
@@ -58,26 +52,22 @@ function handleChange(value: string): void {
                 as="template"
             >
                 <div
-                    class="flex items-start gap-3 cursor-pointer group rounded-md p-2
-                           hover:bg-muted transition-colors"
+                    class="flex items-start gap-3 cursor-pointer group rounded-md p-2 hover:bg-muted transition-colors"
                     :class="{ 'opacity-50 cursor-not-allowed': disabled }"
                 >
                     <!-- Radio visual custom -->
                     <div
-                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center
-                               transition-all duration-150
-                               border-neutral-300 dark:border-neutral-600 bg-surface
-                               group-hover:border-primary-400 dark:group-hover:border-primary-500
-                               group-hover:shadow-sm"
+                        class="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-all duration-150 border-neutral-300 dark:border-neutral-600 bg-surface group-hover:border-primary-400 dark:group-hover:border-primary-500 group-hover:shadow-sm"
                         :class="[
-                            active ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-surface' : '',
-                            checked ? 'border-primary-600 dark:border-primary-500' : ''
+                            active
+                                ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-surface'
+                                : '',
+                            checked ? 'border-primary-600 dark:border-primary-500' : '',
                         ]"
                     >
                         <!-- Inner dot -->
                         <div
-                            class="w-2.5 h-2.5 rounded-full bg-primary-600 dark:bg-primary-500
-                                   transition-all duration-150"
+                            class="w-2.5 h-2.5 rounded-full bg-primary-600 dark:bg-primary-500 transition-all duration-150"
                             :class="checked ? 'scale-100 opacity-100' : 'scale-0 opacity-0'"
                         />
                     </div>
@@ -86,10 +76,7 @@ function handleChange(value: string): void {
                         <span class="text-sm text-base-primary select-none">
                             {{ option.label }}
                         </span>
-                        <p
-                            v-if="option.description"
-                            class="text-xs text-base-muted mt-0.5"
-                        >
+                        <p v-if="option.description" class="text-xs text-base-muted mt-0.5">
                             {{ option.description }}
                         </p>
                     </div>

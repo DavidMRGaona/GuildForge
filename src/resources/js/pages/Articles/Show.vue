@@ -92,9 +92,7 @@ useSeo({
                 </div>
 
                 <div class="p-6 sm:p-8">
-                    <h1
-                        class="mb-4 text-3xl font-bold text-base-primary sm:text-4xl"
-                    >
+                    <h1 class="mb-4 text-3xl font-bold text-base-primary sm:text-4xl">
                         {{ props.article.title }}
                     </h1>
 

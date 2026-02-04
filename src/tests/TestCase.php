@@ -14,6 +14,8 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        $this->withoutVite();
+
         // Override Inertia's assertInertia macro to preserve float types in JSON round-trip
         TestResponse::macro('assertInertia', function (?\Closure $callback = null) {
             try {

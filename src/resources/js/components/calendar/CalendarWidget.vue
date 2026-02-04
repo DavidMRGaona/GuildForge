@@ -11,9 +11,7 @@ const navigateToCalendar = (): void => {
 </script>
 
 <template>
-    <div
-        class="calendar-widget flex flex-col justify-center rounded-lg bg-surface p-4"
-    >
+    <div class="calendar-widget flex flex-col justify-center rounded-lg bg-surface p-4">
         <EventCalendar
             compact
             show-tooltips
