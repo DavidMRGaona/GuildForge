@@ -168,10 +168,10 @@ jobs:
           echo "Building Vue components..."
           npm run build
 
-          # Verify build output
-          if [ -f "public/build/modules/$MODULE_NAME/manifest.json" ]; then
-            echo "Build successful. Assets in public/build/modules/$MODULE_NAME/"
-            ls -la "public/build/modules/$MODULE_NAME/"
+          # Verify build output (standalone mode outputs to public/build/)
+          if [ -f "public/build/manifest.json" ]; then
+            echo "Build successful. Assets in public/build/"
+            ls -la "public/build/"
           else
             echo "::error::Build completed but manifest.json not found"
             exit 1
