@@ -45,12 +45,11 @@ final class ModuleImportMapTest extends TestCase
         $this->assertEmpty($html);
     }
 
-    public function test_returns_import_map_with_vue_chunk(): void
+    public function test_returns_import_map_with_vue_export(): void
     {
         $this->createTestManifest([
-            '_vendor-vue-ABC123.js' => [
-                'file' => 'assets/vendor-vue-ABC123.js',
-                'name' => 'vendor-vue',
+            'resources/js/vendor-exports/vue.ts' => [
+                'file' => 'assets/vue-ABC123.js',
             ],
         ]);
 
@@ -59,17 +58,14 @@ final class ModuleImportMapTest extends TestCase
         $html = $view->render();
 
         $this->assertStringContainsString('<script type="importmap">', $html);
-        $this->assertStringContainsString('"vue": "/build/assets/vendor-vue-ABC123.js"', $html);
-        $this->assertStringContainsString('"pinia": "/build/assets/vendor-vue-ABC123.js"', $html);
-        $this->assertStringContainsString('"vue-i18n": "/build/assets/vendor-vue-ABC123.js"', $html);
+        $this->assertStringContainsString('"vue": "/build/assets/vue-ABC123.js"', $html);
     }
 
-    public function test_returns_import_map_with_inertia_chunk(): void
+    public function test_returns_import_map_with_pinia_export(): void
     {
         $this->createTestManifest([
-            '_vendor-inertia-DEF456.js' => [
-                'file' => 'assets/vendor-inertia-DEF456.js',
-                'name' => 'vendor-inertia',
+            'resources/js/vendor-exports/pinia.ts' => [
+                'file' => 'assets/pinia-DEF456.js',
             ],
         ]);
 
@@ -78,19 +74,39 @@ final class ModuleImportMapTest extends TestCase
         $html = $view->render();
 
         $this->assertStringContainsString('<script type="importmap">', $html);
-        $this->assertStringContainsString('"@inertiajs/vue3": "/build/assets/vendor-inertia-DEF456.js"', $html);
+        $this->assertStringContainsString('"pinia": "/build/assets/pinia-DEF456.js"', $html);
     }
 
-    public function test_returns_complete_import_map_with_all_chunks(): void
+    public function test_returns_import_map_with_inertia_export(): void
     {
         $this->createTestManifest([
-            '_vendor-vue-ABC123.js' => [
-                'file' => 'assets/vendor-vue-ABC123.js',
-                'name' => 'vendor-vue',
+            'resources/js/vendor-exports/inertia.ts' => [
+                'file' => 'assets/inertia-GHI789.js',
             ],
-            '_vendor-inertia-DEF456.js' => [
-                'file' => 'assets/vendor-inertia-DEF456.js',
-                'name' => 'vendor-inertia',
+        ]);
+
+        $component = new ModuleImportMap();
+        $view = $component->render();
+        $html = $view->render();
+
+        $this->assertStringContainsString('<script type="importmap">', $html);
+        $this->assertStringContainsString('"@inertiajs/vue3": "/build/assets/inertia-GHI789.js"', $html);
+    }
+
+    public function test_returns_complete_import_map_with_all_exports(): void
+    {
+        $this->createTestManifest([
+            'resources/js/vendor-exports/vue.ts' => [
+                'file' => 'assets/vue-ABC123.js',
+            ],
+            'resources/js/vendor-exports/pinia.ts' => [
+                'file' => 'assets/pinia-DEF456.js',
+            ],
+            'resources/js/vendor-exports/vue-i18n.ts' => [
+                'file' => 'assets/vue-i18n-GHI789.js',
+            ],
+            'resources/js/vendor-exports/inertia.ts' => [
+                'file' => 'assets/inertia-JKL012.js',
             ],
             'resources/js/app.ts' => [
                 'file' => 'assets/app-XYZ789.js',
@@ -103,13 +119,13 @@ final class ModuleImportMapTest extends TestCase
         $html = $view->render();
 
         // Verify all expected imports are present
-        $this->assertStringContainsString('"vue": "/build/assets/vendor-vue-ABC123.js"', $html);
-        $this->assertStringContainsString('"pinia": "/build/assets/vendor-vue-ABC123.js"', $html);
-        $this->assertStringContainsString('"vue-i18n": "/build/assets/vendor-vue-ABC123.js"', $html);
-        $this->assertStringContainsString('"@inertiajs/vue3": "/build/assets/vendor-inertia-DEF456.js"', $html);
+        $this->assertStringContainsString('"vue": "/build/assets/vue-ABC123.js"', $html);
+        $this->assertStringContainsString('"pinia": "/build/assets/pinia-DEF456.js"', $html);
+        $this->assertStringContainsString('"vue-i18n": "/build/assets/vue-i18n-GHI789.js"', $html);
+        $this->assertStringContainsString('"@inertiajs/vue3": "/build/assets/inertia-JKL012.js"', $html);
     }
 
-    public function test_returns_empty_when_no_vendor_chunks_in_manifest(): void
+    public function test_returns_empty_when_no_vendor_exports_in_manifest(): void
     {
         $this->createTestManifest([
             'resources/js/app.ts' => [
@@ -122,7 +138,7 @@ final class ModuleImportMapTest extends TestCase
         $view = $component->render();
         $html = $view->render();
 
-        // Should be empty because no vendor chunks were found
+        // Should be empty because no vendor exports were found
         $this->assertEmpty($html);
     }
 
