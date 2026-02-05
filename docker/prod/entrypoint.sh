@@ -3,19 +3,25 @@ set -e
 
 echo "Initializing directories..."
 
-# Create subdirectories of storage (volume may be empty on first deploy)
-mkdir -p storage/framework/{cache,sessions,views} storage/logs storage/app/public storage/app/backups
-chmod -R 775 storage
-chown -R www-data:www-data storage
+# Create ALL required directories BEFORE any Laravel command
+# (volumes may be empty on first deploy, overwriting Dockerfile-created dirs)
+mkdir -p \
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    storage/app/public \
+    storage/app/backups \
+    bootstrap/cache \
+    modules
 
-# Create modules directory
-mkdir -p modules
-chmod -R 775 modules
-chown -R www-data:www-data modules
+# Set permissions
+chmod -R 775 storage bootstrap/cache modules
+chown -R www-data:www-data storage bootstrap/cache modules
 
-# Create symlink of storage if it doesn't exist
+# Create symlink if it doesn't exist (must be done before Laravel boots)
 if [ ! -L public/storage ]; then
-    php artisan storage:link || true
+    ln -sf ../storage/app/public public/storage
 fi
 
 echo "Running migrations..."
