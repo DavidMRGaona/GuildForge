@@ -10,6 +10,14 @@ use Illuminate\Http\Resources\Json\JsonResource;
 trait BuildsPaginatedResponse
 {
     /**
+     * Get the current page number from the request.
+     */
+    protected function getCurrentPage(): int
+    {
+        return max(1, (int) request()->query('page', 1));
+    }
+
+    /**
      * Build a paginated response for Inertia.
      *
      * @param  array<int, mixed>  $items
