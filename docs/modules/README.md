@@ -13,13 +13,14 @@ This guide covers how to create and develop modules for GuildForge using the Mod
 7. [Filament integration](#filament-integration)
 8. [Slot registration](#slot-registration)
 9. [Building module assets](#building-module-assets)
-10. [Module installation](#module-installation)
-11. [Extending core functionality](#extending-core-functionality)
-12. [Domain events and listeners](#domain-events-and-listeners)
-13. [State machine pattern](#state-machine-pattern)
-14. [Testing modules](#testing-modules)
-15. [Best practices](#best-practices)
-16. [Quick reference](#quick-reference)
+10. [Tailwind CSS in modules](#tailwind-css-in-modules)
+11. [Module installation](#module-installation)
+12. [Extending core functionality](#extending-core-functionality)
+13. [Domain events and listeners](#domain-events-and-listeners)
+14. [State machine pattern](#state-machine-pattern)
+15. [Testing modules](#testing-modules)
+16. [Best practices](#best-practices)
+17. [Quick reference](#quick-reference)
 
 ---
 
@@ -830,6 +831,181 @@ The `manifest.json` is used by `useModuleSlots` composable to resolve component 
    - Resolve component path from manifest
    - Load component dynamically via `import()`
 3. **Component renders** with props from slot registration
+
+---
+
+## Tailwind CSS in modules
+
+Modules have two options for styling: using the core safelist utilities (recommended) or adding custom module CSS.
+
+### Using core safelist utilities (recommended)
+
+The core CSS includes an expanded safelist of common Tailwind utilities. Modules can use these classes in dynamic bindings without any additional configuration.
+
+**Available utility categories:**
+
+| Category | Examples |
+|----------|----------|
+| Layout | `flex`, `grid`, `block`, `hidden`, `inline-flex`, `items-*`, `justify-*`, `flex-col`, `grid-cols-*` |
+| Spacing | `p-*`, `m-*`, `px-*`, `py-*`, `gap-*`, `space-x-*`, `space-y-*` (scale 0-16) |
+| Sizing | `w-*`, `h-*`, `min-w-*`, `max-w-*`, `size-*`, fractions (`w-1/2`, `w-1/3`, etc.) |
+| Typography | `text-{xs,sm,base,lg,xl,2xl,3xl}`, `font-*`, `leading-*`, `truncate`, `line-clamp-*` |
+| Borders | `rounded-*`, `border-*`, `divide-*` |
+| Effects | `shadow-*`, `opacity-*`, `blur-*`, `backdrop-blur-*` |
+| Transitions | `transition-*`, `duration-*`, `ease-*`, `animate-*` |
+| Transform | `scale-*`, `rotate-*`, `translate-*`, `skew-*` |
+| Position | `absolute`, `relative`, `fixed`, `sticky`, `z-*`, `inset-*`, `top/right/bottom/left-*` |
+| Cursor | `cursor-pointer`, `cursor-default`, `cursor-not-allowed`, `cursor-grab` |
+| Overflow | `overflow-*`, `overscroll-*` |
+
+**Semantic design system classes:**
+
+```css
+/* Backgrounds */
+bg-page, bg-surface, bg-elevated, bg-muted, bg-primary, bg-primary-light
+
+/* Text */
+text-base-primary, text-base-secondary, text-base-muted, text-base-inverted, text-primary
+
+/* Borders */
+border-default, border-strong, border-primary
+
+/* Status colors */
+bg-success, bg-error, bg-warning, bg-info
+text-success, text-error, text-warning, text-info
+border-success, border-error, border-warning, border-info
+```
+
+**Responsive prefixes** (`sm:`, `md:`, `lg:`, `xl:`) are available for layout, sizing, typography, and spacing utilities.
+
+**State variants:**
+
+| Variant | Available modifiers |
+|---------|---------------------|
+| `hover:` | opacity, scale, underline, shadow |
+| `focus:` | outline, ring |
+| `active:` | scale, opacity |
+| `disabled:` | opacity, cursor, pointer-events |
+| `group-hover:` | opacity, visibility, scale, translate |
+| `dark:` | display, opacity, border |
+
+**Example usage in Vue component:**
+
+```vue
+<script setup lang="ts">
+import { computed } from 'vue';
+
+const props = defineProps<{
+    columns: number;
+    gap: number;
+    variant: 'primary' | 'secondary';
+}>();
+
+// Dynamic class binding using safelisted utilities
+const gridClasses = computed(() => [
+    `grid-cols-${props.columns}`,
+    `gap-${props.gap}`,
+    props.variant === 'primary' ? 'bg-primary-light' : 'bg-surface',
+]);
+</script>
+
+<template>
+    <div :class="['grid', ...gridClasses]">
+        <slot />
+    </div>
+</template>
+```
+
+### Custom module CSS (optional)
+
+For utilities not in the safelist, modules can include custom CSS that gets auto-injected when the module loads.
+
+**How it works:**
+
+1. CSS files referenced in the module's Vite manifest are automatically injected
+2. The `useModuleSlots` composable handles injection when loading module components
+3. CSS is loaded once and cached (no duplicate injections)
+
+**Setup:**
+
+1. Create `resources/css/module.css` in your module
+2. Add Tailwind plugin to `vite.config.ts`
+3. Add CSS as an entry point in the build config
+
+**vite.config.ts with CSS:**
+
+```typescript
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+    plugins: [vue(), tailwindcss()],
+    build: {
+        outDir: `../../public/build/modules/${MODULE_NAME}`,
+        emptyOutDir: true,
+        manifest: true,
+        rollupOptions: {
+            input: {
+                // Components
+                'components/MyWidget': 'resources/js/components/MyWidget.vue',
+                // CSS entry (will be auto-injected)
+                'styles': 'resources/css/module.css',
+            },
+            external: ['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3'],
+        },
+    },
+});
+```
+
+**resources/css/module.css:**
+
+```css
+@import 'tailwindcss';
+
+/* Only include utilities NOT in core safelist */
+@source '../js/components/**/*.vue';
+
+/* Module-specific custom styles */
+.my-module-special-effect {
+    /* Custom animation or complex styling */
+}
+```
+
+### When to use custom CSS
+
+| Use case | Recommendation |
+|----------|----------------|
+| Standard layouts, spacing, typography | Use core safelist ✓ |
+| Status colors (success, error, warning) | Use core safelist ✓ |
+| Semantic backgrounds (surface, page) | Use core safelist ✓ |
+| Common responsive patterns | Use core safelist ✓ |
+| Uncommon utilities (e.g., `skew-12`, `blur-3xl`) | Add custom CSS |
+| Module-specific design tokens | Add custom CSS |
+| Complex animations | Add custom CSS |
+| Utilities with arbitrary values | Add custom CSS |
+
+**Note:** The core safelist adds ~25KB gzipped CSS as a one-time cost shared by all modules. Custom module CSS adds to the per-module bundle size, so prefer the safelist when possible.
+
+### CSS injection flow
+
+```
+Module component requested
+        ↓
+useModuleSlots.resolveComponent()
+        ↓
+injectModuleStyles() called (non-blocking)
+        ↓
+Fetch module manifest if not cached
+        ↓
+For each CSS path in manifest:
+    - Check if already injected (Set lookup)
+    - If not, create <link> element
+    - Append to document.head
+    - Mark as injected
+        ↓
+Component loads and renders
+```
 
 ---
 

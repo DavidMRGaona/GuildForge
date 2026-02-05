@@ -8,6 +8,170 @@
 @source '../**/*.blade.php';
 @source '../**/*.vue';
 @source '../**/*.ts';
+@source '../../modules/**/*.vue';
+@source '../../modules/**/*.ts';
+
+/* ==========================================================================
+   Module Safelist - Semantic Status Classes
+   Status classes for modules using dynamic class names.
+   These classes are part of the design system and safe for any module to use.
+   ========================================================================== */
+@source inline("{bg,text,border}-{error,warning,info,success}");
+
+/* ==========================================================================
+   Module Safelist - Common Tailwind Utilities
+   Expanded safelist for module independence. Modules can use these utilities
+   in dynamic class bindings without modifying core CSS.
+   Trade-off: +15-25KB gzipped CSS for full module autonomy.
+   ========================================================================== */
+
+/* Layout */
+@source inline("{flex,inline-flex,block,inline-block,hidden,grid,inline-grid}");
+@source inline("flex-{row,col,row-reverse,col-reverse,wrap,wrap-reverse,nowrap,1,auto,none}");
+@source inline("items-{start,end,center,baseline,stretch}");
+@source inline("justify-{start,end,center,between,around,evenly}");
+@source inline("self-{auto,start,end,center,stretch}");
+@source inline("grid-cols-{1,2,3,4,5,6,12}");
+@source inline("col-span-{1,2,3,4,5,6,full}");
+
+/* Spacing (scale 0-16, common values) */
+@source inline("{p,m,px,py,pt,pb,pl,pr,mx,my,mt,mb,ml,mr}-{0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12,16}");
+@source inline("{-m,-mx,-my,-mt,-mb,-ml,-mr}-{1,2,3,4,5,6,8}");
+@source inline("gap-{0,1,2,3,4,5,6,8,10,12}");
+@source inline("{gap-x,gap-y}-{1,2,3,4,6,8}");
+@source inline("{space-x,space-y}-{1,2,3,4,6,8}");
+
+/* Sizing */
+@source inline("w-{full,auto,screen,fit,min,max,0,1,2,3,4,5,6,8,10,12,16,20,24,32,40,48,56,64,72,80,96}");
+@source inline("w-{1/2,1/3,2/3,1/4,3/4,1/5,2/5,3/5,4/5}");
+@source inline("h-{full,auto,screen,fit,min,max,0,1,2,3,4,5,6,8,10,12,16,20,24,32,40,48,56,64,72,80,96}");
+@source inline("{min-w,min-h}-{0,full,fit,min,max}");
+@source inline("max-w-{none,0,xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,full,min,max,fit,prose,screen-sm,screen-md,screen-lg,screen-xl}");
+@source inline("max-h-{none,full,screen,fit,min,max}");
+@source inline("size-{0,1,2,3,4,5,6,8,10,12,16,20,24,32,40,48,full,auto}");
+
+/* Position */
+@source inline("{static,fixed,absolute,relative,sticky}");
+@source inline("{inset,inset-x,inset-y,top,right,bottom,left}-{0,auto,full,1/2}");
+@source inline("{-inset,-top,-right,-bottom,-left}-{1,2,4,8}");
+@source inline("z-{0,10,20,30,40,50,auto}");
+
+/* Typography */
+@source inline("text-{xs,sm,base,lg,xl,2xl,3xl,4xl,5xl}");
+@source inline("font-{thin,extralight,light,normal,medium,semibold,bold,extrabold}");
+@source inline("leading-{none,tight,snug,normal,relaxed,loose,3,4,5,6,7,8,9,10}");
+@source inline("tracking-{tighter,tight,normal,wide,wider,widest}");
+@source inline("text-{left,center,right,justify}");
+@source inline("{underline,overline,line-through,no-underline}");
+@source inline("{uppercase,lowercase,capitalize,normal-case}");
+@source inline("{truncate,text-ellipsis,text-clip}");
+@source inline("line-clamp-{1,2,3,4,5,6,none}");
+@source inline("{whitespace-normal,whitespace-nowrap,whitespace-pre,whitespace-pre-line,whitespace-pre-wrap}");
+@source inline("{break-normal,break-words,break-all,break-keep}");
+
+/* Borders */
+@source inline("rounded-{none,sm,md,lg,xl,2xl,3xl,full}");
+@source inline("{rounded-t,rounded-r,rounded-b,rounded-l,rounded-tl,rounded-tr,rounded-br,rounded-bl}-{none,sm,md,lg,xl,2xl,full}");
+@source inline("border-{0,2,4,8}");
+@source inline("{border-t,border-r,border-b,border-l}-{0,2,4}");
+@source inline("border-{solid,dashed,dotted,double,none}");
+@source inline("divide-{x,y}-{0,2,4,8}");
+
+/* Effects */
+@source inline("shadow-{sm,md,lg,xl,2xl,inner,none}");
+@source inline("opacity-{0,5,10,20,25,30,40,50,60,70,75,80,90,95,100}");
+@source inline("{blur,blur-sm,blur-md,blur-lg,blur-xl,blur-2xl,blur-3xl,blur-none}");
+@source inline("backdrop-blur-{sm,md,lg,xl}");
+
+/* Transitions & Animation */
+@source inline("transition-{none,all,colors,opacity,shadow,transform}");
+@source inline("duration-{75,100,150,200,300,500,700,1000}");
+@source inline("{ease-linear,ease-in,ease-out,ease-in-out}");
+@source inline("delay-{75,100,150,200,300,500,700,1000}");
+@source inline("{animate-none,animate-spin,animate-ping,animate-pulse,animate-bounce}");
+
+/* Transform */
+@source inline("{scale,scale-x,scale-y}-{0,50,75,90,95,100,105,110,125,150}");
+@source inline("{rotate-0,rotate-1,rotate-2,rotate-3,rotate-6,rotate-12,rotate-45,rotate-90,rotate-180}");
+@source inline("{-rotate-1,-rotate-2,-rotate-3,-rotate-6,-rotate-12,-rotate-45,-rotate-90,-rotate-180}");
+@source inline("{translate-x,translate-y}-{0,0.5,1,2,3,4,5,6,8,10,12,full,1/2}");
+@source inline("{-translate-x,-translate-y}-{0.5,1,2,3,4,5,6,8,10,12,full,1/2}");
+@source inline("{skew-x,skew-y}-{0,1,2,3,6,12}");
+
+/* Cursor & Interaction */
+@source inline("cursor-{auto,default,pointer,wait,text,move,not-allowed,grab,grabbing}");
+@source inline("{pointer-events-none,pointer-events-auto}");
+@source inline("{select-none,select-text,select-all,select-auto}");
+@source inline("{resize,resize-none,resize-x,resize-y}");
+@source inline("{touch-auto,touch-none,touch-manipulation}");
+
+/* Overflow & Scroll */
+@source inline("{overflow,overflow-x,overflow-y}-{auto,hidden,clip,visible,scroll}");
+@source inline("{overscroll,overscroll-x,overscroll-y}-{auto,contain,none}");
+@source inline("{scroll-smooth,scroll-auto}");
+@source inline("snap-{start,end,center,align-none}");
+
+/* Display & Visibility */
+@source inline("{visible,invisible,collapse}");
+@source inline("{sr-only,not-sr-only}");
+
+/* Backgrounds */
+@source inline("bg-{transparent,current}");
+@source inline("bg-{cover,contain,auto,repeat,no-repeat,repeat-x,repeat-y}");
+@source inline("bg-{center,top,bottom,left,right}");
+@source inline("bg-{fixed,local,scroll}");
+@source inline("bg-gradient-to-{t,tr,r,br,b,bl,l,tl}");
+
+/* Object Fit & Position */
+@source inline("object-{contain,cover,fill,none,scale-down}");
+@source inline("object-{bottom,center,left,left-bottom,left-top,right,right-bottom,right-top,top}");
+
+/* Aspect Ratio */
+@source inline("aspect-{auto,square,video}");
+
+/* Ring */
+@source inline("ring-{0,1,2,4,8}");
+@source inline("ring-offset-{0,1,2,4,8}");
+@source inline("ring-inset");
+
+/* Table */
+@source inline("{table,table-caption,table-cell,table-column,table-column-group,table-footer-group,table-header-group,table-row-group,table-row}");
+@source inline("border-{collapse,separate}");
+
+/* Outline */
+@source inline("outline-{none,0,1,2,4,8}");
+@source inline("outline-offset-{0,1,2,4,8}");
+
+/* Responsive prefixes (most common breakpoints) */
+@source inline("{sm,md,lg,xl}:{hidden,block,flex,inline-flex,grid,inline-block}");
+@source inline("{sm,md,lg,xl}:flex-{row,col}");
+@source inline("{sm,md,lg,xl}:grid-cols-{1,2,3,4,6,12}");
+@source inline("{sm,md,lg,xl}:col-span-{1,2,3,4,6,full}");
+@source inline("{sm,md,lg,xl}:w-{full,auto,1/2,1/3,2/3,1/4,3/4}");
+@source inline("{sm,md,lg,xl}:text-{xs,sm,base,lg,xl,2xl}");
+@source inline("{sm,md,lg,xl}:{p,m,px,py,gap}-{0,1,2,3,4,5,6,8}");
+@source inline("{sm,md,lg,xl}:items-{start,end,center}");
+@source inline("{sm,md,lg,xl}:justify-{start,end,center,between}");
+
+/* State variants */
+@source inline("hover:{opacity-75,opacity-80,opacity-90,opacity-100}");
+@source inline("hover:{scale-100,scale-102,scale-105,scale-110}");
+@source inline("hover:{underline,no-underline}");
+@source inline("hover:shadow-{sm,md,lg,xl}");
+
+@source inline("focus:{outline-none,ring-0,ring-1,ring-2,ring-4}");
+@source inline("focus-visible:{outline-none,ring-1,ring-2}");
+
+@source inline("active:{scale-95,scale-100,opacity-75}");
+
+@source inline("disabled:{opacity-25,opacity-50,opacity-75,cursor-not-allowed,pointer-events-none}");
+
+@source inline("group-hover:{opacity-100,visible,scale-100,translate-y-0}");
+
+/* Dark mode variants */
+@source inline("dark:{hidden,block,flex,inline-flex}");
+@source inline("dark:opacity-{50,75,80,90,100}");
+@source inline("dark:border-{0,2,4}");
 
 /* ==========================================================================
    Design Tokens via @theme - creates utility classes
