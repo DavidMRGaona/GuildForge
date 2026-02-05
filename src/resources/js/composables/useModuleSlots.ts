@@ -16,11 +16,38 @@ const dynamicComponentCache = new Map<string, Promise<{ default: Component }>>()
 // Cache for module manifests (to avoid repeated fetches)
 const manifestCache = new Map<string, Promise<Record<string, ManifestEntry> | null>>();
 
+// Track injected CSS files to prevent duplicates
+const injectedStyles = new Set<string>();
+
 interface ManifestEntry {
     file: string;
     src?: string;
     isEntry?: boolean;
     css?: string[];
+}
+
+/**
+ * Inject CSS files from a module's manifest into the document head.
+ * Prevents duplicate injection by tracking already-loaded paths.
+ */
+async function injectModuleStyles(module: string): Promise<void> {
+    const manifest = await getModuleManifest(module);
+    if (!manifest) return;
+
+    for (const entry of Object.values(manifest)) {
+        if (entry.css && Array.isArray(entry.css)) {
+            for (const cssPath of entry.css) {
+                const fullPath = `/build/modules/${module}/${cssPath}`;
+                if (!injectedStyles.has(fullPath)) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = fullPath;
+                    document.head.appendChild(link);
+                    injectedStyles.add(fullPath);
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -123,9 +150,13 @@ async function loadDynamicComponent(
 
 /**
  * Resolve a component path to an async component.
- * First tries the build-time glob, then falls back to actuaruntime loading.
+ * First tries the build-time glob, then falls back to runtime loading.
+ * Also injects any CSS files from the module's manifest (non-blocking).
  */
 function resolveComponent(module: string, componentPath: string): Component | null {
+    // Inject CSS from module manifest (non-blocking)
+    void injectModuleStyles(module);
+
     // Build the glob path: ../../../modules/{module}/resources/js/{componentPath}
     const globPath = `../../../modules/${module}/resources/js/${componentPath}`;
 

@@ -11,6 +11,7 @@ use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
+use App\Modules\ModuleLoader;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -79,6 +80,7 @@ final class HandleInertiaRequests extends Middleware
             ],
             'moduleSlots' => fn () => $this->getModuleSlots(),
             'modulePages' => fn () => $this->getModulePages(),
+            'moduleTranslations' => fn () => $this->getModuleTranslations(),
             'navigation' => fn () => $this->getNavigation($request),
         ];
     }
@@ -276,6 +278,151 @@ final class HandleInertiaRequests extends Middleware
 
             return [];
         }
+    }
+
+    /**
+     * Get module translations for frontend i18n.
+     *
+     * Loads translations from module JS locale files and shares them with the frontend.
+     * This enables runtime translation loading for modules installed after the build.
+     *
+     * @return array<string, array<string, array<string, mixed>>>
+     */
+    private function getModuleTranslations(): array
+    {
+        try {
+            if (! app()->bound(ModuleLoader::class)) {
+                return [];
+            }
+
+            $loader = app(ModuleLoader::class);
+            $translations = [];
+
+            foreach ($loader->getLoadedProviders() as $moduleName => $provider) {
+                $modulePath = $provider->getModulePath();
+                $localesPath = $modulePath.'/resources/js/locales';
+
+                if (! is_dir($localesPath)) {
+                    continue;
+                }
+
+                foreach (['es', 'en'] as $locale) {
+                    $localeFile = $localesPath.'/'.$locale.'.ts';
+
+                    if (! file_exists($localeFile)) {
+                        continue;
+                    }
+
+                    $content = $this->parseTypeScriptLocaleFile($localeFile);
+
+                    if ($content !== null) {
+                        $translations[$moduleName][$locale] = $content;
+                    }
+                }
+            }
+
+            return $translations;
+        } catch (\Throwable $e) {
+            $this->logDebugError('getModuleTranslations', $e);
+
+            return [];
+        }
+    }
+
+    /**
+     * Parse a TypeScript locale file and extract its default export.
+     *
+     * This is a simplified parser that handles the common format:
+     * export default { key: 'value', ... }
+     *
+     * @return array<string, mixed>|null
+     */
+    private function parseTypeScriptLocaleFile(string $filePath): ?array
+    {
+        if (! file_exists($filePath)) {
+            return null;
+        }
+
+        $content = file_get_contents($filePath);
+
+        if ($content === false) {
+            return null;
+        }
+
+        // Find the default export object
+        // Pattern: export default { ... }
+        if (! preg_match('/export\s+default\s+(\{[\s\S]*\})\s*;?\s*$/m', $content, $matches)) {
+            return null;
+        }
+
+        $objectContent = $matches[1];
+
+        // Convert TypeScript object literal to JSON
+        // 1. Handle unquoted keys: key: -> "key":
+        $json = preg_replace('/(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/', '$1"$2":', $objectContent);
+
+        // 2. Handle single quotes -> double quotes (but not within double-quoted strings)
+        if ($json !== null) {
+            $json = $this->convertSingleToDoubleQuotes($json);
+        }
+
+        // 3. Remove trailing commas before } or ]
+        if ($json !== null) {
+            $json = preg_replace('/,(\s*[\}\]])/', '$1', $json);
+        }
+
+        if ($json === null) {
+            return null;
+        }
+
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * Convert single quotes to double quotes in a string, handling escapes.
+     *
+     * When converting single-quoted strings to double-quoted strings,
+     * any double quotes inside the string must be escaped.
+     */
+    private function convertSingleToDoubleQuotes(string $content): string
+    {
+        $result = '';
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $length = strlen($content);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $content[$i];
+            $prevChar = $i > 0 ? $content[$i - 1] : '';
+
+            // Handle escape sequences
+            if ($prevChar === '\\') {
+                $result .= $char;
+
+                continue;
+            }
+
+            // Toggle quote states and handle conversions
+            if ($char === "'" && ! $inDoubleQuote) {
+                $inSingleQuote = ! $inSingleQuote;
+                $result .= '"';
+            } elseif ($char === '"') {
+                if ($inSingleQuote) {
+                    // Double quote inside a single-quoted string needs to be escaped
+                    // because we're converting to double-quoted JSON
+                    $result .= '\\"';
+                } else {
+                    $inDoubleQuote = ! $inDoubleQuote;
+                    $result .= $char;
+                }
+            } else {
+                $result .= $char;
+            }
+        }
+
+        return $result;
     }
 
     /**

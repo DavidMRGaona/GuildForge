@@ -17,8 +17,7 @@ final class BuildsPaginatedResponseTest extends TestCase
         parent::setUp();
 
         // Create an anonymous class that uses the trait
-        $this->traitUser = new class
-        {
+        $this->traitUser = new class () {
             use BuildsPaginatedResponse;
 
             public function callGetCurrentPage(): int

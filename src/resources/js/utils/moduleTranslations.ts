@@ -2,6 +2,9 @@
  * Glob import for all module locale files.
  * Each module can have locales at modules/<module>/resources/js/locales/es.ts (and en.ts)
  * Using the same relative path pattern as app.ts uses for module pages.
+ *
+ * Note: This only captures modules present at build time. Modules installed after
+ * the build will be loaded via the runtime fallback (loadModuleTranslationsFromProps).
  */
 const moduleLocales = import.meta.glob<{ default: Record<string, unknown> }>(
     '../../../modules/*/resources/js/locales/{es,en}.ts',
@@ -40,14 +43,14 @@ function extractLocale(path: string): string | null {
  * I18n instance with global composer for merging translations.
  * Using a minimal interface to avoid type incompatibility with vue-i18n's strict typing.
  */
-interface I18nGlobal {
+export interface I18nGlobal {
     getLocaleMessage(locale: string): Record<string, unknown>;
     setLocaleMessage(locale: string, messages: Record<string, unknown>): void;
 }
 
 /**
  * Load all module translations into the i18n instance.
- * This should be called during app initialization.
+ * This should be called during app initialization for build-time modules.
  */
 export function loadAllModuleTranslations(i18n: { global: I18nGlobal }): void {
     for (const [path, module] of Object.entries(moduleLocales)) {
@@ -74,6 +77,61 @@ export function loadAllModuleTranslations(i18n: { global: I18nGlobal }): void {
         });
 
         loadedModules.add(`${moduleName}:${locale}`);
+    }
+}
+
+/**
+ * Module translations payload structure from Inertia props.
+ * Format: { [moduleName]: { [locale]: { [key]: value } } }
+ */
+export type ModuleTranslationsPayload = Record<string, Record<string, Record<string, unknown>>>;
+
+/**
+ * Load module translations from Inertia shared props.
+ *
+ * This is the runtime fallback for modules installed after the build.
+ * The backend parses module locale files and shares them via Inertia props.
+ *
+ * @param i18n - The vue-i18n instance
+ * @param moduleTranslations - Translations payload from Inertia props
+ */
+export function loadModuleTranslationsFromProps(
+    i18n: { global: I18nGlobal },
+    moduleTranslations: ModuleTranslationsPayload | undefined | null
+): void {
+    if (!moduleTranslations || typeof moduleTranslations !== 'object') {
+        return;
+    }
+
+    for (const [moduleName, locales] of Object.entries(moduleTranslations)) {
+        if (!locales || typeof locales !== 'object') {
+            continue;
+        }
+
+        for (const [locale, messages] of Object.entries(locales)) {
+            // Skip if already loaded from build-time glob
+            if (loadedModules.has(`${moduleName}:${locale}`)) {
+                continue;
+            }
+
+            if (!messages || typeof messages !== 'object') {
+                continue;
+            }
+
+            // Merge module translations into the existing locale messages
+            const existingMessages = i18n.global.getLocaleMessage(locale);
+
+            i18n.global.setLocaleMessage(locale, {
+                ...existingMessages,
+                ...messages,
+            });
+
+            loadedModules.add(`${moduleName}:${locale}`);
+
+            if (import.meta.env.DEV) {
+                console.log(`[i18n] Loaded translations from props: ${moduleName}/${locale}`);
+            }
+        }
     }
 }
 

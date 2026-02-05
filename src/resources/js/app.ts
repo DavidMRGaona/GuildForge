@@ -9,7 +9,11 @@ import { createI18n } from 'vue-i18n';
 import es from '@/locales/es';
 import en from '@/locales/en';
 import { createPageResolver, setModulePageMapping } from '@/utils/resolveModulePage';
-import { loadAllModuleTranslations } from '@/utils/moduleTranslations';
+import {
+    loadAllModuleTranslations,
+    loadModuleTranslationsFromProps,
+    type ModuleTranslationsPayload,
+} from '@/utils/moduleTranslations';
 
 const appName = import.meta.env.VITE_APP_NAME ?? 'GuildForge';
 
@@ -36,24 +40,51 @@ const modulePages = import.meta.glob<DefineComponent>(
     '../../modules/*/resources/js/pages/**/*.vue'
 );
 
-// Extract module page mapping from initial page data (embedded in #app element by Inertia)
-function extractInitialModulePages(): Record<string, string> {
+/**
+ * Initial page data extracted from Inertia's data-page attribute.
+ */
+interface InitialPageData {
+    modulePages: Record<string, string>;
+    moduleTranslations: ModuleTranslationsPayload | undefined;
+}
+
+/**
+ * Extract initial page data from the #app element (embedded by Inertia).
+ * This allows us to access shared props before the Vue app is mounted.
+ */
+function extractInitialPageData(): InitialPageData {
     const appElement = document.getElementById('app');
-    if (!appElement) return {};
+    if (!appElement) {
+        return { modulePages: {}, moduleTranslations: undefined };
+    }
 
     try {
         const dataPage = appElement.getAttribute('data-page');
-        if (!dataPage) return {};
+        if (!dataPage) {
+            return { modulePages: {}, moduleTranslations: undefined };
+        }
 
         const pageData = JSON.parse(dataPage);
-        return pageData.props?.modulePages ?? {};
+        return {
+            modulePages: pageData.props?.modulePages ?? {},
+            moduleTranslations: pageData.props?.moduleTranslations ?? undefined,
+        };
     } catch {
-        return {};
+        return { modulePages: {}, moduleTranslations: undefined };
     }
 }
 
-// Set module page mapping before Inertia boots
-setModulePageMapping(extractInitialModulePages());
+// Extract initial data before Inertia boots
+const initialData = extractInitialPageData();
+
+// Set module page mapping
+setModulePageMapping(initialData.modulePages);
+
+// Load module translations from Inertia props (runtime fallback for modules installed after build)
+loadModuleTranslationsFromProps(
+    i18n as Parameters<typeof loadModuleTranslationsFromProps>[0],
+    initialData.moduleTranslations
+);
 
 // Create page resolver that handles both core and module pages
 const pageResolver = createPageResolver({

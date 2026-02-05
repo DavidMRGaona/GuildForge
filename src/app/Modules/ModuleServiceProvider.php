@@ -24,6 +24,14 @@ abstract class ModuleServiceProvider extends ServiceProvider
         return $path !== '' ? $basePath.'/'.ltrim($path, '/') : $basePath;
     }
 
+    /**
+     * Get the module's base path (public accessor).
+     */
+    public function getModulePath(): string
+    {
+        return $this->modulePath();
+    }
+
     public function register(): void
     {
         $configPath = $this->modulePath('config/module.php');
