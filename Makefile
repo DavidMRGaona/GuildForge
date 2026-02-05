@@ -8,16 +8,20 @@
         check-q test-q lint format db-reset \
         dev build-assets cache cache-clear routes tinker ide-helper \
         make-model make-migration make-controller make-resource \
-        make-request make-test make-filament hooks pre-commit
+        make-request make-test make-filament hooks pre-commit \
+        prod-build prod-build-clean prod-up prod-down prod-logs prod-shell prod-fresh prod-ps
 
 # Default target
 .DEFAULT_GOAL := help
 
 # Docker compose command
 DOCKER_COMPOSE := docker compose
+DOCKER_COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 PHP_CONTAINER := guildforge_app
 NODE_CONTAINER := guildforge_node
 DB_CONTAINER := guildforge_db
+PHP_CONTAINER_PROD := guildforge_app_prod
+DB_CONTAINER_PROD := guildforge_db_prod
 
 # =============================================================================
 # HELP
@@ -289,3 +293,40 @@ hooks: ## Install pre-commit hook
 
 pre-commit: cs phpstan types ## Run pre-commit checks
 	@echo "Pre-commit checks passed!"
+
+# =============================================================================
+# PRODUCTION LOCAL (prod-local simulation)
+# =============================================================================
+
+prod-build: ## Build production image (with cache)
+	@echo "Building production image..."
+	DOCKER_BUILDKIT=1 $(DOCKER_COMPOSE_PROD) build
+	@echo "Production image built!"
+
+prod-build-clean: ## Build production image (no cache)
+	@echo "Building production image from scratch..."
+	DOCKER_BUILDKIT=1 $(DOCKER_COMPOSE_PROD) build --no-cache
+	@echo "Production image built!"
+
+prod-up: ## Start prod-local environment
+	@echo "Starting prod-local environment..."
+	$(DOCKER_COMPOSE_PROD) up -d
+	@echo "Prod-local started!"
+	@echo "Application: http://localhost:8000"
+
+prod-down: ## Stop prod-local environment
+	@echo "Stopping prod-local environment..."
+	$(DOCKER_COMPOSE_PROD) down
+
+prod-logs: ## Tail prod-local logs
+	$(DOCKER_COMPOSE_PROD) logs -f
+
+prod-shell: ## Enter prod-local container
+	docker exec -it $(PHP_CONTAINER_PROD) sh
+
+prod-fresh: ## Fresh migration in prod-local
+	@echo "Running fresh migrations in prod-local..."
+	docker exec $(PHP_CONTAINER_PROD) php artisan migrate:fresh --seed --force
+
+prod-ps: ## Show prod-local container status
+	$(DOCKER_COMPOSE_PROD) ps

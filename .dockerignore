@@ -1,0 +1,39 @@
+# Ignore development and local files for production builds
+
+# Modules (installed separately in production)
+src/modules/*
+!src/modules/.gitkeep
+
+# Caches (rebuilt during container startup)
+src/bootstrap/cache/*.php
+src/bootstrap/cache/filament/
+src/storage/framework/cache/*
+src/storage/framework/sessions/*
+src/storage/framework/views/*
+src/storage/logs/*
+
+# Development files
+src/node_modules/
+src/vendor/
+src/.env
+src/coverage/
+src/.phpunit.cache/
+src/.phpunit.result.cache
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker dev files
+docker-compose.yml
+
+# Documentation
+docs/
+*.md
+!src/README.md
