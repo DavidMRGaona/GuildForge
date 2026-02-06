@@ -17,8 +17,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * @property string $id
@@ -98,13 +96,7 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // Check new role-based system first (using direct relationship query)
-        if ($this->roles()->whereIn('name', ['admin', 'editor'])->exists()) {
-            return true;
-        }
-
-        // Fallback to old enum-based system during migration
-        return $this->role?->canAccessPanel() ?? false;
+        return $this->roles()->whereIn('name', ['admin', 'editor'])->exists();
     }
 
     /**
@@ -113,37 +105,7 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
      */
     public function isAdmin(): bool
     {
-        // Check new role-based system first
-        if ($this->roles()->where('name', 'admin')->exists()) {
-            return true;
-        }
-
-        // Fallback to old enum-based system during migration
-        return $this->role === UserRole::Admin;
-    }
-
-    /**
-     * @deprecated Use AuthorizationService::hasRole() instead
-     */
-    public function isEditor(): bool
-    {
-        return $this->role === UserRole::Editor;
-    }
-
-    /**
-     * @deprecated Use AuthorizationService::can() with specific permissions instead
-     */
-    public function canManageContent(): bool
-    {
-        return $this->role?->canManageContent() ?? false;
-    }
-
-    /**
-     * @deprecated Use AuthorizationService::can() with 'users.*' permissions instead
-     */
-    public function canManageUsers(): bool
-    {
-        return $this->role?->canManageUsers() ?? false;
+        return $this->roles()->where('name', 'admin')->exists();
     }
 
     /**
@@ -157,47 +119,6 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
             'user_id',
             'role_id'
         )->withTimestamps();
-    }
-
-    /**
-     * Anonymize user data for GDPR compliance.
-     * This action is irreversible.
-     *
-     * @deprecated Use UserServiceInterface::anonymize() instead for proper service injection.
-     *             This method is kept for backwards compatibility.
-     */
-    public function anonymize(?string $anonymousName = null): void
-    {
-        // If no name provided, use default (for backwards compatibility)
-        if ($anonymousName === null) {
-            $anonymousName = 'Anónimo';
-        }
-
-        // Delete avatar from Cloudinary if exists
-        if ($this->avatar_public_id !== null) {
-            $this->deleteFromCloudinary($this->avatar_public_id);
-        }
-
-        $this->update([
-            'name' => $anonymousName,
-            'display_name' => null,
-            'email' => 'anonymized_'.$this->id.'@anonymous.local',
-            'pending_email' => null,
-            'password' => Hash::make(Str::random(32)),
-            'avatar_public_id' => null,
-            'anonymized_at' => now(),
-        ]);
-
-        // Remove all roles
-        $this->roles()->detach();
-    }
-
-    /**
-     * Check if user has been anonymized.
-     */
-    public function isAnonymized(): bool
-    {
-        return $this->anonymized_at !== null;
     }
 
     protected static function newFactory(): UserFactory

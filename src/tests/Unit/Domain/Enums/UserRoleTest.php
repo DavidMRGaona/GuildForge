@@ -53,51 +53,6 @@ final class UserRoleTest extends TestCase
         $this->assertCount(3, UserRole::cases());
     }
 
-    public function test_admin_can_manage_content(): void
-    {
-        $this->assertTrue(UserRole::Admin->canManageContent());
-    }
-
-    public function test_editor_can_manage_content(): void
-    {
-        $this->assertTrue(UserRole::Editor->canManageContent());
-    }
-
-    public function test_member_cannot_manage_content(): void
-    {
-        $this->assertFalse(UserRole::Member->canManageContent());
-    }
-
-    public function test_admin_can_manage_users(): void
-    {
-        $this->assertTrue(UserRole::Admin->canManageUsers());
-    }
-
-    public function test_editor_cannot_manage_users(): void
-    {
-        $this->assertFalse(UserRole::Editor->canManageUsers());
-    }
-
-    public function test_member_cannot_manage_users(): void
-    {
-        $this->assertFalse(UserRole::Member->canManageUsers());
-    }
-
-    public function test_admin_can_access_panel(): void
-    {
-        $this->assertTrue(UserRole::Admin->canAccessPanel());
-    }
-
-    public function test_editor_can_access_panel(): void
-    {
-        $this->assertTrue(UserRole::Editor->canAccessPanel());
-    }
-
-    public function test_member_cannot_access_panel(): void
-    {
-        $this->assertFalse(UserRole::Member->canAccessPanel());
-    }
-
     public function test_admin_label_returns_administrator(): void
     {
         $this->assertEquals('Administrator', UserRole::Admin->label());

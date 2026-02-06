@@ -4,43 +4,46 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Policies;
 
+use App\Infrastructure\Authorization\Policies\AuthorizesWithPermissions;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Models\{{ nameStudly }}Model;
 
 final class {{ nameStudly }}Policy
 {
+    use AuthorizesWithPermissions;
+
     public function viewAny(UserModel $user): bool
     {
-        return $user->canManageContent();
+        return $this->authorize($user, '{{ nameSnake }}.view_any');
     }
 
     public function view(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $user->canManageContent();
+        return $this->authorize($user, '{{ nameSnake }}.view');
     }
 
     public function create(UserModel $user): bool
     {
-        return $user->canManageContent();
+        return $this->authorize($user, '{{ nameSnake }}.create');
     }
 
     public function update(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $user->canManageContent();
+        return $this->authorize($user, '{{ nameSnake }}.update');
     }
 
     public function delete(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $user->isAdmin();
+        return $this->authorize($user, '{{ nameSnake }}.delete');
     }
 
     public function restore(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $user->canManageContent();
+        return $this->authorize($user, '{{ nameSnake }}.update');
     }
 
     public function forceDelete(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $user->isAdmin();
+        return $this->authorize($user, '{{ nameSnake }}.delete');
     }
 }

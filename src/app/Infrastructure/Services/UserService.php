@@ -13,6 +13,8 @@ use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 final readonly class UserService implements UserServiceInterface
 {
@@ -20,8 +22,7 @@ final readonly class UserService implements UserServiceInterface
         private UserModelQueryServiceInterface $userModelQuery,
         private AuthorizationServiceInterface $authService,
         private SettingsServiceInterface $settingsService,
-    ) {
-    }
+    ) {}
 
     public function canAccessPanel(string $userId): bool
     {
@@ -31,11 +32,7 @@ final readonly class UserService implements UserServiceInterface
             return false;
         }
 
-        if ($this->authService->can($userModel, 'admin.access')) {
-            return true;
-        }
-
-        return $userModel->role?->canAccessPanel() ?? false;
+        return $this->authService->can($userModel, 'admin.access');
     }
 
     public function anonymize(string $userId): void
@@ -48,7 +45,18 @@ final readonly class UserService implements UserServiceInterface
 
         $anonymousName = $this->settingsService->get('anonymized_user_name', 'Anónimo');
 
-        $userModel->anonymize($anonymousName);
+        // DeletesCloudinaryImages trait auto-deletes old avatar on update
+        $userModel->update([
+            'name' => $anonymousName,
+            'display_name' => null,
+            'email' => 'anonymized_'.$userModel->id.'@anonymous.local',
+            'pending_email' => null,
+            'password' => Hash::make(Str::random(32)),
+            'avatar_public_id' => null,
+            'anonymized_at' => now(),
+        ]);
+
+        $userModel->roles()->detach();
     }
 
     public function isAdmin(string $userId): bool
@@ -83,7 +91,19 @@ final readonly class UserService implements UserServiceInterface
             }
 
             $anonymousName = $this->settingsService->get('anonymized_user_name', 'Anónimo');
-            $userModel->anonymize($anonymousName);
+
+            // DeletesCloudinaryImages trait auto-deletes old avatar on update
+            $userModel->update([
+                'name' => $anonymousName,
+                'display_name' => null,
+                'email' => 'anonymized_'.$userModel->id.'@anonymous.local',
+                'pending_email' => null,
+                'password' => Hash::make(Str::random(32)),
+                'avatar_public_id' => null,
+                'anonymized_at' => now(),
+            ]);
+
+            $userModel->roles()->detach();
         });
     }
 

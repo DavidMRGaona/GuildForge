@@ -81,7 +81,7 @@ final class UserServiceContentTest extends TestCase
         }
 
         $sourceUser->refresh();
-        $this->assertTrue($sourceUser->isAnonymized());
+        $this->assertNotNull($sourceUser->anonymized_at);
     }
 
     public function test_anonymize_with_content_transfer_keeps_content_with_anonymized_user(): void
@@ -103,7 +103,7 @@ final class UserServiceContentTest extends TestCase
         }
 
         $user->refresh();
-        $this->assertTrue($user->isAnonymized());
+        $this->assertNotNull($user->anonymized_at);
     }
 
     public function test_anonymize_with_content_transfer_uses_configured_anonymous_name(): void
@@ -138,6 +138,6 @@ final class UserServiceContentTest extends TestCase
         $this->service->anonymizeWithContentTransfer($dto);
 
         $sourceUser->refresh();
-        $this->assertTrue($sourceUser->isAnonymized());
+        $this->assertNotNull($sourceUser->anonymized_at);
     }
 }
