@@ -20,7 +20,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Notifications\Notification;
-use App\Filament\Resources\BaseResource;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\EditAction;
@@ -180,7 +179,7 @@ class UserResource extends BaseResource
                     ->label(__('filament.users.fields.status'))
                     ->badge()
                     ->getStateUsing(function (UserModel $record): string {
-                        if ($record->isAnonymized()) {
+                        if ($record->anonymized_at !== null) {
                             return __('filament.users.status.anonymized');
                         }
                         if ($record->trashed()) {
@@ -190,7 +189,7 @@ class UserResource extends BaseResource
                         return __('filament.users.status.active');
                     })
                     ->color(fn (UserModel $record): string => match (true) {
-                        $record->isAnonymized() => 'gray',
+                        $record->anonymized_at !== null => 'gray',
                         $record->trashed() => 'warning',
                         default => 'success',
                     }),
@@ -284,7 +283,7 @@ class UserResource extends BaseResource
                         ->label(__('filament.users.actions.anonymize'))
                         ->icon('heroicon-o-eye-slash')
                         ->color('danger')
-                        ->visible(fn (UserModel $record): bool => $record->trashed() && ! $record->isAnonymized() && $record->id !== Auth::id())
+                        ->visible(fn (UserModel $record): bool => $record->trashed() && $record->anonymized_at === null && $record->id !== Auth::id())
                         ->modalHeading(fn (UserModel $record): string => __('filament.users.actions.anonymizeModal.heading', ['name' => $record->display_name ?? $record->name]))
                         ->modalDescription(function (UserModel $record): string {
                             $userService = app(UserServiceInterface::class);

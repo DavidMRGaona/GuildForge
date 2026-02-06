@@ -51,7 +51,7 @@ class EditUser extends EditRecord
                 }),
             RestoreAction::make()
                 ->label(__('filament.users.actions.restore'))
-                ->visible(fn (): bool => $record->trashed() && ! $record->isAnonymized())
+                ->visible(fn (): bool => $record->trashed() && $record->anonymized_at === null)
                 ->modalHeading(__('filament.users.actions.restore'))
                 ->modalDescription(__('filament.users.actions.restoreConfirm'))
                 ->successNotificationTitle(__('filament.users.actions.restored')),
@@ -59,7 +59,7 @@ class EditUser extends EditRecord
                 ->label(__('filament.users.actions.anonymize'))
                 ->icon('heroicon-o-eye-slash')
                 ->color('danger')
-                ->visible(fn (): bool => $record->trashed() && ! $record->isAnonymized() && $record->id !== Auth::id())
+                ->visible(fn (): bool => $record->trashed() && $record->anonymized_at === null && $record->id !== Auth::id())
                 ->modalHeading(__('filament.users.actions.anonymizeModal.heading', ['name' => $record->display_name ?? $record->name]))
                 ->modalDescription(function () use ($record): string {
                     $userService = app(UserServiceInterface::class);

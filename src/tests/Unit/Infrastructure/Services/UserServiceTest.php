@@ -9,11 +9,11 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
-use App\Domain\Enums\UserRole;
 use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Services\UserService;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -21,8 +21,11 @@ use Tests\TestCase;
 final class UserServiceTest extends TestCase
 {
     private UserServiceInterface $service;
+
     private UserModelQueryServiceInterface&MockInterface $userModelQuery;
+
     private AuthorizationServiceInterface&MockInterface $authService;
+
     private SettingsServiceInterface&MockInterface $settingsService;
 
     protected function setUp(): void
@@ -62,34 +65,10 @@ final class UserServiceTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function test_it_returns_true_when_user_has_admin_role_enum(): void
-    {
-        $userId = UserId::generate();
-        $userModel = Mockery::mock(UserModel::class)->makePartial();
-        $userModel->role = UserRole::Admin;
-
-        $this->userModelQuery
-            ->shouldReceive('findModelById')
-            ->once()
-            ->with(Mockery::on(fn ($arg) => $arg->value() === $userId->value()))
-            ->andReturn($userModel);
-
-        $this->authService
-            ->shouldReceive('can')
-            ->once()
-            ->with($userModel, 'admin.access')
-            ->andReturn(false);
-
-        $result = $this->service->canAccessPanel($userId->value());
-
-        $this->assertTrue($result);
-    }
-
     public function test_it_returns_false_when_user_cannot_access_panel(): void
     {
         $userId = UserId::generate();
-        $userModel = Mockery::mock(UserModel::class)->makePartial();
-        $userModel->role = UserRole::Member;
+        $userModel = Mockery::mock(UserModel::class);
 
         $this->userModelQuery
             ->shouldReceive('findModelById')
@@ -143,9 +122,17 @@ final class UserServiceTest extends TestCase
             ->andReturn('Usuario anónimo');
 
         $userModel
-            ->shouldReceive('anonymize')
+            ->shouldReceive('update')
             ->once()
-            ->andReturnNull();
+            ->with(Mockery::on(fn (array $data) => $data['name'] === 'Usuario anónimo'
+                && $data['display_name'] === null
+                && $data['avatar_public_id'] === null
+                && $data['anonymized_at'] !== null
+            ));
+
+        $rolesRelation = Mockery::mock(BelongsToMany::class);
+        $rolesRelation->shouldReceive('detach')->once();
+        $userModel->shouldReceive('roles')->once()->andReturn($rolesRelation);
 
         $this->service->anonymize($userId->value());
 

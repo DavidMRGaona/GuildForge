@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Domain\Enums\UserRole;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -47,7 +48,7 @@ final class UserModelTest extends TestCase
             'anonymized_at',
         ];
 
-        $model = new UserModel();
+        $model = new UserModel;
 
         $this->assertEquals($fillable, $model->getFillable());
     }
@@ -83,67 +84,34 @@ final class UserModelTest extends TestCase
         $this->assertEquals(UserRole::Editor, $user->role);
     }
 
-    public function test_is_admin_returns_true_for_admin(): void
+    public function test_is_admin_returns_true_for_user_with_admin_role(): void
     {
-        $user = UserModel::factory()->admin()->create();
+        $user = UserModel::factory()->create();
+        $adminRole = RoleModel::create([
+            'name' => 'admin',
+            'display_name' => 'Administrator',
+        ]);
+        $user->roles()->attach($adminRole);
 
         $this->assertTrue($user->isAdmin());
     }
 
-    public function test_is_admin_returns_false_for_editor(): void
+    public function test_is_admin_returns_false_for_user_with_editor_role(): void
     {
-        $user = UserModel::factory()->editor()->create();
+        $user = UserModel::factory()->create();
+        $editorRole = RoleModel::create([
+            'name' => 'editor',
+            'display_name' => 'Editor',
+        ]);
+        $user->roles()->attach($editorRole);
 
         $this->assertFalse($user->isAdmin());
     }
 
-    public function test_is_admin_returns_false_for_member(): void
+    public function test_is_admin_returns_false_for_user_without_roles(): void
     {
         $user = UserModel::factory()->create();
 
         $this->assertFalse($user->isAdmin());
-    }
-
-    public function test_is_editor_returns_true_for_editor(): void
-    {
-        $user = UserModel::factory()->editor()->create();
-
-        $this->assertTrue($user->isEditor());
-    }
-
-    public function test_is_editor_returns_false_for_admin(): void
-    {
-        $user = UserModel::factory()->admin()->create();
-
-        $this->assertFalse($user->isEditor());
-    }
-
-    public function test_is_editor_returns_false_for_member(): void
-    {
-        $user = UserModel::factory()->create();
-
-        $this->assertFalse($user->isEditor());
-    }
-
-    public function test_can_manage_content_delegates_to_role(): void
-    {
-        $admin = UserModel::factory()->admin()->create();
-        $editor = UserModel::factory()->editor()->create();
-        $member = UserModel::factory()->create();
-
-        $this->assertTrue($admin->canManageContent());
-        $this->assertTrue($editor->canManageContent());
-        $this->assertFalse($member->canManageContent());
-    }
-
-    public function test_can_manage_users_delegates_to_role(): void
-    {
-        $admin = UserModel::factory()->admin()->create();
-        $editor = UserModel::factory()->editor()->create();
-        $member = UserModel::factory()->create();
-
-        $this->assertTrue($admin->canManageUsers());
-        $this->assertFalse($editor->canManageUsers());
-        $this->assertFalse($member->canManageUsers());
     }
 }
