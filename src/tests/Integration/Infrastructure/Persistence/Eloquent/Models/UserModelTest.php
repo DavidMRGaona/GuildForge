@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Domain\Enums\UserRole;
-use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -86,24 +85,14 @@ final class UserModelTest extends TestCase
 
     public function test_is_admin_returns_true_for_user_with_admin_role(): void
     {
-        $user = UserModel::factory()->create();
-        $adminRole = RoleModel::create([
-            'name' => 'admin',
-            'display_name' => 'Administrator',
-        ]);
-        $user->roles()->attach($adminRole);
+        $user = UserModel::factory()->admin()->create();
 
         $this->assertTrue($user->isAdmin());
     }
 
     public function test_is_admin_returns_false_for_user_with_editor_role(): void
     {
-        $user = UserModel::factory()->create();
-        $editorRole = RoleModel::create([
-            'name' => 'editor',
-            'display_name' => 'Editor',
-        ]);
-        $user->roles()->attach($editorRole);
+        $user = UserModel::factory()->editor()->create();
 
         $this->assertFalse($user->isAdmin());
     }

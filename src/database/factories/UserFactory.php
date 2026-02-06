@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domain\Enums\UserRole;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -64,7 +66,13 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'role' => UserRole::Admin,
-        ]);
+        ])->afterCreating(function (UserModel $user): void {
+            $role = RoleModel::firstOrCreate(
+                ['name' => 'admin'],
+                ['display_name' => 'Administrator']
+            );
+            $user->roles()->syncWithoutDetaching([$role->id]);
+        });
     }
 
     /**
@@ -74,6 +82,12 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'role' => UserRole::Editor,
-        ]);
+        ])->afterCreating(function (UserModel $user): void {
+            $role = RoleModel::firstOrCreate(
+                ['name' => 'editor'],
+                ['display_name' => 'Editor']
+            );
+            $user->roles()->syncWithoutDetaching([$role->id]);
+        });
     }
 }

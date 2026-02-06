@@ -9,12 +9,13 @@ use Stringable;
 
 final readonly class ModuleVersion implements Stringable
 {
-    private const string SEMVER_PATTERN = '/^(\d+)\.(\d+)\.(\d+)$/';
+    private const string SEMVER_PATTERN = '/^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*))?$/';
 
     public function __construct(
         public int $major,
         public int $minor,
         public int $patch,
+        public ?string $preRelease = null,
     ) {
     }
 
@@ -28,12 +29,19 @@ final readonly class ModuleVersion implements Stringable
             major: (int) $matches[1],
             minor: (int) $matches[2],
             patch: (int) $matches[3],
+            preRelease: $matches[4] ?? null,
         );
     }
 
     public function value(): string
     {
-        return "{$this->major}.{$this->minor}.{$this->patch}";
+        $version = "{$this->major}.{$this->minor}.{$this->patch}";
+
+        if ($this->preRelease !== null) {
+            $version .= "-{$this->preRelease}";
+        }
+
+        return $version;
     }
 
     public function __toString(): string
@@ -92,7 +100,24 @@ final readonly class ModuleVersion implements Stringable
             return $this->minor <=> $other->minor;
         }
 
-        return $this->patch <=> $other->patch;
+        if ($this->patch !== $other->patch) {
+            return $this->patch <=> $other->patch;
+        }
+
+        if ($this->preRelease === $other->preRelease) {
+            return 0;
+        }
+
+        // A version with pre-release has lower precedence than the release
+        if ($this->preRelease === null) {
+            return 1;
+        }
+
+        if ($other->preRelease === null) {
+            return -1;
+        }
+
+        return $this->preRelease <=> $other->preRelease;
     }
 
     private function satisfiesCaretConstraint(string $constraint): bool
