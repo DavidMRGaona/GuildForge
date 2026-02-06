@@ -183,4 +183,79 @@ final class ModuleVersionTest extends TestCase
 
         $this->assertEquals('3.14.159', (string) $version);
     }
+
+    public function test_it_parses_version_with_pre_release_label(): void
+    {
+        $version = ModuleVersion::fromString('1.0.0-beta');
+
+        $this->assertSame(1, $version->major);
+        $this->assertSame(0, $version->minor);
+        $this->assertSame(0, $version->patch);
+        $this->assertSame('beta', $version->preRelease);
+    }
+
+    public function test_it_parses_version_with_dot_separated_pre_release_identifiers(): void
+    {
+        $version = ModuleVersion::fromString('2.1.0-alpha.1');
+
+        $this->assertSame(2, $version->major);
+        $this->assertSame(1, $version->minor);
+        $this->assertSame(0, $version->patch);
+        $this->assertSame('alpha.1', $version->preRelease);
+    }
+
+    public function test_value_includes_pre_release_label(): void
+    {
+        $version = ModuleVersion::fromString('1.0.0-beta');
+
+        $this->assertSame('1.0.0-beta', $version->value());
+    }
+
+    public function test_to_string_includes_pre_release_label(): void
+    {
+        $version = ModuleVersion::fromString('1.0.0-beta');
+
+        $this->assertSame('1.0.0-beta', (string) $version);
+    }
+
+    public function test_pre_release_has_lower_precedence_than_release(): void
+    {
+        $preRelease = ModuleVersion::fromString('1.0.0-beta');
+        $release = ModuleVersion::fromString('1.0.0');
+
+        $this->assertTrue($preRelease->isLessThan($release));
+        $this->assertTrue($release->isGreaterThan($preRelease));
+    }
+
+    public function test_pre_release_labels_are_compared_alphabetically(): void
+    {
+        $alpha = ModuleVersion::fromString('1.0.0-alpha');
+        $beta = ModuleVersion::fromString('1.0.0-beta');
+
+        $this->assertTrue($alpha->isLessThan($beta));
+        $this->assertTrue($beta->isGreaterThan($alpha));
+    }
+
+    public function test_equal_pre_release_versions_are_equal(): void
+    {
+        $version1 = ModuleVersion::fromString('1.0.0-beta');
+        $version2 = ModuleVersion::fromString('1.0.0-beta');
+
+        $this->assertTrue($version1->isEqualTo($version2));
+    }
+
+    public function test_comparison_with_different_major_minor_patch_ignores_pre_release(): void
+    {
+        $preRelease = ModuleVersion::fromString('1.0.0-beta');
+        $higherVersion = ModuleVersion::fromString('1.1.0');
+
+        $this->assertTrue($preRelease->isLessThan($higherVersion));
+    }
+
+    public function test_version_without_pre_release_has_null_pre_release(): void
+    {
+        $version = ModuleVersion::fromString('1.0.0');
+
+        $this->assertNull($version->preRelease);
+    }
 }

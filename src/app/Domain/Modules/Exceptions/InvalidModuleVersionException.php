@@ -11,7 +11,7 @@ final class InvalidModuleVersionException extends DomainException
     public static function invalidFormat(string $value): self
     {
         return new self(
-            "Invalid module version format: '{$value}'. Version must be in semantic versioning format (e.g., '1.2.3')."
+            "Invalid module version format: '{$value}'. Version must be in semantic versioning format (e.g., '1.2.3' or '1.2.3-beta')."
         );
     }
 }
