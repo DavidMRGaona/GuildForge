@@ -202,17 +202,20 @@ class TagResource extends BaseResource
 
         $orderedIds = array_map(fn ($tag) => $tag->id, $hierarchicalTags);
 
-        // Build CASE statement for ordering
-        $orderCase = 'CASE id ';
+        // Build parameterized CASE statement for ordering
+        $bindings = [];
+        $whenClauses = [];
         foreach ($orderedIds as $index => $id) {
-            $orderCase .= "WHEN '{$id}' THEN {$index} ";
+            $whenClauses[] = 'WHEN ? THEN ?';
+            $bindings[] = $id;
+            $bindings[] = $index;
         }
-        $orderCase .= 'END';
+        $orderCase = 'CASE id '.implode(' ', $whenClauses).' END';
 
         /** @var Builder<TagModel> $query */
         $query = parent::getEloquentQuery()
             ->with('parent')
-            ->orderByRaw($orderCase);
+            ->orderByRaw($orderCase, $bindings);
 
         return $query;
     }

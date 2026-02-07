@@ -22,11 +22,14 @@ use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Support\SanitizesHtml;
 use DateTimeImmutable;
 use InvalidArgumentException;
 
 final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInterface
 {
+    use SanitizesHtml;
+
     public function createEventDTO(object $model): EventResponseDTO
     {
         if (! $model instanceof EventModel) {
@@ -41,7 +44,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             id: $model->id,
             title: $model->title,
             slug: $model->slug,
-            description: $model->description,
+            description: $this->sanitizeHtml($model->description),
             startDate: DateTimeImmutable::createFromMutable($model->start_date),
             endDate: DateTimeImmutable::createFromMutable($model->end_date),
             location: $model->location,
@@ -73,7 +76,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             id: $model->id,
             title: $model->title,
             slug: $model->slug,
-            content: $model->content,
+            content: $this->sanitizeHtml($model->content),
             excerpt: $model->excerpt,
             featuredImage: $model->featured_image_public_id,
             isPublished: $model->is_published,
@@ -236,7 +239,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             emailVerified: $model->email_verified_at !== null,
             createdAt: $model->created_at !== null
                 ? DateTimeImmutable::createFromMutable($model->created_at)
-                : new DateTimeImmutable(),
+                : new DateTimeImmutable,
         );
     }
 }

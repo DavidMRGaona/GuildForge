@@ -52,7 +52,7 @@
             <x-filament::section>
                 <div class="flex flex-col items-center justify-center py-8 text-center">
                     <div class="mb-3 rounded-full bg-neutral-100 p-3 dark:bg-neutral-800">
-                        <x-heroicon-o-cog-6-tooth class="h-6 w-6 text-neutral-400 dark:text-neutral-500" />
+                        <x-heroicon-o-cog-6-tooth style="width: 1.5rem; height: 1.5rem;" class="text-neutral-400 dark:text-neutral-500" />
                     </div>
                     <h3 class="text-base font-medium text-neutral-900 dark:text-white">
                         {{ __('modules.filament.settings_page.no_settings') }}

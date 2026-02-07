@@ -10,20 +10,22 @@ use App\Application\DTOs\Response\JoinStepDTO;
 use App\Application\DTOs\Response\SocialLinksDTO;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Infrastructure\Support\SanitizesHtml;
 use JsonException;
 
 final readonly class AboutPageService implements AboutPageServiceInterface
 {
+    use SanitizesHtml;
+
     public function __construct(
         private SettingsServiceInterface $settings,
-    ) {
-    }
+    ) {}
 
     public function getAboutPageData(): AboutPageResponseDTO
     {
         return new AboutPageResponseDTO(
             guildName: $this->settings->get('guild_name', config('app.name')),
-            aboutHistory: $this->settings->get('about_history', ''),
+            aboutHistory: $this->sanitizeHtml((string) $this->settings->get('about_history', '')),
             contactEmail: $this->settings->get('contact_email', ''),
             contactPhone: $this->settings->get('contact_phone', ''),
             contactAddress: $this->settings->get('contact_address', ''),

@@ -36,12 +36,36 @@ final class CoreVersionService implements CoreVersionServiceInterface
 
     public function getCurrentCommit(): string
     {
+        // Try git from base_path (works if .git is here or in a parent accessible to git)
+        if (is_dir(base_path('.git'))) {
+            return $this->runGitRevParse(base_path()) ?? 'unknown';
+        }
+
+        // Try parent directory (app lives in src/ subdirectory, .git is at repo root)
+        $parentDir = dirname(base_path());
+
+        if (is_dir($parentDir . '/.git')) {
+            return $this->runGitRevParse($parentDir) ?? 'unknown';
+        }
+
+        // Fallback: environment variable (useful for Docker/CI where .git is not mounted)
+        $envCommit = env('GIT_COMMIT');
+
+        if (is_string($envCommit) && $envCommit !== '') {
+            return $envCommit;
+        }
+
+        return 'unknown';
+    }
+
+    private function runGitRevParse(string $directory): ?string
+    {
         $process = new Process(['git', 'rev-parse', 'HEAD']);
-        $process->setWorkingDirectory(base_path());
+        $process->setWorkingDirectory($directory);
         $process->run();
 
         if (! $process->isSuccessful()) {
-            return 'unknown';
+            return null;
         }
 
         return trim($process->getOutput());

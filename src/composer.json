@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
+        "ext-zip": "*",
         "cloudinary-labs/cloudinary-laravel": "^3.0",
         "elasticsearch/elasticsearch": "^9.2",
         "filament/filament": "^3.2",
@@ -14,7 +15,7 @@
         "intervention/image-laravel": "^1.5",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "ext-zip": "*"
+        "mews/purifier": "^3.4"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",

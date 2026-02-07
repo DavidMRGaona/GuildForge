@@ -1,5 +1,6 @@
 import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
+import { stripHtml } from '@/utils/html';
 
 interface UseArticlesReturn {
     formatPublishedDate: (dateString: string) => string;
@@ -23,7 +24,7 @@ export function useArticles(): UseArticlesReturn {
             return article.excerpt;
         }
 
-        const cleanContent = article.content.replace(/<[^>]*>/g, '');
+        const cleanContent = stripHtml(article.content);
 
         if (cleanContent.length <= maxLength) {
             return cleanContent;

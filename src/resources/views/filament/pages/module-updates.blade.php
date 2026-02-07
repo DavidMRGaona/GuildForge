@@ -8,7 +8,7 @@
 
             @if($availableUpdates->isEmpty())
                 <div class="mt-4 text-center py-8">
-                    <x-heroicon-o-check-circle class="mx-auto h-12 w-12 text-success-500" />
+                    <x-heroicon-o-check-circle class="mx-auto" style="width: 3rem; height: 3rem; color: rgb(var(--success-500));" />
                     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         {{ __('filament.updates.modules.available.empty') }}
                     </p>
@@ -74,7 +74,7 @@
                                                 wire:click="previewUpdate('{{ $update->moduleName }}')"
                                                 class="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:ring-gray-600 dark:hover:bg-gray-600"
                                             >
-                                                <x-heroicon-m-eye class="h-4 w-4 mr-1" />
+                                                <x-heroicon-m-eye class="mr-1" style="width: 1rem; height: 1rem;" />
                                                 {{ __('filament.updates.modules.available.preview') }}
                                             </button>
                                             <button
@@ -85,10 +85,10 @@
                                                 class="inline-flex items-center rounded-md bg-primary-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 @if($isUpdating && $updatingModule === $update->moduleName)
-                                                    <x-heroicon-m-arrow-path class="h-4 w-4 mr-1 animate-spin" />
+                                                    <x-heroicon-m-arrow-path class="mr-1 animate-spin" style="width: 1rem; height: 1rem;" />
                                                     {{ __('filament.updates.modules.available.updating') }}
                                                 @else
-                                                    <x-heroicon-m-arrow-down-tray class="h-4 w-4 mr-1" />
+                                                    <x-heroicon-m-arrow-down-tray class="mr-1" style="width: 1rem; height: 1rem;" />
                                                     {{ __('filament.updates.modules.available.update') }}
                                                 @endif
                                             </button>

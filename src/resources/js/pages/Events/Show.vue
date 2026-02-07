@@ -12,6 +12,7 @@ import { useTags } from '@/composables/useTags';
 import { useSeo } from '@/composables/useSeo';
 import { useRoutes } from '@/composables/useRoutes';
 import { buildHeroImageUrl } from '@/utils/cloudinary';
+import { stripHtml } from '@/utils/html';
 import ModuleSlot from '@/components/layout/ModuleSlot.vue';
 
 interface Props {
@@ -30,7 +31,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
 
 useSeo({
     title: props.event.title,
-    description: props.event.description,
+    description: props.event.description ? stripHtml(props.event.description) : null,
     image: heroImageUrl.value,
     type: 'article',
 });
@@ -206,11 +207,12 @@ useSeo({
                         <ModuleSlot name="event-detail-actions" />
                     </div>
 
-                    <div class="prose max-w-none">
-                        <p class="whitespace-pre-line">
-                            {{ props.event.description }}
-                        </p>
-                    </div>
+                    <!--
+                        SECURITY: v-html is used to render rich text content from the event.
+                        Content is sanitized server-side via SanitizesHtml trait (HTMLPurifier).
+                        @see App\Infrastructure\Factories\EloquentResponseDTOFactory
+                    -->
+                    <div class="prose max-w-none dark:prose-invert" v-html="props.event.description" />
 
                     <div class="mt-8 border-t border-default pt-6">
                         <Link :href="routes.events.index">

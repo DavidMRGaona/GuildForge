@@ -368,4 +368,22 @@ final class EventControllerTest extends TestCase
                 ->where('events.data.0.title', 'Warhammer Tournament')
         );
     }
+
+    public function test_show_returns_sanitized_html_description(): void
+    {
+        EventModel::factory()->published()->create([
+            'slug' => 'secure-event',
+            'description' => '<p>Event info</p><script>alert("hack")</script>',
+        ]);
+
+        $response = $this->get('/eventos/secure-event');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Show')
+                ->where('event.description', fn ($val) => str_contains($val, '<p>Event info</p>'))
+                ->where('event.description', fn ($val) => ! str_contains($val, '<script>'))
+        );
+    }
 }
