@@ -72,6 +72,9 @@ RUN rm -f bootstrap/cache/*.php \
     && composer dump-autoload --optimize \
     && php artisan package:discover --ansi
 
+# Remove dev-mode hot file (if it slipped through .dockerignore)
+RUN rm -f public/hot
+
 # Copy built assets from stage 1
 COPY --from=assets /build/public/build public/build
 
