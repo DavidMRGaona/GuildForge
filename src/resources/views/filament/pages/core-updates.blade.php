@@ -32,9 +32,9 @@
                 <div class="flex items-start gap-4">
                     <div class="flex-shrink-0">
                         @if($this->isMajorUpdate())
-                            <x-heroicon-o-exclamation-triangle class="h-8 w-8 text-danger-500" />
+                            <x-heroicon-o-exclamation-triangle style="width: 2rem; height: 2rem; color: rgb(var(--danger-500));" />
                         @else
-                            <x-heroicon-o-arrow-up-circle class="h-8 w-8 text-primary-500" />
+                            <x-heroicon-o-arrow-up-circle style="width: 2rem; height: 2rem; color: rgb(var(--primary-500));" />
                         @endif
                     </div>
                     <div class="flex-1">
@@ -118,7 +118,7 @@ php artisan config:cache && php artisan route:cache && php artisan view:cache</p
         @else
             <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                 <div class="text-center py-8">
-                    <x-heroicon-o-check-circle class="mx-auto h-12 w-12 text-success-500" />
+                    <x-heroicon-o-check-circle class="mx-auto" style="width: 3rem; height: 3rem; color: rgb(var(--success-500));" />
                     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         {{ __('filament.updates.core.available.up_to_date') }}
                     </p>

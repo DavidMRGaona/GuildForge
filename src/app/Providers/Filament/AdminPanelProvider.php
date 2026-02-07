@@ -16,9 +16,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
-use Illuminate\Support\Facades\Blade;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -86,8 +84,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn (): string => Blade::render('
-                    <style>
+                fn (): string => '<style>
                         /* Time picker input wrapper - focus ring with Filament primary color */
                         .time-picker-input-wrapper:focus-within {
                             --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
@@ -191,9 +188,8 @@ class AdminPanelProvider extends PanelProvider
                         .dark .time-wheel-container::after {
                             background: linear-gradient(to top, rgb(31 41 55) 0%, transparent 100%);
                         }
-                    </style>
-                    <script src="{{ asset(\'js/filament/time-picker.js\') }}"></script>
-                ')
+                    </style>'
+                    .'<script src="'.asset('js/filament/time-picker.js').'"></script>'
             );
 
         // Discover resources from enabled modules
@@ -271,6 +267,7 @@ class AdminPanelProvider extends PanelProvider
             __('filament.navigation.pages') => ['sort' => 30],
             __('filament.navigation.settings') => ['sort' => 40],
             __('filament.navigation.admin') => ['sort' => 50],
+            'Sistema' => ['sort' => 900],
         ];
 
         // Collect navigation groups from modules

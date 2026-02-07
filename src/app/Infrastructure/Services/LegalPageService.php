@@ -7,9 +7,12 @@ namespace App\Infrastructure\Services;
 use App\Application\DTOs\Response\LegalPageResponseDTO;
 use App\Application\Services\LegalPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Infrastructure\Support\SanitizesHtml;
 
 final readonly class LegalPageService implements LegalPageServiceInterface
 {
+    use SanitizesHtml;
+
     /**
      * @var array<string, array{prefix: string, title_key: string}>
      */
@@ -22,8 +25,7 @@ final readonly class LegalPageService implements LegalPageServiceInterface
 
     public function __construct(
         private SettingsServiceInterface $settings,
-    ) {
-    }
+    ) {}
 
     public function getPublishedPage(string $slug): ?LegalPageResponseDTO
     {
@@ -42,6 +44,7 @@ final readonly class LegalPageService implements LegalPageServiceInterface
 
         $content = (string) $this->settings->get($prefix.'content', '');
         $content = $this->replacePlaceholders($content);
+        $content = $this->sanitizeHtml($content);
 
         return new LegalPageResponseDTO(
             title: __($page['title_key']),

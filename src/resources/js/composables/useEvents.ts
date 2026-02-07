@@ -1,5 +1,6 @@
 import { useI18n } from 'vue-i18n';
 import type { Event } from '@/types/models';
+import { stripHtml } from '@/utils/html';
 
 interface UseEventsReturn {
     formatEventDate: (dateString: string) => string;
@@ -59,10 +60,11 @@ export function useEvents(): UseEventsReturn {
     }
 
     function getExcerpt(description: string, maxLength = 150): string {
-        if (description.length <= maxLength) {
-            return description;
+        const cleanText = stripHtml(description);
+        if (cleanText.length <= maxLength) {
+            return cleanText;
         }
-        return description.slice(0, maxLength).trim() + '...';
+        return cleanText.slice(0, maxLength).trim() + '...';
     }
 
     function upcomingEvents(events: Event[]): Event[] {

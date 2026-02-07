@@ -48,7 +48,7 @@
             <x-filament::section>
                 <div class="flex flex-col items-center justify-center py-8 text-center">
                     <div class="mb-3 rounded-full bg-neutral-100 p-3 dark:bg-neutral-800">
-                        <x-heroicon-o-puzzle-piece class="h-6 w-6 text-neutral-400 dark:text-neutral-500" />
+                        <x-heroicon-o-puzzle-piece style="width: 1.5rem; height: 1.5rem;" class="text-neutral-400 dark:text-neutral-500" />
                     </div>
                     <h3 class="text-base font-medium text-neutral-900 dark:text-white">
                         {{ __('modules.filament.empty.title') }}
@@ -150,7 +150,7 @@
                         {{-- Dependency Warning (moved above actions for visibility) --}}
                         @if($depCheck->hasErrors() && $module->isDisabled())
                             <div class="mt-4 flex items-start gap-2 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
-                                <x-heroicon-m-exclamation-triangle class="h-5 w-5 shrink-0" />
+                                <x-heroicon-m-exclamation-triangle class="shrink-0" style="width: 1.25rem; height: 1.25rem;" />
                                 <div class="space-y-1">
                                     @foreach($depCheck->getErrorMessages() as $error)
                                         <p>{{ $error }}</p>
