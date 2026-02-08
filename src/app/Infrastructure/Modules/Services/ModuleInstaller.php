@@ -336,7 +336,6 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
             }
 
             File::copyDirectory($sourceBuild, $targetBuild);
-            File::deleteDirectory($sourceBuild);
 
             Log::info("Published pre-built assets for module {$moduleName}");
         } catch (\Throwable $e) {

@@ -563,9 +563,9 @@ final class ModuleInstallerTest extends TestCase
         $this->assertTrue(File::exists($publicBuildPath.'/app.css'));
         $this->assertEquals('console.log("module app");', File::get($publicBuildPath.'/app.js'));
 
-        // Verify source build directory was removed from module
+        // Verify source build directory is preserved (for re-publishing on redeploy)
         $moduleBuildPath = $this->modulesPath.'/assets-test-module/public/build';
-        $this->assertFalse(File::isDirectory($moduleBuildPath));
+        $this->assertTrue(File::isDirectory($moduleBuildPath));
     }
 
     /**

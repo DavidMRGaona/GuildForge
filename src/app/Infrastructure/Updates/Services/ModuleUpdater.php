@@ -201,6 +201,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             $this->log($history->id, 'apply', 'started', 'Applying update...');
 
             $this->applyUpdate($module->path(), $downloadPath);
+            $this->publishPreBuiltAssets($module->path(), $name->value);
             $this->log($history->id, 'apply', 'completed', 'Update applied');
 
             // Step 6: Run migrations in transaction
@@ -421,7 +422,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         }
 
         // Extract new version
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($zipPath) !== true) {
             throw UpdateException::extractionFailed(basename($modulePath), 'Cannot open ZIP file');
         }
@@ -442,6 +443,33 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                 File::move($folder, $modulePath);
                 break;
             }
+        }
+    }
+
+    private function publishPreBuiltAssets(string $moduleDir, string $moduleName): void
+    {
+        $sourceBuild = $moduleDir.'/public/build';
+
+        if (! File::isDirectory($sourceBuild)) {
+            return;
+        }
+
+        try {
+            $targetBuild = public_path("build/modules/{$moduleName}");
+
+            if (! File::isDirectory(dirname($targetBuild))) {
+                File::makeDirectory(dirname($targetBuild), 0755, true);
+            }
+
+            if (File::isDirectory($targetBuild)) {
+                File::deleteDirectory($targetBuild);
+            }
+
+            File::copyDirectory($sourceBuild, $targetBuild);
+
+            Log::info("Published pre-built assets for module {$moduleName} after update");
+        } catch (\Throwable $e) {
+            Log::warning("Failed to publish pre-built assets for module {$moduleName}: {$e->getMessage()}");
         }
     }
 

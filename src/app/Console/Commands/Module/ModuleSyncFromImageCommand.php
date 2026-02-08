@@ -120,7 +120,6 @@ final class ModuleSyncFromImageCommand extends Command
             }
 
             File::copyDirectory($sourceBuild, $targetBuild);
-            File::deleteDirectory($sourceBuild);
 
             $this->info("  Copied pre-built assets for {$moduleName}");
         } catch (\Throwable $e) {
