@@ -20,6 +20,10 @@ mkdir -p \
 echo "Syncing modules from image..."
 php artisan module:sync-from-image /opt/modules-image || echo "Warning: Module sync had issues"
 
+# Ensure all module build assets are in public/build/modules/ (survives redeploys)
+echo "Publishing module build assets..."
+php artisan module:publish-build-assets || echo "Warning: Module asset publishing had issues"
+
 # Set permissions
 chmod -R 775 storage bootstrap/cache modules public/build
 chown -R www-data:www-data storage bootstrap/cache modules public/build
