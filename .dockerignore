@@ -1,8 +1,9 @@
 # Ignore development and local files for production builds
 
-# Modules - keep source for Vite build, exclude build artifacts
+# Modules - keep source for Vite build, exclude non-build artifacts
 src/modules/*/node_modules
-src/modules/*/public
+src/modules/*/public/*
+!src/modules/*/public/build
 src/modules/*/.vite
 
 # Caches (rebuilt during container startup)
