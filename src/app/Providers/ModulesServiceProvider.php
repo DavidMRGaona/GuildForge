@@ -22,6 +22,7 @@ use App\Console\Commands\Module\ModuleMakeVueComponentCommand;
 use App\Console\Commands\Module\ModuleMakeVuePageCommand;
 use App\Console\Commands\Module\ModuleMigrateCommand;
 use App\Console\Commands\Module\ModulePublishAssetsCommand;
+use App\Console\Commands\Module\ModuleSyncFromImageCommand;
 use App\Infrastructure\Modules\Services\ModuleInstaller;
 use App\Modules\ModuleLoader;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +53,7 @@ final class ModulesServiceProvider extends ServiceProvider
                 ModuleDisableCommand::class,
                 ModuleMigrateCommand::class,
                 ModulePublishAssetsCommand::class,
+                ModuleSyncFromImageCommand::class,
                 // Module scaffolding commands
                 ModuleMakeCommand::class,
                 ModuleMakeEntityCommand::class,

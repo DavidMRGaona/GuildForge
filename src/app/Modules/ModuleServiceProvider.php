@@ -37,7 +37,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
         $configPath = $this->modulePath('config/module.php');
 
         if (file_exists($configPath)) {
-            $this->mergeConfigFrom($configPath, 'modules.'.$this->moduleName());
+            $this->forceLoadConfig($configPath, 'modules.'.$this->moduleName());
         }
 
         // Load module settings into Laravel config
@@ -46,6 +46,23 @@ abstract class ModuleServiceProvider extends ServiceProvider
             $settings = require $settingsPath;
             config()->set("modules.settings.{$this->moduleName()}", $settings);
         }
+    }
+
+    /**
+     * Load a config file even when config:cache is active.
+     *
+     * mergeConfigFrom() is a no-op after config:cache because
+     * the repository ignores new files. This method uses
+     * config()->set() which always works.
+     */
+    protected function forceLoadConfig(string $path, string $key): void
+    {
+        if (! file_exists($path)) {
+            return;
+        }
+
+        $config = require $path;
+        config()->set($key, array_merge($config, config($key, [])));
     }
 
     public function boot(): void

@@ -37,8 +37,7 @@ final class Module
         private ?string $sourceRepo = null,
         private ?string $latestAvailableVersion = null,
         private ?DateTimeImmutable $lastUpdateCheckAt = null,
-    ) {
-    }
+    ) {}
 
     public function id(): ModuleId
     {
@@ -112,7 +111,14 @@ final class Module
 
     public function path(): string
     {
-        return $this->path ?? $this->generateDefaultPath();
+        $path = $this->path ?? $this->generateDefaultPath();
+
+        // Ensure absolute path — DB may store relative paths from old config
+        if (! str_starts_with($path, '/')) {
+            return base_path($path);
+        }
+
+        return $path;
     }
 
     /**
@@ -189,7 +195,7 @@ final class Module
     public function enable(): void
     {
         $this->status = ModuleStatus::Enabled;
-        $this->enabledAt = new DateTimeImmutable();
+        $this->enabledAt = new DateTimeImmutable;
     }
 
     public function disable(): void
@@ -215,7 +221,7 @@ final class Module
 
     public function markInstalled(): void
     {
-        $this->installedAt = new DateTimeImmutable();
+        $this->installedAt = new DateTimeImmutable;
     }
 
     public function markUninstalled(): void

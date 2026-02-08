@@ -48,10 +48,9 @@ final class ModulesPage extends Page implements HasForms
      */
     public ?array $zipFile = null;
 
-    /**
-     * @var array<string, bool> Track delete data checkbox state per module
-     */
-    public array $deleteDataOptions = [];
+    public ?string $confirmingUninstall = null;
+
+    public bool $confirmDeleteData = false;
 
     public function mount(): void
     {
@@ -143,7 +142,7 @@ final class ModulesPage extends Page implements HasForms
                 }),
 
             Action::make('install')
-                ->label(__('modules.filament.actions.install'))
+                ->label(__('modules.filament.install_form.submit'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('primary')
                 ->form([
@@ -160,45 +159,35 @@ final class ModulesPage extends Page implements HasForms
                 ->modalSubmitActionLabel(__('modules.filament.install_form.submit'))
                 ->action(function (array $data, ModuleInstallerInterface $installer, ModuleManagerServiceInterface $moduleManager): void {
                     try {
-                        $tempFile = $data['zipFile'];
+                        $uploadedFile = $this->resolveUploadedFile($data['zipFile']);
 
-                        // Handle TemporaryUploadedFile from Livewire
-                        if ($tempFile instanceof TemporaryUploadedFile) {
-                            $uploadedFile = new UploadedFile(
-                                $tempFile->getRealPath(),
-                                $tempFile->getClientOriginalName(),
-                                $tempFile->getMimeType(),
-                                null,
-                                true
-                            );
-                        } elseif (is_string($tempFile)) {
-                            // Fallback for stored file path
-                            $filePath = storage_path('app/'.$tempFile);
+                        // Peek at the manifest to determine if this is an install or update
+                        $manifest = $installer->peekManifest($uploadedFile);
+                        $isUpdate = $installer->moduleExists($manifest->name);
 
-                            if (! file_exists($filePath)) {
-                                throw ModuleInstallationException::invalidZip();
-                            }
+                        if ($isUpdate) {
+                            $manifest = $installer->updateFromZip($uploadedFile);
 
-                            $uploadedFile = new UploadedFile(
-                                $filePath,
-                                basename($filePath),
-                                'application/zip',
-                                null,
-                                true
-                            );
+                            session()->flash('module_action_notification', [
+                                'title' => __('modules.filament.notifications.updated', [
+                                    'name' => $manifest->name,
+                                    'version' => $manifest->version,
+                                ]),
+                                'status' => 'success',
+                            ]);
                         } else {
-                            throw ModuleInstallationException::invalidZip();
+                            $manifest = $installer->installFromZip($uploadedFile);
+
+                            // Discover to register in DB
+                            $moduleManager->discover();
+
+                            session()->flash('module_action_notification', [
+                                'title' => __('modules.filament.notifications.installed', ['name' => $manifest->name]),
+                                'status' => 'success',
+                            ]);
                         }
 
-                        $manifest = $installer->installFromZip($uploadedFile);
-
-                        // Discover to register in DB
-                        $moduleManager->discover();
-
-                        Notification::make()
-                            ->title(__('modules.filament.notifications.installed', ['name' => $manifest->name]))
-                            ->success()
-                            ->send();
+                        $this->js('window.location.href = '.json_encode(static::getUrl()));
                     } catch (ModuleInstallationException $e) {
                         Notification::make()
                             ->title(__('modules.filament.notifications.cannot_install', ['error' => $e->getMessage()]))
@@ -229,14 +218,10 @@ final class ModulesPage extends Page implements HasForms
                 $message .= ' '.__('modules.filament.notifications.migrations_run_first_install');
             }
 
-            // Store success notification in session for display after redirect
-            session()->flash('module_action_notification', [
-                'title' => $message,
-                'status' => 'success',
-            ]);
-
-            // Force full page reload to rebuild navigation with the new module
-            $this->redirect(self::getUrl(), navigate: false);
+            Notification::make()
+                ->title($message)
+                ->success()
+                ->send();
         } catch (ModuleNotFoundException|ModuleAlreadyEnabledException|ModuleDependencyException $e) {
             Notification::make()
                 ->title(__('modules.filament.notifications.cannot_enable', ['error' => $e->getMessage()]))
@@ -254,14 +239,10 @@ final class ModulesPage extends Page implements HasForms
 
             $moduleManager->disable(new ModuleName($name));
 
-            // Store success notification in session for display after redirect
-            session()->flash('module_action_notification', [
-                'title' => __('modules.filament.notifications.disabled', ['name' => $displayName]),
-                'status' => 'success',
-            ]);
-
-            // Force full page reload to rebuild navigation without the disabled module
-            $this->redirect(self::getUrl(), navigate: false);
+            Notification::make()
+                ->title(__('modules.filament.notifications.disabled', ['name' => $displayName]))
+                ->success()
+                ->send();
         } catch (ModuleNotFoundException|ModuleAlreadyDisabledException|ModuleDependencyException $e) {
             Notification::make()
                 ->title(__('modules.filament.notifications.cannot_disable', ['error' => $e->getMessage()]))
@@ -270,31 +251,50 @@ final class ModulesPage extends Page implements HasForms
         }
     }
 
-    public function uninstallModule(string $name, ModuleManagerServiceInterface $moduleManager): void
+    public function confirmUninstall(string $name): void
     {
-        try {
-            // Get the deleteData option for this module (defaults to false)
-            $deleteData = $this->deleteDataOptions[$name] ?? false;
+        $this->confirmingUninstall = $name;
+        $this->confirmDeleteData = false;
+        $this->dispatch('open-modal', id: 'confirm-uninstall');
+    }
 
+    public function cancelUninstall(): void
+    {
+        $this->confirmingUninstall = null;
+        $this->confirmDeleteData = false;
+        $this->dispatch('close-modal', id: 'confirm-uninstall');
+    }
+
+    public function uninstallModule(ModuleManagerServiceInterface $moduleManager): void
+    {
+        $name = $this->confirmingUninstall;
+
+        if ($name === null) {
+            return;
+        }
+
+        try {
             // Get display name before uninstalling
             $module = $moduleManager->find(new ModuleName($name));
             $displayName = $module?->displayName() ?? $name;
 
-            $moduleManager->uninstall(new ModuleName($name), $deleteData);
+            $moduleManager->uninstall(new ModuleName($name), $this->confirmDeleteData);
 
             // Build notification message
             $message = __('modules.filament.notifications.uninstalled', ['name' => $displayName]);
-            if ($deleteData) {
+            if ($this->confirmDeleteData) {
                 $message .= ' '.__('modules.filament.notifications.data_deleted');
             }
+
+            $this->confirmingUninstall = null;
+            $this->confirmDeleteData = false;
 
             Notification::make()
                 ->title($message)
                 ->success()
                 ->send();
 
-            // Clear the option after uninstall
-            unset($this->deleteDataOptions[$name]);
+            $this->dispatch('close-modal', id: 'confirm-uninstall');
         } catch (ModuleNotFoundException|ModuleCannotUninstallException $e) {
             Notification::make()
                 ->title(__('modules.filament.notifications.cannot_uninstall', ['error' => $e->getMessage()]))
@@ -327,5 +327,36 @@ final class ModulesPage extends Page implements HasForms
         } catch (ModuleNotFoundException) {
             return [];
         }
+    }
+
+    private function resolveUploadedFile(mixed $tempFile): UploadedFile
+    {
+        if ($tempFile instanceof TemporaryUploadedFile) {
+            return new UploadedFile(
+                $tempFile->getRealPath(),
+                $tempFile->getClientOriginalName(),
+                $tempFile->getMimeType(),
+                null,
+                true
+            );
+        }
+
+        if (is_string($tempFile)) {
+            $filePath = storage_path('app/'.$tempFile);
+
+            if (! file_exists($filePath)) {
+                throw ModuleInstallationException::invalidZip();
+            }
+
+            return new UploadedFile(
+                $filePath,
+                basename($filePath),
+                'application/zip',
+                null,
+                true
+            );
+        }
+
+        throw ModuleInstallationException::invalidZip();
     }
 }

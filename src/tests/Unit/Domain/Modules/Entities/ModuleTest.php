@@ -11,7 +11,7 @@ use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use DateTimeImmutable;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 final class ModuleTest extends TestCase
 {
@@ -75,7 +75,7 @@ final class ModuleTest extends TestCase
     {
         $module = $this->createModule(
             status: ModuleStatus::Enabled,
-            enabledAt: new DateTimeImmutable()
+            enabledAt: new DateTimeImmutable
         );
 
         $module->disable();
@@ -114,7 +114,7 @@ final class ModuleTest extends TestCase
 
     public function test_is_installed_returns_true_when_installed_at_is_set(): void
     {
-        $module = $this->createModule(installedAt: new DateTimeImmutable());
+        $module = $this->createModule(installedAt: new DateTimeImmutable);
 
         $this->assertTrue($module->isInstalled());
     }
@@ -138,7 +138,7 @@ final class ModuleTest extends TestCase
 
     public function test_mark_uninstalled_clears_installed_at(): void
     {
-        $module = $this->createModule(installedAt: new DateTimeImmutable());
+        $module = $this->createModule(installedAt: new DateTimeImmutable);
 
         $module->markUninstalled();
 
@@ -236,6 +236,30 @@ final class ModuleTest extends TestCase
         $this->assertEquals($author, $module->author());
     }
 
+    public function test_path_returns_absolute_path_when_stored_path_is_absolute(): void
+    {
+        $absolutePath = '/var/www/modules/test-module';
+        $module = $this->createModule(path: $absolutePath);
+
+        $this->assertSame($absolutePath, $module->path());
+    }
+
+    public function test_path_resolves_relative_path_to_absolute(): void
+    {
+        $module = $this->createModule(path: 'modules/test-module');
+
+        $expected = base_path('modules/test-module');
+        $this->assertSame($expected, $module->path());
+    }
+
+    public function test_path_generates_default_absolute_path_when_null(): void
+    {
+        $module = $this->createModule(path: null);
+
+        $expected = base_path('modules/test-module');
+        $this->assertSame($expected, $module->path());
+    }
+
     private function createModule(
         ?ModuleId $id = null,
         ?ModuleName $name = null,
@@ -247,6 +271,7 @@ final class ModuleTest extends TestCase
         ModuleStatus $status = ModuleStatus::Disabled,
         ?DateTimeImmutable $enabledAt = null,
         ?DateTimeImmutable $installedAt = null,
+        ?string $path = 'UNSET',
     ): Module {
         return new Module(
             id: $id ?? ModuleId::generate(),
@@ -264,6 +289,7 @@ final class ModuleTest extends TestCase
             status: $status,
             enabledAt: $enabledAt,
             installedAt: $installedAt,
+            path: $path === 'UNSET' ? null : $path,
         );
     }
 }

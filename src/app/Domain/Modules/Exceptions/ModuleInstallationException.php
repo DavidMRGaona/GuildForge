@@ -47,4 +47,14 @@ final class ModuleInstallationException extends DomainException
     {
         return new self(__('modules.errors.installation_failed', ['error' => $error]));
     }
+
+    public static function moduleNotInstalled(string $name): self
+    {
+        return new self(__('modules.errors.module_not_installed', ['name' => $name]));
+    }
+
+    public static function updateFailed(string $error): self
+    {
+        return new self(__('modules.errors.update_failed', ['error' => $error]));
+    }
 }

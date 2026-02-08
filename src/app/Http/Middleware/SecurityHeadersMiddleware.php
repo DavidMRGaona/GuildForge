@@ -35,7 +35,7 @@ final readonly class SecurityHeadersMiddleware
             $this->scriptSrc(),
             $this->styleSrc(),
             "img-src 'self' https://res.cloudinary.com data:",
-            "font-src 'self' https://fonts.bunny.net",
+            "font-src 'self' https://fonts.bunny.net data:",
             $this->connectSrc(),
             "frame-ancestors 'none'",
             "base-uri 'self'",

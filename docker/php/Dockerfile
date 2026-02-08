@@ -46,7 +46,7 @@ RUN pecl install xdebug && docker-php-ext-enable xdebug
 # Configure Xdebug
 RUN echo "xdebug.mode=develop,debug,coverage" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
-    && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    && echo "xdebug.start_with_request=trigger" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 # Configure OPcache for development
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
@@ -58,12 +58,12 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
 
 # PHP configuration
 RUN echo "memory_limit=512M" >> /usr/local/etc/php/conf.d/custom.ini \
-    && echo "upload_max_filesize=100M" >> /usr/local/etc/php/conf.d/custom.ini \
-    && echo "post_max_size=100M" >> /usr/local/etc/php/conf.d/custom.ini \
+    && echo "upload_max_filesize=20M" >> /usr/local/etc/php/conf.d/custom.ini \
+    && echo "post_max_size=20M" >> /usr/local/etc/php/conf.d/custom.ini \
     && echo "max_execution_time=60" >> /usr/local/etc/php/conf.d/custom.ini
 
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Create application directory
 WORKDIR /var/www/html

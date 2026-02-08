@@ -67,7 +67,8 @@ final class ModuleUninstallTest extends TestCase
         $this->app->forgetInstance(ModuleManagerServiceInterface::class);
 
         Livewire::test(ModulesPage::class)
-            ->call('uninstallModule', 'test-module')
+            ->set('confirmingUninstall', 'test-module')
+            ->call('uninstallModule')
             ->assertNotified();
 
         $this->assertDatabaseMissing('modules', [
@@ -103,7 +104,8 @@ final class ModuleUninstallTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(ModulesPage::class)
-            ->call('uninstallModule', 'base-module')
+            ->set('confirmingUninstall', 'base-module')
+            ->call('uninstallModule')
             ->assertNotified();
 
         // Module should still exist
@@ -133,7 +135,8 @@ final class ModuleUninstallTest extends TestCase
         $this->assertDatabaseHas('modules', ['id' => $module->id]);
 
         Livewire::test(ModulesPage::class)
-            ->call('uninstallModule', 'removable-module');
+            ->set('confirmingUninstall', 'removable-module')
+            ->call('uninstallModule');
 
         $this->assertDatabaseMissing('modules', ['id' => $module->id]);
     }
@@ -159,10 +162,36 @@ final class ModuleUninstallTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(ModulesPage::class)
-            ->call('uninstallModule', 'file-module');
+            ->set('confirmingUninstall', 'file-module')
+            ->call('uninstallModule');
 
         $this->assertFalse(File::isDirectory($modulePath));
         $this->assertFalse(File::exists($modulePath.'/module.json'));
+    }
+
+    public function test_uninstall_falls_back_to_config_path_when_stored_path_is_stale(): void
+    {
+        $user = UserModel::factory()->admin()->create();
+
+        // Create module directory at the config-based path
+        $configPath = $this->modulesPath.'/stale-path-module';
+        File::ensureDirectoryExists($configPath);
+        File::put($configPath.'/module.json', json_encode(['name' => 'stale-path-module']));
+
+        // Store a stale/wrong path in the DB record
+        $module = ModuleModel::factory()->disabled()->create([
+            'name' => 'stale-path-module',
+            'path' => '/nonexistent/old/path/stale-path-module',
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(ModulesPage::class)
+            ->set('confirmingUninstall', 'stale-path-module')
+            ->call('uninstallModule');
+
+        $this->assertDatabaseMissing('modules', ['id' => $module->id]);
+        $this->assertFalse(File::isDirectory($configPath));
     }
 
     public function test_uninstall_dispatches_event(): void
@@ -186,11 +215,36 @@ final class ModuleUninstallTest extends TestCase
         $this->app->forgetInstance(ModuleManagerServiceInterface::class);
 
         Livewire::test(ModulesPage::class)
-            ->call('uninstallModule', 'event-module');
+            ->set('confirmingUninstall', 'event-module')
+            ->call('uninstallModule');
 
         Event::assertDispatched(ModuleUninstalled::class, function ($event) {
             return $event->moduleName === 'event-module'
                 && $event->moduleVersion === '2.0.0';
         });
+    }
+
+    public function test_uninstall_without_confirming_module_is_noop(): void
+    {
+        $user = UserModel::factory()->admin()->create();
+
+        $modulePath = $this->modulesPath.'/noop-module';
+        File::makeDirectory($modulePath, 0755, true);
+        File::put($modulePath.'/module.json', json_encode(['name' => 'noop-module']));
+
+        ModuleModel::factory()->disabled()->create([
+            'name' => 'noop-module',
+            'path' => $modulePath,
+        ]);
+
+        $this->actingAs($user);
+
+        // Call uninstallModule without setting confirmingUninstall
+        Livewire::test(ModulesPage::class)
+            ->call('uninstallModule');
+
+        // Module should still exist
+        $this->assertDatabaseHas('modules', ['name' => 'noop-module']);
+        $this->assertTrue(File::isDirectory($modulePath));
     }
 }

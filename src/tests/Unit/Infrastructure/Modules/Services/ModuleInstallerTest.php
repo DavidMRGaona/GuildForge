@@ -5,13 +5,26 @@ declare(strict_types=1);
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
 use App\Application\Modules\Services\ModuleInstallerInterface;
+use App\Application\Updates\Services\ModuleBackupServiceInterface;
+use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
+use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\ModuleId;
+use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Domain\Modules\ValueObjects\ModuleRequirements;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\ModuleInstaller;
+use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
+use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use JsonException;
 use Mockery;
+use Mockery\MockInterface;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -23,9 +36,21 @@ final class ModuleInstallerTest extends TestCase
 
     private string $modulesPath;
 
+    private MockInterface&ModuleRepositoryInterface $repository;
+
+    private MockInterface&Dispatcher $dispatcher;
+
+    private MockInterface&ModuleBackupServiceInterface $backupService;
+
+    private ModuleMigrationRunner $migrationRunner;
+
+    private ModuleSeederRunner $seederRunner;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        Log::spy();
 
         $this->tempDir = storage_path('app/temp/modules-test');
         $this->modulesPath = storage_path('app/test-modules');
@@ -35,16 +60,32 @@ final class ModuleInstallerTest extends TestCase
 
         config(['modules.path' => $this->modulesPath]);
 
-        $dispatcher = Mockery::mock(Dispatcher::class);
-        $dispatcher->shouldReceive('dispatch')->andReturnNull();
+        $this->dispatcher = Mockery::mock(Dispatcher::class);
+        $this->dispatcher->shouldReceive('dispatch')->andReturnNull()->byDefault();
 
-        $this->installer = new ModuleInstaller($dispatcher);
+        $this->repository = Mockery::mock(ModuleRepositoryInterface::class);
+        $this->repository->shouldReceive('exists')->andReturn(false)->byDefault();
+
+        $this->backupService = Mockery::mock(ModuleBackupServiceInterface::class);
+
+        // Create real instances since they're final classes
+        $this->migrationRunner = new ModuleMigrationRunner($this->modulesPath);
+        $this->seederRunner = new ModuleSeederRunner($this->modulesPath);
+
+        $this->installer = new ModuleInstaller(
+            $this->dispatcher,
+            $this->repository,
+            $this->backupService,
+            $this->migrationRunner,
+            $this->seederRunner
+        );
     }
 
     protected function tearDown(): void
     {
         File::deleteDirectory($this->tempDir);
         File::deleteDirectory($this->modulesPath);
+        File::deleteDirectory(public_path('build/modules'));
 
         parent::tearDown();
     }
@@ -132,6 +173,11 @@ final class ModuleInstallerTest extends TestCase
         // Create existing module directory
         File::makeDirectory($this->modulesPath.'/existing-module', 0755, true);
 
+        // Module also exists in database — true duplicate
+        $this->repository->shouldReceive('exists')
+            ->with(Mockery::on(fn (ModuleName $n) => $n->value === 'existing-module'))
+            ->andReturn(true);
+
         $zipPath = $this->createValidZip([
             'module.json' => json_encode([
                 'name' => 'existing-module',
@@ -146,6 +192,37 @@ final class ModuleInstallerTest extends TestCase
         $this->expectException(ModuleInstallationException::class);
 
         $this->installer->installFromZip($file);
+    }
+
+    public function test_cleans_up_leftover_directory_and_installs(): void
+    {
+        // Create leftover directory (from incomplete uninstall)
+        $leftoverPath = $this->modulesPath.'/leftover-module';
+        File::makeDirectory($leftoverPath, 0755, true);
+        File::put($leftoverPath.'/module.json', json_encode(['name' => 'leftover-module']));
+
+        // No DB record exists — this is a leftover
+        $this->repository->shouldReceive('exists')
+            ->with(Mockery::on(fn (ModuleName $n) => $n->value === 'leftover-module'))
+            ->andReturn(false);
+
+        $zipPath = $this->createValidZip([
+            'module.json' => json_encode([
+                'name' => 'leftover-module',
+                'version' => '1.0.0',
+                'namespace' => 'Modules\\LeftoverModule',
+                'provider' => 'Modules\\LeftoverModule\\LeftoverModuleServiceProvider',
+            ]),
+            'src/LeftoverModuleServiceProvider.php' => '<?php namespace Modules\\LeftoverModule;',
+        ]);
+
+        $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
+
+        $manifest = $this->installer->installFromZip($file);
+
+        $this->assertEquals('leftover-module', $manifest->name);
+        $this->assertTrue(File::isDirectory($this->modulesPath.'/leftover-module'));
+        $this->assertTrue(File::exists($this->modulesPath.'/leftover-module/module.json'));
     }
 
     public function test_rejects_forbidden_module_names(): void
@@ -259,6 +336,238 @@ final class ModuleInstallerTest extends TestCase
         $this->assertTrue($realFilesystem->exists($this->modulesPath.'/fallback-test-module/module.json'));
     }
 
+    public function test_can_update_existing_module_from_zip(): void
+    {
+        // Create existing module directory
+        $moduleDir = $this->modulesPath.'/update-test-module';
+        File::makeDirectory($moduleDir, 0755, true);
+        File::put($moduleDir.'/old-file.txt', 'old content');
+
+        // Create a real module entity
+        $module = new Module(
+            id: ModuleId::generate(),
+            name: new ModuleName('update-test-module'),
+            displayName: 'Update Test Module',
+            description: 'Test module for updates',
+            version: ModuleVersion::fromString('1.0.0'),
+            author: 'Test Author',
+            requirements: new ModuleRequirements(
+                phpVersion: null,
+                laravelVersion: null,
+                requiredModules: [],
+                requiredExtensions: []
+            ),
+            status: ModuleStatus::Enabled,
+            path: $moduleDir
+        );
+
+        $this->repository->shouldReceive('findByName')
+            ->with(Mockery::type(ModuleName::class))
+            ->andReturn($module);
+
+        $this->repository->shouldReceive('save')
+            ->once()
+            ->with($module);
+
+        $backupPath = $this->tempDir.'/backup.zip';
+        $this->backupService->shouldReceive('createBackup')
+            ->once()
+            ->with(Mockery::type(ModuleName::class))
+            ->andReturn($backupPath);
+
+        // Migration/seeder runners are real instances, they'll run silently in test mode
+
+        $this->dispatcher->shouldReceive('dispatch')
+            ->once()
+            ->with(Mockery::type(ModuleUpdated::class));
+
+        $zipPath = $this->createValidZip([
+            'module.json' => json_encode([
+                'name' => 'update-test-module',
+                'version' => '2.0.0',
+                'namespace' => 'Modules\\UpdateTestModule',
+                'provider' => 'Modules\\UpdateTestModule\\ServiceProvider',
+            ]),
+            'src/NewFile.php' => '<?php // new content',
+        ]);
+
+        $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
+
+        $manifest = $this->installer->updateFromZip($file);
+
+        $this->assertEquals('update-test-module', $manifest->name);
+        $this->assertEquals('2.0.0', $manifest->version);
+        $this->assertTrue(File::exists($moduleDir.'/src/NewFile.php'));
+        $this->assertFalse(File::exists($moduleDir.'/old-file.txt'));
+    }
+
+    public function test_update_rejects_non_existent_module(): void
+    {
+        $this->repository->shouldReceive('findByName')
+            ->with(Mockery::type(ModuleName::class))
+            ->andReturn(null);
+
+        $zipPath = $this->createValidZip([
+            'module.json' => json_encode([
+                'name' => 'non-existent-module',
+                'version' => '1.0.0',
+                'namespace' => 'Modules\\NonExistent',
+                'provider' => 'Modules\\NonExistent\\ServiceProvider',
+            ]),
+        ]);
+
+        $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
+
+        $this->expectException(ModuleInstallationException::class);
+
+        $this->installer->updateFromZip($file);
+    }
+
+    public function test_update_restores_backup_on_failure(): void
+    {
+        // Create existing module directory
+        $moduleDir = $this->modulesPath.'/failing-module';
+        File::makeDirectory($moduleDir, 0755, true);
+        File::put($moduleDir.'/important.txt', 'important data');
+
+        // Create a real module entity
+        $module = new Module(
+            id: ModuleId::generate(),
+            name: new ModuleName('failing-module'),
+            displayName: 'Failing Module',
+            description: 'Test module for failure scenarios',
+            version: ModuleVersion::fromString('1.0.0'),
+            author: 'Test Author',
+            requirements: new ModuleRequirements(
+                phpVersion: null,
+                laravelVersion: null,
+                requiredModules: [],
+                requiredExtensions: []
+            ),
+            status: ModuleStatus::Enabled,
+            path: $moduleDir
+        );
+
+        $this->repository->shouldReceive('findByName')
+            ->with(Mockery::type(ModuleName::class))
+            ->andReturn($module);
+
+        // First save succeeds, but we'll simulate a failure after that
+        $this->repository->shouldReceive('save')
+            ->once()
+            ->with($module)
+            ->andThrow(new \RuntimeException('Database failure'));
+
+        // Second save is for restoration
+        $this->repository->shouldReceive('save')
+            ->once()
+            ->with($module);
+
+        $backupPath = $this->tempDir.'/backup.zip';
+        $this->backupService->shouldReceive('createBackup')
+            ->once()
+            ->with(Mockery::type(ModuleName::class))
+            ->andReturn($backupPath);
+
+        $this->backupService->shouldReceive('restoreBackup')
+            ->once()
+            ->with(Mockery::type(ModuleName::class), $backupPath);
+
+        $zipPath = $this->createValidZip([
+            'module.json' => json_encode([
+                'name' => 'failing-module',
+                'version' => '2.0.0',
+                'namespace' => 'Modules\\FailingModule',
+                'provider' => 'Modules\\FailingModule\\ServiceProvider',
+            ]),
+        ]);
+
+        $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
+
+        $this->expectException(ModuleInstallationException::class);
+
+        $this->installer->updateFromZip($file);
+    }
+
+    public function test_peek_manifest_returns_manifest_without_installing(): void
+    {
+        $zipPath = $this->createValidZip([
+            'module.json' => json_encode([
+                'name' => 'peek-test-module',
+                'version' => '1.5.0',
+                'namespace' => 'Modules\\PeekTest',
+                'provider' => 'Modules\\PeekTest\\ServiceProvider',
+                'description' => 'Test peeking',
+                'author' => 'Test Author',
+            ]),
+        ]);
+
+        $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
+
+        $manifest = $this->installer->peekManifest($file);
+
+        $this->assertEquals('peek-test-module', $manifest->name);
+        $this->assertEquals('1.5.0', $manifest->version);
+        $this->assertEquals('Modules\\PeekTest', $manifest->namespace);
+
+        // Verify module was NOT installed
+        $this->assertFalse(File::isDirectory($this->modulesPath.'/peek-test-module'));
+    }
+
+    public function test_module_exists_returns_true_for_existing_module(): void
+    {
+        $this->repository->shouldReceive('exists')
+            ->with(Mockery::on(fn (ModuleName $n) => $n->value === 'existing-module'))
+            ->andReturn(true);
+
+        $exists = $this->installer->moduleExists('existing-module');
+
+        $this->assertTrue($exists);
+    }
+
+    public function test_module_exists_returns_false_for_non_existing_module(): void
+    {
+        $this->repository->shouldReceive('exists')
+            ->with(Mockery::on(fn (ModuleName $n) => $n->value === 'non-existing-module'))
+            ->andReturn(false);
+
+        $exists = $this->installer->moduleExists('non-existing-module');
+
+        $this->assertFalse($exists);
+    }
+
+    public function test_install_publishes_pre_built_assets(): void
+    {
+        // Create a ZIP with pre-built assets
+        $zipPath = $this->createValidZip([
+            'module.json' => json_encode([
+                'name' => 'assets-test-module',
+                'version' => '1.0.0',
+                'namespace' => 'Modules\\AssetsTest',
+                'provider' => 'Modules\\AssetsTest\\ServiceProvider',
+            ]),
+            'public/build/app.js' => 'console.log("module app");',
+            'public/build/app.css' => '.module { color: red; }',
+        ]);
+
+        $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
+
+        $manifest = $this->installer->installFromZip($file);
+
+        $this->assertEquals('assets-test-module', $manifest->name);
+
+        // Verify assets were published to public/build/modules/{name}/
+        $publicBuildPath = public_path('build/modules/assets-test-module');
+        $this->assertTrue(File::isDirectory($publicBuildPath));
+        $this->assertTrue(File::exists($publicBuildPath.'/app.js'));
+        $this->assertTrue(File::exists($publicBuildPath.'/app.css'));
+        $this->assertEquals('console.log("module app");', File::get($publicBuildPath.'/app.js'));
+
+        // Verify source build directory was removed from module
+        $moduleBuildPath = $this->modulesPath.'/assets-test-module/public/build';
+        $this->assertFalse(File::isDirectory($moduleBuildPath));
+    }
+
     /**
      * @param  array<string, string>  $files
      */
@@ -266,7 +575,7 @@ final class ModuleInstallerTest extends TestCase
     {
         $zipPath = $this->tempDir.'/test-module-'.uniqid().'.zip';
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($zipPath, ZipArchive::CREATE);
 
         foreach ($files as $name => $content) {

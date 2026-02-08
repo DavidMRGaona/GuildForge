@@ -9,7 +9,7 @@
         dev build-assets cache cache-clear routes tinker ide-helper \
         make-model make-migration make-controller make-resource \
         make-request make-test make-filament hooks pre-commit \
-        prod-build prod-build-clean prod-up prod-down prod-logs prod-shell prod-fresh prod-ps
+        prod-build prod-build-clean prod-up prod-down prod-logs prod-shell prod-fresh prod-ps prod-update prod-reset
 
 # Default target
 .DEFAULT_GOAL := help
@@ -136,7 +136,7 @@ db-restore: ## Restore from latest backup
 # =============================================================================
 
 test: ## Run all tests (parallel)
-	docker exec $(PHP_CONTAINER) php artisan test --parallel --processes=8
+	docker exec $(PHP_CONTAINER) php -d memory_limit=512M artisan test --parallel --processes=8
 
 test-unit: ## Run unit tests only (parallel)
 	docker exec $(PHP_CONTAINER) php artisan test --testsuite=Unit --parallel --processes=8
@@ -327,6 +327,27 @@ prod-shell: ## Enter prod-local container
 prod-fresh: ## Fresh migration in prod-local
 	@echo "Running fresh migrations in prod-local..."
 	docker exec $(PHP_CONTAINER_PROD) php artisan migrate:fresh --seed --force
+	docker exec $(PHP_CONTAINER_PROD) php artisan route:clear
+	@echo "Fresh migration complete!"
 
 prod-ps: ## Show prod-local container status
 	$(DOCKER_COMPOSE_PROD) ps
+
+prod-update: ## Update prod-local (rebuild + restart, preserves data)
+	@echo "Updating prod-local environment..."
+	DOCKER_BUILDKIT=1 $(DOCKER_COMPOSE_PROD) build
+	$(DOCKER_COMPOSE_PROD) down
+	$(DOCKER_COMPOSE_PROD) up -d
+	@echo "Prod-local updated!"
+	@echo "Application: http://localhost:8000"
+
+prod-reset: ## Full reset prod-local (DELETES database and all volumes)
+	@echo "WARNING: This will delete ALL data including the database!"
+	@echo "Use 'make prod-update' to update code without data loss."
+	@echo ""
+	@echo "Resetting prod-local environment..."
+	$(DOCKER_COMPOSE_PROD) down -v
+	DOCKER_BUILDKIT=1 $(DOCKER_COMPOSE_PROD) build
+	$(DOCKER_COMPOSE_PROD) up -d
+	@echo "Prod-local reset complete!"
+	@echo "Application: http://localhost:8000"
