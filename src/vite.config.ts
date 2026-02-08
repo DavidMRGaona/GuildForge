@@ -15,6 +15,10 @@ export default defineConfig({
                 'resources/js/vendor-exports/pinia.ts',
                 'resources/js/vendor-exports/vue-i18n.ts',
                 'resources/js/vendor-exports/inertia.ts',
+                // App exports for module runtime loading (import maps)
+                'resources/js/app-exports/cloudinary.ts',
+                'resources/js/app-exports/confirm-dialog.ts',
+                'resources/js/app-exports/form.ts',
             ],
             refresh: true,
         }),
