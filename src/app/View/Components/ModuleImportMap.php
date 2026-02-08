@@ -33,7 +33,7 @@ final class ModuleImportMap extends Component
      */
     private function getImportMap(): array
     {
-        $manifestPath = public_path('build/manifest.json');
+        $manifestPath = public_path('build/.vite/manifest.json');
 
         if (! file_exists($manifestPath)) {
             return [];

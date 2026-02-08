@@ -51,7 +51,7 @@ final readonly class ModuleAssetBuilder
      */
     public function hasBuiltAssets(Module $module): bool
     {
-        $manifestPath = public_path('build/modules/'.$module->name()->value.'/.vite/manifest.json');
+        $manifestPath = public_path('build/modules/'.$module->name()->value.'/manifest.json');
 
         return file_exists($manifestPath);
     }

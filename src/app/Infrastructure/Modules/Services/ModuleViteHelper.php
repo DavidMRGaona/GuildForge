@@ -46,7 +46,7 @@ final class ModuleViteHelper
      */
     public function manifestPath(string $moduleName): string
     {
-        return public_path("build/modules/{$moduleName}/.vite/manifest.json");
+        return public_path("build/modules/{$moduleName}/manifest.json");
     }
 
     /**
