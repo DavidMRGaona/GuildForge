@@ -39,10 +39,15 @@ final class ModuleImportMap extends Component
     private function getImportMap(): array
     {
         $mappings = [
+            // Vendor exports
             'resources/js/vendor-exports/vue.ts' => 'vue',
             'resources/js/vendor-exports/pinia.ts' => 'pinia',
             'resources/js/vendor-exports/vue-i18n.ts' => 'vue-i18n',
             'resources/js/vendor-exports/inertia.ts' => '@inertiajs/vue3',
+            // App exports for @/ imports used by modules
+            'resources/js/app-exports/cloudinary.ts' => '@/utils/cloudinary',
+            'resources/js/app-exports/confirm-dialog.ts' => '@/components/ui/ConfirmDialog.vue',
+            'resources/js/app-exports/form.ts' => '@/components/form',
         ];
 
         $imports = [];
