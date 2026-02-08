@@ -116,7 +116,7 @@ final class ModuleAssetBuilderTest extends TestCase
     public function test_has_built_assets_returns_true_when_manifest_exists(): void
     {
         $module = $this->createModule('test-module');
-        $manifestDir = public_path('build/modules/test-module/.vite');
+        $manifestDir = public_path('build/modules/test-module');
 
         // Clean up before test
         if (is_dir($manifestDir)) {
@@ -163,7 +163,7 @@ final class ModuleAssetBuilderTest extends TestCase
         $this->createModuleWithVueComponent('test-module-skip', 'Test.vue');
 
         // Create existing manifest in actual public path
-        $manifestDir = public_path('build/modules/test-module-skip/.vite');
+        $manifestDir = public_path('build/modules/test-module-skip');
 
         // Clean up before test
         if (is_dir($manifestDir)) {
