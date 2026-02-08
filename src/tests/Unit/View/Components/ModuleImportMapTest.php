@@ -16,7 +16,7 @@ final class ModuleImportMapTest extends TestCase
     {
         parent::setUp();
 
-        $this->manifestPath = public_path('build/manifest.json');
+        $this->manifestPath = public_path('build/.vite/manifest.json');
     }
 
     protected function tearDown(): void
