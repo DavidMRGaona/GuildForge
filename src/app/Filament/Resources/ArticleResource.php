@@ -73,7 +73,7 @@ class ArticleResource extends BaseResource
                 Textarea::make('excerpt')
                     ->label(__('Extracto'))
                     ->rows(3)
-                    ->maxLength(500)
+                    ->maxLength(255)
                     ->columnSpanFull(),
                 FileUpload::make('featured_image_public_id')
                     ->label(__('Imagen destacada'))
