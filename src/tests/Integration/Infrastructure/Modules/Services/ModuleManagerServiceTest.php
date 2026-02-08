@@ -66,6 +66,59 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertNotNull($modules->findByName(ModuleName::fromString('another-module')));
     }
 
+    public function test_discover_updates_version_from_manifest_for_existing_modules(): void
+    {
+        // Create module in database with old version
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'description' => 'Test module',
+            'author' => 'Test Author',
+            'status' => ModuleStatus::Disabled->value,
+            'requires' => null,
+        ]);
+
+        // Create module on filesystem with new version
+        $this->createTestModule('test-module', [
+            'version' => '1.0.1',
+        ]);
+
+        $modules = $this->service->discover();
+
+        $module = $modules->findByName(ModuleName::fromString('test-module'));
+        $this->assertNotNull($module);
+        $this->assertSame('1.0.1', $module->version()->value());
+
+        $this->assertDatabaseHas('modules', [
+            'name' => 'test-module',
+            'version' => '1.0.1',
+        ]);
+    }
+
+    public function test_discover_does_not_save_when_version_is_unchanged(): void
+    {
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'description' => 'Test module',
+            'author' => 'Test Author',
+            'status' => ModuleStatus::Disabled->value,
+            'requires' => null,
+        ]);
+
+        $this->createTestModule('test-module', [
+            'version' => '1.0.0',
+        ]);
+
+        $modules = $this->service->discover();
+
+        $module = $modules->findByName(ModuleName::fromString('test-module'));
+        $this->assertNotNull($module);
+        $this->assertSame('1.0.0', $module->version()->value());
+    }
+
     public function test_it_enables_a_disabled_module(): void
     {
         $this->createTestModule('test-module');

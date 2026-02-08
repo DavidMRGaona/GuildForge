@@ -1,8 +1,9 @@
 # Ignore development and local files for production builds
 
-# Modules (installed separately in production)
-src/modules/*
-!src/modules/.gitkeep
+# Modules - keep source for Vite build, exclude build artifacts
+src/modules/*/node_modules
+src/modules/*/public
+src/modules/*/.vite
 
 # Caches (rebuilt during container startup)
 src/bootstrap/cache/*.php

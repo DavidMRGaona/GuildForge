@@ -22,8 +22,8 @@ const cssVariables = computed(() => theme.value?.cssVariables ?? '');
 const fontHeading = computed(() => theme.value?.fontHeading ?? 'Inter');
 const fontBody = computed(() => theme.value?.fontBody ?? 'Inter');
 
-// Generate Google Fonts URL
-const googleFontsUrl = computed(() => {
+// Generate Bunny Fonts URL (privacy-friendly, CSP-allowed drop-in for Google Fonts)
+const fontsUrl = computed(() => {
     const fonts = new Set<string>();
     if (fontHeading.value !== 'system-ui') fonts.add(fontHeading.value);
     if (fontBody.value !== 'system-ui') fonts.add(fontBody.value);
@@ -34,7 +34,7 @@ const googleFontsUrl = computed(() => {
         .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
         .join('&');
 
-    return `https://fonts.googleapis.com/css2?${fontString}&display=swap`;
+    return `https://fonts.bunny.net/css2?${fontString}&display=swap`;
 });
 
 // Initialize theme settings immediately (synchronously) so components can read them
@@ -61,7 +61,7 @@ watch(theme, (newTheme) => {
 
         <!-- Load Google Fonts -->
         <Teleport to="head">
-            <link v-if="googleFontsUrl" rel="stylesheet" :href="googleFontsUrl" />
+            <link v-if="fontsUrl" rel="stylesheet" :href="fontsUrl" />
         </Teleport>
 
         <a

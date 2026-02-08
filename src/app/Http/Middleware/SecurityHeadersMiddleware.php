@@ -35,7 +35,7 @@ final readonly class SecurityHeadersMiddleware
             $this->scriptSrc(),
             $this->styleSrc(),
             "img-src 'self' https://res.cloudinary.com data:",
-            "font-src 'self'",
+            "font-src 'self' https://fonts.bunny.net",
             $this->connectSrc(),
             "frame-ancestors 'none'",
             "base-uri 'self'",
@@ -64,7 +64,7 @@ final readonly class SecurityHeadersMiddleware
      */
     private function styleSrc(): string
     {
-        $sources = "'self' 'unsafe-inline'";
+        $sources = "'self' 'unsafe-inline' https://fonts.bunny.net";
 
         if (app()->environment('local')) {
             $sources .= ' http://localhost:5173';

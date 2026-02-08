@@ -332,8 +332,8 @@ final class HandleInertiaRequests extends Middleware
     /**
      * Parse a TypeScript locale file and extract its default export.
      *
-     * This is a simplified parser that handles the common format:
-     * export default { key: 'value', ... }
+     * Uses placeholder-based extraction to safely convert TS object literals to JSON
+     * without corrupting string values that contain colons, URLs, or time formats.
      *
      * @return array<string, mixed>|null
      */
@@ -350,21 +350,18 @@ final class HandleInertiaRequests extends Middleware
         }
 
         // Find the default export object
-        // Pattern: export default { ... }
         if (! preg_match('/export\s+default\s+(\{[\s\S]*\})\s*;?\s*$/m', $content, $matches)) {
             return null;
         }
 
         $objectContent = $matches[1];
 
-        // Convert TypeScript object literal to JSON
-        // 1. Handle unquoted keys: key: -> "key":
-        $json = preg_replace('/(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/', '$1"$2":', $objectContent);
+        // 1. Extract all string literals, replacing with placeholders
+        $strings = [];
+        $sanitized = $this->extractStringLiterals($objectContent, $strings);
 
-        // 2. Handle single quotes -> double quotes (but not within double-quoted strings)
-        if ($json !== null) {
-            $json = $this->convertSingleToDoubleQuotes($json);
-        }
+        // 2. Quote unquoted keys (safe — no string content to corrupt)
+        $json = preg_replace('/(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/', '$1"$2":', $sanitized);
 
         // 3. Remove trailing commas before } or ]
         if ($json !== null) {
@@ -375,54 +372,100 @@ final class HandleInertiaRequests extends Middleware
             return null;
         }
 
+        // 4. Restore placeholders as JSON-safe double-quoted strings
+        $json = $this->restoreStringLiterals($json, $strings);
+
         $decoded = json_decode($json, true);
 
-        return is_array($decoded) ? $decoded : null;
+        if (! is_array($decoded)) {
+            logger()->warning("[HandleInertiaRequests] Failed to parse locale file: {$filePath}", [
+                'json_error' => json_last_error_msg(),
+            ]);
+
+            return null;
+        }
+
+        return $decoded;
     }
 
     /**
-     * Convert single quotes to double quotes in a string, handling escapes.
+     * Extract all string literals from content, replacing them with placeholders.
      *
-     * When converting single-quoted strings to double-quoted strings,
-     * any double quotes inside the string must be escaped.
+     * Iterates character-by-character to correctly handle both single and double-quoted
+     * strings, escape sequences, and strips // line comments.
+     *
+     * @param  array<int, string>  $strings  Collected string values (without quotes)
      */
-    private function convertSingleToDoubleQuotes(string $content): string
+    private function extractStringLiterals(string $content, array &$strings): string
     {
         $result = '';
-        $inSingleQuote = false;
-        $inDoubleQuote = false;
         $length = strlen($content);
+        $index = 0;
 
-        for ($i = 0; $i < $length; $i++) {
-            $char = $content[$i];
-            $prevChar = $i > 0 ? $content[$i - 1] : '';
+        while ($index < $length) {
+            $char = $content[$index];
 
-            // Handle escape sequences
-            if ($prevChar === '\\') {
-                $result .= $char;
+            // Strip // line comments (outside strings)
+            if ($char === '/' && $index + 1 < $length && $content[$index + 1] === '/') {
+                // Skip until end of line
+                while ($index < $length && $content[$index] !== "\n") {
+                    $index++;
+                }
 
                 continue;
             }
 
-            // Toggle quote states and handle conversions
-            if ($char === "'" && ! $inDoubleQuote) {
-                $inSingleQuote = ! $inSingleQuote;
-                $result .= '"';
-            } elseif ($char === '"') {
-                if ($inSingleQuote) {
-                    // Double quote inside a single-quoted string needs to be escaped
-                    // because we're converting to double-quoted JSON
-                    $result .= '\\"';
-                } else {
-                    $inDoubleQuote = ! $inDoubleQuote;
-                    $result .= $char;
+            // Start of a string literal
+            if ($char === "'" || $char === '"') {
+                $quote = $char;
+                $stringContent = '';
+                $index++; // skip opening quote
+
+                while ($index < $length && $content[$index] !== $quote) {
+                    if ($content[$index] === '\\' && $index + 1 < $length) {
+                        // Keep escape sequence as-is for now
+                        $stringContent .= $content[$index] . $content[$index + 1];
+                        $index += 2;
+                    } else {
+                        $stringContent .= $content[$index];
+                        $index++;
+                    }
                 }
+
+                $index++; // skip closing quote
+
+                $placeholderIndex = count($strings);
+                $strings[] = $stringContent;
+                $result .= '__PLACEHOLDER_' . $placeholderIndex . '__';
             } else {
                 $result .= $char;
+                $index++;
             }
         }
 
         return $result;
+    }
+
+    /**
+     * Restore string placeholders with properly JSON-encoded double-quoted strings.
+     *
+     * Converts extracted string content to valid JSON strings by escaping double quotes
+     * and unescaping single-quote escapes that are unnecessary in double-quoted context.
+     *
+     * @param  array<int, string>  $strings  Previously extracted string values
+     */
+    private function restoreStringLiterals(string $json, array $strings): string
+    {
+        foreach ($strings as $i => $value) {
+            // Unescape \' (valid in JS single-quoted strings, not needed in JSON double-quoted)
+            $value = str_replace("\\'", "'", $value);
+            // Escape " for JSON double-quoted strings
+            $value = str_replace('"', '\\"', $value);
+
+            $json = str_replace('__PLACEHOLDER_' . $i . '__', '"' . $value . '"', $json);
+        }
+
+        return $json;
     }
 
     /**
