@@ -18,6 +18,16 @@ RUN for dir in modules/*/; do \
     fi; \
 done || true
 
+# Consolidate module build artifacts for easy COPY to stage 2
+RUN mkdir -p /module-builds && \
+    for dir in modules/*/; do \
+        module_name=$(basename "$dir"); \
+        if [ -d "$dir/public/build" ]; then \
+            mkdir -p "/module-builds/$module_name/public" && \
+            cp -a "$dir/public/build" "/module-builds/$module_name/public/build"; \
+        fi; \
+    done
+
 # Stage 2: Production image
 FROM php:8.4-fpm-alpine AS final
 
@@ -88,8 +98,18 @@ RUN rm -f bootstrap/cache/*.php \
 # Remove dev-mode hot file (if it slipped through .dockerignore)
 RUN rm -f public/hot
 
-# Copy built assets from stage 1 (includes public/build/modules/)
+# Copy built assets from stage 1 (main app)
 COPY --from=assets /build/public/build public/build
+
+# Inject pre-built module assets from stage 1 into module directories
+COPY --from=assets /module-builds/ /tmp/module-builds/
+RUN for dir in /tmp/module-builds/*/; do \
+        module_name=$(basename "$dir"); \
+        if [ -d "$dir/public/build" ] && [ -d "modules/$module_name" ]; then \
+            mkdir -p "modules/$module_name/public" && \
+            cp -a "$dir/public/build" "modules/$module_name/public/"; \
+        fi; \
+    done && rm -rf /tmp/module-builds
 
 # Backup modules to non-volume path (volume will mask /var/www/html/modules)
 RUN cp -a modules /opt/modules-image
