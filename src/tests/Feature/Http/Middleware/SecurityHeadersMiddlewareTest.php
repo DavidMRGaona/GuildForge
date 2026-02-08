@@ -126,7 +126,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
-        $this->assertStringContainsString("font-src 'self' https://fonts.bunny.net", $csp);
+        $this->assertStringContainsString("font-src 'self' https://fonts.bunny.net data:", $csp);
     }
 
     public function test_it_does_not_add_hsts_header_for_non_secure_requests(): void

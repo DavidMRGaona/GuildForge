@@ -13,11 +13,16 @@ mkdir -p \
     storage/app/public \
     storage/app/backups \
     bootstrap/cache \
-    modules
+    modules \
+    public/build/modules
+
+# Sync modules from image (version-aware: preserves ZIP-updated modules in volume)
+echo "Syncing modules from image..."
+php artisan module:sync-from-image /opt/modules-image || echo "Warning: Module sync had issues"
 
 # Set permissions
-chmod -R 775 storage bootstrap/cache modules
-chown -R www-data:www-data storage bootstrap/cache modules
+chmod -R 775 storage bootstrap/cache modules public/build
+chown -R www-data:www-data storage bootstrap/cache modules public/build
 
 # Create symlink if it doesn't exist (must be done before Laravel boots)
 if [ ! -L public/storage ]; then
@@ -27,13 +32,13 @@ fi
 echo "Running migrations..."
 php artisan migrate --force
 
+echo "Discovering modules..."
+php artisan module:discover || echo "Warning: Module discovery had issues (check logs)"
+
 echo "Caching configuration..."
 php artisan config:cache
-php artisan route:cache
+php artisan route:clear
 php artisan view:cache
-
-echo "Discovering modules..."
-php artisan module:discover || true
 
 echo "Starting services..."
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf

@@ -25,6 +25,7 @@ use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use DateTimeImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -47,17 +48,26 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
         foreach ($manifests as $manifest) {
             $moduleName = new ModuleName($manifest->name);
+            $modulesPath = config('modules.path', base_path('modules'));
 
             // Check if module already exists in database
             if ($this->repository->exists($moduleName)) {
                 // Get existing module and sync version from manifest
                 $existing = $this->repository->findByName($moduleName);
                 if ($existing !== null) {
+                    $needsSave = false;
+
+                    // Sync path: re-saving resolves stale relative paths via path()
+                    $expectedPath = $modulesPath.'/'.$manifest->name;
+                    if ($existing->path() !== $expectedPath) {
+                        $needsSave = true;
+                    }
+
                     $manifestVersion = ModuleVersion::fromString($manifest->version);
                     if (! $existing->version()->isEqualTo($manifestVersion)) {
                         $previousVersion = $existing->version()->value();
                         $existing->updateVersion($manifestVersion);
-                        $this->repository->save($existing);
+                        $needsSave = true;
 
                         // Run pending migrations and seeders for enabled+installed modules
                         if ($existing->isEnabled() && $existing->isInstalled()) {
@@ -78,6 +88,11 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                             'to' => $manifestVersion->value(),
                         ]);
                     }
+
+                    if ($needsSave) {
+                        $this->repository->save($existing);
+                    }
+
                     $discovered->add($existing);
                 }
 
@@ -86,7 +101,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
             // Compute display_name from manifest
             $displayName = $manifest->description ?? $this->studlyCase($manifest->name);
-            $modulesPath = config('modules.path', base_path('modules'));
 
             // Create new module from manifest
             $module = new Module(
@@ -162,6 +176,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
         // Invalidate cache
         $this->invalidateModuleCache();
+        $this->clearRouteCacheIfNeeded();
 
         // Dispatch event
         $this->events->dispatch(new ModuleEnabled(
@@ -205,6 +220,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
         // Invalidate cache
         $this->invalidateModuleCache();
+        $this->clearRouteCacheIfNeeded();
 
         // Dispatch event
         $this->events->dispatch(new ModuleDisabled(
@@ -373,6 +389,17 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
         // Delete module files
         $modulePath = $module->path();
+        if (! File::isDirectory($modulePath)) {
+            $configPath = config('modules.path', base_path('modules')).'/'.$name->value;
+            if ($modulePath !== $configPath && File::isDirectory($configPath)) {
+                Log::warning("Module {$name->value}: stored path not found, using config path", [
+                    'stored' => $modulePath,
+                    'config' => $configPath,
+                ]);
+                $modulePath = $configPath;
+            }
+        }
+
         if (File::isDirectory($modulePath)) {
             if (! File::deleteDirectory($modulePath)) {
                 throw ModuleCannotUninstallException::deletionFailed($name->value, 'Failed to delete module directory');
@@ -459,6 +486,17 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         if (config('modules.cache.enabled', false)) {
             Cache::forget(config('modules.cache.key', 'modules.enabled'));
+        }
+    }
+
+    /**
+     * Clear route cache if routes are cached.
+     * Module resources change Filament panel routes, so stale route cache causes RouteNotFoundException.
+     */
+    private function clearRouteCacheIfNeeded(): void
+    {
+        if (app()->routesAreCached()) {
+            Artisan::call('route:clear');
         }
     }
 

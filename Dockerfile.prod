@@ -10,6 +10,14 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY src/ .
 RUN npm run build
 
+# Build module assets (modules with package.json and vite.config.ts)
+RUN for dir in modules/*/; do \
+    if [ -f "$dir/package.json" ] && [ -f "$dir/vite.config.ts" ]; then \
+        echo "Building module: $dir" && \
+        cd "/build/$dir" && npm install && npm run build && cd /build; \
+    fi; \
+done || true
+
 # Stage 2: Production image
 FROM php:8.4-fpm-alpine AS final
 
@@ -24,6 +32,7 @@ RUN apk add --no-cache \
     freetype \
     libzip \
     icu-libs \
+    oniguruma \
     imagemagick
 
 # Install PHP extensions (cached layer - rarely changes)
@@ -37,6 +46,7 @@ RUN --mount=type=cache,target=/var/cache/apk \
         freetype-dev \
         libzip-dev \
         icu-dev \
+        oniguruma-dev \
         imagemagick-dev \
     && docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
     && docker-php-ext-install -j$(nproc) \
@@ -47,6 +57,9 @@ RUN --mount=type=cache,target=/var/cache/apk \
         bcmath \
         opcache \
         intl \
+        mbstring \
+        exif \
+        pcntl \
     && pecl install redis imagick \
     && docker-php-ext-enable redis imagick \
     && apk del .build-deps
@@ -75,13 +88,16 @@ RUN rm -f bootstrap/cache/*.php \
 # Remove dev-mode hot file (if it slipped through .dockerignore)
 RUN rm -f public/hot
 
-# Copy built assets from stage 1
+# Copy built assets from stage 1 (includes public/build/modules/)
 COPY --from=assets /build/public/build public/build
+
+# Backup modules to non-volume path (volume will mask /var/www/html/modules)
+RUN cp -a modules /opt/modules-image
 
 # Create directories and set permissions
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs modules bootstrap/cache \
     && chmod -R 775 storage modules bootstrap/cache \
-    && chown -R www-data:www-data storage modules bootstrap/cache
+    && chown -R www-data:www-data storage modules bootstrap/cache public/build
 
 # Copy production configs
 COPY docker/prod/nginx.conf /etc/nginx/http.d/default.conf

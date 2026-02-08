@@ -15,6 +15,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 final class ModuleLoader
 {
@@ -24,8 +25,7 @@ final class ModuleLoader
     public function __construct(
         private readonly Application $app,
         private readonly ModuleRepositoryInterface $repository,
-    ) {
-    }
+    ) {}
 
     /**
      * Boot all enabled modules.
@@ -35,7 +35,14 @@ final class ModuleLoader
         $modules = $this->getEnabledModules();
 
         foreach ($modules as $module) {
-            $this->bootModule($module);
+            try {
+                $this->bootModule($module);
+            } catch (\Throwable $e) {
+                Log::error('[ModuleLoader] Failed to boot module', [
+                    'module' => $module->name()->value,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 
@@ -46,6 +53,16 @@ final class ModuleLoader
     {
         $providerClass = $module->namespace().'\\'.$module->provider();
         $modulePath = $module->path();
+
+        // Skip if module directory doesn't exist on disk
+        if (! is_dir($modulePath)) {
+            Log::warning('[ModuleLoader] Module path not found, skipping', [
+                'module' => $module->name()->value,
+                'path' => $modulePath,
+            ]);
+
+            return;
+        }
 
         // Register autoloader for module namespace
         $this->registerAutoloader($module->namespace(), $modulePath.'/src');

@@ -68,6 +68,8 @@ return [
         'missing_manifest_field' => 'The :field field is required in module.json.',
         'module_already_exists' => 'A module with the name :name already exists.',
         'forbidden_module_name' => 'The name :name is reserved and cannot be used.',
+        'module_not_installed' => 'Module :name is not installed. Use the install option instead.',
+        'update_failed' => 'Failed to update module: :error.',
     ],
 
     // Filament admin interface
@@ -111,11 +113,11 @@ return [
             'discovered_at' => 'Discovered on',
         ],
         'install_form' => [
-            'title' => 'Install Module',
-            'description' => 'Upload a ZIP file containing the module to install.',
+            'title' => 'Install or update module',
+            'description' => 'Upload a ZIP file containing the module to install or update.',
             'file_label' => 'ZIP File',
             'file_help' => 'Maximum :size MB. Must contain a valid module.json file.',
-            'submit' => 'Install',
+            'submit' => 'Install / update',
             'cancel' => 'Cancel',
         ],
         'settings_page' => [
@@ -131,6 +133,7 @@ return [
             'enabled' => 'Module ":name" enabled successfully.',
             'disabled' => 'Module ":name" disabled successfully.',
             'installed' => 'Module ":name" installed successfully.',
+            'updated' => 'Module ":name" updated successfully to version :version.',
             'uninstalled' => 'Module ":name" uninstalled successfully.',
             'cannot_install' => 'Cannot install module: :error',
             'cannot_enable' => 'Cannot enable module: :error',

@@ -102,6 +102,22 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
+  redis:
+    image: redis:alpine
+    container_name: guildforge_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - guildforge_redis_data:/data
+    networks:
+      - guildforge
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   elasticsearch:
     image: elasticsearch:9.2.4
     container_name: guildforge_elasticsearch
@@ -143,6 +159,8 @@ networks:
 
 volumes:
   guildforge_db_data:
+    driver: local
+  guildforge_redis_data:
     driver: local
   guildforge_elasticsearch_data:
     driver: local

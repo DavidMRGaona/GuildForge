@@ -6,8 +6,10 @@ namespace Database\Seeders;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Discovers and enables all modules after a fresh migration.
@@ -30,6 +32,7 @@ final class ModulesSeeder extends Seeder
             // Skip if already enabled
             if ($module->isEnabled()) {
                 $this->runModuleSeeders($module->name()->toString());
+
                 continue;
             }
 
@@ -44,40 +47,22 @@ final class ModulesSeeder extends Seeder
     }
 
     /**
-     * Run all seeders found in a module's Database/Seeders directory.
+     * Run all seeders for a module by delegating to ModuleSeederRunner.
      */
     private function runModuleSeeders(string $moduleName): void
     {
-        $modulePath = config('modules.path').'/'.$moduleName;
-        $seedersPath = $modulePath.'/src/Database/Seeders';
+        $seederRunner = app(ModuleSeederRunner::class);
+        $repository = app(ModuleRepositoryInterface::class);
+        $module = $repository->findByName(new ModuleName($moduleName));
 
-        if (! is_dir($seedersPath)) {
+        if ($module === null) {
             return;
         }
 
-        // Get module namespace from module.json
-        $moduleJsonPath = $modulePath.'/module.json';
-        if (! file_exists($moduleJsonPath)) {
-            return;
-        }
-
-        $moduleConfig = json_decode((string) File::get($moduleJsonPath), true);
-        $namespace = $moduleConfig['namespace'] ?? null;
-
-        if ($namespace === null) {
-            return;
-        }
-
-        // Find all seeder files
-        $seederFiles = File::glob($seedersPath.'/*Seeder.php');
-
-        foreach ($seederFiles as $seederFile) {
-            $className = pathinfo($seederFile, PATHINFO_FILENAME);
-            $seederClass = $namespace.'\\Database\\Seeders\\'.$className;
-
-            if (class_exists($seederClass)) {
-                $this->call($seederClass);
-            }
+        try {
+            $seederRunner->run($module);
+        } catch (\Throwable $e) {
+            Log::warning("Failed to run seeders for module {$moduleName}: {$e->getMessage()}");
         }
     }
 }

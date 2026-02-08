@@ -24,6 +24,22 @@ services:
     depends_on:
       db-prod:
         condition: service_healthy
+      redis-prod:
+        condition: service_healthy
+
+  redis-prod:
+    image: redis:alpine
+    container_name: guildforge_redis_prod
+    restart: unless-stopped
+    volumes:
+      - guildforge_prod_redis_data:/data
+    networks:
+      - guildforge_prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   db-prod:
     image: postgres:16-alpine
@@ -51,6 +67,8 @@ volumes:
   guildforge_prod_db_data:
     driver: local
   guildforge_prod_storage:
+    driver: local
+  guildforge_prod_redis_data:
     driver: local
   guildforge_prod_modules:
     driver: local

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'path' => env('MODULES_PATH') ?: base_path('modules'),
+    'path' => base_path(env('MODULES_PATH') ?: 'modules'),
 
     /*
     |--------------------------------------------------------------------------

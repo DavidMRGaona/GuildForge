@@ -44,4 +44,28 @@ interface ModuleInstallerInterface
      * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
      */
     public function installFromZip(UploadedFile $file): ModuleManifestDTO;
+
+    /**
+     * Update an existing module from an uploaded ZIP file.
+     *
+     * Creates a backup, replaces the module files, copies pre-built assets,
+     * runs pending migrations and seeders, and updates the version in the DB.
+     *
+     * @return ModuleManifestDTO The updated module's manifest
+     *
+     * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
+     */
+    public function updateFromZip(UploadedFile $file): ModuleManifestDTO;
+
+    /**
+     * Check if a module with the given name exists in the database.
+     */
+    public function moduleExists(string $name): bool;
+
+    /**
+     * Extract and validate the manifest from a ZIP file without installing it.
+     *
+     * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
+     */
+    public function peekManifest(UploadedFile $file): ModuleManifestDTO;
 }
