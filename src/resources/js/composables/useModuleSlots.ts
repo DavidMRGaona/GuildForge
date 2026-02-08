@@ -151,12 +151,9 @@ async function loadDynamicComponent(
 /**
  * Resolve a component path to an async component.
  * First tries the build-time glob, then falls back to runtime loading.
- * Also injects any CSS files from the module's manifest (non-blocking).
+ * CSS injection only happens for runtime-loaded modules (static modules use Vite's built-in CSS handling).
  */
 function resolveComponent(module: string, componentPath: string): Component | null {
-    // Inject CSS from module manifest (non-blocking)
-    void injectModuleStyles(module);
-
     // Build the glob path: ../../../modules/{module}/resources/js/{componentPath}
     const globPath = `../../../modules/${module}/resources/js/${componentPath}`;
 
@@ -184,6 +181,8 @@ function resolveComponent(module: string, componentPath: string): Component | nu
             if (!result) {
                 throw new Error(`Component not found: ${module}/${componentPath}`);
             }
+            // Inject CSS only for runtime-loaded modules (manifest already cached by loadDynamicComponent)
+            void injectModuleStyles(module);
             return result;
         },
         delay: 0,
