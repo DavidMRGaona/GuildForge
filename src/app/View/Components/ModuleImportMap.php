@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\View\Components;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\View\Component;
 
 /**
@@ -29,30 +30,14 @@ final class ModuleImportMap extends Component
      * Maps bare import specifiers (vue, pinia, etc.) to the built
      * vendor-export entry points that properly re-export all symbols.
      *
+     * Uses Vite::asset() to resolve paths through the same mechanism
+     * as @vite(), making it resilient to manifest location changes
+     * across Vite versions.
+     *
      * @return array<string, string>
      */
     private function getImportMap(): array
     {
-        $manifestPath = public_path('build/.vite/manifest.json');
-
-        if (! file_exists($manifestPath)) {
-            return [];
-        }
-
-        $content = file_get_contents($manifestPath);
-
-        if ($content === false) {
-            return [];
-        }
-
-        /** @var array<string, array{file?: string}>|null $manifest */
-        $manifest = json_decode($content, true);
-
-        if ($manifest === null) {
-            return [];
-        }
-
-        // Map vendor-exports entry points to their import specifiers
         $mappings = [
             'resources/js/vendor-exports/vue.ts' => 'vue',
             'resources/js/vendor-exports/pinia.ts' => 'pinia',
@@ -63,8 +48,10 @@ final class ModuleImportMap extends Component
         $imports = [];
 
         foreach ($mappings as $entryPoint => $importSpecifier) {
-            if (isset($manifest[$entryPoint]['file'])) {
-                $imports[$importSpecifier] = '/build/' . $manifest[$entryPoint]['file'];
+            try {
+                $imports[$importSpecifier] = Vite::asset($entryPoint);
+            } catch (\Throwable) {
+                // Entry not in manifest or manifest not found — skip
             }
         }
 
