@@ -38,22 +38,46 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private ModuleMigrationRunner $migrationRunner,
         private ModuleSeederRunner $seederRunner,
         private Dispatcher $events,
-    ) {
-    }
+    ) {}
 
     public function discover(): ModuleCollection
     {
         $manifests = $this->discoveryService->discover();
-        $discovered = new ModuleCollection();
+        $discovered = new ModuleCollection;
 
         foreach ($manifests as $manifest) {
             $moduleName = new ModuleName($manifest->name);
 
             // Check if module already exists in database
             if ($this->repository->exists($moduleName)) {
-                // Get existing module
+                // Get existing module and sync version from manifest
                 $existing = $this->repository->findByName($moduleName);
                 if ($existing !== null) {
+                    $manifestVersion = ModuleVersion::fromString($manifest->version);
+                    if (! $existing->version()->isEqualTo($manifestVersion)) {
+                        $previousVersion = $existing->version()->value();
+                        $existing->updateVersion($manifestVersion);
+                        $this->repository->save($existing);
+
+                        // Run pending migrations and seeders for enabled+installed modules
+                        if ($existing->isEnabled() && $existing->isInstalled()) {
+                            try {
+                                $this->migrationRunner->run($existing);
+                                $this->seederRunner->run($existing);
+                            } catch (\Throwable $e) {
+                                Log::warning("Failed to run migrations/seeders after version change for module {$moduleName->value}", [
+                                    'previous_version' => $previousVersion,
+                                    'new_version' => $manifestVersion->value(),
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                        }
+
+                        Log::info("Module {$moduleName->value} version synced", [
+                            'from' => $previousVersion,
+                            'to' => $manifestVersion->value(),
+                        ]);
+                    }
                     $discovered->add($existing);
                 }
 
@@ -75,8 +99,8 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 requirements: $this->parseRequirements($manifest->requires),
                 status: ModuleStatus::Disabled,
                 enabledAt: null,
-                createdAt: new DateTimeImmutable(),
-                updatedAt: new DateTimeImmutable(),
+                createdAt: new DateTimeImmutable,
+                updatedAt: new DateTimeImmutable,
                 namespace: $manifest->namespace,
                 provider: $manifest->provider,
                 path: $modulesPath.'/'.$manifest->name,

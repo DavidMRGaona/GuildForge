@@ -207,24 +207,170 @@ TS;
         $this->assertNull($result);
     }
 
-    public function test_convert_single_to_double_quotes(): void
+    public function test_parse_typescript_locale_file_handles_colons_in_string_values(): void
     {
-        $reflection = new ReflectionClass(HandleInertiaRequests::class);
-        $method = $reflection->getMethod('convertSingleToDoubleQuotes');
-        $method->setAccessible(true);
+        $content = <<<'TS'
+export default {
+    generalOpeningAt: 'Apertura general: {date}',
+    publicOpeningAt: 'Apertura de inscripciones: {date}',
+    simple: 'Sin dos puntos',
+};
+TS;
 
-        // Simple case
-        $result = $method->invoke($this->middleware, "'hello'");
-        $this->assertSame('"hello"', $result);
+        $tempFile = tempnam(sys_get_temp_dir(), 'locale_');
+        file_put_contents($tempFile, $content);
 
-        // Mixed quotes - single inside double should stay
-        $result = $method->invoke($this->middleware, '"hello \'world\'"');
-        $this->assertSame('"hello \'world\'"', $result);
+        try {
+            $reflection = new ReflectionClass(HandleInertiaRequests::class);
+            $method = $reflection->getMethod('parseTypeScriptLocaleFile');
+            $method->setAccessible(true);
 
-        // Object with single quoted values
-        $input = "{'key': 'value', 'nested': {'inner': 'test'}}";
-        $result = $method->invoke($this->middleware, $input);
-        $this->assertSame('{"key": "value", "nested": {"inner": "test"}}', $result);
+            $result = $method->invoke($this->middleware, $tempFile);
+
+            $this->assertIsArray($result);
+            $this->assertSame('Apertura general: {date}', $result['generalOpeningAt']);
+            $this->assertSame('Apertura de inscripciones: {date}', $result['publicOpeningAt']);
+            $this->assertSame('Sin dos puntos', $result['simple']);
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    public function test_parse_typescript_locale_file_handles_multiple_colons_in_nested_structures(): void
+    {
+        $content = <<<'TS'
+export default {
+    eventActions: {
+        generalOpeningAt: 'Apertura general: {date}',
+        earlyAccessActiveFrom: 'Early access activo desde {date}',
+    },
+    registration: {
+        opensAt: 'Las inscripciones abren el {date}',
+        closesAt: 'Cierre: {date}',
+    },
+};
+TS;
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'locale_');
+        file_put_contents($tempFile, $content);
+
+        try {
+            $reflection = new ReflectionClass(HandleInertiaRequests::class);
+            $method = $reflection->getMethod('parseTypeScriptLocaleFile');
+            $method->setAccessible(true);
+
+            $result = $method->invoke($this->middleware, $tempFile);
+
+            $this->assertIsArray($result);
+            $this->assertSame('Apertura general: {date}', $result['eventActions']['generalOpeningAt']);
+            $this->assertSame('Early access activo desde {date}', $result['eventActions']['earlyAccessActiveFrom']);
+            $this->assertSame('Las inscripciones abren el {date}', $result['registration']['opensAt']);
+            $this->assertSame('Cierre: {date}', $result['registration']['closesAt']);
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    public function test_parse_typescript_locale_file_handles_urls_and_time_formats(): void
+    {
+        $content = <<<'TS'
+export default {
+    helpUrl: 'Visita https://example.com/help para más info',
+    time: 'La sesión empieza a las 14:30',
+    multiColon: 'Formato: HH:MM:SS',
+};
+TS;
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'locale_');
+        file_put_contents($tempFile, $content);
+
+        try {
+            $reflection = new ReflectionClass(HandleInertiaRequests::class);
+            $method = $reflection->getMethod('parseTypeScriptLocaleFile');
+            $method->setAccessible(true);
+
+            $result = $method->invoke($this->middleware, $tempFile);
+
+            $this->assertIsArray($result);
+            $this->assertSame('Visita https://example.com/help para más info', $result['helpUrl']);
+            $this->assertSame('La sesión empieza a las 14:30', $result['time']);
+            $this->assertSame('Formato: HH:MM:SS', $result['multiColon']);
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    public function test_parse_typescript_locale_file_handles_real_world_game_tables_structure(): void
+    {
+        $content = <<<'TS'
+export default {
+    gameTables: {
+        title: 'Mesas de rol',
+        eventActions: {
+            createTable: 'Crear partida',
+            generalOpeningAt: 'Apertura general: {date}',
+            publicOpeningAt: 'Apertura de inscripciones: {date}',
+        },
+        profile: {
+            tabLabel: 'Mesas',
+            upcoming: 'Próximas partidas',
+        },
+    },
+    campaigns: {
+        profile: {
+            tabLabel: 'Campañas',
+        },
+    },
+};
+TS;
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'locale_');
+        file_put_contents($tempFile, $content);
+
+        try {
+            $reflection = new ReflectionClass(HandleInertiaRequests::class);
+            $method = $reflection->getMethod('parseTypeScriptLocaleFile');
+            $method->setAccessible(true);
+
+            $result = $method->invoke($this->middleware, $tempFile);
+
+            $this->assertIsArray($result);
+            $this->assertSame('Mesas de rol', $result['gameTables']['title']);
+            $this->assertSame('Apertura general: {date}', $result['gameTables']['eventActions']['generalOpeningAt']);
+            $this->assertSame('Apertura de inscripciones: {date}', $result['gameTables']['eventActions']['publicOpeningAt']);
+            $this->assertSame('Mesas', $result['gameTables']['profile']['tabLabel']);
+            $this->assertSame('Campañas', $result['campaigns']['profile']['tabLabel']);
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    public function test_parse_typescript_locale_file_handles_comments(): void
+    {
+        $content = <<<'TS'
+export default {
+    // This is a comment
+    title: 'Mesas de rol',
+    subtitle: 'Partidas disponibles', // inline comment
+};
+TS;
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'locale_');
+        file_put_contents($tempFile, $content);
+
+        try {
+            $reflection = new ReflectionClass(HandleInertiaRequests::class);
+            $method = $reflection->getMethod('parseTypeScriptLocaleFile');
+            $method->setAccessible(true);
+
+            $result = $method->invoke($this->middleware, $tempFile);
+
+            $this->assertIsArray($result);
+            $this->assertSame('Mesas de rol', $result['title']);
+            $this->assertSame('Partidas disponibles', $result['subtitle']);
+        } finally {
+            unlink($tempFile);
+        }
     }
 
     public function test_admin_routes_bypass_middleware(): void

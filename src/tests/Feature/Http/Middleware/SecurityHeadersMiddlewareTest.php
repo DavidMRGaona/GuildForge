@@ -118,7 +118,15 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
-        $this->assertStringContainsString("style-src 'self' 'unsafe-inline'", $csp);
+        $this->assertStringContainsString("style-src 'self' 'unsafe-inline' https://fonts.bunny.net", $csp);
+    }
+
+    public function test_csp_font_src_allows_bunny_fonts(): void
+    {
+        $response = $this->get('/test-security-headers');
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertStringContainsString("font-src 'self' https://fonts.bunny.net", $csp);
     }
 
     public function test_it_does_not_add_hsts_header_for_non_secure_requests(): void
