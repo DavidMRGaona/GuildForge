@@ -189,6 +189,7 @@ jobs:
           cd -
 
           # Copy built assets back to module checkout
+          mkdir -p public
           cp -a guildforge-app/src/modules/$MODULE_NAME/public/build public/build
 
           # Verify
