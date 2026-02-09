@@ -157,18 +157,41 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
 
+      - name: Checkout main app for build context
+        if: hashFiles('package.json') != ''
+        uses: actions/checkout@v4
+        with:
+          repository: DavidMRGaona/GuildForge
+          path: guildforge-app
+          token: ${{ secrets.GITHUB_TOKEN }}
+          sparse-checkout: |
+            src/resources/js
+            src/public
+
       - name: Build Vue components
         if: hashFiles('package.json') != ''
         env:
           MODULE_NAME: ${{ inputs.module_name }}
         run: |
-          echo "Installing dependencies for module: $MODULE_NAME"
+          # Install main app deps (provides @headlessui/vue, etc. for @/ resolution)
+          cd guildforge-app/src
+          npm ci
+          cd -
+
+          # Copy module into main app structure
+          mkdir -p guildforge-app/src/modules/$MODULE_NAME
+          rsync -a --exclude='.git' --exclude='node_modules' --exclude='guildforge-app' . guildforge-app/src/modules/$MODULE_NAME/
+
+          # Build module in main app context (resolves @/ to main app source)
+          cd guildforge-app/src/modules/$MODULE_NAME
           npm install
+          MODULE_STANDALONE_OUTPUT=true npm run build
+          cd -
 
-          echo "Building Vue components..."
-          npm run build
+          # Copy built assets back to module checkout
+          cp -a guildforge-app/src/modules/$MODULE_NAME/public/build public/build
 
-          # Verify build output (standalone mode outputs to public/build/)
+          # Verify
           if [ -f "public/build/manifest.json" ]; then
             echo "Build successful. Assets in public/build/"
             ls -la "public/build/"
