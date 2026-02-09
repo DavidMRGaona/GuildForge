@@ -169,12 +169,10 @@ async function loadDynamicPage(
             const mod = await import(/* @vite-ignore */ pageUrl);
             return mod.default as DefineComponent;
         } catch (error) {
-            if (import.meta.env.DEV) {
-                console.warn(
-                    `[ModulePages] Failed to load page from ${pageUrl}:`,
-                    error instanceof Error ? error.message : error
-                );
-            }
+            console.warn(
+                `[ModulePages] Failed to load page from ${pageUrl}:`,
+                error instanceof Error ? error.message : error,
+            );
             return null;
         }
     })();
