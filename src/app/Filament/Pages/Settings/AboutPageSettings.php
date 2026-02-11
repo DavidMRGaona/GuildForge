@@ -291,6 +291,14 @@ final class AboutPageSettings extends Page implements HasForms
     }
 
     /**
+     * @return array<string>
+     */
+    protected function getEncryptedFields(): array
+    {
+        return [];
+    }
+
+    /**
      * Get the default values for settings.
      *
      * @return array<string, mixed>

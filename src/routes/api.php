@@ -2,5 +2,7 @@
 
 declare(strict_types=1);
 
-// API routes have been moved to web.php
-// This application uses Inertia.js and session-based authentication
+use App\Http\Controllers\Api\SesWebhookController;
+use Illuminate\Support\Facades\Route;
+
+Route::post('/webhooks/ses', SesWebhookController::class)->name('api.webhooks.ses');

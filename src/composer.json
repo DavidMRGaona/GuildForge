@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.4",
         "ext-zip": "*",
+        "aws/aws-sdk-php": "^3.369",
         "cloudinary-labs/cloudinary-laravel": "^3.0",
         "elasticsearch/elasticsearch": "^9.2",
         "filament/filament": "^3.2",
