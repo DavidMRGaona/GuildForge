@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch, ref, nextTick, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { X, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import type { Photo } from '@/types/models';
 import { buildLightboxImageUrl } from '@/utils/cloudinary';
 
@@ -133,20 +134,7 @@ onUnmounted(() => {
                     :aria-label="t('gallery.close')"
                     @click="emit('close')"
                 >
-                    <svg
-                        class="h-8 w-8"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
-                    </svg>
+                    <X class="h-8 w-8" aria-hidden="true" />
                 </button>
 
                 <!-- Previous arrow -->
@@ -157,20 +145,7 @@ onUnmounted(() => {
                     :aria-label="t('gallery.previous')"
                     @click="emit('prev')"
                 >
-                    <svg
-                        class="h-10 w-10"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 19l-7-7 7-7"
-                        />
-                    </svg>
+                    <ChevronLeft class="h-10 w-10" aria-hidden="true" />
                 </button>
 
                 <!-- Photo -->
@@ -189,20 +164,7 @@ onUnmounted(() => {
                     :aria-label="t('gallery.next')"
                     @click="emit('next')"
                 >
-                    <svg
-                        class="h-10 w-10"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 5l7 7-7 7"
-                        />
-                    </svg>
+                    <ChevronRight class="h-10 w-10" aria-hidden="true" />
                 </button>
 
                 <!-- Caption and counter -->

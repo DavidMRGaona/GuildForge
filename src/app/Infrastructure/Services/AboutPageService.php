@@ -39,6 +39,8 @@ final readonly class AboutPageService implements AboutPageServiceInterface
                 twitter: $this->formatSocialUrl($this->settings->get('social_twitter', '')),
                 discord: $this->formatSocialUrl($this->settings->get('social_discord', '')),
                 tiktok: $this->formatSocialUrl($this->settings->get('social_tiktok', '')),
+                bluesky: $this->formatSocialUrl($this->settings->get('social_bluesky', '')),
+                telegram: $this->formatSocialUrl($this->settings->get('social_telegram', '')),
             ),
             location: $this->settings->getLocationSettings(),
         );

@@ -223,6 +223,16 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->prefix('https://')
                                     ->placeholder('www.tiktok.com/@tu-usuario')
                                     ->maxLength(255),
+                                TextInput::make('social_bluesky')
+                                    ->label(__('filament.settings.social.bluesky'))
+                                    ->prefix('https://')
+                                    ->placeholder('bsky.app/profile/tu-usuario')
+                                    ->maxLength(255),
+                                TextInput::make('social_telegram')
+                                    ->label(__('filament.settings.social.telegram'))
+                                    ->prefix('https://')
+                                    ->placeholder('t.me/tu-grupo')
+                                    ->maxLength(255),
                             ])->columns(2),
                     ])
                     ->columnSpanFull(),
@@ -267,6 +277,8 @@ final class AboutPageSettings extends Page implements HasForms
             'social_twitter',
             'social_discord',
             'social_tiktok',
+            'social_bluesky',
+            'social_telegram',
         ];
     }
 
@@ -324,6 +336,8 @@ final class AboutPageSettings extends Page implements HasForms
             'social_twitter' => '',
             'social_discord' => '',
             'social_tiktok' => '',
+            'social_bluesky' => '',
+            'social_telegram' => '',
         ];
     }
 

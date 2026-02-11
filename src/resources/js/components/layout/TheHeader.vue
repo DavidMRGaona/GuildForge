@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
+import { Search, Sun, Moon, Monitor, Menu, X } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/useAppStore';
 import type { ThemeMode } from '@/stores/useAppStore';
 import { useAuth } from '@/composables/useAuth';
@@ -73,20 +74,7 @@ function selectTheme(mode: ThemeMode): void {
                         :aria-label="t('search.title')"
                         class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                        <svg
-                            class="h-5 w-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                        </svg>
+                        <Search class="h-5 w-5" aria-hidden="true" />
                     </Link>
 
                     <!-- Theme selector dropdown -->
@@ -99,54 +87,9 @@ function selectTheme(mode: ThemeMode): void {
                             @click="toggleThemeMenu"
                             @blur="closeThemeMenu"
                         >
-                            <!-- System icon -->
-                            <svg
-                                v-if="appStore.themeMode === 'system'"
-                                class="h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                />
-                            </svg>
-                            <!-- Sun icon -->
-                            <svg
-                                v-else-if="appStore.themeMode === 'light'"
-                                class="h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                                />
-                            </svg>
-                            <!-- Moon icon -->
-                            <svg
-                                v-else
-                                class="h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                                />
-                            </svg>
+                            <Monitor v-if="appStore.themeMode === 'system'" class="h-5 w-5" aria-hidden="true" />
+                            <Sun v-else-if="appStore.themeMode === 'light'" class="h-5 w-5" aria-hidden="true" />
+                            <Moon v-else class="h-5 w-5" aria-hidden="true" />
                         </button>
 
                         <!-- Dropdown menu -->
@@ -167,19 +110,7 @@ function selectTheme(mode: ThemeMode): void {
                                     role="menuitem"
                                     @click="selectTheme('system')"
                                 >
-                                    <svg
-                                        class="mr-3 h-4 w-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                        />
-                                    </svg>
+                                    <Monitor class="mr-3 h-4 w-4" />
                                     {{ t('layout.systemTheme') }}
                                 </button>
                                 <button
@@ -191,19 +122,7 @@ function selectTheme(mode: ThemeMode): void {
                                     role="menuitem"
                                     @click="selectTheme('light')"
                                 >
-                                    <svg
-                                        class="mr-3 h-4 w-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                                        />
-                                    </svg>
+                                    <Sun class="mr-3 h-4 w-4" />
                                     {{ t('layout.lightTheme') }}
                                 </button>
                                 <button
@@ -215,19 +134,7 @@ function selectTheme(mode: ThemeMode): void {
                                     role="menuitem"
                                     @click="selectTheme('dark')"
                                 >
-                                    <svg
-                                        class="mr-3 h-4 w-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                                        />
-                                    </svg>
+                                    <Moon class="mr-3 h-4 w-4" />
                                     {{ t('layout.darkTheme') }}
                                 </button>
                             </div>
@@ -250,38 +157,8 @@ function selectTheme(mode: ThemeMode): void {
                         <span class="sr-only">{{
                             isMobileMenuOpen ? t('layout.closeMenu') : t('layout.openMenu')
                         }}</span>
-                        <!-- Hamburger icon -->
-                        <svg
-                            v-if="!isMobileMenuOpen"
-                            class="h-6 w-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                            />
-                        </svg>
-                        <!-- Close icon -->
-                        <svg
-                            v-else
-                            class="h-6 w-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
+                        <Menu v-if="!isMobileMenuOpen" class="h-6 w-6" aria-hidden="true" />
+                        <X v-else class="h-6 w-6" aria-hidden="true" />
                     </button>
                 </div>
             </div>
@@ -298,20 +175,7 @@ function selectTheme(mode: ThemeMode): void {
                     class="flex items-center px-3 py-2 text-base font-medium text-base-secondary hover:bg-muted hover:text-base-primary rounded-md"
                     @click="closeMobileMenu"
                 >
-                    <svg
-                        class="mr-3 h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                    </svg>
+                    <Search class="mr-3 h-5 w-5" aria-hidden="true" />
                     {{ t('search.title') }}
                 </Link>
 
@@ -331,19 +195,7 @@ function selectTheme(mode: ThemeMode): void {
                             "
                             @click="selectTheme('system')"
                         >
-                            <svg
-                                class="mr-2 h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                />
-                            </svg>
+                            <Monitor class="mr-2 h-4 w-4" />
                             {{ t('layout.systemTheme') }}
                         </button>
                         <button
@@ -356,19 +208,7 @@ function selectTheme(mode: ThemeMode): void {
                             "
                             @click="selectTheme('light')"
                         >
-                            <svg
-                                class="mr-2 h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                                />
-                            </svg>
+                            <Sun class="mr-2 h-4 w-4" />
                             {{ t('layout.lightTheme') }}
                         </button>
                         <button
@@ -381,19 +221,7 @@ function selectTheme(mode: ThemeMode): void {
                             "
                             @click="selectTheme('dark')"
                         >
-                            <svg
-                                class="mr-2 h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                                />
-                            </svg>
+                            <Moon class="mr-2 h-4 w-4" />
                             {{ t('layout.darkTheme') }}
                         </button>
                     </div>

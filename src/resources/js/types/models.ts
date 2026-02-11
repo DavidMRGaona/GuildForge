@@ -202,4 +202,6 @@ export interface SocialMediaLinks {
     twitter?: string | undefined;
     discord?: string | undefined;
     tiktok?: string | undefined;
+    bluesky?: string | undefined;
+    telegram?: string | undefined;
 }

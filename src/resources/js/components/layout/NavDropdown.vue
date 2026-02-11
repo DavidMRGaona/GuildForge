@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import { ChevronDown } from 'lucide-vue-next';
 import type { MenuItem } from '@/types/navigation';
 
 interface Props {
@@ -68,20 +69,10 @@ function handleKeydown(event: KeyboardEvent): void {
             @click="toggleDropdown"
         >
             <span>{{ item.label }}</span>
-            <svg
+            <ChevronDown
                 class="h-4 w-4 transition-transform"
                 :class="{ 'rotate-180': isOpen }"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                />
-            </svg>
+            />
         </button>
 
         <!-- Dropdown menu (desktop) -->

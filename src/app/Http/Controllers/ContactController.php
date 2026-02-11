@@ -8,13 +8,13 @@ use App\Application\DTOs\ContactMessageDTO;
 use App\Application\Services\ContactServiceInterface;
 use App\Http\Requests\ContactFormRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 
 final class ContactController extends Controller
 {
     public function __construct(
         private readonly ContactServiceInterface $contactService,
-    ) {
-    }
+    ) {}
 
     public function __invoke(ContactFormRequest $request): RedirectResponse
     {
@@ -26,9 +26,15 @@ final class ContactController extends Controller
         /** @var array{name: string, email: string, message: string} $validated */
         $validated = $request->validated();
 
-        $this->contactService->sendContactMessage(
+        $sent = $this->contactService->sendContactMessage(
             ContactMessageDTO::fromArray($validated)
         );
+
+        if (! $sent) {
+            Log::warning('Contact form submitted but contact email is not configured.');
+
+            return back()->with('error', __('contact.error'));
+        }
 
         return back()->with('success', __('contact.success'));
     }

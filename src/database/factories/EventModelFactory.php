@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
@@ -27,8 +28,8 @@ final class EventModelFactory extends Factory
             'title' => $title,
             'slug' => Str::slug($title),
             'description' => $this->faker->paragraphs(3, true),
-            'start_date' => $startDate = $this->faker->dateTimeBetween('+1 week', '+3 months'),
-            'end_date' => (clone $startDate)->modify('+'.rand(0, 3).' days'),
+            'start_date' => $this->faker->dateTimeBetween('+1 week', '+3 months'),
+            'end_date' => fn (array $attr) => Carbon::parse($attr['start_date'])->addDays(rand(0, 3)),
             'location' => $this->faker->optional()->address(),
             'image_public_id' => null,
             'member_price' => $this->faker->optional(0.7)->randomFloat(2, 5, 50),
