@@ -10,7 +10,7 @@ import { useRoutes } from '@/composables/useRoutes';
 // Composables
 const { t } = useI18n();
 const notifications = useNotifications();
-const { success: flashSuccess } = useFlashMessages();
+const { success: flashSuccess, error: flashError } = useFlashMessages();
 const routes = useRoutes();
 
 // Form state
@@ -46,6 +46,17 @@ const submit = (): void => {
         >
             <p class="text-success text-sm">
                 {{ flashSuccess }}
+            </p>
+        </div>
+
+        <!-- Error message -->
+        <div
+            v-if="flashError"
+            class="mb-6 p-4 bg-error-light border border-error rounded-md"
+            role="alert"
+        >
+            <p class="text-error text-sm">
+                {{ flashError }}
             </p>
         </div>
 

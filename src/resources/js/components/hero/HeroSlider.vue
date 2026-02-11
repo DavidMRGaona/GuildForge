@@ -2,6 +2,7 @@
 import { computed, toRef } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import type { HeroSlide } from '@/types/models';
 import { useHeroSlider } from '@/composables/useHeroSlider';
 import { buildFullScreenHeroImageUrl } from '@/utils/cloudinary';
@@ -132,20 +133,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                     :aria-label="t('common.previous')"
                     @click="prev"
                 >
-                    <svg
-                        class="h-6 w-6"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 19l-7-7 7-7"
-                        />
-                    </svg>
+                    <ChevronLeft class="h-6 w-6" aria-hidden="true" />
                 </button>
 
                 <!-- Next arrow -->
@@ -155,20 +143,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                     :aria-label="t('common.next')"
                     @click="next"
                 >
-                    <svg
-                        class="h-6 w-6"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 5l7 7-7 7"
-                        />
-                    </svg>
+                    <ChevronRight class="h-6 w-6" aria-hidden="true" />
                 </button>
             </template>
 

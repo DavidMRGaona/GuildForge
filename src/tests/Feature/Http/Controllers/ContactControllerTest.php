@@ -316,6 +316,32 @@ final class ContactControllerTest extends TestCase
     }
 
     /**
+     * Verify contact form returns error when contact email is not configured.
+     */
+    public function test_contact_form_returns_error_when_email_not_configured(): void
+    {
+        // Arrange
+        Mail::fake();
+        // Do NOT set contact_email - leave it unconfigured
+
+        $formData = [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'message' => 'I would like to join your guild.',
+            'website' => '',
+        ];
+
+        // Act
+        $response = $this->post(route('contact.store'), $formData);
+
+        // Assert
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $response->assertSessionMissing('success');
+        Mail::assertNotSent(ContactFormMail::class);
+    }
+
+    /**
      * Verify email with special characters is validated correctly.
      */
     public function test_contact_form_validates_email_with_special_characters(): void

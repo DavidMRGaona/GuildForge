@@ -34,7 +34,7 @@ final readonly class SecurityHeadersMiddleware
             "default-src 'self'",
             $this->scriptSrc(),
             $this->styleSrc(),
-            "img-src 'self' https://res.cloudinary.com data:",
+            $this->imgSrc(),
             "font-src 'self' https://fonts.bunny.net data:",
             $this->connectSrc(),
             "frame-ancestors 'none'",
@@ -71,6 +71,17 @@ final readonly class SecurityHeadersMiddleware
         }
 
         return "style-src {$sources}";
+    }
+
+    private function imgSrc(): string
+    {
+        $sources = "'self' https://res.cloudinary.com https://*.tile.openstreetmap.org data:";
+
+        if (app()->environment('local')) {
+            $sources .= ' http://localhost:5173';
+        }
+
+        return "img-src {$sources}";
     }
 
     private function connectSrc(): string

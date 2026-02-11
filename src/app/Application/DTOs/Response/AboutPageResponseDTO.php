@@ -22,8 +22,7 @@ final readonly class AboutPageResponseDTO
         public array $joinSteps,
         public SocialLinksDTO $socialLinks,
         public LocationSettingsDTO $location,
-    ) {
-    }
+    ) {}
 
     /**
      * Convert to array for frontend consumption.
@@ -43,6 +42,8 @@ final readonly class AboutPageResponseDTO
      *     socialTwitter: string,
      *     socialDiscord: string,
      *     socialTiktok: string,
+     *     socialBluesky: string,
+     *     socialTelegram: string,
      *     location: array{name: string, address: string, lat: float, lng: float, zoom: int},
      * }
      */
@@ -69,6 +70,8 @@ final readonly class AboutPageResponseDTO
             'socialTwitter' => $this->socialLinks->twitter,
             'socialDiscord' => $this->socialLinks->discord,
             'socialTiktok' => $this->socialLinks->tiktok,
+            'socialBluesky' => $this->socialLinks->bluesky,
+            'socialTelegram' => $this->socialLinks->telegram,
             'location' => $this->location->toArray(),
         ];
     }

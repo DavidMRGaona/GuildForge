@@ -105,6 +105,14 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $this->assertStringContainsString('https://res.cloudinary.com', $csp);
     }
 
+    public function test_csp_allows_openstreetmap_tile_images(): void
+    {
+        $response = $this->get('/test-security-headers');
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertStringContainsString('https://*.tile.openstreetmap.org', $csp);
+    }
+
     public function test_csp_script_src_allows_unsafe_inline_for_livewire(): void
     {
         $response = $this->get('/test-security-headers');

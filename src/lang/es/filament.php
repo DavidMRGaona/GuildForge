@@ -219,6 +219,8 @@ return [
             'twitter' => 'X (Twitter)',
             'discord' => 'Discord',
             'tiktok' => 'TikTok',
+            'bluesky' => 'Bluesky',
+            'telegram' => 'Telegram',
         ],
         'auth' => [
             'section_public' => 'Acceso público',

@@ -2,6 +2,7 @@
 import { ref, watch, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
+import { Search } from 'lucide-vue-next';
 
 interface Props {
     initialQuery?: string;
@@ -59,20 +60,10 @@ onMounted(() => {
                 :aria-label="t('search.placeholder')"
                 class="w-full rounded-lg border border-neutral-300 py-2 pl-10 pr-4 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 dark:border-neutral-600 dark:bg-surface dark:text-white"
             />
-            <svg
+            <Search
                 class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400 dark:text-neutral-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
                 aria-hidden="true"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-            </svg>
+            />
         </div>
         <p
             v-if="query.length > 0 && query.length < 2"
