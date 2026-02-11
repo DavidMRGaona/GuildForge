@@ -126,6 +126,14 @@ final class SiteSettings extends Page implements HasForms
     }
 
     /**
+     * @return array<string>
+     */
+    protected function getEncryptedFields(): array
+    {
+        return [];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function getDefaultSettings(): array

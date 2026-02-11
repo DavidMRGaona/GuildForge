@@ -7,7 +7,9 @@ namespace App\Infrastructure\Services;
 use App\Application\DTOs\Response\LocationSettingsDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 
 final class SettingsService implements SettingsServiceInterface
@@ -24,6 +26,32 @@ final class SettingsService implements SettingsServiceInterface
         $settings = $this->getAllSettings();
 
         return $settings[$key] ?? $default;
+    }
+
+    /**
+     * Get an encrypted setting, decrypting it on read.
+     */
+    public function getEncrypted(string $key, mixed $default = null): mixed
+    {
+        $value = $this->get($key);
+
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        try {
+            return Crypt::decryptString((string) $value);
+        } catch (DecryptException) {
+            return $default;
+        }
+    }
+
+    /**
+     * Set a setting, encrypting the value before storage.
+     */
+    public function setEncrypted(string $key, string $value): void
+    {
+        $this->set($key, Crypt::encryptString($value));
     }
 
     /**

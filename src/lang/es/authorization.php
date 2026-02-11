@@ -12,6 +12,7 @@ return [
         'hero_slides' => 'Slides del hero',
         'tags' => 'Etiquetas',
         'settings' => 'Configuración',
+        'mail' => 'Correo electrónico',
         'admin' => 'Administración',
     ],
 
@@ -22,6 +23,8 @@ return [
         'update' => 'Editar',
         'delete' => 'Eliminar',
         'manage' => 'Gestionar',
+        'configure' => 'Configurar',
+        'view_stats' => 'Ver estadísticas',
         'access' => 'Acceder',
     ],
 
@@ -75,6 +78,10 @@ return [
         ],
         'settings' => [
             'manage' => 'Gestionar configuración del sitio',
+        ],
+        'mail' => [
+            'configure' => 'Configurar correo electrónico',
+            'view_stats' => 'Ver estadísticas de correo',
         ],
         'admin' => [
             'access' => 'Acceder al panel de administración',

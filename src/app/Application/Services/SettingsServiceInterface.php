@@ -24,6 +24,16 @@ interface SettingsServiceInterface
     public function getLocationSettings(): LocationSettingsDTO;
 
     /**
+     * Get an encrypted setting, decrypting it on read.
+     */
+    public function getEncrypted(string $key, mixed $default = null): mixed;
+
+    /**
+     * Set a setting, encrypting the value before storage.
+     */
+    public function setEncrypted(string $key, string $value): void;
+
+    /**
      * Clear the settings cache.
      */
     public function clearCache(): void;

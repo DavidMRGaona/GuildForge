@@ -48,6 +48,13 @@ trait ManagesPageSettings
     abstract protected function getImageFields(): array;
 
     /**
+     * Get the list of field names that should be encrypted at rest.
+     *
+     * @return array<string>
+     */
+    abstract protected function getEncryptedFields(): array;
+
+    /**
      * Get the default values for settings.
      *
      * When a setting has not been saved yet, the default value will be used
@@ -68,9 +75,18 @@ trait ManagesPageSettings
     {
         $data = [];
         $jsonFields = $this->getJsonFields();
+        $encryptedFields = $this->getEncryptedFields();
         $defaults = $this->getDefaultSettings();
 
         foreach ($this->getSettingsKeys() as $key) {
+            // Encrypted fields use getEncrypted() for transparent decryption
+            if (in_array($key, $encryptedFields, true)) {
+                $value = $settingsService->getEncrypted($key, $defaults[$key] ?? '');
+                $data[$key] = (string) $value;
+
+                continue;
+            }
+
             $value = $settingsService->get($key, null);
 
             // If setting has not been saved, use default
@@ -99,6 +115,7 @@ trait ManagesPageSettings
     {
         $jsonFields = $this->getJsonFields();
         $imageFields = $this->getImageFields();
+        $encryptedFields = $this->getEncryptedFields();
 
         foreach ($this->getSettingsKeys() as $key) {
             $value = $formData[$key] ?? '';
@@ -116,6 +133,18 @@ trait ManagesPageSettings
             if (in_array($key, $jsonFields, true)) {
                 $jsonValue = $this->encodeJsonField(is_array($value) ? $value : []);
                 $settingsService->set($key, $jsonValue);
+
+                continue;
+            }
+
+            // Handle encrypted fields
+            if (in_array($key, $encryptedFields, true)) {
+                $stringValue = (string) $value;
+                if ($stringValue !== '') {
+                    $settingsService->setEncrypted($key, $stringValue);
+                } else {
+                    $settingsService->set($key, '');
+                }
 
                 continue;
             }

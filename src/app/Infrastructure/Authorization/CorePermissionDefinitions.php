@@ -259,6 +259,20 @@ final class CorePermissionDefinitions
                 action: 'manage',
             ),
 
+            // Mail
+            new PermissionDefinitionDTO(
+                key: 'mail.configure',
+                label: __('authorization.permissions.mail.configure'),
+                resource: 'mail',
+                action: 'configure',
+            ),
+            new PermissionDefinitionDTO(
+                key: 'mail.view_stats',
+                label: __('authorization.permissions.mail.view_stats'),
+                resource: 'mail',
+                action: 'view_stats',
+            ),
+
             // Admin panel access
             new PermissionDefinitionDTO(
                 key: 'admin.access',

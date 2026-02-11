@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Mail\Services\EmailQuotaServiceInterface;
+use App\Application\Mail\Services\MailConfigurationServiceInterface;
+use App\Application\Mail\Services\MailStatisticsServiceInterface;
+use App\Application\Mail\Services\MailTestServiceInterface;
 use App\Application\Modules\Services\ModuleContextServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
@@ -41,6 +45,7 @@ use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
+use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Domain\Repositories\ArticleRepositoryInterface;
@@ -51,6 +56,14 @@ use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
+use App\Infrastructure\Mail\Listeners\CheckQuotaBeforeSending;
+use App\Infrastructure\Mail\Listeners\LogSentEmail;
+use App\Infrastructure\Mail\Services\EmailQuotaService;
+use App\Infrastructure\Mail\Services\MailConfigurationService;
+use App\Infrastructure\Mail\Services\MailStatisticsService;
+use App\Infrastructure\Mail\Services\MailTestService;
+use App\Infrastructure\Mail\Ses\SnsMessageValidator;
+use App\Infrastructure\Mail\Ses\SnsMessageValidatorInterface;
 use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
 use App\Infrastructure\Modules\Services\ModuleContextService;
 use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
@@ -78,6 +91,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentArticleRepository;
+use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentEmailLogRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentEventRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentGalleryRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
@@ -120,6 +134,8 @@ use Cloudinary\Cloudinary;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -156,6 +172,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(LegalPageServiceInterface::class, LegalPageService::class);
         $this->app->singleton(ContactServiceInterface::class, ContactService::class);
 
+        // Mail system bindings
+        $this->app->singleton(MailConfigurationServiceInterface::class, MailConfigurationService::class);
+        $this->app->singleton(MailTestServiceInterface::class, MailTestService::class);
+        $this->app->bind(EmailLogRepositoryInterface::class, EloquentEmailLogRepository::class);
+        $this->app->singleton(EmailQuotaServiceInterface::class, EmailQuotaService::class);
+        $this->app->singleton(MailStatisticsServiceInterface::class, MailStatisticsService::class);
+        $this->app->singleton(SnsMessageValidatorInterface::class, SnsMessageValidator::class);
+
         // Log context provider (uses request scoped binding)
         $this->app->bind(LogContextProviderInterface::class, function ($app) {
             return new HttpLogContextProvider($app['request'] ?? null);
@@ -189,7 +213,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ModuleDependencyResolver::class, function () {
-            return new ModuleDependencyResolver();
+            return new ModuleDependencyResolver;
         });
 
         $this->app->singleton(ModuleMigrationRunner::class, function ($app) {
@@ -301,6 +325,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Domain\Modules\Events\ModuleUninstalled::class,
             \App\Infrastructure\Navigation\Listeners\DeleteMenuItemsOnModuleUninstalled::class,
         );
+
+        // Email quota enforcement: check quota before sending
+        Event::listen(MessageSending::class, CheckQuotaBeforeSending::class);
+
+        // Email logging: log every sent email to the database
+        Event::listen(MessageSent::class, LogSentEmail::class);
 
         // Override cloudinary driver with a safe adapter that:
         // - Generates URLs directly (no Admin API calls)
