@@ -6,12 +6,14 @@ namespace App\Infrastructure\Modules\Listeners;
 
 use App\Domain\Modules\Events\ModuleDisabled;
 use App\Domain\Modules\Events\ModuleEnabled;
+use App\Domain\Modules\Events\ModuleInstalled;
+use App\Domain\Modules\Events\ModuleUpdated;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Clears and rebuilds Laravel caches when a module is enabled or disabled.
+ * Clears and rebuilds Laravel caches when a module is enabled, disabled, installed, or updated.
  *
  * Required in production where routes are cached. Without clearing and
  * rebuilding the cache, Filament resources from newly enabled modules
@@ -19,7 +21,7 @@ use Illuminate\Support\Facades\Log;
  */
 final class ClearCachesOnModuleChange
 {
-    public function handle(ModuleEnabled|ModuleDisabled $event): void
+    public function handle(ModuleEnabled|ModuleDisabled|ModuleInstalled|ModuleUpdated $event): void
     {
         // In tests, caches (routes, views, config) are not active, so clearing
         // and rebuilding is unnecessary and destroys compiled Blade views
