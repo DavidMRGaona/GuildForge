@@ -322,6 +322,14 @@ class AppServiceProvider extends ServiceProvider
             \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
         );
         Event::listen(
+            \App\Domain\Modules\Events\ModuleInstalled::class,
+            \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+        );
+        Event::listen(
+            \App\Domain\Modules\Events\ModuleUpdated::class,
+            \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+        );
+        Event::listen(
             \App\Domain\Modules\Events\ModuleUninstalled::class,
             \App\Infrastructure\Navigation\Listeners\DeleteMenuItemsOnModuleUninstalled::class,
         );
