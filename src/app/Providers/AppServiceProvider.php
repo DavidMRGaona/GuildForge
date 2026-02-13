@@ -283,6 +283,14 @@ class AppServiceProvider extends ServiceProvider
             return new UuidEloquentUserProvider($app['hash'], $config['model']);
         });
 
+        // Rate limiter for login: 5 attempts per minute per IP + email combo
+        RateLimiter::for(
+            'login',
+            static fn (Request $request) => Limit::perMinute(5)->by(
+                ($request->input('email', '') ?: '') . '|' . ($request->ip() ?? 'unknown')
+            )
+        );
+
         // Rate limiter for contact form: 3 submissions per minute per IP
         RateLimiter::for(
             'contact',
