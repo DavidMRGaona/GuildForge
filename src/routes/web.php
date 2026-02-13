@@ -46,16 +46,16 @@ Route::get('/{slug}', [LegalPageController::class, 'show'])
 
 // Guest routes
 Route::middleware('guest')->group(function (): void {
-    // Registration (with rate limiting)
-    Route::middleware(['registration.enabled', 'throttle:5,1'])->group(function (): void {
+    // Registration (rate limiting only on POST to avoid counting page views)
+    Route::middleware('registration.enabled')->group(function (): void {
         Route::get('/registro', [RegisterController::class, 'create'])->name('register');
-        Route::post('/registro', [RegisterController::class, 'store']);
+        Route::post('/registro', [RegisterController::class, 'store'])->middleware('throttle:5,1');
     });
 
-    // Login (with rate limiting)
-    Route::middleware(['login.enabled', 'throttle:5,1'])->group(function (): void {
+    // Login (rate limiting only on POST to avoid counting page views)
+    Route::middleware('login.enabled')->group(function (): void {
         Route::get('/iniciar-sesion', [LoginController::class, 'create'])->name('login');
-        Route::post('/iniciar-sesion', [LoginController::class, 'store']);
+        Route::post('/iniciar-sesion', [LoginController::class, 'store'])->middleware('throttle:login');
     });
 
     // Password reset
