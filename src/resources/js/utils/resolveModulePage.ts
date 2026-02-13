@@ -169,9 +169,21 @@ async function loadDynamicPage(
             const mod = await import(/* @vite-ignore */ pageUrl);
             return mod.default as DefineComponent;
         } catch (error) {
-            console.warn(
-                `[ModulePages] Failed to load page from ${pageUrl}:`,
-                error instanceof Error ? error.message : error,
+            const isChunkError =
+                error instanceof Error &&
+                (error.message.includes('Failed to fetch') ||
+                    error.message.includes('Loading chunk') ||
+                    error.message.includes('Loading CSS chunk'));
+
+            console.error(
+                `[ModulePages] Failed to load page:`,
+                `\n  Module: ${moduleName}`,
+                `\n  Page: ${pagePath}`,
+                `\n  URL: ${pageUrl}`,
+                `\n  Error: ${error instanceof Error ? error.message : error}`,
+                isChunkError
+                    ? `\n  Hint: This may be caused by a stale chunk reference after a deploy. A page reload should fix it.`
+                    : '',
             );
             return null;
         }
@@ -242,6 +254,16 @@ export function createPageResolver(options: ResolveOptions) {
                 return dynamicPageRelative;
             }
 
+            console.error(
+                `[ModulePages] All resolution strategies failed for page "${name}":`,
+                `\n  Module: ${moduleName}`,
+                `\n  Tried glob paths: ${modulePath}, ${alternativePath}`,
+                `\n  Tried runtime manifest for: ${name}, ${relativeName}`,
+                `\n  Available glob keys:`,
+                Object.keys(options.modulePages)
+                    .filter((k) => k.includes(moduleName))
+                    .join(', ') || '(none for this module)',
+            );
             throw new Error(
                 `Module page not found: ${name}. Looked in module "${moduleName}" for ${modulePath}, ${alternativePath}, and runtime manifest.`
             );
