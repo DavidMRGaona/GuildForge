@@ -164,10 +164,13 @@ function resolveComponent(module: string, componentPath: string): Component | nu
             loader: staticLoader,
             delay: 0,
             timeout: 10000,
-            onError: (error, _retry, fail) => {
+            onError: (error, _retry, fail, attempts) => {
                 console.error(
-                    `[ModuleSlots] Failed to load component: ${module}/${componentPath}`,
-                    error
+                    `[ModuleSlots] Failed to load static component (attempt ${attempts}):`,
+                    `\n  Module: ${module}`,
+                    `\n  Component: ${componentPath}`,
+                    `\n  Glob path: ${globPath}`,
+                    `\n  Error: ${error instanceof Error ? error.message : error}`,
                 );
                 fail();
             },
@@ -187,10 +190,12 @@ function resolveComponent(module: string, componentPath: string): Component | nu
         },
         delay: 0,
         timeout: 15000, // Slightly longer timeout for network requests
-        onError: (error, _retry, fail) => {
+        onError: (error, _retry, fail, attempts) => {
             console.error(
-                `[ModuleSlots] Failed to load component: ${module}/${componentPath}`,
-                error
+                `[ModuleSlots] Failed to load dynamic component (attempt ${attempts}):`,
+                `\n  Module: ${module}`,
+                `\n  Component: ${componentPath}`,
+                `\n  Error: ${error instanceof Error ? error.message : error}`,
             );
             fail();
         },
