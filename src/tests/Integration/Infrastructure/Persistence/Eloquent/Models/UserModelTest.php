@@ -103,4 +103,47 @@ final class UserModelTest extends TestCase
 
         $this->assertFalse($user->isAdmin());
     }
+
+    public function test_it_normalizes_email_to_lowercase_on_create(): void
+    {
+        $user = UserModel::factory()->create([
+            'email' => 'John.Doe@Example.COM',
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'john.doe@example.com',
+        ]);
+    }
+
+    public function test_it_normalizes_email_to_lowercase_on_update(): void
+    {
+        $user = UserModel::factory()->create([
+            'email' => 'original@example.com',
+        ]);
+
+        $user->update(['email' => 'UPDATED@EXAMPLE.COM']);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'updated@example.com',
+        ]);
+    }
+
+    public function test_it_normalizes_email_to_lowercase_via_mass_assignment(): void
+    {
+        $user = UserModel::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'name' => 'Mass Assign User',
+            'display_name' => 'Mass Assign',
+            'email' => 'MASS.ASSIGN@EXAMPLE.COM',
+            'password' => 'password',
+            'role' => UserRole::Member,
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'mass.assign@example.com',
+        ]);
+    }
 }

@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Carbon;
 
 /**
@@ -119,6 +120,18 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
             'user_id',
             'role_id'
         )->withTimestamps();
+    }
+
+    /**
+     * Normalize email to lowercase to ensure case-insensitive lookups on PostgreSQL.
+     *
+     * @return Attribute<string, string>
+     */
+    protected function email(): Attribute
+    {
+        return Attribute::make(
+            set: fn (string $value) => strtolower($value),
+        );
     }
 
     protected static function newFactory(): UserFactory
