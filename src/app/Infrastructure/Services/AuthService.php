@@ -64,7 +64,7 @@ final readonly class AuthService implements AuthServiceInterface
     public function attemptLogin(string $email, string $password, bool $remember = false): bool
     {
         $result = Auth::attempt([
-            'email' => $email,
+            'email' => strtolower($email),
             'password' => $password,
         ], $remember);
 
