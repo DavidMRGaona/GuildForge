@@ -25,6 +25,7 @@ final class GalleryResource extends JsonResource
             'title' => $this->resource->title,
             'slug' => $this->resource->slug,
             'description' => $this->resource->description,
+            'coverImagePublicId' => $this->resource->coverImagePublicId,
             'isPublished' => $this->resource->isPublished,
             'isFeatured' => $this->resource->isFeatured,
             'photoCount' => $this->resource->photoCount,

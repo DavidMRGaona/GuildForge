@@ -125,6 +125,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             title: $model->title,
             slug: $model->slug,
             description: $model->description,
+            coverImagePublicId: $model->cover_image_public_id,
             isPublished: $model->is_published,
             isFeatured: $model->is_featured,
             photoCount: $model->photos_count ?? $model->photos()->count(),

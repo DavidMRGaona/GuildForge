@@ -16,6 +16,7 @@ final readonly class GalleryResponseDTO
         public string $title,
         public string $slug,
         public ?string $description,
+        public ?string $coverImagePublicId,
         public bool $isPublished,
         public bool $isFeatured,
         public int $photoCount,
