@@ -15,6 +15,7 @@ export default defineConfig({
                 'resources/js/vendor-exports/pinia.ts',
                 'resources/js/vendor-exports/vue-i18n.ts',
                 'resources/js/vendor-exports/inertia.ts',
+                'resources/js/vendor-exports/unhead.ts',
             ],
             refresh: true,
         }),
