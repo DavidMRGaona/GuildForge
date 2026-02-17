@@ -150,14 +150,42 @@ async function loadDynamicComponent(
 
 /**
  * Resolve a component path to an async component.
- * First tries the build-time glob, then falls back to runtime loading.
- * CSS injection only happens for runtime-loaded modules (static modules use Vite's built-in CSS handling).
+ *
+ * In production, always uses manifest-based loading from the module's own build.
+ * The build-time glob creates chunks in the main app's output with different content
+ * hashes than the module's independent build, causing 404s when builds are out of sync.
+ *
+ * In development, tries the build-time glob first (HMR support), then falls back
+ * to runtime loading.
  */
 function resolveComponent(module: string, componentPath: string): Component | null {
-    // Build the glob path: ../../../modules/{module}/resources/js/{componentPath}
-    const globPath = `../../../modules/${module}/resources/js/${componentPath}`;
+    // In production, always use manifest-based loading from the module's own build.
+    if (!import.meta.env.DEV) {
+        return defineAsyncComponent({
+            loader: async () => {
+                const result = await loadDynamicComponent(module, componentPath);
+                if (!result) {
+                    throw new Error(`Component not found: ${module}/${componentPath}`);
+                }
+                void injectModuleStyles(module);
+                return result;
+            },
+            delay: 0,
+            timeout: 15000,
+            onError: (error, _retry, fail, attempts) => {
+                console.error(
+                    `[ModuleSlots] Failed to load component (attempt ${attempts}):`,
+                    `\n  Module: ${module}`,
+                    `\n  Component: ${componentPath}`,
+                    `\n  Error: ${error instanceof Error ? error.message : error}`,
+                );
+                fail();
+            },
+        });
+    }
 
-    // Try build-time glob first (fastest, for modules present at build time)
+    // Development: try build-time glob first (fastest, HMR support)
+    const globPath = `../../../modules/${module}/resources/js/${componentPath}`;
     const staticLoader = moduleComponents[globPath];
     if (staticLoader) {
         return defineAsyncComponent({
@@ -177,19 +205,18 @@ function resolveComponent(module: string, componentPath: string): Component | nu
         });
     }
 
-    // Fallback: try runtime dynamic loading for modules installed after build
+    // Development fallback: runtime dynamic loading
     return defineAsyncComponent({
         loader: async () => {
             const result = await loadDynamicComponent(module, componentPath);
             if (!result) {
                 throw new Error(`Component not found: ${module}/${componentPath}`);
             }
-            // Inject CSS only for runtime-loaded modules (manifest already cached by loadDynamicComponent)
             void injectModuleStyles(module);
             return result;
         },
         delay: 0,
-        timeout: 15000, // Slightly longer timeout for network requests
+        timeout: 15000,
         onError: (error, _retry, fail, attempts) => {
             console.error(
                 `[ModuleSlots] Failed to load dynamic component (attempt ${attempts}):`,
