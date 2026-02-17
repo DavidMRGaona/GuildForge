@@ -6,9 +6,11 @@ import type { SlotRegistration, SlotPosition } from '@/types/slots';
 // These modules are discovered at build time - modules installed after build
 // will be loaded via the runtime fallback mechanism
 // Path: from composables/ -> js/ -> resources/ -> src/ -> modules/
-const moduleComponents = import.meta.glob<{ default: Component }>(
-    '../../../modules/*/resources/js/components/**/*.vue'
-);
+const moduleComponents: Record<string, () => Promise<{ default: Component }>> = import.meta.env.DEV
+    ? import.meta.glob<{ default: Component }>(
+        '../../../modules/*/resources/js/components/**/*.vue'
+    )
+    : {};
 
 // Cache for dynamically loaded module components (runtime fallback)
 const dynamicComponentCache = new Map<string, Promise<{ default: Component }>>();
