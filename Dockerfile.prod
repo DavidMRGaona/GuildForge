@@ -84,6 +84,7 @@ COPY src/composer.json src/composer.lock ./
 
 # Install PHP dependencies (cached if composer.* unchanged)
 RUN --mount=type=cache,target=/root/.composer/cache \
+    mkdir -p /root/.composer/cache/files /root/.composer/cache/vcs /root/.composer/cache/repo && \
     composer install --no-dev --optimize-autoloader --no-scripts --no-interaction --no-autoloader
 
 # Copy PHP source code
