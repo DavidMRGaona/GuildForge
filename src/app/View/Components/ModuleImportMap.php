@@ -11,7 +11,7 @@ use Illuminate\View\Component;
 /**
  * Generates an import map for module externals.
  *
- * Modules are built with vue, pinia, vue-i18n, and @inertiajs/vue3 marked as
+ * Modules are built with vue, pinia, vue-i18n, @inertiajs/vue3, and @unhead/vue marked as
  * external dependencies. The browser needs an import map to resolve these
  * bare import specifiers to the actual vendor chunk files from the main app.
  */
@@ -27,7 +27,7 @@ final class ModuleImportMap extends Component
     /**
      * Build import map from the main app's Vite manifest.
      *
-     * Maps bare import specifiers (vue, pinia, vue-i18n, @inertiajs/vue3)
+     * Maps bare import specifiers (vue, pinia, vue-i18n, @inertiajs/vue3, @unhead/vue)
      * to the built vendor-export entry points that re-export all symbols.
      *
      * Uses Vite::asset() to resolve paths through the same mechanism
@@ -42,6 +42,7 @@ final class ModuleImportMap extends Component
             'resources/js/vendor-exports/pinia.ts' => 'pinia',
             'resources/js/vendor-exports/vue-i18n.ts' => 'vue-i18n',
             'resources/js/vendor-exports/inertia.ts' => '@inertiajs/vue3',
+            'resources/js/vendor-exports/unhead.ts' => '@unhead/vue',
         ];
 
         $imports = [];

@@ -40,6 +40,10 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/inertia.ts')
             ->andThrow(new \Exception('Not found'));
 
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/unhead.ts')
+            ->andThrow(new \Exception('Not found'));
+
         $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
@@ -64,6 +68,10 @@ final class ModuleImportMapTest extends TestCase
 
         Vite::shouldReceive('asset')
             ->with('resources/js/vendor-exports/inertia.ts')
+            ->andThrow(new \Exception('Not found'));
+
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/unhead.ts')
             ->andThrow(new \Exception('Not found'));
 
         $component = new ModuleImportMap();
@@ -92,12 +100,46 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/inertia.ts')
             ->andReturn('/build/assets/inertia-GHI789.js');
 
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/unhead.ts')
+            ->andThrow(new \Exception('Not found'));
+
         $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
 
         $this->assertStringContainsString('<script type="importmap">', $html);
         $this->assertStringContainsString('"@inertiajs/vue3": "/build/assets/inertia-GHI789.js"', $html);
+    }
+
+    public function test_returns_import_map_with_unhead_export(): void
+    {
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/vue.ts')
+            ->andThrow(new \Exception('Not found'));
+
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/pinia.ts')
+            ->andThrow(new \Exception('Not found'));
+
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/vue-i18n.ts')
+            ->andThrow(new \Exception('Not found'));
+
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/inertia.ts')
+            ->andThrow(new \Exception('Not found'));
+
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/unhead.ts')
+            ->andReturn('/build/assets/unhead-MNO345.js');
+
+        $component = new ModuleImportMap();
+        $view = $component->render();
+        $html = $view->render();
+
+        $this->assertStringContainsString('<script type="importmap">', $html);
+        $this->assertStringContainsString('"@unhead/vue": "/build/assets/unhead-MNO345.js"', $html);
     }
 
     public function test_returns_complete_import_map_with_all_exports(): void
@@ -118,6 +160,10 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/inertia.ts')
             ->andReturn('/build/assets/inertia-JKL012.js');
 
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/unhead.ts')
+            ->andReturn('/build/assets/unhead-MNO345.js');
+
         $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
@@ -126,6 +172,7 @@ final class ModuleImportMapTest extends TestCase
         $this->assertStringContainsString('"pinia": "/build/assets/pinia-DEF456.js"', $html);
         $this->assertStringContainsString('"vue-i18n": "/build/assets/vue-i18n-GHI789.js"', $html);
         $this->assertStringContainsString('"@inertiajs/vue3": "/build/assets/inertia-JKL012.js"', $html);
+        $this->assertStringContainsString('"@unhead/vue": "/build/assets/unhead-MNO345.js"', $html);
     }
 
     public function test_handles_errors_gracefully(): void
@@ -146,6 +193,10 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/inertia.ts')
             ->andReturn('/build/assets/inertia-JKL012.js');
 
+        Vite::shouldReceive('asset')
+            ->with('resources/js/vendor-exports/unhead.ts')
+            ->andReturn('/build/assets/unhead-MNO345.js');
+
         $component = new ModuleImportMap();
         $view = $component->render();
         $html = $view->render();
@@ -154,5 +205,6 @@ final class ModuleImportMapTest extends TestCase
         $this->assertStringNotContainsString('"pinia"', $html);
         $this->assertStringNotContainsString('"vue-i18n"', $html);
         $this->assertStringContainsString('"@inertiajs/vue3": "/build/assets/inertia-JKL012.js"', $html);
+        $this->assertStringContainsString('"@unhead/vue": "/build/assets/unhead-MNO345.js"', $html);
     }
 }
