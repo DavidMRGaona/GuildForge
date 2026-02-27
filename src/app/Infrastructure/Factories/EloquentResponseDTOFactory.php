@@ -58,6 +58,7 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             updatedAt: $model->updated_at !== null
                 ? DateTimeImmutable::createFromMutable($model->updated_at)
                 : null,
+            downloadLinks: $model->download_links ?? [],
             tags: $tags,
         );
     }

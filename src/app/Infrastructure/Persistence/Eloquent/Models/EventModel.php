@@ -27,6 +27,7 @@ use Modules\GameTables\Infrastructure\Persistence\Eloquent\Models\GameTableModel
  * @property string|null $image_public_id
  * @property string|null $member_price
  * @property string|null $non_member_price
+ * @property array<array{label: string, url: string, description: string}>|null $download_links
  * @property bool $is_published
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -58,6 +59,7 @@ final class EventModel extends Model
         'member_price',
         'non_member_price',
         'image_public_id',
+        'download_links',
         'is_published',
     ];
 
@@ -71,6 +73,7 @@ final class EventModel extends Model
             'end_date' => 'datetime',
             'member_price' => 'decimal:2',
             'non_member_price' => 'decimal:2',
+            'download_links' => 'array',
             'is_published' => 'boolean',
         ];
     }

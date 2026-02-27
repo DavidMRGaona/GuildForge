@@ -6,6 +6,7 @@ namespace App\Domain\Entities;
 
 use App\Domain\Exceptions\CannotPublishPastEventException;
 use App\Domain\Exceptions\InvalidEventDatesException;
+use App\Domain\ValueObjects\DownloadLink;
 use App\Domain\ValueObjects\EventId;
 use App\Domain\ValueObjects\Price;
 use App\Domain\ValueObjects\Slug;
@@ -13,6 +14,9 @@ use DateTimeImmutable;
 
 final class Event
 {
+    /**
+     * @param  array<DownloadLink>  $downloadLinks
+     */
     public function __construct(
         private readonly EventId $id,
         private readonly string $title,
@@ -27,6 +31,7 @@ final class Event
         private bool $isPublished = false,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
+        private readonly array $downloadLinks = [],
     ) {
         $this->validateDates();
     }
@@ -119,12 +124,12 @@ final class Event
 
     public function isUpcoming(): bool
     {
-        return $this->endDate > new DateTimeImmutable();
+        return $this->endDate > new DateTimeImmutable;
     }
 
     public function isPast(): bool
     {
-        return $this->endDate < new DateTimeImmutable();
+        return $this->endDate < new DateTimeImmutable;
     }
 
     public function isMultiDay(): bool
@@ -135,5 +140,18 @@ final class Event
     public function isFree(): bool
     {
         return $this->memberPrice === null && $this->nonMemberPrice === null;
+    }
+
+    /**
+     * @return array<DownloadLink>
+     */
+    public function downloadLinks(): array
+    {
+        return $this->downloadLinks;
+    }
+
+    public function hasDownloadLinks(): bool
+    {
+        return $this->downloadLinks !== [];
     }
 }

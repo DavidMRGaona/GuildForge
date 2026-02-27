@@ -69,6 +69,12 @@ export interface Tag {
     parentId: string | null;
 }
 
+export interface DownloadLink {
+    label: string;
+    url: string;
+    description: string;
+}
+
 export interface Event {
     id: string;
     title: string;
@@ -83,6 +89,7 @@ export interface Event {
     isPublished: boolean;
     createdAt: string;
     updatedAt: string;
+    downloadLinks: DownloadLink[];
     tags: Tag[];
 }
 

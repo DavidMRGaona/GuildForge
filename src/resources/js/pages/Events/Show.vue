@@ -202,6 +202,55 @@ useSeo({
                         </p>
                     </div>
 
+                    <!-- Download links -->
+                    <div
+                        v-if="props.event.downloadLinks.length > 0"
+                        class="mb-6 rounded-lg border border-default p-4"
+                    >
+                        <h3 class="mb-3 font-semibold text-base-primary">
+                            {{ t('events.downloads') }}
+                        </h3>
+                        <ul class="space-y-3">
+                            <li
+                                v-for="(link, index) in props.event.downloadLinks"
+                                :key="index"
+                            >
+                                <a
+                                    :href="link.url"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="group flex items-start gap-3"
+                                >
+                                    <svg
+                                        class="mt-0.5 h-5 w-5 shrink-0 text-primary-600 group-hover:text-primary-700"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                                        />
+                                    </svg>
+                                    <div>
+                                        <span class="font-medium text-primary-600 group-hover:text-primary-700 group-hover:underline">
+                                            {{ link.label }}
+                                        </span>
+                                        <p
+                                            v-if="link.description"
+                                            class="text-sm text-base-muted"
+                                        >
+                                            {{ link.description }}
+                                        </p>
+                                    </div>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
                     <!-- Module slot for event actions (e.g., registration button) -->
                     <div class="mb-6">
                         <ModuleSlot name="event-detail-actions" />

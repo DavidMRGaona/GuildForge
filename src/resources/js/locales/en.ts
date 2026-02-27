@@ -41,6 +41,8 @@ export default {
         memberPrice: 'Member price',
         nonMemberPrice: 'Non-member price',
         multiDay: 'Multi-day event',
+        downloads: 'Download files',
+        downloadFile: 'Download file',
     },
     articles: {
         title: 'Articles',

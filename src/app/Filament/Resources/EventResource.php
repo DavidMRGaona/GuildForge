@@ -11,6 +11,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -19,7 +20,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use App\Filament\Resources\BaseResource;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -115,6 +115,28 @@ class EventResource extends BaseResource
                     )
                     ->maxSize(2048)
                     ->nullable(),
+                Section::make(__('Enlaces de descarga'))
+                    ->schema([
+                        Repeater::make('download_links')
+                            ->label(__('Enlaces de descarga'))
+                            ->schema([
+                                TextInput::make('label')
+                                    ->label(__('Etiqueta'))
+                                    ->required()
+                                    ->maxLength(255),
+                                TextInput::make('url')
+                                    ->label(__('URL'))
+                                    ->required()
+                                    ->url()
+                                    ->maxLength(2048),
+                                TextInput::make('description')
+                                    ->label(__('Descripción'))
+                                    ->maxLength(500),
+                            ])
+                            ->columns(1)
+                            ->collapsible()
+                            ->defaultItems(0),
+                    ]),
                 Select::make('category_id')
                     ->label(__('filament.tags.fields.category'))
                     ->options(fn () => TagModel::roots()
