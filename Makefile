@@ -9,7 +9,8 @@
         dev build-assets cache cache-clear routes tinker ide-helper \
         make-model make-migration make-controller make-resource \
         make-request make-test make-filament hooks pre-commit \
-        prod-build prod-build-clean prod-up prod-down prod-logs prod-shell prod-fresh prod-ps prod-update prod-reset
+        prod-build prod-build-clean prod-up prod-down prod-logs prod-shell prod-fresh prod-ps prod-update prod-reset \
+        module-zip
 
 # Default target
 .DEFAULT_GOAL := help
@@ -213,6 +214,87 @@ dev: ## Vite dev server with HMR
 
 build-assets: ## Production build
 	docker exec $(NODE_CONTAINER) npm run build
+
+# =============================================================================
+# MODULE PACKAGING
+# =============================================================================
+
+module-zip: ## Build and package a module as a production-ready ZIP
+	@MODULES=""; \
+	INDEX=0; \
+	for MANIFEST in src/modules/*/module.json; do \
+		if [ ! -f "$$MANIFEST" ]; then \
+			echo "No modules found in src/modules/"; \
+			exit 1; \
+		fi; \
+		MOD_NAME=$$(grep '"name"' "$$MANIFEST" | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'); \
+		MOD_DISPLAY=$$(grep '"displayName"' "$$MANIFEST" | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'); \
+		MOD_VERSION=$$(grep '"version"' "$$MANIFEST" | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'); \
+		INDEX=$$((INDEX + 1)); \
+		MODULES="$$MODULES$$INDEX|$$MOD_NAME|$$MOD_DISPLAY|$$MOD_VERSION\n"; \
+		echo "  $$INDEX) $$MOD_NAME ($$MOD_DISPLAY) v$$MOD_VERSION"; \
+	done; \
+	if [ $$INDEX -eq 0 ]; then \
+		echo "No modules found in src/modules/"; \
+		exit 1; \
+	fi; \
+	echo ""; \
+	printf "Select module [1-$$INDEX]: "; \
+	read SELECTION; \
+	if [ -z "$$SELECTION" ] || [ "$$SELECTION" -lt 1 ] 2>/dev/null || [ "$$SELECTION" -gt $$INDEX ] 2>/dev/null; then \
+		echo "Invalid selection"; \
+		exit 1; \
+	fi; \
+	SELECTED=$$(echo "$$MODULES" | sed -n "$${SELECTION}p"); \
+	MODULE_NAME=$$(echo "$$SELECTED" | cut -d'|' -f2); \
+	MODULE_DISPLAY=$$(echo "$$SELECTED" | cut -d'|' -f3); \
+	MODULE_VERSION=$$(echo "$$SELECTED" | cut -d'|' -f4); \
+	echo ""; \
+	echo "Packaging $$MODULE_NAME v$$MODULE_VERSION..."; \
+	echo ""; \
+	if [ -f "src/modules/$$MODULE_NAME/package.json" ]; then \
+		echo "Building Vue assets..."; \
+		docker exec -e MODULE_STANDALONE_OUTPUT=true $(NODE_CONTAINER) \
+			sh -c "cd modules/$$MODULE_NAME && npm install && npm run build"; \
+		if [ ! -f "src/modules/$$MODULE_NAME/public/build/manifest.json" ]; then \
+			echo "Build failed: manifest.json not found"; \
+			exit 1; \
+		fi; \
+		echo "Vue assets built successfully"; \
+		echo ""; \
+	else \
+		echo "No package.json found, skipping Vue build"; \
+		echo ""; \
+	fi; \
+	PACKAGE_DIR="$$MODULE_NAME-$$MODULE_VERSION"; \
+	ZIP_NAME="$$MODULE_NAME-$$MODULE_VERSION.zip"; \
+	mkdir -p dist; \
+	rm -rf "/tmp/$$PACKAGE_DIR"; \
+	mkdir -p "/tmp/$$PACKAGE_DIR"; \
+	rsync -a "src/modules/$$MODULE_NAME/" "/tmp/$$PACKAGE_DIR/" \
+		--exclude='.git' \
+		--exclude='.github' \
+		--exclude='tests' \
+		--exclude='node_modules' \
+		--exclude='.env*' \
+		--exclude='*.log' \
+		--exclude='.phpunit*' \
+		--exclude='phpunit.xml' \
+		--exclude='.gitignore' \
+		--exclude='.gitattributes' \
+		--exclude='vite.config.ts' \
+		--exclude='tsconfig.json' \
+		--exclude='package-lock.json'; \
+	cd /tmp && zip -r "$$ZIP_NAME" "$$PACKAGE_DIR" > /dev/null && cd - > /dev/null; \
+	mv "/tmp/$$ZIP_NAME" "dist/$$ZIP_NAME"; \
+	rm -rf "/tmp/$$PACKAGE_DIR"; \
+	cd dist && shasum -a 256 "$$ZIP_NAME" > "$$ZIP_NAME.sha256" && cd - > /dev/null; \
+	echo ""; \
+	echo "Package created:"; \
+	echo "  dist/$$ZIP_NAME"; \
+	echo "  dist/$$ZIP_NAME.sha256"; \
+	echo ""; \
+	echo "Checksum: $$(cat dist/$$ZIP_NAME.sha256)"
 
 # =============================================================================
 # CODE GENERATION
