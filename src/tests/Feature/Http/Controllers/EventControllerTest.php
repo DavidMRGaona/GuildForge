@@ -369,6 +369,48 @@ final class EventControllerTest extends TestCase
         );
     }
 
+    public function test_show_returns_download_links(): void
+    {
+        $downloadLinks = [
+            ['label' => 'Bases del torneo', 'url' => 'https://example.com/rules.pdf', 'description' => 'Reglas'],
+            ['label' => 'Horarios', 'url' => 'https://example.com/schedule.pdf', 'description' => ''],
+        ];
+
+        EventModel::factory()->published()->create([
+            'slug' => 'event-with-downloads',
+            'download_links' => $downloadLinks,
+        ]);
+
+        $response = $this->get('/eventos/event-with-downloads');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Show')
+                ->has('event.downloadLinks', 2)
+                ->where('event.downloadLinks.0.label', 'Bases del torneo')
+                ->where('event.downloadLinks.0.url', 'https://example.com/rules.pdf')
+                ->where('event.downloadLinks.1.label', 'Horarios')
+        );
+    }
+
+    public function test_show_returns_empty_download_links_when_none(): void
+    {
+        EventModel::factory()->published()->create([
+            'slug' => 'event-no-downloads',
+            'download_links' => null,
+        ]);
+
+        $response = $this->get('/eventos/event-no-downloads');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Events/Show')
+                ->has('event.downloadLinks', 0)
+        );
+    }
+
     public function test_show_returns_sanitized_html_description(): void
     {
         EventModel::factory()->published()->create([

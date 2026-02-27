@@ -45,6 +45,7 @@ final class EventModelTest extends TestCase
             'member_price',
             'non_member_price',
             'image_public_id',
+            'download_links',
             'is_published',
         ];
 

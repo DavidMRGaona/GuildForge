@@ -91,6 +91,20 @@ final class EventModelFactory extends Factory
     }
 
     /**
+     * Indicate that the event has download links.
+     */
+    public function withDownloadLinks(int $count = 2): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'download_links' => collect(range(1, $count))->map(fn (int $i): array => [
+                'label' => $this->faker->sentence(3),
+                'url' => $this->faker->url(),
+                'description' => $this->faker->optional(0.7)->sentence(),
+            ])->toArray(),
+        ]);
+    }
+
+    /**
      * Indicate that the event is multi-day.
      *
      * Uses afterMaking to ensure end_date is calculated from the actual

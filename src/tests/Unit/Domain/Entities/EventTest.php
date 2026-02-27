@@ -6,6 +6,7 @@ namespace Tests\Unit\Domain\Entities;
 
 use App\Domain\Entities\Event;
 use App\Domain\Exceptions\CannotPublishPastEventException;
+use App\Domain\ValueObjects\DownloadLink;
 use App\Domain\ValueObjects\EventId;
 use App\Domain\ValueObjects\Price;
 use App\Domain\ValueObjects\Slug;
@@ -243,12 +244,46 @@ final class EventTest extends TestCase
         $event->publish();
     }
 
+    public function test_it_has_no_download_links_by_default(): void
+    {
+        $event = $this->createEvent();
+
+        $this->assertSame([], $event->downloadLinks());
+        $this->assertFalse($event->hasDownloadLinks());
+    }
+
+    public function test_it_creates_event_with_download_links(): void
+    {
+        $links = [
+            new DownloadLink('Bases del torneo', 'https://example.com/rules.pdf', 'Reglas'),
+            new DownloadLink('Horarios', 'https://example.com/schedule.pdf', ''),
+        ];
+
+        $event = $this->createEvent(downloadLinks: $links);
+
+        $this->assertCount(2, $event->downloadLinks());
+        $this->assertTrue($event->hasDownloadLinks());
+        $this->assertSame('Bases del torneo', $event->downloadLinks()[0]->label);
+        $this->assertSame('Horarios', $event->downloadLinks()[1]->label);
+    }
+
+    public function test_has_download_links_returns_false_for_empty_array(): void
+    {
+        $event = $this->createEvent(downloadLinks: []);
+
+        $this->assertFalse($event->hasDownloadLinks());
+    }
+
+    /**
+     * @param  array<DownloadLink>  $downloadLinks
+     */
     private function createEvent(
         ?DateTimeImmutable $startDate = null,
         ?DateTimeImmutable $endDate = null,
         ?Price $memberPrice = null,
         ?Price $nonMemberPrice = null,
         bool $isPublished = false,
+        array $downloadLinks = [],
     ): Event {
         $start = $startDate ?? new DateTimeImmutable('+1 week');
 
@@ -262,6 +297,7 @@ final class EventTest extends TestCase
             memberPrice: $memberPrice,
             nonMemberPrice: $nonMemberPrice,
             isPublished: $isPublished,
+            downloadLinks: $downloadLinks,
         );
     }
 }
