@@ -17,6 +17,7 @@ final readonly class ModuleManifestDTO
         public string $version,
         public string $namespace,
         public string $provider,
+        public ?string $displayName = null,
         public ?string $description = null,
         public ?string $author = null,
         public ?array $requires = null,
@@ -41,6 +42,7 @@ final readonly class ModuleManifestDTO
             version: $data['version'],
             namespace: $data['namespace'],
             provider: $data['provider'],
+            displayName: $data['displayName'] ?? null,
             description: $data['description'] ?? null,
             author: $data['author'] ?? null,
             requires: $data['requires'] ?? [],
@@ -60,6 +62,9 @@ final readonly class ModuleManifestDTO
             'provider' => $this->provider,
         ];
 
+        if ($this->displayName !== null) {
+            $result['displayName'] = $this->displayName;
+        }
         if ($this->description !== null) {
             $result['description'] = $this->description;
         }
