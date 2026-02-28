@@ -19,8 +19,8 @@ final class Module
     public function __construct(
         private readonly ModuleId $id,
         private readonly ModuleName $name,
-        private readonly string $displayName,
-        private readonly string $description,
+        private string $displayName,
+        private string $description,
         private ModuleVersion $version,
         private readonly string $author,
         private readonly ModuleRequirements $requirements,
@@ -190,6 +190,16 @@ final class Module
     public function updateVersion(ModuleVersion $version): void
     {
         $this->version = $version;
+    }
+
+    public function updateDisplayName(string $displayName): void
+    {
+        $this->displayName = $displayName;
+    }
+
+    public function updateDescription(string $description): void
+    {
+        $this->description = $description;
     }
 
     public function enable(): void

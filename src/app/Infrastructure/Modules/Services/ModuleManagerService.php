@@ -63,6 +63,19 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                         $needsSave = true;
                     }
 
+                    // Sync displayName and description from manifest
+                    $manifestDisplayName = $manifest->displayName ?? $this->studlyCase($manifest->name);
+                    if ($existing->displayName() !== $manifestDisplayName) {
+                        $existing->updateDisplayName($manifestDisplayName);
+                        $needsSave = true;
+                    }
+
+                    $manifestDescription = $manifest->description ?? '';
+                    if ($existing->description() !== $manifestDescription) {
+                        $existing->updateDescription($manifestDescription);
+                        $needsSave = true;
+                    }
+
                     $manifestVersion = ModuleVersion::fromString($manifest->version);
                     if (! $existing->version()->isEqualTo($manifestVersion)) {
                         $previousVersion = $existing->version()->value();
@@ -100,7 +113,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             }
 
             // Compute display_name from manifest
-            $displayName = $manifest->description ?? $this->studlyCase($manifest->name);
+            $displayName = $manifest->displayName ?? $this->studlyCase($manifest->name);
 
             // Create new module from manifest
             $module = new Module(
