@@ -470,6 +470,11 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         if (function_exists('opcache_invalidate')) {
             opcache_invalidate($settingsPath, true);
         }
+
+        // Touch file to ensure mtime changes, forcing OPcache revalidation
+        // across all PHP-FPM workers (when validate_timestamps is enabled)
+        clearstatcache(true, $settingsPath);
+        touch($settingsPath);
     }
 
     public function getDependents(ModuleName $name): ModuleCollection
