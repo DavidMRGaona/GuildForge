@@ -85,6 +85,12 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           --color-border: var(--color-neutral-200);
           --color-border-strong: var(--color-neutral-300);
 
+          /* Tooltip variables (inverted: dark in light, light in dark) */
+          --color-bg-tooltip: var(--color-neutral-900);
+          --color-text-tooltip: #FFFFFF;
+          --color-text-tooltip-secondary: var(--color-neutral-300);
+          --color-ring-tooltip: rgb(255 255 255 / 0.1);
+
           /* Semantic colors (fixed for universal recognition) */
           --color-success: #16A34A;
           --color-success-bg: #DCFCE7;
@@ -135,6 +141,12 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           /* Border variables (Dark mode) */
           --color-border: var(--color-neutral-700);
           --color-border-strong: var(--color-neutral-600);
+
+          /* Tooltip variables (inverted) */
+          --color-bg-tooltip: var(--color-neutral-100);
+          --color-text-tooltip: var(--color-neutral-900);
+          --color-text-tooltip-secondary: var(--color-neutral-600);
+          --color-ring-tooltip: rgb(28 25 23 / 0.1);
 
           /* Semantic colors (Dark mode) */
           --color-success: #4ADE80;

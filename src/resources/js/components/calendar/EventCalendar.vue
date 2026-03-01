@@ -202,7 +202,7 @@ watch(tooltipVisible, (visible) => {
         <div class="relative">
             <div
                 v-if="isLoading"
-                class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 dark:bg-surface/70"
+                class="absolute inset-0 z-10 flex items-center justify-center bg-surface/70"
             >
                 <div class="text-center">
                     <div

@@ -188,6 +188,7 @@
     --color-surface: var(--color-bg-surface);
     --color-muted: var(--color-bg-muted);
     --color-elevated: var(--color-bg-elevated);
+    --color-tooltip: var(--color-bg-tooltip);
     --color-base-primary: var(--color-text-primary);
     --color-base-secondary: var(--color-text-secondary);
     --color-base-muted: var(--color-text-muted);
@@ -293,6 +294,12 @@
     /* Focus Ring */
     --color-focus-ring: #f59e0b; /* amber-500 */
     --color-focus-ring-offset: #ffffff;
+
+    /* Tooltip Colors (inverted: dark in light mode, light in dark mode) */
+    --color-bg-tooltip: #1c1917; /* stone-900 */
+    --color-text-tooltip: #ffffff; /* white */
+    --color-text-tooltip-secondary: #d6d3d1; /* stone-300 */
+    --color-ring-tooltip: rgb(255 255 255 / 0.1);
 }
 
 /* ==========================================================================
@@ -348,6 +355,12 @@
     /* Focus Ring */
     --color-focus-ring: #fbbf24; /* amber-400 */
     --color-focus-ring-offset: #1c1917; /* stone-900 */
+
+    /* Tooltip Colors (inverted) */
+    --color-bg-tooltip: #f5f5f4; /* stone-100 */
+    --color-text-tooltip: #1c1917; /* stone-900 */
+    --color-text-tooltip-secondary: #57534e; /* stone-600 */
+    --color-ring-tooltip: rgb(28 25 23 / 0.1);
 }
 
 /* ==========================================================================
@@ -374,6 +387,9 @@
 .bg-primary-light {
     background-color: var(--color-primary-light);
 }
+.bg-tooltip {
+    background-color: var(--color-bg-tooltip);
+}
 
 /* Text utilities */
 .text-base-primary {
@@ -390,6 +406,15 @@
 }
 .text-primary {
     color: var(--color-primary);
+}
+.text-tooltip {
+    color: var(--color-text-tooltip);
+}
+.text-tooltip-secondary {
+    color: var(--color-text-tooltip-secondary);
+}
+.ring-tooltip {
+    --tw-ring-color: var(--color-ring-tooltip);
 }
 
 /* Border utilities */
@@ -823,6 +848,77 @@ button[data-headlessui-state]:hover {
 
 .event-calendar--compact .fc-daygrid-event-harness-abs {
     position: relative;
+}
+
+/* ===== TIMEGRID VIEWS ===== */
+.event-calendar .fc-timegrid-slot-label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    padding-right: 8px;
+}
+
+.event-calendar .fc-timegrid-slot {
+    height: 2.5rem;
+}
+
+.event-calendar .fc-timegrid-slot-lane {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.event-calendar .fc-timegrid-now-indicator-line {
+    border-color: var(--color-error);
+    border-width: 2px;
+    z-index: 4;
+}
+
+.event-calendar .fc-timegrid-now-indicator-arrow {
+    border-color: var(--color-error);
+}
+
+.event-calendar .fc-timegrid-event {
+    border-radius: 0.5rem;
+    border-left-width: 3px;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+    transition: box-shadow 150ms ease-in-out;
+}
+
+.event-calendar .fc-timegrid-event:hover {
+    box-shadow: 0 4px 6px rgb(0 0 0 / 0.15);
+}
+
+.event-calendar .fc-timegrid-event .fc-event-main {
+    padding: 4px 6px;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+}
+
+.event-calendar .fc-timegrid-event .fc-event-time {
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.dark .event-calendar .fc-timegrid-col {
+    background-color: var(--color-bg-surface);
+}
+
+.dark .event-calendar .fc-timegrid-axis {
+    background-color: var(--color-bg-surface);
+}
+
+.dark .event-calendar .fc-timegrid-slot-label {
+    color: var(--color-text-muted);
+}
+
+.dark .event-calendar .fc-timegrid-slot-lane {
+    border-bottom-color: var(--color-border);
+}
+
+.dark .event-calendar .fc-timegrid-event {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+
+.dark .event-calendar .fc-timegrid-event:hover {
+    box-shadow: 0 4px 6px rgb(0 0 0 / 0.4);
 }
 
 /* ==========================================================================

@@ -169,6 +169,23 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertStringContainsString('--color-info:', $css);
     }
 
+    public function test_get_css_variables_includes_tooltip_variables(): void
+    {
+        $css = $this->service->getCssVariables();
+
+        $this->assertStringContainsString('--color-bg-tooltip:', $css);
+        $this->assertStringContainsString('--color-text-tooltip:', $css);
+        $this->assertStringContainsString('--color-text-tooltip-secondary:', $css);
+        $this->assertStringContainsString('--color-ring-tooltip:', $css);
+
+        // Verify tooltip variables exist in both light and dark sections
+        $lightSection = $this->extractLightModeSection($css);
+        $darkSection = $this->extractDarkModeSection($css);
+
+        $this->assertStringContainsString('--color-bg-tooltip:', $lightSection);
+        $this->assertStringContainsString('--color-bg-tooltip:', $darkSection);
+    }
+
     public function test_get_css_variables_uses_default_colors_when_no_settings_exist(): void
     {
         $css = $this->service->getCssVariables();
