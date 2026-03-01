@@ -35,14 +35,14 @@ const tooltipStyle = computed(() => ({
         >
             <div
                 v-if="visible && event"
-                class="pointer-events-none fixed z-50 max-w-xs rounded-lg bg-elevated px-3 py-2 text-sm text-white shadow-lg"
+                class="pointer-events-none fixed z-50 max-w-xs rounded-lg bg-tooltip px-3.5 py-2.5 text-sm text-tooltip shadow-xl ring-1 ring-tooltip"
                 :style="tooltipStyle"
             >
                 <!-- Title -->
                 <p class="font-semibold">{{ event.title }}</p>
 
                 <!-- Date -->
-                <p class="mt-1 text-neutral-300">
+                <p class="mt-1 text-tooltip-secondary">
                     <svg
                         class="mr-1 inline-block h-3 w-3"
                         fill="none"
@@ -60,7 +60,7 @@ const tooltipStyle = computed(() => ({
                 </p>
 
                 <!-- Location -->
-                <p v-if="event.location" class="mt-1 text-neutral-300">
+                <p v-if="event.location" class="mt-1 text-tooltip-secondary">
                     <svg
                         class="mr-1 inline-block h-3 w-3"
                         fill="none"
@@ -84,7 +84,7 @@ const tooltipStyle = computed(() => ({
                 </p>
 
                 <!-- Tooltip arrow -->
-                <div class="absolute -left-1 top-3 h-2 w-2 rotate-45 bg-elevated"></div>
+                <div class="absolute -left-1 top-3 h-2 w-2 rotate-45 bg-tooltip ring-1 ring-tooltip"></div>
             </div>
         </Transition>
     </Teleport>

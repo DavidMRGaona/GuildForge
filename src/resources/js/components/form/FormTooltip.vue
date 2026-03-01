@@ -57,7 +57,7 @@ function hide(): void {
             <div
                 v-if="isVisible && content"
                 role="tooltip"
-                class="absolute z-30 rounded-lg bg-neutral-900 dark:bg-neutral-100 px-3 py-2 text-sm text-white dark:text-neutral-900 shadow-lg pointer-events-none whitespace-normal"
+                class="absolute z-30 rounded-lg bg-tooltip px-3 py-2 text-sm text-tooltip shadow-lg pointer-events-none whitespace-normal"
                 :class="[
                     widthClass,
                     {
@@ -72,7 +72,7 @@ function hide(): void {
 
                 <!-- Arrow -->
                 <div
-                    class="absolute h-2 w-2 rotate-45 bg-neutral-900 dark:bg-neutral-100"
+                    class="absolute h-2 w-2 rotate-45 bg-tooltip"
                     :class="{
                         'top-full left-1/2 -translate-x-1/2 -mt-1': position === 'top',
                         'bottom-full left-1/2 -translate-x-1/2 -mb-1': position === 'bottom',
