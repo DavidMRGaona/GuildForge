@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Application\Services\DashboardWidgetConfigServiceInterface;
 use App\Filament\Resources\ArticleResource;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use Filament\Tables\Columns\TextColumn;
@@ -23,12 +24,15 @@ class RecentArticlesWidget extends TableWidget
 
     public function table(Table $table): Table
     {
+        $limit = app(DashboardWidgetConfigServiceInterface::class)
+            ->getLimit(static::class, 5);
+
         return $table
             ->query(
                 ArticleModel::query()
                     ->where('is_published', true)
                     ->latest('published_at')
-                    ->limit(5)
+                    ->limit($limit)
             )
             ->columns([
                 TextColumn::make('title')
