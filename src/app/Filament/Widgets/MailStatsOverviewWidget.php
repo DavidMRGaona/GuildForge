@@ -10,6 +10,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class MailStatsOverviewWidget extends StatsOverviewWidget
 {
+    protected static ?int $sort = 81;
+
     /**
      * @return array<Stat>
      */

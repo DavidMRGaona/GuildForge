@@ -13,6 +13,11 @@ class UpcomingEventsWidget extends StatsOverviewWidget
 {
     protected static ?int $sort = 1;
 
+    protected function getColumns(): int
+    {
+        return 2;
+    }
+
     /**
      * @return array<Stat>
      */

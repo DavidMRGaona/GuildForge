@@ -12,7 +12,7 @@ use Filament\Widgets\TableWidget;
 
 class RecentArticlesWidget extends TableWidget
 {
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 11;
 
     protected int|string|array $columnSpan = 'full';
 
