@@ -226,6 +226,7 @@ jobs:
             --exclude='vite.config.ts' \
             --exclude='tsconfig.json' \
             --exclude='package-lock.json' \
+            --exclude='guildforge-app' \
             --exclude="$PACKAGE_DIR"
 
           # Create ZIP
