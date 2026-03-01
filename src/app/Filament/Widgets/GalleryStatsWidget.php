@@ -13,6 +13,11 @@ class GalleryStatsWidget extends StatsOverviewWidget
 {
     protected static ?int $sort = 3;
 
+    protected function getColumns(): int
+    {
+        return 2;
+    }
+
     /**
      * @return array<Stat>
      */

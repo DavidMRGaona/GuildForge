@@ -12,7 +12,12 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class MailHealthWidget extends StatsOverviewWidget
 {
-    protected static ?int $sort = 5;
+    protected static ?int $sort = 80;
+
+    protected function getColumns(): int
+    {
+        return 1;
+    }
 
     /**
      * @return array<Stat>
