@@ -24,6 +24,7 @@ use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\ContactServiceInterface;
+use App\Application\Services\DashboardWidgetConfigServiceInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\GalleryQueryServiceInterface;
 use App\Application\Services\HeroSlideQueryServiceInterface;
@@ -103,6 +104,7 @@ use App\Infrastructure\Services\ArticleQueryService;
 use App\Infrastructure\Services\AuthService;
 use App\Infrastructure\Services\CloudinaryStorageAdapter;
 use App\Infrastructure\Services\ContactService;
+use App\Infrastructure\Services\DashboardWidgetConfigService;
 use App\Infrastructure\Services\EventQueryService;
 use App\Infrastructure\Services\GalleryQueryService;
 use App\Infrastructure\Services\HeroSlideQueryService;
@@ -164,6 +166,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
+        $this->app->singleton(DashboardWidgetConfigServiceInterface::class, DashboardWidgetConfigService::class);
         $this->app->singleton(ThemeSettingsServiceInterface::class, ThemeSettingsService::class);
         $this->app->singleton(ImageOptimizationServiceInterface::class, ImageOptimizationService::class);
         $this->app->singleton(AuthServiceInterface::class, AuthService::class);
