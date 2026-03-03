@@ -143,6 +143,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Illuminate\Support\ServiceProvider;
 use League\Flysystem\Filesystem;
 
@@ -350,6 +352,15 @@ class AppServiceProvider extends ServiceProvider
 
         // Email logging: log every sent email to the database
         Event::listen(MessageSent::class, LogSentEmail::class);
+
+        // Calendars start on Monday (European convention)
+        DateTimePicker::configureUsing(function (DateTimePicker $component): void {
+            $component->firstDayOfWeek(1);
+        });
+
+        DatePicker::configureUsing(function (DatePicker $component): void {
+            $component->firstDayOfWeek(1);
+        });
 
         // Override cloudinary driver with a safe adapter that:
         // - Generates URLs directly (no Admin API calls)

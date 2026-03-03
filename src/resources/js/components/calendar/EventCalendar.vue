@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import esLocale from '@fullcalendar/core/locales/es';
 import type {
     CalendarOptions,
     EventClickArg,
@@ -32,7 +33,7 @@ const emit = defineEmits<{
     eventsLoaded: [events: CalendarEvent[]];
 }>();
 
-const { locale, t } = useI18n();
+const { t } = useI18n();
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const eventsCache = ref<Map<string, CalendarEvent>>(new Map());
@@ -140,7 +141,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     const baseOptions: CalendarOptions = {
         plugins: [dayGridPlugin, interactionPlugin],
         initialView: 'dayGridMonth',
-        locale: locale.value,
+        locale: esLocale,
         events: fetchEvents,
         eventClick: handleEventClick,
         dateClick: handleDateClick,
