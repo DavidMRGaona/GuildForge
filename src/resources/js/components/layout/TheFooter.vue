@@ -2,7 +2,9 @@
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
+import SocialLinks from '@/components/ui/SocialLinks.vue';
 import type { MenuItem, Navigation } from '@/types/navigation';
+import type { SocialMediaLinks } from '@/types/models';
 
 const { t } = useI18n();
 const page = usePage();
@@ -54,6 +56,12 @@ const footerLinks = computed(() => {
     const items = navigation.value?.footer;
     return items && items.length > 0 ? items : fallbackLinks;
 });
+
+const socialLinks = computed(() => page.props.socialLinks as SocialMediaLinks | undefined);
+const hasSocialLinks = computed(() => {
+    if (!socialLinks.value) return false;
+    return Object.values(socialLinks.value).some((url) => url);
+});
 </script>
 
 <template>
@@ -73,7 +81,7 @@ const footerLinks = computed(() => {
                     </Link>
                 </nav>
 
-                <!-- Copyright -->
+                <!-- Copyright & Social -->
                 <div class="mt-6 text-center md:mt-0 md:text-right">
                     <p class="text-sm text-neutral-300 dark:text-neutral-400">
                         {{ t('layout.copyright', { year: currentYear }) }}
@@ -81,6 +89,9 @@ const footerLinks = computed(() => {
                     <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-600">
                         {{ t('layout.madeWith') }}
                     </p>
+                    <div v-if="hasSocialLinks && socialLinks" class="mt-3 flex justify-center md:justify-end">
+                        <SocialLinks :links="socialLinks" size="sm" variant="dark" />
+                    </div>
                 </div>
             </div>
         </div>
