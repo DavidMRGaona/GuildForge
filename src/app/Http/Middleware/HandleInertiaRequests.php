@@ -82,6 +82,7 @@ final class HandleInertiaRequests extends Middleware
             'modulePages' => fn () => $this->getModulePages(),
             'moduleTranslations' => fn () => $this->getModuleTranslations(),
             'navigation' => fn () => $this->getNavigation($request),
+            'socialLinks' => fn () => $this->getSocialLinks(),
         ];
     }
 
@@ -466,6 +467,56 @@ final class HandleInertiaRequests extends Middleware
         }
 
         return $json;
+    }
+
+    /**
+     * Get social media links for frontend (footer, etc.).
+     *
+     * @return array{facebook: string, instagram: string, twitter: string, discord: string, tiktok: string, bluesky: string, telegram: string}
+     */
+    private function getSocialLinks(): array
+    {
+        try {
+            $settingsService = app(SettingsServiceInterface::class);
+
+            $keys = ['facebook', 'instagram', 'twitter', 'discord', 'tiktok', 'bluesky', 'telegram'];
+            $links = [];
+
+            foreach ($keys as $key) {
+                $url = (string) $settingsService->get("social_{$key}", '');
+                $links[$key] = $this->formatSocialUrl($url);
+            }
+
+            return $links;
+        } catch (\Throwable $e) {
+            $this->logDebugError('getSocialLinks', $e);
+
+            return [
+                'facebook' => '',
+                'instagram' => '',
+                'twitter' => '',
+                'discord' => '',
+                'tiktok' => '',
+                'bluesky' => '',
+                'telegram' => '',
+            ];
+        }
+    }
+
+    /**
+     * Format a social media URL, adding https:// prefix if needed.
+     */
+    private function formatSocialUrl(string $url): string
+    {
+        if ($url === '') {
+            return '';
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        return 'https://' . $url;
     }
 
     /**
