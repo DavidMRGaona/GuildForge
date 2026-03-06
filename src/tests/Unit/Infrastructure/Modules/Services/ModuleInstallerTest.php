@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
 use App\Application\Modules\Services\ModuleInstallerInterface;
+use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CoreTableRegistry;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\ModuleInstaller;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
+use App\Infrastructure\Modules\Services\ModuleSchemaGuard;
 use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\UploadedFile;
@@ -69,8 +72,10 @@ final class ModuleInstallerTest extends TestCase
         $this->backupService = Mockery::mock(ModuleBackupServiceInterface::class);
 
         // Create real instances since they're final classes
-        $this->migrationRunner = new ModuleMigrationRunner($this->modulesPath);
-        $this->seederRunner = new ModuleSeederRunner($this->modulesPath);
+        $analyzer = $this->createMock(ModuleMigrationAnalyzerInterface::class);
+        $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
+        $this->migrationRunner = new ModuleMigrationRunner($this->modulesPath, $analyzer, $schemaGuard);
+        $this->seederRunner = new ModuleSeederRunner($this->modulesPath, $analyzer);
 
         $this->installer = new ModuleInstaller(
             $this->dispatcher,

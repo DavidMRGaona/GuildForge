@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Modules\Services;
 
+use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use Illuminate\Database\Seeder;
@@ -13,8 +14,8 @@ final readonly class ModuleSeederRunner
 {
     public function __construct(
         private string $modulesPath,
-    ) {
-    }
+        private ModuleMigrationAnalyzerInterface $analyzer,
+    ) {}
 
     /**
      * Runs seeders for a module.
@@ -48,6 +49,9 @@ final readonly class ModuleSeederRunner
         if ($seederFiles === false || empty($seederFiles)) {
             return 0;
         }
+
+        // Static analysis: check seeders for prohibited operations before execution
+        $this->analyzer->analyzeSeeders($module->name()->value, $seedersPath);
 
         // Run seeders if Laravel is fully booted
         return $this->runSeedersIfPossible($module, $seederFiles);

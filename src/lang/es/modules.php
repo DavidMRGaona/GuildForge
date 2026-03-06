@@ -70,6 +70,8 @@ return [
         'forbidden_module_name' => 'El nombre :name está reservado y no puede usarse.',
         'module_not_installed' => 'El módulo :name no está instalado. Usa la opción de instalar en su lugar.',
         'update_failed' => 'Error al actualizar el módulo: :error.',
+        'migration_violation' => 'El módulo :name contiene operaciones prohibidas en la migración :file: :violations',
+        'seeder_violation' => 'El módulo :name contiene operaciones prohibidas en su seeder :file: :violations',
     ],
 
     // Filament admin interface

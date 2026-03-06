@@ -11,6 +11,7 @@ use App\Application\Mail\Services\MailStatisticsServiceInterface;
 use App\Application\Mail\Services\MailTestServiceInterface;
 use App\Application\Modules\Services\ModuleContextServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModulePermissionRegistryInterface;
@@ -48,6 +49,7 @@ use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CoreTableRegistry;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\Repositories\EventRepositoryInterface;
@@ -70,12 +72,14 @@ use App\Infrastructure\Modules\Services\ModuleContextService;
 use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
 use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
 use App\Infrastructure\Modules\Services\ModuleManagerService;
+use App\Infrastructure\Modules\Services\ModuleMigrationAnalyzer;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use App\Infrastructure\Modules\Services\ModuleNavigationRegistry;
 use App\Infrastructure\Modules\Services\ModulePageRegistry;
 use App\Infrastructure\Modules\Services\ModulePermissionRegistry;
 use App\Infrastructure\Modules\Services\ModuleRouteRegistry;
 use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
+use App\Infrastructure\Modules\Services\ModuleSchemaGuard;
 use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use App\Infrastructure\Modules\Services\ModuleSlotRegistry;
 use App\Infrastructure\Modules\Services\StubRenderer;
@@ -133,6 +137,8 @@ use App\Policies\RolePolicy;
 use App\Policies\TagPolicy;
 use App\Policies\UserPolicy;
 use Cloudinary\Cloudinary;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
@@ -143,8 +149,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
 use Illuminate\Support\ServiceProvider;
 use League\Flysystem\Filesystem;
 
@@ -221,15 +225,22 @@ class AppServiceProvider extends ServiceProvider
             return new ModuleDependencyResolver;
         });
 
+        $this->app->singleton(CoreTableRegistry::class);
+        $this->app->singleton(ModuleSchemaGuard::class);
+        $this->app->bind(ModuleMigrationAnalyzerInterface::class, ModuleMigrationAnalyzer::class);
+
         $this->app->singleton(ModuleMigrationRunner::class, function ($app) {
             return new ModuleMigrationRunner(
                 modulesPath: config('modules.path'),
+                analyzer: $app->make(ModuleMigrationAnalyzerInterface::class),
+                schemaGuard: $app->make(ModuleSchemaGuard::class),
             );
         });
 
         $this->app->singleton(ModuleSeederRunner::class, function ($app) {
             return new ModuleSeederRunner(
                 modulesPath: config('modules.path'),
+                analyzer: $app->make(ModuleMigrationAnalyzerInterface::class),
             );
         });
 
@@ -292,7 +303,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for(
             'login',
             static fn (Request $request) => Limit::perMinute(5)->by(
-                ($request->input('email', '') ?: '') . '|' . ($request->ip() ?? 'unknown')
+                ($request->input('email', '') ?: '').'|'.($request->ip() ?? 'unknown')
             )
         );
 
