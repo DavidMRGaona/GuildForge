@@ -59,7 +59,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('module_test_table', function (Blueprint $table) {
+        Schema::create('testmodule_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name');
             $table->timestamps();
@@ -68,7 +68,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('module_test_table');
+        Schema::dropIfExists('testmodule_items');
     }
 };
 PHP
@@ -79,7 +79,7 @@ PHP
             ->assertExitCode(0);
 
         // Verify migration was executed
-        $this->assertTrue(Schema::hasTable('module_test_table'));
+        $this->assertTrue(Schema::hasTable('testmodule_items'));
     }
 
     public function test_it_fails_when_module_not_found(): void

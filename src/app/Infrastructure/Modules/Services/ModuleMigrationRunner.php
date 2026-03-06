@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Modules\Services;
 
+use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
 use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Exceptions\ModuleMigrationViolationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use Illuminate\Support\Facades\Artisan;
 
@@ -12,8 +14,9 @@ final readonly class ModuleMigrationRunner
 {
     public function __construct(
         private string $modulesPath,
-    ) {
-    }
+        private ModuleMigrationAnalyzerInterface $analyzer,
+        private ModuleSchemaGuard $schemaGuard,
+    ) {}
 
     /**
      * Runs migrations for a module.
@@ -22,6 +25,7 @@ final readonly class ModuleMigrationRunner
      * @return int The number of migrations run
      *
      * @throws ModuleNotFoundException If the module directory does not exist
+     * @throws ModuleMigrationViolationException If the module contains prohibited operations
      */
     public function run(Module $module): int
     {
@@ -48,9 +52,12 @@ final readonly class ModuleMigrationRunner
             return 0;
         }
 
+        // Static analysis: check migrations for prohibited operations before execution
+        $this->analyzer->analyzeMigrations($module->name()->value, $migrationsPath);
+
         // Run migrations from the module's migrations path if Laravel is fully booted
         // This check prevents errors in unit tests where the application isn't available
-        $this->runMigrationsIfPossible($migrationsPath);
+        $this->runMigrationsIfPossible($module->name()->value, $migrationsPath);
 
         return count($migrationFiles);
     }
@@ -126,7 +133,7 @@ final readonly class ModuleMigrationRunner
     /**
      * Run migrations if Laravel is fully booted.
      */
-    private function runMigrationsIfPossible(string $migrationsPath): void
+    private function runMigrationsIfPossible(string $moduleName, string $migrationsPath): void
     {
         try {
             // Check if we're in a Laravel application context
@@ -141,10 +148,15 @@ final readonly class ModuleMigrationRunner
                 return;
             }
 
-            Artisan::call('migrate', [
-                '--path' => str_replace(base_path().'/', '', $migrationsPath),
-                '--force' => true,
-            ]);
+            // Runtime guard: protect core tables during migration execution
+            $this->schemaGuard->protect($moduleName, function () use ($migrationsPath): void {
+                Artisan::call('migrate', [
+                    '--path' => str_replace(base_path().'/', '', $migrationsPath),
+                    '--force' => true,
+                ]);
+            });
+        } catch (ModuleMigrationViolationException $e) {
+            throw $e;
         } catch (\Throwable) {
             // Silently fail if anything goes wrong (unit tests, missing dependencies, etc.)
         }
