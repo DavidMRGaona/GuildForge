@@ -1,16 +1,16 @@
-# CI/CD para distribución de módulos
+# CI/CD for module distribution
 
-Esta guía explica cómo configurar y usar el sistema de CI/CD para distribuir módulos de GuildForge via GitHub Releases.
+This guide explains how to set up and use the CI/CD system to distribute GuildForge modules via GitHub Releases.
 
-## Arquitectura
+## Architecture
 
-El sistema usa un **workflow reutilizable centralizado** en el repositorio principal (`runesword`) que es llamado desde cada repositorio de módulo:
+The system uses a **centralized reusable workflow** in the main repository (`runesword`) that is called from each module repository:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Repositorio principal (runesword)                       │
+│  Main repository (runesword)                             │
 │  .github/workflows/reusable-module-release.yml          │
-│  - Lógica compartida de validación, build, release      │
+│  - Shared validation, build, and release logic          │
 └────────────────────────────┬────────────────────────────┘
                              │ calls
          ┌───────────────────┼───────────────────┐
@@ -20,44 +20,44 @@ El sistema usa un **workflow reutilizable centralizado** en el repositorio princ
 │ guildforge-     │ │ guildforge-     │ │ guildforge-     │
 │ announcements   │ │ tournaments     │ │ memberships     │
 │ release.yml     │ │ release.yml     │ │ release.yml     │
-│ (15 líneas)     │ │ (15 líneas)     │ │ (15 líneas)     │
+│ (15 lines)      │ │ (15 lines)      │ │ (15 lines)      │
 └─────────────────┘ └─────────────────┘ └─────────────────┘
 ```
 
-## Crear un release
+## Creating a release
 
-Para crear un nuevo release de un módulo:
+To create a new module release:
 
 ```bash
-# 1. Actualiza la versión en module.json
+# 1. Update the version in module.json
 {
   "name": "announcements",
-  "version": "1.0.0",  # ← Incrementar según semver
+  "version": "1.0.0",  # ← Increment following semver
   ...
 }
 
-# 2. Commit los cambios
+# 2. Commit the changes
 git add module.json
 git commit -m "chore: bump version to 1.0.0"
 
-# 3. Crear y push el tag
+# 3. Create and push the tag
 git tag v1.0.0
 git push origin main --tags
 ```
 
-El workflow automáticamente:
-1. Valida que `module.json` existe y tiene formato correcto
-2. Verifica que el tag coincide con la versión en `module.json`
-3. Ejecuta linting (Pint) y tests si existen
-4. Genera un ZIP con la estructura correcta
-5. Calcula checksum SHA256
-6. Crea un GitHub Release con los assets
+The workflow automatically:
+1. Validates that `module.json` exists and has the correct format
+2. Verifies that the tag matches the version in `module.json`
+3. Runs linting (Pint) and tests if they exist
+4. Generates a ZIP with the correct structure
+5. Calculates a SHA256 checksum
+6. Creates a GitHub Release with the assets
 
-## Configurar un nuevo módulo
+## Setting up a new module
 
-### 1. Crear el workflow en el módulo
+### 1. Create the workflow in the module
 
-Crea `.github/workflows/release.yml` en el repositorio del módulo:
+Create `.github/workflows/release.yml` in the module repository:
 
 ```yaml
 name: Module release
@@ -70,27 +70,27 @@ jobs:
   release:
     uses: DavidMRGaona/runesword/.github/workflows/reusable-module-release.yml@main
     with:
-      module_name: 'NOMBRE_DEL_MODULO'  # ← Cambiar
+      module_name: 'MODULE_NAME'  # ← Change this
     permissions:
       contents: write
 ```
 
-### 2. Asegurar que module.json es válido
+### 2. Ensure module.json is valid
 
-El `module.json` debe tener:
+The `module.json` must have:
 
 ```json
 {
-  "name": "nombre-del-modulo",
+  "name": "module-name",
   "version": "1.0.0",
-  "description": "Descripción del módulo",
+  "description": "Module description",
   "dependencies": []
 }
 ```
 
-**Importante:** El `name` en `module.json` debe coincidir exactamente con el `module_name` del workflow.
+**Important:** The `name` in `module.json` must match the workflow's `module_name` exactly.
 
-## Estructura del ZIP generado
+## Generated ZIP structure
 
 ```
 announcements-1.0.0/
@@ -103,7 +103,7 @@ announcements-1.0.0/
 ├── config/
 └── README.md
 
-❌ Excluidos automáticamente:
+❌ Automatically excluded:
 - tests/
 - .git/
 - .github/
@@ -114,35 +114,35 @@ announcements-1.0.0/
 - phpunit.xml
 ```
 
-## Instalar un módulo
+## Installing a module
 
-1. Ve a la página de Releases del módulo en GitHub
-2. Descarga el archivo `{module_name}-{version}.zip`
-3. En el panel de administración de GuildForge → Módulos → Instalar desde ZIP
-4. Sube el archivo ZIP
+1. Go to the module's Releases page on GitHub
+2. Download the `{module_name}-{version}.zip` file
+3. In the GuildForge admin panel → Modules → Install from ZIP
+4. Upload the ZIP file
 
-### Verificar integridad (opcional)
+### Verify integrity (optional)
 
 ```bash
-# Descarga también el archivo .sha256
+# Also download the .sha256 file
 sha256sum -c announcements-1.0.0.zip.sha256
 ```
 
 ## Prereleases
 
-Las versiones con sufijo (ej: `1.0.0-beta.1`, `2.0.0-rc.1`) se marcan automáticamente como prerelease en GitHub.
+Versions with a suffix (e.g., `1.0.0-beta.1`, `2.0.0-rc.1`) are automatically marked as prerelease on GitHub.
 
-## Opciones del workflow
+## Workflow options
 
-El workflow reutilizable acepta estos parámetros:
+The reusable workflow accepts these parameters:
 
-| Parámetro | Tipo | Default | Descripción |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `module_name` | string | (requerido) | Nombre del módulo en kebab-case |
-| `php_version` | string | `8.4` | Versión de PHP para tests |
-| `run_tests` | boolean | `true` | Ejecutar tests antes del release |
+| `module_name` | string | (required) | Module name in kebab-case |
+| `php_version` | string | `8.4` | PHP version for tests |
+| `run_tests` | boolean | `true` | Run tests before the release |
 
-Ejemplo con opciones:
+Example with options:
 
 ```yaml
 jobs:
@@ -156,37 +156,37 @@ jobs:
       contents: write
 ```
 
-## Módulos configurados
+## Configured modules
 
-| Módulo | Estado |
+| Module | Status |
 |--------|--------|
-| guildforge-announcements | ✅ Configurado |
-| guildforge-cookie-consent | ✅ Configurado |
-| guildforge-event-registrations | ✅ Configurado |
-| guildforge-game-tables | ✅ Configurado |
-| guildforge-memberships | ✅ Configurado |
-| guildforge-tournaments | ✅ Configurado |
+| guildforge-announcements | ✅ Configured |
+| guildforge-cookie-consent | ✅ Configured |
+| guildforge-event-registrations | ✅ Configured |
+| guildforge-game-tables | ✅ Configured |
+| guildforge-memberships | ✅ Configured |
+| guildforge-tournaments | ✅ Configured |
 
 ## Troubleshooting
 
-### El workflow falla en validación
+### The workflow fails on validation
 
 **Error:** `module.json not found`
-- Asegúrate de que `module.json` existe en la raíz del repositorio
+- Make sure `module.json` exists at the root of the repository
 
 **Error:** `Module name mismatch`
-- El `name` en `module.json` debe coincidir exactamente con `module_name` del workflow
+- The `name` in `module.json` must match the workflow's `module_name` exactly
 
 **Error:** `Tag version doesn't match module.json version`
-- El tag (sin el prefijo `v`) debe coincidir con la versión en `module.json`
+- The tag (without the `v` prefix) must match the version in `module.json`
 - Tag `v1.0.0` → version `"1.0.0"`
 
-### Los tests fallan
+### Tests fail
 
-- Verifica que `composer.json` tiene las dependencias correctas
-- Asegúrate de que los tests pasan localmente antes de crear el tag
+- Verify that `composer.json` has the correct dependencies
+- Make sure the tests pass locally before creating the tag
 
-### El release no tiene assets
+### The release has no assets
 
-- Revisa los logs del job "Create release" para ver errores
-- Verifica que el workflow tiene permisos `contents: write`
+- Check the logs of the "Create release" job for errors
+- Verify that the workflow has `contents: write` permissions

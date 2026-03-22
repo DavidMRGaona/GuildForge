@@ -9,7 +9,7 @@ Platform for wargames and role-playing games guilds with:
 
 | Layer               | Technology                                    |
 |---------------------|-----------------------------------------------|
-| Backend framework   | Laravel 11+                                   |
+| Backend framework   | Laravel 12+                                   |
 | Admin panel         | Filament 3                                    |
 | Frontend bridge     | Inertia.js                                    |
 | Frontend framework  | Vue 3 (Composition API with `<script setup>`) |
@@ -40,7 +40,7 @@ Platform for wargames and role-playing games guilds with:
    cp src/.env.example src/.env
    ```
 
-3. Configure your instance in `.env`:
+3. Configure your instance in `.env` (see [Environment variables](#environment-variables) below):
    ```env
    APP_NAME="GuildForge"
    APP_DESCRIPTION="Platform for wargames and role-playing games guilds"
@@ -69,6 +69,18 @@ Platform for wargames and role-playing games guilds with:
    npm run build
    ```
 
+## Environment variables
+
+Key environment variables to configure:
+
+| Variable        | Description                              |
+|-----------------|------------------------------------------|
+| `APP_NAME`      | Guild name                               |
+| `APP_URL`       | Application URL                          |
+| `CLOUDINARY_URL`| Cloudinary connection string for images  |
+| `MAIL_*`        | Email configuration for contact form     |
+| `DB_*`          | Database connection settings             |
+
 ## Commands
 
 | Command          | Description                        |
@@ -82,6 +94,12 @@ Platform for wargames and role-playing games guilds with:
 | `make fresh`     | Fresh migration with seeders       |
 
 ## Project structure
+
+This project follows **Clean Architecture** principles:
+
+```
+Domain → Application → Infrastructure → Presentation
+```
 
 ```
 src/app/
@@ -109,6 +127,11 @@ tests/
 └── Feature/          # Feature tests (Controllers)
 ```
 
+- **Domain**: Business entities, value objects, and repository interfaces
+- **Application**: DTOs (Create/Response), factories, query service interfaces
+- **Infrastructure**: Eloquent implementations, query services, external services
+- **Presentation**: Controllers, HTTP resources, Filament resources, Vue components
+
 ## Modules
 
 The project includes an extensible module system for adding functionality without modifying core code.
@@ -127,20 +150,9 @@ php artisan module:list
 
 For detailed module development documentation, see [docs/modules/README.md](docs/modules/README.md).
 
-## Architecture
+## Routes
 
-This project follows **Clean Architecture** principles:
-
-```
-Domain → Application → Infrastructure → Presentation
-```
-
-- **Domain**: Business entities, value objects, and repository interfaces
-- **Application**: DTOs (Create/Response), factories, query service interfaces
-- **Infrastructure**: Eloquent implementations, query services, external services
-- **Presentation**: Controllers, HTTP resources, Filament resources, Vue components
-
-## Public routes
+### Public
 
 | Route               | Description                                           |
 |---------------------|-------------------------------------------------------|
@@ -157,26 +169,14 @@ Domain → Application → Infrastructure → Presentation
 | `/buscar`           | Global search                                         |
 | `/sitemap.xml`      | XML sitemap                                           |
 
-## API routes
+### API
 
 | Route                | Description                |
 |----------------------|----------------------------|
 | `/api/calendar`      | Calendar events JSON       |
 | `/api/settings`      | Site settings JSON         |
 
-## Environment variables
-
-Key environment variables to configure:
-
-| Variable        | Description                              |
-|-----------------|------------------------------------------|
-| `APP_NAME`      | Guild name                               |
-| `APP_URL`       | Application URL                          |
-| `CLOUDINARY_URL`| Cloudinary connection string for images  |
-| `MAIL_*`        | Email configuration for contact form     |
-| `DB_*`          | Database connection settings             |
-
-## Contributing
+## Development rules
 
 1. **TDD**: Write tests BEFORE implementation
 2. **Strict typing**: `declare(strict_types=1)` in PHP, `strict: true` in TypeScript
@@ -186,27 +186,27 @@ Key environment variables to configure:
 
 ## CI/CD
 
-### Pipeline de integración continua
+### Continuous integration pipeline
 
-El proyecto usa GitHub Actions para CI/CD:
+The project uses GitHub Actions for CI/CD:
 
-| Workflow | Trigger            | Descripción         |
-|----------|--------------------|---------------------|
-| CI       | Push/PR a main     | Tests y linting     |
-| Deploy   | CI exitoso en main | Deploy a producción |
+| Workflow | Trigger            | Description          |
+|----------|--------------------|----------------------|
+| CI       | Push/PR to main    | Tests and linting    |
+| Deploy   | CI passed on main  | Deploy to production |
 
-### Jobs de CI
+### CI jobs
 
-- **test**: PHP 8.4, PostgreSQL 17, Redis 7. Ejecuta migraciones y tests en paralelo.
-- **lint**: TypeScript type-check y ESLint.
+- **test**: PHP 8.4, PostgreSQL 17, Redis 7. Runs migrations and tests in parallel.
+- **lint**: TypeScript type-check and ESLint.
 
-### Secrets necesarios
+### Required secrets
 
-Configurar en GitHub → Settings → Secrets and variables → Actions:
+Configure in GitHub → Settings → Secrets and variables → Actions:
 
-| Secret                | Descripción                            |
-|-----------------------|----------------------------------------|
-| `COOLIFY_WEBHOOK_URL` | URL del webhook de Coolify para deploy |
+| Secret                | Description                          |
+|-----------------------|--------------------------------------|
+| `COOLIFY_WEBHOOK_URL` | Coolify webhook URL for deployments  |
 
 ## License
 
