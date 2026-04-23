@@ -11,6 +11,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\MenuItem;
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -53,6 +54,14 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(fn (): ?string => $this->getBrandLogo('site_logo_light'))
             ->darkModeBrandLogo(fn (): ?string => $this->getBrandLogo('site_logo_dark'))
             ->brandLogoHeight('2.5rem')
+            ->homeUrl('/')
+            ->userMenuItems([
+                MenuItem::make()
+                    ->label(__('filament.user_menu.visit_site'))
+                    ->icon('heroicon-o-globe-alt')
+                    ->url('/')
+                    ->openUrlInNewTab(),
+            ])
             ->favicon(fn (): string => $this->getFavicon())
             ->colors([
                 'primary' => $this->getPrimaryColor(),
