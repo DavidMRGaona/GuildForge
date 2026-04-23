@@ -9,6 +9,9 @@ return [
         'settings' => 'Settings',
         'admin' => 'Administration',
     ],
+    'user_menu' => [
+        'visit_site' => 'Visit site',
+    ],
     'pages' => [
         'about' => [
             'title' => 'About',

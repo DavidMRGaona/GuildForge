@@ -12,6 +12,9 @@ return [
     'navigation_groups' => [
         'system' => 'Sistema',
     ],
+    'user_menu' => [
+        'visit_site' => 'Visitar sitio',
+    ],
     'pages' => [
         'about' => [
             'title' => 'Nosotros',
