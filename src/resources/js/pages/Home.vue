@@ -15,7 +15,8 @@ import { buildMosaicLargeUrl, buildMosaicSmallUrl } from '@/utils/cloudinary';
 
 interface Props {
     heroSlides: HeroSlide[];
-    upcomingEvents: Event[];
+    events: Event[];
+    eventsArePast: boolean;
     latestArticles: Article[];
     featuredGallery: Gallery | null;
 }
@@ -57,7 +58,11 @@ function openLightbox(index: number): void {
 
         <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
             <!-- Events Section (Events Grid + Calendar Widget) -->
-            <EventsSection :events="props.upcomingEvents" class="mb-16" />
+            <EventsSection
+                :events="props.events"
+                :are-past="props.eventsArePast"
+                class="mb-16"
+            />
 
             <!-- Latest Articles Section -->
             <section class="mb-16">

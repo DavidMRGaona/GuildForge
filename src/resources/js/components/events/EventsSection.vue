@@ -9,10 +9,12 @@ import { useRoutes } from '@/composables/useRoutes';
 
 interface Props {
     events: Event[];
+    arePast?: boolean;
     maxEvents?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+    arePast: false,
     maxEvents: 2,
 });
 
@@ -21,6 +23,9 @@ const routes = useRoutes();
 
 const displayEvents = computed(() => props.events.slice(0, props.maxEvents));
 const hasEvents = computed(() => props.events.length > 0);
+const sectionTitle = computed(() =>
+    props.arePast ? t('home.recentEvents') : t('home.upcomingEvents'),
+);
 </script>
 
 <template>
@@ -28,7 +33,7 @@ const hasEvents = computed(() => props.events.length > 0);
         <!-- Section header -->
         <div class="mb-6 flex items-center justify-between">
             <h2 class="text-3xl font-bold tracking-tight text-base-primary">
-                {{ t('home.upcomingEvents') }}
+                {{ sectionTitle }}
             </h2>
             <Link
                 v-if="hasEvents"

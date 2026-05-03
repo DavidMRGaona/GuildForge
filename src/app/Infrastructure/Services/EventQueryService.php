@@ -14,8 +14,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
-    ) {
-    }
+    ) {}
 
     public function getUpcomingEvents(int $limit = 10): array
     {
@@ -24,6 +23,19 @@ final readonly class EventQueryService implements EventQueryServiceInterface
             ->where('is_published', true)
             ->where('start_date', '>=', now())
             ->orderBy('start_date', 'asc')
+            ->limit($limit)
+            ->get();
+
+        return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
+    }
+
+    public function getRecentPastEvents(int $limit = 10): array
+    {
+        $events = EventModel::query()
+            ->with('tags')
+            ->where('is_published', true)
+            ->where('start_date', '<', now())
+            ->orderBy('start_date', 'desc')
             ->limit($limit)
             ->get();
 
