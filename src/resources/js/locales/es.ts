@@ -74,6 +74,7 @@ export default {
             'Únete a nuestra comunidad. Organizamos eventos y actividades para todos los niveles.',
         viewEvents: 'Ver próximos eventos',
         upcomingEvents: 'Próximos eventos',
+        recentEvents: 'Eventos recientes',
         featuredGallery: 'Galería destacada',
         noEvents: 'No hay eventos próximos programados',
         noEventsCompact: 'No hay eventos próximos',

@@ -74,6 +74,7 @@ export default {
             'Join our community. We organize events and activities for all skill levels.',
         viewEvents: 'View upcoming events',
         upcomingEvents: 'Upcoming events',
+        recentEvents: 'Recent events',
         featuredGallery: 'Featured gallery',
         noEvents: 'No upcoming events scheduled',
         noEventsCompact: 'No upcoming events',

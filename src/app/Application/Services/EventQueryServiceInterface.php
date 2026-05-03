@@ -14,6 +14,11 @@ interface EventQueryServiceInterface
     public function getUpcomingEvents(int $limit = 10): array;
 
     /**
+     * @return array<int, EventResponseDTO>
+     */
+    public function getRecentPastEvents(int $limit = 10): array;
+
+    /**
      * @param  array<string>|null  $tagSlugs
      * @return array<int, EventResponseDTO>
      */

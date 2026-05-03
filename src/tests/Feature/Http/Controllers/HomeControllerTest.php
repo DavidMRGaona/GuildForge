@@ -30,7 +30,8 @@ final class HomeControllerTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Home')
-                ->has('upcomingEvents', 3)
+                ->has('events', 3)
+                ->where('eventsArePast', false)
         );
     }
 
@@ -44,7 +45,8 @@ final class HomeControllerTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Home')
-                ->has('upcomingEvents', 3)
+                ->has('events', 3)
+                ->where('eventsArePast', false)
         );
     }
 
@@ -69,16 +71,50 @@ final class HomeControllerTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Home')
-                ->has('upcomingEvents', 3)
-                ->where('upcomingEvents.0.title', 'Soonest Event')
-                ->where('upcomingEvents.1.title', 'Middle Event')
-                ->where('upcomingEvents.2.title', 'Later Event')
+                ->has('events', 3)
+                ->where('eventsArePast', false)
+                ->where('events.0.title', 'Soonest Event')
+                ->where('events.1.title', 'Middle Event')
+                ->where('events.2.title', 'Later Event')
         );
     }
 
-    public function test_index_returns_empty_array_when_no_upcoming_events(): void
+    public function test_index_falls_back_to_recent_past_events_when_no_upcoming(): void
     {
-        EventModel::factory()->published()->past()->count(2)->create();
+        EventModel::factory()->published()->create([
+            'title' => 'Yesterday Event',
+            'start_date' => now()->subDay(),
+            'end_date' => now()->subDay()->addHours(2),
+        ]);
+        EventModel::factory()->published()->create([
+            'title' => 'Last Week Event',
+            'start_date' => now()->subWeek(),
+            'end_date' => now()->subWeek()->addHours(2),
+        ]);
+        EventModel::factory()->published()->create([
+            'title' => 'Last Month Event',
+            'start_date' => now()->subMonth(),
+            'end_date' => now()->subMonth()->addHours(2),
+        ]);
+        EventModel::factory()->draft()->past()->create();
+
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Home')
+                ->has('events', 3)
+                ->where('eventsArePast', true)
+                ->where('events.0.title', 'Yesterday Event')
+                ->where('events.1.title', 'Last Week Event')
+                ->where('events.2.title', 'Last Month Event')
+        );
+    }
+
+    public function test_index_returns_empty_when_no_events_at_all(): void
+    {
+        EventModel::factory()->draft()->past()->count(2)->create();
         EventModel::factory()->draft()->upcoming()->count(2)->create();
 
         $response = $this->get('/');
@@ -87,7 +123,23 @@ final class HomeControllerTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Home')
-                ->has('upcomingEvents', 0)
+                ->has('events', 0)
+                ->where('eventsArePast', true)
+        );
+    }
+
+    public function test_index_limits_recent_past_events_to_three(): void
+    {
+        EventModel::factory()->published()->past()->count(5)->create();
+
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Home')
+                ->has('events', 3)
+                ->where('eventsArePast', true)
         );
     }
 
@@ -241,20 +293,20 @@ final class HomeControllerTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('Home')
-                ->has('upcomingEvents', 1)
-                ->has('upcomingEvents.0.id')
-                ->has('upcomingEvents.0.title')
-                ->has('upcomingEvents.0.slug')
-                ->has('upcomingEvents.0.description')
-                ->has('upcomingEvents.0.startDate')
-                ->has('upcomingEvents.0.endDate')
-                ->has('upcomingEvents.0.location')
-                ->has('upcomingEvents.0.imagePublicId')
-                ->has('upcomingEvents.0.memberPrice')
-                ->has('upcomingEvents.0.nonMemberPrice')
-                ->has('upcomingEvents.0.isPublished')
-                ->has('upcomingEvents.0.createdAt')
-                ->has('upcomingEvents.0.updatedAt')
+                ->has('events', 1)
+                ->has('events.0.id')
+                ->has('events.0.title')
+                ->has('events.0.slug')
+                ->has('events.0.description')
+                ->has('events.0.startDate')
+                ->has('events.0.endDate')
+                ->has('events.0.location')
+                ->has('events.0.imagePublicId')
+                ->has('events.0.memberPrice')
+                ->has('events.0.nonMemberPrice')
+                ->has('events.0.isPublished')
+                ->has('events.0.createdAt')
+                ->has('events.0.updatedAt')
         );
     }
 

@@ -22,14 +22,18 @@ final class HomeController extends Controller
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly GalleryQueryServiceInterface $galleryQuery,
         private readonly HeroSlideQueryServiceInterface $heroSlideQuery,
-    ) {
-    }
+    ) {}
 
     public function __invoke(): Response
     {
+        $upcoming = $this->eventQuery->getUpcomingEvents(3);
+        $eventsArePast = $upcoming === [];
+        $events = $eventsArePast ? $this->eventQuery->getRecentPastEvents(3) : $upcoming;
+
         return Inertia::render('Home', [
             'heroSlides' => HeroSlideResource::collection($this->heroSlideQuery->getActiveSlides())->resolve(),
-            'upcomingEvents' => EventResource::collection($this->eventQuery->getUpcomingEvents(3))->resolve(),
+            'events' => EventResource::collection($events)->resolve(),
+            'eventsArePast' => $eventsArePast,
             'latestArticles' => ArticleResource::collection($this->articleQuery->getLatestPublished(3))->resolve(),
             'featuredGallery' => $this->getFeaturedGallery(),
         ]);
