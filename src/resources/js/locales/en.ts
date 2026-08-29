@@ -91,6 +91,9 @@ export default {
         today: 'Today',
         selectEvent: 'Select an event from the calendar',
         viewEvent: 'View full event',
+        viewDetail: 'View full details',
+        legendLabel: 'Activity types',
+        entryAriaLabel: '{source}: {title}',
         free: 'Free',
     },
     about: {

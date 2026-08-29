@@ -2,14 +2,14 @@
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import type { CalendarEvent } from '@/types/models';
+import type { CalendarEntry } from '@/types/models';
 import { buildCardImageUrl } from '@/utils/cloudinary';
 import { useEvents } from '@/composables/useEvents';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import TagList from '@/components/ui/TagList.vue';
 
 interface Props {
-    event: CalendarEvent | null;
+    event: CalendarEntry | null;
 }
 
 const props = defineProps<Props>();
@@ -19,16 +19,18 @@ const { formatDateRange, formatPrice, getExcerpt } = useEvents();
 
 const imageUrl = computed(() => buildCardImageUrl(props.event?.imagePublicId));
 
+const isEventSource = computed(() => props.event?.sourceType === 'event');
+
 const formattedDate = computed(() => {
     if (!props.event) return '';
-    return formatDateRange(props.event.start, props.event.end);
+    return formatDateRange(props.event.start, props.event.end ?? props.event.start);
 });
 
 const priceDisplay = computed(() => {
     if (!props.event) return '';
 
-    const memberPrice = props.event.memberPrice;
-    const nonMemberPrice = props.event.nonMemberPrice;
+    const memberPrice = props.event.memberPrice ?? null;
+    const nonMemberPrice = props.event.nonMemberPrice ?? null;
 
     if (memberPrice === null && nonMemberPrice === null) {
         return t('calendar.free');
@@ -88,6 +90,14 @@ const truncatedDescription = computed(() => {
 
             <!-- Event content -->
             <div class="flex-1">
+                <!-- Source badge (non-event activity types, e.g. game tables) -->
+                <span
+                    v-if="!isEventSource"
+                    class="mb-2 inline-block rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-base-secondary"
+                >
+                    {{ event.sourceLabel }}
+                </span>
+
                 <!-- Title -->
                 <h3 class="text-lg font-semibold text-base-primary">
                     {{ event.title }}
@@ -152,8 +162,8 @@ const truncatedDescription = computed(() => {
                     {{ truncatedDescription }}
                 </p>
 
-                <!-- Pricing -->
-                <div v-if="priceDisplay" class="mt-3 flex items-center text-sm">
+                <!-- Pricing (events only; other activity types don't have core pricing) -->
+                <div v-if="isEventSource && priceDisplay" class="mt-3 flex items-center text-sm">
                     <svg
                         class="mr-2 h-4 w-4 text-base-muted"
                         fill="none"
@@ -175,7 +185,7 @@ const truncatedDescription = computed(() => {
             <div class="mt-4 pt-4 border-t border-default">
                 <Link :href="event.url" class="block">
                     <BaseButton variant="primary" size="sm" class="w-full">
-                        {{ t('calendar.viewEvent') }}
+                        {{ isEventSource ? t('calendar.viewEvent') : t('calendar.viewDetail') }}
                     </BaseButton>
                 </Link>
             </div>

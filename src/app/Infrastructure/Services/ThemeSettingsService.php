@@ -24,7 +24,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         private SettingsServiceInterface $settingsService,
         ?ColorPaletteGeneratorInterface $paletteGenerator = null,
     ) {
-        $this->paletteGenerator = $paletteGenerator ?? new OklchColorPaletteGenerator();
+        $this->paletteGenerator = $paletteGenerator ?? new OklchColorPaletteGenerator;
     }
 
     public function getThemeSettings(): ThemeSettingsDTO
@@ -101,6 +101,15 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           --color-info: #2563EB;
           --color-info-bg: #DBEAFE;
 
+          /* Calendar source colors (Light mode) */
+          --color-calendar-primary: var(--color-primary-action);
+          --color-calendar-accent: var(--color-accent-400);
+          --color-calendar-accent-text: var(--color-neutral-900);
+          --color-calendar-info: var(--color-info);
+          --color-calendar-success: var(--color-success);
+          --color-calendar-warning: var(--color-warning);
+          --color-calendar-neutral: var(--color-neutral-500);
+
           /* Typography */
           --font-heading: '{$theme->fontHeading}', system-ui, sans-serif;
           --font-body: '{$theme->fontBody}', system-ui, sans-serif;
@@ -157,6 +166,15 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           --color-warning-bg: #713F12;
           --color-info: #60A5FA;
           --color-info-bg: #1E3A8A;
+
+          /* Calendar source colors (Dark mode) */
+          --color-calendar-primary: var(--color-primary-action);
+          --color-calendar-accent: var(--color-accent-300);
+          --color-calendar-accent-text: var(--color-neutral-950);
+          --color-calendar-info: var(--color-info);
+          --color-calendar-success: var(--color-success);
+          --color-calendar-warning: var(--color-warning);
+          --color-calendar-neutral: var(--color-neutral-500);
         }
         CSS;
     }

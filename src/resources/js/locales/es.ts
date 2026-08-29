@@ -91,6 +91,9 @@ export default {
         today: 'Hoy',
         selectEvent: 'Selecciona un evento del calendario',
         viewEvent: 'Ver evento completo',
+        viewDetail: 'Ver ficha completa',
+        legendLabel: 'Tipos de actividad',
+        entryAriaLabel: '{source}: {title}',
         free: 'Gratuito',
     },
     about: {

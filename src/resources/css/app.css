@@ -608,13 +608,68 @@ button[data-headlessui-state]:hover {
     transition: transform 0.15s ease-in-out;
 }
 
-.event-calendar .fc-event:hover {
+.event-calendar .fc-event:hover,
+.event-calendar .fc-event:focus-visible {
     transform: scale(1.05);
+}
+
+.event-calendar .fc-event:focus-visible {
+    outline: 2px solid var(--color-primary-action);
+    outline-offset: 2px;
 }
 
 .event-calendar .fc-daygrid-event {
     white-space: normal;
     align-items: flex-start;
+}
+
+/* Block view: per-source-color event backgrounds (token-driven, see ThemeSettingsService) */
+.event-calendar .fc-daygrid-event.fc-entry--primary {
+    background-color: var(--color-calendar-primary, var(--color-primary-action));
+    border-color: var(--color-calendar-primary, var(--color-primary-action));
+}
+
+.event-calendar .fc-daygrid-event.fc-entry--accent {
+    background-color: var(--color-calendar-accent, var(--color-accent-400));
+    border-color: var(--color-calendar-accent, var(--color-accent-400));
+    color: var(--color-calendar-accent-text, var(--color-text-primary));
+}
+
+.event-calendar .fc-daygrid-event.fc-entry--info {
+    background-color: var(--color-calendar-info, var(--color-info));
+    border-color: var(--color-calendar-info, var(--color-info));
+}
+
+/* --color-info flips from a dark blue (light mode) to a light blue (dark
+   mode); the default white event text only keeps 4.5:1 contrast in light
+   mode, so dark mode needs the same dark-text token used for --accent. */
+.dark .event-calendar .fc-daygrid-event.fc-entry--info {
+    color: var(--color-calendar-accent-text, var(--color-text-primary));
+}
+
+/* --color-success and --color-warning are mid-brightness in both modes:
+   the default white event text fails 4.5:1 contrast against them, so both
+   need a dark text color regardless of light/dark mode. */
+.event-calendar .fc-daygrid-event.fc-entry--success {
+    background-color: var(--color-calendar-success, var(--color-success));
+    border-color: var(--color-calendar-success, var(--color-success));
+    color: var(--color-calendar-accent-text, var(--color-text-primary));
+}
+
+.event-calendar .fc-daygrid-event.fc-entry--warning {
+    background-color: var(--color-calendar-warning, var(--color-warning));
+    border-color: var(--color-calendar-warning, var(--color-warning));
+    color: var(--color-calendar-accent-text, var(--color-text-primary));
+}
+
+/* --color-calendar-neutral resolves to the theme's admin-configurable
+   neutral-500 shade; there is no dedicated "neutral text" token, so this
+   reuses the accent dark-text token as a best-effort default (same
+   uncertainty already accepted for --accent, see ThemeSettingsService). */
+.event-calendar .fc-daygrid-event.fc-entry--neutral {
+    background-color: var(--color-calendar-neutral, var(--color-neutral-400));
+    border-color: var(--color-calendar-neutral, var(--color-neutral-400));
+    color: var(--color-calendar-accent-text, var(--color-text-primary));
 }
 
 .event-calendar .fc-event-title {
@@ -812,7 +867,11 @@ button[data-headlessui-state]:hover {
 .event-calendar--compact .fc .fc-daygrid-body-unbalanced .fc-daygrid-day-events {
     display: flex;
     justify-content: center;
-    gap: 2px;
+    /* Each dot carries a 1px box-shadow ring (see .fc-daygrid-event-dot below)
+       that doesn't take up layout space. A 2px gap left the rings of two
+       adjacent, differently-colored dots touching (visually 0px apart), so
+       they read as a single blob; 4px keeps a ~2px visible gap between rings. */
+    gap: 4px;
     min-height: 0;
     margin-top: 2px;
 }
@@ -825,20 +884,69 @@ button[data-headlessui-state]:hover {
     margin: 0;
 }
 
-.event-calendar--compact .fc-daygrid-event {
+/* The compact widget root carries both `event-calendar` and
+   `event-calendar--compact`, and every entry always carries the base
+   `fc-entry` class (see calendarEntries.ts). The block-view color rules
+   above (`.event-calendar .fc-daygrid-event.fc-entry--{color}`) have
+   specificity (0,3,0) and would otherwise beat this reset's (0,2,0),
+   leaving a colored background/border chip behind each dot. The second
+   selector matches at (0,3,0) too, so it ties with those rules and wins by
+   appearing later in the file. The plain `.fc-daygrid-event` selector is
+   kept as a defensive fallback for any entry that might ever render
+   without the `fc-entry` class. */
+.event-calendar--compact .fc-daygrid-event,
+.event-calendar--compact .fc-daygrid-event.fc-entry {
+    position: relative;
     margin: 0;
     padding: 0;
     background: none;
     border: none;
 }
 
+/* Invisible hit-area extension: the visible dot stays 6px, but the tap/click
+   target is enlarged (without affecting layout, since it's an absolutely
+   positioned pseudo-element) to make the tiny dots easier to hit on touch
+   devices. */
+.event-calendar--compact .fc-daygrid-event::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+}
+
 .event-calendar--compact .fc-daygrid-event-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: var(--color-primary-action);
+    background-color: var(--color-calendar-primary, var(--color-primary-action));
+    /* Neutral ring so the dot stays perceivable (WCAG 1.4.11) even when an
+       admin-configured accent/primary color is close in luminance to
+       --color-bg-surface; the fill color itself still conveys the source
+       (never the sole channel: see EventCalendar's eventDidMount aria-label
+       and the /calendario legend). */
+    box-shadow: 0 0 0 1px var(--color-border-strong);
     border: none;
     margin: 0;
+}
+
+/* Per-source-color dot overrides (token-driven, see ThemeSettingsService) */
+.event-calendar--compact .fc-entry--accent .fc-daygrid-event-dot {
+    background-color: var(--color-calendar-accent, var(--color-accent-400));
+}
+
+.event-calendar--compact .fc-entry--info .fc-daygrid-event-dot {
+    background-color: var(--color-calendar-info, var(--color-info));
+}
+
+.event-calendar--compact .fc-entry--success .fc-daygrid-event-dot {
+    background-color: var(--color-calendar-success, var(--color-success));
+}
+
+.event-calendar--compact .fc-entry--warning .fc-daygrid-event-dot {
+    background-color: var(--color-calendar-warning, var(--color-warning));
+}
+
+.event-calendar--compact .fc-entry--neutral .fc-daygrid-event-dot {
+    background-color: var(--color-calendar-neutral, var(--color-neutral-400));
 }
 
 .event-calendar--compact .fc-event-title,
@@ -846,6 +954,16 @@ button[data-headlessui-state]:hover {
     display: none;
 }
 
+/* NOTE (unverified, no browser/Docker available to confirm): the compact
+   widget forces `eventDisplay: 'list-item'` (EventCalendar.vue), which makes
+   FullCalendar render every entry -- including multi-day ones -- as a dot in
+   normal flow (`.fc-daygrid-event-harness`), not as an absolutely positioned
+   spanning bar (`.fc-daygrid-event-harness-abs`, used for block/bar display
+   across day cells). This rule may therefore never match any real element in
+   compact mode. Left in place defensively rather than removed, since we
+   can't verify FullCalendar's harness selection at runtime here; if a future
+   visual QA pass confirms `-abs` harnesses never appear under `list-item`
+   display, this rule can be deleted. */
 .event-calendar--compact .fc-daygrid-event-harness-abs {
     position: relative;
 }
@@ -919,6 +1037,43 @@ button[data-headlessui-state]:hover {
 
 .dark .event-calendar .fc-timegrid-event:hover {
     box-shadow: 0 4px 6px rgb(0 0 0 / 0.4);
+}
+
+/* ===== CALENDAR LEGEND ===== */
+/* Data-driven legend dots (see extractLegend() / Calendar/Index.vue), token-driven colors */
+.calendar-legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    /* Same neutral ring as the compact widget dots, for a consistent
+       perceivable boundary regardless of the admin-configured color. */
+    box-shadow: 0 0 0 1px var(--color-border-strong);
+}
+
+.calendar-legend-dot--primary {
+    background-color: var(--color-calendar-primary, var(--color-primary-action));
+}
+
+.calendar-legend-dot--accent {
+    background-color: var(--color-calendar-accent, var(--color-accent-400));
+}
+
+.calendar-legend-dot--info {
+    background-color: var(--color-calendar-info, var(--color-info));
+}
+
+.calendar-legend-dot--success {
+    background-color: var(--color-calendar-success, var(--color-success));
+}
+
+.calendar-legend-dot--warning {
+    background-color: var(--color-calendar-warning, var(--color-warning));
+}
+
+.calendar-legend-dot--neutral {
+    background-color: var(--color-calendar-neutral, var(--color-neutral-400));
 }
 
 /* ==========================================================================
