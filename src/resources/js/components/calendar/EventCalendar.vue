@@ -5,7 +5,9 @@ import { useI18n } from 'vue-i18n';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import luxonPlugin from '@fullcalendar/luxon3';
 import { useCalendarLocale } from '@/composables/useCalendarLocale';
+import { VENUE_TIMEZONE } from '@/utils/datetime';
 import type {
     CalendarOptions,
     EventClickArg,
@@ -171,8 +173,11 @@ const handleEventDidMount = (info: EventMountArg): void => {
 
 const calendarOptions = computed<CalendarOptions>(() => {
     const baseOptions: CalendarOptions = {
-        plugins: [dayGridPlugin, interactionPlugin],
+        plugins: [dayGridPlugin, interactionPlugin, luxonPlugin],
         initialView: 'dayGridMonth',
+        // Named timezone support comes from luxonPlugin; without it FullCalendar
+        // would place entries on the visitor's local day instead of the venue's.
+        timeZone: VENUE_TIMEZONE,
         locale: calendarLocale.value,
         events: fetchEvents,
         eventClick: handleEventClick,

@@ -1,6 +1,7 @@
 import { computed, unref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { MaybeRef } from 'vue';
+import { venueDayKey } from '@/utils/datetime';
 
 export interface EventDateBadge {
     day: string;
@@ -34,9 +35,11 @@ export function useEventDateBadge(localeParam?: MaybeRef<string>): {
     });
 
     function getDateBadge(dateString: string): EventDateBadge {
-        const date = new Date(dateString);
-        const day = date.getDate().toString();
-        const monthIndex = date.getMonth();
+        // Read day and month off the venue day key: the browser's getters would
+        // shift the badge by a day for visitors in another timezone.
+        const dayKey = venueDayKey(new Date(dateString));
+        const day = Number(dayKey.slice(8)).toString();
+        const monthIndex = Number(dayKey.slice(5, 7)) - 1;
         // months array is always 12 elements, monthIndex is always 0-11
         const month = months.value[monthIndex] as string;
 
