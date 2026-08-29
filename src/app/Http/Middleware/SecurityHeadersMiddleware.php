@@ -53,7 +53,7 @@ final readonly class SecurityHeadersMiddleware
         $sources = "'self' 'unsafe-inline' 'unsafe-eval'";
 
         if (app()->environment('local')) {
-            $sources .= ' http://localhost:5174';
+            $sources .= ' http://localhost:5173';
         }
 
         return "script-src {$sources}";
@@ -67,7 +67,7 @@ final readonly class SecurityHeadersMiddleware
         $sources = "'self' 'unsafe-inline' https://fonts.bunny.net";
 
         if (app()->environment('local')) {
-            $sources .= ' http://localhost:5174';
+            $sources .= ' http://localhost:5173';
         }
 
         return "style-src {$sources}";
@@ -78,7 +78,7 @@ final readonly class SecurityHeadersMiddleware
         $sources = "'self' https://res.cloudinary.com https://*.tile.openstreetmap.org data:";
 
         if (app()->environment('local')) {
-            $sources .= ' http://localhost:5174';
+            $sources .= ' http://localhost:5173';
         }
 
         return "img-src {$sources}";
@@ -89,7 +89,7 @@ final readonly class SecurityHeadersMiddleware
         $sources = "'self'";
 
         if (app()->environment('local')) {
-            $sources .= ' http://localhost:5174 ws://localhost:5174';
+            $sources .= ' http://localhost:5173 ws://localhost:5173';
         }
 
         return "connect-src {$sources}";
