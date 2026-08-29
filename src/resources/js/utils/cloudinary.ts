@@ -1,5 +1,39 @@
-const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? '';
-const CLOUDINARY_PREFIX = import.meta.env.VITE_CLOUDINARY_PREFIX ?? '';
+export interface CloudinaryConfig {
+    cloudName: string;
+    prefix: string;
+}
+
+declare global {
+    var __guildforgeCloudinary: CloudinaryConfig | undefined;
+}
+
+/**
+ * Publish the delivery settings shared by the backend through Inertia.
+ *
+ * Called once while booting the app. The value lives on `globalThis` on
+ * purpose: module bundles ship their own copy of this file, so module-level
+ * state would not be shared between the core bundle and a module's bundle.
+ */
+export function setCloudinaryConfig(config: CloudinaryConfig): void {
+    globalThis.__guildforgeCloudinary = config;
+}
+
+/**
+ * Resolve the delivery settings at call time.
+ *
+ * Reading these at runtime (instead of inlining `import.meta.env` at build
+ * time) is what allows module assets to be compiled by CI into a distributable
+ * package: the bundle carries no installation-specific configuration.
+ * The build-time values remain as a fallback for local development.
+ */
+function getCloudinaryConfig(): CloudinaryConfig {
+    const runtime = globalThis.__guildforgeCloudinary;
+
+    return {
+        cloudName: runtime?.cloudName || import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '',
+        prefix: runtime?.prefix || import.meta.env.VITE_CLOUDINARY_PREFIX || '',
+    };
+}
 
 interface CloudinaryTransformations {
     width?: number;
@@ -15,7 +49,7 @@ interface CloudinaryTransformations {
  * - Add prefix if configured and not already present
  * - Remove file extension (Cloudinary public_id doesn't include it)
  */
-function normalizePublicId(publicId: string): string {
+function normalizePublicId(publicId: string, prefix: string): string {
     // Remove file extension
     const lastDotIndex = publicId.lastIndexOf('.');
     if (lastDotIndex > 0) {
@@ -26,8 +60,8 @@ function normalizePublicId(publicId: string): string {
     }
 
     // Add prefix if configured and not already present
-    if (CLOUDINARY_PREFIX && !publicId.startsWith(CLOUDINARY_PREFIX + '/')) {
-        publicId = `${CLOUDINARY_PREFIX}/${publicId}`;
+    if (prefix && !publicId.startsWith(prefix + '/')) {
+        publicId = `${prefix}/${publicId}`;
     }
 
     return publicId;
@@ -39,7 +73,8 @@ export function buildImageUrl(
 ): string | null {
     if (!publicId) return null;
 
-    const normalizedId = normalizePublicId(publicId);
+    const { cloudName, prefix } = getCloudinaryConfig();
+    const normalizedId = normalizePublicId(publicId, prefix);
 
     const parts: string[] = [];
     if (transformations.width) parts.push(`w_${transformations.width}`);
@@ -54,7 +89,7 @@ export function buildImageUrl(
     if (!transformations.format) parts.push('f_auto');
 
     const transformationString = parts.join(',');
-    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${transformationString}/${normalizedId}`;
+    return `https://res.cloudinary.com/${cloudName}/image/upload/${transformationString}/${normalizedId}`;
 }
 
 // Presets
