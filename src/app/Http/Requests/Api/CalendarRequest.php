@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use DateTimeImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class CalendarRequest extends FormRequest
@@ -43,5 +44,21 @@ final class CalendarRequest extends FormRequest
     public function endDate(): string
     {
         return $this->validated('end');
+    }
+
+    /**
+     * Get the start date from the request as a DateTimeImmutable.
+     */
+    public function startDateTime(): DateTimeImmutable
+    {
+        return new DateTimeImmutable($this->startDate());
+    }
+
+    /**
+     * Get the end date from the request as a DateTimeImmutable.
+     */
+    public function endDateTime(): DateTimeImmutable
+    {
+        return new DateTimeImmutable($this->endDate());
     }
 }

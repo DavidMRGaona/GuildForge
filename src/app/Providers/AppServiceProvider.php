@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Calendar\Services\CalendarAggregatorServiceInterface;
+use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
@@ -58,6 +60,8 @@ use App\Domain\Repositories\PhotoRepositoryInterface;
 use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
+use App\Infrastructure\Calendar\Services\CalendarAggregatorService;
+use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Mail\Listeners\CheckQuotaBeforeSending;
 use App\Infrastructure\Mail\Listeners\LogSentEmail;
@@ -264,6 +268,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleSlotRegistryInterface::class, ModuleSlotRegistry::class);
         $this->app->singleton(ModulePageRegistryInterface::class, ModulePageRegistry::class);
         $this->app->singleton(ModuleRouteRegistryInterface::class, ModuleRouteRegistry::class);
+
+        // Calendar system bindings
+        $this->app->singleton(CalendarSourceRegistryInterface::class, CalendarSourceRegistry::class);
+        $this->app->singleton(CalendarAggregatorServiceInterface::class, CalendarAggregatorService::class);
 
         // Navigation system bindings
         $this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);

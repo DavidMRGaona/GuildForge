@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CalendarEvent } from '@/types/models';
+import type { CalendarEntry } from '@/types/models';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel.vue';
+import { extractLegend, type CalendarLegendItem } from '@/utils/calendarEntries';
 import { useSeo } from '@/composables/useSeo';
 import { useMediaQuery } from '@/composables/useMediaQuery';
 
@@ -16,11 +17,14 @@ useSeo({
     description: t('calendar.title'),
 });
 
-const selectedEvent = ref<CalendarEvent | null>(null);
+const selectedEvent = ref<CalendarEntry | null>(null);
 const showMobileModal = ref(false);
 const hasSetDefaultEvent = ref(false);
+const legend = ref<CalendarLegendItem[]>([]);
 
-const handleEventsLoaded = (events: CalendarEvent[]): void => {
+const handleEventsLoaded = (events: CalendarEntry[]): void => {
+    legend.value = extractLegend(events);
+
     // Only set default once (first load)
     if (hasSetDefaultEvent.value || events.length === 0) {
         return;
@@ -49,7 +53,7 @@ const handleEventsLoaded = (events: CalendarEvent[]): void => {
     hasSetDefaultEvent.value = true;
 };
 
-const handleEventSelect = (event: CalendarEvent): void => {
+const handleEventSelect = (event: CalendarEntry): void => {
     selectedEvent.value = event;
 
     // On mobile, show the modal
@@ -83,6 +87,28 @@ const closeMobileModal = (): void => {
                         @event-select="handleEventSelect"
                         @events-loaded="handleEventsLoaded"
                     />
+
+                    <!-- Legend -->
+                    <ul
+                        v-if="legend.length > 0"
+                        class="mt-4 flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
+                        :aria-label="t('calendar.legendLabel')"
+                    >
+                        <li
+                            v-for="item in legend"
+                            :key="item.sourceType"
+                            class="flex items-center gap-1.5 text-sm text-base-secondary"
+                        >
+                            <span
+                                :class="[
+                                    'calendar-legend-dot',
+                                    `calendar-legend-dot--${item.color}`,
+                                ]"
+                                aria-hidden="true"
+                            ></span>
+                            {{ item.sourceLabel }}
+                        </li>
+                    </ul>
                 </div>
 
                 <!-- Detail panel (1/3 width) -->
@@ -100,6 +126,25 @@ const closeMobileModal = (): void => {
                     @event-select="handleEventSelect"
                     @events-loaded="handleEventsLoaded"
                 />
+
+                <!-- Legend -->
+                <ul
+                    v-if="legend.length > 0"
+                    class="mt-4 flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
+                    :aria-label="t('calendar.legendLabel')"
+                >
+                    <li
+                        v-for="item in legend"
+                        :key="item.sourceType"
+                        class="flex items-center gap-1.5 text-sm text-base-secondary"
+                    >
+                        <span
+                            :class="['calendar-legend-dot', `calendar-legend-dot--${item.color}`]"
+                            aria-hidden="true"
+                        ></span>
+                        {{ item.sourceLabel }}
+                    </li>
+                </ul>
             </div>
         </div>
 

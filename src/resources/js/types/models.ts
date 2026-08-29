@@ -158,20 +158,31 @@ export interface GalleryFilters {
     page?: number;
 }
 
-export interface CalendarEvent {
+/** Semantic color token for a calendar source, resolved via CSS variables. */
+export type CalendarSourceColor = 'primary' | 'accent' | 'info' | 'success' | 'warning' | 'neutral';
+
+export interface CalendarEntry {
     id: string;
+    /** Generic source identifier (e.g. 'event', 'game-table'). Frontend stays agnostic of module types. */
+    sourceType: string;
+    sourceLabel: string;
+    color: CalendarSourceColor;
     title: string;
-    slug: string;
+    /** Only present on core event entries; other sources (e.g. game tables) don't send it. */
+    slug?: string;
     description: string;
     start: string;
-    end: string;
+    end: string | null;
     location: string | null;
     imagePublicId: string | null;
-    memberPrice: number | null;
-    nonMemberPrice: number | null;
+    memberPrice?: number | null;
+    nonMemberPrice?: number | null;
     url: string;
     tags: Tag[];
 }
+
+/** @deprecated Use CalendarEntry instead */
+export type CalendarEvent = CalendarEntry;
 
 export type ActivityIcon =
     | 'dice'

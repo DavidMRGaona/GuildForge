@@ -208,4 +208,39 @@ final class CalendarControllerTest extends TestCase
         $response->assertJsonCount(0);
         $response->assertJson([]);
     }
+
+    public function test_index_marks_core_events_with_event_source_type(): void
+    {
+        EventModel::factory()->published()->create([
+            'title' => 'Source Type Event',
+            'start_date' => '2025-01-15 10:00:00',
+            'end_date' => '2025-01-15 18:00:00',
+        ]);
+
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            '*' => [
+                'id',
+                'title',
+                'slug',
+                'description',
+                'start',
+                'end',
+                'location',
+                'imagePublicId',
+                'memberPrice',
+                'nonMemberPrice',
+                'url',
+                'sourceType',
+                'sourceLabel',
+                'color',
+            ],
+        ]);
+        $response->assertJsonFragment([
+            'sourceType' => 'event',
+            'color' => 'primary',
+        ]);
+    }
 }

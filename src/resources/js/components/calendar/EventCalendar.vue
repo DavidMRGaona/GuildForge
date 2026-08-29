@@ -9,10 +9,18 @@ import { useCalendarLocale } from '@/composables/useCalendarLocale';
 import type {
     CalendarOptions,
     EventClickArg,
+    EventInput,
     EventSourceFuncArg,
     EventHoveringArg,
+    EventMountArg,
 } from '@fullcalendar/core';
-import type { CalendarEvent } from '@/types/models';
+import type { CalendarEntry } from '@/types/models';
+import {
+    collapseEntriesByActivityType,
+    entryUid,
+    expandEntriesPerDay,
+    toFullCalendarEvents,
+} from '@/utils/calendarEntries';
 import EventTooltip from './EventTooltip.vue';
 
 interface Props {
@@ -28,34 +36,26 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-    eventSelect: [event: CalendarEvent];
+    eventSelect: [event: CalendarEntry];
     calendarClick: [];
-    eventsLoaded: [events: CalendarEvent[]];
+    eventsLoaded: [events: CalendarEntry[]];
 }>();
 
 const { t } = useI18n();
 const calendarLocale = useCalendarLocale();
 const isLoading = ref(false);
 const error = ref<string | null>(null);
-const eventsCache = ref<Map<string, CalendarEvent>>(new Map());
+const eventsCache = ref<Map<string, CalendarEntry>>(new Map());
 
 // Tooltip state
-const tooltipEvent = ref<CalendarEvent | null>(null);
+const tooltipEvent = ref<CalendarEntry | null>(null);
 const tooltipX = ref(0);
 const tooltipY = ref(0);
 const tooltipVisible = ref(false);
 
 const fetchEvents = async (
     info: EventSourceFuncArg,
-    successCallback: (
-        events: Array<{
-            id: string;
-            title: string;
-            start: string;
-            end?: string;
-            url: string;
-        }>
-    ) => void,
+    successCallback: (events: EventInput[]) => void,
     failureCallback: (error: Error) => void
 ): Promise<void> => {
     isLoading.value = true;
@@ -72,28 +72,37 @@ const fetchEvents = async (
             throw new Error('Failed to fetch events');
         }
 
-        const data: CalendarEvent[] = await response.json();
+        const data: CalendarEntry[] = await response.json();
 
-        // Cache events for tooltip/detail panel access
+        // Cache entries (keyed by a source-prefixed uid) for tooltip/detail panel access.
+        // In compact mode, multi-day entries are expanded into one synthetic, single-day
+        // id per covered day (see expandEntriesPerDay) so every day gets a dot; those
+        // synthetic ids must still resolve back to the ORIGINAL entry (real start/end),
+        // not the single-day placeholder, so the tooltip/click/aria-label always reflect
+        // the entry's real duration.
         eventsCache.value.clear();
-        data.forEach((event) => {
-            eventsCache.value.set(event.id, event);
-        });
+        if (props.compact) {
+            data.forEach((entry) => {
+                expandEntriesPerDay([entry]).forEach((piece) => {
+                    eventsCache.value.set(entryUid(piece), entry);
+                });
+            });
+        } else {
+            data.forEach((entry) => {
+                eventsCache.value.set(entryUid(entry), entry);
+            });
+        }
 
-        // Emit events loaded for parent component to handle
+        // Emit the full, unexpanded/uncollapsed set for parent component to handle
         emit('eventsLoaded', data);
 
-        const mappedEvents = data.map((event) => {
-            const baseEvent = {
-                id: event.id,
-                title: event.title,
-                start: event.start,
-                url: event.url,
-            };
-            return event.end !== null ? { ...baseEvent, end: event.end } : baseEvent;
-        });
+        // Compact (widget) view: expand multi-day entries into one marker per covered
+        // day, then collapse same-day, multi-type entries down to one dot per type
+        const displayedEntries = props.compact
+            ? collapseEntriesByActivityType(expandEntriesPerDay(data))
+            : data;
 
-        successCallback(mappedEvents);
+        successCallback(toFullCalendarEvents(displayedEntries));
     } catch (e) {
         error.value = t('calendar.error');
         console.error('Error fetching calendar events:', e);
@@ -138,6 +147,28 @@ const handleMouseLeave = (): void => {
     tooltipVisible.value = false;
 };
 
+/**
+ * Give every rendered event a real accessible name.
+ *
+ * Compact (widget) mode hides the visible title/time via CSS to keep the
+ * dot-only layout, which also removes them from the accessibility tree.
+ * Non-event activity types (e.g. game tables) are only distinguished from
+ * core events by color, so keyboard/screen-reader users need a text
+ * alternative independent of both the hidden title and the hover-only
+ * tooltip.
+ */
+const handleEventDidMount = (info: EventMountArg): void => {
+    const entry = eventsCache.value.get(info.event.id);
+    if (!entry) return;
+
+    const label =
+        entry.sourceType === 'event'
+            ? entry.title
+            : t('calendar.entryAriaLabel', { source: entry.sourceLabel, title: entry.title });
+
+    info.el.setAttribute('aria-label', label);
+};
+
 const calendarOptions = computed<CalendarOptions>(() => {
     const baseOptions: CalendarOptions = {
         plugins: [dayGridPlugin, interactionPlugin],
@@ -145,6 +176,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
         locale: calendarLocale.value,
         events: fetchEvents,
         eventClick: handleEventClick,
+        eventDidMount: handleEventDidMount,
         dateClick: handleDateClick,
         headerToolbar: props.compact
             ? {

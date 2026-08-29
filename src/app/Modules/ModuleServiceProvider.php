@@ -238,6 +238,17 @@ abstract class ModuleServiceProvider extends ServiceProvider
     }
 
     /**
+     * Register calendar sources provided by this module.
+     * Allows module entries to appear in the public calendars.
+     *
+     * @return array<class-string<\App\Application\Calendar\Contracts\CalendarEntrySourceInterface>>
+     */
+    public function registerCalendarSources(): array
+    {
+        return [];
+    }
+
+    /**
      * Register Filament pages provided by this module.
      * Override in subclass to provide Filament pages.
      *

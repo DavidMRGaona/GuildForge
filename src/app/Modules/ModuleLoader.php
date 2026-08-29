@@ -6,6 +6,7 @@ namespace App\Modules;
 
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
+use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
@@ -90,6 +91,9 @@ final class ModuleLoader
         // Register routes from the provider
         $this->registerProviderRoutes($provider);
 
+        // Register calendar sources from the provider
+        $this->registerProviderCalendarSources($provider, $module->name()->value);
+
         // Register navigation from the provider
         $this->registerProviderNavigation($provider);
     }
@@ -169,6 +173,23 @@ final class ModuleLoader
         if ($this->app->bound(ModuleRouteRegistryInterface::class)) {
             $routeRegistry = $this->app->make(ModuleRouteRegistryInterface::class);
             $routeRegistry->registerMany($routes);
+        }
+    }
+
+    /**
+     * Register calendar sources from a module provider.
+     */
+    private function registerProviderCalendarSources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerCalendarSources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(CalendarSourceRegistryInterface::class)) {
+            $sourceRegistry = $this->app->make(CalendarSourceRegistryInterface::class);
+            $sourceRegistry->registerMany($sources, $moduleName);
         }
     }
 
