@@ -87,6 +87,17 @@ final readonly class ModuleAssetBuilder
             return true;
         }
 
+        $missingEnvVars = $this->missingViteEnvVars();
+
+        if ($missingEnvVars !== []) {
+            Log::error(
+                "Cannot build assets for module {$module->name()->value}: missing required Vite environment variables",
+                ['missing' => $missingEnvVars],
+            );
+
+            return false;
+        }
+
         Log::info("Building assets for module: {$module->name()->value}");
 
         // Install dependencies if node_modules doesn't exist
@@ -98,6 +109,43 @@ final readonly class ModuleAssetBuilder
 
         // Run the build
         return $this->runNpmBuild($modulePath, $module->name()->value);
+    }
+
+    /**
+     * Vite environment variables forwarded to the module build process.
+     *
+     * Vite resolves `import.meta.env.VITE_*` at build time from the `.env` file
+     * in its working directory. Module builds run inside the module directory,
+     * which has no `.env`, so the values are passed through the environment of
+     * the build process instead.
+     *
+     * @return array<string, string>
+     */
+    public function viteEnvironment(): array
+    {
+        /** @var array<string, string|null> $configured */
+        $configured = config('module-build.vite_env', []);
+
+        return array_filter(
+            $configured,
+            static fn (?string $value): bool => $value !== null && $value !== '',
+        );
+    }
+
+    /**
+     * Required Vite variables that have no value in the current environment.
+     *
+     * @return list<string>
+     */
+    public function missingViteEnvVars(): array
+    {
+        /** @var list<string> $required */
+        $required = config('module-build.required_vite_env', []);
+        $available = $this->viteEnvironment();
+
+        return array_values(
+            array_filter($required, static fn (string $name): bool => ! isset($available[$name])),
+        );
     }
 
     /**
@@ -132,7 +180,7 @@ final readonly class ModuleAssetBuilder
     {
         Log::info("Running npm build for module: {$moduleName}");
 
-        $process = new Process(['npm', 'run', 'build'], $modulePath);
+        $process = new Process(['npm', 'run', 'build'], $modulePath, $this->viteEnvironment());
         $process->setTimeout(300); // 5 minutes
 
         try {

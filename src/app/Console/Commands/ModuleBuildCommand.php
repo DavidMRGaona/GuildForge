@@ -40,6 +40,20 @@ final class ModuleBuildCommand extends Command
             return Command::FAILURE;
         }
 
+        $missingEnvVars = $this->assetBuilder->missingViteEnvVars();
+
+        if ($missingEnvVars !== []) {
+            $this->error('Missing required Vite environment variables: '.implode(', ', $missingEnvVars));
+            $this->newLine();
+            $this->line('Module assets are compiled from the module directory, which has no .env file,');
+            $this->line('so these values must be defined in the application .env (see .env.example).');
+            $this->line('Without them Vite inlines empty strings and the built assets request broken URLs.');
+            $this->newLine();
+            $this->line('After updating .env run: php artisan config:clear');
+
+            return Command::FAILURE;
+        }
+
         if ($buildAll) {
             return $this->buildAllModules($force);
         }

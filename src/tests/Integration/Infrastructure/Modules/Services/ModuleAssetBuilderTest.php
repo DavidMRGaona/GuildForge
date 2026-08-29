@@ -184,6 +184,71 @@ final class ModuleAssetBuilderTest extends TestCase
         }
     }
 
+    public function test_vite_environment_forwards_configured_variables(): void
+    {
+        config(['module-build.vite_env' => [
+            'VITE_CLOUDINARY_CLOUD_NAME' => 'test-cloud',
+            'VITE_CLOUDINARY_PREFIX' => 'test-prefix',
+        ]]);
+
+        $this->assertSame([
+            'VITE_CLOUDINARY_CLOUD_NAME' => 'test-cloud',
+            'VITE_CLOUDINARY_PREFIX' => 'test-prefix',
+        ], $this->builder->viteEnvironment());
+    }
+
+    public function test_vite_environment_omits_variables_without_value(): void
+    {
+        config(['module-build.vite_env' => [
+            'VITE_CLOUDINARY_CLOUD_NAME' => 'test-cloud',
+            'VITE_CLOUDINARY_PREFIX' => null,
+            'VITE_EMPTY' => '',
+        ]]);
+
+        $this->assertSame(
+            ['VITE_CLOUDINARY_CLOUD_NAME' => 'test-cloud'],
+            $this->builder->viteEnvironment()
+        );
+    }
+
+    public function test_missing_vite_env_vars_reports_required_variables_without_value(): void
+    {
+        config([
+            'module-build.vite_env' => ['VITE_CLOUDINARY_CLOUD_NAME' => null],
+            'module-build.required_vite_env' => ['VITE_CLOUDINARY_CLOUD_NAME'],
+        ]);
+
+        $this->assertSame(
+            ['VITE_CLOUDINARY_CLOUD_NAME'],
+            $this->builder->missingViteEnvVars()
+        );
+    }
+
+    public function test_missing_vite_env_vars_is_empty_when_required_variables_are_present(): void
+    {
+        config([
+            'module-build.vite_env' => ['VITE_CLOUDINARY_CLOUD_NAME' => 'test-cloud'],
+            'module-build.required_vite_env' => ['VITE_CLOUDINARY_CLOUD_NAME'],
+        ]);
+
+        $this->assertSame([], $this->builder->missingViteEnvVars());
+    }
+
+    public function test_build_fails_when_required_vite_env_var_is_missing(): void
+    {
+        config([
+            'module-build.vite_env' => ['VITE_CLOUDINARY_CLOUD_NAME' => null],
+            'module-build.required_vite_env' => ['VITE_CLOUDINARY_CLOUD_NAME'],
+        ]);
+
+        $module = $this->createModule('test-module-env');
+        $this->createModuleWithBuildConfig('test-module-env');
+        $this->createModuleWithVueComponent('test-module-env', 'Test.vue');
+
+        // Must fail fast instead of producing assets with empty VITE_* values baked in
+        $this->assertFalse($this->builder->build($module, true));
+    }
+
     private function createModule(string $name): Module
     {
         return new Module(
