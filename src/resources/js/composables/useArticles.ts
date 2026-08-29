@@ -1,6 +1,7 @@
 import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
 import { stripHtml } from '@/utils/html';
+import { VENUE_TIMEZONE } from '@/utils/datetime';
 
 interface UseArticlesReturn {
     formatPublishedDate: (dateString: string) => string;
@@ -16,6 +17,7 @@ export function useArticles(): UseArticlesReturn {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
+            timeZone: VENUE_TIMEZONE,
         });
     }
 

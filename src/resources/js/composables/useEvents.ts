@@ -1,6 +1,7 @@
 import { useI18n } from 'vue-i18n';
 import type { Event } from '@/types/models';
 import { stripHtml } from '@/utils/html';
+import { VENUE_TIMEZONE, venueDayKey } from '@/utils/datetime';
 
 interface UseEventsReturn {
     formatEventDate: (dateString: string) => string;
@@ -21,31 +22,41 @@ export function useEvents(): UseEventsReturn {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
+            timeZone: VENUE_TIMEZONE,
         });
     }
 
     function formatDateRange(startDate: string, endDate: string): string {
         const start = new Date(startDate);
         const end = new Date(endDate);
+        const startDay = venueDayKey(start);
+        const endDay = venueDayKey(end);
 
-        if (start.toDateString() === end.toDateString()) {
+        if (startDay === endDay) {
             // Single day: "15 de enero de 2026"
             return start.toLocaleDateString(locale.value, {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
+                timeZone: VENUE_TIMEZONE,
             });
         }
 
         // Multi-day same month: "15-17 de enero de 2026"
-        if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-            return `${start.getDate()}-${end.getDate()} de ${start.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })}`;
+        if (startDay.slice(0, 7) === endDay.slice(0, 7)) {
+            const firstDayNumber = Number(startDay.slice(8));
+            const lastDayNumber = Number(endDay.slice(8));
+            return `${firstDayNumber}-${lastDayNumber} de ${start.toLocaleDateString(locale.value, { month: 'long', year: 'numeric', timeZone: VENUE_TIMEZONE })}`;
         }
 
         // Multi-day different months: "15 ene - 2 feb 2026"
         const formatShort = (d: Date): string =>
-            d.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' });
-        return `${formatShort(start)} - ${formatShort(end)} ${end.getFullYear()}`;
+            d.toLocaleDateString(locale.value, {
+                day: 'numeric',
+                month: 'short',
+                timeZone: VENUE_TIMEZONE,
+            });
+        return `${formatShort(start)} - ${formatShort(end)} ${endDay.slice(0, 4)}`;
     }
 
     function formatPrice(price: number | null): string {

@@ -1,5 +1,6 @@
 import { useI18n } from 'vue-i18n';
 import type { Gallery, Photo } from '@/types/models';
+import { VENUE_TIMEZONE } from '@/utils/datetime';
 
 interface UseGalleryReturn {
     formatGalleryDate: (dateString: string) => string;
@@ -17,6 +18,7 @@ export function useGallery(): UseGalleryReturn {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
+            timeZone: VENUE_TIMEZONE,
         });
     }
 

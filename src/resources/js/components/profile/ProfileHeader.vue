@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { buildAvatarUrl } from '@/utils/cloudinary';
 import { useNotifications } from '@/composables/useNotifications';
 import type { User, UpdateProfileFormData } from '@/types/models';
+import { VENUE_TIMEZONE } from '@/utils/datetime';
 
 interface Props {
     user: User;
@@ -26,6 +27,7 @@ const memberSinceDate = computed(() => {
     return date.toLocaleDateString(locale.value, {
         month: 'long',
         year: 'numeric',
+        timeZone: VENUE_TIMEZONE,
     });
 });
 
