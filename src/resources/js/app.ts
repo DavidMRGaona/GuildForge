@@ -14,6 +14,7 @@ import {
     loadModuleTranslationsFromProps,
     type ModuleTranslationsPayload,
 } from '@/utils/moduleTranslations';
+import { setCloudinaryConfig, type CloudinaryConfig } from '@/utils/cloudinary';
 
 const appName = import.meta.env.VITE_APP_NAME ?? 'GuildForge';
 
@@ -46,6 +47,7 @@ const modulePages = import.meta.glob<DefineComponent>(
 interface InitialPageData {
     modulePages: Record<string, string>;
     moduleTranslations: ModuleTranslationsPayload | undefined;
+    cloudinary: CloudinaryConfig | undefined;
 }
 
 /**
@@ -55,27 +57,34 @@ interface InitialPageData {
 function extractInitialPageData(): InitialPageData {
     const appElement = document.getElementById('app');
     if (!appElement) {
-        return { modulePages: {}, moduleTranslations: undefined };
+        return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
     }
 
     try {
         const dataPage = appElement.getAttribute('data-page');
         if (!dataPage) {
-            return { modulePages: {}, moduleTranslations: undefined };
+            return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
         }
 
         const pageData = JSON.parse(dataPage);
         return {
             modulePages: pageData.props?.modulePages ?? {},
             moduleTranslations: pageData.props?.moduleTranslations ?? undefined,
+            cloudinary: pageData.props?.cloudinary ?? undefined,
         };
     } catch {
-        return { modulePages: {}, moduleTranslations: undefined };
+        return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
     }
 }
 
 // Extract initial data before Inertia boots
 const initialData = extractInitialPageData();
+
+// Publish Cloudinary delivery settings before any component builds an image URL.
+// Module bundles read these at runtime, so their assets carry no installation config.
+if (initialData.cloudinary) {
+    setCloudinaryConfig(initialData.cloudinary);
+}
 
 // Set module page mapping
 setModulePageMapping(initialData.modulePages);

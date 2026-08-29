@@ -41,6 +41,41 @@ final class HandleInertiaRequestsTest extends TestCase
         $this->assertArrayHasKey('modulePages', $shared);
         $this->assertArrayHasKey('moduleTranslations', $shared);
         $this->assertArrayHasKey('navigation', $shared);
+        $this->assertArrayHasKey('cloudinary', $shared);
+    }
+
+    public function test_cloudinary_config_is_shared_for_runtime_url_building(): void
+    {
+        config([
+            'cloudinary.cloud_name' => 'test-cloud',
+            'cloudinary.prefix' => 'test-prefix',
+        ]);
+
+        $request = Request::create('/test', 'GET');
+        $request->setLaravelSession($this->app['session']->driver());
+
+        $shared = $this->middleware->share($request);
+        $cloudinary = value($shared['cloudinary']);
+
+        $this->assertSame(
+            ['cloudName' => 'test-cloud', 'prefix' => 'test-prefix'],
+            $cloudinary
+        );
+    }
+
+    public function test_cloudinary_config_falls_back_to_empty_strings(): void
+    {
+        config([
+            'cloudinary.cloud_name' => null,
+            'cloudinary.prefix' => null,
+        ]);
+
+        $request = Request::create('/test', 'GET');
+        $request->setLaravelSession($this->app['session']->driver());
+
+        $cloudinary = value($this->middleware->share($request)['cloudinary']);
+
+        $this->assertSame(['cloudName' => '', 'prefix' => ''], $cloudinary);
     }
 
     public function test_module_translations_returns_empty_array_when_no_modules_loaded(): void

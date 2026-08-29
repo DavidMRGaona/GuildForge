@@ -32,9 +32,13 @@ return [
     | Building a module without these would generate assets that look valid but
     | request broken URLs. The build fails fast instead.
     |
+    | Empty on purpose: Cloudinary settings are no longer inlined at build time.
+    | They are resolved at runtime from Inertia props (see config/cloudinary.php
+    | and resources/js/utils/cloudinary.ts), because module assets are compiled
+    | by CI into a distributable package shared across installations. Add a
+    | variable here only if a bundle genuinely cannot work without it.
+    |
     */
-    'required_vite_env' => [
-        'VITE_CLOUDINARY_CLOUD_NAME',
-    ],
+    'required_vite_env' => [],
 
 ];

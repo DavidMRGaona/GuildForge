@@ -81,8 +81,26 @@ final class HandleInertiaRequests extends Middleware
             'moduleSlots' => fn () => $this->getModuleSlots(),
             'modulePages' => fn () => $this->getModulePages(),
             'moduleTranslations' => fn () => $this->getModuleTranslations(),
+            'cloudinary' => fn (): array => $this->getCloudinaryConfig(),
             'navigation' => fn () => $this->getNavigation($request),
             'socialLinks' => fn () => $this->getSocialLinks(),
+        ];
+    }
+
+    /**
+     * Cloudinary delivery settings for building image URLs in the browser.
+     *
+     * Resolved at runtime rather than inlined at build time: module assets are
+     * compiled by CI into a distributable package that cannot know which
+     * installation will run it.
+     *
+     * @return array{cloudName: string, prefix: string}
+     */
+    private function getCloudinaryConfig(): array
+    {
+        return [
+            'cloudName' => (string) config('cloudinary.cloud_name', ''),
+            'prefix' => (string) config('cloudinary.prefix', ''),
         ];
     }
 
