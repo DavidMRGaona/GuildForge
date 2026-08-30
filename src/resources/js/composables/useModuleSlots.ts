@@ -1,6 +1,7 @@
 import { computed, defineAsyncComponent, type Component, type ComputedRef } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import type { SlotRegistration, SlotPosition } from '@/types/slots';
+import { attachModuleStylesheet } from '@/utils/moduleStyles';
 
 // Glob all module components for dynamic loading
 // These modules are discovered at build time - modules installed after build
@@ -17,9 +18,6 @@ const dynamicComponentCache = new Map<string, Promise<{ default: Component }>>()
 
 // Cache for module manifests (to avoid repeated fetches)
 const manifestCache = new Map<string, Promise<Record<string, ManifestEntry> | null>>();
-
-// Track injected CSS files to prevent duplicates
-const injectedStyles = new Set<string>();
 
 interface ManifestEntry {
     file: string;
@@ -46,14 +44,7 @@ async function injectModuleStyles(module: string): Promise<void> {
         ];
 
         for (const cssPath of cssPaths) {
-            const fullPath = `/build/modules/${module}/${cssPath}`;
-            if (!injectedStyles.has(fullPath)) {
-                const link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = fullPath;
-                document.head.appendChild(link);
-                injectedStyles.add(fullPath);
-            }
+            attachModuleStylesheet(`/build/modules/${module}/${cssPath}`);
         }
     }
 }

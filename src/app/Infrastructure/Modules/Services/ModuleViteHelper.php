@@ -124,11 +124,14 @@ final class ModuleViteHelper
                 continue;
             }
 
-            // Add CSS files
+            // Add CSS files. A <link> cannot carry a cascade layer, so the sheet
+            // is imported into the module layer instead: left unlayered, a module's
+            // utilities outrank every layered rule in the core stylesheet no matter
+            // the order (see the layer declaration in resources/css/app.css).
             if (isset($chunk['css'])) {
                 foreach ($chunk['css'] as $css) {
                     $tags[] = sprintf(
-                        '<link rel="stylesheet" href="/build/modules/%s/%s">',
+                        '<style>@import url("/build/modules/%s/%s") layer(module-utilities);</style>',
                         $moduleName,
                         $css
                     );

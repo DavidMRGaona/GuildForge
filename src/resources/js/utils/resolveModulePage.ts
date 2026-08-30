@@ -1,4 +1,5 @@
 import type { DefineComponent } from 'vue';
+import { attachModuleStylesheet } from '@/utils/moduleStyles';
 
 /**
  * Mapping of page prefixes to module names.
@@ -161,7 +162,7 @@ async function loadDynamicPage(
         if (entry.css?.length) {
             for (const cssFile of entry.css) {
                 const cssUrl = `/build/modules/${moduleName}/${cssFile}`;
-                loadCss(cssUrl);
+                attachModuleStylesheet(cssUrl);
             }
         }
 
@@ -171,7 +172,7 @@ async function loadDynamicPage(
         // the whole manifest.
         for (const manifestEntry of Object.values(manifest)) {
             if (manifestEntry.file.endsWith('.css')) {
-                loadCss(`/build/modules/${moduleName}/${manifestEntry.file}`);
+                attachModuleStylesheet(`/build/modules/${moduleName}/${manifestEntry.file}`);
             }
         }
 
@@ -201,21 +202,6 @@ async function loadDynamicPage(
 
     dynamicPageCache.set(cacheKey, loadPromise as Promise<DefineComponent>);
     return loadPromise;
-}
-
-/**
- * Load a CSS file dynamically by appending a <link> element.
- */
-function loadCss(url: string): void {
-    // Check if already loaded
-    if (document.querySelector(`link[href="${url}"]`)) {
-        return;
-    }
-
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = url;
-    document.head.appendChild(link);
 }
 
 // ==================

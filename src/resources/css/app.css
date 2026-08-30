@@ -1,3 +1,19 @@
+/* Cascade order, declared before Tailwind so its own layers slot into the
+   positions named here. `module-utilities` is where every module stylesheet is
+   imported (see resources/js/utils/moduleStyles.ts), and its position is load
+   bearing:
+
+   - above `base`, so a module's utilities still beat preflight — below it, a
+     module's `text-2xl` on a heading would lose to the `h1` reset;
+   - below `utilities`, so the core wins any tie. A module sheet carries its own
+     `.hidden` but not `.md\:flex`; left unlayered it beat the core's `.md\:flex`
+     at every width and permanently hid the header navigation, which is exactly
+     the bug this ordering exists to prevent.
+
+   Nothing here shows up in development or in the test suite: module stylesheets
+   are only injected from a built asset. */
+@layer theme, base, components, module-utilities, utilities;
+
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
