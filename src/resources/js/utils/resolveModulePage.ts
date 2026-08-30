@@ -165,6 +165,16 @@ async function loadDynamicPage(
             }
         }
 
+        // Standalone CSS entry points, which a module uses to ship the Tailwind
+        // utilities the core stylesheet cannot generate for it. They belong to the
+        // module as a whole rather than to this page, so they are looked up across
+        // the whole manifest.
+        for (const manifestEntry of Object.values(manifest)) {
+            if (manifestEntry.file.endsWith('.css')) {
+                loadCss(`/build/modules/${moduleName}/${manifestEntry.file}`);
+            }
+        }
+
         try {
             const mod = await import(/* @vite-ignore */ pageUrl);
             return mod.default as DefineComponent;

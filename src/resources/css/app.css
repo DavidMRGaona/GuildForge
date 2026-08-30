@@ -8,8 +8,17 @@
 @source '../**/*.blade.php';
 @source '../**/*.vue';
 @source '../**/*.ts';
-@source '../../modules/**/*.vue';
-@source '../../modules/**/*.ts';
+
+/* Module sources are deliberately NOT scanned from here. `src/modules/*` is
+   gitignored, and Tailwind skips ignored paths, so a glob over them silently
+   produced nothing. It could not work anyway: modules are separate repos that
+   are absent from the core checkout when CI builds this stylesheet.
+
+   Modules are covered two ways instead: the semantic tokens and utilities
+   safelisted below, and — for anything outside that vocabulary — a stylesheet
+   each module compiles from its own sources and ships in its build manifest
+   (see resources/js/utils/resolveModulePage.ts and composables/useModuleSlots.ts,
+   which inject it at runtime). */
 
 /* ==========================================================================
    Module Safelist - Semantic Status Classes
