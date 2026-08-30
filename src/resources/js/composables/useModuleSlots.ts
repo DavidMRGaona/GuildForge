@@ -37,16 +37,22 @@ async function injectModuleStyles(module: string): Promise<void> {
     if (!manifest) return;
 
     for (const entry of Object.values(manifest)) {
-        if (entry.css && Array.isArray(entry.css)) {
-            for (const cssPath of entry.css) {
-                const fullPath = `/build/modules/${module}/${cssPath}`;
-                if (!injectedStyles.has(fullPath)) {
-                    const link = document.createElement('link');
-                    link.rel = 'stylesheet';
-                    link.href = fullPath;
-                    document.head.appendChild(link);
-                    injectedStyles.add(fullPath);
-                }
+        // CSS attached to a JS entry (a component importing a stylesheet), plus
+        // standalone CSS entry points, which a module uses to ship the Tailwind
+        // utilities the core stylesheet cannot generate for it.
+        const cssPaths = [
+            ...(Array.isArray(entry.css) ? entry.css : []),
+            ...(entry.file.endsWith('.css') ? [entry.file] : []),
+        ];
+
+        for (const cssPath of cssPaths) {
+            const fullPath = `/build/modules/${module}/${cssPath}`;
+            if (!injectedStyles.has(fullPath)) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = fullPath;
+                document.head.appendChild(link);
+                injectedStyles.add(fullPath);
             }
         }
     }
