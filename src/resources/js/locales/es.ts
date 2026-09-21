@@ -217,6 +217,7 @@ export default {
         errors: {
             registrationClosed: 'Las inscripciones están cerradas',
             cannotCancel: 'No se puede cancelar la inscripción',
+            sessionExpired: 'Tu sesión ha caducado. Recarga la página e inténtalo de nuevo.',
             notFound: 'No se encontraron inscripciones',
         },
     },

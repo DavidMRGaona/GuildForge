@@ -216,6 +216,7 @@ export default {
         errors: {
             registrationClosed: 'Registration is closed',
             cannotCancel: 'Cannot cancel registration',
+            sessionExpired: 'Your session has expired. Reload the page and try again.',
             notFound: 'No registrations found',
         },
     },
