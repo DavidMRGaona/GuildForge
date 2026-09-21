@@ -12,8 +12,6 @@
  * cookie and the token is always the current one.
  */
 
-const XSRF_COOKIE = 'XSRF-TOKEN';
-
 function readXsrfCookie(): string | null {
     const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/);
 
