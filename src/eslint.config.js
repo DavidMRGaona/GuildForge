@@ -45,6 +45,7 @@ export default [
                 document: 'readonly',
                 window: 'readonly',
                 fetch: 'readonly',
+                Response: 'readonly',
                 MediaQueryList: 'readonly',
                 MediaQueryListEvent: 'readonly',
                 URL: 'readonly',
