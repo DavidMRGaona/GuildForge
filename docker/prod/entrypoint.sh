@@ -1,6 +1,12 @@
 #!/bin/sh
 set -e
 
+# Mark this deployment as failed in the deployment log, then stop the boot
+record_failure() {
+    php artisan core:record-deployment fail --error="$1" || true
+    exit 1
+}
+
 echo "Initializing directories..."
 
 # Create ALL required directories BEFORE any Laravel command
@@ -33,16 +39,21 @@ if [ ! -L public/storage ]; then
     ln -sf ../storage/app/public public/storage
 fi
 
+echo "Recording deployment..."
+php artisan core:record-deployment start || echo "Warning: Could not record the deployment"
+
 echo "Running migrations..."
-php artisan migrate --force
+php artisan migrate --force || record_failure "Migrations failed (see the container logs)"
 
 echo "Discovering modules..."
 php artisan module:discover || echo "Warning: Module discovery had issues (check logs)"
 
 echo "Caching configuration..."
-php artisan config:cache
+php artisan config:cache || record_failure "Config cache failed (see the container logs)"
 php artisan route:clear
-php artisan view:cache
+php artisan view:cache || record_failure "View cache failed (see the container logs)"
+
+php artisan core:record-deployment finish || echo "Warning: Could not record the deployment"
 
 echo "Starting services..."
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf

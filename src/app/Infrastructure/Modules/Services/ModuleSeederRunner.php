@@ -7,6 +7,8 @@ namespace App\Infrastructure\Modules\Services;
 use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
+use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Log;
 
@@ -31,7 +33,11 @@ final readonly class ModuleSeederRunner
     }
 
     /**
-     * Run the module's seeders and return the classes executed.
+     * Run the module's seeders that have not run yet and return the classes executed.
+     *
+     * Each seeder runs once per installation: running it again on every update would
+     * overwrite what admins edited or bring back what they deleted. A new version that
+     * needs more default data ships a new seeder (or a data migration).
      *
      * @return array<string>
      */
@@ -119,10 +125,17 @@ final readonly class ModuleSeederRunner
                 $validSeeders[] = $fullClassName;
             }
 
-            // Now run all valid seeders
+            $alreadyExecuted = ModuleSeederHistoryModel::getExecutedSeeders($module->name()->value);
+
+            // Now run the valid seeders that have not run yet (all loaded above, so they can call each other)
             foreach ($validSeeders as $fullClassName) {
+                if (in_array($fullClassName, $alreadyExecuted, true)) {
+                    continue;
+                }
+
                 $seeder = $app->make($fullClassName);
                 $this->executeSeeder($seeder);
+                ModuleSeederHistoryModel::markExecuted($module->name()->value, $fullClassName);
                 $executed[] = $fullClassName;
 
                 Log::info("Ran seeder: {$fullClassName}");
@@ -139,6 +152,15 @@ final readonly class ModuleSeederRunner
             // Re-throw seeder execution errors so they're visible
             throw $e;
         }
+    }
+
+    /**
+     * Forget which seeders ran, so they run again on the next install.
+     * Only for when the data they created has been removed.
+     */
+    public function forget(ModuleName $moduleName): void
+    {
+        ModuleSeederHistoryModel::query()->where('module_name', $moduleName->value)->delete();
     }
 
     /**
