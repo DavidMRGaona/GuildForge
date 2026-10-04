@@ -54,6 +54,16 @@ interface SettingsServiceInterface
     public function isEmailVerificationRequired(): bool;
 
     /**
+     * Check if the public site is in maintenance mode.
+     */
+    public function isMaintenanceModeEnabled(): bool;
+
+    /**
+     * Get the message shown to visitors during maintenance, if any.
+     */
+    public function getMaintenanceMessage(): ?string;
+
+    /**
      * Get the email logo URL with fallback to light logo.
      */
     public function getEmailLogoUrl(): ?string;

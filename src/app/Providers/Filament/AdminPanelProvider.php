@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Filament\Pages\SiteSettings;
 use App\Modules\ModuleServiceProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -197,6 +198,14 @@ class AdminPanelProvider extends PanelProvider
                         }
                     </style>'
                     .'<script src="'.asset('js/filament/time-picker.js').'"></script>'
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                fn (): string => app(SettingsServiceInterface::class)->isMaintenanceModeEnabled()
+                    ? view('filament.components.maintenance-banner', [
+                        'settingsUrl' => SiteSettings::canAccess() ? SiteSettings::getUrl() : null,
+                    ])->render()
+                    : '',
             );
 
         // Discover resources from enabled modules

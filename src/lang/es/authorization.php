@@ -13,6 +13,7 @@ return [
         'tags' => 'Etiquetas',
         'settings' => 'Configuración',
         'mail' => 'Correo electrónico',
+        'updates' => 'Actualizaciones',
         'admin' => 'Administración',
     ],
 
@@ -26,6 +27,8 @@ return [
         'configure' => 'Configurar',
         'view_stats' => 'Ver estadísticas',
         'access' => 'Acceder',
+        'maintenance' => 'Modo mantenimiento',
+        'apply' => 'Aplicar',
     ],
 
     'permissions' => [
@@ -78,6 +81,10 @@ return [
         ],
         'settings' => [
             'manage' => 'Gestionar configuración del sitio',
+            'maintenance' => 'Activar o desactivar el modo mantenimiento',
+        ],
+        'updates' => [
+            'apply' => 'Aplicar actualizaciones',
         ],
         'mail' => [
             'configure' => 'Configurar correo electrónico',

@@ -176,6 +176,31 @@ final class SettingsServiceTest extends TestCase
         $this->assertTrue($result);
     }
 
+    public function test_is_maintenance_mode_enabled_returns_false_by_default(): void
+    {
+        $this->assertFalse($this->settingsService->isMaintenanceModeEnabled());
+    }
+
+    public function test_is_maintenance_mode_enabled_returns_true_when_enabled(): void
+    {
+        SettingModel::create([
+            'key' => 'maintenance_enabled',
+            'value' => '1',
+        ]);
+
+        $this->assertTrue($this->settingsService->isMaintenanceModeEnabled());
+    }
+
+    public function test_is_maintenance_mode_enabled_returns_false_when_disabled(): void
+    {
+        SettingModel::create([
+            'key' => 'maintenance_enabled',
+            'value' => '',
+        ]);
+
+        $this->assertFalse($this->settingsService->isMaintenanceModeEnabled());
+    }
+
     public function test_is_login_enabled_returns_true_by_default(): void
     {
         $result = $this->settingsService->isLoginEnabled();

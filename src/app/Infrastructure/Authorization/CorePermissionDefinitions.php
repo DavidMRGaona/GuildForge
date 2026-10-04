@@ -258,6 +258,20 @@ final class CorePermissionDefinitions
                 resource: 'settings',
                 action: 'manage',
             ),
+            new PermissionDefinitionDTO(
+                key: 'settings.maintenance',
+                label: __('authorization.permissions.settings.maintenance'),
+                resource: 'settings',
+                action: 'maintenance',
+            ),
+
+            // Updates
+            new PermissionDefinitionDTO(
+                key: 'updates.apply',
+                label: __('authorization.permissions.updates.apply'),
+                resource: 'updates',
+                action: 'apply',
+            ),
 
             // Mail
             new PermissionDefinitionDTO(

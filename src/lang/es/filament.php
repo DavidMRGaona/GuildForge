@@ -85,6 +85,11 @@ return [
         ],
         'child_of' => 'Subcategoría de :parent',
     ],
+    'maintenance' => [
+        'banner' => 'La web pública está en modo mantenimiento: los visitantes no pueden acceder.',
+        'banner_link' => 'Desactivar',
+    ],
+
     'settings' => [
         'title' => 'Configuración del sitio',
         'tabs' => [
@@ -94,6 +99,7 @@ return [
             'typography' => 'Tipografía',
             'appearance' => 'Apariencia',
             'authentication' => 'Autenticación',
+            'maintenance' => 'Mantenimiento',
         ],
         'general' => [
             'title' => 'Configuración general',
@@ -240,6 +246,14 @@ return [
             'email_verification_required_help' => 'Los usuarios deberán verificar su correo electrónico antes de poder acceder a todas las funciones.',
             'anonymized_user_name' => 'Nombre de usuario anonimizado',
             'anonymized_user_name_help' => 'Nombre que se mostrará para usuarios que han sido anonimizados (ej: "Anónimo", "Redacción").',
+        ],
+        'maintenance' => [
+            'section' => 'Modo mantenimiento',
+            'section_description' => 'Cierra temporalmente la web pública, por ejemplo mientras se aplican actualizaciones.',
+            'enabled' => 'Activar modo mantenimiento',
+            'enabled_help' => 'Los visitantes verán una página de mantenimiento. Los usuarios con acceso al panel siguen viendo la web con normalidad.',
+            'message' => 'Mensaje para los visitantes',
+            'message_help' => 'Opcional. Si lo dejas vacío se mostrará un mensaje genérico.',
         ],
     ],
     'mail' => [
