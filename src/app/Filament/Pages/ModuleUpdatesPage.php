@@ -334,7 +334,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 TextColumn::make('status')
                     ->label(__('filament.updates.modules.history.status'))
                     ->badge()
-                    ->formatStateUsing(fn (UpdateStatus|string $state): string => $state instanceof UpdateStatus ? $state->value : $state)
+                    ->formatStateUsing(fn (UpdateStatus|string $state): string => ($state instanceof UpdateStatus ? $state : UpdateStatus::from($state))->label())
                     ->color(fn (UpdateStatus|string $state): string => match ($state instanceof UpdateStatus ? $state->value : $state) {
                         'completed' => 'success',
                         'failed', 'rolled_back' => 'danger',
@@ -347,14 +347,13 @@ final class ModuleUpdatesPage extends Page implements HasTable
                     ->dateTime('d/m/Y H:i')
                     ->sortable(),
 
+                // Only failures get an icon: a green check under "Error" read as "yes, it failed"
                 IconColumn::make('error_message')
                     ->label(__('filament.updates.modules.history.has_error'))
-                    ->boolean()
                     ->getStateUsing(fn (ModuleUpdateHistoryModel $record): bool => $record->error_message !== null)
-                    ->trueIcon('heroicon-o-exclamation-triangle')
-                    ->falseIcon('heroicon-o-check-circle')
-                    ->trueColor('danger')
-                    ->falseColor('success'),
+                    ->icon(fn (bool $state): ?string => $state ? 'heroicon-o-exclamation-triangle' : null)
+                    ->color('danger')
+                    ->tooltip(fn (ModuleUpdateHistoryModel $record): ?string => $record->error_message),
             ])
             ->defaultSort('started_at', 'desc')
             ->paginated([10, 25, 50]);
