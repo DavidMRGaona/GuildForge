@@ -121,6 +121,7 @@ return [
             'file_help' => 'Máximo :size MB. Debe contener un archivo module.json válido.',
             'submit' => 'Instalar / actualizar',
             'cancel' => 'Cancelar',
+            'maintenance_required' => 'Activa el modo mantenimiento para instalar o actualizar módulos',
         ],
         'settings_page' => [
             'title' => 'Configuración de :name',

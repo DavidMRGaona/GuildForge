@@ -55,6 +55,13 @@
                     @if($status['behind_by'] > 0)
                         <p class="text-gray-500 dark:text-gray-400">{{ __('filament.updates.core.status.behind_hint') }}</p>
 
+                        @unless($this->isMaintenanceModeEnabled())
+                            <p class="flex items-center gap-2 font-medium text-warning-600 dark:text-warning-400">
+                                <x-heroicon-m-wrench-screwdriver style="width: 1.25rem; height: 1.25rem;" />
+                                {{ __('filament.updates.core.status.maintenance_warning', ['branch' => $status['branch']]) }}
+                            </p>
+                        @endunless
+
                         <ul class="flex flex-col gap-2">
                             @foreach($status['commits'] as $commit)
                                 <li class="flex items-center gap-3">

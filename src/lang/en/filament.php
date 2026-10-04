@@ -57,6 +57,7 @@ return [
     'maintenance' => [
         'banner' => 'The public site is in maintenance mode: visitors cannot access it.',
         'banner_link' => 'Turn off',
+        'settings_link' => 'Go to site settings',
     ],
 
     'settings' => [
@@ -250,6 +251,7 @@ return [
                 'update_failed' => 'Error updating :module',
                 'update_rolled_back' => 'Update failed but previous state was restored. Error: :error',
                 'preview_failed' => 'Error getting preview',
+                'maintenance_required' => 'Enable maintenance mode before applying updates',
             ],
             'available' => [
                 'title' => 'Available updates',
@@ -288,6 +290,10 @@ return [
             ],
             'check_errors' => [
                 'title' => 'Some modules could not be checked',
+            ],
+            'maintenance_required' => [
+                'title' => 'Updates require maintenance mode',
+                'description' => 'Updating a module replaces its code and runs migrations. Enable maintenance mode in the site settings before updating and turn it off when done.',
             ],
             'without_source' => [
                 'title' => 'Modules without a repository',
@@ -334,6 +340,7 @@ return [
                 'checked_at' => 'Checked on :date',
                 'never_checked' => 'Press "Check for updates" to compare it with GitHub.',
                 'check_failed' => 'Could not check',
+                'maintenance_warning' => 'These changes deploy as soon as they reach :branch and CI passes. Enable maintenance mode before pushing.',
             ],
         ],
         'widget' => [

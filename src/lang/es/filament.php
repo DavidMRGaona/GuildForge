@@ -88,6 +88,7 @@ return [
     'maintenance' => [
         'banner' => 'La web pública está en modo mantenimiento: los visitantes no pueden acceder.',
         'banner_link' => 'Desactivar',
+        'settings_link' => 'Ir a la configuración del sitio',
     ],
 
     'settings' => [
@@ -513,6 +514,7 @@ return [
                 'update_failed' => 'Error al actualizar :module',
                 'update_rolled_back' => 'La actualización falló pero se restauró el estado anterior. Error: :error',
                 'preview_failed' => 'Error al obtener vista previa',
+                'maintenance_required' => 'Activa el modo mantenimiento antes de aplicar actualizaciones',
             ],
             'available' => [
                 'title' => 'Actualizaciones disponibles',
@@ -551,6 +553,10 @@ return [
             ],
             'check_errors' => [
                 'title' => 'No se han podido comprobar algunos módulos',
+            ],
+            'maintenance_required' => [
+                'title' => 'Las actualizaciones requieren el modo mantenimiento',
+                'description' => 'Actualizar un módulo reemplaza su código y ejecuta migraciones. Activa el modo mantenimiento en la configuración del sitio antes de actualizar y desactívalo al terminar.',
             ],
             'without_source' => [
                 'title' => 'Módulos sin repositorio configurado',
@@ -597,6 +603,7 @@ return [
                 'checked_at' => 'Comprobado el :date',
                 'never_checked' => 'Pulsa «Comprobar actualizaciones» para compararlo con GitHub.',
                 'check_failed' => 'No se ha podido comprobar',
+                'maintenance_warning' => 'Estos cambios se desplegarán en cuanto lleguen a :branch y pasen el CI. Activa el modo mantenimiento antes de hacer push.',
             ],
         ],
     ],

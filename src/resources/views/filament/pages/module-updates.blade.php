@@ -1,6 +1,15 @@
 {{-- Uses Filament components and only utility classes present in Filament's compiled CSS: this panel has no custom theme --}}
 <x-filament-panels::page>
+    @php($maintenanceEnabled = $this->isMaintenanceModeEnabled())
     <div class="flex flex-col gap-6" @if($queuedModules !== []) wire:poll.3s="pollUpdates" @endif>
+        @unless($maintenanceEnabled)
+            @include('filament.components.maintenance-required', [
+                'heading' => __('filament.updates.modules.maintenance_required.title'),
+                'description' => __('filament.updates.modules.maintenance_required.description'),
+                'settingsUrl' => $this->getMaintenanceSettingsUrl(),
+            ])
+        @endunless
+
         @if($checkErrors !== [])
             <x-filament::section
                 icon="heroicon-o-exclamation-triangle"
@@ -93,7 +102,7 @@
                                             <x-filament::button
                                                 size="sm"
                                                 :icon="$isQueued ? 'heroicon-m-arrow-path' : 'heroicon-m-arrow-down-tray'"
-                                                :disabled="$isQueued"
+                                                :disabled="$isQueued || ! $maintenanceEnabled"
                                                 wire:click="updateModule('{{ $update['module_name'] }}')"
                                             >
                                                 {{ $isQueued ? __('filament.updates.modules.available.updating') : __('filament.updates.modules.available.update') }}

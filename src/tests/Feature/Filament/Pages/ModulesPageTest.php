@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Pages;
 
+use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -200,6 +201,23 @@ final class ModulesPageTest extends TestCase
             'name' => 'base-module',
             'status' => 'enabled',
         ]);
+    }
+
+    public function test_install_action_is_disabled_without_maintenance_mode(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModulesPage::class)
+            ->assertActionDisabled('install');
+    }
+
+    public function test_install_action_is_enabled_while_maintenance_mode_is_enabled(): void
+    {
+        app(SettingsServiceInterface::class)->set('maintenance_enabled', '1');
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModulesPage::class)
+            ->assertActionEnabled('install');
     }
 
     public function test_discover_action_finds_new_modules(): void

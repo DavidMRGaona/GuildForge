@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
@@ -32,6 +32,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  */
 final class SiteSettings extends Page implements HasForms
 {
+    use ChecksPermissions;
     use InteractsWithForms;
     use ManagesPageSettings;
 
@@ -135,13 +136,6 @@ final class SiteSettings extends Page implements HasForms
         }
 
         return $keys;
-    }
-
-    private static function userCan(string $permission): bool
-    {
-        $user = auth()->user();
-
-        return $user !== null && app(AuthorizationServiceInterface::class)->can($user, $permission);
     }
 
     /**
