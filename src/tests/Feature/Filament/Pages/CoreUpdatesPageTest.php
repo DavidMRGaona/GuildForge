@@ -6,9 +6,11 @@ namespace Tests\Feature\Filament\Pages;
 
 use App\Application\Updates\DTOs\CoreUpdateStatusDTO;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
+use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Filament\Pages\CoreUpdatesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
@@ -111,6 +113,35 @@ final class CoreUpdatesPageTest extends TestCase
 
         Livewire::test(CoreUpdatesPage::class)
             ->assertDontSee('fix: send one email on auto-confirmed registrations');
+    }
+
+    public function test_page_shows_when_the_deployed_commit_was_deployed(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->travelTo(now()->setDate(2026, 10, 4)->setTime(19, 52));
+        CoreUpdateHistoryModel::query()->create([
+            'from_version' => '2.5.10', 'to_version' => '2.5.10',
+            'git_commit_before' => 'fff0000fff0000fff0000fff0000fff0000fff00', 'git_commit_after' => self::DEPLOYED,
+            'status' => UpdateStatus::Completed,
+        ]);
+
+        Livewire::test(CoreUpdatesPage::class)
+            ->assertSee('04/10/2026 19:52');
+    }
+
+    public function test_deployment_history_lists_deployments_with_their_status(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $failed = CoreUpdateHistoryModel::query()->create([
+            'from_version' => '2.5.10', 'to_version' => '2.5.10',
+            'git_commit_before' => self::DEPLOYED, 'git_commit_after' => 'ccc1111ccc1111ccc1111ccc1111ccc1111ccc11',
+            'status' => UpdateStatus::Failed, 'error_message' => 'Migrations failed',
+        ]);
+
+        Livewire::test(CoreUpdatesPage::class)
+            ->assertCanSeeTableRecords([$failed])
+            ->assertSee('ccc1111')
+            ->assertSee(UpdateStatus::Failed->label());
     }
 
     private function behindStatus(): CoreUpdateStatusDTO

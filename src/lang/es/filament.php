@@ -561,6 +561,18 @@ return [
                 'commit' => 'Commit',
                 'branch' => 'Rama',
                 'unknown' => 'Desconocido',
+                'at' => 'Desplegado el',
+            ],
+            'history' => [
+                'title' => 'Historial de despliegues',
+                'date' => 'Fecha',
+                'from' => 'Desde',
+                'to' => 'Hasta',
+                'changes' => 'Cambios',
+                'view_changes' => 'Ver cambios',
+                'status' => 'Estado',
+                'in_progress' => 'En curso',
+                'error' => 'Error',
             ],
             'status' => [
                 'up_to_date' => 'El commit desplegado es el último de :branch',

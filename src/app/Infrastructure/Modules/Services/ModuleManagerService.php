@@ -405,6 +405,9 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             } catch (\Throwable $e) {
                 Log::warning("Failed to rollback migrations for module {$name->value}: {$e->getMessage()}");
             }
+
+            // The seeded data is gone with the tables: a reinstall must seed again
+            $this->seederRunner->forget($name);
         }
 
         // Store version for event before deleting

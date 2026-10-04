@@ -298,6 +298,18 @@ return [
                 'commit' => 'Commit',
                 'branch' => 'Branch',
                 'unknown' => 'Unknown',
+                'at' => 'Deployed on',
+            ],
+            'history' => [
+                'title' => 'Deployment history',
+                'date' => 'Date',
+                'from' => 'From',
+                'to' => 'To',
+                'changes' => 'Changes',
+                'view_changes' => 'View changes',
+                'status' => 'Status',
+                'in_progress' => 'In progress',
+                'error' => 'Error',
             ],
             'status' => [
                 'up_to_date' => 'The deployed commit is the latest on :branch',

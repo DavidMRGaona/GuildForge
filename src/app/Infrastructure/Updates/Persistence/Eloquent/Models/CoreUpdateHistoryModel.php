@@ -43,18 +43,4 @@ final class CoreUpdateHistoryModel extends Model
             'status' => UpdateStatus::class,
         ];
     }
-
-    public function markCompleted(string $commitAfter): void
-    {
-        $this->status = UpdateStatus::Completed;
-        $this->git_commit_after = $commitAfter;
-        $this->save();
-    }
-
-    public function markFailed(string $errorMessage): void
-    {
-        $this->status = UpdateStatus::Failed;
-        $this->error_message = $errorMessage;
-        $this->save();
-    }
 }

@@ -15,6 +15,7 @@ use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
+use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -504,6 +505,29 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertDatabaseMissing('modules', [
             'name' => 'test-module',
         ]);
+    }
+
+    public function test_uninstall_with_delete_data_forgets_the_seeders_that_ran(): void
+    {
+        // The data the seeders created is gone, so a reinstall must seed again
+        $this->createTestModule('test-module');
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'installed_at' => now()]);
+        ModuleSeederHistoryModel::markExecuted('test-module', 'Modules\\TestModule\\Database\\Seeders\\ItemsSeeder');
+
+        $this->service->uninstall(ModuleName::fromString('test-module'), true);
+
+        $this->assertSame([], ModuleSeederHistoryModel::getExecutedSeeders('test-module'));
+    }
+
+    public function test_uninstall_keeping_data_keeps_the_seeder_history(): void
+    {
+        $this->createTestModule('test-module');
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'installed_at' => now()]);
+        ModuleSeederHistoryModel::markExecuted('test-module', 'Modules\\TestModule\\Database\\Seeders\\ItemsSeeder');
+
+        $this->service->uninstall(ModuleName::fromString('test-module'), false);
+
+        $this->assertCount(1, ModuleSeederHistoryModel::getExecutedSeeders('test-module'));
     }
 
     public function test_disable_then_enable_does_not_run_migrations_again(): void

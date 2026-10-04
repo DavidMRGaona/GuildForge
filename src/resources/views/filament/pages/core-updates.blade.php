@@ -2,7 +2,7 @@
 <x-filament-panels::page>
     <div class="flex flex-col gap-6">
         <x-filament::section :heading="__('filament.updates.core.deployed.title')">
-            <dl class="grid grid-cols-2 gap-4 text-sm">
+            <dl class="grid grid-cols-3 gap-4 text-sm">
                 <div>
                     <dt class="text-gray-500 dark:text-gray-400">{{ __('filament.updates.core.deployed.commit') }}</dt>
                     <dd class="font-mono font-medium text-gray-950 dark:text-white">
@@ -18,6 +18,10 @@
                 <div>
                     <dt class="text-gray-500 dark:text-gray-400">{{ __('filament.updates.core.deployed.branch') }}</dt>
                     <dd class="font-mono font-medium text-gray-950 dark:text-white">{{ $branch }}</dd>
+                </div>
+                <div>
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('filament.updates.core.deployed.at') }}</dt>
+                    <dd class="font-medium text-gray-950 dark:text-white">{{ $deployedAt ?? '—' }}</dd>
                 </div>
             </dl>
         </x-filament::section>
@@ -74,5 +78,7 @@
                 </div>
             </x-filament::section>
         @endif
+
+        {{ $this->table }}
     </div>
 </x-filament-panels::page>

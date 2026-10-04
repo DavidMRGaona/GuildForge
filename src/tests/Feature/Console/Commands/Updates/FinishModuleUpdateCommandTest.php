@@ -8,6 +8,7 @@ use App\Application\Updates\DTOs\HealthCheckResultDTO;
 use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
+use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +84,20 @@ final class FinishModuleUpdateCommandTest extends TestCase
         $this->assertSame([], $report->migrations);
     }
 
+    public function test_seeders_that_already_ran_are_not_run_again(): void
+    {
+        $this->healthCheck(passes: true);
+        Artisan::call('module:finish-update', ['name' => 'finish-mod', 'version' => '1.0.1-beta']);
+        DB::table('finish_mod_items')->where('name', 'default')->delete(); // an admin removed it
+
+        Artisan::call('module:finish-update', ['name' => 'finish-mod', 'version' => '1.0.1-beta']);
+        $report = PostUpdateReportDTO::fromOutput(Artisan::output());
+
+        $this->assertNotNull($report);
+        $this->assertSame([], $report->seeders);
+        $this->assertSame(0, DB::table('finish_mod_items')->count());
+    }
+
     public function test_a_failed_health_check_leaves_the_database_untouched(): void
     {
         $this->healthCheck(passes: false);
@@ -153,6 +168,7 @@ PHP);
         $this->assertFalse(Schema::hasTable('finish_mod_items'));
         $this->assertFalse(DB::table('migrations')->where('migration', '2026_10_04_000000_create_finish_mod_items_table')->exists());
         $this->assertSame('1.0.0-beta', ModuleModel::query()->where('name', 'finish-mod')->value('version'));
+        $this->assertSame([], ModuleSeederHistoryModel::getExecutedSeeders('finish-mod'));
     }
 
     private function healthCheck(bool $passes): void
