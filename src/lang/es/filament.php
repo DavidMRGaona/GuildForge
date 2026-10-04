@@ -516,6 +516,16 @@ return [
                 'update' => 'Actualizar',
                 'updating' => 'Actualizando...',
             ],
+            'preview' => [
+                'heading' => 'Detalles de la actualización de :module',
+                'current' => 'Versión actual',
+                'new' => 'Nueva versión',
+                'major_warning' => 'Es una actualización de versión mayor: revisa las notas antes de actualizar.',
+                'changelog' => 'Notas de la versión',
+                'no_changelog' => 'Esta versión no tiene notas.',
+                'failed' => 'No se han podido obtener los detalles',
+                'close' => 'Cerrar',
+            ],
             'history' => [
                 'title' => 'Historial de actualizaciones',
                 'module' => 'Módulo',

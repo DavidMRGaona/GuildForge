@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament\Pages;
 
 use App\Application\Updates\DTOs\UpdateCheckResultDTO;
+use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
+use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Updates\Enums\UpdateStatus;
+use App\Domain\Updates\Exceptions\UpdateException;
 use App\Filament\Pages\ModuleUpdatesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -214,6 +217,70 @@ final class ModuleUpdatesPageTest extends TestCase
             'started_at' => now(),
             'completed_at' => now(),
         ]);
+    }
+
+    public function test_details_button_opens_the_preview_action(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->pendingUpdate();
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->assertSeeHtml("mountAction('preview', { module: 'event-registrations' })");
+    }
+
+    public function test_preview_shows_versions_and_the_release_notes(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->previewReturns("## Cambios\n\n- Arreglados los correos duplicados");
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->mountAction('preview', ['module' => 'event-registrations'])
+            ->assertActionMounted('preview')
+            ->assertSee('v1.0.8-beta')
+            ->assertSee('v1.0.9-beta')
+            ->assertSeeHtml('<li>Arreglados los correos duplicados</li>');
+    }
+
+    public function test_preview_does_not_render_html_from_the_release_notes(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->previewReturns("Notas <script>alert('x')</script>");
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->mountAction('preview', ['module' => 'event-registrations'])
+            ->assertDontSeeHtml("<script>alert('x')</script>");
+    }
+
+    public function test_preview_shows_why_the_details_could_not_be_loaded(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $updater = Mockery::mock(ModuleUpdaterInterface::class);
+        $updater->shouldReceive('preview')->andThrow(UpdateException::githubRequestFailed('o/event-registrations', 'HTTP 403'));
+        $this->app->instance(ModuleUpdaterInterface::class, $updater);
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->mountAction('preview', ['module' => 'event-registrations'])
+            ->assertActionMounted('preview')
+            ->assertSee('HTTP 403');
+    }
+
+    private function previewReturns(string $changelog): void
+    {
+        $updater = Mockery::mock(ModuleUpdaterInterface::class);
+        $updater->shouldReceive('preview')->andReturn(new UpdatePreviewDTO(
+            moduleName: 'event-registrations',
+            fromVersion: '1.0.8-beta',
+            toVersion: '1.0.9-beta',
+            pendingMigrations: [],
+            newSeeders: [],
+            changelog: $changelog,
+            isMajorUpdate: false,
+            coreCompatible: true,
+            coreRequirement: null,
+            downloadUrl: null,
+            downloadSize: null,
+        ));
+        $this->app->instance(ModuleUpdaterInterface::class, $updater);
     }
 
     private function pendingUpdate(): void

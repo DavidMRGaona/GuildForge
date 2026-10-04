@@ -16,13 +16,16 @@ use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryMo
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 final class ModuleUpdatesPage extends Page implements HasTable
 {
@@ -290,29 +293,38 @@ final class ModuleUpdatesPage extends Page implements HasTable
             ->send();
     }
 
-    public function previewUpdate(string $moduleName): void
+    public function previewAction(): Action
+    {
+        return Action::make('preview')
+            ->modalHeading(fn (array $arguments): string => __('filament.updates.modules.preview.heading', [
+                'module' => (string) ($arguments['module'] ?? ''),
+            ]))
+            ->modalContent(fn (array $arguments): View => $this->previewContent((string) ($arguments['module'] ?? '')))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('filament.updates.modules.preview.close'))
+            ->modalWidth(MaxWidth::TwoExtraLarge);
+    }
+
+    private function previewContent(string $moduleName): View
     {
         try {
-            $updater = app(ModuleUpdaterInterface::class);
-            $preview = $updater->preview(new ModuleName($moduleName));
-
-            $this->dispatch('open-modal', id: 'preview-update', data: [
-                'moduleName' => $preview->moduleName,
-                'fromVersion' => $preview->fromVersion,
-                'toVersion' => $preview->toVersion,
-                'isMajorUpdate' => $preview->isMajorUpdate,
-                'coreCompatible' => $preview->coreCompatible,
-                'coreRequirement' => $preview->coreRequirement,
-                'pendingMigrations' => $preview->pendingMigrations,
-                'changelog' => $preview->changelog,
-            ]);
+            $preview = app(ModuleUpdaterInterface::class)->preview(new ModuleName($moduleName));
         } catch (\Throwable $e) {
-            Notification::make()
-                ->title(__('filament.updates.modules.notifications.preview_failed'))
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
+            return view('filament.pages.partials.module-update-preview', ['preview' => null, 'error' => $e->getMessage()]);
         }
+
+        return view('filament.pages.partials.module-update-preview', [
+            'preview' => [
+                'from_version' => $preview->fromVersion,
+                'to_version' => $preview->toVersion,
+                'is_major_update' => $preview->isMajorUpdate,
+                // Release notes come from GitHub: render their Markdown, never their raw HTML
+                'changelog_html' => trim($preview->changelog) === ''
+                    ? null
+                    : Str::markdown($preview->changelog, ['html_input' => 'strip', 'allow_unsafe_links' => false]),
+            ],
+            'error' => null,
+        ]);
     }
 
     public function table(Table $table): Table
