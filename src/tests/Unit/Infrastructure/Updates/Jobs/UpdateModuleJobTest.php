@@ -43,6 +43,15 @@ final class UpdateModuleJobTest extends TestCase
         $this->assertSame('module-update:game-tables', $job->uniqueId());
     }
 
+    public function test_queue_retry_after_exceeds_the_job_timeout(): void
+    {
+        $timeout = (new UpdateModuleJob('game-tables'))->timeout;
+
+        // Otherwise a long update is handed to the worker a second time while it is still running
+        $this->assertGreaterThan($timeout, config('queue.connections.redis.retry_after'));
+        $this->assertGreaterThan($timeout, config('queue.connections.database.retry_after'));
+    }
+
     private function updateResult(UpdateStatus $status): ModuleUpdateResultDTO
     {
         return new ModuleUpdateResultDTO(
