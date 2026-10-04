@@ -23,6 +23,8 @@ final readonly class EnsureSiteIsNotInMaintenance
     private const int RETRY_AFTER_SECONDS = 600;
 
     /**
+     * The public login stays open so staff can sign in and get past the maintenance page.
+     *
      * @var array<string>
      */
     private const array EXCLUDED_PATHS = [
@@ -30,6 +32,7 @@ final readonly class EnsureSiteIsNotInMaintenance
         'admin/*',
         'livewire/*',
         'up',
+        'iniciar-sesion',
     ];
 
     public function __construct(
