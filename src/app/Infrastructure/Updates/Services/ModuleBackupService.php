@@ -19,8 +19,7 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
 {
     public function __construct(
         private ModuleManagerServiceInterface $moduleManager,
-    ) {
-    }
+    ) {}
 
     public function createBackup(ModuleName $name): string
     {
@@ -80,8 +79,9 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
                 File::deleteDirectory($modulePath);
             }
 
-            // Extract backup
-            $this->extractZipBackup($backupPath, dirname($modulePath));
+            // Backups store paths relative to the module root, so extract into it
+            File::ensureDirectoryExists($modulePath, 0775);
+            $this->extractZipBackup($backupPath, $modulePath);
 
             Log::info("Restored module {$name->value} from backup", [
                 'backup_path' => $backupPath,
@@ -96,11 +96,11 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
         $backupPath = $this->getBackupDirectory($name->value);
 
         if (! File::isDirectory($backupPath)) {
-            return new Collection();
+            return new Collection;
         }
 
         $files = File::files($backupPath);
-        $backups = new Collection();
+        $backups = new Collection;
 
         foreach ($files as $file) {
             if ($file->getExtension() !== 'zip') {
@@ -114,7 +114,7 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
 
             $backups->push([
                 'path' => $file->getPathname(),
-                'created_at' => new DateTimeImmutable('@' . $file->getMTime()),
+                'created_at' => new DateTimeImmutable('@'.$file->getMTime()),
                 'size' => $file->getSize(),
                 'version' => $version,
             ]);
@@ -173,7 +173,7 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
 
     private function createZipBackup(string $sourcePath, string $destinationPath): void
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($destinationPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new \RuntimeException("Cannot create ZIP file: {$destinationPath}");
@@ -206,7 +206,7 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
 
     private function extractZipBackup(string $zipPath, string $destinationPath): void
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($zipPath) !== true) {
             throw new \RuntimeException("Cannot open ZIP file: {$zipPath}");

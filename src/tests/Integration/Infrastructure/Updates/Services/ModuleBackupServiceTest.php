@@ -82,7 +82,7 @@ final class ModuleBackupServiceTest extends TestCase
         $this->assertStringContainsString('1.0.0', $backupPath);
 
         // Verify the ZIP contains files
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         $zip->open($backupPath);
         $this->assertGreaterThan(0, $zip->numFiles);
         $zip->close();
@@ -104,13 +104,28 @@ final class ModuleBackupServiceTest extends TestCase
         // Modify the module (simulate failed update)
         File::put("{$modulePath}/src/ModuleProvider.php", '<?php // modified');
 
-        // Restore (note: the restore extracts to parent dir, so the module files are restored)
         $this->service->restoreBackup(ModuleName::fromString('shop'), $backupPath);
 
         // Verify the module directory was restored
         // The actual content restoration depends on how the ZIP was created
         $this->assertFileExists($backupPath);
         $this->assertDirectoryExists(dirname($modulePath));
+    }
+
+    public function test_restore_puts_files_back_inside_the_module_directory(): void
+    {
+        $modulePath = $this->createTestModule('shop', '1.0.0');
+        $originalContent = File::get("{$modulePath}/src/ModuleProvider.php");
+        $this->moduleManager->shouldReceive('find')->andReturn($this->createRealModule('shop', '1.0.0', $modulePath));
+        $backupPath = $this->service->createBackup(ModuleName::fromString('shop'));
+        File::deleteDirectory($modulePath);
+
+        $this->service->restoreBackup(ModuleName::fromString('shop'), $backupPath);
+
+        $this->assertSame($originalContent, File::get("{$modulePath}/src/ModuleProvider.php"));
+        $this->assertFileExists("{$modulePath}/module.json");
+        $this->assertFileDoesNotExist(dirname($modulePath).'/module.json');
+        $this->assertDirectoryDoesNotExist(dirname($modulePath).'/src');
     }
 
     public function test_it_throws_when_module_not_found(): void
@@ -258,10 +273,10 @@ final class ModuleBackupServiceTest extends TestCase
         File::put("{$modulePath}/module.json", json_encode([
             'name' => $name,
             'version' => $version,
-            'namespace' => 'Modules\\' . ucfirst($name),
+            'namespace' => 'Modules\\'.ucfirst($name),
         ]));
 
-        File::put("{$modulePath}/src/ModuleProvider.php", "<?php\nclass " . ucfirst($name) . "ModuleServiceProvider {}");
+        File::put("{$modulePath}/src/ModuleProvider.php", "<?php\nclass ".ucfirst($name).'ModuleServiceProvider {}');
         File::put("{$modulePath}/config/config.php", "<?php\nreturn [];");
 
         return $modulePath;
@@ -272,7 +287,7 @@ final class ModuleBackupServiceTest extends TestCase
         return new Module(
             id: new ModuleId(Str::uuid()->toString()),
             name: ModuleName::fromString($name),
-            displayName: ucfirst($name) . ' Module',
+            displayName: ucfirst($name).' Module',
             description: 'Test module',
             version: ModuleVersion::fromString($version),
             author: 'Test Author',
