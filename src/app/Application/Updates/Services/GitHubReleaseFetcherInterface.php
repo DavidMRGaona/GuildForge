@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Updates\Services;
 
+use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 
 /**
@@ -12,9 +13,14 @@ use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 interface GitHubReleaseFetcherInterface
 {
     /**
-     * Get the latest release for a repository.
+     * Get the highest-versioned published release of a repository.
+     *
+     * Drafts are ignored, and prereleases too unless $includePrereleases is true.
+     * Returns null when the repository has no matching release.
+     *
+     * @throws UpdateException When GitHub cannot be queried (missing or private repo, rate limit, network)
      */
-    public function getLatestRelease(string $owner, string $repo): ?GitHubReleaseInfo;
+    public function getLatestRelease(string $owner, string $repo, bool $includePrereleases = false): ?GitHubReleaseInfo;
 
     /**
      * Download a release ZIP file to local storage.
@@ -31,10 +37,13 @@ interface GitHubReleaseFetcherInterface
     /**
      * Batch fetch latest releases for multiple repositories.
      *
+     * A repository that cannot be queried maps to its UpdateException, so one
+     * failure does not hide the results of the others.
+     *
      * @param  array<array{owner: string, repo: string}>  $repos
-     * @return array<string, GitHubReleaseInfo|null> Keyed by "owner/repo"
+     * @return array<string, GitHubReleaseInfo|UpdateException|null> Keyed by "owner/repo"
      */
-    public function batchFetchLatestReleases(array $repos): array;
+    public function batchFetchLatestReleases(array $repos, bool $includePrereleases = false): array;
 
     /**
      * Clear cached release information.

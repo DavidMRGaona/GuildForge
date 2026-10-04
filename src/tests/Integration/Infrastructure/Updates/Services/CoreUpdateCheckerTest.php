@@ -8,6 +8,7 @@ use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use App\Infrastructure\Updates\Services\CoreUpdateChecker;
 use DateTimeImmutable;
@@ -52,12 +53,12 @@ final class CoreUpdateCheckerTest extends TestCase
             downloadUrl: 'https://github.com/guildforge/core/releases/download/v1.1.0/core.zip',
             checksumUrl: '',
             releaseNotes: 'New features',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
         $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core')
+            ->with('guildforge', 'core', false)
             ->andReturn($release);
 
         $result = $this->checker->checkForUpdate();
@@ -81,12 +82,12 @@ final class CoreUpdateCheckerTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
         $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core')
+            ->with('guildforge', 'core', false)
             ->andReturn($release);
 
         $result = $this->checker->checkForUpdate();
@@ -99,12 +100,22 @@ final class CoreUpdateCheckerTest extends TestCase
         config(['updates.core.owner' => 'guildforge', 'updates.core.repo' => 'core']);
 
         $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core')
+            ->with('guildforge', 'core', false)
             ->andReturn(null);
 
         $result = $this->checker->checkForUpdate();
 
         $this->assertNull($result);
+    }
+
+    public function test_check_for_update_returns_null_when_github_request_fails(): void
+    {
+        config(['updates.core.owner' => 'guildforge', 'updates.core.repo' => 'core']);
+
+        $this->githubFetcher->shouldReceive('getLatestRelease')
+            ->andThrow(UpdateException::githubRequestFailed('guildforge/core', 'HTTP 403'));
+
+        $this->assertNull($this->checker->checkForUpdate());
     }
 
     public function test_check_for_update_returns_null_when_no_core_config(): void
@@ -136,12 +147,12 @@ final class CoreUpdateCheckerTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: true,
         );
 
         $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core')
+            ->with('guildforge', 'core', false)
             ->andReturn($release);
 
         $result = $this->checker->checkForUpdate();
@@ -168,12 +179,12 @@ final class CoreUpdateCheckerTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: true,
         );
 
         $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core')
+            ->with('guildforge', 'core', true)
             ->andReturn($release);
 
         $result = $this->checker->checkForUpdate();
@@ -194,7 +205,7 @@ final class CoreUpdateCheckerTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -216,7 +227,7 @@ final class CoreUpdateCheckerTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -236,7 +247,7 @@ final class CoreUpdateCheckerTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: 'Major improvements and bug fixes',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 

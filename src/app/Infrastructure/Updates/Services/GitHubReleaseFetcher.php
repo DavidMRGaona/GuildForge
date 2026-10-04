@@ -5,26 +5,46 @@ declare(strict_types=1);
 namespace App\Infrastructure\Updates\Services;
 
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
+use App\Domain\Modules\Exceptions\InvalidModuleVersionException;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
 {
-    private const string CACHE_KEY_PREFIX = 'github_release';
+    private const string CACHE_KEY_PREFIX = 'github_releases';
 
-    public function getLatestRelease(string $owner, string $repo): ?GitHubReleaseInfo
+    /** @var list<string> Cache keys written by this instance, so clearCache() can forget only them */
+    private array $cachedKeys = [];
+
+    public function getLatestRelease(string $owner, string $repo, bool $includePrereleases = false): ?GitHubReleaseInfo
     {
-        $cacheKey = $this->getCacheKey($owner, $repo);
-        $cacheTtl = config('updates.cache.ttl', 3600);
+        $latest = null;
 
-        return Cache::remember($cacheKey, $cacheTtl, function () use ($owner, $repo) {
-            return $this->fetchLatestRelease($owner, $repo);
-        });
+        foreach ($this->fetchReleases($owner, $repo) as $data) {
+            if (($data['draft'] ?? false) === true) {
+                continue;
+            }
+
+            if (($data['prerelease'] ?? false) === true && ! $includePrereleases) {
+                continue;
+            }
+
+            try {
+                $release = GitHubReleaseInfo::fromGitHubResponse($data);
+            } catch (InvalidModuleVersionException) {
+                continue; // Tags such as "nightly" are not versions
+            }
+
+            if ($latest === null || $release->version->isGreaterThan($latest->version)) {
+                $latest = $release;
+            }
+        }
+
+        return $latest;
     }
 
     public function downloadRelease(GitHubReleaseInfo $release, string $destinationPath): string
@@ -98,39 +118,17 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
         }
     }
 
-    public function batchFetchLatestReleases(array $repos): array
+    public function batchFetchLatestReleases(array $repos, bool $includePrereleases = false): array
     {
         $results = [];
-        $uncached = [];
 
-        // First, check cache for all repos
         foreach ($repos as $repo) {
-            $key = "{$repo['owner']}/{$repo['repo']}";
-            $cacheKey = $this->getCacheKey($repo['owner'], $repo['repo']);
-
-            if (Cache::has($cacheKey)) {
-                $results[$key] = Cache::get($cacheKey);
-            } else {
-                $uncached[] = $repo;
-            }
-        }
-
-        // Fetch uncached repos
-        foreach ($uncached as $repo) {
             $key = "{$repo['owner']}/{$repo['repo']}";
 
             try {
-                $release = $this->fetchLatestRelease($repo['owner'], $repo['repo']);
-                $results[$key] = $release;
-
-                // Cache the result
-                $cacheKey = $this->getCacheKey($repo['owner'], $repo['repo']);
-                Cache::put($cacheKey, $release, config('updates.cache.ttl', 3600));
-            } catch (\Throwable $e) {
-                Log::warning("Failed to fetch release for {$key}", [
-                    'error' => $e->getMessage(),
-                ]);
-                $results[$key] = null;
+                $results[$key] = $this->getLatestRelease($repo['owner'], $repo['repo'], $includePrereleases);
+            } catch (UpdateException $e) {
+                $results[$key] = $e;
             }
         }
 
@@ -145,44 +143,50 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
             return;
         }
 
-        // Clear all release cache (using pattern if cache driver supports it)
-        $prefix = config('updates.cache.key_prefix', 'updates');
-        Cache::flush(); // Simplified - in production, use tagged caches
+        foreach ($this->cachedKeys as $key) {
+            Cache::forget($key);
+        }
+
+        $this->cachedKeys = [];
     }
 
-    private function fetchLatestRelease(string $owner, string $repo): ?GitHubReleaseInfo
+    /**
+     * Raw release list of a repository, cached only when GitHub answered successfully.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function fetchReleases(string $owner, string $repo): array
     {
+        $cacheKey = $this->getCacheKey($owner, $repo);
+
+        /** @var list<array<string, mixed>>|null $cached */
+        $cached = Cache::get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
         try {
-            $response = $this->createClient()
-                ->get("repos/{$owner}/{$repo}/releases/latest");
-
-            if ($response->status() === 404) {
-                return null;
-            }
-
-            if (! $response->successful()) {
-                Log::warning("GitHub API error for {$owner}/{$repo}", [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-
-                return null;
-            }
-
-            $data = $response->json();
-
-            if (empty($data)) {
-                return null;
-            }
-
-            return GitHubReleaseInfo::fromGitHubResponse($data);
+            $response = $this->createClient()->get("repos/{$owner}/{$repo}/releases", ['per_page' => 30]);
         } catch (\Throwable $e) {
-            Log::error("Failed to fetch latest release for {$owner}/{$repo}", [
-                'error' => $e->getMessage(),
+            throw UpdateException::githubRequestFailed("{$owner}/{$repo}", $e->getMessage());
+        }
+
+        if (! $response->successful()) {
+            Log::warning("GitHub API error for {$owner}/{$repo}", [
+                'status' => $response->status(),
+                'body' => $response->body(),
             ]);
 
-            return null;
+            throw UpdateException::githubRequestFailed("{$owner}/{$repo}", "HTTP {$response->status()}");
         }
+
+        $releases = $response->json();
+        $releases = is_array($releases) ? array_values(array_filter($releases, 'is_array')) : [];
+
+        Cache::put($cacheKey, $releases, (int) config('updates.cache.ttl', 3600));
+        $this->cachedKeys[] = $cacheKey;
+
+        return $releases;
     }
 
     private function createClient(): PendingRequest
@@ -207,7 +211,7 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
     {
         $prefix = config('updates.cache.key_prefix', 'updates');
 
-        return "{$prefix}." . self::CACHE_KEY_PREFIX . ".{$owner}.{$repo}";
+        return "{$prefix}.".self::CACHE_KEY_PREFIX.".{$owner}.{$repo}";
     }
 
     private function ensureDirectoryExists(string $path): void
