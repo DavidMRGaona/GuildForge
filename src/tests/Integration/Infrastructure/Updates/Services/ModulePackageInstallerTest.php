@@ -124,7 +124,7 @@ final class ModulePackageInstallerTest extends TestCase
         }
     }
 
-    public function test_cleanup_leftovers_removes_only_this_modules_temp_dirs(): void
+    public function test_cleanup_leftovers_removes_only_this_modules_staging_dirs(): void
     {
         File::makeDirectory($this->modulesPath.'/.staging-game-tables-old');
         File::makeDirectory($this->modulesPath.'/.previous-game-tables-old');
@@ -133,7 +133,8 @@ final class ModulePackageInstallerTest extends TestCase
         $this->installer->cleanupLeftovers('game-tables');
 
         $this->assertDirectoryDoesNotExist($this->modulesPath.'/.staging-game-tables-old');
-        $this->assertDirectoryDoesNotExist($this->modulesPath.'/.previous-game-tables-old');
+        // A previous copy may be the only good version left after a failed revert
+        $this->assertDirectoryExists($this->modulesPath.'/.previous-game-tables-old');
         $this->assertDirectoryExists($this->modulesPath.'/.staging-tournaments-old');
         $this->assertDirectoryExists($this->modulesPath.'/game-tables');
     }
