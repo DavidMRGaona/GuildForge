@@ -253,6 +253,16 @@ return [
                 'update' => 'Update',
                 'updating' => 'Updating...',
             ],
+            'preview' => [
+                'heading' => 'Update details for :module',
+                'current' => 'Current version',
+                'new' => 'New version',
+                'major_warning' => 'This is a major version update: read the notes before updating.',
+                'changelog' => 'Release notes',
+                'no_changelog' => 'This release has no notes.',
+                'failed' => 'Could not load the details',
+                'close' => 'Close',
+            ],
             'history' => [
                 'title' => 'Update history',
                 'module' => 'Module',

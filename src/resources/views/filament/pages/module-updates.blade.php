@@ -85,7 +85,7 @@
                                                 size="sm"
                                                 color="gray"
                                                 icon="heroicon-m-eye"
-                                                wire:click="previewUpdate('{{ $update['module_name'] }}')"
+                                                wire:click="mountAction('preview', { module: '{{ $update['module_name'] }}' })"
                                             >
                                                 {{ __('filament.updates.modules.available.preview') }}
                                             </x-filament::button>
