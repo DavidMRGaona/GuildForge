@@ -25,9 +25,7 @@ final class CheckModuleUpdatesJob implements ShouldQueue
 
     public int $backoff = 60;
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function handle(
         ModuleUpdateCheckerInterface $updateChecker,
@@ -38,10 +36,21 @@ final class CheckModuleUpdatesJob implements ShouldQueue
         }
 
         try {
-            $availableUpdates = $updateChecker->checkAllForUpdates();
+            $result = $updateChecker->checkAll();
+            $availableUpdates = $result->updates;
+
+            foreach ($result->errors as $module => $error) {
+                Log::warning("Module update check could not reach the repository of {$module}", ['error' => $error]);
+            }
+
+            if ($result->modulesWithoutSource !== []) {
+                Log::info('Modules without a repository were not checked', ['modules' => $result->modulesWithoutSource]);
+            }
 
             if ($availableUpdates->isEmpty()) {
-                Log::info('Module update check completed: No updates available');
+                if (! $result->hasErrors()) {
+                    Log::info('Module update check completed: No updates available');
+                }
 
                 return;
             }
