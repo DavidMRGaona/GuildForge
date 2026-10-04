@@ -182,6 +182,11 @@ final class Module
         $this->latestAvailableVersion = $version;
     }
 
+    public function clearLatestAvailableVersion(): void
+    {
+        $this->latestAvailableVersion = null;
+    }
+
     public function updateLastCheckAt(DateTimeImmutable $timestamp): void
     {
         $this->lastUpdateCheckAt = $timestamp;

@@ -22,8 +22,7 @@ final readonly class AvailableUpdateDTO
         public bool $isMajorUpdate,
         public string $downloadUrl,
         public bool $hasChecksum,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>

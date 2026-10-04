@@ -49,6 +49,7 @@ use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
+use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\CoreTableRegistry;
@@ -283,6 +284,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(GitHubReleaseFetcherInterface::class, GitHubReleaseFetcher::class);
         $this->app->singleton(ModuleBackupServiceInterface::class, ModuleBackupService::class);
         $this->app->singleton(ModuleHealthCheckerInterface::class, ModuleHealthChecker::class);
+        $this->app->singleton(ReleaseChannelPolicy::class, fn (): ReleaseChannelPolicy => new ReleaseChannelPolicy(
+            (bool) config('updates.behavior.allow_prereleases', false),
+        ));
         $this->app->singleton(ModuleUpdateCheckerInterface::class, ModuleUpdateChecker::class);
         $this->app->singleton(ModuleUpdaterInterface::class, ModuleUpdater::class);
         $this->app->singleton(CoreVersionServiceInterface::class, CoreVersionService::class);

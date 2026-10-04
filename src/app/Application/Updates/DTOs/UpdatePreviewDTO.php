@@ -25,8 +25,7 @@ final readonly class UpdatePreviewDTO
         public ?string $coreRequirement,
         public ?string $downloadUrl,
         public ?int $downloadSize,
-    ) {
-    }
+    ) {}
 
     public function hasMigrations(): bool
     {
