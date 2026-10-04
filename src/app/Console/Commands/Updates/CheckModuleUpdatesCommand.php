@@ -18,12 +18,25 @@ final class CheckModuleUpdatesCommand extends Command
     {
         $this->info('Checking for module updates...');
 
-        $updates = $updateChecker->checkAllForUpdates();
+        $result = $updateChecker->checkAll((bool) $this->option('force'));
+        $updates = $result->updates;
+
+        foreach ($result->errors as $module => $error) {
+            $this->error("{$module}: {$error}");
+        }
+
+        if ($result->modulesWithoutSource !== []) {
+            $this->warn('No repository configured for: '.implode(', ', $result->modulesWithoutSource));
+        }
+
+        $exitCode = $result->hasErrors() ? self::FAILURE : self::SUCCESS;
 
         if ($updates->isEmpty()) {
-            $this->info('All modules are up to date.');
+            if (! $result->hasErrors()) {
+                $this->info('All modules are up to date.');
+            }
 
-            return self::SUCCESS;
+            return $exitCode;
         }
 
         $this->info("Found {$updates->count()} update(s) available:");
@@ -36,7 +49,7 @@ final class CheckModuleUpdatesCommand extends Command
                 $update->currentVersion,
                 $update->availableVersion,
                 $update->isMajorUpdate ? 'Yes' : 'No',
-                $update->publishedAt->format('Y-m-d'),
+                $update->publishedAt?->format('Y-m-d') ?? '-',
             ];
         }
 
@@ -45,6 +58,6 @@ final class CheckModuleUpdatesCommand extends Command
             $rows
         );
 
-        return self::SUCCESS;
+        return $exitCode;
     }
 }

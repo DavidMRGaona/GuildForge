@@ -5,6 +5,12 @@ declare(strict_types=1);
 namespace Tests\Unit\Application\Updates\DTOs;
 
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
+use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\ValueObjects\ModuleId;
+use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Domain\Modules\ValueObjects\ModuleRequirements;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -47,7 +53,7 @@ final class AvailableUpdateDTOTest extends TestCase
             currentVersion: '2.0.0',
             availableVersion: '2.1.0-beta.1',
             releaseNotes: 'Beta release',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: true,
             isMajorUpdate: false,
             downloadUrl: 'https://example.com/download.zip',
@@ -66,7 +72,7 @@ final class AvailableUpdateDTOTest extends TestCase
             currentVersion: '1.5.3',
             availableVersion: '2.0.0',
             releaseNotes: 'Major release with breaking changes',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
             isMajorUpdate: true,
             downloadUrl: 'https://example.com/download.zip',
@@ -138,7 +144,7 @@ final class AvailableUpdateDTOTest extends TestCase
             currentVersion: '1.0.0',
             availableVersion: '1.1.0',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
             isMajorUpdate: false,
             downloadUrl: '',
@@ -157,7 +163,7 @@ final class AvailableUpdateDTOTest extends TestCase
             currentVersion: '0.9.0',
             availableVersion: '1.0.0',
             releaseNotes: 'Initial stable release',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
             isMajorUpdate: true,
             downloadUrl: 'https://example.com/legacy.zip',
@@ -178,7 +184,7 @@ final class AvailableUpdateDTOTest extends TestCase
             currentVersion: '1.0.0',
             availableVersion: '1.0.1',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
             isMajorUpdate: false,
             downloadUrl: 'https://example.com/minimal.zip',
@@ -189,5 +195,30 @@ final class AvailableUpdateDTOTest extends TestCase
 
         $array = $dto->toArray();
         $this->assertEquals('', $array['release_notes']);
+    }
+
+    public function test_from_module_builds_pending_update_from_persisted_state(): void
+    {
+        $module = new Module(
+            id: new ModuleId('0193c7a2-0000-7000-8000-000000000001'),
+            name: ModuleName::fromString('event-registrations'),
+            displayName: 'Event registrations',
+            description: '',
+            version: ModuleVersion::fromString('1.0.8-beta'),
+            author: '',
+            requirements: ModuleRequirements::fromArray([]),
+            status: ModuleStatus::Enabled,
+            latestAvailableVersion: '1.0.9-beta',
+        );
+
+        $dto = AvailableUpdateDTO::fromModule($module);
+
+        $this->assertSame('event-registrations', $dto->moduleName);
+        $this->assertSame('1.0.8-beta', $dto->currentVersion);
+        $this->assertSame('1.0.9-beta', $dto->availableVersion);
+        $this->assertTrue($dto->isPrerelease);
+        $this->assertFalse($dto->isMajorUpdate);
+        $this->assertNull($dto->publishedAt);
+        $this->assertNull($dto->toArray()['published_at']);
     }
 }

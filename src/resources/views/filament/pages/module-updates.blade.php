@@ -1,12 +1,39 @@
 <x-filament-panels::page>
     <div class="space-y-6">
+        @if($checkErrors !== [])
+            <div class="rounded-xl border border-danger-300 bg-danger-50 p-4 dark:border-danger-700 dark:bg-danger-950">
+                <h2 class="text-sm font-medium text-danger-800 dark:text-danger-200">
+                    {{ __('filament.updates.modules.check_errors.title') }}
+                </h2>
+                <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-danger-700 dark:text-danger-300">
+                    @foreach($checkErrors as $module => $error)
+                        <li><span class="font-medium">{{ $module }}</span>: {{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        @if($modulesWithoutSource !== [])
+            <div class="rounded-xl border border-warning-300 bg-warning-50 p-4 dark:border-warning-700 dark:bg-warning-950">
+                <h2 class="text-sm font-medium text-warning-800 dark:text-warning-200">
+                    {{ __('filament.updates.modules.without_source.title') }}
+                </h2>
+                <p class="mt-1 text-sm text-warning-700 dark:text-warning-300">
+                    {{ implode(', ', $modulesWithoutSource) }}
+                </p>
+                <p class="mt-1 text-xs text-warning-600 dark:text-warning-400">
+                    {{ __('filament.updates.modules.without_source.hint') }}
+                </p>
+            </div>
+        @endif
+
         {{-- Available updates section --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <h2 class="text-lg font-medium text-gray-900 dark:text-white">
                 {{ __('filament.updates.modules.available.title') }}
             </h2>
 
-            @if($availableUpdates->isEmpty())
+            @if($availableUpdates === [])
                 <div class="mt-4 text-center py-8">
                     <x-heroicon-o-check-circle class="mx-auto" style="width: 3rem; height: 3rem; color: rgb(var(--success-500));" />
                     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -45,19 +72,19 @@
                             @foreach($availableUpdates as $update)
                                 <tr>
                                     <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                                        {{ $update->moduleName }}
+                                        {{ $update['module_name'] }}
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                        v{{ $update->currentVersion }}
+                                        v{{ $update['current_version'] }}
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                        v{{ $update->availableVersion }}
+                                        v{{ $update['available_version'] }}
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $update->publishedAt->format('d/m/Y') }}
+                                        {{ $update['published_at'] !== null ? \Illuminate\Support\Carbon::parse($update['published_at'])->format('d/m/Y') : '—' }}
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-3 text-sm">
-                                        @if($update->isMajorUpdate)
+                                        @if($update['is_major_update'])
                                             <span class="inline-flex items-center rounded-full bg-danger-100 px-2.5 py-0.5 text-xs font-medium text-danger-800 dark:bg-danger-900 dark:text-danger-200">
                                                 {{ __('filament.updates.modules.available.major') }}
                                             </span>
@@ -71,7 +98,7 @@
                                         <div class="flex items-center justify-end gap-2">
                                             <button
                                                 type="button"
-                                                wire:click="previewUpdate('{{ $update->moduleName }}')"
+                                                wire:click="previewUpdate('{{ $update['module_name'] }}')"
                                                 class="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:ring-gray-600 dark:hover:bg-gray-600"
                                             >
                                                 <x-heroicon-m-eye class="mr-1" style="width: 1rem; height: 1rem;" />
@@ -79,12 +106,12 @@
                                             </button>
                                             <button
                                                 type="button"
-                                                wire:click="updateModule('{{ $update->moduleName }}')"
+                                                wire:click="updateModule('{{ $update['module_name'] }}')"
                                                 wire:loading.attr="disabled"
                                                 @if($isUpdating) disabled @endif
                                                 class="inline-flex items-center rounded-md bg-primary-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                @if($isUpdating && $updatingModule === $update->moduleName)
+                                                @if($isUpdating && $updatingModule === $update['module_name'])
                                                     <x-heroicon-m-arrow-path class="mr-1 animate-spin" style="width: 1rem; height: 1rem;" />
                                                     {{ __('filament.updates.modules.available.updating') }}
                                                 @else
