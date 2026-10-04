@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
-use App\Application\Updates\DTOs\HealthCheckResultDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
-use App\Application\Updates\Services\ModuleHealthCheckerInterface;
+use App\Application\Updates\Services\ModulePostUpdateRunnerInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
@@ -20,6 +19,7 @@ use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\Infrastructure\Updates\Services\ModulePackageInstaller;
 use App\Infrastructure\Updates\Services\ModuleUpdater;
 use DateTimeImmutable;
@@ -45,7 +45,7 @@ final class ModuleUpdaterTest extends TestCase
 
     private MockInterface&ModuleBackupServiceInterface $backupService;
 
-    private MockInterface&ModuleHealthCheckerInterface $healthChecker;
+    private MockInterface&ModulePostUpdateRunnerInterface $postUpdateRunner;
 
     private MockInterface&Dispatcher $events;
 
@@ -63,7 +63,7 @@ final class ModuleUpdaterTest extends TestCase
         $this->moduleManager = Mockery::mock(ModuleManagerServiceInterface::class);
         $this->githubFetcher = Mockery::mock(GitHubReleaseFetcherInterface::class);
         $this->backupService = Mockery::mock(ModuleBackupServiceInterface::class);
-        $this->healthChecker = Mockery::mock(ModuleHealthCheckerInterface::class);
+        $this->postUpdateRunner = Mockery::mock(ModulePostUpdateRunnerInterface::class);
         $this->events = Mockery::mock(Dispatcher::class);
 
         $this->service = new ModuleUpdater(
@@ -71,10 +71,10 @@ final class ModuleUpdaterTest extends TestCase
             $this->moduleManager,
             $this->githubFetcher,
             $this->backupService,
-            $this->healthChecker,
             $this->events,
             new ModulePackageInstaller,
             new ReleaseChannelPolicy(allowPrereleases: false),
+            $this->postUpdateRunner,
         );
 
         $this->tempDir = storage_path('app/test-updates');
@@ -82,7 +82,6 @@ final class ModuleUpdaterTest extends TestCase
 
         config(['updates.temp_path' => $this->tempDir]);
         config(['updates.behavior.verify_checksum' => false]);
-        config(['updates.behavior.health_check' => false]);
         config(['updates.behavior.auto_rollback' => true]);
 
         // The updater reads these settings in its constructor
@@ -255,8 +254,6 @@ final class ModuleUpdaterTest extends TestCase
     {
         $module = $this->prepareInstalledModules();
         $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
-        $this->moduleManager->shouldReceive('disable')->once()->andReturn($module);
-        $this->moduleManager->shouldReceive('enable')->once()->andReturn($module);
 
         $result = $this->service->update(ModuleName::fromString('updtest-game'));
 
@@ -269,15 +266,42 @@ final class ModuleUpdaterTest extends TestCase
         $this->assertSame('new', File::get(public_path('build/modules/updtest-game/manifest.json')));
     }
 
-    public function test_update_reverts_files_and_assets_when_health_check_fails(): void
+    public function test_update_keeps_the_module_enabled_while_it_runs(): void
     {
-        config(['updates.behavior.health_check' => true]);
-        $this->rebuildService();
-        $module = $this->prepareInstalledModules();
+        // Disabling rebuilt the config cache in the worker, which dropped the module's bindings mid-update
+        $this->prepareInstalledModules();
         $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
-        $this->moduleManager->shouldReceive('disable')->once()->andReturn($module);
-        $this->moduleManager->shouldReceive('enable')->once()->andReturn($module);
-        $this->healthChecker->shouldReceive('check')->andReturn(new HealthCheckResultDTO(false, true, true, ['provider failed']));
+        $this->moduleManager->shouldNotReceive('disable');
+        $this->moduleManager->shouldNotReceive('enable');
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertTrue($result->isSuccess(), (string) $result->errorMessage);
+    }
+
+    public function test_update_runs_the_post_update_steps_once_the_new_files_are_in_place(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $versionSeenByRunner = null;
+        $this->postUpdateRunner->shouldReceive('run')
+            ->once()
+            ->with(Mockery::on(fn (ModuleName $name): bool => $name->value === 'updtest-game'))
+            ->andReturnUsing(function () use (&$versionSeenByRunner): void {
+                $versionSeenByRunner = $this->manifestVersion('updtest-game');
+            });
+
+        $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertSame('1.0.1-beta', $versionSeenByRunner);
+    }
+
+    public function test_update_reverts_files_and_assets_when_the_post_update_steps_fail(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->postUpdateRunner->shouldReceive('run')
+            ->andThrow(UpdateException::postUpdateFailed('updtest-game', 'Target class [PublishersSeeder] does not exist.'));
 
         $result = $this->service->update(ModuleName::fromString('updtest-game'));
 
@@ -288,11 +312,24 @@ final class ModuleUpdaterTest extends TestCase
         $this->assertSame([], glob($this->tempDir.'/*.zip'));
     }
 
+    public function test_a_rolled_back_update_keeps_the_error_in_its_history(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->postUpdateRunner->shouldReceive('run')
+            ->andThrow(UpdateException::postUpdateFailed('updtest-game', 'Target class [PublishersSeeder] does not exist.'));
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $history = ModuleUpdateHistoryModel::findOrFail($result->historyId);
+        $this->assertStringContainsString('Target class [PublishersSeeder] does not exist.', (string) $history->error_message);
+    }
+
     public function test_update_rejecting_the_package_leaves_the_module_enabled_and_untouched(): void
     {
         $this->prepareInstalledModules();
         $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-aaa', '1.0.1-beta', 'new'));
-        $this->moduleManager->shouldNotReceive('disable');
+        $this->postUpdateRunner->shouldNotReceive('run');
 
         $result = $this->service->update(ModuleName::fromString('updtest-game'));
 
@@ -307,7 +344,7 @@ final class ModuleUpdaterTest extends TestCase
         $this->rebuildService();
         $this->prepareInstalledModules();
         $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
-        $this->moduleManager->shouldNotReceive('disable');
+        $this->postUpdateRunner->shouldNotReceive('run');
 
         $result = $this->service->update(ModuleName::fromString('updtest-game'));
 
@@ -360,7 +397,7 @@ final class ModuleUpdaterTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')->andReturn($module);
         $this->moduleRepository->shouldReceive('save');
         $this->backupService->shouldReceive('createBackup')->andReturn($this->tempDir.'/backup.zip');
-        $this->healthChecker->shouldReceive('check')->andReturn(new HealthCheckResultDTO(true, true, true))->byDefault();
+        $this->postUpdateRunner->shouldReceive('run')->byDefault();
 
         return $module;
     }
@@ -404,10 +441,10 @@ final class ModuleUpdaterTest extends TestCase
             $this->moduleManager,
             $this->githubFetcher,
             $this->backupService,
-            $this->healthChecker,
             $this->events,
             new ModulePackageInstaller,
             new ReleaseChannelPolicy(allowPrereleases: false),
+            $this->postUpdateRunner,
         );
     }
 

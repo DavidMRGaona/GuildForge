@@ -85,9 +85,10 @@ final class ModuleUpdateHistoryModel extends Model
         $this->save();
     }
 
-    public function markRolledBack(): void
+    public function markRolledBack(string $reason): void
     {
         $this->status = UpdateStatus::RolledBack;
+        $this->error_message = $reason;
         $this->completed_at = now()->toImmutable();
         $this->save();
     }
