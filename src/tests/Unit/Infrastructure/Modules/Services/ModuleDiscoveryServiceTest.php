@@ -187,6 +187,19 @@ final class ModuleDiscoveryServiceTest extends TestCase
         $this->service->discover();
     }
 
+    public function test_it_ignores_dot_directories(): void
+    {
+        mkdir($this->testModulesPath.'/.staging-test-module-abc', 0755, true);
+        file_put_contents($this->testModulesPath.'/.staging-test-module-abc/module.json', json_encode([
+            'name' => 'test-module',
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\TestModule',
+            'provider' => 'TestModuleServiceProvider',
+        ]));
+
+        $this->assertCount(0, $this->service->discover());
+    }
+
     private function removeDirectory(string $path): void
     {
         if (! file_exists($path)) {

@@ -11,8 +11,7 @@ final readonly class ModuleDiscoveryService
 {
     public function __construct(
         private string $modulesPath,
-    ) {
-    }
+    ) {}
 
     /**
      * Discovers modules from the modules directory.
@@ -33,7 +32,8 @@ final readonly class ModuleDiscoveryService
         }
 
         foreach ($directories as $dir) {
-            if ($dir === '.' || $dir === '..') {
+            // Dot directories are the updater's staging/previous copies, never modules
+            if (str_starts_with($dir, '.')) {
                 continue;
             }
 
