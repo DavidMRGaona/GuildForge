@@ -227,19 +227,29 @@ final class ModuleUpdatesPage extends Page implements HasTable
         }
 
         $finished = false;
+        $since = Carbon::parse($this->queuedSince);
+        // Longer than UpdateModuleJob's timeout: past this, the job died without reporting
+        $givenUp = $since->copy()->addMinutes(15)->isPast();
 
         foreach ($this->queuedModules as $index => $moduleName) {
+            // An update already running when the page queued it (e.g. after a reload) also counts
             $history = ModuleUpdateHistoryModel::query()
                 ->where('module_name', $moduleName)
-                ->where('started_at', '>=', Carbon::parse($this->queuedSince))
+                ->where(fn ($query) => $query->where('started_at', '>=', $since)->orWhere('completed_at', '>=', $since))
                 ->latest('started_at')
                 ->first();
 
-            if ($history === null || ! $history->status->isTerminal()) {
+            if ($history !== null && $history->status->isTerminal()) {
+                $this->notifyFinished($moduleName, $history);
+            } elseif ($givenUp) {
+                Notification::make()
+                    ->title(__('filament.updates.modules.notifications.update_lost', ['module' => $moduleName]))
+                    ->warning()
+                    ->send();
+            } else {
                 continue;
             }
 
-            $this->notifyFinished($moduleName, $history);
             unset($this->queuedModules[$index]);
             $finished = true;
         }
