@@ -7,13 +7,15 @@ namespace App\Infrastructure\Updates\Jobs;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 
-final class UpdateModuleJob implements ShouldQueue
+final class UpdateModuleJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -24,10 +26,12 @@ final class UpdateModuleJob implements ShouldQueue
 
     public int $timeout = 600; // 10 minutes
 
+    /** Seconds the uniqueness lock lasts if the job never finishes */
+    public int $uniqueFor = 900;
+
     public function __construct(
         public readonly string $moduleName,
-    ) {
-    }
+    ) {}
 
     public function handle(ModuleUpdaterInterface $updater): void
     {
@@ -37,13 +41,13 @@ final class UpdateModuleJob implements ShouldQueue
             $result = $updater->update(new ModuleName($this->moduleName));
 
             if ($result->isSuccess()) {
-                Log::info("Module update completed successfully", [
+                Log::info('Module update completed successfully', [
                     'module' => $this->moduleName,
                     'from_version' => $result->fromVersion,
                     'to_version' => $result->toVersion,
                 ]);
             } else {
-                Log::warning("Module update failed", [
+                Log::warning('Module update failed', [
                     'module' => $this->moduleName,
                     'status' => $result->status->value,
                     'error' => $result->errorMessage,
@@ -51,12 +55,15 @@ final class UpdateModuleJob implements ShouldQueue
                 ]);
             }
         } catch (\Throwable $e) {
-            Log::error("Module update job failed", [
+            Log::error('Module update job failed', [
                 'module' => $this->moduleName,
                 'error' => $e->getMessage(),
             ]);
 
             throw $e;
+        } finally {
+            // Workers keep the old module classes loaded; make them exit after this job
+            Artisan::call('queue:restart');
         }
     }
 
