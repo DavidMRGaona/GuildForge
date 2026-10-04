@@ -239,14 +239,16 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                 $this->log($history->id, 'health', 'completed', 'Health check passed');
             }
 
-            // Step 8: Persist the new version, re-enable and drop the previous copy
-            $module->updateVersion(ModuleVersion::fromString($toVersion));
-            $module->clearLatestAvailableVersion();
-            $this->moduleRepository->save($module);
-
+            // Step 8: Re-enable, then persist the new version on a freshly loaded entity:
+            // disable()/enable() saved their own copies, so $module's status is stale
             if ($wasDisabled) {
                 $this->moduleManager->enable($name);
             }
+
+            $current = $this->moduleRepository->findByName($name) ?? $module;
+            $current->updateVersion(ModuleVersion::fromString($toVersion));
+            $current->clearLatestAvailableVersion();
+            $this->moduleRepository->save($current);
 
             $this->installer->discard($previousPath);
             $previousPath = null;
