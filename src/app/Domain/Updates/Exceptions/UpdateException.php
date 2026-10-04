@@ -73,6 +73,11 @@ final class UpdateException extends DomainException
         return new self("No update available for '{$moduleName}'.");
     }
 
+    public static function githubRequestFailed(string $repository, string $reason): self
+    {
+        return new self("GitHub request for '{$repository}' failed: {$reason}");
+    }
+
     public static function noSourceConfigured(string $moduleName): self
     {
         return new self("Module '{$moduleName}' has no GitHub source configured.");

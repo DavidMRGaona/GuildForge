@@ -22,28 +22,15 @@ final class GitHubReleaseFetcherTest extends TestCase
     {
         parent::setUp();
 
-        $this->fetcher = new GitHubReleaseFetcher();
+        $this->fetcher = new GitHubReleaseFetcher;
         Cache::flush();
     }
 
     public function test_it_fetches_latest_release_from_github(): void
     {
         Http::fake([
-            'api.github.com/repos/test-owner/test-repo/releases/latest' => Http::response([
-                'tag_name' => 'v1.2.0',
-                'body' => 'Release notes here',
-                'published_at' => '2024-08-15T10:30:00Z',
-                'prerelease' => false,
-                'assets' => [
-                    [
-                        'name' => 'module-1.2.0.zip',
-                        'browser_download_url' => 'https://github.com/test-owner/test-repo/releases/download/v1.2.0/module-1.2.0.zip',
-                    ],
-                    [
-                        'name' => 'module-1.2.0.zip.sha256',
-                        'browser_download_url' => 'https://github.com/test-owner/test-repo/releases/download/v1.2.0/module-1.2.0.zip.sha256',
-                    ],
-                ],
+            'api.github.com/repos/test-owner/test-repo/releases*' => Http::response([
+                $this->release('v1.2.0', body: 'Release notes here'),
             ]),
         ]);
 
@@ -58,81 +45,131 @@ final class GitHubReleaseFetcherTest extends TestCase
         $this->assertTrue($release->hasChecksum());
     }
 
+    public function test_it_returns_highest_prerelease_when_prereleases_included(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([
+                $this->release('v1.0.9-beta', prerelease: true),
+                $this->release('v1.0.10-beta', prerelease: true),
+                $this->release('v1.1.0', draft: true),
+            ]),
+        ]);
+
+        $release = $this->fetcher->getLatestRelease('o', 'r', includePrereleases: true);
+
+        $this->assertSame('1.0.10-beta', $release?->version->value());
+    }
+
+    public function test_it_skips_prereleases_by_default(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([
+                $this->release('v2.0.0-beta', prerelease: true),
+                $this->release('v1.5.0'),
+            ]),
+        ]);
+
+        $this->assertSame('1.5.0', $this->fetcher->getLatestRelease('o', 'r')?->version->value());
+    }
+
+    public function test_it_ignores_tags_that_are_not_versions(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([
+                $this->release('nightly'),
+                $this->release('v1.0.0'),
+            ]),
+        ]);
+
+        $this->assertSame('1.0.0', $this->fetcher->getLatestRelease('o', 'r')?->version->value());
+    }
+
     public function test_it_caches_results_for_configured_ttl(): void
     {
         Http::fake([
-            'api.github.com/repos/cache-owner/cache-repo/releases/latest' => Http::sequence()
-                ->push([
-                    'tag_name' => 'v1.0.0',
-                    'body' => 'First call',
-                    'published_at' => '2024-01-01T00:00:00Z',
-                    'prerelease' => false,
-                    'assets' => [],
-                ])
-                ->push([
-                    'tag_name' => 'v2.0.0',
-                    'body' => 'Second call - should not be reached',
-                    'published_at' => '2024-01-01T00:00:00Z',
-                    'prerelease' => false,
-                    'assets' => [],
-                ]),
+            'api.github.com/repos/cache-owner/cache-repo/releases*' => Http::sequence()
+                ->push([$this->release('v1.0.0')])
+                ->push([$this->release('v2.0.0')]),
         ]);
 
         $firstResult = $this->fetcher->getLatestRelease('cache-owner', 'cache-repo');
         $secondResult = $this->fetcher->getLatestRelease('cache-owner', 'cache-repo');
 
-        $this->assertEquals('v1.0.0', $firstResult->tagName);
-        $this->assertEquals('v1.0.0', $secondResult->tagName);
-
-        // Should only make one HTTP request
+        $this->assertEquals('v1.0.0', $firstResult?->tagName);
+        $this->assertEquals('v1.0.0', $secondResult?->tagName);
         Http::assertSentCount(1);
     }
 
-    public function test_it_returns_null_when_no_releases(): void
+    public function test_it_returns_null_when_repo_has_no_releases(): void
     {
         Http::fake([
-            'api.github.com/repos/empty-owner/empty-repo/releases/latest' => Http::response([], 404),
+            'api.github.com/repos/empty-owner/empty-repo/releases*' => Http::response([]),
         ]);
 
-        $release = $this->fetcher->getLatestRelease('empty-owner', 'empty-repo');
-
-        $this->assertNull($release);
+        $this->assertNull($this->fetcher->getLatestRelease('empty-owner', 'empty-repo'));
     }
 
-    public function test_it_batch_fetches_multiple_repos(): void
+    public function test_it_throws_when_repo_is_missing_or_private(): void
     {
         Http::fake([
-            'api.github.com/repos/owner1/repo1/releases/latest' => Http::response([
-                'tag_name' => 'v1.0.0',
-                'body' => '',
-                'published_at' => '2024-01-01T00:00:00Z',
-                'prerelease' => false,
-                'assets' => [],
-            ]),
-            'api.github.com/repos/owner2/repo2/releases/latest' => Http::response([
-                'tag_name' => 'v2.0.0',
-                'body' => '',
-                'published_at' => '2024-01-01T00:00:00Z',
-                'prerelease' => false,
-                'assets' => [],
-            ]),
-            'api.github.com/repos/owner3/repo3/releases/latest' => Http::response([], 404),
+            'api.github.com/repos/o/private/releases*' => Http::response(['message' => 'Not Found'], 404),
         ]);
 
-        $repos = [
-            ['owner' => 'owner1', 'repo' => 'repo1'],
-            ['owner' => 'owner2', 'repo' => 'repo2'],
-            ['owner' => 'owner3', 'repo' => 'repo3'],
-        ];
+        $this->expectException(UpdateException::class);
+        $this->expectExceptionMessage('o/private');
 
-        $results = $this->fetcher->batchFetchLatestReleases($repos);
+        $this->fetcher->getLatestRelease('o', 'private');
+    }
 
-        $this->assertCount(3, $results);
-        $this->assertInstanceOf(GitHubReleaseInfo::class, $results['owner1/repo1']);
-        $this->assertInstanceOf(GitHubReleaseInfo::class, $results['owner2/repo2']);
-        $this->assertNull($results['owner3/repo3']);
-        $this->assertEquals('v1.0.0', $results['owner1/repo1']->tagName);
-        $this->assertEquals('v2.0.0', $results['owner2/repo2']->tagName);
+    public function test_it_throws_on_api_error_and_does_not_cache_it(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::sequence()
+                ->push(['message' => 'API rate limit exceeded'], 403)
+                ->push([$this->release('v1.0.0')]),
+        ]);
+
+        try {
+            $this->fetcher->getLatestRelease('o', 'r');
+            $this->fail('Expected UpdateException');
+        } catch (UpdateException $e) {
+            $this->assertStringContainsString('403', $e->getMessage());
+        }
+
+        $this->assertSame('1.0.0', $this->fetcher->getLatestRelease('o', 'r')?->version->value());
+    }
+
+    public function test_batch_returns_exception_for_failing_repo_and_release_for_others(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/ok/releases*' => Http::response([$this->release('v1.0.0')]),
+            'api.github.com/repos/o/private/releases*' => Http::response(['message' => 'Not Found'], 404),
+            'api.github.com/repos/o/empty/releases*' => Http::response([]),
+        ]);
+
+        $results = $this->fetcher->batchFetchLatestReleases([
+            ['owner' => 'o', 'repo' => 'ok'],
+            ['owner' => 'o', 'repo' => 'private'],
+            ['owner' => 'o', 'repo' => 'empty'],
+        ]);
+
+        $this->assertInstanceOf(GitHubReleaseInfo::class, $results['o/ok']);
+        $this->assertSame('1.0.0', $results['o/ok']->version->value());
+        $this->assertInstanceOf(UpdateException::class, $results['o/private']);
+        $this->assertNull($results['o/empty']);
+    }
+
+    public function test_batch_includes_prereleases_when_requested(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([
+                $this->release('v1.0.9-beta', prerelease: true),
+            ]),
+        ]);
+
+        $results = $this->fetcher->batchFetchLatestReleases([['owner' => 'o', 'repo' => 'r']], true);
+
+        $this->assertInstanceOf(GitHubReleaseInfo::class, $results['o/r']);
     }
 
     public function test_it_verifies_checksum_correctly(): void
@@ -154,7 +191,7 @@ final class GitHubReleaseFetcherTest extends TestCase
                 downloadUrl: 'https://example.com/module.zip',
                 checksumUrl: 'https://example.com/checksum.sha256',
                 releaseNotes: '',
-                publishedAt: new DateTimeImmutable(),
+                publishedAt: new DateTimeImmutable,
                 isPrerelease: false,
             );
 
@@ -185,7 +222,7 @@ final class GitHubReleaseFetcherTest extends TestCase
                 downloadUrl: 'https://example.com/module.zip',
                 checksumUrl: 'https://example.com/checksum.sha256',
                 releaseNotes: '',
-                publishedAt: new DateTimeImmutable(),
+                publishedAt: new DateTimeImmutable,
                 isPrerelease: false,
             );
 
@@ -198,19 +235,6 @@ final class GitHubReleaseFetcherTest extends TestCase
         }
     }
 
-    public function test_it_handles_rate_limit_errors(): void
-    {
-        Http::fake([
-            'api.github.com/repos/rate-limited/repo/releases/latest' => Http::response([
-                'message' => 'API rate limit exceeded',
-            ], 403),
-        ]);
-
-        $release = $this->fetcher->getLatestRelease('rate-limited', 'repo');
-
-        $this->assertNull($release);
-    }
-
     public function test_it_skips_verification_when_no_checksum_available(): void
     {
         $release = new GitHubReleaseInfo(
@@ -219,7 +243,7 @@ final class GitHubReleaseFetcherTest extends TestCase
             downloadUrl: 'https://example.com/module.zip',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -239,70 +263,51 @@ final class GitHubReleaseFetcherTest extends TestCase
     public function test_it_clears_cache_for_specific_repo(): void
     {
         Http::fake([
-            'api.github.com/repos/clear-cache/repo/releases/latest' => Http::sequence()
-                ->push([
-                    'tag_name' => 'v1.0.0',
-                    'body' => '',
-                    'published_at' => '2024-01-01T00:00:00Z',
-                    'prerelease' => false,
-                    'assets' => [],
-                ])
-                ->push([
-                    'tag_name' => 'v2.0.0',
-                    'body' => '',
-                    'published_at' => '2024-01-01T00:00:00Z',
-                    'prerelease' => false,
-                    'assets' => [],
-                ]),
+            'api.github.com/repos/clear-cache/repo/releases*' => Http::sequence()
+                ->push([$this->release('v1.0.0')])
+                ->push([$this->release('v2.0.0')]),
         ]);
 
-        $firstResult = $this->fetcher->getLatestRelease('clear-cache', 'repo');
-        $this->assertEquals('v1.0.0', $firstResult->tagName);
+        $this->assertEquals('v1.0.0', $this->fetcher->getLatestRelease('clear-cache', 'repo')?->tagName);
 
         $this->fetcher->clearCache('clear-cache', 'repo');
 
-        $secondResult = $this->fetcher->getLatestRelease('clear-cache', 'repo');
-        $this->assertEquals('v2.0.0', $secondResult->tagName);
+        $this->assertEquals('v2.0.0', $this->fetcher->getLatestRelease('clear-cache', 'repo')?->tagName);
+    }
+
+    public function test_clear_cache_does_not_flush_other_cache_entries(): void
+    {
+        Cache::put('unrelated', 'keep');
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::sequence()
+                ->push([$this->release('v1.0.0')])
+                ->push([$this->release('v2.0.0')]),
+        ]);
+        $this->fetcher->getLatestRelease('o', 'r');
+
+        $this->fetcher->clearCache();
+
+        $this->assertSame('keep', Cache::get('unrelated'));
+        $this->assertEquals('v2.0.0', $this->fetcher->getLatestRelease('o', 'r')?->tagName);
     }
 
     public function test_it_uses_cached_results_in_batch_fetch(): void
     {
-        // First, cache a release for owner1/repo1
         Http::fake([
-            'api.github.com/repos/cached-owner/cached-repo/releases/latest' => Http::response([
-                'tag_name' => 'v1.0.0',
-                'body' => 'Cached',
-                'published_at' => '2024-01-01T00:00:00Z',
-                'prerelease' => false,
-                'assets' => [],
-            ]),
+            'api.github.com/repos/cached-owner/cached-repo/releases*' => Http::response([$this->release('v1.0.0')]),
+            'api.github.com/repos/new-owner/new-repo/releases*' => Http::response([$this->release('v2.0.0')]),
         ]);
 
         $this->fetcher->getLatestRelease('cached-owner', 'cached-repo');
 
-        // Now batch fetch, should use cached result
-        Http::fake([
-            'api.github.com/repos/new-owner/new-repo/releases/latest' => Http::response([
-                'tag_name' => 'v2.0.0',
-                'body' => 'New',
-                'published_at' => '2024-01-01T00:00:00Z',
-                'prerelease' => false,
-                'assets' => [],
-            ]),
-        ]);
-
-        $repos = [
+        $results = $this->fetcher->batchFetchLatestReleases([
             ['owner' => 'cached-owner', 'repo' => 'cached-repo'],
             ['owner' => 'new-owner', 'repo' => 'new-repo'],
-        ];
+        ]);
 
-        $results = $this->fetcher->batchFetchLatestReleases($repos);
-
-        $this->assertEquals('v1.0.0', $results['cached-owner/cached-repo']->tagName);
-        $this->assertEquals('v2.0.0', $results['new-owner/new-repo']->tagName);
-
-        // Should only fetch the non-cached repo
-        Http::assertSentCount(1);
+        $this->assertEquals('v1.0.0', $results['cached-owner/cached-repo']?->tagName);
+        $this->assertEquals('v2.0.0', $results['new-owner/new-repo']?->tagName);
+        Http::assertSentCount(2);
     }
 
     public function test_service_is_registered_in_container(): void
@@ -310,5 +315,25 @@ final class GitHubReleaseFetcherTest extends TestCase
         $service = $this->app->make(GitHubReleaseFetcherInterface::class);
 
         $this->assertInstanceOf(GitHubReleaseFetcher::class, $service);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function release(string $tag, bool $prerelease = false, bool $draft = false, string $body = ''): array
+    {
+        $version = ltrim($tag, 'v');
+
+        return [
+            'tag_name' => $tag,
+            'prerelease' => $prerelease,
+            'draft' => $draft,
+            'body' => $body,
+            'published_at' => '2026-10-04T10:00:00Z',
+            'assets' => [
+                ['name' => "m-{$version}.zip", 'browser_download_url' => "https://example.test/m-{$version}.zip"],
+                ['name' => "m-{$version}.zip.sha256", 'browser_download_url' => "https://example.test/m-{$version}.zip.sha256"],
+            ],
+        ];
     }
 }

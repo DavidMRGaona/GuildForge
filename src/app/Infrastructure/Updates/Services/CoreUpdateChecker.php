@@ -7,15 +7,16 @@ namespace App\Infrastructure\Updates\Services;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
+use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use Illuminate\Support\Facades\Log;
 
 final readonly class CoreUpdateChecker implements CoreUpdateCheckerInterface
 {
     public function __construct(
         private CoreVersionServiceInterface $versionService,
         private GitHubReleaseFetcherInterface $githubFetcher,
-    ) {
-    }
+    ) {}
 
     public function checkForUpdate(): ?GitHubReleaseInfo
     {
@@ -26,7 +27,15 @@ final readonly class CoreUpdateChecker implements CoreUpdateCheckerInterface
             return null;
         }
 
-        $release = $this->githubFetcher->getLatestRelease($owner, $repo);
+        $allowPrereleases = (bool) config('updates.behavior.allow_prereleases', false);
+
+        try {
+            $release = $this->githubFetcher->getLatestRelease($owner, $repo, $allowPrereleases);
+        } catch (UpdateException $e) {
+            Log::warning('Core update check failed', ['error' => $e->getMessage()]);
+
+            return null;
+        }
 
         if ($release === null) {
             return null;
