@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Application\Updates\Services\ModulePostUpdateRunnerInterface;
@@ -252,14 +253,13 @@ final class ModuleUpdaterTest extends TestCase
 
     public function test_update_installs_new_version_and_keeps_siblings(): void
     {
-        $module = $this->prepareInstalledModules();
+        $this->prepareInstalledModules();
         $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
 
         $result = $this->service->update(ModuleName::fromString('updtest-game'));
 
         $this->assertTrue($result->isSuccess(), (string) $result->errorMessage);
         $this->assertSame('1.0.1-beta', $this->manifestVersion('updtest-game'));
-        $this->assertSame('1.0.1-beta', $module->version()->value());
         $this->assertSame('updtest-aaa', json_decode(File::get($this->modulesPath.'/updtest-aaa/module.json'), true)['name']);
         $this->assertSame([], glob($this->modulesPath.'/.*updtest-game-*', GLOB_ONLYDIR));
         $this->assertSame([], glob($this->tempDir.'/*.zip'));
@@ -286,14 +286,51 @@ final class ModuleUpdaterTest extends TestCase
         $versionSeenByRunner = null;
         $this->postUpdateRunner->shouldReceive('run')
             ->once()
-            ->with(Mockery::on(fn (ModuleName $name): bool => $name->value === 'updtest-game'))
-            ->andReturnUsing(function () use (&$versionSeenByRunner): void {
+            ->with(
+                Mockery::on(fn (ModuleName $name): bool => $name->value === 'updtest-game'),
+                Mockery::on(fn (ModuleVersion $version): bool => $version->value() === '1.0.1-beta'),
+            )
+            ->andReturnUsing(function () use (&$versionSeenByRunner): PostUpdateReportDTO {
                 $versionSeenByRunner = $this->manifestVersion('updtest-game');
+
+                return new PostUpdateReportDTO([], []);
             });
 
         $this->service->update(ModuleName::fromString('updtest-game'));
 
         $this->assertSame('1.0.1-beta', $versionSeenByRunner);
+    }
+
+    public function test_update_result_lists_the_migrations_and_seeders_the_post_update_steps_applied(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->postUpdateRunner->shouldReceive('run')
+            ->andReturn(new PostUpdateReportDTO(['2026_10_04_000000_create_updtest_game_items_table'], ['ItemsSeeder']));
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertSame(['2026_10_04_000000_create_updtest_game_items_table'], $result->migrationsRun);
+        $this->assertSame(['ItemsSeeder'], $result->seedersRun);
+    }
+
+    public function test_update_refreshes_caches_only_after_the_post_update_steps_succeed(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->postUpdateRunner->shouldReceive('refreshCaches')->once();
+
+        $this->service->update(ModuleName::fromString('updtest-game'));
+    }
+
+    public function test_update_does_not_refresh_caches_when_the_post_update_steps_fail(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->postUpdateRunner->shouldReceive('run')->andThrow(UpdateException::postUpdateFailed('updtest-game', 'broken'));
+        $this->postUpdateRunner->shouldNotReceive('refreshCaches');
+
+        $this->service->update(ModuleName::fromString('updtest-game'));
     }
 
     public function test_update_reverts_files_and_assets_when_the_post_update_steps_fail(): void
@@ -397,7 +434,8 @@ final class ModuleUpdaterTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')->andReturn($module);
         $this->moduleRepository->shouldReceive('save');
         $this->backupService->shouldReceive('createBackup')->andReturn($this->tempDir.'/backup.zip');
-        $this->postUpdateRunner->shouldReceive('run')->byDefault();
+        $this->postUpdateRunner->shouldReceive('run')->andReturn(new PostUpdateReportDTO([], []))->byDefault();
+        $this->postUpdateRunner->shouldReceive('refreshCaches')->byDefault();
 
         return $module;
     }

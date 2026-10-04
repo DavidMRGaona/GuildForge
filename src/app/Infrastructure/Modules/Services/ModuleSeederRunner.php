@@ -27,6 +27,16 @@ final readonly class ModuleSeederRunner
      */
     public function run(Module $module): int
     {
+        return count($this->seed($module));
+    }
+
+    /**
+     * Run the module's seeders and return the classes executed.
+     *
+     * @return array<string>
+     */
+    public function seed(Module $module): array
+    {
         $modulePath = $module->path();
 
         // Fall back to default path if module path is not set
@@ -41,13 +51,13 @@ final readonly class ModuleSeederRunner
         $seedersPath = $modulePath.'/database/seeders';
 
         if (! is_dir($seedersPath)) {
-            return 0;
+            return [];
         }
 
         $seederFiles = glob($seedersPath.'/*Seeder.php');
 
         if ($seederFiles === false || empty($seederFiles)) {
-            return 0;
+            return [];
         }
 
         // Static analysis: check seeders for prohibited operations before execution
@@ -62,24 +72,24 @@ final readonly class ModuleSeederRunner
      *
      * @param  Module  $module  The module
      * @param  array<string>  $seederFiles  The seeder files to run
-     * @return int The number of seeders run
+     * @return array<string> The seeder classes run
      */
-    private function runSeedersIfPossible(Module $module, array $seederFiles): int
+    private function runSeedersIfPossible(Module $module, array $seederFiles): array
     {
         try {
             // Check if we're in a Laravel application context
             if (! function_exists('app')) {
-                return 0;
+                return [];
             }
 
             $app = app();
 
             // Check if the application has the db bound (indicates full boot)
             if (! $app->bound('db')) {
-                return 0;
+                return [];
             }
 
-            $count = 0;
+            $executed = [];
             $namespace = $module->namespace().'\\Database\\Seeders\\';
 
             // Pre-load all seeder classes first to ensure cross-references work
@@ -113,17 +123,17 @@ final readonly class ModuleSeederRunner
             foreach ($validSeeders as $fullClassName) {
                 $seeder = $app->make($fullClassName);
                 $this->executeSeeder($seeder);
-                $count++;
+                $executed[] = $fullClassName;
 
                 Log::info("Ran seeder: {$fullClassName}");
             }
 
-            return $count;
+            return $executed;
         } catch (\Throwable $e) {
             // Only catch and suppress errors for initial bootstrapping issues
             // (missing app, db not bound), not seeder execution errors
             if (! function_exists('app') || ! app()->bound('db')) {
-                return 0;
+                return [];
             }
 
             // Re-throw seeder execution errors so they're visible

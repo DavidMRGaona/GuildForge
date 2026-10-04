@@ -16,7 +16,6 @@ use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
-use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Domain\Updates\Events\ModuleUpdateFailed;
@@ -200,22 +199,27 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             $this->publishPreBuiltAssets($module->path(), $name->value);
             $this->log($history->id, 'apply', 'completed', 'Update applied');
 
-            // Step 6: Migrations, seeders, health check and caches, in a fresh process:
-            // this one still has the previous version's classes and providers loaded
+            // Step 6: Health check, then migrations, seeders and the new version in one
+            // database transaction, in a fresh process: this one still has the previous
+            // version's classes and providers loaded. The commit is the point of no return
             $this->updateStatus($history, UpdateStatus::Migrating);
-            $this->log($history->id, 'finish', 'started', 'Running migrations, seeders and health check...');
-            $this->postUpdateRunner->run($name);
-            $this->log($history->id, 'finish', 'completed', 'Module ready');
-
-            // Step 7: Persist the new version on a freshly loaded entity, in case the
-            // post-update process saved the module row meanwhile
-            $current = $this->moduleRepository->findByName($name) ?? $module;
-            $current->updateVersion(ModuleVersion::fromString($toVersion));
-            $current->clearLatestAvailableVersion();
-            $this->moduleRepository->save($current);
-
-            $this->installer->discard($previousPath);
+            $this->log($history->id, 'finish', 'started', 'Running health check, migrations and seeders...');
+            $report = $this->postUpdateRunner->run($name, $release->version);
+            $committedPrevious = $previousPath;
             $previousPath = null;
+            $this->log($history->id, 'finish', 'completed', 'Module ready', [
+                'migrations' => $report->migrations,
+                'seeders' => $report->seeders,
+            ]);
+
+            // Step 7: Housekeeping. Nothing from here on may undo the committed update
+            $this->postUpdateRunner->refreshCaches();
+
+            try {
+                $this->installer->discard($committedPrevious);
+            } catch (\Throwable $discardError) {
+                Log::warning("Could not remove the previous version of {$name->value}", ['error' => $discardError->getMessage()]);
+            }
 
             $this->updateStatus($history, UpdateStatus::Completed);
             $history->markCompleted();
@@ -228,8 +232,8 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                 fromVersion: $fromVersion,
                 toVersion: $toVersion,
                 status: UpdateStatus::Completed,
-                migrationsRun: [],
-                seedersRun: [],
+                migrationsRun: $report->migrations,
+                seedersRun: $report->seeders,
                 errorMessage: null,
                 backupPath: $backupPath,
                 historyId: $history->id,
