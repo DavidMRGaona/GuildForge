@@ -5,27 +5,25 @@ declare(strict_types=1);
 namespace App\Infrastructure\Updates\Services;
 
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
+use App\Application\Updates\DTOs\UpdateCheckResultDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
+use App\Application\Updates\Services\ReleaseChannelPolicy;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Domain\Updates\Exceptions\UpdateException;
+use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use DateTimeImmutable;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 
 final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
 {
-    private bool $allowPrereleases;
-
-    private bool $batchCheck;
-
     public function __construct(
         private ModuleRepositoryInterface $moduleRepository,
         private GitHubReleaseFetcherInterface $githubFetcher,
-    ) {
-        $this->allowPrereleases = (bool) config('updates.behavior.allow_prereleases', false);
-        $this->batchCheck = (bool) config('updates.batch_check', true);
-    }
+        private ReleaseChannelPolicy $channelPolicy,
+    ) {}
 
     public function checkForUpdate(ModuleName $name): ?AvailableUpdateDTO
     {
@@ -35,7 +33,6 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
             return null;
         }
 
-        // Check if module has a configured source
         $sourceOwner = $module->sourceOwner();
         $sourceRepo = $module->sourceRepo();
 
@@ -43,114 +40,75 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
             return null;
         }
 
-        $latestRelease = $this->githubFetcher->getLatestRelease($sourceOwner, $sourceRepo);
-
-        if ($latestRelease === null) {
-            return null;
-        }
-
-        // Skip prereleases unless configured to allow them
-        if ($latestRelease->isPrerelease && ! $this->allowPrereleases) {
-            return null;
-        }
-
-        // Check if update is available
-        $currentVersion = $module->version();
-        if (! $latestRelease->version->isGreaterThan($currentVersion)) {
-            return null;
-        }
-
-        // Update the last check timestamp
-        $module->updateLastCheckAt(new DateTimeImmutable());
-        $module->updateLatestAvailableVersion($latestRelease->version->value());
-        $this->moduleRepository->save($module);
-
-        return new AvailableUpdateDTO(
-            moduleName: $module->name()->value,
-            displayName: $module->displayName(),
-            currentVersion: $currentVersion->value(),
-            availableVersion: $latestRelease->version->value(),
-            releaseNotes: $latestRelease->releaseNotes,
-            publishedAt: $latestRelease->publishedAt,
-            isPrerelease: $latestRelease->isPrerelease,
-            isMajorUpdate: $latestRelease->isMajorUpgradeFrom($currentVersion),
-            downloadUrl: $latestRelease->downloadUrl,
-            hasChecksum: $latestRelease->hasChecksum(),
+        $latestRelease = $this->githubFetcher->getLatestRelease(
+            $sourceOwner,
+            $sourceRepo,
+            $this->channelPolicy->includesPrereleasesFor($module->version()),
         );
+
+        return $this->recordCheck($module, $latestRelease);
     }
 
     public function checkAllForUpdates(): Collection
     {
-        $modules = $this->moduleRepository->all();
-        $updates = new Collection();
+        return $this->checkAll()->updates;
+    }
 
-        // Collect repos to check
-        $reposToCheck = [];
+    public function checkAll(): UpdateCheckResultDTO
+    {
+        /** @var Collection<int, AvailableUpdateDTO> $updates */
+        $updates = new Collection;
+        $errors = [];
+        $modulesWithoutSource = [];
+
+        // Modules on a prerelease follow a different channel, so fetch each channel in its own batch
+        $reposByChannel = [false => [], true => []];
         $modulesByRepo = [];
 
-        foreach ($modules->all() as $module) {
+        foreach ($this->moduleRepository->all()->all() as $module) {
             $sourceOwner = $module->sourceOwner();
             $sourceRepo = $module->sourceRepo();
 
             if ($sourceOwner === null || $sourceRepo === null) {
+                $modulesWithoutSource[] = $module->name()->value;
+
                 continue;
             }
 
-            $repoKey = "{$sourceOwner}/{$sourceRepo}";
-            $reposToCheck[] = ['owner' => $sourceOwner, 'repo' => $sourceRepo];
-            $modulesByRepo[$repoKey] = $module;
+            $includePrereleases = $this->channelPolicy->includesPrereleasesFor($module->version());
+            $reposByChannel[$includePrereleases][] = ['owner' => $sourceOwner, 'repo' => $sourceRepo];
+            $modulesByRepo["{$sourceOwner}/{$sourceRepo}"] = $module;
         }
 
-        if (empty($reposToCheck)) {
-            return $updates;
+        foreach ($reposByChannel as $includePrereleases => $repos) {
+            if ($repos === []) {
+                continue;
+            }
+
+            $releases = $this->githubFetcher->batchFetchLatestReleases($repos, (bool) $includePrereleases);
+
+            foreach ($releases as $repoKey => $release) {
+                $module = $modulesByRepo[$repoKey] ?? null;
+
+                if ($module === null) {
+                    continue;
+                }
+
+                if ($release instanceof UpdateException) {
+                    $errors[$module->name()->value] = $release->getMessage();
+
+                    continue;
+                }
+
+                $update = $this->recordCheck($module, $release);
+
+                if ($update !== null) {
+                    $updates->push($update);
+                }
+            }
         }
 
-        // Batch fetch all releases
-        $releases = $this->batchCheck
-            ? $this->githubFetcher->batchFetchLatestReleases($reposToCheck)
-            : $this->fetchReleasesIndividually($reposToCheck);
-
-        foreach ($releases as $repoKey => $release) {
-            if ($release === null) {
-                continue;
-            }
-
-            $module = $modulesByRepo[$repoKey] ?? null;
-            if ($module === null) {
-                continue;
-            }
-
-            // Skip prereleases unless configured
-            if ($release->isPrerelease && ! $this->allowPrereleases) {
-                continue;
-            }
-
-            // Check if update is available
-            $currentVersion = $module->version();
-            if (! $release->version->isGreaterThan($currentVersion)) {
-                continue;
-            }
-
-            // Update tracking info
-            $module->updateLastCheckAt(new DateTimeImmutable());
-            $module->updateLatestAvailableVersion($release->version->value());
-            $this->moduleRepository->save($module);
-
-            $updates->push(new AvailableUpdateDTO(
-                moduleName: $module->name()->value,
-                displayName: $module->displayName(),
-                currentVersion: $currentVersion->value(),
-                availableVersion: $release->version->value(),
-                releaseNotes: $release->releaseNotes,
-                publishedAt: $release->publishedAt,
-                isPrerelease: $release->isPrerelease,
-                isMajorUpdate: $release->isMajorUpgradeFrom($currentVersion),
-                downloadUrl: $release->downloadUrl,
-                hasChecksum: $release->hasChecksum(),
-            ));
-        }
-
-        return $updates;
+        return new UpdateCheckResultDTO($updates, $errors, $modulesWithoutSource);
     }
 
     public function getLastCheckTime(ModuleName $name): ?DateTimeImmutable
@@ -179,24 +137,39 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
     }
 
     /**
-     * @param  array<array{owner: string, repo: string}>  $repos
-     * @return array<string, \App\Domain\Updates\ValueObjects\GitHubReleaseInfo|null>
+     * Persist the outcome of a check so the admin page can show pending updates
+     * without querying GitHub again.
      */
-    private function fetchReleasesIndividually(array $repos): array
+    private function recordCheck(Module $module, ?GitHubReleaseInfo $release): ?AvailableUpdateDTO
     {
-        $results = [];
+        $currentVersion = $module->version();
+        $isUpdate = $release !== null
+            && ($this->channelPolicy->includesPrereleasesFor($currentVersion) || ! $release->isPrerelease)
+            && $release->version->isGreaterThan($currentVersion);
 
-        foreach ($repos as $repo) {
-            $key = "{$repo['owner']}/{$repo['repo']}";
+        $module->updateLastCheckAt(new DateTimeImmutable);
 
-            try {
-                $results[$key] = $this->githubFetcher->getLatestRelease($repo['owner'], $repo['repo']);
-            } catch (\Throwable $e) {
-                Log::warning("Failed to fetch release for {$key}", ['error' => $e->getMessage()]);
-                $results[$key] = null;
-            }
+        if (! $isUpdate) {
+            $module->clearLatestAvailableVersion();
+            $this->moduleRepository->save($module);
+
+            return null;
         }
 
-        return $results;
+        $module->updateLatestAvailableVersion($release->version->value());
+        $this->moduleRepository->save($module);
+
+        return new AvailableUpdateDTO(
+            moduleName: $module->name()->value,
+            displayName: $module->displayName(),
+            currentVersion: $currentVersion->value(),
+            availableVersion: $release->version->value(),
+            releaseNotes: $release->releaseNotes,
+            publishedAt: $release->publishedAt,
+            isPrerelease: $release->isPrerelease,
+            isMajorUpdate: $release->isMajorUpgradeFrom($currentVersion),
+            downloadUrl: $release->downloadUrl,
+            hasChecksum: $release->hasChecksum(),
+        );
     }
 }

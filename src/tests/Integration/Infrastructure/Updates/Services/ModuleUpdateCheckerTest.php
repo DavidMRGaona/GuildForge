@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
+use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
@@ -13,6 +14,7 @@ use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use App\Infrastructure\Updates\Services\ModuleUpdateChecker;
 use DateTimeImmutable;
@@ -38,11 +40,9 @@ final class ModuleUpdateCheckerTest extends TestCase
 
         $this->service = new ModuleUpdateChecker(
             $this->moduleRepository,
-            $this->githubFetcher
+            $this->githubFetcher,
+            new ReleaseChannelPolicy(allowPrereleases: false),
         );
-
-        config(['updates.behavior.allow_prereleases' => false]);
-        config(['updates.batch_check' => true]);
     }
 
     public function test_it_detects_available_update(): void
@@ -55,7 +55,7 @@ final class ModuleUpdateCheckerTest extends TestCase
             ->andReturn($module);
 
         $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('owner', 'forum-module')
+            ->with('owner', 'forum-module', false)
             ->andReturn($release);
 
         $this->moduleRepository->shouldReceive('save')
@@ -94,6 +94,9 @@ final class ModuleUpdateCheckerTest extends TestCase
 
     public function test_it_returns_null_when_no_release_found(): void
     {
+        // Every check records its time, even without an update
+        $this->moduleRepository->shouldReceive('save')->once();
+
         $module = $this->createRealModule('forum', '1.0.0', 'owner', 'repo');
 
         $this->moduleRepository->shouldReceive('findByName')
@@ -109,6 +112,9 @@ final class ModuleUpdateCheckerTest extends TestCase
 
     public function test_it_returns_null_when_already_up_to_date(): void
     {
+        // Every check records its time, even without an update
+        $this->moduleRepository->shouldReceive('save')->once();
+
         $module = $this->createRealModule('forum', '2.0.0', 'owner', 'repo');
         $release = $this->createReleaseInfo('1.5.0', false);
 
@@ -125,6 +131,9 @@ final class ModuleUpdateCheckerTest extends TestCase
 
     public function test_it_skips_prereleases_by_default(): void
     {
+        // Every check records its time, even without an update
+        $this->moduleRepository->shouldReceive('save')->once();
+
         $module = $this->createRealModule('forum', '1.0.0', 'owner', 'repo');
         $release = $this->createReleaseInfo('2.0.0', true); // prerelease
 
@@ -141,13 +150,10 @@ final class ModuleUpdateCheckerTest extends TestCase
 
     public function test_it_includes_prereleases_when_configured(): void
     {
-        // Set the config before creating the service
-        config()->set('updates.behavior.allow_prereleases', true);
-
-        // Create a fresh service instance to pick up the new config
         $service = new ModuleUpdateChecker(
             $this->moduleRepository,
-            $this->githubFetcher
+            $this->githubFetcher,
+            new ReleaseChannelPolicy(allowPrereleases: true),
         );
 
         $module = $this->createRealModule('forumpr', '1.0.0', 'owner', 'repo');
@@ -200,7 +206,7 @@ final class ModuleUpdateCheckerTest extends TestCase
         $release = $this->createReleaseInfo('1.5.0', false);
 
         $this->githubFetcher->shouldReceive('batchFetchLatestReleases')
-            ->with([['owner' => 'owner', 'repo' => 'forumall']])
+            ->with([['owner' => 'owner', 'repo' => 'forumall']], false)
             ->andReturn(['owner/forumall' => $release]);
 
         $this->moduleRepository->shouldReceive('save')->once();
@@ -213,7 +219,7 @@ final class ModuleUpdateCheckerTest extends TestCase
 
     public function test_check_all_returns_empty_when_all_up_to_date(): void
     {
-        $moduleCollection = new ModuleCollection();
+        $moduleCollection = new ModuleCollection;
 
         $this->moduleRepository->shouldReceive('all')
             ->andReturn($moduleCollection);
@@ -223,8 +229,65 @@ final class ModuleUpdateCheckerTest extends TestCase
         $this->assertCount(0, $results);
     }
 
+    public function test_check_all_finds_prerelease_update_for_beta_install(): void
+    {
+        $module = $this->createRealModule('eventreg', '1.0.8-beta', 'owner', 'eventreg');
+        $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
+        $this->moduleRepository->shouldReceive('save')->once();
+        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')
+            ->with([['owner' => 'owner', 'repo' => 'eventreg']], true)
+            ->andReturn(['owner/eventreg' => $this->createReleaseInfo('1.0.9-beta', true)]);
+
+        $result = $this->service->checkAll();
+
+        $this->assertSame('1.0.9-beta', $result->updates->first()?->availableVersion);
+        $this->assertSame([], $result->errors);
+        $this->assertSame('1.0.9-beta', $module->latestAvailableVersion());
+    }
+
+    public function test_check_all_reports_github_errors_per_module(): void
+    {
+        $module = $this->createRealModule('gametables', '1.0.0-beta', 'owner', 'gametables');
+        $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
+        $this->moduleRepository->shouldReceive('save');
+        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')
+            ->andReturn(['owner/gametables' => UpdateException::githubRequestFailed('owner/gametables', 'HTTP 403')]);
+
+        $result = $this->service->checkAll();
+
+        $this->assertTrue($result->updates->isEmpty());
+        $this->assertStringContainsString('HTTP 403', $result->errors['gametables']);
+    }
+
+    public function test_check_all_lists_modules_without_source(): void
+    {
+        $module = $this->createRealModuleWithoutSource('localonly');
+        $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
+        $this->githubFetcher->shouldNotReceive('batchFetchLatestReleases');
+
+        $this->assertSame(['localonly'], $this->service->checkAll()->modulesWithoutSource);
+    }
+
+    public function test_check_all_clears_stale_latest_version_when_up_to_date(): void
+    {
+        $module = $this->createRealModule('uptodate', '1.0.9-beta', 'owner', 'uptodate');
+        $module->updateLatestAvailableVersion('1.0.9-beta');
+        $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
+        $this->moduleRepository->shouldReceive('save')->once();
+        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')
+            ->andReturn(['owner/uptodate' => $this->createReleaseInfo('1.0.9-beta', true)]);
+
+        $this->service->checkAll();
+
+        $this->assertNull($module->latestAvailableVersion());
+        $this->assertNotNull($module->lastUpdateCheckAt());
+    }
+
     public function test_force_check_clears_cache(): void
     {
+        // Every check records its time, even without an update
+        $this->moduleRepository->shouldReceive('save')->once();
+
         $module = $this->createRealModule('forum', '1.0.0', 'owner', 'repo');
 
         $this->moduleRepository->shouldReceive('findByName')
@@ -272,7 +335,7 @@ final class ModuleUpdateCheckerTest extends TestCase
         return new Module(
             id: new ModuleId(Str::uuid()->toString()),
             name: ModuleName::fromString($name),
-            displayName: ucfirst($name) . ' Module',
+            displayName: ucfirst($name).' Module',
             description: 'Test module',
             version: ModuleVersion::fromString($version),
             author: 'Test Author',
@@ -288,7 +351,7 @@ final class ModuleUpdateCheckerTest extends TestCase
         return new Module(
             id: new ModuleId(Str::uuid()->toString()),
             name: ModuleName::fromString($name),
-            displayName: ucfirst($name) . ' Module',
+            displayName: ucfirst($name).' Module',
             description: 'Test module',
             version: ModuleVersion::fromString('1.0.0'),
             author: 'Test Author',
@@ -302,7 +365,7 @@ final class ModuleUpdateCheckerTest extends TestCase
         return new Module(
             id: new ModuleId(Str::uuid()->toString()),
             name: ModuleName::fromString($name),
-            displayName: ucfirst($name) . ' Module',
+            displayName: ucfirst($name).' Module',
             description: 'Test module',
             version: ModuleVersion::fromString('1.0.0'),
             author: 'Test Author',
@@ -320,7 +383,7 @@ final class ModuleUpdateCheckerTest extends TestCase
             downloadUrl: "https://github.com/owner/repo/releases/download/v{$version}/module.zip",
             checksumUrl: '',
             releaseNotes: 'Test release',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: $isPrerelease,
         );
     }
