@@ -10,6 +10,8 @@ use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Domain\Updates\Enums\UpdateStatus;
+use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -19,6 +21,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 final class ModuleUpdatesPage extends Page implements HasTable
@@ -42,9 +45,11 @@ final class ModuleUpdatesPage extends Page implements HasTable
 
     public bool $isChecking = false;
 
-    public bool $isUpdating = false;
+    /** @var array<int, string> Modules whose queued update is still being followed */
+    public array $queuedModules = [];
 
-    public ?string $updatingModule = null;
+    /** When the oldest followed update was queued (ISO 8601) */
+    public ?string $queuedSince = null;
 
     /** @var array<string, string> Module name => why its repository could not be checked */
     public array $checkErrors = [];
@@ -124,7 +129,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 ->label(__('filament.updates.modules.actions.check'))
                 ->icon('heroicon-o-magnifying-glass')
                 ->action('checkForUpdates')
-                ->disabled(fn (): bool => $this->isChecking || $this->isUpdating),
+                ->disabled(fn (): bool => $this->isChecking),
 
             Action::make('updateAll')
                 ->label(__('filament.updates.modules.actions.update_all'))
@@ -134,7 +139,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 ->requiresConfirmation()
                 ->modalHeading(__('filament.updates.modules.confirm.update_all_heading'))
                 ->modalDescription(__('filament.updates.modules.confirm.update_all_description'))
-                ->disabled(fn (): bool => $this->availableUpdates === [] || $this->isUpdating),
+                ->disabled(fn (): bool => $this->availableUpdates === [] || $this->queuedModules !== []),
         ];
     }
 
@@ -185,64 +190,94 @@ final class ModuleUpdatesPage extends Page implements HasTable
         }
     }
 
+    /**
+     * Updates run in the queue: a web request would hit the 60 s PHP/nginx limit.
+     */
     public function updateModule(string $moduleName): void
     {
-        $this->isUpdating = true;
-        $this->updatingModule = $moduleName;
-
-        try {
-            $updater = app(ModuleUpdaterInterface::class);
-            $result = $updater->update(new ModuleName($moduleName));
-
-            if ($result->isSuccess()) {
-                Notification::make()
-                    ->title(__('filament.updates.modules.notifications.update_success', [
-                        'module' => $moduleName,
-                        'version' => $result->toVersion,
-                    ]))
-                    ->success()
-                    ->send();
-
-                $this->loadPersistedState();
-            } else {
-                $message = $result->wasRolledBack()
-                    ? __('filament.updates.modules.notifications.update_rolled_back', [
-                        'error' => $result->errorMessage,
-                    ])
-                    : $result->errorMessage;
-
-                Notification::make()
-                    ->title(__('filament.updates.modules.notifications.update_failed', [
-                        'module' => $moduleName,
-                    ]))
-                    ->body(is_string($message) ? $message : null)
-                    ->danger()
-                    ->send();
-            }
-        } catch (\Throwable $e) {
-            Notification::make()
-                ->title(__('filament.updates.modules.notifications.update_failed', [
-                    'module' => $moduleName,
-                ]))
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-        } finally {
-            $this->isUpdating = false;
-            $this->updatingModule = null;
+        if (in_array($moduleName, $this->queuedModules, true)) {
+            return;
         }
+
+        UpdateModuleJob::dispatch($moduleName);
+
+        $this->queuedModules[] = $moduleName;
+        $this->queuedSince ??= now()->toIso8601String();
+
+        Notification::make()
+            ->title(__('filament.updates.modules.notifications.update_queued', ['module' => $moduleName]))
+            ->info()
+            ->send();
     }
 
     public function updateAllModules(): void
     {
         foreach ($this->availableUpdates as $update) {
             $this->updateModule((string) $update['module_name']);
-
-            if ($this->isUpdating === false) {
-                // If updating was stopped, break the loop
-                break;
-            }
         }
+    }
+
+    /**
+     * Called by wire:poll while updates are queued: reports the ones that finished.
+     */
+    public function pollUpdates(): void
+    {
+        if ($this->queuedModules === [] || $this->queuedSince === null) {
+            return;
+        }
+
+        $finished = false;
+
+        foreach ($this->queuedModules as $index => $moduleName) {
+            $history = ModuleUpdateHistoryModel::query()
+                ->where('module_name', $moduleName)
+                ->where('started_at', '>=', Carbon::parse($this->queuedSince))
+                ->latest('started_at')
+                ->first();
+
+            if ($history === null || ! $history->status->isTerminal()) {
+                continue;
+            }
+
+            $this->notifyFinished($moduleName, $history);
+            unset($this->queuedModules[$index]);
+            $finished = true;
+        }
+
+        $this->queuedModules = array_values($this->queuedModules);
+
+        if ($this->queuedModules === []) {
+            $this->queuedSince = null;
+        }
+
+        if ($finished) {
+            $this->loadPersistedState();
+        }
+    }
+
+    private function notifyFinished(string $moduleName, ModuleUpdateHistoryModel $history): void
+    {
+        if ($history->status === UpdateStatus::Completed) {
+            Notification::make()
+                ->title(__('filament.updates.modules.notifications.update_success', [
+                    'module' => $moduleName,
+                    'version' => $history->to_version,
+                ]))
+                ->success()
+                ->send();
+
+            return;
+        }
+
+        $body = $history->status === UpdateStatus::RolledBack
+            ? __('filament.updates.modules.notifications.update_rolled_back', ['error' => (string) $history->error_message])
+            : (string) $history->error_message;
+
+        Notification::make()
+            ->title(__('filament.updates.modules.notifications.update_failed', ['module' => $moduleName]))
+            ->body($body)
+            ->danger()
+            ->send();
     }
 
     public function previewUpdate(string $moduleName): void
@@ -289,7 +324,8 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 TextColumn::make('status')
                     ->label(__('filament.updates.modules.history.status'))
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn (UpdateStatus|string $state): string => $state instanceof UpdateStatus ? $state->value : $state)
+                    ->color(fn (UpdateStatus|string $state): string => match ($state instanceof UpdateStatus ? $state->value : $state) {
                         'completed' => 'success',
                         'failed', 'rolled_back' => 'danger',
                         'pending', 'downloading', 'applying', 'migrating' => 'warning',

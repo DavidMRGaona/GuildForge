@@ -1,5 +1,5 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
+    <div class="space-y-6" @if($queuedModules !== []) wire:poll.3s="pollUpdates" @endif>
         @if($checkErrors !== [])
             <div class="rounded-xl border border-danger-300 bg-danger-50 p-4 dark:border-danger-700 dark:bg-danger-950">
                 <h2 class="text-sm font-medium text-danger-800 dark:text-danger-200">
@@ -108,10 +108,10 @@
                                                 type="button"
                                                 wire:click="updateModule('{{ $update['module_name'] }}')"
                                                 wire:loading.attr="disabled"
-                                                @if($isUpdating) disabled @endif
+                                                @if(in_array($update['module_name'], $queuedModules, true)) disabled @endif
                                                 class="inline-flex items-center rounded-md bg-primary-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                @if($isUpdating && $updatingModule === $update['module_name'])
+                                                @if(in_array($update['module_name'], $queuedModules, true))
                                                     <x-heroicon-m-arrow-path class="mr-1 animate-spin" style="width: 1rem; height: 1rem;" />
                                                     {{ __('filament.updates.modules.available.updating') }}
                                                 @else
