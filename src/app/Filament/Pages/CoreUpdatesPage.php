@@ -42,6 +42,11 @@ final class CoreUpdatesPage extends Page implements HasTable
         $this->currentCommit = $versionService->getCurrentCommit();
     }
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function getNavigationLabel(): string
     {
         return __('filament.updates.core.navigation');
