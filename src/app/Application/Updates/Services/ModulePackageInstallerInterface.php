@@ -39,7 +39,8 @@ interface ModulePackageInstallerInterface
     public function discard(string $path): void;
 
     /**
-     * Delete staging and previous-version directories left by interrupted updates of this module.
+     * Delete staging directories left by interrupted updates of this module.
+     * Previous-version copies are kept and only logged: one may be the only good version on disk.
      */
     public function cleanupLeftovers(string $moduleName): void;
 }

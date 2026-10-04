@@ -7,6 +7,7 @@ namespace App\Infrastructure\Updates\Services;
 use App\Application\Updates\Services\ModulePackageInstallerInterface;
 use App\Domain\Updates\Exceptions\UpdateException;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use ZipArchive;
 
@@ -85,10 +86,13 @@ final class ModulePackageInstaller implements ModulePackageInstallerInterface
 
     public function cleanupLeftovers(string $moduleName): void
     {
-        foreach (['staging', 'previous'] as $kind) {
-            foreach (glob($this->modulesPath()."/.{$kind}-{$moduleName}-*", GLOB_ONLYDIR) ?: [] as $path) {
-                $this->discard($path);
-            }
+        foreach (glob($this->modulesPath()."/.staging-{$moduleName}-*", GLOB_ONLYDIR) ?: [] as $path) {
+            $this->discard($path);
+        }
+
+        // Previous copies are kept: after a failed revert one may be the only good version on disk
+        foreach (glob($this->modulesPath()."/.previous-{$moduleName}-*", GLOB_ONLYDIR) ?: [] as $path) {
+            Log::warning("Previous copy of module {$moduleName} left by an interrupted update: {$path}");
         }
     }
 
