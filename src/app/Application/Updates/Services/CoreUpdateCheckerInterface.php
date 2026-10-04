@@ -4,25 +4,17 @@ declare(strict_types=1);
 
 namespace App\Application\Updates\Services;
 
-use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Application\Updates\DTOs\CoreUpdateStatusDTO;
+use App\Domain\Updates\Exceptions\UpdateException;
 
 /**
- * Service for checking core application updates.
+ * The core is deployed continuously from a branch: an update is any commit on that
+ * branch that is not deployed yet (CI failed, deploy pending or broken).
  */
 interface CoreUpdateCheckerInterface
 {
     /**
-     * Check if a core update is available.
+     * @throws UpdateException When the deployed commit is unknown or GitHub cannot be queried
      */
-    public function checkForUpdate(): ?GitHubReleaseInfo;
-
-    /**
-     * Get update instructions for a release.
-     */
-    public function getUpdateInstructions(GitHubReleaseInfo $release): string;
-
-    /**
-     * Check if this is a major version upgrade.
-     */
-    public function isMajorUpgrade(GitHubReleaseInfo $release): bool;
+    public function check(): CoreUpdateStatusDTO;
 }

@@ -5,52 +5,41 @@ declare(strict_types=1);
 namespace App\Console\Commands\Updates;
 
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
-use App\Application\Updates\Services\CoreVersionServiceInterface;
 use Illuminate\Console\Command;
 
 final class CoreCheckUpdatesCommand extends Command
 {
     protected $signature = 'core:check-updates';
 
-    protected $description = 'Check for available core updates';
+    protected $description = 'Compare the deployed core commit with the branch deployments are built from';
 
-    public function handle(
-        CoreVersionServiceInterface $versionService,
-        CoreUpdateCheckerInterface $updateChecker,
-    ): int {
-        $currentVersion = $versionService->getCurrentVersion();
+    public function handle(CoreUpdateCheckerInterface $updateChecker): int
+    {
+        try {
+            $status = $updateChecker->check();
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage());
 
-        $this->info("Current core version: v{$currentVersion->value()}");
-        $this->info('Checking for updates...');
+            return self::FAILURE;
+        }
 
-        $latestRelease = $updateChecker->checkForUpdate();
+        $this->info('Deployed commit: '.substr($status->deployedCommit, 0, 7)." (branch {$status->branch})");
 
-        if ($latestRelease === null) {
-            $this->info('You are running the latest version.');
+        if ($status->diverged) {
+            $this->warn("The deployed commit is not on {$status->branch}.");
+        }
+
+        if ($status->isUpToDate()) {
+            $this->info("The deployed commit is the latest on {$status->branch}.");
 
             return self::SUCCESS;
         }
 
-        $this->newLine();
-        $this->info('Update available!');
-        $this->table(
-            ['Field', 'Value'],
-            [
-                ['Current version', "v{$currentVersion->value()}"],
-                ['Available version', "v{$latestRelease->version->value()}"],
-                ['Published', $latestRelease->publishedAt->format('Y-m-d H:i')],
-                ['Pre-release', $latestRelease->isPrerelease ? 'Yes' : 'No'],
-            ]
-        );
+        $this->warn("{$status->behindBy} commit(s) on {$status->branch} are not deployed:");
 
-        if ($latestRelease->releaseNotes !== '') {
-            $this->newLine();
-            $this->info('Release notes:');
-            $this->line($latestRelease->releaseNotes);
+        foreach ($status->commits as $commit) {
+            $this->line('  '.substr($commit['sha'], 0, 7).'  '.$commit['message']);
         }
-
-        $this->newLine();
-        $this->warn('To update, run your deployment process with the new version.');
 
         return self::SUCCESS;
     }

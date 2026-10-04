@@ -6,19 +6,18 @@ namespace App\Filament\Pages;
 
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
-use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
-use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Concerns\InteractsWithTable;
-use Filament\Tables\Contracts\HasTable;
-use Filament\Tables\Table;
+use Illuminate\Support\Facades\Cache;
 
-final class CoreUpdatesPage extends Page implements HasTable
+/**
+ * The core is deployed continuously from a branch, so this page shows the deployed
+ * commit and the commits on that branch that have not reached production yet.
+ */
+final class CoreUpdatesPage extends Page
 {
-    use InteractsWithTable;
+    private const string LAST_CHECK_CACHE_KEY = 'updates.core.last_check';
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
 
@@ -28,18 +27,32 @@ final class CoreUpdatesPage extends Page implements HasTable
 
     protected static ?int $navigationSort = 101;
 
-    public string $currentVersion = '';
+    public string $deployedCommit = '';
 
-    public string $currentCommit = '';
+    public string $branch = '';
 
-    public ?GitHubReleaseInfo $latestRelease = null;
+    public string $repositoryUrl = '';
 
-    public bool $isChecking = false;
+    /** @var array{deployed_commit: string, branch: string, behind_by: int, latest_commit: string, commits: array<int, array{sha: string, message: string, date: string|null, url: string}>, diverged: bool}|null */
+    public ?array $status = null;
+
+    public ?string $checkedAt = null;
+
+    public ?string $checkError = null;
 
     public function mount(CoreVersionServiceInterface $versionService): void
     {
-        $this->currentVersion = $versionService->getCurrentVersion()->value();
-        $this->currentCommit = $versionService->getCurrentCommit();
+        $this->deployedCommit = $versionService->getCurrentCommit();
+        $this->branch = (string) config('updates.core.branch', 'main');
+        $this->repositoryUrl = 'https://github.com/'.config('updates.core.owner').'/'.config('updates.core.repo');
+
+        // Show the last check, unless it was made for a deployment that has since been replaced
+        $lastCheck = Cache::get(self::LAST_CHECK_CACHE_KEY);
+
+        if (is_array($lastCheck) && ($lastCheck['status']['deployed_commit'] ?? null) === $this->deployedCommit) {
+            $this->status = $lastCheck['status'];
+            $this->checkedAt = $lastCheck['checked_at'];
+        }
     }
 
     public static function canAccess(): bool
@@ -73,95 +86,38 @@ final class CoreUpdatesPage extends Page implements HasTable
             Action::make('checkUpdates')
                 ->label(__('filament.updates.core.actions.check'))
                 ->icon('heroicon-o-magnifying-glass')
-                ->action('checkForUpdates')
-                ->disabled(fn (): bool => $this->isChecking),
+                ->action('checkForUpdates'),
         ];
     }
 
     public function checkForUpdates(): void
     {
-        $this->isChecking = true;
-
         try {
-            $updateChecker = app(CoreUpdateCheckerInterface::class);
-            $this->latestRelease = $updateChecker->checkForUpdate();
-
-            if ($this->latestRelease === null) {
-                Notification::make()
-                    ->title(__('filament.updates.core.notifications.up_to_date'))
-                    ->success()
-                    ->send();
-            } else {
-                Notification::make()
-                    ->title(__('filament.updates.core.notifications.update_available', [
-                        'version' => $this->latestRelease->version->value(),
-                    ]))
-                    ->info()
-                    ->send();
-            }
+            $status = app(CoreUpdateCheckerInterface::class)->check();
         } catch (\Throwable $e) {
+            $this->status = null;
+            $this->checkError = $e->getMessage();
+
             Notification::make()
                 ->title(__('filament.updates.core.notifications.check_failed'))
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
-        } finally {
-            $this->isChecking = false;
-        }
-    }
 
-    public function isMajorUpdate(): bool
-    {
-        if ($this->latestRelease === null) {
-            return false;
+            return;
         }
 
-        $currentParts = explode('.', $this->currentVersion);
-        $newParts = explode('.', $this->latestRelease->version->value());
+        $this->status = $status->toArray();
+        $this->checkedAt = now()->toIso8601String();
+        $this->checkError = null;
+        Cache::forever(self::LAST_CHECK_CACHE_KEY, ['status' => $this->status, 'checked_at' => $this->checkedAt]);
 
-        return $currentParts[0] !== $newParts[0];
-    }
-
-    public function table(Table $table): Table
-    {
-        return $table
-            ->query(CoreUpdateHistoryModel::query()->latest('created_at'))
-            ->columns([
-                TextColumn::make('from_version')
-                    ->label(__('filament.updates.core.history.from_version'))
-                    ->formatStateUsing(fn (string $state): string => "v{$state}"),
-
-                TextColumn::make('to_version')
-                    ->label(__('filament.updates.core.history.to_version'))
-                    ->formatStateUsing(fn (string $state): string => "v{$state}"),
-
-                TextColumn::make('status')
-                    ->label(__('filament.updates.core.history.status'))
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'completed' => 'success',
-                        'failed', 'rolled_back' => 'danger',
-                        'started' => 'warning',
-                        default => 'gray',
-                    }),
-
-                TextColumn::make('git_commit_before')
-                    ->label(__('filament.updates.core.history.commit_before'))
-                    ->limit(8)
-                    ->tooltip(fn (CoreUpdateHistoryModel $record): string => $record->git_commit_before),
-
-                TextColumn::make('git_commit_after')
-                    ->label(__('filament.updates.core.history.commit_after'))
-                    ->limit(8)
-                    ->tooltip(fn (CoreUpdateHistoryModel $record): ?string => $record->git_commit_after)
-                    ->placeholder('-'),
-
-                TextColumn::make('created_at')
-                    ->label(__('filament.updates.core.history.date'))
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable(),
-            ])
-            ->defaultSort('created_at', 'desc')
-            ->paginated([10, 25, 50]);
+        Notification::make()
+            ->title($status->isUpToDate()
+                ? __('filament.updates.core.notifications.up_to_date')
+                : trans_choice('filament.updates.core.notifications.behind', $status->behindBy, ['count' => $status->behindBy]))
+            ->color($status->isUpToDate() ? 'success' : 'warning')
+            ->icon($status->isUpToDate() ? 'heroicon-o-check-circle' : 'heroicon-o-exclamation-triangle')
+            ->send();
     }
 }

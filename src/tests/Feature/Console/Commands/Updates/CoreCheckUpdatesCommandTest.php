@@ -4,188 +4,53 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console\Commands\Updates;
 
+use App\Application\Updates\DTOs\CoreUpdateStatusDTO;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
-use App\Application\Updates\Services\CoreVersionServiceInterface;
-use App\Domain\Modules\ValueObjects\ModuleVersion;
-use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
-use DateTimeImmutable;
+use App\Domain\Updates\Exceptions\UpdateException;
 use Mockery;
-use Mockery\MockInterface;
 use Tests\TestCase;
 
 final class CoreCheckUpdatesCommandTest extends TestCase
 {
-    private MockInterface&CoreVersionServiceInterface $versionService;
+    private const string DEPLOYED = 'abc1234def4567890abc123def4567890abc1234';
 
-    private MockInterface&CoreUpdateCheckerInterface $updateChecker;
-
-    protected function setUp(): void
+    public function test_it_lists_the_commits_waiting_to_be_deployed(): void
     {
-        parent::setUp();
-
-        $this->versionService = Mockery::mock(CoreVersionServiceInterface::class);
-        $this->updateChecker = Mockery::mock(CoreUpdateCheckerInterface::class);
-
-        $this->app->instance(CoreVersionServiceInterface::class, $this->versionService);
-        $this->app->instance(CoreUpdateCheckerInterface::class, $this->updateChecker);
-    }
-
-    public function test_it_displays_current_version(): void
-    {
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn(ModuleVersion::fromString('1.0.0'));
-
-        $this->updateChecker->shouldReceive('checkForUpdate')
-            ->andReturn(null);
+        $this->checkReturns(new CoreUpdateStatusDTO(self::DEPLOYED, 'main', 1, 'bbb', [
+            ['sha' => 'bbbbbbbbbb', 'message' => 'fix: one', 'date' => '2026-10-04T10:00:00Z', 'url' => 'https://github.com/o/r/commit/bbb'],
+        ], false));
 
         $this->artisan('core:check-updates')
-            ->expectsOutput('Current core version: v1.0.0')
+            ->expectsOutputToContain('abc1234')
+            ->expectsOutputToContain('1 commit(s) on main are not deployed')
+            ->expectsOutputToContain('fix: one')
             ->assertExitCode(0);
     }
 
-    public function test_it_shows_message_when_no_update_available(): void
+    public function test_it_reports_an_up_to_date_deployment(): void
     {
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn(ModuleVersion::fromString('2.0.0'));
-
-        $this->updateChecker->shouldReceive('checkForUpdate')
-            ->andReturn(null);
+        $this->checkReturns(new CoreUpdateStatusDTO(self::DEPLOYED, 'main', 0, self::DEPLOYED, [], false));
 
         $this->artisan('core:check-updates')
-            ->expectsOutput('You are running the latest version.')
+            ->expectsOutputToContain('The deployed commit is the latest on main.')
             ->assertExitCode(0);
     }
 
-    public function test_it_displays_available_update_when_found(): void
+    public function test_it_fails_when_the_check_fails(): void
     {
-        $currentVersion = ModuleVersion::fromString('1.0.0');
-        $newVersion = ModuleVersion::fromString('1.2.0');
-
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v1.2.0',
-            version: $newVersion,
-            downloadUrl: 'https://example.com/download.zip',
-            checksumUrl: '',
-            releaseNotes: 'Bug fixes and improvements',
-            publishedAt: new DateTimeImmutable('2024-08-15 10:30:00'),
-            isPrerelease: false,
-        );
-
-        $this->updateChecker->shouldReceive('checkForUpdate')
-            ->andReturn($release);
+        $checker = Mockery::mock(CoreUpdateCheckerInterface::class);
+        $checker->shouldReceive('check')->andThrow(UpdateException::githubRequestFailed('o/r', 'HTTP 403'));
+        $this->app->instance(CoreUpdateCheckerInterface::class, $checker);
 
         $this->artisan('core:check-updates')
-            ->expectsOutput('Update available!')
-            ->assertExitCode(0);
+            ->expectsOutputToContain('HTTP 403')
+            ->assertExitCode(1);
     }
 
-    public function test_it_displays_update_table_with_version_info(): void
+    private function checkReturns(CoreUpdateStatusDTO $status): void
     {
-        $currentVersion = ModuleVersion::fromString('1.0.0');
-        $newVersion = ModuleVersion::fromString('2.0.0');
-
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v2.0.0',
-            version: $newVersion,
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: '',
-            publishedAt: new DateTimeImmutable('2024-08-15 10:30:00'),
-            isPrerelease: false,
-        );
-
-        $this->updateChecker->shouldReceive('checkForUpdate')
-            ->andReturn($release);
-
-        $this->artisan('core:check-updates')
-            ->expectsTable(
-                ['Field', 'Value'],
-                [
-                    ['Current version', 'v1.0.0'],
-                    ['Available version', 'v2.0.0'],
-                    ['Published', '2024-08-15 10:30'],
-                    ['Pre-release', 'No'],
-                ]
-            )
-            ->assertExitCode(0);
-    }
-
-    public function test_it_displays_prerelease_status_when_applicable(): void
-    {
-        $currentVersion = ModuleVersion::fromString('1.0.0');
-        $newVersion = ModuleVersion::fromString('2.0.0');
-
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v2.0.0-beta.1',
-            version: $newVersion,
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: '',
-            publishedAt: new DateTimeImmutable('2024-08-15 10:30:00'),
-            isPrerelease: true,
-        );
-
-        $this->updateChecker->shouldReceive('checkForUpdate')
-            ->andReturn($release);
-
-        $this->artisan('core:check-updates')
-            ->expectsTable(
-                ['Field', 'Value'],
-                [
-                    ['Current version', 'v1.0.0'],
-                    ['Available version', 'v2.0.0'],
-                    ['Published', '2024-08-15 10:30'],
-                    ['Pre-release', 'Yes'],
-                ]
-            )
-            ->assertExitCode(0);
-    }
-
-    public function test_it_displays_release_notes_when_available(): void
-    {
-        $currentVersion = ModuleVersion::fromString('1.0.0');
-        $newVersion = ModuleVersion::fromString('1.1.0');
-
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v1.1.0',
-            version: $newVersion,
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: 'Added new feature X',
-            publishedAt: new DateTimeImmutable('2024-08-15 10:30:00'),
-            isPrerelease: false,
-        );
-
-        $this->updateChecker->shouldReceive('checkForUpdate')
-            ->andReturn($release);
-
-        $this->artisan('core:check-updates')
-            ->expectsOutput('Release notes:')
-            ->expectsOutput('Added new feature X')
-            ->assertExitCode(0);
-    }
-
-    public function test_it_returns_success_exit_code(): void
-    {
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn(ModuleVersion::fromString('1.0.0'));
-
-        $this->updateChecker->shouldReceive('checkForUpdate')
-            ->andReturn(null);
-
-        $this->artisan('core:check-updates')
-            ->assertExitCode(0);
+        $checker = Mockery::mock(CoreUpdateCheckerInterface::class);
+        $checker->shouldReceive('check')->andReturn($status);
+        $this->app->instance(CoreUpdateCheckerInterface::class, $checker);
     }
 }

@@ -4,106 +4,42 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Updates\Services;
 
+use App\Application\Updates\DTOs\CoreUpdateStatusDTO;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Domain\Updates\Exceptions\UpdateException;
-use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
-use Illuminate\Support\Facades\Log;
 
 final readonly class CoreUpdateChecker implements CoreUpdateCheckerInterface
 {
     public function __construct(
         private CoreVersionServiceInterface $versionService,
-        private GitHubReleaseFetcherInterface $githubFetcher,
+        private GitHubReleaseFetcherInterface $github,
     ) {}
 
-    public function checkForUpdate(): ?GitHubReleaseInfo
+    public function check(): CoreUpdateStatusDTO
     {
-        $owner = config('updates.core.owner');
-        $repo = config('updates.core.repo');
+        $deployedCommit = $this->versionService->getCurrentCommit();
 
-        if ($owner === null || $repo === null) {
-            return null;
+        if ($deployedCommit === 'unknown') {
+            throw UpdateException::unknownDeployedCommit();
         }
 
-        $allowPrereleases = (bool) config('updates.behavior.allow_prereleases', false);
+        $branch = (string) config('updates.core.branch', 'main');
+        $comparison = $this->github->compareCommits(
+            (string) config('updates.core.owner'),
+            (string) config('updates.core.repo'),
+            $deployedCommit,
+            $branch,
+        );
 
-        try {
-            $release = $this->githubFetcher->getLatestRelease($owner, $repo, $allowPrereleases);
-        } catch (UpdateException $e) {
-            Log::warning('Core update check failed', ['error' => $e->getMessage()]);
-
-            return null;
-        }
-
-        if ($release === null) {
-            return null;
-        }
-
-        // Skip prereleases unless configured
-        if ($release->isPrerelease && ! config('updates.behavior.allow_prereleases', false)) {
-            return null;
-        }
-
-        $currentVersion = $this->versionService->getCurrentVersion();
-
-        if (! $release->version->isGreaterThan($currentVersion)) {
-            return null;
-        }
-
-        return $release;
-    }
-
-    public function getUpdateInstructions(GitHubReleaseInfo $release): string
-    {
-        $version = $release->version->value();
-        $currentCommit = $this->versionService->getCurrentCommit();
-
-        return <<<INSTRUCTIONS
-        # Core update to v{$version}
-
-        ## Antes de actualizar
-        1. Crear un backup de la base de datos
-        2. Verificar que no hay trabajos pendientes en la cola
-
-        ## Instrucciones de actualización
-
-        ```bash
-        php artisan down --refresh=15
-
-        git fetch origin
-        git checkout tags/v{$version}
-
-        composer install --no-dev --optimize-autoloader
-        npm ci && npm run build
-
-        php artisan migrate --force
-        php artisan config:cache
-        php artisan route:cache
-        php artisan view:cache
-
-        php artisan up
-        ```
-
-        ## Rollback (si es necesario)
-
-        ```bash
-        git checkout {$currentCommit}
-        composer install --no-dev --optimize-autoloader
-        npm ci && npm run build
-        ```
-
-        ## Notas de la versión
-
-        {$release->releaseNotes}
-        INSTRUCTIONS;
-    }
-
-    public function isMajorUpgrade(GitHubReleaseInfo $release): bool
-    {
-        $currentVersion = $this->versionService->getCurrentVersion();
-
-        return $release->isMajorUpgradeFrom($currentVersion);
+        return new CoreUpdateStatusDTO(
+            deployedCommit: $deployedCommit,
+            branch: $branch,
+            behindBy: $comparison->aheadBy,
+            latestCommit: $comparison->headSha,
+            commits: $comparison->commits,
+            diverged: $comparison->behindBy > 0,
+        );
     }
 }

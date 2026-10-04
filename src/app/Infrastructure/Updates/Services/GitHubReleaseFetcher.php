@@ -7,6 +7,7 @@ namespace App\Infrastructure\Updates\Services;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Domain\Modules\Exceptions\InvalidModuleVersionException;
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Domain\Updates\ValueObjects\GitHubCommitComparison;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
@@ -148,6 +149,48 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
         }
 
         $this->cachedKeys = [];
+    }
+
+    public function compareCommits(string $owner, string $repo, string $base, string $head): GitHubCommitComparison
+    {
+        try {
+            $response = $this->createClient()->get("repos/{$owner}/{$repo}/compare/{$base}...{$head}");
+        } catch (\Throwable $e) {
+            throw UpdateException::githubRequestFailed("{$owner}/{$repo}", $e->getMessage());
+        }
+
+        if (! $response->successful()) {
+            throw UpdateException::githubRequestFailed("{$owner}/{$repo}", "HTTP {$response->status()}");
+        }
+
+        $commits = [];
+
+        foreach ((array) $response->json('commits', []) as $commit) {
+            if (! is_array($commit)) {
+                continue;
+            }
+
+            $message = (string) data_get($commit, 'commit.message', '');
+            $date = data_get($commit, 'commit.author.date');
+
+            $commits[] = [
+                'sha' => (string) ($commit['sha'] ?? ''),
+                // Subject line only
+                'message' => trim(strtok($message, "\n") ?: ''),
+                'date' => is_string($date) ? $date : null,
+                'url' => (string) ($commit['html_url'] ?? ''),
+            ];
+        }
+
+        // GitHub lists them oldest first
+        $commits = array_reverse($commits);
+
+        return new GitHubCommitComparison(
+            aheadBy: (int) $response->json('ahead_by', 0),
+            behindBy: (int) $response->json('behind_by', 0),
+            headSha: $commits[0]['sha'] ?? $base,
+            commits: $commits,
+        );
     }
 
     /**
