@@ -9,6 +9,7 @@ use App\Application\Updates\DTOs\HealthCheckResultDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
+use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
@@ -17,12 +18,9 @@ use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
-use App\Domain\Updates\Enums\UpdateStatus;
-use App\Domain\Updates\Events\ModuleUpdateCompleted;
-use App\Domain\Updates\Events\ModuleUpdateFailed;
-use App\Domain\Updates\Events\ModuleUpdateStarted;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Infrastructure\Updates\Services\ModulePackageInstaller;
 use App\Infrastructure\Updates\Services\ModuleUpdater;
 use DateTimeImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -33,6 +31,7 @@ use Illuminate\Support\Str;
 use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
+use ZipArchive;
 
 final class ModuleUpdaterTest extends TestCase
 {
@@ -54,6 +53,8 @@ final class ModuleUpdaterTest extends TestCase
 
     private string $tempDir;
 
+    private string $modulesPath;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -71,7 +72,9 @@ final class ModuleUpdaterTest extends TestCase
             $this->githubFetcher,
             $this->backupService,
             $this->healthChecker,
-            $this->events
+            $this->events,
+            new ModulePackageInstaller,
+            new ReleaseChannelPolicy(allowPrereleases: false),
         );
 
         $this->tempDir = storage_path('app/test-updates');
@@ -82,12 +85,16 @@ final class ModuleUpdaterTest extends TestCase
         config(['updates.behavior.health_check' => false]);
         config(['updates.behavior.auto_rollback' => true]);
 
+        // The updater reads these settings in its constructor
+        $this->rebuildService();
+
         Cache::flush();
     }
 
     protected function tearDown(): void
     {
         File::deleteDirectory($this->tempDir);
+        File::deleteDirectory(public_path('build/modules/updtest-game'));
         Cache::flush();
         parent::tearDown();
     }
@@ -244,6 +251,166 @@ final class ModuleUpdaterTest extends TestCase
         $this->service->rollback(ModuleName::fromString('nonexistent'), '/path/to/backup.zip');
     }
 
+    public function test_update_installs_new_version_and_keeps_siblings(): void
+    {
+        $module = $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->moduleManager->shouldReceive('disable')->once()->andReturn($module);
+        $this->moduleManager->shouldReceive('enable')->once()->andReturn($module);
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertTrue($result->isSuccess(), (string) $result->errorMessage);
+        $this->assertSame('1.0.1-beta', $this->manifestVersion('updtest-game'));
+        $this->assertSame('1.0.1-beta', $module->version()->value());
+        $this->assertSame('updtest-aaa', json_decode(File::get($this->modulesPath.'/updtest-aaa/module.json'), true)['name']);
+        $this->assertSame([], glob($this->modulesPath.'/.*updtest-game-*', GLOB_ONLYDIR));
+        $this->assertSame([], glob($this->tempDir.'/*.zip'));
+        $this->assertSame('new', File::get(public_path('build/modules/updtest-game/manifest.json')));
+    }
+
+    public function test_update_reverts_files_and_assets_when_health_check_fails(): void
+    {
+        config(['updates.behavior.health_check' => true]);
+        $this->rebuildService();
+        $module = $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->moduleManager->shouldReceive('disable')->once()->andReturn($module);
+        $this->moduleManager->shouldReceive('enable')->once()->andReturn($module);
+        $this->healthChecker->shouldReceive('check')->andReturn(new HealthCheckResultDTO(false, true, true, ['provider failed']));
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertTrue($result->wasRolledBack());
+        $this->assertSame('1.0.0-beta', $this->manifestVersion('updtest-game'));
+        $this->assertSame('old', File::get(public_path('build/modules/updtest-game/manifest.json')));
+        $this->assertSame([], glob($this->modulesPath.'/.*updtest-game-*', GLOB_ONLYDIR));
+        $this->assertSame([], glob($this->tempDir.'/*.zip'));
+    }
+
+    public function test_update_rejecting_the_package_leaves_the_module_enabled_and_untouched(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-aaa', '1.0.1-beta', 'new'));
+        $this->moduleManager->shouldNotReceive('disable');
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertFalse($result->isSuccess());
+        $this->assertSame('1.0.0-beta', $this->manifestVersion('updtest-game'));
+        $this->assertSame([], glob($this->tempDir.'/*.zip'));
+    }
+
+    public function test_update_fails_closed_when_checksum_is_required_but_missing(): void
+    {
+        config(['updates.behavior.verify_checksum' => true]);
+        $this->rebuildService();
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->moduleManager->shouldNotReceive('disable');
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertFalse($result->isSuccess());
+        $this->assertSame('1.0.0-beta', $this->manifestVersion('updtest-game'));
+    }
+
+    public function test_update_requests_prereleases_for_beta_installs(): void
+    {
+        $this->prepareInstalledModules();
+        $this->events->shouldReceive('dispatch')->andReturnNull();
+        $this->githubFetcher->shouldReceive('getLatestRelease')
+            ->with('owner', 'updtest-game', true)
+            ->once()
+            ->andReturn(null);
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertFalse($result->isSuccess()); // noUpdateAvailable is caught and returned as a failed result
+    }
+
+    private function prepareInstalledModules(): Module
+    {
+        $this->modulesPath = $this->tempDir.'/modules';
+        config(['modules.path' => $this->modulesPath]);
+
+        foreach (['updtest-game', 'updtest-aaa'] as $name) {
+            File::ensureDirectoryExists("{$this->modulesPath}/{$name}/public/build");
+            File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode(['name' => $name, 'version' => '1.0.0-beta']));
+            File::put("{$this->modulesPath}/{$name}/public/build/manifest.json", 'old');
+        }
+
+        File::ensureDirectoryExists(public_path('build/modules/updtest-game'));
+        File::put(public_path('build/modules/updtest-game/manifest.json'), 'old');
+
+        $module = new Module(
+            id: new ModuleId(Str::uuid()->toString()),
+            name: ModuleName::fromString('updtest-game'),
+            displayName: 'Updtest game',
+            description: 'Test module',
+            version: ModuleVersion::fromString('1.0.0-beta'),
+            author: 'Test Author',
+            requirements: ModuleRequirements::fromArray([]),
+            status: ModuleStatus::Enabled,
+            path: "{$this->modulesPath}/updtest-game",
+            sourceOwner: 'owner',
+            sourceRepo: 'updtest-game',
+        );
+
+        $this->moduleRepository->shouldReceive('findByName')->andReturn($module);
+        $this->moduleRepository->shouldReceive('save');
+        $this->backupService->shouldReceive('createBackup')->andReturn($this->tempDir.'/backup.zip');
+        $this->healthChecker->shouldReceive('check')->andReturn(new HealthCheckResultDTO(true, true, true))->byDefault();
+
+        return $module;
+    }
+
+    private function expectRelease(string $version, string $zipPath): void
+    {
+        $this->events->shouldReceive('dispatch')->andReturnNull();
+        $this->githubFetcher->shouldReceive('getLatestRelease')->andReturn($this->createReleaseInfo($version));
+        $this->githubFetcher->shouldReceive('downloadRelease')->andReturnUsing(
+            function (GitHubReleaseInfo $release, string $destination) use ($zipPath): string {
+                File::ensureDirectoryExists(dirname($destination));
+                File::copy($zipPath, $destination);
+
+                return $destination;
+            }
+        );
+    }
+
+    private function releaseZip(string $name, string $version, string $assetContent): string
+    {
+        $path = $this->tempDir.'/fixtures/'.uniqid().'.release';
+        File::ensureDirectoryExists(dirname($path));
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString("{$name}-{$version}/module.json", (string) json_encode(['name' => $name, 'version' => $version]));
+        $zip->addFromString("{$name}-{$version}/public/build/manifest.json", $assetContent);
+        $zip->close();
+
+        return $path;
+    }
+
+    private function manifestVersion(string $name): string
+    {
+        return json_decode(File::get("{$this->modulesPath}/{$name}/module.json"), true)['version'];
+    }
+
+    private function rebuildService(): void
+    {
+        $this->service = new ModuleUpdater(
+            $this->moduleRepository,
+            $this->moduleManager,
+            $this->githubFetcher,
+            $this->backupService,
+            $this->healthChecker,
+            $this->events,
+            new ModulePackageInstaller,
+            new ReleaseChannelPolicy(allowPrereleases: false),
+        );
+    }
+
     private function createRealModule(
         string $name,
         string $version,
@@ -252,7 +419,7 @@ final class ModuleUpdaterTest extends TestCase
         return new Module(
             id: new ModuleId(Str::uuid()->toString()),
             name: ModuleName::fromString($name),
-            displayName: ucfirst($name) . ' Module',
+            displayName: ucfirst($name).' Module',
             description: 'Test module',
             version: ModuleVersion::fromString($version),
             author: 'Test Author',
@@ -272,7 +439,7 @@ final class ModuleUpdaterTest extends TestCase
             downloadUrl: "https://github.com/owner/repo/releases/download/v{$version}/module.zip",
             checksumUrl: '',
             releaseNotes: 'Test release notes',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
     }
