@@ -47,6 +47,7 @@ use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
+use App\Application\Updates\Services\ModulePackageInstallerInterface;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
@@ -131,6 +132,7 @@ use App\Infrastructure\Updates\Services\CoreVersionService;
 use App\Infrastructure\Updates\Services\GitHubReleaseFetcher;
 use App\Infrastructure\Updates\Services\ModuleBackupService;
 use App\Infrastructure\Updates\Services\ModuleHealthChecker;
+use App\Infrastructure\Updates\Services\ModulePackageInstaller;
 use App\Infrastructure\Updates\Services\ModuleUpdateChecker;
 use App\Infrastructure\Updates\Services\ModuleUpdater;
 use App\Policies\ArticlePolicy;
@@ -288,6 +290,7 @@ class AppServiceProvider extends ServiceProvider
             (bool) config('updates.behavior.allow_prereleases', false),
         ));
         $this->app->singleton(ModuleUpdateCheckerInterface::class, ModuleUpdateChecker::class);
+        $this->app->singleton(ModulePackageInstallerInterface::class, ModulePackageInstaller::class);
         $this->app->singleton(ModuleUpdaterInterface::class, ModuleUpdater::class);
         $this->app->singleton(CoreVersionServiceInterface::class, CoreVersionService::class);
         $this->app->singleton(CoreUpdateCheckerInterface::class, CoreUpdateChecker::class);
