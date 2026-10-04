@@ -14,7 +14,9 @@
    are only injected from a built asset. */
 @layer theme, base, components, module-utilities, utilities;
 
-@import 'tailwindcss';
+/* Only the @source paths below: automatic detection also scanned Filament's compiled assets and PHP
+   strings, so the CSS changed with backend-only commits and the production build could not be cached */
+@import 'tailwindcss' source(none);
 @plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:where(.dark, .dark *));

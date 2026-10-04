@@ -1,14 +1,26 @@
 # syntax=docker/dockerfile:1
 # ↑ Enables BuildKit features (cache mounts, parallel builds)
 
+# Stage 0: only the files the frontend build reads. BuildKit caches COPY --from by
+# content, so commits that only touch PHP reuse the cached asset build below
+FROM alpine:3.20 AS frontend-sources
+WORKDIR /src
+COPY src/ .
+RUN find . -mindepth 1 -maxdepth 1 \
+        ! -name resources ! -name modules \
+        ! -name package.json ! -name package-lock.json \
+        ! -name vite.config.ts ! -name tsconfig.json ! -name tsconfig.node.json \
+        -exec rm -rf {} +
+
 # Stage 1: Build frontend assets
 FROM node:22-alpine AS assets
 WORKDIR /build
 COPY src/package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
-COPY src/ .
-RUN npm run build
+COPY --from=frontend-sources /src/ .
+# vite build only: types are checked by CI, which every deployment waits for
+RUN npx vite build
 
 # Build module assets (modules with package.json and vite.config.ts)
 RUN for dir in modules/*/; do \
