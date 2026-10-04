@@ -38,7 +38,7 @@ final readonly class ModuleManifestDTO
         }
 
         $repository = $data['repository'] ?? null;
-        if ($repository !== null && (! is_string($repository) || preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $repository) !== 1)) {
+        if ($repository !== null && ! self::isValidRepository($repository)) {
             throw new InvalidArgumentException("Invalid repository, expected 'owner/repo'");
         }
 
@@ -88,6 +88,14 @@ final readonly class ModuleManifestDTO
         }
 
         return $result;
+    }
+
+    /**
+     * A GitHub repository in "owner/repo" form.
+     */
+    public static function isValidRepository(mixed $repository): bool
+    {
+        return is_string($repository) && preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $repository) === 1;
     }
 
     public function repositoryOwner(): ?string

@@ -158,6 +158,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use League\Flysystem\Filesystem;
+use Psr\Log\LoggerInterface;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -219,6 +220,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleDiscoveryService::class, function ($app) {
             return new ModuleDiscoveryService(
                 modulesPath: config('modules.path'),
+                logger: $app->make(LoggerInterface::class),
             );
         });
 
