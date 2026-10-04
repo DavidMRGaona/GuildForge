@@ -7,264 +7,107 @@ namespace Tests\Integration\Infrastructure\Updates\Services;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
-use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Exceptions\UpdateException;
-use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Domain\Updates\ValueObjects\GitHubCommitComparison;
 use App\Infrastructure\Updates\Services\CoreUpdateChecker;
-use DateTimeImmutable;
 use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
 
 final class CoreUpdateCheckerTest extends TestCase
 {
+    private const string DEPLOYED = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
     private MockInterface&CoreVersionServiceInterface $versionService;
 
-    private MockInterface&GitHubReleaseFetcherInterface $githubFetcher;
-
-    private CoreUpdateChecker $checker;
+    private MockInterface&GitHubReleaseFetcherInterface $github;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->versionService = Mockery::mock(CoreVersionServiceInterface::class);
-        $this->githubFetcher = Mockery::mock(GitHubReleaseFetcherInterface::class);
-
-        $this->checker = new CoreUpdateChecker(
-            $this->versionService,
-            $this->githubFetcher,
-        );
+        $this->github = Mockery::mock(GitHubReleaseFetcherInterface::class);
+        config(['updates.core.owner' => 'DavidMRGaona', 'updates.core.repo' => 'guildforge', 'updates.core.branch' => 'main']);
     }
 
-    public function test_check_for_update_returns_release_when_newer_version_available(): void
+    public function test_it_lists_the_commits_on_the_branch_that_are_not_deployed(): void
     {
-        config(['updates.core.owner' => 'guildforge', 'updates.core.repo' => 'core']);
+        $this->versionService->shouldReceive('getCurrentCommit')->andReturn(self::DEPLOYED);
+        $this->github->shouldReceive('compareCommits')
+            ->with('DavidMRGaona', 'guildforge', self::DEPLOYED, 'main')
+            ->andReturn(new GitHubCommitComparison(aheadBy: 1, behindBy: 0, headSha: 'bbb', commits: [
+                ['sha' => 'bbb', 'message' => 'fix: one', 'date' => '2026-10-04T10:00:00Z', 'url' => 'https://github.com/o/r/commit/bbb'],
+            ]));
 
-        $currentVersion = ModuleVersion::fromString('1.0.0');
-        $newVersion = ModuleVersion::fromString('1.1.0');
+        $status = $this->checker()->check();
 
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v1.1.0',
-            version: $newVersion,
-            downloadUrl: 'https://github.com/guildforge/core/releases/download/v1.1.0/core.zip',
-            checksumUrl: '',
-            releaseNotes: 'New features',
-            publishedAt: new DateTimeImmutable,
-            isPrerelease: false,
-        );
-
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core', false)
-            ->andReturn($release);
-
-        $result = $this->checker->checkForUpdate();
-
-        $this->assertInstanceOf(GitHubReleaseInfo::class, $result);
-        $this->assertEquals('v1.1.0', $result->tagName);
+        $this->assertFalse($status->isUpToDate());
+        $this->assertSame(1, $status->behindBy);
+        $this->assertSame('main', $status->branch);
+        $this->assertSame(self::DEPLOYED, $status->deployedCommit);
+        $this->assertSame('bbb', $status->latestCommit);
+        $this->assertSame('fix: one', $status->commits[0]['message']);
     }
 
-    public function test_check_for_update_returns_null_when_already_on_latest(): void
+    public function test_it_is_up_to_date_when_the_branch_has_nothing_new(): void
     {
-        config(['updates.core.owner' => 'guildforge', 'updates.core.repo' => 'core']);
+        $this->versionService->shouldReceive('getCurrentCommit')->andReturn(self::DEPLOYED);
+        $this->github->shouldReceive('compareCommits')
+            ->andReturn(new GitHubCommitComparison(aheadBy: 0, behindBy: 0, headSha: self::DEPLOYED, commits: []));
 
-        $currentVersion = ModuleVersion::fromString('2.0.0');
-
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v2.0.0',
-            version: ModuleVersion::fromString('2.0.0'),
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: '',
-            publishedAt: new DateTimeImmutable,
-            isPrerelease: false,
-        );
-
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core', false)
-            ->andReturn($release);
-
-        $result = $this->checker->checkForUpdate();
-
-        $this->assertNull($result);
+        $this->assertTrue($this->checker()->check()->isUpToDate());
     }
 
-    public function test_check_for_update_returns_null_when_no_release_found(): void
+    public function test_it_compares_with_the_configured_branch(): void
     {
-        config(['updates.core.owner' => 'guildforge', 'updates.core.repo' => 'core']);
+        config(['updates.core.branch' => 'release']);
+        $this->versionService->shouldReceive('getCurrentCommit')->andReturn(self::DEPLOYED);
+        $this->github->shouldReceive('compareCommits')
+            ->with('DavidMRGaona', 'guildforge', self::DEPLOYED, 'release')
+            ->once()
+            ->andReturn(new GitHubCommitComparison(0, 0, self::DEPLOYED, []));
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core', false)
-            ->andReturn(null);
-
-        $result = $this->checker->checkForUpdate();
-
-        $this->assertNull($result);
+        $this->assertSame('release', $this->checker()->check()->branch);
     }
 
-    public function test_check_for_update_returns_null_when_github_request_fails(): void
+    public function test_it_flags_a_deployed_commit_that_is_not_on_the_branch(): void
     {
-        config(['updates.core.owner' => 'guildforge', 'updates.core.repo' => 'core']);
+        $this->versionService->shouldReceive('getCurrentCommit')->andReturn(self::DEPLOYED);
+        $this->github->shouldReceive('compareCommits')
+            ->andReturn(new GitHubCommitComparison(aheadBy: 0, behindBy: 3, headSha: 'ccc', commits: []));
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andThrow(UpdateException::githubRequestFailed('guildforge/core', 'HTTP 403'));
-
-        $this->assertNull($this->checker->checkForUpdate());
+        $this->assertTrue($this->checker()->check()->diverged);
     }
 
-    public function test_check_for_update_returns_null_when_no_core_config(): void
+    public function test_it_fails_when_the_deployed_commit_is_unknown(): void
     {
-        config(['updates.core.owner' => null, 'updates.core.repo' => null]);
+        $this->versionService->shouldReceive('getCurrentCommit')->andReturn('unknown');
+        $this->github->shouldNotReceive('compareCommits');
 
-        $result = $this->checker->checkForUpdate();
+        $this->expectException(UpdateException::class);
 
-        $this->assertNull($result);
-        $this->githubFetcher->shouldNotHaveReceived('getLatestRelease');
+        $this->checker()->check();
     }
 
-    public function test_check_for_update_skips_prereleases_by_default(): void
+    public function test_it_lets_github_errors_through(): void
     {
-        config([
-            'updates.core.owner' => 'guildforge',
-            'updates.core.repo' => 'core',
-            'updates.behavior.allow_prereleases' => false,
-        ]);
+        $this->versionService->shouldReceive('getCurrentCommit')->andReturn(self::DEPLOYED);
+        $this->github->shouldReceive('compareCommits')
+            ->andThrow(UpdateException::githubRequestFailed('DavidMRGaona/guildforge', 'HTTP 403'));
 
-        $currentVersion = ModuleVersion::fromString('1.0.0');
+        $this->expectExceptionMessage('HTTP 403');
 
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v2.0.0-beta.1',
-            version: ModuleVersion::fromString('2.0.0'),
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: '',
-            publishedAt: new DateTimeImmutable,
-            isPrerelease: true,
-        );
-
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core', false)
-            ->andReturn($release);
-
-        $result = $this->checker->checkForUpdate();
-
-        $this->assertNull($result);
-    }
-
-    public function test_check_for_update_includes_prereleases_when_allowed(): void
-    {
-        config([
-            'updates.core.owner' => 'guildforge',
-            'updates.core.repo' => 'core',
-            'updates.behavior.allow_prereleases' => true,
-        ]);
-
-        $currentVersion = ModuleVersion::fromString('1.0.0');
-
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v2.0.0-beta.1',
-            version: ModuleVersion::fromString('2.0.0'),
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: '',
-            publishedAt: new DateTimeImmutable,
-            isPrerelease: true,
-        );
-
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('guildforge', 'core', true)
-            ->andReturn($release);
-
-        $result = $this->checker->checkForUpdate();
-
-        $this->assertInstanceOf(GitHubReleaseInfo::class, $result);
-    }
-
-    public function test_is_major_upgrade_returns_true_for_major_version_change(): void
-    {
-        $currentVersion = ModuleVersion::fromString('1.5.3');
-
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v2.0.0',
-            version: ModuleVersion::fromString('2.0.0'),
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: '',
-            publishedAt: new DateTimeImmutable,
-            isPrerelease: false,
-        );
-
-        $result = $this->checker->isMajorUpgrade($release);
-
-        $this->assertTrue($result);
-    }
-
-    public function test_is_major_upgrade_returns_false_for_minor_version_change(): void
-    {
-        $currentVersion = ModuleVersion::fromString('1.5.3');
-
-        $this->versionService->shouldReceive('getCurrentVersion')
-            ->andReturn($currentVersion);
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v1.6.0',
-            version: ModuleVersion::fromString('1.6.0'),
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: '',
-            publishedAt: new DateTimeImmutable,
-            isPrerelease: false,
-        );
-
-        $result = $this->checker->isMajorUpgrade($release);
-
-        $this->assertFalse($result);
-    }
-
-    public function test_get_update_instructions_generates_correct_markdown(): void
-    {
-        $this->versionService->shouldReceive('getCurrentCommit')
-            ->andReturn('abc123def456');
-
-        $release = new GitHubReleaseInfo(
-            tagName: 'v2.0.0',
-            version: ModuleVersion::fromString('2.0.0'),
-            downloadUrl: '',
-            checksumUrl: '',
-            releaseNotes: 'Major improvements and bug fixes',
-            publishedAt: new DateTimeImmutable,
-            isPrerelease: false,
-        );
-
-        $instructions = $this->checker->getUpdateInstructions($release);
-
-        $this->assertStringContainsString('v2.0.0', $instructions);
-        $this->assertStringContainsString('abc123def456', $instructions);
-        $this->assertStringContainsString('Major improvements and bug fixes', $instructions);
-        $this->assertStringContainsString('git checkout tags/v2.0.0', $instructions);
-        $this->assertStringContainsString('composer install', $instructions);
-        $this->assertStringContainsString('php artisan migrate', $instructions);
+        $this->checker()->check();
     }
 
     public function test_service_is_registered_in_container(): void
     {
-        $service = $this->app->make(CoreUpdateCheckerInterface::class);
+        $this->assertInstanceOf(CoreUpdateChecker::class, app(CoreUpdateCheckerInterface::class));
+    }
 
-        $this->assertInstanceOf(CoreUpdateChecker::class, $service);
+    private function checker(): CoreUpdateChecker
+    {
+        return new CoreUpdateChecker($this->versionService, $this->github);
     }
 }

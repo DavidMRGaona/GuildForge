@@ -83,6 +83,11 @@ final class UpdateException extends DomainException
         return new self("GitHub request for '{$repository}' failed: {$reason}");
     }
 
+    public static function unknownDeployedCommit(): self
+    {
+        return new self('The deployed commit is unknown: set SOURCE_COMMIT or GIT_COMMIT in the environment.');
+    }
+
     public static function noSourceConfigured(string $moduleName): self
     {
         return new self("Module '{$moduleName}' has no GitHub source configured.");

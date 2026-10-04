@@ -19,7 +19,7 @@ final class CoreVersionServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new CoreVersionService();
+        $this->service = new CoreVersionService;
         $this->versionFilePath = base_path('VERSION');
     }
 
@@ -38,7 +38,7 @@ final class CoreVersionServiceTest extends TestCase
         $this->backupAndWriteVersion('2.5.10');
 
         // Clear cached version by creating new instance
-        $service = new CoreVersionService();
+        $service = new CoreVersionService;
         $version = $service->getCurrentVersion();
 
         $this->assertEquals('2.5.10', $version->value());
@@ -52,7 +52,7 @@ final class CoreVersionServiceTest extends TestCase
         $this->backupVersionFile();
         File::delete($this->versionFilePath);
 
-        $service = new CoreVersionService();
+        $service = new CoreVersionService;
         $version = $service->getCurrentVersion();
 
         $this->assertEquals('0.0.0', $version->value());
@@ -62,7 +62,7 @@ final class CoreVersionServiceTest extends TestCase
     {
         $this->backupAndWriteVersion('1.0.0');
 
-        $service = new CoreVersionService();
+        $service = new CoreVersionService;
         $firstCall = $service->getCurrentVersion();
 
         // Modify the file (but cache should preserve original)
@@ -87,11 +87,19 @@ final class CoreVersionServiceTest extends TestCase
         }
     }
 
+    public function test_it_prefers_the_commit_injected_by_the_deployment(): void
+    {
+        // Coolify exposes the deployed SHA as SOURCE_COMMIT; the image has no .git
+        config(['updates.core.commit' => 'abc123def4567890abc123def4567890abc12345']);
+
+        $this->assertSame('abc123def4567890abc123def4567890abc12345', $this->service->getCurrentCommit());
+    }
+
     public function test_satisfies_returns_true_for_matching_constraint(): void
     {
         $this->backupAndWriteVersion('1.5.3');
 
-        $service = new CoreVersionService();
+        $service = new CoreVersionService;
 
         $this->assertTrue($service->satisfies('^1.0'));
         $this->assertTrue($service->satisfies('>=1.0.0'));
@@ -102,7 +110,7 @@ final class CoreVersionServiceTest extends TestCase
     {
         $this->backupAndWriteVersion('1.5.3');
 
-        $service = new CoreVersionService();
+        $service = new CoreVersionService;
 
         $this->assertFalse($service->satisfies('^2.0'));
         $this->assertFalse($service->satisfies('>=2.0.0'));
@@ -120,7 +128,7 @@ final class CoreVersionServiceTest extends TestCase
     {
         $this->backupAndWriteVersion("  3.2.1  \n");
 
-        $service = new CoreVersionService();
+        $service = new CoreVersionService;
         $version = $service->getCurrentVersion();
 
         $this->assertEquals('3.2.1', $version->value());

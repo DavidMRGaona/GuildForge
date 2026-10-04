@@ -45,6 +45,55 @@ final class GitHubReleaseFetcherTest extends TestCase
         $this->assertTrue($release->hasChecksum());
     }
 
+    public function test_it_compares_a_commit_with_a_branch_newest_first(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/compare/aaa...main' => Http::response([
+                'status' => 'ahead',
+                'ahead_by' => 2,
+                'behind_by' => 0,
+                'commits' => [
+                    $this->commit('bbb', "fix: one\n\nLonger body", '2026-10-04T10:00:00Z'),
+                    $this->commit('ccc', 'feat: two', '2026-10-04T11:00:00Z'),
+                ],
+            ]),
+        ]);
+
+        $comparison = $this->fetcher->compareCommits('o', 'r', 'aaa', 'main');
+
+        $this->assertSame(2, $comparison->aheadBy);
+        $this->assertSame(0, $comparison->behindBy);
+        $this->assertSame('ccc', $comparison->headSha);
+        $this->assertSame(['ccc', 'bbb'], array_column($comparison->commits, 'sha'));
+        $this->assertSame('fix: one', $comparison->commits[1]['message']);
+        $this->assertSame('https://github.com/o/r/commit/bbb', $comparison->commits[1]['url']);
+        $this->assertSame('2026-10-04T10:00:00Z', $comparison->commits[1]['date']);
+    }
+
+    public function test_comparing_an_identical_commit_reports_nothing_pending(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/compare/aaa...main' => Http::response([
+                'status' => 'identical', 'ahead_by' => 0, 'behind_by' => 0, 'commits' => [],
+            ]),
+        ]);
+
+        $comparison = $this->fetcher->compareCommits('o', 'r', 'aaa', 'main');
+
+        $this->assertSame(0, $comparison->aheadBy);
+        $this->assertSame('aaa', $comparison->headSha);
+        $this->assertSame([], $comparison->commits);
+    }
+
+    public function test_comparing_throws_when_github_fails(): void
+    {
+        Http::fake(['api.github.com/repos/o/r/compare/*' => Http::response(['message' => 'Not Found'], 404)]);
+
+        $this->expectException(UpdateException::class);
+
+        $this->fetcher->compareCommits('o', 'r', 'aaa', 'main');
+    }
+
     public function test_it_returns_highest_prerelease_when_prereleases_included(): void
     {
         Http::fake([
@@ -334,6 +383,18 @@ final class GitHubReleaseFetcherTest extends TestCase
                 ['name' => "m-{$version}.zip", 'browser_download_url' => "https://example.test/m-{$version}.zip"],
                 ['name' => "m-{$version}.zip.sha256", 'browser_download_url' => "https://example.test/m-{$version}.zip.sha256"],
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function commit(string $sha, string $message, string $date): array
+    {
+        return [
+            'sha' => $sha,
+            'html_url' => "https://github.com/o/r/commit/{$sha}",
+            'commit' => ['message' => $message, 'author' => ['date' => $date]],
         ];
     }
 }

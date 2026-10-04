@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Updates\Services;
 
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Domain\Updates\ValueObjects\GitHubCommitComparison;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 
 /**
@@ -49,4 +50,11 @@ interface GitHubReleaseFetcherInterface
      * Clear cached release information.
      */
     public function clearCache(?string $owner = null, ?string $repo = null): void;
+
+    /**
+     * Compare a commit with a branch (or any other ref) of a repository.
+     *
+     * @throws UpdateException When GitHub cannot be reached or answers with an error
+     */
+    public function compareCommits(string $owner, string $repo, string $base, string $head): GitHubCommitComparison;
 }
