@@ -186,6 +186,36 @@ final class ModuleUpdatesPageTest extends TestCase
             ->assertNotified(__('filament.updates.modules.notifications.update_lost', ['module' => 'event-registrations']));
     }
 
+    public function test_history_shows_translated_status_and_flags_only_failures(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $ok = $this->historyRow(UpdateStatus::Completed, null);
+        $failed = $this->historyRow(UpdateStatus::Failed, 'HTTP 403');
+
+        $page = Livewire::test(ModuleUpdatesPage::class)
+            ->assertTableColumnFormattedStateSet('status', UpdateStatus::Completed->label(), $ok);
+
+        $column = $page->instance()->getTable()->getColumn('error_message');
+        $column->record($ok);
+        $this->assertNull($column->getIcon($column->getState()), 'A successful update must not show any error icon');
+        $column->record($failed);
+        $this->assertSame('heroicon-o-exclamation-triangle', $column->getIcon($column->getState()));
+    }
+
+    private function historyRow(UpdateStatus $status, ?string $error): ModuleUpdateHistoryModel
+    {
+        return ModuleUpdateHistoryModel::create([
+            'id' => (string) Str::uuid(),
+            'module_name' => 'announcements',
+            'from_version' => '1.0.6-beta',
+            'to_version' => '1.0.7-beta',
+            'status' => $status,
+            'error_message' => $error,
+            'started_at' => now(),
+            'completed_at' => now(),
+        ]);
+    }
+
     private function pendingUpdate(): void
     {
         ModuleModel::factory()->enabled()->create([
