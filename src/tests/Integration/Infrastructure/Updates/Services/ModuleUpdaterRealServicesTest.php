@@ -6,6 +6,7 @@ namespace Tests\Integration\Infrastructure\Updates\Services;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Updates\DTOs\HealthCheckResultDTO;
+use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
@@ -137,12 +138,19 @@ final class ModuleUpdaterRealServicesTest extends TestCase
 
         $inProcessRunner = new class implements ModulePostUpdateRunnerInterface
         {
-            public function run(ModuleName $moduleName): void
+            public function run(ModuleName $moduleName, ModuleVersion $version): PostUpdateReportDTO
             {
-                if (Artisan::call('module:finish-update', ['name' => $moduleName->value]) !== 0) {
-                    throw UpdateException::postUpdateFailed($moduleName->value, trim(Artisan::output()));
+                $exitCode = Artisan::call('module:finish-update', ['name' => $moduleName->value, 'version' => $version->value()]);
+                $output = Artisan::output();
+
+                if ($exitCode !== 0) {
+                    throw UpdateException::postUpdateFailed($moduleName->value, trim($output));
                 }
+
+                return PostUpdateReportDTO::fromOutput($output) ?? throw UpdateException::postUpdateFailed($moduleName->value, 'no report');
             }
+
+            public function refreshCaches(): void {}
         };
 
         return new ModuleUpdater(
