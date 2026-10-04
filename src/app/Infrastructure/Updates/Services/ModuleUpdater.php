@@ -9,8 +9,8 @@ use App\Application\Updates\DTOs\ModuleUpdateResultDTO;
 use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
-use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Application\Updates\Services\ModulePackageInstallerInterface;
+use App\Application\Updates\Services\ModulePostUpdateRunnerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
@@ -22,12 +22,10 @@ use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Domain\Updates\Events\ModuleUpdateFailed;
 use App\Domain\Updates\Events\ModuleUpdateStarted;
 use App\Domain\Updates\Exceptions\UpdateException;
-use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateLogModel;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -42,8 +40,6 @@ final class ModuleUpdater implements ModuleUpdaterInterface
 
     private readonly bool $verifyChecksum;
 
-    private readonly bool $healthCheck;
-
     private readonly bool $autoRollback;
 
     public function __construct(
@@ -51,14 +47,13 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         private readonly ModuleManagerServiceInterface $moduleManager,
         private readonly GitHubReleaseFetcherInterface $githubFetcher,
         private readonly ModuleBackupServiceInterface $backupService,
-        private readonly ModuleHealthCheckerInterface $healthChecker,
         private readonly Dispatcher $events,
         private readonly ModulePackageInstallerInterface $installer,
         private readonly ReleaseChannelPolicy $channelPolicy,
+        private readonly ModulePostUpdateRunnerInterface $postUpdateRunner,
     ) {
         $this->tempPath = (string) config('updates.temp_path', storage_path('app/temp/updates'));
         $this->verifyChecksum = (bool) config('updates.behavior.verify_checksum', true);
-        $this->healthCheck = (bool) config('updates.behavior.health_check', true);
         $this->autoRollback = (bool) config('updates.behavior.auto_rollback', true);
     }
 
@@ -140,9 +135,6 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         $downloadPath = null;
         $stagedRoot = null;
         $previousPath = null;
-        $wasDisabled = false;
-        $migrationsRun = [];
-        $seedersRun = [];
 
         try {
             // Interrupted runs may have left staging/previous copies behind
@@ -201,50 +193,22 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             $this->log($history->id, 'apply', 'started', 'Applying update...');
             $stagedRoot = $this->installer->stage($downloadPath, $name->value);
 
-            // Step 5: Disable and swap
-            if ($module->isEnabled()) {
-                $this->moduleManager->disable($name);
-                $wasDisabled = true;
-            }
-
+            // Step 5: Swap. The module stays enabled: disabling it rebuilt the config cache
+            // in this worker and left the module's bindings unresolvable for the steps below
             $previousPath = $this->installer->swap($stagedRoot, $name->value);
             $stagedRoot = null;
             $this->publishPreBuiltAssets($module->path(), $name->value);
             $this->log($history->id, 'apply', 'completed', 'Update applied');
 
-            // Step 6: Migrations and new seeders
+            // Step 6: Migrations, seeders, health check and caches, in a fresh process:
+            // this one still has the previous version's classes and providers loaded
             $this->updateStatus($history, UpdateStatus::Migrating);
-            $this->log($history->id, 'migrate', 'started', 'Running migrations...');
+            $this->log($history->id, 'finish', 'started', 'Running migrations, seeders and health check...');
+            $this->postUpdateRunner->run($name);
+            $this->log($history->id, 'finish', 'completed', 'Module ready');
 
-            DB::transaction(function () use ($name, &$migrationsRun, &$seedersRun, $history) {
-                $migrationsRun = $this->runMigrations($name);
-                $this->log($history->id, 'migrate', 'completed', 'Migrations complete', ['count' => count($migrationsRun)]);
-
-                $this->updateStatus($history, UpdateStatus::Seeding);
-                $this->log($history->id, 'seed', 'started', 'Running seeders...');
-                $seedersRun = $this->runNewSeeders($name);
-                $this->log($history->id, 'seed', 'completed', 'Seeders complete', ['count' => count($seedersRun)]);
-            });
-
-            // Step 7: Health check
-            if ($this->healthCheck) {
-                $this->updateStatus($history, UpdateStatus::HealthChecking);
-                $this->log($history->id, 'health', 'started', 'Running health check...');
-                $healthResult = $this->healthChecker->check($name);
-
-                if (! $healthResult->passes()) {
-                    throw UpdateException::healthCheckFailed($name->value, implode(', ', $healthResult->errors));
-                }
-
-                $this->log($history->id, 'health', 'completed', 'Health check passed');
-            }
-
-            // Step 8: Re-enable, then persist the new version on a freshly loaded entity:
-            // disable()/enable() saved their own copies, so $module's status is stale
-            if ($wasDisabled) {
-                $this->moduleManager->enable($name);
-            }
-
+            // Step 7: Persist the new version on a freshly loaded entity, in case the
+            // post-update process saved the module row meanwhile
             $current = $this->moduleRepository->findByName($name) ?? $module;
             $current->updateVersion(ModuleVersion::fromString($toVersion));
             $current->clearLatestAvailableVersion();
@@ -264,8 +228,8 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                 fromVersion: $fromVersion,
                 toVersion: $toVersion,
                 status: UpdateStatus::Completed,
-                migrationsRun: $migrationsRun,
-                seedersRun: $seedersRun,
+                migrationsRun: [],
+                seedersRun: [],
                 errorMessage: null,
                 backupPath: $backupPath,
                 historyId: $history->id,
@@ -287,19 +251,11 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                     $previousPath = null;
                     $this->publishPreBuiltAssets($module->path(), $name->value);
                     $wasRolledBack = true;
-                    $history->markRolledBack();
+                    $history->markRolledBack($e->getMessage());
                     $this->log($history->id, 'rollback', 'completed', 'Previous version restored');
                 } catch (\Throwable $rollbackError) {
                     Log::error("Rollback failed for {$name->value}", ['error' => $rollbackError->getMessage()]);
                     $this->log($history->id, 'rollback', 'failed', $rollbackError->getMessage());
-                }
-            }
-
-            if ($wasDisabled) {
-                try {
-                    $this->moduleManager->enable($name);
-                } catch (\Throwable $enableError) {
-                    Log::error("Could not re-enable {$name->value} after a failed update", ['error' => $enableError->getMessage()]);
                 }
             }
 
@@ -320,8 +276,8 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                 fromVersion: $fromVersion,
                 toVersion: $history->to_version ?? 'unknown',
                 status: $wasRolledBack ? UpdateStatus::RolledBack : UpdateStatus::Failed,
-                migrationsRun: $migrationsRun,
-                seedersRun: $seedersRun,
+                migrationsRun: [],
+                seedersRun: [],
                 errorMessage: $e->getMessage(),
                 backupPath: $backupPath,
                 historyId: $history->id,
@@ -454,89 +410,5 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         } catch (\Throwable $e) {
             Log::warning("Failed to publish pre-built assets for module {$moduleName}: {$e->getMessage()}");
         }
-    }
-
-    /**
-     * @return array<string>
-     */
-    private function runMigrations(ModuleName $name): array
-    {
-        $module = $this->moduleRepository->findByName($name);
-        if ($module === null) {
-            return [];
-        }
-
-        $migrationPath = $module->path().'/database/migrations';
-        if (! File::isDirectory($migrationPath)) {
-            return [];
-        }
-
-        // Get migration files
-        $files = File::files($migrationPath);
-        $migrationsRun = [];
-
-        foreach ($files as $file) {
-            if ($file->getExtension() === 'php') {
-                $migrationsRun[] = $file->getFilename();
-            }
-        }
-
-        // Run migrations using Artisan
-        \Artisan::call('migrate', [
-            '--path' => "modules/{$name->value}/database/migrations",
-            '--force' => true,
-        ]);
-
-        return $migrationsRun;
-    }
-
-    /**
-     * @return array<string>
-     */
-    private function runNewSeeders(ModuleName $name): array
-    {
-        $module = $this->moduleRepository->findByName($name);
-        if ($module === null) {
-            return [];
-        }
-
-        $seederPath = $module->path().'/database/seeders';
-        if (! File::isDirectory($seederPath)) {
-            return [];
-        }
-
-        $executedSeeders = ModuleSeederHistoryModel::getExecutedSeeders($name->value);
-        $seedersRun = [];
-
-        $files = File::files($seederPath);
-        foreach ($files as $file) {
-            if ($file->getExtension() !== 'php') {
-                continue;
-            }
-
-            $className = $file->getFilenameWithoutExtension();
-            $fullClassName = $module->namespace().'\\Database\\Seeders\\'.$className;
-
-            if (in_array($fullClassName, $executedSeeders, true)) {
-                continue;
-            }
-
-            if (! class_exists($fullClassName)) {
-                // Try to load the class
-                require_once $file->getPathname();
-            }
-
-            if (class_exists($fullClassName)) {
-                \Artisan::call('db:seed', [
-                    '--class' => $fullClassName,
-                    '--force' => true,
-                ]);
-
-                ModuleSeederHistoryModel::markExecuted($name->value, $fullClassName);
-                $seedersRun[] = $className;
-            }
-        }
-
-        return $seedersRun;
     }
 }

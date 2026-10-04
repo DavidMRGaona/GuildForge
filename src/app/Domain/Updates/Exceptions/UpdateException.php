@@ -46,6 +46,11 @@ final class UpdateException extends DomainException
         return new self("Health check failed for '{$moduleName}': {$reason}");
     }
 
+    public static function postUpdateFailed(string $moduleName, string $reason): self
+    {
+        return new self("Post-update steps failed for '{$moduleName}': {$reason}");
+    }
+
     public static function rollbackFailed(string $moduleName, string $reason): self
     {
         return new self("Rollback failed for '{$moduleName}': {$reason}");
