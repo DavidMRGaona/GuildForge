@@ -285,7 +285,7 @@ final class UpdateModuleCommandTest extends TestCase
                 currentVersion: '1.0.0',
                 availableVersion: '1.1.0',
                 releaseNotes: '',
-                publishedAt: new DateTimeImmutable(),
+                publishedAt: new DateTimeImmutable,
                 isPrerelease: false,
                 isMajorUpdate: false,
                 downloadUrl: '',
@@ -297,7 +297,7 @@ final class UpdateModuleCommandTest extends TestCase
                 currentVersion: '2.0.0',
                 availableVersion: '2.1.0',
                 releaseNotes: '',
-                publishedAt: new DateTimeImmutable(),
+                publishedAt: new DateTimeImmutable,
                 isPrerelease: false,
                 isMajorUpdate: false,
                 downloadUrl: '',
@@ -343,7 +343,7 @@ final class UpdateModuleCommandTest extends TestCase
     public function test_update_all_shows_message_when_all_up_to_date(): void
     {
         $this->updateChecker->shouldReceive('checkAllForUpdates')
-            ->andReturn(new Collection());
+            ->andReturn(new Collection);
 
         $this->artisan('module:update', ['--all' => true])
             ->expectsOutput('All modules are up to date.')
@@ -359,7 +359,7 @@ final class UpdateModuleCommandTest extends TestCase
                 currentVersion: '1.0.0',
                 availableVersion: '1.1.0',
                 releaseNotes: '',
-                publishedAt: new DateTimeImmutable(),
+                publishedAt: new DateTimeImmutable,
                 isPrerelease: false,
                 isMajorUpdate: false,
                 downloadUrl: '',

@@ -29,8 +29,10 @@ interface ModuleUpdateCheckerInterface
     /**
      * Check every module with a configured repository, reporting per-module errors
      * and the modules that have no repository instead of silently skipping them.
+     *
+     * @param  bool  $fresh  Bypass cached GitHub responses (an explicit "check now")
      */
-    public function checkAll(): UpdateCheckResultDTO;
+    public function checkAll(bool $fresh = false): UpdateCheckResultDTO;
 
     /**
      * Get the last check timestamp for a module.

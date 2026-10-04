@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Updates\DTOs;
 
+use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use DateTimeImmutable;
 
 /**
@@ -17,12 +19,35 @@ final readonly class AvailableUpdateDTO
         public string $currentVersion,
         public string $availableVersion,
         public string $releaseNotes,
-        public DateTimeImmutable $publishedAt,
+        public ?DateTimeImmutable $publishedAt,
         public bool $isPrerelease,
         public bool $isMajorUpdate,
         public string $downloadUrl,
         public bool $hasChecksum,
     ) {}
+
+    /**
+     * Pending update as persisted by the last check, without querying GitHub.
+     * Release details (notes, date, URL) are only known after a fresh check.
+     */
+    public static function fromModule(Module $module): self
+    {
+        $current = $module->version();
+        $available = ModuleVersion::fromString((string) $module->latestAvailableVersion());
+
+        return new self(
+            moduleName: $module->name()->value,
+            displayName: $module->displayName(),
+            currentVersion: $current->value(),
+            availableVersion: $available->value(),
+            releaseNotes: '',
+            publishedAt: null,
+            isPrerelease: $available->preRelease !== null,
+            isMajorUpdate: $available->major > $current->major,
+            downloadUrl: '',
+            hasChecksum: false,
+        );
+    }
 
     /**
      * @return array<string, mixed>
@@ -35,7 +60,7 @@ final readonly class AvailableUpdateDTO
             'current_version' => $this->currentVersion,
             'available_version' => $this->availableVersion,
             'release_notes' => $this->releaseNotes,
-            'published_at' => $this->publishedAt->format('c'),
+            'published_at' => $this->publishedAt?->format('c'),
             'is_prerelease' => $this->isPrerelease,
             'is_major_update' => $this->isMajorUpdate,
             'download_url' => $this->downloadUrl,

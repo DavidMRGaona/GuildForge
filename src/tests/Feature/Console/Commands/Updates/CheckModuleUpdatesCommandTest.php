@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Console\Commands\Updates;
 
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
+use App\Application\Updates\DTOs\UpdateCheckResultDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use DateTimeImmutable;
 use Illuminate\Support\Collection;
@@ -53,8 +54,8 @@ final class CheckModuleUpdatesCommandTest extends TestCase
             ),
         ]);
 
-        $this->updateChecker->shouldReceive('checkAllForUpdates')
-            ->andReturn($updates);
+        $this->updateChecker->shouldReceive('checkAll')
+            ->andReturn(new UpdateCheckResultDTO($updates, [], []));
 
         $this->artisan('module:check-updates')
             ->expectsOutput('Found 2 update(s) available:')
@@ -70,8 +71,8 @@ final class CheckModuleUpdatesCommandTest extends TestCase
 
     public function test_it_shows_message_when_all_up_to_date(): void
     {
-        $this->updateChecker->shouldReceive('checkAllForUpdates')
-            ->andReturn(new Collection());
+        $this->updateChecker->shouldReceive('checkAll')
+            ->andReturn(new UpdateCheckResultDTO(new Collection, [], []));
 
         $this->artisan('module:check-updates')
             ->expectsOutput('All modules are up to date.')
@@ -95,8 +96,8 @@ final class CheckModuleUpdatesCommandTest extends TestCase
             ),
         ]);
 
-        $this->updateChecker->shouldReceive('checkAllForUpdates')
-            ->andReturn($updates);
+        $this->updateChecker->shouldReceive('checkAll')
+            ->andReturn(new UpdateCheckResultDTO($updates, [], []));
 
         $this->artisan('module:check-updates')
             ->expectsOutput('Found 1 update(s) available:')
@@ -126,8 +127,8 @@ final class CheckModuleUpdatesCommandTest extends TestCase
             ),
         ]);
 
-        $this->updateChecker->shouldReceive('checkAllForUpdates')
-            ->andReturn($updates);
+        $this->updateChecker->shouldReceive('checkAll')
+            ->andReturn(new UpdateCheckResultDTO($updates, [], []));
 
         $this->artisan('module:check-updates')
             ->expectsTable(
@@ -141,10 +142,41 @@ final class CheckModuleUpdatesCommandTest extends TestCase
 
     public function test_it_returns_success_exit_code(): void
     {
-        $this->updateChecker->shouldReceive('checkAllForUpdates')
-            ->andReturn(new Collection());
+        $this->updateChecker->shouldReceive('checkAll')
+            ->andReturn(new UpdateCheckResultDTO(new Collection, [], []));
 
         $this->artisan('module:check-updates')
+            ->assertExitCode(0);
+    }
+
+    public function test_it_reports_repositories_that_could_not_be_checked(): void
+    {
+        $this->updateChecker->shouldReceive('checkAll')
+            ->andReturn(new UpdateCheckResultDTO(new Collection, ['game-tables' => "GitHub request for 'o/r' failed: HTTP 403"], []));
+
+        $this->artisan('module:check-updates')
+            ->expectsOutput("game-tables: GitHub request for 'o/r' failed: HTTP 403")
+            ->assertExitCode(1);
+    }
+
+    public function test_it_warns_about_modules_without_repository(): void
+    {
+        $this->updateChecker->shouldReceive('checkAll')
+            ->andReturn(new UpdateCheckResultDTO(new Collection, [], ['security-test']));
+
+        $this->artisan('module:check-updates')
+            ->expectsOutput('No repository configured for: security-test')
+            ->assertExitCode(0);
+    }
+
+    public function test_force_option_bypasses_the_cache(): void
+    {
+        $this->updateChecker->shouldReceive('checkAll')
+            ->with(true)
+            ->once()
+            ->andReturn(new UpdateCheckResultDTO(new Collection, [], []));
+
+        $this->artisan('module:check-updates', ['--force' => true])
             ->assertExitCode(0);
     }
 }

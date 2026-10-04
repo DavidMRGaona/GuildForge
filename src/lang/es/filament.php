@@ -523,6 +523,13 @@ return [
                 'started_at' => 'Fecha',
                 'has_error' => 'Error',
             ],
+            'check_errors' => [
+                'title' => 'No se han podido comprobar algunos módulos',
+            ],
+            'without_source' => [
+                'title' => 'Módulos sin repositorio configurado',
+                'hint' => 'Añade "repository": "propietario/repositorio" a su module.json o ejecuta php artisan module:set-source.',
+            ],
         ],
         'core' => [
             'navigation' => 'Actualización del core',

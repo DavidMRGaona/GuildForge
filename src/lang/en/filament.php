@@ -260,6 +260,13 @@ return [
                 'started_at' => 'Date',
                 'has_error' => 'Error',
             ],
+            'check_errors' => [
+                'title' => 'Some modules could not be checked',
+            ],
+            'without_source' => [
+                'title' => 'Modules without a repository',
+                'hint' => 'Add "repository": "owner/repo" to their module.json or run php artisan module:set-source.',
+            ],
         ],
         'core' => [
             'navigation' => 'Core update',

@@ -7,6 +7,8 @@ namespace App\Filament\Pages;
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
+use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use Filament\Actions\Action;
@@ -31,8 +33,12 @@ final class ModuleUpdatesPage extends Page implements HasTable
 
     protected static ?int $navigationSort = 100;
 
-    /** @var Collection<int, AvailableUpdateDTO> */
-    public Collection $availableUpdates;
+    /**
+     * Stored as arrays: Livewire cannot serialize DTO objects in public properties.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    public array $availableUpdates = [];
 
     public bool $isChecking = false;
 
@@ -40,9 +46,55 @@ final class ModuleUpdatesPage extends Page implements HasTable
 
     public ?string $updatingModule = null;
 
+    /** @var array<string, string> Module name => why its repository could not be checked */
+    public array $checkErrors = [];
+
+    /** @var array<int, string> */
+    public array $modulesWithoutSource = [];
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = self::pendingModules()->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
     public function mount(): void
     {
-        $this->availableUpdates = collect();
+        $this->loadPersistedState();
+    }
+
+    /**
+     * Pending updates and missing repositories as recorded by the last check,
+     * so opening the page never waits on GitHub.
+     */
+    private function loadPersistedState(): void
+    {
+        $this->availableUpdates = self::pendingModules()
+            ->map(fn (Module $module): array => AvailableUpdateDTO::fromModule($module)->toArray())
+            ->values()
+            ->all();
+
+        $this->modulesWithoutSource = collect(app(ModuleRepositoryInterface::class)->all()->all())
+            ->reject(fn (Module $module): bool => $module->hasUpdateSource())
+            ->map(fn (Module $module): string => $module->name()->value)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, Module>
+     */
+    private static function pendingModules(): Collection
+    {
+        return collect(app(ModuleRepositoryInterface::class)->all()->all())
+            ->filter(fn (Module $module): bool => $module->hasAvailableUpdate())
+            ->values();
     }
 
     public static function getNavigationLabel(): string
@@ -82,7 +134,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 ->requiresConfirmation()
                 ->modalHeading(__('filament.updates.modules.confirm.update_all_heading'))
                 ->modalDescription(__('filament.updates.modules.confirm.update_all_description'))
-                ->disabled(fn (): bool => $this->availableUpdates->isEmpty() || $this->isUpdating),
+                ->disabled(fn (): bool => $this->availableUpdates === [] || $this->isUpdating),
         ];
     }
 
@@ -91,10 +143,25 @@ final class ModuleUpdatesPage extends Page implements HasTable
         $this->isChecking = true;
 
         try {
-            $updateChecker = app(ModuleUpdateCheckerInterface::class);
-            $this->availableUpdates = $updateChecker->checkAllForUpdates();
+            $result = app(ModuleUpdateCheckerInterface::class)->checkAll(fresh: true);
+            $this->availableUpdates = $result->updates
+                ->map(fn (AvailableUpdateDTO $update): array => $update->toArray())
+                ->values()
+                ->all();
+            $this->checkErrors = $result->errors;
+            $this->modulesWithoutSource = $result->modulesWithoutSource;
 
-            if ($this->availableUpdates->isEmpty()) {
+            if ($result->hasErrors()) {
+                Notification::make()
+                    ->title(__('filament.updates.modules.notifications.check_failed'))
+                    ->body(implode("\n", array_map(
+                        fn (string $module, string $error): string => "{$module}: {$error}",
+                        array_keys($result->errors),
+                        $result->errors,
+                    )))
+                    ->danger()
+                    ->send();
+            } elseif ($this->availableUpdates === []) {
                 Notification::make()
                     ->title(__('filament.updates.modules.notifications.no_updates'))
                     ->success()
@@ -102,7 +169,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
             } else {
                 Notification::make()
                     ->title(__('filament.updates.modules.notifications.updates_found', [
-                        'count' => $this->availableUpdates->count(),
+                        'count' => count($this->availableUpdates),
                     ]))
                     ->info()
                     ->send();
@@ -136,8 +203,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                     ->success()
                     ->send();
 
-                // Refresh the list
-                $this->checkForUpdates();
+                $this->loadPersistedState();
             } else {
                 $message = $result->wasRolledBack()
                     ? __('filament.updates.modules.notifications.update_rolled_back', [
@@ -170,7 +236,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
     public function updateAllModules(): void
     {
         foreach ($this->availableUpdates as $update) {
-            $this->updateModule($update->moduleName);
+            $this->updateModule((string) $update['module_name']);
 
             if ($this->isUpdating === false) {
                 // If updating was stopped, break the loop

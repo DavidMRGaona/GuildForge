@@ -54,7 +54,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
         return $this->checkAll()->updates;
     }
 
-    public function checkAll(): UpdateCheckResultDTO
+    public function checkAll(bool $fresh = false): UpdateCheckResultDTO
     {
         /** @var Collection<int, AvailableUpdateDTO> $updates */
         $updates = new Collection;
@@ -73,6 +73,10 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
                 $modulesWithoutSource[] = $module->name()->value;
 
                 continue;
+            }
+
+            if ($fresh) {
+                $this->githubFetcher->clearCache($sourceOwner, $sourceRepo);
             }
 
             $includePrereleases = $this->channelPolicy->includesPrereleasesFor($module->version());

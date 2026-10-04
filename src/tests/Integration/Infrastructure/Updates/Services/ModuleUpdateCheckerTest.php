@@ -283,6 +283,18 @@ final class ModuleUpdateCheckerTest extends TestCase
         $this->assertNotNull($module->lastUpdateCheckAt());
     }
 
+    public function test_check_all_fresh_clears_each_repository_cache_first(): void
+    {
+        $module = $this->createRealModule('freshmod', '1.0.0', 'owner', 'freshmod');
+        $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
+        $this->moduleRepository->shouldReceive('save');
+        $this->githubFetcher->shouldReceive('clearCache')->with('owner', 'freshmod')->once()->ordered();
+        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')->once()->ordered()
+            ->andReturn(['owner/freshmod' => null]);
+
+        $this->service->checkAll(fresh: true);
+    }
+
     public function test_force_check_clears_cache(): void
     {
         // Every check records its time, even without an update
