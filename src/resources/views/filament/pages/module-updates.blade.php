@@ -1,41 +1,39 @@
+{{-- Uses Filament components and only utility classes present in Filament's compiled CSS: this panel has no custom theme --}}
 <x-filament-panels::page>
-    <div class="space-y-6" @if($queuedModules !== []) wire:poll.3s="pollUpdates" @endif>
+    <div class="flex flex-col gap-6" @if($queuedModules !== []) wire:poll.3s="pollUpdates" @endif>
         @if($checkErrors !== [])
-            <div class="rounded-xl border border-danger-300 bg-danger-50 p-4 dark:border-danger-700 dark:bg-danger-950">
-                <h2 class="text-sm font-medium text-danger-800 dark:text-danger-200">
-                    {{ __('filament.updates.modules.check_errors.title') }}
-                </h2>
-                <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-danger-700 dark:text-danger-300">
+            <x-filament::section
+                icon="heroicon-o-exclamation-triangle"
+                icon-color="danger"
+                :heading="__('filament.updates.modules.check_errors.title')"
+            >
+                <ul class="flex flex-col gap-1 text-sm">
                     @foreach($checkErrors as $module => $error)
                         <li><span class="font-medium">{{ $module }}</span>: {{ $error }}</li>
                     @endforeach
                 </ul>
-            </div>
+            </x-filament::section>
         @endif
 
         @if($modulesWithoutSource !== [])
-            <div class="rounded-xl border border-warning-300 bg-warning-50 p-4 dark:border-warning-700 dark:bg-warning-950">
-                <h2 class="text-sm font-medium text-warning-800 dark:text-warning-200">
-                    {{ __('filament.updates.modules.without_source.title') }}
-                </h2>
-                <p class="mt-1 text-sm text-warning-700 dark:text-warning-300">
-                    {{ implode(', ', $modulesWithoutSource) }}
-                </p>
-                <p class="mt-1 text-xs text-warning-600 dark:text-warning-400">
-                    {{ __('filament.updates.modules.without_source.hint') }}
-                </p>
-            </div>
+            <x-filament::section
+                icon="heroicon-o-link-slash"
+                icon-color="warning"
+                :heading="__('filament.updates.modules.without_source.title')"
+                :description="__('filament.updates.modules.without_source.hint')"
+            >
+                <div class="flex flex-wrap gap-2">
+                    @foreach($modulesWithoutSource as $module)
+                        <x-filament::badge color="warning">{{ $module }}</x-filament::badge>
+                    @endforeach
+                </div>
+            </x-filament::section>
         @endif
 
-        {{-- Available updates section --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <h2 class="text-lg font-medium text-gray-900 dark:text-white">
-                {{ __('filament.updates.modules.available.title') }}
-            </h2>
-
+        <x-filament::section :heading="__('filament.updates.modules.available.title')">
             @if($availableUpdates === [])
-                <div class="mt-4 text-center py-8">
-                    <x-heroicon-o-check-circle class="mx-auto" style="width: 3rem; height: 3rem; color: rgb(var(--success-500));" />
+                <div class="flex flex-col items-center py-8 text-center">
+                    <x-heroicon-o-check-circle style="width: 3rem; height: 3rem; color: rgb(var(--success-500));" />
                     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         {{ __('filament.updates.modules.available.empty') }}
                     </p>
@@ -44,81 +42,62 @@
                     </p>
                 </div>
             @else
-                <div class="mt-4 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-900">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    {{ __('filament.updates.modules.available.module') }}
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    {{ __('filament.updates.modules.available.current') }}
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    {{ __('filament.updates.modules.available.available') }}
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    {{ __('filament.updates.modules.available.published') }}
-                                </th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    {{ __('filament.updates.modules.available.type') }}
-                                </th>
-                                <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    {{ __('filament.updates.modules.available.actions') }}
-                                </th>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm" style="width: 100%;">
+                        <thead>
+                            <tr class="text-gray-500 dark:text-gray-400">
+                                <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.module') }}</th>
+                                <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.current') }}</th>
+                                <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.available') }}</th>
+                                <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.published') }}</th>
+                                <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.type') }}</th>
+                                <th class="px-4 py-3 text-end font-medium">{{ __('filament.updates.modules.available.actions') }}</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                        <tbody>
                             @foreach($availableUpdates as $update)
-                                <tr>
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                                @php($isQueued = in_array($update['module_name'], $queuedModules, true))
+                                <tr class="border-t border-gray-200 dark:border-white/10">
+                                    <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-950 dark:text-white">
                                         {{ $update['module_name'] }}
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                    <td class="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
                                         v{{ $update['current_version'] }}
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                    <td class="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
                                         v{{ $update['available_version'] }}
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                    <td class="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
                                         {{ $update['published_at'] !== null ? \Illuminate\Support\Carbon::parse($update['published_at'])->format('d/m/Y') : '—' }}
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-sm">
-                                        @if($update['is_major_update'])
-                                            <span class="inline-flex items-center rounded-full bg-danger-100 px-2.5 py-0.5 text-xs font-medium text-danger-800 dark:bg-danger-900 dark:text-danger-200">
-                                                {{ __('filament.updates.modules.available.major') }}
-                                            </span>
-                                        @else
-                                            <span class="inline-flex items-center rounded-full bg-success-100 px-2.5 py-0.5 text-xs font-medium text-success-800 dark:bg-success-900 dark:text-success-200">
-                                                {{ __('filament.updates.modules.available.minor') }}
-                                            </span>
-                                        @endif
+                                    <td class="whitespace-nowrap px-4 py-3">
+                                        <div class="flex">
+                                            @if($update['is_major_update'])
+                                                <x-filament::badge color="danger">{{ __('filament.updates.modules.available.major') }}</x-filament::badge>
+                                            @else
+                                                <x-filament::badge color="success">{{ __('filament.updates.modules.available.minor') }}</x-filament::badge>
+                                            @endif
+                                        </div>
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
+                                    <td class="whitespace-nowrap px-4 py-3">
                                         <div class="flex items-center justify-end gap-2">
-                                            <button
-                                                type="button"
+                                            <x-filament::button
+                                                size="sm"
+                                                color="gray"
+                                                icon="heroicon-m-eye"
                                                 wire:click="previewUpdate('{{ $update['module_name'] }}')"
-                                                class="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:ring-gray-600 dark:hover:bg-gray-600"
                                             >
-                                                <x-heroicon-m-eye class="mr-1" style="width: 1rem; height: 1rem;" />
                                                 {{ __('filament.updates.modules.available.preview') }}
-                                            </button>
-                                            <button
-                                                type="button"
+                                            </x-filament::button>
+
+                                            <x-filament::button
+                                                size="sm"
+                                                :icon="$isQueued ? 'heroicon-m-arrow-path' : 'heroicon-m-arrow-down-tray'"
+                                                :disabled="$isQueued"
                                                 wire:click="updateModule('{{ $update['module_name'] }}')"
-                                                wire:loading.attr="disabled"
-                                                @if(in_array($update['module_name'], $queuedModules, true)) disabled @endif
-                                                class="inline-flex items-center rounded-md bg-primary-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                @if(in_array($update['module_name'], $queuedModules, true))
-                                                    <x-heroicon-m-arrow-path class="mr-1 animate-spin" style="width: 1rem; height: 1rem;" />
-                                                    {{ __('filament.updates.modules.available.updating') }}
-                                                @else
-                                                    <x-heroicon-m-arrow-down-tray class="mr-1" style="width: 1rem; height: 1rem;" />
-                                                    {{ __('filament.updates.modules.available.update') }}
-                                                @endif
-                                            </button>
+                                                {{ $isQueued ? __('filament.updates.modules.available.updating') : __('filament.updates.modules.available.update') }}
+                                            </x-filament::button>
                                         </div>
                                     </td>
                                 </tr>
@@ -127,15 +106,10 @@
                     </table>
                 </div>
             @endif
-        </div>
+        </x-filament::section>
 
-        {{-- Update history section --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-            <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                {{ __('filament.updates.modules.history.title') }}
-            </h2>
-
+        <x-filament::section :heading="__('filament.updates.modules.history.title')">
             {{ $this->table }}
-        </div>
+        </x-filament::section>
     </div>
 </x-filament-panels::page>
