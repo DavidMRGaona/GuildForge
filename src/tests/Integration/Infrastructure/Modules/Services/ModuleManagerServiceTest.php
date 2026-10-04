@@ -12,6 +12,7 @@ use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
+use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -538,6 +539,55 @@ final class ModuleManagerServiceTest extends TestCase
             $installedAt->format('Y-m-d H:i:s'),
             $dbModule->installed_at->format('Y-m-d H:i:s')
         );
+    }
+
+    public function test_discover_sets_source_from_manifest_repository(): void
+    {
+        $this->createTestModule('repo-module', ['repository' => 'acme/guildforge-repo-module']);
+
+        $this->service->discover();
+
+        $module = $this->service->find(new ModuleName('repo-module'));
+        $this->assertSame('acme', $module?->sourceOwner());
+        $this->assertSame('guildforge-repo-module', $module?->sourceRepo());
+    }
+
+    public function test_discover_syncs_source_for_existing_modules(): void
+    {
+        $this->createTestModule('repo-module');
+        $this->service->discover();
+
+        $this->writeManifestKey('repo-module', 'repository', 'acme/new-repo');
+        $this->service->discover();
+
+        $module = $this->service->find(new ModuleName('repo-module'));
+        $this->assertSame('acme', $module?->sourceOwner());
+        $this->assertSame('new-repo', $module?->sourceRepo());
+    }
+
+    public function test_discover_keeps_manual_source_when_manifest_has_no_repository(): void
+    {
+        $this->createTestModule('repo-module');
+        $this->service->discover();
+
+        $repository = $this->app->make(ModuleRepositoryInterface::class);
+        $module = $repository->findByName(new ModuleName('repo-module'));
+        $this->assertNotNull($module);
+        $module->updateSourceInfo('manual', 'manual-repo');
+        $repository->save($module);
+
+        $this->service->discover();
+
+        $this->assertSame('manual', $repository->findByName(new ModuleName('repo-module'))?->sourceOwner());
+    }
+
+    private function writeManifestKey(string $name, string $key, string $value): void
+    {
+        $path = $this->testModulesPath.'/'.$name.'/module.json';
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode((string) file_get_contents($path), true);
+        $manifest[$key] = $value;
+        file_put_contents($path, json_encode($manifest, JSON_PRETTY_PRINT));
     }
 
     private function createTestModule(string $name, array $manifest = []): void

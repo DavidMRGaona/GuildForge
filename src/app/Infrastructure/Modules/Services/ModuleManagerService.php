@@ -76,6 +76,14 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                         $needsSave = true;
                     }
 
+                    $manifestOwner = $manifest->repositoryOwner();
+                    $manifestRepo = $manifest->repositoryName();
+                    if ($manifestOwner !== null && $manifestRepo !== null
+                        && ($existing->sourceOwner() !== $manifestOwner || $existing->sourceRepo() !== $manifestRepo)) {
+                        $existing->updateSourceInfo($manifestOwner, $manifestRepo);
+                        $needsSave = true;
+                    }
+
                     $manifestVersion = ModuleVersion::fromString($manifest->version);
                     if (! $existing->version()->isEqualTo($manifestVersion)) {
                         $previousVersion = $existing->version()->value();
@@ -132,6 +140,8 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 provider: $manifest->provider,
                 path: $modulesPath.'/'.$manifest->name,
                 dependencies: $manifest->dependencies ?? [],
+                sourceOwner: $manifest->repositoryOwner(),
+                sourceRepo: $manifest->repositoryName(),
             );
 
             $this->repository->save($module);

@@ -194,4 +194,48 @@ final class ModuleManifestDTOTest extends TestCase
         $this->assertArrayHasKey('requires', $array);
         $this->assertArrayHasKey('dependencies', $array);
     }
+
+    public function test_from_array_parses_repository(): void
+    {
+        $dto = ModuleManifestDTO::fromArray([
+            'name' => 'game-tables',
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\GameTables',
+            'provider' => 'Modules\\GameTables\\GameTablesServiceProvider',
+            'repository' => 'DavidMRGaona/guildforge-game-tables',
+        ]);
+
+        $this->assertSame('DavidMRGaona/guildforge-game-tables', $dto->repository);
+        $this->assertSame('DavidMRGaona', $dto->repositoryOwner());
+        $this->assertSame('guildforge-game-tables', $dto->repositoryName());
+        $this->assertSame('DavidMRGaona/guildforge-game-tables', $dto->toArray()['repository']);
+    }
+
+    public function test_from_array_rejects_malformed_repository(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        ModuleManifestDTO::fromArray([
+            'name' => 'forum',
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\Forum',
+            'provider' => 'Modules\\Forum\\ForumServiceProvider',
+            'repository' => 'https://github.com/owner/repo',
+        ]);
+    }
+
+    public function test_repository_is_optional(): void
+    {
+        $dto = ModuleManifestDTO::fromArray([
+            'name' => 'forum',
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\Forum',
+            'provider' => 'Modules\\Forum\\ForumServiceProvider',
+        ]);
+
+        $this->assertNull($dto->repository);
+        $this->assertNull($dto->repositoryOwner());
+        $this->assertNull($dto->repositoryName());
+        $this->assertArrayNotHasKey('repository', $dto->toArray());
+    }
 }

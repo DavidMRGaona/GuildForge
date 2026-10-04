@@ -22,8 +22,8 @@ final readonly class ModuleManifestDTO
         public ?string $author = null,
         public ?array $requires = null,
         public ?array $dependencies = null,
-    ) {
-    }
+        public ?string $repository = null,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -37,6 +37,11 @@ final readonly class ModuleManifestDTO
             }
         }
 
+        $repository = $data['repository'] ?? null;
+        if ($repository !== null && (! is_string($repository) || preg_match('#^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$#', $repository) !== 1)) {
+            throw new InvalidArgumentException("Invalid repository, expected 'owner/repo'");
+        }
+
         return new self(
             name: $data['name'],
             version: $data['version'],
@@ -47,6 +52,7 @@ final readonly class ModuleManifestDTO
             author: $data['author'] ?? null,
             requires: $data['requires'] ?? [],
             dependencies: $data['dependencies'] ?? [],
+            repository: $repository,
         );
     }
 
@@ -77,7 +83,20 @@ final readonly class ModuleManifestDTO
         if ($this->dependencies !== null) {
             $result['dependencies'] = $this->dependencies;
         }
+        if ($this->repository !== null) {
+            $result['repository'] = $this->repository;
+        }
 
         return $result;
+    }
+
+    public function repositoryOwner(): ?string
+    {
+        return $this->repository === null ? null : explode('/', $this->repository, 2)[0];
+    }
+
+    public function repositoryName(): ?string
+    {
+        return $this->repository === null ? null : explode('/', $this->repository, 2)[1];
     }
 }
