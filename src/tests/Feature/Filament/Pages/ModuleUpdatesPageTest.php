@@ -154,6 +154,38 @@ final class ModuleUpdatesPageTest extends TestCase
         $page->call('pollUpdates')->assertSet('queuedModules', ['event-registrations']);
     }
 
+    public function test_poll_reports_an_update_that_started_before_the_page_queued_it(): void
+    {
+        Queue::fake();
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->pendingUpdate();
+        ModuleUpdateHistoryModel::create([
+            'id' => (string) Str::uuid(),
+            'module_name' => 'event-registrations',
+            'from_version' => '1.0.8-beta',
+            'to_version' => '1.0.9-beta',
+            'status' => UpdateStatus::Downloading,
+            'started_at' => now()->subMinute(),
+        ]);
+        $page = Livewire::test(ModuleUpdatesPage::class)->call('updateModule', 'event-registrations');
+
+        ModuleUpdateHistoryModel::query()->update(['status' => UpdateStatus::Completed, 'completed_at' => now()->addSecond()]);
+
+        $page->call('pollUpdates')->assertSet('queuedModules', []);
+    }
+
+    public function test_poll_gives_up_on_updates_that_never_report_back(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->set('queuedModules', ['event-registrations'])
+            ->set('queuedSince', now()->subMinutes(20)->toIso8601String())
+            ->call('pollUpdates')
+            ->assertSet('queuedModules', [])
+            ->assertNotified(__('filament.updates.modules.notifications.update_lost', ['module' => 'event-registrations']));
+    }
+
     private function pendingUpdate(): void
     {
         ModuleModel::factory()->enabled()->create([

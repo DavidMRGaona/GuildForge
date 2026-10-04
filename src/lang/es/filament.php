@@ -493,6 +493,7 @@ return [
                 'no_updates' => 'Todos los módulos están actualizados',
                 'updates_found' => 'Se encontraron :count actualización(es) disponible(s)',
                 'check_failed' => 'Error al comprobar actualizaciones',
+                'update_lost' => 'No se ha recibido el resultado de la actualización de :module; revisa el historial',
                 'update_queued' => 'Actualización de :module en cola',
                 'update_success' => 'Módulo :module actualizado a v:version',
                 'update_failed' => 'Error al actualizar :module',

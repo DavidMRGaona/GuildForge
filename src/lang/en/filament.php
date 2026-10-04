@@ -230,6 +230,7 @@ return [
                 'no_updates' => 'All modules are up to date',
                 'updates_found' => 'Found :count available update(s)',
                 'check_failed' => 'Error checking for updates',
+                'update_lost' => 'No result received for the :module update; check the history',
                 'update_queued' => ':module update queued',
                 'update_success' => 'Module :module updated to v:version',
                 'update_failed' => 'Error updating :module',

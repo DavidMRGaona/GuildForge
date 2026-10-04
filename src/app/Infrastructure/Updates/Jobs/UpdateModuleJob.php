@@ -6,6 +6,8 @@ namespace App\Infrastructure\Updates\Jobs;
 
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Domain\Updates\Enums\UpdateStatus;
+use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,6 +16,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 final class UpdateModuleJob implements ShouldBeUnique, ShouldQueue
 {
@@ -55,6 +58,19 @@ final class UpdateModuleJob implements ShouldBeUnique, ShouldQueue
                 ]);
             }
         } catch (\Throwable $e) {
+            // update() only throws before it records history (lock, module or source missing);
+            // record the failure so the admin page following this job can report it
+            ModuleUpdateHistoryModel::create([
+                'id' => (string) Str::uuid(),
+                'module_name' => $this->moduleName,
+                'from_version' => 'unknown',
+                'to_version' => 'unknown',
+                'status' => UpdateStatus::Failed,
+                'error_message' => $e->getMessage(),
+                'started_at' => now(),
+                'completed_at' => now(),
+            ]);
+
             Log::error('Module update job failed', [
                 'module' => $this->moduleName,
                 'error' => $e->getMessage(),
