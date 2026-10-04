@@ -6,11 +6,14 @@ namespace App\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\ModuleManifestDTO;
 use InvalidArgumentException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 final readonly class ModuleDiscoveryService
 {
     public function __construct(
         private string $modulesPath,
+        private LoggerInterface $logger = new NullLogger,
     ) {}
 
     /**
@@ -65,6 +68,12 @@ final readonly class ModuleDiscoveryService
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new InvalidArgumentException('Invalid JSON: '.json_last_error_msg());
+        }
+
+        // A bad repository only disables updates for this module; it must not block discovery
+        if (isset($data['repository']) && ! ModuleManifestDTO::isValidRepository($data['repository'])) {
+            $this->logger->warning("Ignoring invalid repository in {$path}, expected 'owner/repo'");
+            unset($data['repository']);
         }
 
         return ModuleManifestDTO::fromArray($data);

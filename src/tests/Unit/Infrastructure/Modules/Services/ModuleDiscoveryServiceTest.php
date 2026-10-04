@@ -200,6 +200,32 @@ final class ModuleDiscoveryServiceTest extends TestCase
         $this->assertCount(0, $this->service->discover());
     }
 
+    public function test_a_malformed_repository_does_not_block_discovery(): void
+    {
+        mkdir($this->testModulesPath.'/bad-repo', 0755, true);
+        file_put_contents($this->testModulesPath.'/bad-repo/module.json', json_encode([
+            'name' => 'bad-repo',
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\BadRepo',
+            'provider' => 'BadRepoServiceProvider',
+            'repository' => 'https://github.com/owner/bad-repo',
+        ]));
+        mkdir($this->testModulesPath.'/good-repo', 0755, true);
+        file_put_contents($this->testModulesPath.'/good-repo/module.json', json_encode([
+            'name' => 'good-repo',
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\GoodRepo',
+            'provider' => 'GoodRepoServiceProvider',
+            'repository' => 'owner/good-repo',
+        ]));
+
+        $manifests = collect($this->service->discover())->keyBy('name');
+
+        $this->assertCount(2, $manifests);
+        $this->assertNull($manifests['bad-repo']->repository);
+        $this->assertSame('owner/good-repo', $manifests['good-repo']->repository);
+    }
+
     private function removeDirectory(string $path): void
     {
         if (! file_exists($path)) {
