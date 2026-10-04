@@ -9,9 +9,12 @@ import type { ThemeSettings } from '@/types/inertia';
 interface Props {
     title: string;
     subtitle?: string;
+    showBackLink?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    showBackLink: true,
+});
 
 const { t } = useI18n();
 const page = usePage();
@@ -83,7 +86,7 @@ watch(theme, (newTheme) => {
             </div>
         </div>
 
-        <div class="mt-8 text-center">
+        <div v-if="props.showBackLink" class="mt-8 text-center">
             <Link
                 :href="routes.home"
                 class="text-sm text-base-secondary hover:text-primary transition-colors"

@@ -114,6 +114,24 @@ final class SettingsService implements SettingsServiceInterface
     }
 
     /**
+     * Check if the public site is in maintenance mode.
+     */
+    public function isMaintenanceModeEnabled(): bool
+    {
+        return $this->getBooleanSetting('maintenance_enabled', false);
+    }
+
+    /**
+     * Get the message shown to visitors during maintenance, if any.
+     */
+    public function getMaintenanceMessage(): ?string
+    {
+        $message = trim((string) $this->get('maintenance_message', ''));
+
+        return $message !== '' ? $message : null;
+    }
+
+    /**
      * Get all settings from the cache or database.
      *
      * @return array<string, string|null>

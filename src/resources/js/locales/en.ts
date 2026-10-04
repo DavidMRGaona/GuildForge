@@ -149,6 +149,10 @@ export default {
         serverError: 'Server error',
         forbidden: 'Access denied',
     },
+    maintenance: {
+        title: "We're under maintenance",
+        defaultMessage: "We're making improvements to the site. Please try again in a few minutes.",
+    },
     layout: {
         brand: '{appName}',
         copyright: '© {year} {appName}. All rights reserved.',

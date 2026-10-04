@@ -48,6 +48,10 @@ php artisan migrate --force || record_failure "Migrations failed (see the contai
 echo "Discovering modules..."
 php artisan module:discover || echo "Warning: Module discovery had issues (check logs)"
 
+# New core/module permissions only show up in Roles > Permissions once synced
+echo "Syncing permissions..."
+php artisan permissions:sync || echo "Warning: Permission sync had issues (check logs)"
+
 echo "Caching configuration..."
 php artisan config:cache || record_failure "Config cache failed (see the container logs)"
 php artisan route:clear

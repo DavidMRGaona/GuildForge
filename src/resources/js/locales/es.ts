@@ -150,6 +150,10 @@ export default {
         serverError: 'Error del servidor',
         forbidden: 'Acceso denegado',
     },
+    maintenance: {
+        title: 'Estamos en mantenimiento',
+        defaultMessage: 'Estamos haciendo mejoras en la web. Vuelve a intentarlo en unos minutos.',
+    },
     layout: {
         brand: '{appName}',
         copyright: '© {year} {appName}. Todos los derechos reservados.',

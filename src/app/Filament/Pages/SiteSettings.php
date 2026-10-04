@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Forms\Components\ColorPicker;
@@ -13,6 +14,7 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Tabs\Tab;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\View;
@@ -48,6 +50,41 @@ final class SiteSettings extends Page implements HasForms
         'acero-forja' => ['primary' => '#0F766E', 'accent' => '#FB923C'],
     ];
 
+    /**
+     * @var array<string>
+     */
+    private const array GENERAL_SETTINGS_KEYS = [
+        'guild_name',
+        'guild_description',
+        'site_logo_light',
+        'site_logo_dark',
+        'site_logo_email',
+        'site_favicon_light',
+        'site_favicon_dark',
+        'theme_primary_base_color',
+        'theme_accent_base_color',
+        'theme_font_heading',
+        'theme_font_body',
+        'theme_font_size_base',
+        'theme_border_radius',
+        'theme_shadow_intensity',
+        'theme_button_style',
+        'theme_dark_mode_default',
+        'theme_dark_mode_toggle_visible',
+        'auth_registration_enabled',
+        'auth_login_enabled',
+        'auth_email_verification_required',
+        'anonymized_user_name',
+    ];
+
+    /**
+     * @var array<string>
+     */
+    private const array MAINTENANCE_SETTINGS_KEYS = [
+        'maintenance_enabled',
+        'maintenance_message',
+    ];
+
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?int $navigationSort = 100;
@@ -76,37 +113,35 @@ final class SiteSettings extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('settings.manage') || self::userCan('settings.maintenance');
     }
 
     /**
+     * Only the keys the user may edit are loaded and saved, so saving never blanks
+     * (or deletes the images of) settings from tabs the user cannot see.
+     *
      * @return array<string>
      */
     protected function getSettingsKeys(): array
     {
-        return [
-            'guild_name',
-            'guild_description',
-            'site_logo_light',
-            'site_logo_dark',
-            'site_logo_email',
-            'site_favicon_light',
-            'site_favicon_dark',
-            'theme_primary_base_color',
-            'theme_accent_base_color',
-            'theme_font_heading',
-            'theme_font_body',
-            'theme_font_size_base',
-            'theme_border_radius',
-            'theme_shadow_intensity',
-            'theme_button_style',
-            'theme_dark_mode_default',
-            'theme_dark_mode_toggle_visible',
-            'auth_registration_enabled',
-            'auth_login_enabled',
-            'auth_email_verification_required',
-            'anonymized_user_name',
-        ];
+        $keys = [];
+
+        if (self::userCan('settings.manage')) {
+            $keys = self::GENERAL_SETTINGS_KEYS;
+        }
+
+        if (self::userCan('settings.maintenance')) {
+            $keys = [...$keys, ...self::MAINTENANCE_SETTINGS_KEYS];
+        }
+
+        return $keys;
+    }
+
+    private static function userCan(string $permission): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && app(AuthorizationServiceInterface::class)->can($user, $permission);
     }
 
     /**
@@ -160,6 +195,8 @@ final class SiteSettings extends Page implements HasForms
             'auth_login_enabled' => true,
             'auth_email_verification_required' => false,
             'anonymized_user_name' => 'Anónimo',
+            'maintenance_enabled' => false,
+            'maintenance_message' => '',
         ];
     }
 
@@ -170,12 +207,15 @@ final class SiteSettings extends Page implements HasForms
 
     public function form(Form $form): Form
     {
+        $canManage = self::userCan('settings.manage');
+
         return $form
             ->schema([
                 Tabs::make('Settings')
                     ->tabs([
                         Tab::make(__('filament.settings.tabs.general'))
                             ->icon('heroicon-o-cog-6-tooth')
+                            ->visible($canManage)
                             ->schema([
                                 TextInput::make('guild_name')
                                     ->label(__('filament.settings.about.guild_name'))
@@ -191,6 +231,7 @@ final class SiteSettings extends Page implements HasForms
 
                         Tab::make(__('filament.settings.tabs.logos'))
                             ->icon('heroicon-o-photo')
+                            ->visible($canManage)
                             ->schema([
                                 Section::make(__('filament.settings.branding.logos_section'))
                                     ->schema([
@@ -270,6 +311,7 @@ final class SiteSettings extends Page implements HasForms
 
                         Tab::make(__('filament.settings.tabs.colors'))
                             ->icon('heroicon-o-swatch')
+                            ->visible($canManage)
                             ->schema([
                                 Section::make(__('filament.settings.colors.brand_section'))
                                     ->description(__('filament.settings.colors.brand_description'))
@@ -323,6 +365,7 @@ final class SiteSettings extends Page implements HasForms
 
                         Tab::make(__('filament.settings.tabs.typography'))
                             ->icon('heroicon-o-language')
+                            ->visible($canManage)
                             ->schema([
                                 Select::make('theme_font_heading')
                                     ->label(__('filament.settings.typography.font_heading'))
@@ -360,6 +403,7 @@ final class SiteSettings extends Page implements HasForms
 
                         Tab::make(__('filament.settings.tabs.appearance'))
                             ->icon('heroicon-o-adjustments-horizontal')
+                            ->visible($canManage)
                             ->schema([
                                 Select::make('theme_border_radius')
                                     ->label(__('filament.settings.appearance.border_radius'))
@@ -404,6 +448,7 @@ final class SiteSettings extends Page implements HasForms
 
                         Tab::make(__('filament.settings.tabs.authentication'))
                             ->icon('heroicon-o-key')
+                            ->visible($canManage)
                             ->schema([
                                 Section::make(__('filament.settings.auth.section_public'))
                                     ->description(__('filament.settings.auth.section_public_description'))
@@ -436,6 +481,26 @@ final class SiteSettings extends Page implements HasForms
                                             ->helperText(__('filament.settings.auth.anonymized_user_name_help'))
                                             ->default('Anónimo')
                                             ->maxLength(100),
+                                    ]),
+                            ]),
+
+                        Tab::make(__('filament.settings.tabs.maintenance'))
+                            ->icon('heroicon-o-wrench-screwdriver')
+                            ->visible(self::userCan('settings.maintenance'))
+                            ->schema([
+                                Section::make(__('filament.settings.maintenance.section'))
+                                    ->description(__('filament.settings.maintenance.section_description'))
+                                    ->schema([
+                                        Toggle::make('maintenance_enabled')
+                                            ->label(__('filament.settings.maintenance.enabled'))
+                                            ->helperText(__('filament.settings.maintenance.enabled_help'))
+                                            ->default(false),
+
+                                        Textarea::make('maintenance_message')
+                                            ->label(__('filament.settings.maintenance.message'))
+                                            ->helperText(__('filament.settings.maintenance.message_help'))
+                                            ->rows(3)
+                                            ->maxLength(500),
                                     ]),
                             ]),
                     ])

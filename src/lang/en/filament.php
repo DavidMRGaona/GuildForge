@@ -54,6 +54,11 @@ return [
             'galleries' => 'Galleries',
         ],
     ],
+    'maintenance' => [
+        'banner' => 'The public site is in maintenance mode: visitors cannot access it.',
+        'banner_link' => 'Turn off',
+    ],
+
     'settings' => [
         'title' => 'Site Settings',
         'tabs' => [
@@ -63,6 +68,7 @@ return [
             'typography' => 'Typography',
             'appearance' => 'Appearance',
             'authentication' => 'Authentication',
+            'maintenance' => 'Maintenance',
         ],
         'general' => [
             'title' => 'General Settings',
@@ -209,6 +215,14 @@ return [
             'email_verification_required_help' => 'Users will need to verify their email before accessing all features.',
             'anonymized_user_name' => 'Anonymized user name',
             'anonymized_user_name_help' => 'Name that will be displayed for users who have been anonymized (e.g., "Anonymous", "Editorial").',
+        ],
+        'maintenance' => [
+            'section' => 'Maintenance mode',
+            'section_description' => 'Temporarily close the public site, for example while updates are applied.',
+            'enabled' => 'Enable maintenance mode',
+            'enabled_help' => 'Visitors will see a maintenance page. Users with panel access keep seeing the site as usual.',
+            'message' => 'Message for visitors',
+            'message_help' => 'Optional. If empty, a generic message is shown.',
         ],
     ],
 

@@ -12,6 +12,7 @@ return [
         'hero_slides' => 'Hero slides',
         'tags' => 'Tags',
         'settings' => 'Settings',
+        'updates' => 'Updates',
         'admin' => 'Administration',
     ],
 
@@ -23,6 +24,8 @@ return [
         'delete' => 'Delete',
         'manage' => 'Manage',
         'access' => 'Access',
+        'maintenance' => 'Maintenance mode',
+        'apply' => 'Apply',
     ],
 
     'permissions' => [
@@ -75,6 +78,10 @@ return [
         ],
         'settings' => [
             'manage' => 'Manage site settings',
+            'maintenance' => 'Turn maintenance mode on or off',
+        ],
+        'updates' => [
+            'apply' => 'Apply updates',
         ],
         'admin' => [
             'access' => 'Access admin panel',
