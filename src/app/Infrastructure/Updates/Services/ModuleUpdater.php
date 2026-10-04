@@ -10,7 +10,9 @@ use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
+use App\Application\Updates\Services\ModulePackageInstallerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
+use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -29,7 +31,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use ZipArchive;
 
 final class ModuleUpdater implements ModuleUpdaterInterface
 {
@@ -52,6 +53,8 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         private readonly ModuleBackupServiceInterface $backupService,
         private readonly ModuleHealthCheckerInterface $healthChecker,
         private readonly Dispatcher $events,
+        private readonly ModulePackageInstallerInterface $installer,
+        private readonly ReleaseChannelPolicy $channelPolicy,
     ) {
         $this->tempPath = (string) config('updates.temp_path', storage_path('app/temp/updates'));
         $this->verifyChecksum = (bool) config('updates.behavior.verify_checksum', true);
@@ -78,7 +81,11 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             throw UpdateException::noSourceConfigured($name->value);
         }
 
-        $release = $this->githubFetcher->getLatestRelease($sourceOwner, $sourceRepo);
+        $release = $this->githubFetcher->getLatestRelease(
+            $sourceOwner,
+            $sourceRepo,
+            $this->channelPolicy->includesPrereleasesFor($module->version()),
+        );
 
         if ($release === null || ! $release->version->isGreaterThan($module->version())) {
             throw UpdateException::noUpdateAvailable($name->value);
@@ -127,21 +134,30 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             throw UpdateException::lockAcquisitionFailed($name->value);
         }
 
-        // Create history record
-        $history = $this->createHistoryRecord($name->value, $module->version()->value());
+        $fromVersion = $module->version()->value();
+        $history = $this->createHistoryRecord($name->value, $fromVersion);
         $backupPath = null;
+        $downloadPath = null;
+        $stagedRoot = null;
+        $previousPath = null;
+        $wasDisabled = false;
         $migrationsRun = [];
         $seedersRun = [];
 
         try {
-            // Get latest release
-            // We can assert non-null because hasUpdateSource() was checked above
+            // Interrupted runs may have left staging/previous copies behind
+            $this->installer->cleanupLeftovers($name->value);
+
             /** @var string $sourceOwner */
             $sourceOwner = $module->sourceOwner();
             /** @var string $sourceRepo */
             $sourceRepo = $module->sourceRepo();
 
-            $release = $this->githubFetcher->getLatestRelease($sourceOwner, $sourceRepo);
+            $release = $this->githubFetcher->getLatestRelease(
+                $sourceOwner,
+                $sourceRepo,
+                $this->channelPolicy->includesPrereleasesFor($module->version()),
+            );
 
             if ($release === null || ! $release->version->isGreaterThan($module->version())) {
                 throw UpdateException::noUpdateAvailable($name->value);
@@ -151,72 +167,61 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             $history->to_version = $toVersion;
             $history->save();
 
-            // Dispatch start event
-            $this->events->dispatch(new ModuleUpdateStarted(
-                $name->value,
-                $module->version()->value(),
-                $toVersion,
-            ));
+            $this->events->dispatch(new ModuleUpdateStarted($name->value, $fromVersion, $toVersion));
 
-            // Step 1: Disable module
-            $this->updateStatus($history, UpdateStatus::Applying);
-            $this->log($history->id, 'disabling', 'started', 'Disabling module...');
-
-            if ($module->isEnabled()) {
-                $this->moduleManager->disable($name);
-            }
-
-            $this->log($history->id, 'disabling', 'completed', 'Module disabled');
-
-            // Step 2: Create backup
+            // Step 1: Backup (manual safety net; automatic rollback uses the previous directory)
             $this->updateStatus($history, UpdateStatus::BackingUp);
             $this->log($history->id, 'backup', 'started', 'Creating backup...');
-
             $backupPath = $this->backupService->createBackup($name);
             $history->backup_path = $backupPath;
             $history->save();
-
             $this->log($history->id, 'backup', 'completed', "Backup created at {$backupPath}");
 
-            // Step 3: Download release
+            // Step 2: Download
             $this->updateStatus($history, UpdateStatus::Downloading);
             $this->log($history->id, 'download', 'started', 'Downloading update...');
-
             $downloadPath = "{$this->tempPath}/{$name->value}-{$toVersion}.zip";
-
             $this->githubFetcher->downloadRelease($release, $downloadPath);
             $this->log($history->id, 'download', 'completed', 'Download complete');
 
-            // Step 4: Verify checksum
-            if ($this->verifyChecksum && $release->hasChecksum()) {
+            // Step 3: Verify checksum (fail closed when verification is required)
+            if ($this->verifyChecksum) {
+                if (! $release->hasChecksum()) {
+                    throw UpdateException::checksumFetchFailed($name->value);
+                }
+
                 $this->updateStatus($history, UpdateStatus::Verifying);
                 $this->log($history->id, 'verify', 'started', 'Verifying checksum...');
-
                 $this->githubFetcher->fetchAndVerifyChecksum($release, $downloadPath);
                 $this->log($history->id, 'verify', 'completed', 'Checksum verified');
             }
 
-            // Step 5: Apply update
+            // Step 4: Stage the package; the installed module is untouched until the swap
             $this->updateStatus($history, UpdateStatus::Applying);
             $this->log($history->id, 'apply', 'started', 'Applying update...');
+            $stagedRoot = $this->installer->stage($downloadPath, $name->value);
 
-            $this->applyUpdate($module->path(), $downloadPath);
+            // Step 5: Disable and swap
+            if ($module->isEnabled()) {
+                $this->moduleManager->disable($name);
+                $wasDisabled = true;
+            }
+
+            $previousPath = $this->installer->swap($stagedRoot, $name->value);
+            $stagedRoot = null;
             $this->publishPreBuiltAssets($module->path(), $name->value);
             $this->log($history->id, 'apply', 'completed', 'Update applied');
 
-            // Step 6: Run migrations in transaction
+            // Step 6: Migrations and new seeders
             $this->updateStatus($history, UpdateStatus::Migrating);
             $this->log($history->id, 'migrate', 'started', 'Running migrations...');
 
             DB::transaction(function () use ($name, &$migrationsRun, &$seedersRun, $history) {
-                // Run migrations
                 $migrationsRun = $this->runMigrations($name);
                 $this->log($history->id, 'migrate', 'completed', 'Migrations complete', ['count' => count($migrationsRun)]);
 
-                // Run new seeders
                 $this->updateStatus($history, UpdateStatus::Seeding);
                 $this->log($history->id, 'seed', 'started', 'Running seeders...');
-
                 $seedersRun = $this->runNewSeeders($name);
                 $this->log($history->id, 'seed', 'completed', 'Seeders complete', ['count' => count($seedersRun)]);
             });
@@ -225,7 +230,6 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             if ($this->healthCheck) {
                 $this->updateStatus($history, UpdateStatus::HealthChecking);
                 $this->log($history->id, 'health', 'started', 'Running health check...');
-
                 $healthResult = $this->healthChecker->check($name);
 
                 if (! $healthResult->passes()) {
@@ -235,33 +239,27 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                 $this->log($history->id, 'health', 'completed', 'Health check passed');
             }
 
-            // Step 8: Update module version and re-enable
+            // Step 8: Persist the new version, re-enable and drop the previous copy
             $module->updateVersion(ModuleVersion::fromString($toVersion));
+            $module->clearLatestAvailableVersion();
             $this->moduleRepository->save($module);
 
-            $this->moduleManager->enable($name);
-
-            // Success
-            $this->updateStatus($history, UpdateStatus::Completed);
-            $history->markCompleted();
-
-            $this->log($history->id, 'complete', 'completed', 'Update completed successfully');
-
-            // Cleanup temp files
-            if (File::exists($downloadPath)) {
-                File::delete($downloadPath);
+            if ($wasDisabled) {
+                $this->moduleManager->enable($name);
             }
 
-            // Dispatch completion event
-            $this->events->dispatch(new ModuleUpdateCompleted(
-                $name->value,
-                $module->version()->value(),
-                $toVersion,
-            ));
+            $this->installer->discard($previousPath);
+            $previousPath = null;
+
+            $this->updateStatus($history, UpdateStatus::Completed);
+            $history->markCompleted();
+            $this->log($history->id, 'complete', 'completed', 'Update completed successfully');
+
+            $this->events->dispatch(new ModuleUpdateCompleted($name->value, $fromVersion, $toVersion));
 
             return new ModuleUpdateResultDTO(
                 moduleName: $name->value,
-                fromVersion: $module->version()->value(),
+                fromVersion: $fromVersion,
                 toVersion: $toVersion,
                 status: UpdateStatus::Completed,
                 migrationsRun: $migrationsRun,
@@ -278,21 +276,28 @@ final class ModuleUpdater implements ModuleUpdaterInterface
 
             $this->log($history->id, 'error', 'failed', $e->getMessage());
 
-            // Attempt rollback
             $wasRolledBack = false;
-            if ($this->autoRollback && $backupPath !== null) {
+
+            if ($previousPath !== null && $this->autoRollback) {
                 try {
-                    $this->log($history->id, 'rollback', 'started', 'Attempting rollback...');
-                    $this->backupService->restoreBackup($name, $backupPath);
-                    $this->moduleManager->enable($name);
+                    $this->log($history->id, 'rollback', 'started', 'Restoring the previous version...');
+                    $this->installer->revert($previousPath, $name->value);
+                    $previousPath = null;
+                    $this->publishPreBuiltAssets($module->path(), $name->value);
                     $wasRolledBack = true;
                     $history->markRolledBack();
-                    $this->log($history->id, 'rollback', 'completed', 'Rollback successful');
+                    $this->log($history->id, 'rollback', 'completed', 'Previous version restored');
                 } catch (\Throwable $rollbackError) {
-                    Log::error("Rollback failed for {$name->value}", [
-                        'error' => $rollbackError->getMessage(),
-                    ]);
+                    Log::error("Rollback failed for {$name->value}", ['error' => $rollbackError->getMessage()]);
                     $this->log($history->id, 'rollback', 'failed', $rollbackError->getMessage());
+                }
+            }
+
+            if ($wasDisabled) {
+                try {
+                    $this->moduleManager->enable($name);
+                } catch (\Throwable $enableError) {
+                    Log::error("Could not re-enable {$name->value} after a failed update", ['error' => $enableError->getMessage()]);
                 }
             }
 
@@ -300,10 +305,9 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                 $history->markFailed($e->getMessage());
             }
 
-            // Dispatch failure event
             $this->events->dispatch(new ModuleUpdateFailed(
                 $name->value,
-                $module->version()->value(),
+                $fromVersion,
                 $history->to_version ?? 'unknown',
                 $e->getMessage(),
                 $wasRolledBack,
@@ -311,7 +315,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
 
             return new ModuleUpdateResultDTO(
                 moduleName: $name->value,
-                fromVersion: $module->version()->value(),
+                fromVersion: $fromVersion,
                 toVersion: $history->to_version ?? 'unknown',
                 status: $wasRolledBack ? UpdateStatus::RolledBack : UpdateStatus::Failed,
                 migrationsRun: $migrationsRun,
@@ -321,6 +325,15 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                 historyId: $history->id,
             );
         } finally {
+            // Whatever happened, nothing temporary survives this run
+            if ($downloadPath !== null && File::exists($downloadPath)) {
+                File::delete($downloadPath);
+            }
+
+            if ($stagedRoot !== null) {
+                $this->installer->discard(dirname($stagedRoot));
+            }
+
             $lock->release();
         }
     }
@@ -412,38 +425,6 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         ?array $context = null
     ): void {
         ModuleUpdateLogModel::log($historyId, $step, $status, $message, $context);
-    }
-
-    private function applyUpdate(string $modulePath, string $zipPath): void
-    {
-        // Remove old module directory
-        if (File::isDirectory($modulePath)) {
-            File::deleteDirectory($modulePath);
-        }
-
-        // Extract new version
-        $zip = new ZipArchive;
-        if ($zip->open($zipPath) !== true) {
-            throw UpdateException::extractionFailed(basename($modulePath), 'Cannot open ZIP file');
-        }
-
-        // The ZIP contains a folder like "module-name-1.0.0/"
-        $zip->extractTo(dirname($modulePath));
-        $zip->close();
-
-        // Rename extracted folder to module name
-        $extractedFolders = glob(dirname($modulePath).'/*', GLOB_ONLYDIR);
-
-        if ($extractedFolders === false) {
-            throw UpdateException::extractionFailed(basename($modulePath), 'Failed to list extracted folders');
-        }
-
-        foreach ($extractedFolders as $folder) {
-            if (! File::isDirectory($modulePath) && str_contains(basename($folder), '-')) {
-                File::move($folder, $modulePath);
-                break;
-            }
-        }
     }
 
     private function publishPreBuiltAssets(string $moduleDir, string $moduleName): void
