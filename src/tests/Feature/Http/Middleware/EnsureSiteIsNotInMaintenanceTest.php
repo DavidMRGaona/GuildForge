@@ -73,6 +73,36 @@ final class EnsureSiteIsNotInMaintenanceTest extends TestCase
         $this->get('/admin/login')->assertOk();
     }
 
+    public function test_public_login_page_stays_reachable_during_maintenance(): void
+    {
+        $this->enableMaintenance();
+
+        $this->get('/iniciar-sesion')->assertOk();
+    }
+
+    public function test_editor_can_log_in_through_the_public_login_during_maintenance(): void
+    {
+        $this->enableMaintenance();
+        $editor = UserModel::factory()->editor()->create();
+
+        $this->post('/iniciar-sesion', ['email' => $editor->email, 'password' => 'password'])
+            ->assertRedirect();
+
+        $this->assertAuthenticatedAs($editor);
+    }
+
+    public function test_member_who_logs_in_during_maintenance_still_gets_the_maintenance_page(): void
+    {
+        $this->enableMaintenance();
+        $member = UserModel::factory()->create();
+
+        $this->post('/iniciar-sesion', ['email' => $member->email, 'password' => 'password'])
+            ->assertRedirect(route('home'));
+
+        $this->assertAuthenticatedAs($member);
+        $this->get('/')->assertStatus(503);
+    }
+
     public function test_health_check_stays_up_during_maintenance(): void
     {
         $this->enableMaintenance();
