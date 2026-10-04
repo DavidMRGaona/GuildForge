@@ -22,6 +22,11 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Never read the bootstrap caches shared with the Docker container: a cached
+             config or route list would leak into tests and can vanish mid-run -->
+        <env name="APP_CONFIG_CACHE" value="bootstrap/cache/testing-config.php"/>
+        <env name="APP_ROUTES_CACHE" value="bootstrap/cache/testing-routes.php"/>
+        <env name="APP_EVENTS_CACHE" value="bootstrap/cache/testing-events.php"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
