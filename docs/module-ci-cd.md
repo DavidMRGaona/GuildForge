@@ -55,6 +55,12 @@ The workflow automatically:
 
 ## Setting up a new module
 
+Add the module's GitHub repository to its `module.json` so the updater can find its releases:
+
+```json
+"repository": "DavidMRGaona/guildforge-my-module"
+```
+
 ### 1. Create the workflow in the module
 
 Create `.github/workflows/release.yml` in the module repository:
@@ -127,6 +133,14 @@ announcements-1.0.0/
 # Also download the .sha256 file
 sha256sum -c announcements-1.0.0.zip.sha256
 ```
+
+## Updating installed modules
+
+The admin page *Sistema → Actualizaciones de módulos* detects and applies new releases:
+
+1. Each module declares its repository in `module.json` (`"repository": "owner/repo"`). Discovery (`module:discover`, run on every container start) copies it to `modules.source_owner`/`source_repo`. Modules installed before the field existed need it once: `php artisan module:set-source <name> <owner/repo>`.
+2. Detection lists the repository's releases (not `/releases/latest`, which ignores prereleases), skips drafts and picks the highest version. A module installed on a prerelease (`1.0.8-beta`) receives newer prereleases; stable installs only when `UPDATE_ALLOW_PRERELEASES=true`. It runs daily at 04:00 (`CheckModuleUpdatesJob` via `schedule:work`), from `php artisan module:check-updates [--force]` and from the page's *Comprobar* button, which bypasses the one-hour cache.
+3. *Actualizar* queues an `UpdateModuleJob` (one per module at a time) and the page follows its progress. The job downloads the ZIP, verifies the `.sha256` (an update without checksum is rejected), extracts it into `modules/.staging-<name>-*`, checks that it holds exactly this module, swaps it with the installed copy (kept as `modules/.previous-<name>-*`), publishes `public/build`, runs migrations and new seeders, and health-checks the module. Any failure after the swap renames the previous version back. Temporary files are always removed and the queue worker restarts afterwards; production OPcache revalidates file timestamps, so no container restart is needed.
 
 ## Prereleases
 
