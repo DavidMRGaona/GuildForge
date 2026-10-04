@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
@@ -11,6 +12,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Enums\UpdateStatus;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use Filament\Actions\Action;
@@ -29,6 +31,7 @@ use Illuminate\Support\Str;
 
 final class ModuleUpdatesPage extends Page implements HasTable
 {
+    use ChecksPermissions;
     use InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-path';
@@ -62,7 +65,25 @@ final class ModuleUpdatesPage extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('updates.apply');
+    }
+
+    /**
+     * Updates replace module code and run migrations, so the public site must be closed first.
+     */
+    public function isMaintenanceModeEnabled(): bool
+    {
+        return app(SettingsServiceInterface::class)->isMaintenanceModeEnabled();
+    }
+
+    private static function maintenanceRequiredMessage(): string
+    {
+        return __('filament.updates.modules.maintenance_required.title');
+    }
+
+    public function getMaintenanceSettingsUrl(): ?string
+    {
+        return SiteSettings::canAccess() ? SiteSettings::getUrl() : null;
     }
 
     public static function getNavigationBadge(): ?string
@@ -142,7 +163,10 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 ->requiresConfirmation()
                 ->modalHeading(__('filament.updates.modules.confirm.update_all_heading'))
                 ->modalDescription(__('filament.updates.modules.confirm.update_all_description'))
-                ->disabled(fn (): bool => $this->availableUpdates === [] || $this->queuedModules !== []),
+                ->disabled(fn (): bool => $this->availableUpdates === []
+                    || $this->queuedModules !== []
+                    || ! $this->isMaintenanceModeEnabled())
+                ->tooltip(fn (): ?string => $this->isMaintenanceModeEnabled() ? null : self::maintenanceRequiredMessage()),
         ];
     }
 
@@ -198,6 +222,45 @@ final class ModuleUpdatesPage extends Page implements HasTable
      */
     public function updateModule(string $moduleName): void
     {
+        if (! $this->ensureUpdatesCanBeApplied()) {
+            return;
+        }
+
+        $this->queueUpdate($moduleName);
+    }
+
+    public function updateAllModules(): void
+    {
+        if (! $this->ensureUpdatesCanBeApplied()) {
+            return;
+        }
+
+        foreach ($this->availableUpdates as $update) {
+            $this->queueUpdate((string) $update['module_name']);
+        }
+    }
+
+    /**
+     * Livewire methods can be called without the (disabled) buttons, so check again here.
+     */
+    private function ensureUpdatesCanBeApplied(): bool
+    {
+        abort_unless(self::canAccess(), 403);
+
+        if ($this->isMaintenanceModeEnabled()) {
+            return true;
+        }
+
+        Notification::make()
+            ->title(__('filament.updates.modules.notifications.maintenance_required'))
+            ->danger()
+            ->send();
+
+        return false;
+    }
+
+    private function queueUpdate(string $moduleName): void
+    {
         if (in_array($moduleName, $this->queuedModules, true)) {
             return;
         }
@@ -211,13 +274,6 @@ final class ModuleUpdatesPage extends Page implements HasTable
             ->title(__('filament.updates.modules.notifications.update_queued', ['module' => $moduleName]))
             ->info()
             ->send();
-    }
-
-    public function updateAllModules(): void
-    {
-        foreach ($this->availableUpdates as $update) {
-            $this->updateModule((string) $update['module_name']);
-        }
     }
 
     /**

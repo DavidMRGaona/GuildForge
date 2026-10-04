@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Pages;
 
+use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\DTOs\UpdateCheckResultDTO;
 use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
@@ -21,10 +22,12 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Mockery;
+use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
 
 final class ModuleUpdatesPageTest extends TestCase
 {
+    use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
 
     public function test_page_is_forbidden_for_editors(): void
@@ -32,6 +35,30 @@ final class ModuleUpdatesPageTest extends TestCase
         $this->actingAs(UserModel::factory()->editor()->create());
 
         $this->get(ModuleUpdatesPage::getUrl())->assertForbidden();
+    }
+
+    public function test_page_is_accessible_with_the_apply_updates_permission(): void
+    {
+        $this->actingAs($this->editorWithPermissions(['updates.apply']));
+
+        $this->get(ModuleUpdatesPage::getUrl())->assertOk();
+    }
+
+    public function test_page_warns_that_updates_need_maintenance_mode(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->assertSee(__('filament.updates.modules.maintenance_required.title'));
+    }
+
+    public function test_page_does_not_warn_while_maintenance_mode_is_enabled(): void
+    {
+        $this->enableMaintenance();
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->assertDontSee(__('filament.updates.modules.maintenance_required.title'));
     }
 
     public function test_page_shows_persisted_pending_updates_without_checking_github(): void
@@ -86,6 +113,7 @@ final class ModuleUpdatesPageTest extends TestCase
     public function test_update_module_queues_a_job(): void
     {
         Queue::fake();
+        $this->enableMaintenance();
         $this->actingAs(UserModel::factory()->admin()->create());
         $this->pendingUpdate();
 
@@ -97,9 +125,38 @@ final class ModuleUpdatesPageTest extends TestCase
         Queue::assertPushed(UpdateModuleJob::class, fn (UpdateModuleJob $job): bool => $job->moduleName === 'event-registrations');
     }
 
+    public function test_update_module_is_refused_without_maintenance_mode(): void
+    {
+        Queue::fake();
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->pendingUpdate();
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->call('updateModule', 'event-registrations')
+            ->assertSet('queuedModules', [])
+            ->assertNotified(__('filament.updates.modules.notifications.maintenance_required'));
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_update_all_is_refused_without_maintenance_mode(): void
+    {
+        Queue::fake();
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->pendingUpdate();
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->assertActionDisabled('updateAll')
+            ->call('updateAllModules')
+            ->assertNotified(__('filament.updates.modules.notifications.maintenance_required'));
+
+        Queue::assertNothingPushed();
+    }
+
     public function test_update_all_queues_one_job_per_pending_update(): void
     {
         Queue::fake();
+        $this->enableMaintenance();
         $this->actingAs(UserModel::factory()->admin()->create());
         $this->pendingUpdate();
         ModuleModel::factory()->enabled()->create([
@@ -118,6 +175,7 @@ final class ModuleUpdatesPageTest extends TestCase
     public function test_poll_reports_finished_updates_and_stops_following_them(): void
     {
         Queue::fake();
+        $this->enableMaintenance();
         $this->actingAs(UserModel::factory()->admin()->create());
         $this->pendingUpdate();
         $page = Livewire::test(ModuleUpdatesPage::class)->call('updateModule', 'event-registrations');
@@ -141,6 +199,7 @@ final class ModuleUpdatesPageTest extends TestCase
     public function test_poll_keeps_following_updates_that_are_still_running(): void
     {
         Queue::fake();
+        $this->enableMaintenance();
         $this->actingAs(UserModel::factory()->admin()->create());
         $this->pendingUpdate();
         $page = Livewire::test(ModuleUpdatesPage::class)->call('updateModule', 'event-registrations');
@@ -160,6 +219,7 @@ final class ModuleUpdatesPageTest extends TestCase
     public function test_poll_reports_an_update_that_started_before_the_page_queued_it(): void
     {
         Queue::fake();
+        $this->enableMaintenance();
         $this->actingAs(UserModel::factory()->admin()->create());
         $this->pendingUpdate();
         ModuleUpdateHistoryModel::create([
@@ -281,6 +341,11 @@ final class ModuleUpdatesPageTest extends TestCase
             downloadSize: null,
         ));
         $this->app->instance(ModuleUpdaterInterface::class, $updater);
+    }
+
+    private function enableMaintenance(): void
+    {
+        app(SettingsServiceInterface::class)->set('maintenance_enabled', '1');
     }
 
     private function pendingUpdate(): void

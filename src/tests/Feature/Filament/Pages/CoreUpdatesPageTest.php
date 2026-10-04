@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Pages;
 
+use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\DTOs\CoreUpdateStatusDTO;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Domain\Updates\Enums\UpdateStatus;
@@ -15,10 +16,12 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
 use Mockery;
+use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
 
 final class CoreUpdatesPageTest extends TestCase
 {
+    use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
 
     private const string DEPLOYED = 'abc1234def4567890abc123def4567890abc1234';
@@ -43,6 +46,44 @@ final class CoreUpdatesPageTest extends TestCase
         $this->actingAs(UserModel::factory()->admin()->create());
 
         $this->get(CoreUpdatesPage::getUrl())->assertOk();
+    }
+
+    public function test_page_is_accessible_with_the_apply_updates_permission(): void
+    {
+        $this->actingAs($this->editorWithPermissions(['updates.apply']));
+
+        $this->get(CoreUpdatesPage::getUrl())->assertOk();
+    }
+
+    public function test_pending_commits_warn_to_enable_maintenance_mode_first(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->checkReturns($this->behindStatus());
+
+        Livewire::test(CoreUpdatesPage::class)
+            ->call('checkForUpdates')
+            ->assertSee(__('filament.updates.core.status.maintenance_warning', ['branch' => 'main']));
+    }
+
+    public function test_pending_commits_do_not_warn_while_maintenance_mode_is_enabled(): void
+    {
+        app(SettingsServiceInterface::class)->set('maintenance_enabled', '1');
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->checkReturns($this->behindStatus());
+
+        Livewire::test(CoreUpdatesPage::class)
+            ->call('checkForUpdates')
+            ->assertDontSee(__('filament.updates.core.status.maintenance_warning', ['branch' => 'main']));
+    }
+
+    public function test_an_up_to_date_deployment_does_not_warn_about_maintenance_mode(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->checkReturns(new CoreUpdateStatusDTO(self::DEPLOYED, 'main', 0, self::DEPLOYED, [], false));
+
+        Livewire::test(CoreUpdatesPage::class)
+            ->call('checkForUpdates')
+            ->assertDontSee(__('filament.updates.core.status.maintenance_warning', ['branch' => 'main']));
     }
 
     public function test_page_shows_the_deployed_commit_and_branch(): void

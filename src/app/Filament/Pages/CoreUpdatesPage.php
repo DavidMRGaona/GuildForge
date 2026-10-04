@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Updates\Enums\UpdateStatus;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -25,6 +27,7 @@ use Illuminate\Support\Facades\Cache;
  */
 final class CoreUpdatesPage extends Page implements HasTable
 {
+    use ChecksPermissions;
     use InteractsWithTable;
 
     private const string LAST_CHECK_CACHE_KEY = 'updates.core.last_check';
@@ -76,7 +79,15 @@ final class CoreUpdatesPage extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('updates.apply');
+    }
+
+    /**
+     * Deployments are triggered by pushes to the branch, so this page can only warn.
+     */
+    public function isMaintenanceModeEnabled(): bool
+    {
+        return app(SettingsServiceInterface::class)->isMaintenanceModeEnabled();
     }
 
     public static function getNavigationLabel(): string

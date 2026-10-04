@@ -6,16 +6,16 @@ namespace Tests\Feature\Filament\Pages;
 
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Pages\SiteSettings;
-use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
-use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
 
 final class SiteSettingsTest extends TestCase
 {
+    use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
 
     public function test_member_cannot_access_site_settings(): void
@@ -143,34 +143,5 @@ final class SiteSettingsTest extends TestCase
         $this->assertSame('Nuevo nombre', $settings->get('guild_name'));
         $this->assertTrue($settings->isMaintenanceModeEnabled());
         $this->assertSame('Mensaje existente', $settings->get('maintenance_message'));
-    }
-
-    /**
-     * Panel access is granted by the editor role; the extra role carries the permissions under test.
-     *
-     * @param  array<string>  $permissionKeys
-     */
-    private function editorWithPermissions(array $permissionKeys): UserModel
-    {
-        $role = RoleModel::create([
-            'name' => 'settings_tester',
-            'display_name' => 'Settings tester',
-        ]);
-
-        foreach ($permissionKeys as $key) {
-            [$resource, $action] = explode('.', $key, 2);
-            $permission = PermissionModel::create([
-                'key' => $key,
-                'label' => $key,
-                'resource' => $resource,
-                'action' => $action,
-            ]);
-            $role->permissions()->attach($permission->id);
-        }
-
-        $user = UserModel::factory()->editor()->create();
-        $user->roles()->attach($role->id);
-
-        return $user;
     }
 }

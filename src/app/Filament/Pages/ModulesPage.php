@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
@@ -89,6 +90,11 @@ final class ModulesPage extends Page implements HasForms
         return auth()->user()?->isAdmin() ?? false;
     }
 
+    private static function installRequiresMaintenanceMessage(): string
+    {
+        return __('modules.filament.install_form.maintenance_required');
+    }
+
     /**
      * @return Collection<int, Module>
      */
@@ -157,6 +163,11 @@ final class ModulesPage extends Page implements HasForms
                 ->modalHeading(__('modules.filament.install_form.title'))
                 ->modalDescription(__('modules.filament.install_form.description'))
                 ->modalSubmitActionLabel(__('modules.filament.install_form.submit'))
+                // Installing (or updating from a ZIP) replaces code and runs migrations
+                ->disabled(fn (SettingsServiceInterface $settings): bool => ! $settings->isMaintenanceModeEnabled())
+                ->tooltip(fn (SettingsServiceInterface $settings): ?string => $settings->isMaintenanceModeEnabled()
+                    ? null
+                    : self::installRequiresMaintenanceMessage())
                 ->action(function (array $data, ModuleInstallerInterface $installer, ModuleManagerServiceInterface $moduleManager): void {
                     try {
                         $uploadedFile = $this->resolveUploadedFile($data['zipFile']);
