@@ -735,7 +735,7 @@ Modules can:
 - **Inertia.js** as the bridge between Laravel and Vue (no separate REST API)
 - **Pinia** for state management
 - **Tailwind CSS** for styling
-- **Vite 5** for build and HMR
+- **Vite 7** for build and HMR
 
 ### Layouts
 
