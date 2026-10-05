@@ -11,8 +11,9 @@ namespace App\Infrastructure\Support;
  *
  * This is optimize:clear minus cache:clear. Never use either of those two for this:
  * with the Redis store they run FLUSHDB on the cache database, which production
- * shares between tenants, so one tenant would drop the other's cache entries,
- * locks and queue:restart signal.
+ * shares between tenants, so one tenant would drop the other's cache entries and
+ * queue:restart signal. Cache locks live in Redis database 0 (lock_connection is
+ * "default"), not in the cache database.
  */
 final class FrameworkCacheCommands
 {

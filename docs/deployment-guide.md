@@ -120,7 +120,7 @@ make prod-ps       # Status
 
 The `docker/prod/entrypoint.sh` script runs when the container starts:
 
-1. Creates required directories (storage, bootstrap/cache, modules)
+1. Creates required directories (storage, bootstrap/cache, modules, public/build/modules)
 2. Syncs modules from the image (`php artisan module:sync-from-image`)
 3. Publishes module build assets (`php artisan module:publish-build-assets`)
 4. Sets permissions (775 for storage, bootstrap/cache, modules, public/build)
@@ -148,8 +148,8 @@ Manages four processes inside the production container:
 ```bash
 docker exec <container> supervisorctl status
 docker exec <container> supervisorctl restart php-fpm
-docker exec <container> supervisorctl stop queue-worker:* scheduler   # e.g. before a database dump
-docker exec <container> supervisorctl start queue-worker:* scheduler
+docker exec <container> supervisorctl stop 'queue-worker:*' scheduler   # e.g. before a database dump
+docker exec <container> supervisorctl start 'queue-worker:*' scheduler
 ```
 
 At startup supervisord logs `CRIT Server 'unix_http_server' running without any HTTP authentication checking`. This is expected, not a failure: the socket is owned by root with mode `0700`, so only root inside the container can use it.
@@ -239,6 +239,7 @@ Reusable workflow for publishing modules as ZIP packages in GitHub Releases.
 | `REDIS_PORT` | Redis port | `6379` |
 | `REDIS_PASSWORD` | Redis password | (secret or `null`) |
 | `REDIS_PREFIX` | Redis key prefix | `guildforge_` |
+| `REDIS_CACHE_DB` | Redis database of the cache store; each tenant sharing a Redis needs a different value | `1` |
 | `CACHE_STORE` | Cache driver | `database` |
 | `QUEUE_CONNECTION` | Queue driver | `database` |
 | `SESSION_DRIVER` | Session driver | `database` |
@@ -423,7 +424,7 @@ REDIS_CACHE_DB=1              # one value per tenant when tenants share a Redis
 
 In production both tenants use the same Redis 7.2 instance managed by Coolify. Each tenant needs its own `REDIS_PREFIX` and its own `REDIS_CACHE_DB` (for example `1` and `2`).
 
-**Never run `php artisan cache:clear` or `php artisan optimize:clear` in production.** With the Redis store they run `FLUSHDB` on the cache database, which drops every cache entry, the locks of unique jobs and `withoutOverlapping` tasks, and the `queue:restart` signal. To drop compiled files, run the individual commands (`config:clear`, `route:clear`, `event:clear`, `view:clear`) or `php artisan module:refresh-caches`, which clears and rebuilds them without touching the data cache (`App\Infrastructure\Support\FrameworkCacheCommands`).
+**Never run `php artisan cache:clear` or `php artisan optimize:clear` in production.** With the Redis store they run `FLUSHDB` on the cache database, which drops every cache entry and the `queue:restart` signal of every tenant using that database. Cache locks (unique jobs, `withoutOverlapping` tasks) are not there: `lock_connection` is `default`, so they live in database 0, which both tenants share, separated only by `REDIS_PREFIX`. To drop compiled files, run the individual commands (`config:clear`, `route:clear`, `event:clear`, `view:clear`) or `php artisan module:refresh-caches`, which clears and rebuilds them without touching the data cache (`App\Infrastructure\Support\FrameworkCacheCommands`).
 
 ---
 
@@ -488,7 +489,7 @@ A module update runs as a queued job (`UpdateModuleJob`, one per module at a tim
 
 1. Backs up the installed module, downloads the release ZIP, verifies its `.sha256`, extracts it into `modules/.staging-<name>-*` and swaps it with the installed copy (kept as `modules/.previous-<name>-*`); publishes the module's `public/build`.
 2. Runs `php artisan module:finish-update <name> <version>` in a new PHP process: the health check first, then migrations, new seeders and the recorded version in one database transaction. The commit is the point of no return.
-3. Runs `php artisan module:refresh-caches`, which clears the framework's compiled files (config, routes, events, views, compiled classes, Blade icons, Filament) and rebuilds the config, view and route caches that were in use, without touching the data cache.
+3. Runs `php artisan module:refresh-caches`, which clears the framework's compiled files (config, routes, events, views, compiled classes, Blade icons, Filament) without touching the data cache, then rebuilds the config and view caches when the config cache was in use, and the route cache when routes were cached.
 4. On a failure between the swap and the commit, restores the previous files. Finally runs `php artisan queue:restart` so the worker drops the old module classes.
 
 Sending `USR2` to PID 1 does not reload PHP-FPM: PID 1 is supervisord. To restart PHP-FPM or the workers by hand, use `supervisorctl` (see [Supervisord](#supervisord)).
@@ -575,7 +576,7 @@ Required settings for each tenant in Coolify:
 | Setting | Value | Why |
 |---------|-------|-----|
 | Healthcheck path | `/up` | With `/`, maintenance mode answers 503, the container turns unhealthy and the proxy takes the whole tenant down, admin panel included |
-| `REDIS_CACHE_DB` | A different value per tenant (`1`, `2`) | Both tenants share Redis; separate cache databases keep each tenant's cache, locks and `queue:restart` signal apart |
+| `REDIS_CACHE_DB` | A different value per tenant (`1`, `2`) | Both tenants share Redis; separate cache databases keep each tenant's cache and `queue:restart` signal apart (locks live in database 0, separated by `REDIS_PREFIX`) |
 | `REDIS_PREFIX` | A different value per tenant | Keeps session and queue keys apart in the shared database |
 
 To roll back, redeploy the previous image from the application's deployment history in Coolify. Modules are not part of the image, so rolling back the core does not roll back modules.
