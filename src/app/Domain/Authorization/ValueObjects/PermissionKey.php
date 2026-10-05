@@ -68,16 +68,6 @@ final readonly class PermissionKey implements Stringable
         if ($value === '') {
             throw new InvalidArgumentException('Permission key cannot be empty');
         }
-
-        // Check for module:resource.action or resource.action format
-        // Allows lowercase letters, numbers, hyphens, and underscores
-        $pattern = '/^(?:([a-z0-9_-]+):)?([a-z0-9_-]+)\.([a-z0-9_-]+)$/';
-
-        if (! preg_match($pattern, $value, $matches)) {
-            throw new InvalidArgumentException(
-                'Permission key must be in format "resource.action" or "module:resource.action"'
-            );
-        }
     }
 
     /**
@@ -85,8 +75,15 @@ final readonly class PermissionKey implements Stringable
      */
     private function parse(string $value): array
     {
+        // Check for module:resource.action or resource.action format
+        // Allows lowercase letters, numbers, hyphens, and underscores
         $pattern = '/^(?:([a-z0-9_-]+):)?([a-z0-9_-]+)\.([a-z0-9_-]+)$/';
-        preg_match($pattern, $value, $matches);
+
+        if (preg_match($pattern, $value, $matches) !== 1) {
+            throw new InvalidArgumentException(
+                'Permission key must be in format "resource.action" or "module:resource.action"'
+            );
+        }
 
         $module = $matches[1] !== '' ? $matches[1] : null;
         $resource = $matches[2];

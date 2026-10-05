@@ -19,7 +19,7 @@ services:
       - COMPOSER_MEMORY_LIMIT=-1
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.30-alpine
     container_name: guildforge_nginx
     restart: unless-stopped
     ports:
@@ -33,7 +33,7 @@ services:
       - app
 
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: guildforge_db
     restart: unless-stopped
     ports:
@@ -90,7 +90,7 @@ services:
     command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
 
   mailpit:
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.31
     container_name: guildforge_mailpit
     restart: unless-stopped
     ports:
@@ -103,7 +103,7 @@ services:
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
   redis:
-    image: redis:alpine
+    image: redis:7.2-alpine
     container_name: guildforge_redis
     restart: unless-stopped
     ports:

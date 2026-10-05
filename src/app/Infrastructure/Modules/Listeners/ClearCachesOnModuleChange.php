@@ -8,6 +8,7 @@ use App\Domain\Modules\Events\ModuleDisabled;
 use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Modules\Events\ModuleInstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
+use App\Infrastructure\Support\FrameworkCacheCommands;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -31,8 +32,11 @@ final class ClearCachesOnModuleChange
         }
 
         try {
-            // 1. Clear all Laravel caches (config, routes, views, events, compiled)
-            Artisan::call('optimize:clear');
+            // 1. Clear the compiled framework caches. Never optimize:clear or cache:clear:
+            //    with Redis they FLUSHDB a cache database shared with the other tenant
+            foreach (FrameworkCacheCommands::CLEAR as $command) {
+                Artisan::call($command);
+            }
 
             // 2. Clear Filament component discovery cache
             $filamentCachePath = config('filament.cache_path', base_path('bootstrap/cache/filament'));

@@ -4,11 +4,11 @@ This guide explains how to set up and use the CI/CD system to distribute GuildFo
 
 ## Architecture
 
-The system uses a **centralized reusable workflow** in the main repository (`runesword`) that is called from each module repository:
+The system uses a **centralized reusable workflow** in the host repository (`DavidMRGaona/GuildForge`) that is called from each module repository:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Main repository (runesword)                             │
+│  Host repository (DavidMRGaona/GuildForge)              │
 │  .github/workflows/reusable-module-release.yml          │
 │  - Shared validation, build, and release logic          │
 └────────────────────────────┬────────────────────────────┘
@@ -48,7 +48,7 @@ git push origin main --tags
 The workflow automatically:
 1. Validates that `module.json` exists and has the correct format
 2. Verifies that the tag matches the version in `module.json`
-3. Runs linting (Pint) and tests if they exist
+3. Runs the module's PHPUnit suite inside the host application: it checks out `DavidMRGaona/GuildForge` at `host_ref`, installs its Composer dependencies, places the module in `src/modules/<module_name>` and runs `vendor/bin/phpunit -c modules/<module_name>/phpunit.xml` (`.github/scripts/run-module-tests.sh`). Modules without `phpunit.xml` or tests are skipped with a notice; a failing test blocks the release
 4. Generates a ZIP with the correct structure
 5. Calculates a SHA256 checksum
 6. Creates a GitHub Release with the assets
@@ -74,7 +74,7 @@ on:
 
 jobs:
   release:
-    uses: DavidMRGaona/runesword/.github/workflows/reusable-module-release.yml@main
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-release.yml@main
     with:
       module_name: 'MODULE_NAME'  # ← Change this
     permissions:
@@ -140,7 +140,7 @@ The admin page *Sistema → Actualizaciones de módulos* detects and applies new
 
 1. Each module declares its repository in `module.json` (`"repository": "owner/repo"`). Discovery (`module:discover`, run on every container start) copies it to `modules.source_owner`/`source_repo`. Modules installed before the field existed need it once: `php artisan module:set-source <name> <owner/repo>`.
 2. Detection lists the repository's releases (not `/releases/latest`, which ignores prereleases), skips drafts and picks the highest version. A module installed on a prerelease (`1.0.8-beta`) receives newer prereleases; stable installs only when `UPDATE_ALLOW_PRERELEASES=true`. It runs daily at 04:00 (`CheckModuleUpdatesJob` via `schedule:work`), from `php artisan module:check-updates [--force]` and from the page's *Comprobar* button, which bypasses the one-hour cache.
-3. *Actualizar* queues an `UpdateModuleJob` (one per module at a time) and the page follows its progress. The job downloads the ZIP, verifies the `.sha256` (an update without checksum is rejected), extracts it into `modules/.staging-<name>-*`, checks that it holds exactly this module, swaps it with the installed copy (kept as `modules/.previous-<name>-*`), publishes `public/build`, runs migrations and new seeders, and health-checks the module. Any failure after the swap renames the previous version back. Temporary files are always removed and the queue worker restarts afterwards; production OPcache revalidates file timestamps, so no container restart is needed.
+3. *Actualizar* (only with maintenance mode on) queues an `UpdateModuleJob` (one per module at a time) and the page follows its progress. The job downloads the ZIP, verifies the `.sha256` (an update without checksum is rejected), extracts it into `modules/.staging-<name>-*`, checks that it holds exactly this module, swaps it with the installed copy (kept as `modules/.previous-<name>-*`) and publishes `public/build`. Then `module:finish-update` runs in a new PHP process: it health-checks the module first and only then runs migrations, new seeders and the version bump in one database transaction. Finally `module:refresh-caches` rebuilds the framework caches without clearing the data cache. Any failure between the swap and the commit renames the previous version back. Temporary files are always removed and the queue worker restarts afterwards; production OPcache revalidates file timestamps, so no container restart is needed.
 
 ## Prereleases
 
@@ -154,6 +154,8 @@ The reusable workflow accepts these parameters:
 |-----------|------|---------|-------------|
 | `module_name` | string | (required) | Module name in kebab-case |
 | `php_version` | string | `8.4` | PHP version for tests |
+| `node_version` | string | `24` | Node.js version for building Vue components |
+| `host_ref` | string | `main` | Branch, tag or SHA of `DavidMRGaona/GuildForge` the module is tested and built against |
 | `run_tests` | boolean | `true` | Run tests before the release |
 
 Example with options:
@@ -161,10 +163,10 @@ Example with options:
 ```yaml
 jobs:
   release:
-    uses: DavidMRGaona/runesword/.github/workflows/reusable-module-release.yml@main
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-release.yml@main
     with:
       module_name: 'my-module'
-      php_version: '8.3'
+      host_ref: 'main'
       run_tests: false
     permissions:
       contents: write
@@ -197,8 +199,10 @@ jobs:
 
 ### Tests fail
 
-- Verify that `composer.json` has the correct dependencies
-- Make sure the tests pass locally before creating the tag
+- Run the suite locally before tagging: `docker exec guildforge_app vendor/bin/phpunit -c modules/<module>/phpunit.xml`
+- CI uses a fresh clone: files that are not committed (and empty test directories) do not exist there
+- The module's `phpunit.xml` must keep the `APP_*_CACHE` environment block so tests never read the bootstrap caches
+- To release while a fix is pending, pass `run_tests: false` in the module's `release.yml` and revert it afterwards
 
 ### The release has no assets
 

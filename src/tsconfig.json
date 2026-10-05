@@ -32,7 +32,8 @@
         "baseUrl": ".",
         "paths": {
             "@/*": ["resources/js/*"],
-            "@modules/*": ["modules/*"]
+            "@modules/*": ["modules/*"],
+            "vue": ["./node_modules/vue"]
         },
 
         "types": ["vite/client", "node"]
