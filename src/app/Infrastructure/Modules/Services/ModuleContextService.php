@@ -12,6 +12,7 @@ use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 final class ModuleContextService implements ModuleContextServiceInterface
 {
@@ -152,8 +153,23 @@ final class ModuleContextService implements ModuleContextServiceInterface
     {
         $moduleKey = Str::snake(Str::studly($moduleName));
         $viewName = $moduleKey.'::'.$name;
+        $this->ensureViewExists($viewName);
 
         return $this->viewFactory->make($viewName, $data);
+    }
+
+    /**
+     * Module view names are built at runtime, so check them before rendering.
+     *
+     * @phpstan-assert view-string $viewName
+     *
+     * @throws InvalidArgumentException
+     */
+    private function ensureViewExists(string $viewName): void
+    {
+        if (! $this->viewFactory->exists($viewName)) {
+            throw new InvalidArgumentException("View [{$viewName}] not found.");
+        }
     }
 
     /**
