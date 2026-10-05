@@ -48,7 +48,7 @@ git push origin main --tags
 The workflow automatically:
 1. Validates that `module.json` exists and has the correct format
 2. Verifies that the tag matches the version in `module.json`
-3. Runs linting (Pint) and tests if they exist
+3. Runs the module's PHPUnit suite inside the host application: it checks out `DavidMRGaona/GuildForge` at `host_ref`, installs its Composer dependencies, places the module in `src/modules/<module_name>` and runs `vendor/bin/phpunit -c modules/<module_name>/phpunit.xml` (`.github/scripts/run-module-tests.sh`). Modules without `phpunit.xml` or tests are skipped with a notice; a failing test blocks the release
 4. Generates a ZIP with the correct structure
 5. Calculates a SHA256 checksum
 6. Creates a GitHub Release with the assets
@@ -74,7 +74,7 @@ on:
 
 jobs:
   release:
-    uses: DavidMRGaona/runesword/.github/workflows/reusable-module-release.yml@main
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-release.yml@main
     with:
       module_name: 'MODULE_NAME'  # ← Change this
     permissions:
@@ -154,6 +154,8 @@ The reusable workflow accepts these parameters:
 |-----------|------|---------|-------------|
 | `module_name` | string | (required) | Module name in kebab-case |
 | `php_version` | string | `8.4` | PHP version for tests |
+| `node_version` | string | `24` | Node.js version for building Vue components |
+| `host_ref` | string | `main` | Branch, tag or SHA of `DavidMRGaona/GuildForge` the module is tested and built against |
 | `run_tests` | boolean | `true` | Run tests before the release |
 
 Example with options:
@@ -161,10 +163,10 @@ Example with options:
 ```yaml
 jobs:
   release:
-    uses: DavidMRGaona/runesword/.github/workflows/reusable-module-release.yml@main
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-release.yml@main
     with:
       module_name: 'my-module'
-      php_version: '8.3'
+      host_ref: 'main'
       run_tests: false
     permissions:
       contents: write
@@ -197,8 +199,10 @@ jobs:
 
 ### Tests fail
 
-- Verify that `composer.json` has the correct dependencies
-- Make sure the tests pass locally before creating the tag
+- Run the suite locally before tagging: `docker exec guildforge_app vendor/bin/phpunit -c modules/<module>/phpunit.xml`
+- CI uses a fresh clone: files that are not committed (and empty test directories) do not exist there
+- The module's `phpunit.xml` must keep the `APP_*_CACHE` environment block so tests never read the bootstrap caches
+- To release while a fix is pending, pass `run_tests: false` in the module's `release.yml` and revert it afterwards
 
 ### The release has no assets
 

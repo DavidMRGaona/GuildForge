@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: '24'
+      host_ref:
+        description: 'Ref of DavidMRGaona/GuildForge to test and build against (branch, tag or SHA)'
+        required: false
+        type: string
+        default: 'main'
       run_tests:
         description: 'Run tests before release'
         required: false
@@ -91,52 +96,53 @@ jobs:
     needs: validate
     if: inputs.run_tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout host application
+        uses: actions/checkout@v7
+        with:
+          repository: DavidMRGaona/GuildForge
+          ref: ${{ inputs.host_ref }}
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ inputs.php_version }}
-          extensions: mbstring, xml, ctype, json
+          extensions: pdo_pgsql, pdo_sqlite, redis, gd, zip, bcmath, intl
           coverage: none
 
       - name: Get Composer cache directory
         id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Composer dependencies
         uses: actions/cache@v6
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
+          key: ${{ runner.os }}-php${{ inputs.php_version }}-composer-${{ hashFiles('src/composer.lock') }}
+          restore-keys: ${{ runner.os }}-php${{ inputs.php_version }}-composer-
 
-      - name: Install dependencies
-        run: |
-          if [ -f "composer.json" ]; then
-            composer install --prefer-dist --no-progress
-          fi
+      - name: Install host dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Run Pint
+      - name: Prepare environment
         run: |
-          if [ -f "vendor/bin/pint" ]; then
-            vendor/bin/pint --test
-          elif command -v pint &> /dev/null; then
-            pint --test
-          else
-            echo "Pint not available, skipping lint"
-          fi
+          cp .env.example .env
+          php artisan key:generate
 
-      - name: Run tests
-        run: |
-          if [ -d "tests" ] && [ -f "vendor/bin/pest" ]; then
-            vendor/bin/pest
-          elif [ -d "tests" ] && [ -f "vendor/bin/phpunit" ]; then
-            vendor/bin/phpunit
-          else
-            echo "No tests found, skipping"
-          fi
+      # Checked out after the host is installed: Composer scripts and key:generate
+      # boot the application without any module, exactly as in the host CI
+      - name: Checkout module
+        uses: actions/checkout@v7
+        with:
+          path: src/modules/${{ inputs.module_name }}
+
+      - name: Run module tests
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
+        run: sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME"
 
   release:
     name: Create release
@@ -162,6 +168,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: DavidMRGaona/GuildForge
+          ref: ${{ inputs.host_ref }}
           path: guildforge-app
           token: ${{ secrets.GITHUB_TOKEN }}
           sparse-checkout: |
