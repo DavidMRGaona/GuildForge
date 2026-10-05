@@ -70,6 +70,6 @@ trait DeletesCloudinaryImages
      */
     protected function getCloudinaryImageFields(): array
     {
-        return $this->cloudinaryImageFields ?? [];
+        return $this->cloudinaryImageFields;
     }
 }
