@@ -16,7 +16,7 @@ on:
         description: 'Node.js version for building Vue components'
         required: false
         type: string
-        default: '20'
+        default: '24'
       run_tests:
         description: 'Run tests before release'
         required: false
