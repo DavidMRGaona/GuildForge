@@ -57,7 +57,7 @@ const markerIcon = L.icon({
             />
             <LMarker :lat-lng="center" :icon="markerIcon">
                 <LPopup>
-                    <div class="text-sm">
+                    <div v-if="location" class="text-sm">
                         <strong>{{ location.name }}</strong>
                         <br />
                         {{ location.address }}
