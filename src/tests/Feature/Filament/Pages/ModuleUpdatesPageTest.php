@@ -12,6 +12,7 @@ use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Filament\Pages\ModuleUpdatesPage;
+use App\Filament\Pages\SiteSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
@@ -50,6 +51,14 @@ final class ModuleUpdatesPageTest extends TestCase
 
         Livewire::test(ModuleUpdatesPage::class)
             ->assertSee(__('filament.updates.modules.maintenance_required.title'));
+    }
+
+    public function test_maintenance_warning_links_to_the_maintenance_tab(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->assertSeeHtml('href="'.SiteSettings::getUrl(['tab' => 'settings-maintenance-tab']).'"');
     }
 
     public function test_page_does_not_warn_while_maintenance_mode_is_enabled(): void
