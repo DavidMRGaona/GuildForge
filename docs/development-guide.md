@@ -41,8 +41,8 @@ make up
 This brings up all the services defined in `docker-compose.yml`:
 - **app** (PHP 8.4 FPM) - application server
 - **nginx** - web server (port 8080)
-- **db** - PostgreSQL 16 (port 5432)
-- **node** - Node.js 22 with Vite HMR (port 5173)
+- **db** - PostgreSQL 17 (port 5432)
+- **node** - Node.js 24 with Vite HMR (port 5173)
 - **queue** - Laravel queue worker
 - **mailpit** - development mail server (port 8025)
 - **redis** - cache and sessions (port 6379)
@@ -431,4 +431,4 @@ npm run dev     # Vite server with HMR only
 npm run build   # Type checking + production build
 ```
 
-> **Note**: requires PHP 8.4, Node 22, PostgreSQL 16, and Redis installed locally. See `src/composer.json` and `src/package.json` for the full list of scripts.
+> **Note**: requires PHP 8.4, Node 24 (22.13+ also works, see `engines` in `src/package.json`), PostgreSQL 17, and Redis installed locally. See `src/composer.json` and `src/package.json` for the full list of scripts.
