@@ -22,13 +22,18 @@ COPY --from=frontend-sources /src/ .
 # vite build only: types are checked by CI, which every deployment waits for
 RUN npx vite build
 
-# Build module assets (modules with package.json and vite.config.ts)
-RUN for dir in modules/*/; do \
-    if [ -f "$dir/package.json" ] && [ -f "$dir/vite.config.ts" ]; then \
-        echo "Building module: $dir" && \
-        cd "/build/$dir" && npm install && npm run build && cd /build; \
-    fi; \
-done || true
+# Build module assets (modules with package.json and vite.config.ts). Every module repo
+# tracks its lockfile, so npm ci; a module that fails to install or build fails the
+# image. Coolify builds carry no modules (src/modules is not in the host repo), so this
+# loop only does work in prod-local builds.
+RUN --mount=type=cache,target=/root/.npm \
+    for dir in modules/*/; do \
+        if [ -f "$dir/package.json" ] && [ -f "$dir/vite.config.ts" ]; then \
+            echo "Building module: $dir"; \
+            (cd "/build/$dir" && npm ci && npm run build) \
+                || { echo "Module build failed: $dir" >&2; exit 1; }; \
+        fi; \
+    done
 
 # Consolidate module build artifacts for easy COPY to stage 2
 RUN mkdir -p /module-builds && \
