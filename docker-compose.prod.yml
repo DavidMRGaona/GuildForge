@@ -28,7 +28,7 @@ services:
         condition: service_healthy
 
   redis-prod:
-    image: redis:alpine
+    image: redis:7.2-alpine
     container_name: guildforge_redis_prod
     restart: unless-stopped
     volumes:
@@ -42,7 +42,7 @@ services:
       retries: 5
 
   db-prod:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: guildforge_db_prod
     restart: unless-stopped
     environment:
