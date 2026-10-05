@@ -14,10 +14,11 @@ Platform for wargames and role-playing games guilds with:
 | Frontend bridge     | Inertia.js                                    |
 | Frontend framework  | Vue 3 (Composition API with `<script setup>`) |
 | Frontend language   | TypeScript (strict mode)                      |
-| Build tool          | Vite 5                                        |
+| Build tool          | Vite 7                                        |
+| Frontend runtime    | Node.js 24 LTS                                |
 | CSS framework       | Tailwind CSS                                  |
 | State management    | Pinia                                         |
-| Database (dev/prod) | PostgreSQL 16                                 |
+| Database (dev/prod) | PostgreSQL 17                                 |
 | Database (testing)  | SQLite in-memory                              |
 | Containerization    | Docker + Docker Compose                       |
 
@@ -197,16 +198,18 @@ The project uses GitHub Actions for CI/CD:
 
 ### CI jobs
 
-- **test**: PHP 8.4, PostgreSQL 17, Redis 7. Runs migrations and tests in parallel.
+- **test**: PHP 8.4, PostgreSQL 17, Redis 7.2. Runs migrations and tests in parallel.
 - **lint**: TypeScript type-check and ESLint.
 
 ### Required secrets
 
 Configure in GitHub → Settings → Secrets and variables → Actions:
 
-| Secret                | Description                          |
-|-----------------------|--------------------------------------|
-| `COOLIFY_WEBHOOK_URL` | Coolify webhook URL for deployments  |
+| Secret                 | Description                                          |
+|------------------------|------------------------------------------------------|
+| `WEBHOOK_URL_SERVER_1` | Coolify deploy webhook URL of the first tenant       |
+| `WEBHOOK_URL_SERVER_2` | Coolify deploy webhook URL of the second tenant      |
+| `DEPLOY_API_TOKEN`     | Coolify API token sent as the webhooks' bearer token |
 
 ## License
 

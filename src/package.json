@@ -3,6 +3,9 @@
     "name": "guildforge",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": "^22.13.0 || >=24"
+    },
     "scripts": {
         "dev": "vite",
         "build": "vue-tsc --noEmit && vite build",
@@ -36,7 +39,7 @@
         "@tailwindcss/typography": "^0.5.19",
         "@tailwindcss/vite": "^4.0.0",
         "@types/leaflet": "^1.9.21",
-        "@types/node": "^25.0.9",
+        "@types/node": "^24.19.1",
         "@typescript-eslint/eslint-plugin": "^8.53.0",
         "@typescript-eslint/parser": "^8.53.0",
         "@vitejs/plugin-vue": "^6.0.3",

@@ -16,7 +16,12 @@ on:
         description: 'Node.js version for building Vue components'
         required: false
         type: string
-        default: '20'
+        default: '24'
+      host_ref:
+        description: 'Ref of DavidMRGaona/GuildForge to test and build against (branch, tag or SHA)'
+        required: false
+        type: string
+        default: 'main'
       run_tests:
         description: 'Run tests before release'
         required: false
@@ -38,7 +43,7 @@ jobs:
       version: ${{ steps.manifest.outputs.version }}
       is_prerelease: ${{ steps.manifest.outputs.is_prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Validate module.json exists
         run: |
@@ -91,52 +96,53 @@ jobs:
     needs: validate
     if: inputs.run_tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout host application
+        uses: actions/checkout@v7
+        with:
+          repository: DavidMRGaona/GuildForge
+          ref: ${{ inputs.host_ref }}
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ inputs.php_version }}
-          extensions: mbstring, xml, ctype, json
+          extensions: pdo_pgsql, pdo_sqlite, redis, gd, zip, bcmath, intl
           coverage: none
 
       - name: Get Composer cache directory
         id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
+          key: ${{ runner.os }}-php${{ inputs.php_version }}-composer-${{ hashFiles('src/composer.lock') }}
+          restore-keys: ${{ runner.os }}-php${{ inputs.php_version }}-composer-
 
-      - name: Install dependencies
-        run: |
-          if [ -f "composer.json" ]; then
-            composer install --prefer-dist --no-progress
-          fi
+      - name: Install host dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Run Pint
+      - name: Prepare environment
         run: |
-          if [ -f "vendor/bin/pint" ]; then
-            vendor/bin/pint --test
-          elif command -v pint &> /dev/null; then
-            pint --test
-          else
-            echo "Pint not available, skipping lint"
-          fi
+          cp .env.example .env
+          php artisan key:generate
 
-      - name: Run tests
-        run: |
-          if [ -d "tests" ] && [ -f "vendor/bin/pest" ]; then
-            vendor/bin/pest
-          elif [ -d "tests" ] && [ -f "vendor/bin/phpunit" ]; then
-            vendor/bin/phpunit
-          else
-            echo "No tests found, skipping"
-          fi
+      # Checked out after the host is installed: Composer scripts and key:generate
+      # boot the application without any module, exactly as in the host CI
+      - name: Checkout module
+        uses: actions/checkout@v7
+        with:
+          path: src/modules/${{ inputs.module_name }}
+
+      - name: Run module tests
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
+        run: sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME"
 
   release:
     name: Create release
@@ -145,23 +151,24 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ needs.validate.outputs.version }}
-      release_url: ${{ steps.create_release.outputs.html_url }}
+      release_url: ${{ steps.create_release.outputs.url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
         if: hashFiles('package.json') != ''
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
 
       - name: Checkout main app for build context
         if: hashFiles('package.json') != ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: DavidMRGaona/GuildForge
+          ref: ${{ inputs.host_ref }}
           path: guildforge-app
           token: ${{ secrets.GITHUB_TOKEN }}
           sparse-checkout: |
@@ -256,7 +263,7 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: "${{ inputs.module_name }} v${{ needs.validate.outputs.version }}"
           body: |

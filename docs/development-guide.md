@@ -41,8 +41,8 @@ make up
 This brings up all the services defined in `docker-compose.yml`:
 - **app** (PHP 8.4 FPM) - application server
 - **nginx** - web server (port 8080)
-- **db** - PostgreSQL 16 (port 5432)
-- **node** - Node.js 22 with Vite HMR (port 5173)
+- **db** - PostgreSQL 17 (port 5432)
+- **node** - Node.js 24 with Vite HMR (port 5173)
 - **queue** - Laravel queue worker
 - **mailpit** - development mail server (port 8025)
 - **redis** - cache and sessions (port 6379)
@@ -285,6 +285,22 @@ make module-zip     # Select a module and generate a ZIP with SHA-256 checksum
 
 The package is generated in the `dist/` directory along with its `.sha256` verification file.
 
+### Upgrading an existing checkout
+
+The development stack now uses PostgreSQL 17 and Redis 7.2. After pulling this change, an existing stack crash-loops: PostgreSQL 17 cannot open a data directory created by PostgreSQL 16, and Redis 7.2 cannot read an RDB file written by Redis 8.x. Recreate both volumes, keeping the database:
+
+```bash
+make db-backup     # while the old containers are still running
+make down
+docker volume ls | grep guildforge      # find the real names: <project>_guildforge_db_data, <project>_guildforge_redis_data
+docker volume rm runesword_guildforge_db_data runesword_guildforge_redis_data   # use the names listed above
+make up
+make db-restore    # restores the latest backup into the new, empty database
+make migrate       # only if the branch adds migrations newer than the backup
+```
+
+The Redis volume is not backed up: it holds the cache and, if your `.env` points sessions or queues at Redis, sessions and pending jobs, which are lost.
+
 ---
 
 ## Testing
@@ -431,4 +447,4 @@ npm run dev     # Vite server with HMR only
 npm run build   # Type checking + production build
 ```
 
-> **Note**: requires PHP 8.4, Node 22, PostgreSQL 16, and Redis installed locally. See `src/composer.json` and `src/package.json` for the full list of scripts.
+> **Note**: requires PHP 8.4, Node 24 (22.13+ also works, see `engines` in `src/package.json`), PostgreSQL 17, and Redis installed locally. See `src/composer.json` and `src/package.json` for the full list of scripts.
