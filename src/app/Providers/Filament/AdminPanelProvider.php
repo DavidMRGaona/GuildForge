@@ -203,7 +203,7 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_START,
                 fn (): string => app(SettingsServiceInterface::class)->isMaintenanceModeEnabled()
                     ? view('filament.components.maintenance-banner', [
-                        'settingsUrl' => SiteSettings::canAccess() ? SiteSettings::getUrl() : null,
+                        'settingsUrl' => SiteSettings::canAccess() ? SiteSettings::getMaintenanceTabUrl() : null,
                     ])->render()
                     : '',
             );

@@ -83,7 +83,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
 
     public function getMaintenanceSettingsUrl(): ?string
     {
-        return SiteSettings::canAccess() ? SiteSettings::getUrl() : null;
+        return SiteSettings::canAccess() ? SiteSettings::getMaintenanceTabUrl() : null;
     }
 
     public static function getNavigationBadge(): ?string

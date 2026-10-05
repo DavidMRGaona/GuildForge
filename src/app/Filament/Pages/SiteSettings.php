@@ -86,6 +86,11 @@ final class SiteSettings extends Page implements HasForms
         'maintenance_message',
     ];
 
+    /**
+     * Filament tab id: tabs container id, tab id and "-tab", used by the ?tab= query string.
+     */
+    private const string MAINTENANCE_TAB = 'settings-maintenance-tab';
+
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?int $navigationSort = 100;
@@ -115,6 +120,11 @@ final class SiteSettings extends Page implements HasForms
     public static function canAccess(): bool
     {
         return self::userCan('settings.manage') || self::userCan('settings.maintenance');
+    }
+
+    public static function getMaintenanceTabUrl(): string
+    {
+        return self::getUrl(['tab' => self::MAINTENANCE_TAB]);
     }
 
     /**
@@ -206,6 +216,8 @@ final class SiteSettings extends Page implements HasForms
         return $form
             ->schema([
                 Tabs::make('Settings')
+                    ->id('settings')
+                    ->persistTabInQueryString()
                     ->tabs([
                         Tab::make(__('filament.settings.tabs.general'))
                             ->icon('heroicon-o-cog-6-tooth')
@@ -479,6 +491,7 @@ final class SiteSettings extends Page implements HasForms
                             ]),
 
                         Tab::make(__('filament.settings.tabs.maintenance'))
+                            ->id('maintenance')
                             ->icon('heroicon-o-wrench-screwdriver')
                             ->visible(self::userCan('settings.maintenance'))
                             ->schema([
