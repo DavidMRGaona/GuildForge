@@ -10,6 +10,7 @@ use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\View\Modules\CompatibilityIssueFormatter;
 use Illuminate\Console\Command;
 
 final class ModuleEnableCommand extends Command
@@ -33,6 +34,7 @@ final class ModuleEnableCommand extends Command
 
     public function __construct(
         private readonly ModuleManagerServiceInterface $moduleManager,
+        private readonly CompatibilityIssueFormatter $formatter,
     ) {
         parent::__construct();
     }
@@ -94,7 +96,7 @@ final class ModuleEnableCommand extends Command
 
             return self::FAILURE;
         } catch (ModuleIncompatibleException $e) {
-            $this->error($e->getMessage());
+            $this->error($this->formatter->cannotEnable($moduleName, $e->issues));
 
             return self::FAILURE;
         } catch (ModuleDependencyException $e) {

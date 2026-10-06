@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament\Pages;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Updates\DTOs\BlockedReleaseDTO;
 use App\Application\Updates\DTOs\UpdateCheckResultDTO;
 use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Filament\Pages\ModuleUpdatesPage;
@@ -307,7 +310,71 @@ final class ModuleUpdatesPageTest extends TestCase
             ->assertActionMounted('preview')
             ->assertSee('v1.0.8-beta')
             ->assertSee('v1.0.9-beta')
-            ->assertSeeHtml('<li>Arreglados los correos duplicados</li>');
+            ->assertSeeHtml('<li>Arreglados los correos duplicados</li>')
+            ->assertSee(__('filament.updates.modules.preview.compatible'));
+    }
+
+    public function test_page_lists_persisted_blocked_releases_without_an_update_button(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        ModuleModel::factory()->enabled()->create([
+            'name' => 'announcements',
+            'version' => '1.1.0',
+            'source_owner' => 'o',
+            'source_repo' => 'announcements',
+            'latest_blocked_version' => '2.0.0',
+            'latest_blocked_reason' => [(new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED))->toArray()],
+        ]);
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->assertSee(__('filament.updates.modules.blocked.heading'))
+            ->assertSee('2.0.0 disponible, requiere core ^3.0')
+            ->assertDontSeeHtml("updateModule('announcements')");
+        $this->assertNull(ModuleUpdatesPage::getNavigationBadge());
+    }
+
+    public function test_check_shows_the_blocked_releases_it_found(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $checker = Mockery::mock(ModuleUpdateCheckerInterface::class);
+        $checker->shouldReceive('checkAll')->with(true)->once()->andReturn(new UpdateCheckResultDTO(new Collection, [], [], [
+            new BlockedReleaseDTO('announcements', 'Anuncios', '1.1.0', '2.0.0', [
+                new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED),
+            ]),
+        ]));
+        $this->app->instance(ModuleUpdateCheckerInterface::class, $checker);
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->call('checkForUpdates')
+            ->assertCount('blockedReleases', 1)
+            ->assertSee('2.0.0 disponible, requiere core ^3.0');
+    }
+
+    public function test_preview_shows_why_a_release_is_not_compatible(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $updater = Mockery::mock(ModuleUpdaterInterface::class);
+        $updater->shouldReceive('preview')->andReturn(new UpdatePreviewDTO(
+            moduleName: 'announcements',
+            fromVersion: '1.1.0',
+            toVersion: '2.0.0',
+            pendingMigrations: [],
+            newSeeders: [],
+            changelog: '',
+            isMajorUpdate: true,
+            coreCompatible: false,
+            coreRequirement: '^3.0',
+            downloadUrl: null,
+            downloadSize: null,
+            compatibilityIssues: [(new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED))->toArray()],
+        ));
+        $this->app->instance(ModuleUpdaterInterface::class, $updater);
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->mountAction('preview', ['module' => 'announcements'])
+            ->assertSee(__('filament.updates.modules.preview.incompatible'))
+            ->assertSee('Requiere core ^3.0')
+            ->assertSee('requiere core ^3.0, instalado 2.6.0');
     }
 
     public function test_preview_does_not_render_html_from_the_release_notes(): void

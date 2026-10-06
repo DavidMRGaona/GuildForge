@@ -92,7 +92,7 @@ final class ModuleEnableCommandTest extends TestCase
         ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'version' => '1.0.0']);
 
         $this->artisan('module:enable', ['module' => 'test-module'])
-            ->expectsOutputToContain('requires core ^99.0')
+            ->expectsOutput('No se puede habilitar test-module: requiere core ^99.0, instalado 2.6.0')
             ->assertExitCode(1);
 
         $this->assertDatabaseHas('modules', ['name' => 'test-module', 'status' => 'disabled']);

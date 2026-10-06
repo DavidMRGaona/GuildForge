@@ -214,7 +214,7 @@ final class UpdateModuleCommandTest extends TestCase
 
         $this->artisan('module:update', ['name' => 'notifications', '--force' => true])
             ->expectsOutput('Version 1.1.0 cannot be installed on this host:')
-            ->expectsOutput('  - requires PHP extension intl')
+            ->expectsOutput('  - requiere la extensión PHP intl')
             ->doesntExpectOutputToContain('Incompatible with current core version')
             ->assertExitCode(1);
     }

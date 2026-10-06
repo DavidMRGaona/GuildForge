@@ -7,8 +7,8 @@ namespace App\Console\Commands\Updates;
 use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
-use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\View\Modules\CompatibilityIssueFormatter;
 use Illuminate\Console\Command;
 
 final class UpdateModuleCommand extends Command
@@ -119,8 +119,10 @@ final class UpdateModuleCommand extends Command
 
         $this->error("Version {$preview->toVersion} cannot be installed on this host:");
 
+        $formatter = app(CompatibilityIssueFormatter::class);
+
         foreach ($preview->compatibilityIssues as $issue) {
-            $this->error('  - '.CompatibilityIssue::fromArray($issue)->describe());
+            $this->error('  - '.$formatter->format($issue));
         }
     }
 

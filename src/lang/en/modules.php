@@ -72,6 +72,37 @@ return [
         'update_failed' => 'Failed to update module: :error.',
     ],
 
+    // Module compatibility with this host (core, PHP, Laravel, Filament, extensions)
+    'compatibility' => [
+        'requirements' => [
+            'core' => 'core',
+            'php' => 'PHP',
+            'laravel' => 'Laravel',
+            'filament' => 'Filament',
+            'extension' => 'extension',
+            'manifest' => 'module.json',
+        ],
+        'reasons' => [
+            'unsatisfied' => 'requires :requirement :required, installed :found',
+            'missing_extension' => 'requires the PHP extension :required',
+            'invalid_constraint' => 'invalid :requirement constraint: ":required"',
+            'unknown_host_version' => 'requires :requirement :required and the installed version could not be determined',
+            'manifest_missing' => 'module.json not found',
+            'manifest_invalid' => 'module.json is not valid',
+        ],
+        'short' => [
+            'unsatisfied' => 'requires :requirement :required',
+        ],
+        'badge' => 'Incompatible',
+        'enable_blocked' => 'Cannot be enabled: :reasons',
+        'banner' => '{1} An enabled module was not loaded because it is not compatible with this version:|[2,*] :count enabled modules were not loaded because they are not compatible with this version:',
+        'banner_link' => 'View modules',
+        'list' => [
+            'yes' => 'yes',
+            'no' => 'no: :reason',
+        ],
+    ],
+
     // Filament admin interface
     'filament' => [
         'page' => [
@@ -143,6 +174,8 @@ return [
             'migrations_run' => ':count migration(s) executed.',
             'migrations_run_first_install' => 'Migrations have been executed.',
             'data_deleted' => 'Module data has been deleted.',
+            'incompatible' => 'Cannot enable :name: :reasons',
+            'incompatible_package' => 'The package :name :version is not compatible: :reasons',
         ],
         'confirm' => [
             'uninstall_title' => 'Uninstall module?',
