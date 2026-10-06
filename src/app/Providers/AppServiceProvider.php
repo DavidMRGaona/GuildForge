@@ -11,6 +11,9 @@ use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
 use App\Application\Mail\Services\MailStatisticsServiceInterface;
 use App\Application\Mail\Services\MailTestServiceInterface;
+use App\Application\Modules\Services\HostEnvironmentProviderInterface;
+use App\Application\Modules\Services\ModuleCompatibilityChecker;
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleContextServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
@@ -54,6 +57,7 @@ use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\Services\ConstraintMatcher;
 use App\Domain\Modules\ValueObjects\CoreTableRegistry;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Domain\Repositories\ArticleRepositoryInterface;
@@ -74,11 +78,14 @@ use App\Infrastructure\Mail\Services\MailStatisticsService;
 use App\Infrastructure\Mail\Services\MailTestService;
 use App\Infrastructure\Mail\Ses\SnsMessageValidator;
 use App\Infrastructure\Mail\Ses\SnsMessageValidatorInterface;
+use App\Infrastructure\Modules\Services\HostEnvironmentProvider;
 use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
+use App\Infrastructure\Modules\Services\ModuleCompatibilityService;
 use App\Infrastructure\Modules\Services\ModuleContextService;
 use App\Infrastructure\Modules\Services\ModuleDependencyResolver;
 use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
 use App\Infrastructure\Modules\Services\ModuleManagerService;
+use App\Infrastructure\Modules\Services\ModuleManifestReader;
 use App\Infrastructure\Modules\Services\ModuleMigrationAnalyzer;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use App\Infrastructure\Modules\Services\ModuleNavigationRegistry;
@@ -256,6 +263,14 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ModuleManagerServiceInterface::class, ModuleManagerService::class);
+
+        // Module compatibility gate: resolved while AdminPanelProvider registers, so none of these
+        // may depend on services that capture modules.path when they are built
+        $this->app->singleton(ConstraintMatcher::class);
+        $this->app->singleton(ModuleManifestReader::class, fn ($app): ModuleManifestReader => new ModuleManifestReader($app->make(LoggerInterface::class)));
+        $this->app->singleton(ModuleCompatibilityChecker::class);
+        $this->app->singleton(HostEnvironmentProviderInterface::class, HostEnvironmentProvider::class);
+        $this->app->singleton(ModuleCompatibilityServiceInterface::class, ModuleCompatibilityService::class);
 
         // Module SDK services
         $this->app->singleton(StubRenderer::class, function () {
