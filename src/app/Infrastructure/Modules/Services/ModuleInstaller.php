@@ -225,6 +225,12 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
             }
         }
 
+        // As ModuleManifestReader does: a malformed requirement becomes an invalid constraint,
+        // so the package is still refused, but with that reason instead of "invalid JSON"
+        if (array_key_exists('requires', $data)) {
+            $data['requires'] = ModuleManifestDTO::normalizeRequires($data['requires'])['requires'];
+        }
+
         try {
             return ModuleManifestDTO::fromArray($data);
         } catch (InvalidArgumentException $e) {

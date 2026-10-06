@@ -9,10 +9,12 @@ use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
+use App\Infrastructure\Modules\Services\EnabledModulesResolver;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -122,6 +124,36 @@ final class EnabledModulesResolverTest extends TestCase
 
         $resolver->reset();
         $this->assertSame(['test-module'], $resolver->names());
+    }
+
+    public function test_a_rejection_is_logged_once_across_processes(): void
+    {
+        $this->enabled('incompatible-module');
+        Log::spy();
+
+        // Every scheduler tick is a new process with a new resolver
+        app()->make(EnabledModulesResolver::class)->names();
+        app()->make(EnabledModulesResolver::class)->names();
+
+        Log::shouldHaveReceived('warning')
+            ->with('[EnabledModulesResolver] Module rejected', \Mockery::on(
+                static fn (array $context): bool => $context['module'] === 'incompatible-module',
+            ))
+            ->once();
+    }
+
+    public function test_a_different_reason_is_logged_again(): void
+    {
+        $this->enabled('incompatible-module');
+        Log::spy();
+
+        app()->make(EnabledModulesResolver::class)->names();
+
+        $manifest = "{$this->modulesPath}/incompatible-module/module.json";
+        File::put($manifest, str_replace('^99.0', '^999.0', File::get($manifest)));
+        app()->make(EnabledModulesResolver::class)->names();
+
+        Log::shouldHaveReceived('warning')->twice();
     }
 
     private function resolver(): EnabledModulesResolverInterface

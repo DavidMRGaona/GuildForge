@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
+use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
@@ -626,6 +627,31 @@ final class ModuleInstallerTest extends TestCase
         } finally {
             $this->assertFileExists($this->modulesPath.'/update-test-module/old-file.txt');
         }
+    }
+
+    public function test_a_malformed_requirement_is_refused_with_its_reason_not_as_invalid_json(): void
+    {
+        $this->compatibility->shouldReceive('checkManifest')
+            ->once()
+            ->with(Mockery::on(static fn (ModuleManifestDTO $manifest): bool => ($manifest->requires['core'] ?? null) === ''))
+            ->andReturn(new CompatibilityResult([
+                new CompatibilityIssue(RequirementType::Core, '', '2.6.0', CompatibilityIssue::INVALID_CONSTRAINT),
+            ]));
+        $zipPath = $this->createValidZip([
+            'module.json' => (string) json_encode([
+                'name' => 'future-module', 'version' => '9.0.0', 'namespace' => 'Modules\\FutureModule',
+                'provider' => 'FutureModuleServiceProvider', 'requires' => ['core' => null],
+            ]),
+        ]);
+
+        try {
+            $this->installer->installFromZip(new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true));
+            $this->fail('Expected ModuleIncompatibleException');
+        } catch (ModuleIncompatibleException $e) {
+            $this->assertSame(CompatibilityIssue::INVALID_CONSTRAINT, $e->issues[0]->reasonKey);
+        }
+
+        $this->assertDirectoryDoesNotExist($this->modulesPath.'/future-module');
     }
 
     private function rejectEverything(): void
