@@ -610,6 +610,14 @@ final class ModuleManagerServiceTest extends TestCase
         $this->createTestModule('test-module', ['requires' => ['php' => '>=8.2']]);
         $this->service->discover();
 
+        $repository = $this->app->make(ModuleRepositoryInterface::class);
+        $stored = $repository->findByName(new ModuleName('test-module'));
+        $this->assertNotNull($stored);
+        $stored->enable();
+        $stored->updateSourceInfo('acme', 'manual-repo');
+        $stored->updateLatestAvailableVersion('1.1.0');
+        $repository->save($stored);
+
         $this->mergeManifest('test-module', [
             'requires' => ['core' => '^2.6', 'filament' => '^3.3', 'php' => '>=8.3', 'modules' => ['base-module:^1.0']],
             'dependencies' => ['base-module'],
@@ -629,6 +637,50 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertSame('Modules\\Renamed', $module->namespace());
         $this->assertSame('RenamedServiceProvider', $module->provider());
         $this->assertSame('New Author', $module->author());
+
+        // State that does not come from the manifest survives the re-sync
+        $this->assertTrue($module->isEnabled());
+        $this->assertSame('acme', $module->sourceOwner());
+        $this->assertSame('manual-repo', $module->sourceRepo());
+        $this->assertSame('1.1.0', $module->latestAvailableVersion());
+
+        // With the manifest unchanged, the next discovery saves nothing
+        $saves = 0;
+        ModuleModel::saving(function () use (&$saves): void {
+            $saves++;
+        });
+        $this->service->discover();
+        $this->assertSame(0, $saves);
+    }
+
+    public function test_first_discovery_keeps_only_string_dependencies_so_the_resync_saves_nothing(): void
+    {
+        $this->createTestModule('test-module', ['dependencies' => ['base-module', 7]]);
+        $this->service->discover();
+
+        $this->assertSame(['base-module'], $this->service->find(new ModuleName('test-module'))?->dependencies());
+
+        $saves = 0;
+        ModuleModel::saving(function () use (&$saves): void {
+            $saves++;
+        });
+        $this->service->discover();
+        $this->assertSame(0, $saves);
+    }
+
+    public function test_an_invalid_constraint_in_one_manifest_does_not_abort_discovery_of_the_others(): void
+    {
+        $this->createTestModule('bad-module', ['requires' => ['core' => 3, 'extensions' => 'intl']]);
+        $this->createTestModule('good-module', ['requires' => ['core' => '^2.6']]);
+
+        $modules = $this->service->discover();
+
+        $this->assertCount(2, $modules);
+        $bad = $this->service->find(new ModuleName('bad-module'));
+        $this->assertNotNull($bad);
+        $this->assertSame('', $bad->requirements()->coreVersion());
+        $this->assertSame([], $bad->requirements()->requiredExtensions());
+        $this->assertSame('^2.6', $this->service->find(new ModuleName('good-module'))?->requirements()->coreVersion());
     }
 
     private function writeManifestKey(string $name, string $key, string $value): void
