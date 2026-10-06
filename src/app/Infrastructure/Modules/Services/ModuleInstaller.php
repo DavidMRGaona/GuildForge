@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\ModuleManifestDTO;
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Domain\Modules\Events\ModuleInstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -30,6 +32,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         private ModuleBackupServiceInterface $backupService,
         private ModuleMigrationRunner $migrationRunner,
         private ModuleSeederRunner $seederRunner,
+        private ModuleCompatibilityServiceInterface $compatibility,
     ) {}
 
     public function installFromZip(UploadedFile $file): ModuleManifestDTO
@@ -41,6 +44,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         try {
             $manifest = $this->findAndValidateManifest($tempPath);
             $this->validateModuleNameForInstall($manifest);
+            $this->assertCompatible($manifest);
 
             $targetPath = $this->moveToModulesDirectory($tempPath, $manifest->name);
             $this->publishPreBuiltAssets($targetPath, $manifest->name);
@@ -65,6 +69,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 
         try {
             $manifest = $this->findAndValidateManifest($tempPath);
+            $this->assertCompatible($manifest);
             $moduleName = new ModuleName($manifest->name);
 
             $module = $this->repository->findByName($moduleName);
@@ -224,6 +229,18 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
             return ModuleManifestDTO::fromArray($data);
         } catch (InvalidArgumentException $e) {
             throw ModuleInstallationException::invalidManifestJson();
+        }
+    }
+
+    /**
+     * Runs before anything is moved, backed up or deleted; the finally block removes the extracted copy.
+     */
+    private function assertCompatible(ModuleManifestDTO $manifest): void
+    {
+        $result = $this->compatibility->checkManifest($manifest);
+
+        if (! $result->isCompatible()) {
+            throw ModuleIncompatibleException::forModule($manifest->name, $manifest->version, $result);
         }
     }
 

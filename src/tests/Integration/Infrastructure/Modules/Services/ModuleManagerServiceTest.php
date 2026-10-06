@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\DependencyCheckResultDTO;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
@@ -12,11 +13,14 @@ use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class ModuleManagerServiceTest extends TestCase
@@ -681,6 +685,69 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertSame('', $bad->requirements()->coreVersion());
         $this->assertSame([], $bad->requirements()->requiredExtensions());
         $this->assertSame('^2.6', $this->service->find(new ModuleName('good-module'))?->requirements()->coreVersion());
+    }
+
+    public function test_enable_rejects_an_incompatible_module_without_migrating_or_changing_its_state(): void
+    {
+        $this->createTestModule('test-module', ['requires' => ['core' => '^99.0']]);
+        $this->createTestModuleMigration('test-module', 'create_test_module_table');
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'status' => ModuleStatus::Disabled->value,
+        ]);
+
+        try {
+            $this->service->enable(ModuleName::fromString('test-module'));
+            $this->fail('Expected ModuleIncompatibleException');
+        } catch (ModuleIncompatibleException $e) {
+            $this->assertSame('test-module', $e->moduleName);
+            $this->assertSame('1.0.0', $e->version);
+            $this->assertStringContainsString('requires core ^99.0', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('modules', ['name' => 'test-module', 'status' => 'disabled', 'installed_at' => null]);
+        $this->assertFalse(Schema::hasTable('test_module_table'));
+    }
+
+    public function test_enable_makes_the_module_loadable_in_the_same_process(): void
+    {
+        $this->createTestModule('test-module');
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value]);
+        $resolver = app(EnabledModulesResolverInterface::class);
+        $resolver->reset();
+        $this->assertSame([], $resolver->names());
+
+        $this->service->enable(ModuleName::fromString('test-module'));
+
+        $this->assertSame(['test-module'], $resolver->names());
+    }
+
+    public function test_discover_does_not_migrate_an_enabled_module_that_became_incompatible(): void
+    {
+        $this->createTestModule('test-module', ['version' => '1.1.0', 'requires' => ['core' => '^99.0']]);
+        $this->createTestModuleMigration('test-module', 'create_test_module_table');
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'status' => ModuleStatus::Enabled->value,
+            'enabled_at' => now(),
+            'installed_at' => now(),
+        ]);
+
+        // Module migrations under a temp path never reach the migrator in tests, so the table
+        // assertion alone cannot fail: the skip is also observed through its warning
+        Log::spy();
+
+        $this->service->discover();
+
+        $this->assertFalse(Schema::hasTable('test_module_table'));
+        $this->assertDatabaseHas('modules', ['name' => 'test-module', 'version' => '1.1.0', 'status' => 'enabled']);
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message): bool => str_contains($message, 'Not migrating module test-module'))
+            ->once();
     }
 
     private function writeManifestKey(string $name, string $key, string $value): void

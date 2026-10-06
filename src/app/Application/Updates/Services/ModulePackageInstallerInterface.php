@@ -16,6 +16,7 @@ interface ModulePackageInstallerInterface
      * Extract the release ZIP into a staging directory and return the module root inside it.
      *
      * @throws UpdateException When the package is unreadable or is not exactly this module
+     * @throws \App\Domain\Modules\Exceptions\ModuleIncompatibleException When the release does not fit this host (the staging copy is removed)
      */
     public function stage(string $zipPath, string $moduleName): string;
 

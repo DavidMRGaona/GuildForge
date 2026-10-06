@@ -18,6 +18,7 @@ use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
@@ -73,7 +74,7 @@ final class ModuleUpdaterTest extends TestCase
             $this->githubFetcher,
             $this->backupService,
             $this->events,
-            new ModulePackageInstaller,
+            app(ModulePackageInstaller::class),
             new ReleaseChannelPolicy(allowPrereleases: false),
             $this->postUpdateRunner,
         );
@@ -403,6 +404,22 @@ final class ModuleUpdaterTest extends TestCase
         $this->assertFalse($result->isSuccess()); // noUpdateAvailable is caught and returned as a failed result
     }
 
+    public function test_an_incompatible_release_fails_in_staging_and_never_touches_the_installed_module(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new', ['core' => '^99.0']));
+        $this->postUpdateRunner->shouldNotReceive('run');
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertSame(UpdateStatus::Failed, $result->status);
+        $this->assertStringContainsString('requires core ^99.0', (string) $result->errorMessage);
+        $this->assertStringContainsString('requires core ^99.0', (string) ModuleUpdateHistoryModel::findOrFail($result->historyId)->error_message);
+        $this->assertSame('1.0.0-beta', $this->manifestVersion('updtest-game'));
+        $this->assertSame('old', File::get(public_path('build/modules/updtest-game/manifest.json')));
+        $this->assertSame([], glob($this->modulesPath.'/.*updtest-game-*', GLOB_ONLYDIR));
+    }
+
     private function prepareInstalledModules(): Module
     {
         $this->modulesPath = $this->tempDir.'/modules';
@@ -454,13 +471,22 @@ final class ModuleUpdaterTest extends TestCase
         );
     }
 
-    private function releaseZip(string $name, string $version, string $assetContent): string
+    /**
+     * @param  array<string, mixed>  $requires
+     */
+    private function releaseZip(string $name, string $version, string $assetContent, array $requires = []): string
     {
         $path = $this->tempDir.'/fixtures/'.uniqid().'.release';
         File::ensureDirectoryExists(dirname($path));
         $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        $zip->addFromString("{$name}-{$version}/module.json", (string) json_encode(['name' => $name, 'version' => $version]));
+        $zip->addFromString("{$name}-{$version}/module.json", (string) json_encode([
+            'name' => $name,
+            'version' => $version,
+            'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
+            'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
+            'requires' => $requires,
+        ]));
         $zip->addFromString("{$name}-{$version}/public/build/manifest.json", $assetContent);
         $zip->close();
 
@@ -480,7 +506,7 @@ final class ModuleUpdaterTest extends TestCase
             $this->githubFetcher,
             $this->backupService,
             $this->events,
-            new ModulePackageInstaller,
+            app(ModulePackageInstaller::class),
             new ReleaseChannelPolicy(allowPrereleases: false),
             $this->postUpdateRunner,
         );
