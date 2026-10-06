@@ -77,6 +77,16 @@ final class ConstraintMatcherTest extends TestCase
         yield 'or without spaces' => ['^3.2||^4.0', '4.0.0', true];
         yield 'space after operator' => ['>= 1.2', '1.2.0', true];
         yield 'surrounding spaces' => [' ^2.6 ', '2.7.0', true];
+        // Boundaries pinned during review
+        yield 'and range excludes the upper bound prerelease' => ['>=1.0 <2.0', '2.0.0-beta', false];
+        yield '^0.0.0 exact zero' => ['^0.0.0', '0.0.0', true];
+        yield '^0.0.0 next patch' => ['^0.0.0', '0.0.1', false];
+        yield '^1.2.3-beta lower prerelease' => ['^1.2.3-beta', '1.2.3-alpha', false];
+        yield '^1.2.3-beta higher prerelease' => ['^1.2.3-beta', '1.2.3-beta.1', true];
+        yield '>1.2 next patch prerelease' => ['>1.2', '1.2.1-beta', true];
+        yield 'or exact first' => ['1.2.3 || ^2.0', '1.2.3', true];
+        yield 'or caret second' => ['1.2.3 || ^2.0', '2.5.0', true];
+        yield '~1.2.3 below' => ['~1.2.3', '1.2.2', false];
     }
 
     #[DataProvider('cases')]
@@ -102,7 +112,8 @@ final class ConstraintMatcherTest extends TestCase
     public static function invalidConstraints(): iterable
     {
         foreach (['', ' ', '*', '2.x', '2.*', 'v2.6', '^2.6-beta', '2.6-beta', '!=2.0', '1.0 - 2.0', '^2.6@beta', '^02.1',
-            '^2.6 ||', '|| ^2.6', '^2.6,', '>=', '^2.6.0.1', '>= 1.0 <', 'latest', '^2.6 | ^3.0'] as $constraint) {
+            '^2.6 ||', '|| ^2.6', '^2.6,', '>=', '^2.6.0.1', '>= 1.0 <', 'latest', '^2.6 | ^3.0',
+            '^9223372036854775807', '99999999999999999999', "^2.6\n", '> = 1.0', '< = 2.0'] as $constraint) {
             yield "'{$constraint}'" => [$constraint];
         }
     }

@@ -15,7 +15,10 @@ use App\Domain\Modules\ValueObjects\ModuleVersion;
  */
 final class ConstraintMatcher
 {
-    private const string SIMPLE = '/^(>=|<=|>|<|=|\^|~)?(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:-([0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*))?)?)?$/';
+    /**
+     * Components are capped at nine digits so a bound plus one always fits in an int.
+     */
+    private const string SIMPLE = '/^(>=|<=|>|<|=|\^|~)?(0|[1-9]\d{0,8})(?:\.(0|[1-9]\d{0,8})(?:\.(0|[1-9]\d{0,8})(?:-([0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*))?)?)?$/D';
 
     /** @var array<string, list<list<array{op: string, bound: ModuleVersion, floor: bool}>>> */
     private array $parsed = [];
@@ -67,8 +70,9 @@ final class ConstraintMatcher
                 throw InvalidVersionConstraintException::invalid($constraint, 'empty alternative around "||"');
             }
 
-            // "operator ws* version": glue the operator to its version before splitting on spaces
-            $glued = (string) preg_replace('/(>=|<=|>|<|=|\^|~) +/', '$1', $group);
+            // "operator ws* version": glue the operator to its version before splitting on spaces;
+            // only before a digit, so a split operator such as "> = 1.0" stays invalid
+            $glued = (string) preg_replace('/(>=|<=|>|<|=|\^|~) +(?=\d)/', '$1', $group);
             $comparisons = [];
 
             foreach (preg_split('/ *, *| +/', $glued) ?: [] as $simple) {

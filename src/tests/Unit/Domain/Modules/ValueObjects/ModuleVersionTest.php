@@ -280,6 +280,11 @@ final class ModuleVersionTest extends TestCase
         $this->assertFalse(ModuleVersion::fromString('2.0.0')->satisfies('2.x'));
     }
 
+    public function test_satisfies_is_false_for_an_oversized_constraint(): void
+    {
+        $this->assertFalse(ModuleVersion::fromString('2.0.0')->satisfies('^9223372036854775807'));
+    }
+
     public function test_satisfies_supports_or_constraints(): void
     {
         $this->assertTrue(ModuleVersion::fromString('4.1.0')->satisfies('^3.2 || ^4.0'));
