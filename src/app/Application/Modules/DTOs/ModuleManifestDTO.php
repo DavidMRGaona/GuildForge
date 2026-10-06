@@ -101,6 +101,7 @@ final readonly class ModuleManifestDTO
      * Makes a requires block safe to evaluate: a constraint with the wrong shape becomes ''
      * (an invalid constraint, so the module is rejected), lists keep only their strings, and
      * an unreadable block becomes an invalid core constraint instead of the default ^2.0.
+     * A null block ("requires": null) counts as absent, but a null or non-string value inside it is invalid.
      *
      * @return array{requires: array<string, mixed>, invalid: list<string>}
      */

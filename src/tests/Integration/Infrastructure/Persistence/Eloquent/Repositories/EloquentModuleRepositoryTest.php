@@ -210,6 +210,26 @@ final class EloquentModuleRepositoryTest extends TestCase
         $this->assertSame('^3.3', $row->requires['filament_version'] ?? null);
     }
 
+    public function test_a_row_saved_before_core_existed_falls_back_to_the_default_core_constraint(): void
+    {
+        ModuleModel::factory()->create([
+            'name' => 'old-module',
+            'requires' => [
+                'php_version' => '>=8.2',
+                'laravel_version' => '>=12.0',
+                'required_modules' => [],
+                'required_extensions' => [],
+            ],
+        ]);
+
+        $module = $this->repository->findByName(new ModuleName('old-module'));
+
+        $this->assertNotNull($module);
+        $this->assertSame('>=8.2', $module->requirements()->phpVersion());
+        $this->assertNull($module->requirements()->coreVersion());
+        $this->assertSame('^2.0', $module->requirements()->effectiveCoreConstraint());
+    }
+
     private function createModule(
         ?string $name = null,
         ModuleStatus $status = ModuleStatus::Disabled,

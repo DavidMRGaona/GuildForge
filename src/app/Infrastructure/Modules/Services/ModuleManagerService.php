@@ -155,7 +155,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 namespace: $manifest->namespace,
                 provider: $manifest->provider,
                 path: $modulesPath.'/'.$manifest->name,
-                dependencies: $manifest->dependencies ?? [],
+                dependencies: array_values(array_filter($manifest->dependencies ?? [], 'is_string')),
                 sourceOwner: $manifest->repositoryOwner(),
                 sourceRepo: $manifest->repositoryName(),
             );

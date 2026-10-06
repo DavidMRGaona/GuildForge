@@ -118,10 +118,13 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
     }
 
     /**
-     * Normalize database requires format to ModuleRequirements format.
+     * Normalize the stored requires column to the ModuleRequirements::fromArray() format.
      *
-     * Database format: ['modules' => [...], 'php' => '...']
-     * ModuleRequirements format: ['required_modules' => [...], 'php_version' => '...']
+     * Two shapes are accepted, the manifest keys winning when both are present:
+     * - Manifest keys: ['php' => ..., 'laravel' => ..., 'core' => ..., 'filament' => ..., 'modules' => [...], 'extensions' => [...]]
+     * - Database keys (what save() writes): ['php_version' => ..., 'laravel_version' => ..., 'core_version' => ...,
+     *   'filament_version' => ..., 'required_modules' => [...], 'required_extensions' => [...]]
+     * Rows saved before core/filament existed lack those keys and read as null (core falls back to ^2.0).
      *
      * @param  array<string, mixed>|null  $requires
      * @return array<string, mixed>

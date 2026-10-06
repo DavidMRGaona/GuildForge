@@ -43,6 +43,8 @@ final readonly class ModuleRequirements
 
     /**
      * Manifest format (module.json "requires"): php, laravel, core, filament, modules, extensions.
+     * The input must come from ModuleManifestDTO::normalizeRequires(): a raw ['core' => null] would
+     * read as an absent core (the ^2.0 default) instead of an invalid constraint.
      *
      * @param  array<string, mixed>  $requires
      */
