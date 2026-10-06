@@ -13,6 +13,6 @@ return RectorConfig::configure()
     ->withSkip([
         // Adding #[\Override] to every overridden property would churn about 100 files for no runtime gain.
         AddOverrideAttributeToOverriddenPropertiesRector::class,
-        // The PHP 8.4 `new Foo()->bar()` form is not part of the project's code style.
+        // Skipped to avoid rewriting existing `(new Foo())->bar()` calls in bulk; the PHP 8.4 form is allowed in new code.
         NewMethodCallWithoutParenthesesRector::class,
     ]);

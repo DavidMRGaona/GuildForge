@@ -14,12 +14,13 @@ use SplFileInfo;
 /**
  * Calls deprecated in PHP 8.5 that the application and its tests do not need:
  * ReflectionProperty/ReflectionMethod::setAccessible() (no effect since PHP 8.1),
- * imagedestroy() (no effect since PHP 8.0) and the PDO::MYSQL_ATTR_* constants
- * (replaced by Pdo\Mysql::ATTR_*).
+ * imagedestroy() (no effect since PHP 8.0) and the driver-specific PDO::MYSQL_*,
+ * PDO::PGSQL_* and PDO::SQLITE_* constants (replaced by Pdo\Mysql, Pdo\Pgsql and
+ * Pdo\Sqlite).
  */
 final class NoPhp85DeprecatedCallsTest extends TestCase
 {
-    private const string PATTERN = '/->setAccessible\s*\(|\bimagedestroy\s*\(|\bPDO::MYSQL_ATTR_/';
+    private const string PATTERN = '/->setAccessible\s*\(|\bimagedestroy\s*\(|\bPDO::(MYSQL|PGSQL|SQLITE)_/';
 
     private const array DIRECTORIES = ['app', 'config', 'database', 'routes', 'tests'];
 
@@ -72,6 +73,8 @@ final class NoPhp85DeprecatedCallsTest extends TestCase
             'imagedestroy' => ['imagedestroy($image);'],
             'global imagedestroy' => ['\imagedestroy($image);'],
             'PDO MySQL constant' => ["\\PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),"],
+            'PDO PostgreSQL constant' => ['\\PDO::PGSQL_ATTR_DISABLE_PREPARES => true,'],
+            'PDO SQLite constant' => ['$flags = PDO::SQLITE_DETERMINISTIC;'],
         ];
     }
 
@@ -82,6 +85,8 @@ final class NoPhp85DeprecatedCallsTest extends TestCase
     {
         return [
             'Pdo\Mysql constant' => ["\\Pdo\\Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),"],
+            'Pdo\Pgsql constant' => ['\\Pdo\\Pgsql::ATTR_DISABLE_PREPARES => true,'],
+            'Pdo\Sqlite constant' => ['$flags = \\Pdo\\Sqlite::DETERMINISTIC;'],
             'env key with the old name' => ["env('MYSQL_ATTR_SSL_CA')"],
             'reflection getValue' => ['$property->getValue($instance);'],
             'GD image creation' => ['imagecreatetruecolor(10, 10);'],
