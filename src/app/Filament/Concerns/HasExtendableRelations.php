@@ -109,7 +109,6 @@ trait HasExtendableRelations
         try {
             $reflection = new \ReflectionClass($modelClass);
             $property = $reflection->getProperty('relationResolvers');
-            $property->setAccessible(true);
 
             /** @var array<string, array<string, \Closure>> $resolvers */
             $resolvers = $property->getValue();
