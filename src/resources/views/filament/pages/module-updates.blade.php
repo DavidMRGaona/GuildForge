@@ -117,6 +117,27 @@
             @endif
         </x-filament::section>
 
+        @if($blockedReleases !== [])
+            <x-filament::section
+                icon="heroicon-o-no-symbol"
+                icon-color="danger"
+                :heading="__('filament.updates.modules.blocked.heading')"
+            >
+                {{-- No update button: these releases need a newer core --}}
+                <ul class="flex flex-col gap-1 text-sm">
+                    @foreach($blockedReleases as $blocked)
+                        <li>
+                            <span class="font-medium">{{ $blocked['module_name'] }}</span>:
+                            {{ __('filament.updates.modules.blocked.line', [
+                                'version' => $blocked['blocked_version'],
+                                'reasons' => app(\App\View\Modules\CompatibilityIssueFormatter::class)->summary($blocked['issues'], short: true),
+                            ]) }}
+                        </li>
+                    @endforeach
+                </ul>
+            </x-filament::section>
+        @endif
+
         <x-filament::section :heading="__('filament.updates.modules.history.title')">
             {{ $this->table }}
         </x-filament::section>

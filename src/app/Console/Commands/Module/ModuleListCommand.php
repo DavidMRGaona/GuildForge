@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Module;
 
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\View\Modules\CompatibilityIssueFormatter;
 use Illuminate\Console\Command;
 
 final class ModuleListCommand extends Command
@@ -25,6 +27,8 @@ final class ModuleListCommand extends Command
 
     public function __construct(
         private readonly ModuleManagerServiceInterface $moduleManager,
+        private readonly ModuleCompatibilityServiceInterface $compatibility,
+        private readonly CompatibilityIssueFormatter $formatter,
     ) {
         parent::__construct();
     }
@@ -48,12 +52,13 @@ final class ModuleListCommand extends Command
                 $module->name()->value,
                 $module->version()->value(),
                 $module->status()->value,
+                $this->formatter->listLabel($this->compatibility->checkInstalled($module->name())),
                 $module->description(),
             ];
         }
 
         $this->table(
-            ['Name', 'Version', 'Status', 'Description'],
+            ['Name', 'Version', 'Status', 'Compatible', 'Description'],
             $rows
         );
 

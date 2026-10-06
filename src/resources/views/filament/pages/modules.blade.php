@@ -66,6 +66,7 @@
                         $dependents = $this->getDependents($module->name()->value, $moduleManager);
                         $dependencies = $module->dependencies();
                         $depCheck = $moduleManager->checkDependencies($module->name());
+                        $compatibility = $this->getCompatibility($module->name()->value);
                     @endphp
                     <div wire:key="module-{{ $module->name()->value }}">
                         <x-filament::section
@@ -89,7 +90,7 @@
                                         @endif
                                     </p>
                                 </div>
-                                <div class="shrink-0">
+                                <div class="flex shrink-0 flex-col items-end gap-1">
                                     @if($module->isEnabled())
                                         <x-filament::badge
                                             color="success"
@@ -105,6 +106,14 @@
                                             {{ __('modules.status.disabled') }}
                                         </x-filament::badge>
                                     @endif
+                                    @unless($compatibility['compatible'])
+                                        <x-filament::badge
+                                            color="danger"
+                                            icon="heroicon-m-exclamation-triangle"
+                                        >
+                                            {{ __('modules.compatibility.badge') }}
+                                        </x-filament::badge>
+                                    @endunless
                                 </div>
                             </div>
 
@@ -116,6 +125,15 @@
                                     </p>
                                 </div>
                             @endif
+
+                            {{-- Why this host cannot load it (shown for enabled and disabled modules) --}}
+                            @unless($compatibility['compatible'])
+                                <ul class="mt-2 space-y-1 text-sm text-danger-600 dark:text-danger-400">
+                                    @foreach($compatibility['reasons'] as $reason)
+                                        <li>{{ $reason }}</li>
+                                    @endforeach
+                                </ul>
+                            @endunless
 
                             {{-- Dependencies & Required By --}}
                             @if(!empty($dependencies) || !empty($dependents))
@@ -192,7 +210,8 @@
                                         wire:click="enableModule('{{ $module->name()->value }}')"
                                         wire:loading.attr="disabled"
                                         wire:target="enableModule('{{ $module->name()->value }}')"
-                                        :disabled="$depCheck->hasErrors()"
+                                        :disabled="$depCheck->hasErrors() || ! $compatibility['compatible']"
+                                        :tooltip="$compatibility['compatible'] ? null : __('modules.compatibility.enable_blocked', ['reasons' => implode('; ', $compatibility['reasons'])])"
                                         icon="heroicon-m-play"
                                     >
                                         <span wire:loading.remove wire:target="enableModule('{{ $module->name()->value }}')">

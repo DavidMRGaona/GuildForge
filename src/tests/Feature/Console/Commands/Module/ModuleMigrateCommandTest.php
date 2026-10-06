@@ -102,7 +102,7 @@ PHP
         ]));
 
         $this->artisan('module:migrate', ['module' => 'test-module'])
-            ->expectsOutputToContain('requires core ^99.0')
+            ->expectsOutput('No se puede habilitar test-module: requiere core ^99.0, instalado 2.6.0')
             ->assertExitCode(1);
     }
 }

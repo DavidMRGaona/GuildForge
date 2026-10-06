@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Console\Commands\Updates;
 
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
+use App\Application\Updates\DTOs\BlockedReleaseDTO;
 use App\Application\Updates\DTOs\UpdateCheckResultDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use DateTimeImmutable;
 use Illuminate\Support\Collection;
 use Mockery;
@@ -177,6 +180,20 @@ final class CheckModuleUpdatesCommandTest extends TestCase
             ->andReturn(new UpdateCheckResultDTO(new Collection, [], []));
 
         $this->artisan('module:check-updates', ['--force' => true])
+            ->assertExitCode(0);
+    }
+
+    public function test_it_lists_blocked_releases_without_changing_the_exit_code(): void
+    {
+        $this->updateChecker->shouldReceive('checkAll')->andReturn(new UpdateCheckResultDTO(new Collection, [], [], [
+            new BlockedReleaseDTO('announcements', 'Anuncios', '1.1.0', '2.0.0', [
+                new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED),
+            ]),
+        ]));
+
+        $this->artisan('module:check-updates')
+            ->expectsOutput('All modules are up to date.')
+            ->expectsTable(['Module', 'Current', 'Blocked', 'Reason'], [['announcements', '1.1.0', '2.0.0', 'requiere core ^3.0']])
             ->assertExitCode(0);
     }
 }
