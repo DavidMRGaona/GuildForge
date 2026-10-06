@@ -76,7 +76,7 @@ final class ModuleSeedCommand extends Command
 
             return self::FAILURE;
         } catch (ModuleIncompatibleException $e) {
-            $this->error($this->formatter->cannotEnable($moduleName, $e->issues));
+            $this->error($this->formatter->cannotSeed($moduleName, $e->issues));
 
             return self::FAILURE;
         }

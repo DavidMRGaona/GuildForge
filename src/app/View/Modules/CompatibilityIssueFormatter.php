@@ -76,6 +76,14 @@ final class CompatibilityIssueFormatter
     /**
      * @param  array<int, CompatibilityIssue|array<string, mixed>>  $issues
      */
+    public function cannotSeed(string $name, array $issues): string
+    {
+        return $this->translate('modules.compatibility.cannot_seed', ['name' => $name, 'reasons' => $this->summary($issues)]);
+    }
+
+    /**
+     * @param  array<int, CompatibilityIssue|array<string, mixed>>  $issues
+     */
     public function incompatiblePackage(string $name, ?string $version, array $issues): string
     {
         return $this->translate('modules.filament.notifications.incompatible_package', [

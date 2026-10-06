@@ -98,6 +98,7 @@ return [
         'badge' => 'Incompatible',
         'enable_blocked' => 'No se puede habilitar: :reasons',
         'banner' => '{1} Un módulo habilitado no se ha cargado porque no es compatible con esta versión:|[2,*] :count módulos habilitados no se han cargado porque no son compatibles con esta versión:',
+        'cannot_seed' => 'No se pueden ejecutar los seeders de :name en este servidor: :reasons',
         'banner_link' => 'Ver módulos',
         'list' => [
             'yes' => 'sí',

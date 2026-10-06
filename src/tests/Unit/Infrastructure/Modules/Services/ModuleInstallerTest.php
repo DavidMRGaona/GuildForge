@@ -654,6 +654,26 @@ final class ModuleInstallerTest extends TestCase
         $this->assertDirectoryDoesNotExist($this->modulesPath.'/future-module');
     }
 
+    public function test_malformed_requirement_lists_are_still_refused_as_an_invalid_manifest(): void
+    {
+        $this->compatibility->shouldNotReceive('checkManifest');
+        $zipPath = $this->createValidZip([
+            'module.json' => (string) json_encode([
+                'name' => 'future-module', 'version' => '9.0.0', 'namespace' => 'Modules\\FutureModule',
+                'provider' => 'FutureModuleServiceProvider', 'requires' => ['extensions' => 'intl', 'modules' => [1, 'announcements']],
+            ]),
+        ]);
+
+        try {
+            $this->installer->installFromZip(new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true));
+            $this->fail('Expected ModuleInstallationException');
+        } catch (ModuleInstallationException $e) {
+            $this->assertSame(ModuleInstallationException::invalidManifestJson()->getMessage(), $e->getMessage());
+        }
+
+        $this->assertDirectoryDoesNotExist($this->modulesPath.'/future-module');
+    }
+
     private function rejectEverything(): void
     {
         $this->compatibility->shouldReceive('checkManifest')->andReturn(new CompatibilityResult([

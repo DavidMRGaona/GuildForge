@@ -26,6 +26,9 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 {
     private const string TEMP_DIRECTORY = 'temp/modules';
 
+    /** requires keys whose malformed value may become an invalid constraint */
+    private const array CONSTRAINT_REQUIREMENTS = ['php', 'laravel', 'core', 'filament'];
+
     public function __construct(
         private Dispatcher $events,
         private ModuleRepositoryInterface $repository,
@@ -225,10 +228,18 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
             }
         }
 
-        // As ModuleManifestReader does: a malformed requirement becomes an invalid constraint,
-        // so the package is still refused, but with that reason instead of "invalid JSON"
+        // A malformed version constraint becomes an invalid constraint, so the package is refused
+        // with that reason instead of "invalid JSON". Anything else malformed in requires (the block
+        // itself, the modules or extensions lists) is still refused as an invalid manifest: repairing
+        // a list would drop the requirement and let the package in
         if (array_key_exists('requires', $data)) {
-            $data['requires'] = ModuleManifestDTO::normalizeRequires($data['requires'])['requires'];
+            $normalized = ModuleManifestDTO::normalizeRequires($data['requires']);
+
+            if (array_diff($normalized['invalid'], self::CONSTRAINT_REQUIREMENTS) !== []) {
+                throw ModuleInstallationException::invalidManifestJson();
+            }
+
+            $data['requires'] = $normalized['requires'];
         }
 
         try {

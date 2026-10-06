@@ -70,5 +70,9 @@ final class CompatibilityIssueFormatterTest extends TestCase
             'El paquete announcements 9.0.0 no es compatible: requiere core ^3.0, instalado 2.6.0',
             $this->formatter->incompatiblePackage('announcements', '9.0.0', [$this->core]),
         );
+        $this->assertSame(
+            'No se pueden ejecutar los seeders de announcements en este servidor: requiere core ^3.0, instalado 2.6.0',
+            $this->formatter->cannotSeed('announcements', [$this->core]),
+        );
     }
 }

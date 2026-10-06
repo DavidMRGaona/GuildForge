@@ -142,6 +142,25 @@ final class EnabledModulesResolverTest extends TestCase
             ->once();
     }
 
+    public function test_web_requests_never_log_a_rejection(): void
+    {
+        $this->enabled('incompatible-module');
+        Log::spy();
+        $setConsole = fn (bool $console) => (fn () => $this->isRunningInConsole = $console)->call(app());
+        $setConsole(false);
+
+        try {
+            $resolver = app()->make(EnabledModulesResolver::class);
+            $this->assertSame([], $resolver->names());
+            $this->assertCount(1, $resolver->rejected());
+        } finally {
+            $setConsole(true);
+        }
+
+        // The panel banner replaces the log on the web
+        Log::shouldNotHaveReceived('warning');
+    }
+
     public function test_a_different_reason_is_logged_again(): void
     {
         $this->enabled('incompatible-module');
