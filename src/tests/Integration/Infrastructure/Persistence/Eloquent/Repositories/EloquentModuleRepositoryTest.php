@@ -7,6 +7,8 @@ namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
@@ -228,6 +230,28 @@ final class EloquentModuleRepositoryTest extends TestCase
         $this->assertSame('>=8.2', $module->requirements()->phpVersion());
         $this->assertNull($module->requirements()->coreVersion());
         $this->assertSame('^2.0', $module->requirements()->effectiveCoreConstraint());
+    }
+
+    public function test_it_round_trips_the_blocked_release(): void
+    {
+        ModuleModel::factory()->create(['name' => 'blocked-module', 'version' => '1.1.0']);
+        $module = $this->repository->findByName(new ModuleName('blocked-module'));
+        $this->assertNotNull($module);
+        $issue = new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED);
+
+        $module->updateLatestBlocked('2.0.0', [$issue]);
+        $this->repository->save($module);
+
+        $row = ModuleModel::query()->where('name', 'blocked-module')->firstOrFail();
+        $this->assertSame('2.0.0', $row->latest_blocked_version);
+        $this->assertSame([$issue->toArray()], $row->latest_blocked_reason);
+
+        $reloaded = $this->repository->findByName(new ModuleName('blocked-module'));
+        $this->assertEquals([$issue], $reloaded?->latestBlockedIssues());
+
+        $reloaded?->clearLatestBlocked();
+        $this->repository->save($reloaded);
+        $this->assertNull(ModuleModel::query()->where('name', 'blocked-module')->firstOrFail()->latest_blocked_reason);
     }
 
     private function createModule(

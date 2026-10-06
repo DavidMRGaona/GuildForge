@@ -15,6 +15,7 @@ use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Events\ModuleUpdateCompleted;
@@ -75,19 +76,25 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             throw UpdateException::noSourceConfigured($name->value);
         }
 
-        $release = $this->githubFetcher->getLatestRelease(
+        $selection = $this->githubFetcher->selectRelease(
             $sourceOwner,
             $sourceRepo,
+            $module->version(),
             $this->channelPolicy->includesPrereleasesFor($module->version()),
         );
+
+        // Preview the blocked release too, so the CLI and the panel can say why it cannot be applied
+        $release = $selection->compatible ?? $selection->blocked;
 
         if ($release === null || ! $release->version->isGreaterThan($module->version())) {
             throw UpdateException::noUpdateAvailable($name->value);
         }
 
-        // Check core compatibility
-        $coreCompatible = true;
-        $coreRequirement = null;
+        $coreCompatible = $selection->compatible !== null;
+        $coreRequirement = $coreCompatible ? $selection->compatibleCoreConstraint : $selection->blockedCoreConstraint;
+        $compatibilityIssues = $coreCompatible
+            ? []
+            : array_map(static fn (CompatibilityIssue $issue): array => $issue->toArray(), $selection->blockedIssues);
 
         // Look for migrations and seeders in the release notes or manifest
         $pendingMigrations = [];
@@ -105,6 +112,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             coreRequirement: $coreRequirement,
             downloadUrl: $release->downloadUrl,
             downloadSize: null,
+            compatibilityIssues: $compatibilityIssues,
         );
     }
 
@@ -144,13 +152,23 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             /** @var string $sourceRepo */
             $sourceRepo = $module->sourceRepo();
 
-            $release = $this->githubFetcher->getLatestRelease(
+            $selection = $this->githubFetcher->selectRelease(
                 $sourceOwner,
                 $sourceRepo,
+                $module->version(),
                 $this->channelPolicy->includesPrereleasesFor($module->version()),
             );
+            $release = $selection->compatible;
 
             if ($release === null || ! $release->version->isGreaterThan($module->version())) {
+                if ($selection->blocked !== null) {
+                    throw UpdateException::noCompatibleRelease(
+                        $name->value,
+                        $selection->blocked->version->value(),
+                        implode('; ', array_map(static fn (CompatibilityIssue $issue): string => $issue->describe(), $selection->blockedIssues)),
+                    );
+                }
+
                 throw UpdateException::noUpdateAvailable($name->value);
             }
 

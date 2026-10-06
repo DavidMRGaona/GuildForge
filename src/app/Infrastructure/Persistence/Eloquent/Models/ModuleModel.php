@@ -26,6 +26,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $source_owner
  * @property string|null $source_repo
  * @property string|null $latest_available_version
+ * @property string|null $latest_blocked_version
+ * @property array<mixed>|null $latest_blocked_reason Stored JSON, validated when read
  * @property Carbon|null $last_update_check_at
  * @property Carbon|null $discovered_at
  * @property Carbon|null $enabled_at
@@ -58,6 +60,8 @@ final class ModuleModel extends Model
         'source_owner',
         'source_repo',
         'latest_available_version',
+        'latest_blocked_version',
+        'latest_blocked_reason',
         'last_update_check_at',
         'discovered_at',
         'enabled_at',
@@ -72,6 +76,7 @@ final class ModuleModel extends Model
         return [
             'requires' => 'array',
             'dependencies' => 'array',
+            'latest_blocked_reason' => 'array',
             'last_update_check_at' => 'datetime',
             'discovered_at' => 'datetime',
             'enabled_at' => 'datetime',

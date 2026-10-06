@@ -4,11 +4,20 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Updates\Services;
 
+use App\Application\Modules\DTOs\ModuleManifestDTO;
+use App\Application\Modules\Services\HostEnvironmentProviderInterface;
+use App\Application\Modules\Services\ModuleCompatibilityChecker;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
+use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\Exceptions\InvalidModuleVersionException;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
+use App\Domain\Modules\ValueObjects\CompatibilityResult;
+use App\Domain\Modules\ValueObjects\ModuleRequirements;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubCommitComparison;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Domain\Updates\ValueObjects\ReleaseSelection;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -18,34 +27,49 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
 {
     private const string CACHE_KEY_PREFIX = 'github_releases';
 
+    /** A module.json is a few hundred bytes; anything far larger is not a manifest */
+    private const int MANIFEST_MAX_BYTES = 65536;
+
     /** @var list<string> Cache keys written by this instance, so clearCache() can forget only them */
     private array $cachedKeys = [];
 
-    public function getLatestRelease(string $owner, string $repo, bool $includePrereleases = false): ?GitHubReleaseInfo
+    public function __construct(
+        private readonly ModuleCompatibilityChecker $checker,
+        private readonly HostEnvironmentProviderInterface $hostEnvironment,
+    ) {
+    }
+
+    public function selectRelease(string $owner, string $repo, ModuleVersion $installed, bool $includePrereleases): ReleaseSelection
     {
-        $latest = null;
+        $host = $this->hostEnvironment->current();
+        $blocked = null;
+        $blockedConstraint = null;
+        $blockedIssues = [];
 
-        foreach ($this->fetchReleases($owner, $repo) as $data) {
-            if (($data['draft'] ?? false) === true) {
-                continue;
+        foreach ($this->candidates($owner, $repo, $installed, $includePrereleases) as $release) {
+            $requirements = $this->releaseRequirements($owner, $repo, $release);
+
+            if ($requirements === null) {
+                $result = new CompatibilityResult([new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID)]);
+                $constraint = null;
+            } else {
+                $result = $this->checker->check($requirements, $host);
+                $constraint = $requirements->effectiveCoreConstraint();
             }
 
-            if (($data['prerelease'] ?? false) === true && ! $includePrereleases) {
-                continue;
+            if ($result->isCompatible()) {
+                return new ReleaseSelection($release, $constraint, $blocked, $blockedConstraint, $blockedIssues);
             }
 
-            try {
-                $release = GitHubReleaseInfo::fromGitHubResponse($data);
-            } catch (InvalidModuleVersionException) {
-                continue; // Tags such as "nightly" are not versions
-            }
-
-            if ($latest === null || $release->version->isGreaterThan($latest->version)) {
-                $latest = $release;
+            // Candidates come newest first: the first incompatible one is the highest
+            if ($blocked === null) {
+                $blocked = $release;
+                $blockedConstraint = $constraint;
+                $blockedIssues = $result->issues;
             }
         }
 
-        return $latest;
+        return new ReleaseSelection(null, null, $blocked, $blockedConstraint, $blockedIssues);
     }
 
     public function downloadRelease(GitHubReleaseInfo $release, string $destinationPath): string
@@ -119,7 +143,7 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
         }
     }
 
-    public function batchFetchLatestReleases(array $repos, bool $includePrereleases = false): array
+    public function batchSelectReleases(array $repos, bool $includePrereleases = false): array
     {
         $results = [];
 
@@ -127,7 +151,7 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
             $key = "{$repo['owner']}/{$repo['repo']}";
 
             try {
-                $results[$key] = $this->getLatestRelease($repo['owner'], $repo['repo'], $includePrereleases);
+                $results[$key] = $this->selectRelease($repo['owner'], $repo['repo'], $repo['installed'], $includePrereleases);
             } catch (UpdateException $e) {
                 $results[$key] = $e;
             }
@@ -140,6 +164,7 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
     {
         if ($owner !== null && $repo !== null) {
             Cache::forget($this->getCacheKey($owner, $repo));
+            Cache::forget($this->getManifestsCacheKey($owner, $repo));
 
             return;
         }
@@ -230,6 +255,105 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
         $this->cachedKeys[] = $cacheKey;
 
         return $releases;
+    }
+
+    /**
+     * Downloadable releases newer than the installed version, newest first.
+     *
+     * @return list<GitHubReleaseInfo>
+     */
+    private function candidates(string $owner, string $repo, ModuleVersion $installed, bool $includePrereleases): array
+    {
+        $candidates = [];
+
+        foreach ($this->fetchReleases($owner, $repo) as $data) {
+            if (($data['draft'] ?? false) === true) {
+                continue;
+            }
+
+            if (($data['prerelease'] ?? false) === true && ! $includePrereleases) {
+                continue;
+            }
+
+            try {
+                $release = GitHubReleaseInfo::fromGitHubResponse($data);
+            } catch (InvalidModuleVersionException) {
+                continue; // Tags such as "nightly" are not versions
+            }
+
+            if ($release->hasDownloadableAssets() && $release->version->isGreaterThan($installed)) {
+                $candidates[] = $release;
+            }
+        }
+
+        usort($candidates, static fn (GitHubReleaseInfo $a, GitHubReleaseInfo $b): int => match (true) {
+            $a->version->isGreaterThan($b->version) => -1,
+            $b->version->isGreaterThan($a->version) => 1,
+            default => 0,
+        });
+
+        return $candidates;
+    }
+
+    /**
+     * Requirements published with a release, or null when its module.json asset is not a JSON object.
+     * Releases published before the asset existed declare nothing, so the default core constraint applies.
+     */
+    private function releaseRequirements(string $owner, string $repo, GitHubReleaseInfo $release): ?ModuleRequirements
+    {
+        if (! $release->hasManifest()) {
+            return ModuleRequirements::fromManifest([]);
+        }
+
+        $cacheKey = $this->getManifestsCacheKey($owner, $repo);
+        /** @var array<string, array{requires?: array<string, mixed>, invalid?: bool}> $manifests */
+        $manifests = Cache::get($cacheKey, []);
+
+        if (! isset($manifests[$release->tagName])) {
+            $manifests[$release->tagName] = $this->downloadManifest($owner, $repo, $release);
+            Cache::put($cacheKey, $manifests, (int) config('updates.cache.ttl', 3600));
+            $this->cachedKeys[] = $cacheKey;
+        }
+
+        $requires = $manifests[$release->tagName]['requires'] ?? null;
+
+        return $requires === null ? null : ModuleRequirements::fromManifest($requires);
+    }
+
+    /**
+     * @return array{requires?: array<string, mixed>, invalid?: bool}
+     */
+    private function downloadManifest(string $owner, string $repo, GitHubReleaseInfo $release): array
+    {
+        try {
+            $response = $this->createClient()->get($release->manifestUrl);
+        } catch (\Throwable $e) {
+            throw UpdateException::githubRequestFailed("{$owner}/{$repo}", "module.json of {$release->tagName}: {$e->getMessage()}");
+        }
+
+        // Never "up to date" because a download failed: the check reports it as an error
+        if (! $response->successful()) {
+            throw UpdateException::githubRequestFailed("{$owner}/{$repo}", "module.json of {$release->tagName}: HTTP {$response->status()}");
+        }
+
+        $body = $response->body();
+
+        if (strlen($body) > self::MANIFEST_MAX_BYTES) {
+            return ['invalid' => true];
+        }
+
+        $data = json_decode($body, true);
+
+        if (! is_array($data) || ($data !== [] && array_is_list($data))) {
+            return ['invalid' => true];
+        }
+
+        return ['requires' => ModuleManifestDTO::normalizeRequires($data['requires'] ?? null)['requires']];
+    }
+
+    private function getManifestsCacheKey(string $owner, string $repo): string
+    {
+        return $this->getCacheKey($owner, $repo).'.manifests';
     }
 
     private function createClient(): PendingRequest
