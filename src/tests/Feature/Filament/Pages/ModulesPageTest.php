@@ -9,12 +9,29 @@ use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 use Tests\TestCase;
 
 final class ModulesPageTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    private string $modulesPath;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->modulesPath = sys_get_temp_dir().'/gf-modules-page-'.uniqid();
+        config(['modules.path' => $this->modulesPath]);
+    }
+
+    protected function tearDown(): void
+    {
+        File::deleteDirectory($this->modulesPath);
+        parent::tearDown();
+    }
 
     public function test_modules_page_requires_admin(): void
     {
@@ -125,6 +142,7 @@ final class ModulesPageTest extends TestCase
 
     public function test_can_enable_disabled_module(): void
     {
+        $this->moduleOnDisk('test-module');
         $user = UserModel::factory()->admin()->create();
 
         $module = ModuleModel::factory()->disabled()->create([
@@ -159,6 +177,7 @@ final class ModulesPageTest extends TestCase
 
     public function test_cannot_enable_module_with_missing_dependencies(): void
     {
+        $this->moduleOnDisk('dependent-module');
         $user = UserModel::factory()->admin()->create();
 
         ModuleModel::factory()->disabled()->create([
@@ -231,5 +250,33 @@ final class ModulesPageTest extends TestCase
         Livewire::test(ModulesPage::class)
             ->callAction('discover')
             ->assertNotified();
+    }
+
+    public function test_enabling_an_incompatible_module_notifies_and_keeps_it_disabled(): void
+    {
+        $this->moduleOnDisk('test-module', ['core' => '^99.0']);
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module']);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModulesPage::class)
+            ->call('enableModule', 'test-module')
+            ->assertNotified();
+
+        $this->assertDatabaseHas('modules', ['name' => 'test-module', 'status' => 'disabled']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $requires
+     */
+    private function moduleOnDisk(string $name, array $requires = []): void
+    {
+        File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
+        File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
+            'name' => $name,
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
+            'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
+            'requires' => $requires,
+        ]));
     }
 }

@@ -113,7 +113,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $zip = $this->tempDir.'/release.zip';
         $archive = new ZipArchive;
         $archive->open($zip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        $archive->addFromString('real-mod-1.0.1-beta/module.json', (string) json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta']));
+        $archive->addFromString('real-mod-1.0.1-beta/module.json', (string) json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta', 'namespace' => 'Modules\\RealMod', 'provider' => 'RealModServiceProvider']));
         $archive->close();
 
         $fetcher = Mockery::mock(GitHubReleaseFetcherInterface::class);
@@ -159,7 +159,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
             $fetcher,
             $backup,
             app(Dispatcher::class),
-            new ModulePackageInstaller,
+            app(ModulePackageInstaller::class),
             new ReleaseChannelPolicy(allowPrereleases: false),
             $inProcessRunner,
         );

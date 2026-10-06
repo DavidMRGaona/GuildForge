@@ -12,6 +12,7 @@ use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleCannotUninstallException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -199,7 +200,7 @@ final class ModulesPage extends Page implements HasForms
                         }
 
                         $this->js('window.location.href = '.json_encode(static::getUrl()));
-                    } catch (ModuleInstallationException $e) {
+                    } catch (ModuleInstallationException|ModuleIncompatibleException $e) {
                         Notification::make()
                             ->title(__('modules.filament.notifications.cannot_install', ['error' => $e->getMessage()]))
                             ->danger()
@@ -233,7 +234,7 @@ final class ModulesPage extends Page implements HasForms
                 ->title($message)
                 ->success()
                 ->send();
-        } catch (ModuleNotFoundException|ModuleAlreadyEnabledException|ModuleDependencyException $e) {
+        } catch (ModuleNotFoundException|ModuleAlreadyEnabledException|ModuleDependencyException|ModuleIncompatibleException $e) {
             Notification::make()
                 ->title(__('modules.filament.notifications.cannot_enable', ['error' => $e->getMessage()]))
                 ->danger()
