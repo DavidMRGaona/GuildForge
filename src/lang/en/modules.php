@@ -96,6 +96,7 @@ return [
         'badge' => 'Incompatible',
         'enable_blocked' => 'Cannot be enabled: :reasons',
         'banner' => '{1} An enabled module was not loaded because it is not compatible with this version:|[2,*] :count enabled modules were not loaded because they are not compatible with this version:',
+        'cannot_seed' => 'Cannot run the seeders of :name on this server: :reasons',
         'banner_link' => 'View modules',
         'list' => [
             'yes' => 'yes',

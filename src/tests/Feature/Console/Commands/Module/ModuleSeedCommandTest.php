@@ -58,7 +58,7 @@ class SeedGateModuleSeeder extends Seeder
 PHP);
 
         $this->artisan('module:seed', ['module' => 'seed-gate-module'])
-            ->expectsOutput('No se puede habilitar seed-gate-module: requiere core ^99.0, instalado 2.6.0')
+            ->expectsOutput('No se pueden ejecutar los seeders de seed-gate-module en este servidor: requiere core ^99.0, instalado 2.6.0')
             ->doesntExpectOutputToContain('Running seeders')
             ->assertExitCode(1);
 
