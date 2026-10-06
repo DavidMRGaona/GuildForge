@@ -39,7 +39,7 @@ make up
 ```
 
 This brings up all the services defined in `docker-compose.yml`:
-- **app** (PHP 8.4 FPM) - application server
+- **app** (PHP 8.5 FPM) - application server
 - **nginx** - web server (port 8080)
 - **db** - PostgreSQL 17 (port 5432)
 - **node** - Node.js 24 with Vite HMR (port 5173)
@@ -48,6 +48,8 @@ This brings up all the services defined in `docker-compose.yml`:
 - **redis** - cache and sessions (port 6379)
 - **elasticsearch** - search engine and logging (port 9200)
 - **kibana** - log visualization (port 5601)
+
+`make up` does not rebuild existing images. After a change to `docker/php/Dockerfile` (for example a PHP upgrade), rebuild the two containers that use it: `docker compose build app queue && docker compose up -d app queue`.
 
 ### 3. Full initial setup
 

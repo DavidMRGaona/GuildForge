@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console\Commands\Module;
 
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -57,8 +58,10 @@ class SeedGateModuleSeeder extends Seeder
 }
 PHP);
 
+        $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
+
         $this->artisan('module:seed', ['module' => 'seed-gate-module'])
-            ->expectsOutput('No se pueden ejecutar los seeders de seed-gate-module en este servidor: requiere core ^99.0, instalado 2.6.0')
+            ->expectsOutput("No se pueden ejecutar los seeders de seed-gate-module en este servidor: requiere core ^99.0, instalado {$core}")
             ->doesntExpectOutputToContain('Running seeders')
             ->assertExitCode(1);
 

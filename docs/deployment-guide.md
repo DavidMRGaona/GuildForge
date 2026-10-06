@@ -16,7 +16,7 @@ The table below is prod-local (`docker-compose.prod.yml`). Production runs on Co
 
 | Container | Image | Port | Function |
 |-----------|-------|------|----------|
-| `guildforge_app_prod` | Dockerfile.prod (PHP 8.4 FPM Alpine) | 8000 | Application (Nginx + PHP-FPM + queue worker + scheduler) |
+| `guildforge_app_prod` | Dockerfile.prod (PHP 8.5 FPM Alpine) | 8000 | Application (Nginx + PHP-FPM + queue worker + scheduler) |
 | `guildforge_db_prod` | postgres:17-alpine | - | PostgreSQL database |
 | `guildforge_redis_prod` | redis:7.2-alpine | - | Cache and sessions |
 
@@ -81,9 +81,10 @@ The `Dockerfile.prod` file uses a multi-stage build to optimize image size and s
 - Compiles module assets that have `package.json` and `vite.config.ts` with `npm ci` and `npm run build`; a module that fails to install or build fails the image. Coolify builds carry no modules (they live outside the host repository), so this only does work in prod-local
 - Consolidates module build artifacts for copying to the final stage
 
-**Stage 2: `final` (PHP 8.4 FPM Alpine)**
+**Stage 2: `final` (PHP 8.5 FPM Alpine 3.24)**
 - Installs system dependencies (Nginx, Supervisor, image libraries)
-- Installs PHP extensions: `pdo_pgsql`, `gd`, `zip`, `bcmath`, `opcache`, `intl`, `mbstring`, `exif`, `pcntl`, `redis`, `imagick`
+- Installs PHP extensions: `pdo_pgsql`, `pgsql`, `gd`, `zip`, `bcmath`, `intl`, `mbstring`, `exif`, `pcntl`, plus `redis` 6.3.0 and `imagick` 3.8.1 from PECL (pinned versions)
+- OPcache is compiled into PHP 8.5, so it is not in that list. Do not add `zend_extension=opcache`: PHP would print "Failed loading Zend extension" on every start. The build fails if `php -m` or `php-fpm -m` does not list `Zend OPcache`
 - Installs Composer and production PHP dependencies (`--no-dev --optimize-autoloader`)
 - Copies source code and compiled assets from stage 1
 - Copies compiled module assets to their corresponding directories
