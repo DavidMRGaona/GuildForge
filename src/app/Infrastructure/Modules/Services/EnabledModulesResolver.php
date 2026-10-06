@@ -112,7 +112,7 @@ final class EnabledModulesResolver implements EnabledModulesResolverInterface
             $rejected[] = new RejectedModuleDTO($module->name()->value, $module->displayName(), $result->issues);
 
             // Web requests show the panel banner instead of logging once per request
-            if (app()->runningInConsole()) {
+            if (app()->runningInConsole() && $this->firstReportToday($module->name()->value, $result->summary())) {
                 Log::warning('[EnabledModulesResolver] Module rejected', [
                     'module' => $module->name()->value,
                     'reasons' => $result->summary(),
@@ -123,6 +123,20 @@ final class EnabledModulesResolver implements EnabledModulesResolverInterface
         $this->rejected = $rejected;
 
         return $this->approved = $approved;
+    }
+
+    /**
+     * The scheduler starts a console process every minute: without a shared marker the same
+     * rejection would be logged ~1440 times a day. A new reason is logged at once.
+     */
+    private function firstReportToday(string $module, string $reasons): bool
+    {
+        try {
+            return Cache::add('modules.compatibility.logged.'.$module.'.'.md5($reasons), true, now()->addDay());
+        } catch (\Throwable) {
+            // Without a cache store, logging every time beats hiding the rejection or failing the boot
+            return true;
+        }
     }
 
     /**
