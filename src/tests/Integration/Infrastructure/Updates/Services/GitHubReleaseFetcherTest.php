@@ -404,6 +404,27 @@ final class GitHubReleaseFetcherTest extends TestCase
         Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), 'v1.1.0/module.json'));
     }
 
+    public function test_a_release_with_the_same_version_as_the_compatible_one_is_not_blocked(): void
+    {
+        // Two tags for one version: the incompatible one sorts first, the compatible one must win alone
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([
+                $this->release('v1.1.0', withManifest: true),
+                $this->release('1.1.0', withManifest: true),
+            ]),
+            'example.test/v1.1.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^3.0']]),
+            'example.test/1.1.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^2.6']]),
+        ]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertSame('1.1.0', $selection->compatible?->version->value());
+        $this->assertSame('1.1.0', $selection->compatible?->tagName);
+        $this->assertNull($selection->blocked);
+        $this->assertNull($selection->blockedCoreConstraint);
+        $this->assertSame([], $selection->blockedIssues);
+    }
+
     public function test_only_a_blocked_release_selects_nothing_compatible(): void
     {
         Http::fake([

@@ -17,6 +17,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class EloquentModuleRepositoryTest extends TestCase
@@ -252,6 +253,17 @@ final class EloquentModuleRepositoryTest extends TestCase
         $reloaded?->clearLatestBlocked();
         $this->repository->save($reloaded);
         $this->assertNull(ModuleModel::query()->where('name', 'blocked-module')->firstOrFail()->latest_blocked_reason);
+    }
+
+    public function test_a_blocked_reason_that_is_not_a_list_loads_as_no_issues(): void
+    {
+        ModuleModel::factory()->create(['name' => 'scalar-string', 'version' => '1.1.0', 'latest_blocked_version' => '2.0.0']);
+        ModuleModel::factory()->create(['name' => 'scalar-int', 'version' => '1.1.0', 'latest_blocked_version' => '2.0.0']);
+        DB::table('modules')->where('name', 'scalar-string')->update(['latest_blocked_reason' => '"x"']);
+        DB::table('modules')->where('name', 'scalar-int')->update(['latest_blocked_reason' => '1']);
+
+        $this->assertSame([], $this->repository->findByName(new ModuleName('scalar-string'))?->latestBlockedIssues());
+        $this->assertSame([], $this->repository->findByName(new ModuleName('scalar-int'))?->latestBlockedIssues());
     }
 
     private function createModule(

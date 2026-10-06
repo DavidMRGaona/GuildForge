@@ -58,6 +58,11 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
             }
 
             if ($result->isCompatible()) {
+                // Two tags can carry one version (v1.1.0 and 1.1.0): only a strictly newer release is blocked
+                if ($blocked !== null && ! $blocked->version->isGreaterThan($release->version)) {
+                    return new ReleaseSelection($release, $constraint, null, null, []);
+                }
+
                 return new ReleaseSelection($release, $constraint, $blocked, $blockedConstraint, $blockedIssues);
             }
 
