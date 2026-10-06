@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console\Commands\Module;
 
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -91,8 +92,10 @@ final class ModuleEnableCommandTest extends TestCase
         $this->moduleOnDisk('test-module', ['core' => '^99.0']);
         ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'version' => '1.0.0']);
 
+        $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
+
         $this->artisan('module:enable', ['module' => 'test-module'])
-            ->expectsOutput('No se puede habilitar test-module: requiere core ^99.0, instalado 2.6.0')
+            ->expectsOutput("No se puede habilitar test-module: requiere core ^99.0, instalado {$core}")
             ->assertExitCode(1);
 
         $this->assertDatabaseHas('modules', ['name' => 'test-module', 'status' => 'disabled']);

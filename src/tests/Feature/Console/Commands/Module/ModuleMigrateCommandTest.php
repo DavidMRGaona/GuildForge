@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console\Commands\Module;
 
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -101,8 +102,10 @@ PHP
             'requires' => ['core' => '^99.0'],
         ]));
 
+        $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
+
         $this->artisan('module:migrate', ['module' => 'test-module'])
-            ->expectsOutput('No se puede habilitar test-module: requiere core ^99.0, instalado 2.6.0')
+            ->expectsOutput("No se puede habilitar test-module: requiere core ^99.0, instalado {$core}")
             ->assertExitCode(1);
     }
 }

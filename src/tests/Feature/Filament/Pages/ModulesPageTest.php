@@ -8,6 +8,7 @@ use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
@@ -267,10 +268,11 @@ final class ModulesPageTest extends TestCase
         $this->moduleOnDisk('test-module', ['core' => '^99.0']);
         ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'display_name' => 'Test Module']);
         $this->actingAs(UserModel::factory()->admin()->create());
+        $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
 
         Livewire::test(ModulesPage::class)
             ->call('enableModule', 'test-module')
-            ->assertNotified(__('modules.filament.notifications.incompatible', ['name' => 'Test Module', 'reasons' => 'requiere core ^99.0, instalado 2.6.0']));
+            ->assertNotified(__('modules.filament.notifications.incompatible', ['name' => 'Test Module', 'reasons' => "requiere core ^99.0, instalado {$core}"]));
 
         $this->assertDatabaseHas('modules', ['name' => 'test-module', 'status' => 'disabled']);
     }
@@ -282,14 +284,15 @@ final class ModulesPageTest extends TestCase
         ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'display_name' => 'Test Module']);
         ModuleModel::factory()->enabled()->create(['name' => 'good-module', 'display_name' => 'Good Module']);
         $this->actingAs(UserModel::factory()->admin()->create());
+        $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
 
         Livewire::test(ModulesPage::class)
             ->assertSee(__('modules.compatibility.badge'))
-            ->assertSee('requiere core ^99.0, instalado 2.6.0');
+            ->assertSee("requiere core ^99.0, instalado {$core}");
 
         $page = Livewire::test(ModulesPage::class)->instance();
         $this->assertSame(['compatible' => true, 'reasons' => []], $page->getCompatibility('good-module'));
-        $this->assertSame(['compatible' => false, 'reasons' => ['requiere core ^99.0, instalado 2.6.0']], $page->getCompatibility('test-module'));
+        $this->assertSame(['compatible' => false, 'reasons' => ["requiere core ^99.0, instalado {$core}"]], $page->getCompatibility('test-module'));
     }
 
     public function test_installing_an_incompatible_package_notifies_why(): void

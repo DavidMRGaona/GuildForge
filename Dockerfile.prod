@@ -46,7 +46,7 @@ RUN mkdir -p /module-builds && \
     done
 
 # Stage 2: Production image
-FROM php:8.4-fpm-alpine AS final
+FROM php:8.5-fpm-alpine3.24 AS final
 
 # Install system dependencies (runtime)
 RUN apk add --no-cache \
@@ -82,14 +82,18 @@ RUN --mount=type=cache,target=/var/cache/apk \
         gd \
         zip \
         bcmath \
-        opcache \
         intl \
         mbstring \
         exif \
         pcntl \
-    && pecl install redis imagick \
+    && pecl install redis-6.3.0 imagick-3.8.1 \
     && docker-php-ext-enable redis imagick \
     && apk del .build-deps
+
+# OPcache is compiled into PHP 8.5: it is not installed above and must not be loaded
+# with zend_extension. Fail the build if the CLI or the FPM binary comes without it
+RUN php -m | grep -qx 'Zend OPcache' \
+    && php-fpm -m | grep -qx 'Zend OPcache'
 
 # Install Composer
 COPY --from=composer:2.10 /usr/bin/composer /usr/bin/composer
