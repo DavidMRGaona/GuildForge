@@ -284,6 +284,7 @@ class AppServiceProvider extends ServiceProvider
             return new ModuleScaffoldingService(
                 $app->make(StubRenderer::class),
                 config('modules.path'),
+                $app->make(CoreVersionServiceInterface::class),
             );
         });
 

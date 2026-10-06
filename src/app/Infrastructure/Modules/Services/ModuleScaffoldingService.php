@@ -6,6 +6,7 @@ namespace App\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\ScaffoldResultDTO;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\Exceptions\InvalidModuleNameException;
 use Illuminate\Support\Str;
 
@@ -22,6 +23,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function __construct(
         private readonly StubRenderer $stubRenderer,
         ?string $modulesPath = null,
+        private readonly ?CoreVersionServiceInterface $coreVersion = null,
     ) {
         $this->modulesPath = $modulesPath ?? base_path('modules');
     }
@@ -36,6 +38,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
 
         $modulePath = $this->modulesPath.'/'.$name;
         $variables = $this->stubRenderer->getModuleVariables($name, $description, $author);
+        $variables['coreConstraint'] = $this->coreConstraint();
         $files = [];
         $warnings = [];
 
@@ -477,6 +480,16 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         }
 
         return null;
+    }
+
+    /**
+     * New modules require the core minor they were generated on: "^2.6" on core 2.6.x.
+     */
+    private function coreConstraint(): string
+    {
+        $version = ($this->coreVersion ?? app(CoreVersionServiceInterface::class))->getCurrentVersion();
+
+        return "^{$version->major}.{$version->minor}";
     }
 
     private function validateModuleExists(string $module): ?ScaffoldResultDTO
