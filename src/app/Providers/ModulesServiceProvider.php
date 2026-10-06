@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Console\Commands\Module\ModuleDisableCommand;
 use App\Console\Commands\Module\ModuleDiscoverCommand;
@@ -77,29 +78,22 @@ final class ModulesServiceProvider extends ServiceProvider
     }
 
     /**
-     * Load migrations from all modules in the filesystem.
-     * This ensures migrations run during migrate:fresh even when the modules table doesn't exist.
+     * Load migrations from every compatible module on disk, enabled or not, also when the modules
+     * table does not exist yet (migrate:fresh). A migration may reference module classes, so an
+     * incompatible module's migrations are never registered.
      */
     private function loadAllModuleMigrations(): void
     {
-        $modulesPath = config('modules.path', base_path('modules'));
+        try {
+            $paths = $this->app->make(EnabledModulesResolverInterface::class)->migrationPaths();
+        } catch (\Throwable $e) {
+            logger()->error('[ModulesServiceProvider] Module migrations not loaded', ['error' => $e->getMessage()]);
 
-        if (! is_dir($modulesPath)) {
             return;
         }
 
-        $directories = glob($modulesPath.'/*', GLOB_ONLYDIR);
-
-        if ($directories === false) {
-            return;
-        }
-
-        foreach ($directories as $moduleDir) {
-            $migrationsPath = $moduleDir.'/database/migrations';
-
-            if (is_dir($migrationsPath)) {
-                $this->loadMigrationsFrom($migrationsPath);
-            }
+        foreach ($paths as $path) {
+            $this->loadMigrationsFrom($path);
         }
     }
 

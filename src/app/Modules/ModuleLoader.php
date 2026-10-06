@@ -8,14 +8,13 @@ use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Domain\Modules\Entities\Module;
-use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 final class ModuleLoader
@@ -25,8 +24,9 @@ final class ModuleLoader
 
     public function __construct(
         private readonly Application $app,
-        private readonly ModuleRepositoryInterface $repository,
-    ) {}
+        private readonly EnabledModulesResolverInterface $resolver,
+    ) {
+    }
 
     /**
      * Boot all enabled modules.
@@ -273,19 +273,13 @@ final class ModuleLoader
     }
 
     /**
+     * Enabled and compatible modules; the resolver owns the module cache.
+     *
      * @return array<Module>
      */
     private function getEnabledModules(): array
     {
-        if (config('modules.cache.enabled', false)) {
-            return Cache::remember(
-                config('modules.cache.key', 'modules.enabled'),
-                config('modules.cache.ttl', 3600),
-                fn () => $this->repository->enabled()->all()
-            );
-        }
-
-        return $this->repository->enabled()->all();
+        return $this->resolver->modules();
     }
 
     /**

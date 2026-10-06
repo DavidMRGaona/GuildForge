@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
-use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Filament\Pages\SiteSettings;
 use App\Modules\ModuleServiceProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -414,7 +414,7 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * Get the names of all enabled modules.
+     * Names of the enabled modules whose module.json this host satisfies.
      *
      * @return array<string>
      */
@@ -431,19 +431,12 @@ class AdminPanelProvider extends PanelProvider
                 return $this->enabledModuleNamesCache = [];
             }
 
-            if (! app()->bound(ModuleRepositoryInterface::class)) {
+            if (! app()->bound(EnabledModulesResolverInterface::class)) {
                 return $this->enabledModuleNamesCache = [];
             }
 
-            $repository = app(ModuleRepositoryInterface::class);
-            $enabledModules = $repository->enabled()->all();
-
-            $names = array_map(
-                static fn ($module) => $module->name()->value,
-                $enabledModules
-            );
-
-            return $this->enabledModuleNamesCache = $names;
+            // Enabled AND compatible: nothing below may require_once an incompatible module
+            return $this->enabledModuleNamesCache = app(EnabledModulesResolverInterface::class)->names();
         } catch (Throwable) {
             return $this->enabledModuleNamesCache = [];
         }
