@@ -1,6 +1,8 @@
 # Template: Release workflow for GuildForge modules
 # Copy this file to .github/workflows/release.yml in your module repository
 # and change MODULE_NAME to your module's name (kebab-case)
+# module.json must declare requires.core (e.g. "core": "^2.6"): the release is rejected
+# without it, and the module.json published with the release tells sites which core it needs
 
 name: Module release
 
