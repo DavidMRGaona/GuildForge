@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
+use App\Application\Modules\Services\HostEnvironmentProviderInterface;
+use App\Application\Modules\Services\ModuleCompatibilityChecker;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\Services\ConstraintMatcher;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
+use App\Domain\Modules\ValueObjects\HostEnvironment;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Domain\Updates\ValueObjects\ReleaseSelection;
 use App\Infrastructure\Updates\Services\GitHubReleaseFetcher;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Cache;
@@ -22,11 +29,11 @@ final class GitHubReleaseFetcherTest extends TestCase
     {
         parent::setUp();
 
-        $this->fetcher = new GitHubReleaseFetcher;
+        $this->fetcher = new GitHubReleaseFetcher(new ModuleCompatibilityChecker(new ConstraintMatcher()), $this->hostAt('2.6.0'));
         Cache::flush();
     }
 
-    public function test_it_fetches_latest_release_from_github(): void
+    public function test_it_selects_the_latest_release_from_github(): void
     {
         Http::fake([
             'api.github.com/repos/test-owner/test-repo/releases*' => Http::response([
@@ -34,7 +41,7 @@ final class GitHubReleaseFetcherTest extends TestCase
             ]),
         ]);
 
-        $release = $this->fetcher->getLatestRelease('test-owner', 'test-repo');
+        $release = $this->latest('test-owner', 'test-repo');
 
         $this->assertInstanceOf(GitHubReleaseInfo::class, $release);
         $this->assertEquals('v1.2.0', $release->tagName);
@@ -104,7 +111,7 @@ final class GitHubReleaseFetcherTest extends TestCase
             ]),
         ]);
 
-        $release = $this->fetcher->getLatestRelease('o', 'r', includePrereleases: true);
+        $release = $this->latest('o', 'r', includePrereleases: true);
 
         $this->assertSame('1.0.10-beta', $release?->version->value());
     }
@@ -118,7 +125,7 @@ final class GitHubReleaseFetcherTest extends TestCase
             ]),
         ]);
 
-        $this->assertSame('1.5.0', $this->fetcher->getLatestRelease('o', 'r')?->version->value());
+        $this->assertSame('1.5.0', $this->latest('o', 'r')?->version->value());
     }
 
     public function test_it_ignores_tags_that_are_not_versions(): void
@@ -130,7 +137,7 @@ final class GitHubReleaseFetcherTest extends TestCase
             ]),
         ]);
 
-        $this->assertSame('1.0.0', $this->fetcher->getLatestRelease('o', 'r')?->version->value());
+        $this->assertSame('1.0.0', $this->latest('o', 'r')?->version->value());
     }
 
     public function test_it_caches_results_for_configured_ttl(): void
@@ -141,8 +148,8 @@ final class GitHubReleaseFetcherTest extends TestCase
                 ->push([$this->release('v2.0.0')]),
         ]);
 
-        $firstResult = $this->fetcher->getLatestRelease('cache-owner', 'cache-repo');
-        $secondResult = $this->fetcher->getLatestRelease('cache-owner', 'cache-repo');
+        $firstResult = $this->latest('cache-owner', 'cache-repo');
+        $secondResult = $this->latest('cache-owner', 'cache-repo');
 
         $this->assertEquals('v1.0.0', $firstResult?->tagName);
         $this->assertEquals('v1.0.0', $secondResult?->tagName);
@@ -155,7 +162,7 @@ final class GitHubReleaseFetcherTest extends TestCase
             'api.github.com/repos/empty-owner/empty-repo/releases*' => Http::response([]),
         ]);
 
-        $this->assertNull($this->fetcher->getLatestRelease('empty-owner', 'empty-repo'));
+        $this->assertNull($this->latest('empty-owner', 'empty-repo'));
     }
 
     public function test_it_throws_when_repo_is_missing_or_private(): void
@@ -167,7 +174,7 @@ final class GitHubReleaseFetcherTest extends TestCase
         $this->expectException(UpdateException::class);
         $this->expectExceptionMessage('o/private');
 
-        $this->fetcher->getLatestRelease('o', 'private');
+        $this->latest('o', 'private');
     }
 
     public function test_it_throws_on_api_error_and_does_not_cache_it(): void
@@ -179,46 +186,47 @@ final class GitHubReleaseFetcherTest extends TestCase
         ]);
 
         try {
-            $this->fetcher->getLatestRelease('o', 'r');
+            $this->latest('o', 'r');
             $this->fail('Expected UpdateException');
         } catch (UpdateException $e) {
             $this->assertStringContainsString('403', $e->getMessage());
         }
 
-        $this->assertSame('1.0.0', $this->fetcher->getLatestRelease('o', 'r')?->version->value());
+        $this->assertSame('1.0.0', $this->latest('o', 'r')?->version->value());
     }
 
-    public function test_batch_returns_exception_for_failing_repo_and_release_for_others(): void
+    public function test_batch_returns_exception_for_failing_repo_and_selection_for_others(): void
     {
         Http::fake([
             'api.github.com/repos/o/ok/releases*' => Http::response([$this->release('v1.0.0')]),
             'api.github.com/repos/o/private/releases*' => Http::response(['message' => 'Not Found'], 404),
             'api.github.com/repos/o/empty/releases*' => Http::response([]),
         ]);
+        $installed = new ModuleVersion(0, 1, 0);
 
-        $results = $this->fetcher->batchFetchLatestReleases([
-            ['owner' => 'o', 'repo' => 'ok'],
-            ['owner' => 'o', 'repo' => 'private'],
-            ['owner' => 'o', 'repo' => 'empty'],
+        $results = $this->fetcher->batchSelectReleases([
+            ['owner' => 'o', 'repo' => 'ok', 'installed' => $installed],
+            ['owner' => 'o', 'repo' => 'private', 'installed' => $installed],
+            ['owner' => 'o', 'repo' => 'empty', 'installed' => $installed],
         ]);
 
-        $this->assertInstanceOf(GitHubReleaseInfo::class, $results['o/ok']);
-        $this->assertSame('1.0.0', $results['o/ok']->version->value());
+        $this->assertInstanceOf(ReleaseSelection::class, $results['o/ok']);
+        $this->assertSame('1.0.0', $results['o/ok']->compatible?->version->value());
         $this->assertInstanceOf(UpdateException::class, $results['o/private']);
-        $this->assertNull($results['o/empty']);
+        $this->assertInstanceOf(ReleaseSelection::class, $results['o/empty']);
+        $this->assertNull($results['o/empty']->compatible);
     }
 
     public function test_batch_includes_prereleases_when_requested(): void
     {
         Http::fake([
-            'api.github.com/repos/o/r/releases*' => Http::response([
-                $this->release('v1.0.9-beta', prerelease: true),
-            ]),
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.0.9-beta', prerelease: true)]),
         ]);
 
-        $results = $this->fetcher->batchFetchLatestReleases([['owner' => 'o', 'repo' => 'r']], true);
+        $results = $this->fetcher->batchSelectReleases([['owner' => 'o', 'repo' => 'r', 'installed' => ModuleVersion::fromString('1.0.8-beta')]], true);
 
-        $this->assertInstanceOf(GitHubReleaseInfo::class, $results['o/r']);
+        $this->assertInstanceOf(ReleaseSelection::class, $results['o/r']);
+        $this->assertSame('1.0.9-beta', $results['o/r']->compatible?->version->value());
     }
 
     public function test_it_verifies_checksum_correctly(): void
@@ -317,11 +325,11 @@ final class GitHubReleaseFetcherTest extends TestCase
                 ->push([$this->release('v2.0.0')]),
         ]);
 
-        $this->assertEquals('v1.0.0', $this->fetcher->getLatestRelease('clear-cache', 'repo')?->tagName);
+        $this->assertEquals('v1.0.0', $this->latest('clear-cache', 'repo')?->tagName);
 
         $this->fetcher->clearCache('clear-cache', 'repo');
 
-        $this->assertEquals('v2.0.0', $this->fetcher->getLatestRelease('clear-cache', 'repo')?->tagName);
+        $this->assertEquals('v2.0.0', $this->latest('clear-cache', 'repo')?->tagName);
     }
 
     public function test_clear_cache_does_not_flush_other_cache_entries(): void
@@ -332,31 +340,174 @@ final class GitHubReleaseFetcherTest extends TestCase
                 ->push([$this->release('v1.0.0')])
                 ->push([$this->release('v2.0.0')]),
         ]);
-        $this->fetcher->getLatestRelease('o', 'r');
+        $this->latest('o', 'r');
 
         $this->fetcher->clearCache();
 
         $this->assertSame('keep', Cache::get('unrelated'));
-        $this->assertEquals('v2.0.0', $this->fetcher->getLatestRelease('o', 'r')?->tagName);
+        $this->assertEquals('v2.0.0', $this->latest('o', 'r')?->tagName);
     }
 
-    public function test_it_uses_cached_results_in_batch_fetch(): void
+    public function test_it_uses_cached_results_in_batch_select(): void
     {
         Http::fake([
             'api.github.com/repos/cached-owner/cached-repo/releases*' => Http::response([$this->release('v1.0.0')]),
             'api.github.com/repos/new-owner/new-repo/releases*' => Http::response([$this->release('v2.0.0')]),
         ]);
+        $this->latest('cached-owner', 'cached-repo');
+        $installed = new ModuleVersion(0, 1, 0);
 
-        $this->fetcher->getLatestRelease('cached-owner', 'cached-repo');
-
-        $results = $this->fetcher->batchFetchLatestReleases([
-            ['owner' => 'cached-owner', 'repo' => 'cached-repo'],
-            ['owner' => 'new-owner', 'repo' => 'new-repo'],
+        $results = $this->fetcher->batchSelectReleases([
+            ['owner' => 'cached-owner', 'repo' => 'cached-repo', 'installed' => $installed],
+            ['owner' => 'new-owner', 'repo' => 'new-repo', 'installed' => $installed],
         ]);
 
-        $this->assertEquals('v1.0.0', $results['cached-owner/cached-repo']?->tagName);
-        $this->assertEquals('v2.0.0', $results['new-owner/new-repo']?->tagName);
+        $this->assertInstanceOf(ReleaseSelection::class, $results['cached-owner/cached-repo']);
+        $this->assertInstanceOf(ReleaseSelection::class, $results['new-owner/new-repo']);
+        $this->assertSame('v1.0.0', $results['cached-owner/cached-repo']->compatible?->tagName);
+        $this->assertSame('v2.0.0', $results['new-owner/new-repo']->compatible?->tagName);
         Http::assertSentCount(2);
+    }
+
+    public function test_a_release_without_manifest_asset_defaults_to_core_2(): void
+    {
+        Http::fake(['api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0')])]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.7-beta'), false);
+
+        $this->assertSame('1.1.0', $selection->compatible?->version->value());
+        $this->assertSame('^2.0', $selection->compatibleCoreConstraint);
+        $this->assertNull($selection->blocked);
+        Http::assertSentCount(1);
+    }
+
+    public function test_it_selects_the_highest_compatible_release_and_the_highest_blocked_one(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([
+                $this->release('v1.1.0', withManifest: true),
+                $this->release('v2.0.0', withManifest: true),
+                $this->release('v1.2.0', withManifest: true),
+            ]),
+            'example.test/v2.0.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^3.0']]),
+            'example.test/v1.2.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^2.6']]),
+            'example.test/v1.1.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^2.6']]),
+        ]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertSame('1.2.0', $selection->compatible?->version->value());
+        $this->assertSame('^2.6', $selection->compatibleCoreConstraint);
+        $this->assertSame('2.0.0', $selection->blocked?->version->value());
+        $this->assertSame('^3.0', $selection->blockedCoreConstraint);
+        $this->assertEquals([new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED)], $selection->blockedIssues);
+        Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), 'v1.1.0/module.json'));
+    }
+
+    public function test_only_a_blocked_release_selects_nothing_compatible(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v2.0.0', withManifest: true)]),
+            'example.test/v2.0.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^3.0', 'filament' => '^4.0']]),
+        ]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.1.0'), false);
+
+        $this->assertNull($selection->compatible);
+        $this->assertSame('2.0.0', $selection->blocked?->version->value());
+        $this->assertCount(2, $selection->blockedIssues);
+    }
+
+    public function test_releases_not_newer_than_the_installed_one_are_ignored(): void
+    {
+        Http::fake(['api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0'), $this->release('v1.0.0')])]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.1.0'), false);
+
+        $this->assertNull($selection->compatible);
+        $this->assertNull($selection->blocked);
+    }
+
+    public function test_a_malformed_manifest_asset_blocks_the_release(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0', withManifest: true), $this->release('v1.0.5')]),
+            'example.test/v1.1.0/module.json' => Http::response('this is not json'),
+        ]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertSame('1.0.5', $selection->compatible?->version->value());
+        $this->assertSame('1.1.0', $selection->blocked?->version->value());
+        $this->assertNull($selection->blockedCoreConstraint);
+        $this->assertEquals([new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID)], $selection->blockedIssues);
+    }
+
+    public function test_a_manifest_with_a_malformed_core_requirement_blocks_the_release(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0', withManifest: true)]),
+            'example.test/v1.1.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => 3]]),
+        ]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertNull($selection->compatible);
+        $this->assertSame(CompatibilityIssue::INVALID_CONSTRAINT, $selection->blockedIssues[0]->reasonKey);
+    }
+
+    public function test_an_oversized_manifest_asset_blocks_the_release(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0', withManifest: true)]),
+            'example.test/v1.1.0/module.json' => Http::response(json_encode(['name' => 'm', 'padding' => str_repeat('x', 70_000)])),
+        ]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertNull($selection->compatible);
+        $this->assertEquals([new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID)], $selection->blockedIssues);
+    }
+
+    public function test_a_manifest_download_error_is_an_update_exception(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0', withManifest: true)]),
+            'example.test/v1.1.0/module.json' => Http::response('Bad gateway', 502),
+        ]);
+
+        $this->expectException(UpdateException::class);
+        $this->expectExceptionMessage('o/r');
+
+        $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+    }
+
+    public function test_manifests_are_cached_and_clear_cache_forgets_them(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0', withManifest: true)]),
+            'example.test/v1.1.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^2.6']]),
+        ]);
+        $installed = ModuleVersion::fromString('1.0.0');
+
+        $this->fetcher->selectRelease('o', 'r', $installed, false);
+        $this->fetcher->selectRelease('o', 'r', $installed, false);
+        Http::assertSentCount(2);
+
+        $this->fetcher->clearCache('o', 'r');
+        $this->fetcher->selectRelease('o', 'r', $installed, false);
+        Http::assertSentCount(4);
+    }
+
+    public function test_a_core_3_host_blocks_releases_that_require_core_2(): void
+    {
+        $fetcher = new GitHubReleaseFetcher(new ModuleCompatibilityChecker(new ConstraintMatcher()), $this->hostAt('3.0.0'));
+        Http::fake(['api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0')])]);
+
+        $selection = $fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertNull($selection->compatible);
+        $this->assertSame('^2.0', $selection->blockedCoreConstraint);
     }
 
     public function test_service_is_registered_in_container(): void
@@ -367,11 +518,48 @@ final class GitHubReleaseFetcherTest extends TestCase
     }
 
     /**
+     * The highest compatible release for a module installed at 0.0.0, i.e. the latest usable release.
+     */
+    private function latest(string $owner, string $repo, bool $includePrereleases = false): ?GitHubReleaseInfo
+    {
+        return $this->fetcher->selectRelease($owner, $repo, new ModuleVersion(0, 0, 0), $includePrereleases)->compatible;
+    }
+
+    private function hostAt(string $core): HostEnvironmentProviderInterface
+    {
+        return new class ($core) implements HostEnvironmentProviderInterface {
+            public function __construct(
+                private readonly string $core,
+            ) {
+            }
+
+            public function current(): HostEnvironment
+            {
+                return new HostEnvironment(
+                    core: ModuleVersion::fromString($this->core),
+                    php: new ModuleVersion(8, 4, 26),
+                    laravel: new ModuleVersion(12, 69, 3),
+                    filament: new ModuleVersion(3, 3, 56),
+                    extensions: ['json'],
+                );
+            }
+        };
+    }
+
+    /**
      * @return array<string, mixed>
      */
-    private function release(string $tag, bool $prerelease = false, bool $draft = false, string $body = ''): array
+    private function release(string $tag, bool $prerelease = false, bool $draft = false, string $body = '', bool $withManifest = false): array
     {
         $version = ltrim($tag, 'v');
+        $assets = [
+            ['name' => "m-{$version}.zip", 'browser_download_url' => "https://example.test/m-{$version}.zip"],
+            ['name' => "m-{$version}.zip.sha256", 'browser_download_url' => "https://example.test/m-{$version}.zip.sha256"],
+        ];
+
+        if ($withManifest) {
+            $assets[] = ['name' => 'module.json', 'browser_download_url' => "https://example.test/{$tag}/module.json"];
+        }
 
         return [
             'tag_name' => $tag,
@@ -379,10 +567,7 @@ final class GitHubReleaseFetcherTest extends TestCase
             'draft' => $draft,
             'body' => $body,
             'published_at' => '2026-10-04T10:00:00Z',
-            'assets' => [
-                ['name' => "m-{$version}.zip", 'browser_download_url' => "https://example.test/m-{$version}.zip"],
-                ['name' => "m-{$version}.zip.sha256", 'browser_download_url' => "https://example.test/m-{$version}.zip.sha256"],
-            ],
+            'assets' => $assets,
         ];
     }
 

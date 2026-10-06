@@ -78,6 +78,11 @@ final class UpdateException extends DomainException
         return new self("No update available for '{$moduleName}'.");
     }
 
+    public static function noCompatibleRelease(string $moduleName, string $version, string $reasons): self
+    {
+        return new self("No compatible update for '{$moduleName}': {$version} is available but {$reasons}.");
+    }
+
     public static function githubRequestFailed(string $repository, string $reason): self
     {
         return new self("GitHub request for '{$repository}' failed: {$reason}");

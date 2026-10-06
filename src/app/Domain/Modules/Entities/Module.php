@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Modules\Entities;
 
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
@@ -15,6 +16,7 @@ final class Module
 {
     /**
      * @param  array<string>  $dependencies
+     * @param  list<CompatibilityIssue>  $latestBlockedIssues
      */
     public function __construct(
         private readonly ModuleId $id,
@@ -37,6 +39,8 @@ final class Module
         private ?string $sourceRepo = null,
         private ?string $latestAvailableVersion = null,
         private ?DateTimeImmutable $lastUpdateCheckAt = null,
+        private ?string $latestBlockedVersion = null,
+        private array $latestBlockedIssues = [],
     ) {}
 
     public function id(): ModuleId
@@ -185,6 +189,50 @@ final class Module
     public function clearLatestAvailableVersion(): void
     {
         $this->latestAvailableVersion = null;
+    }
+
+    public function latestBlockedVersion(): ?string
+    {
+        return $this->latestBlockedVersion;
+    }
+
+    /**
+     * @return list<CompatibilityIssue>
+     */
+    public function latestBlockedIssues(): array
+    {
+        return $this->latestBlockedIssues;
+    }
+
+    /**
+     * @param  list<CompatibilityIssue>  $issues
+     */
+    public function updateLatestBlocked(string $version, array $issues): void
+    {
+        $this->latestBlockedVersion = $version;
+        $this->latestBlockedIssues = $issues;
+    }
+
+    public function clearLatestBlocked(): void
+    {
+        $this->latestBlockedVersion = null;
+        $this->latestBlockedIssues = [];
+    }
+
+    /**
+     * A newer release exists but this host cannot run it.
+     */
+    public function hasBlockedRelease(): bool
+    {
+        if ($this->latestBlockedVersion === null) {
+            return false;
+        }
+
+        try {
+            return ModuleVersion::fromString($this->latestBlockedVersion)->isGreaterThan($this->version);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function updateLastCheckAt(DateTimeImmutable $timestamp): void

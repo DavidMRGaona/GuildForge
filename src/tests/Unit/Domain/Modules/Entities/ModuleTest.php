@@ -6,6 +6,8 @@ namespace Tests\Unit\Domain\Modules\Entities;
 
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
@@ -215,6 +217,31 @@ final class ModuleTest extends TestCase
 
         $expected = base_path('modules/test-module');
         $this->assertSame($expected, $module->path());
+    }
+
+    public function test_it_records_and_clears_the_highest_blocked_release(): void
+    {
+        $module = $this->createModule(version: new ModuleVersion(1, 1, 0));
+        $issue = new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED);
+
+        $this->assertFalse($module->hasBlockedRelease());
+
+        $module->updateLatestBlocked('2.0.0', [$issue]);
+        $this->assertTrue($module->hasBlockedRelease());
+        $this->assertSame('2.0.0', $module->latestBlockedVersion());
+        $this->assertSame([$issue], $module->latestBlockedIssues());
+
+        $module->clearLatestBlocked();
+        $this->assertFalse($module->hasBlockedRelease());
+        $this->assertSame([], $module->latestBlockedIssues());
+    }
+
+    public function test_a_blocked_release_that_is_not_newer_than_the_installed_one_is_not_reported(): void
+    {
+        $module = $this->createModule(version: new ModuleVersion(2, 0, 0));
+        $module->updateLatestBlocked('2.0.0', []);
+
+        $this->assertFalse($module->hasBlockedRelease());
     }
 
     private function createModule(

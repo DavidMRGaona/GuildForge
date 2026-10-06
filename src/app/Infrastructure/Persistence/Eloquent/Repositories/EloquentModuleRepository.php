@@ -8,6 +8,7 @@ use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
@@ -114,6 +115,11 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             lastUpdateCheckAt: $model->last_update_check_at !== null
                 ? new DateTimeImmutable($model->last_update_check_at->toDateTimeString())
                 : null,
+            latestBlockedVersion: $model->latest_blocked_version,
+            latestBlockedIssues: array_map(
+                static fn (mixed $issue): CompatibilityIssue => CompatibilityIssue::fromArray(is_array($issue) ? $issue : []),
+                array_values($model->latest_blocked_reason ?? []),
+            ),
         );
     }
 
@@ -166,6 +172,10 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             'source_repo' => $module->sourceRepo(),
             'latest_available_version' => $module->latestAvailableVersion(),
             'last_update_check_at' => $module->lastUpdateCheckAt()?->format('Y-m-d H:i:s'),
+            'latest_blocked_version' => $module->latestBlockedVersion(),
+            'latest_blocked_reason' => $module->latestBlockedVersion() === null
+                ? null
+                : array_map(static fn (CompatibilityIssue $issue): array => $issue->toArray(), $module->latestBlockedIssues()),
             'status' => $module->status()->value,
             'enabled_at' => $module->enabledAt()?->format('Y-m-d H:i:s'),
             'installed_at' => $module->installedAt()?->format('Y-m-d H:i:s'),

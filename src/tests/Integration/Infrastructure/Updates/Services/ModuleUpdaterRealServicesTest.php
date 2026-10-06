@@ -18,6 +18,7 @@ use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Domain\Updates\ValueObjects\ReleaseSelection;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\Infrastructure\Updates\Services\ModulePackageInstaller;
@@ -117,9 +118,9 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $archive->close();
 
         $fetcher = Mockery::mock(GitHubReleaseFetcherInterface::class);
-        $fetcher->shouldReceive('getLatestRelease')->andReturn(new GitHubReleaseInfo(
+        $fetcher->shouldReceive('selectRelease')->andReturn(new ReleaseSelection(new GitHubReleaseInfo(
             'v1.0.1-beta', ModuleVersion::fromString('1.0.1-beta'), 'https://example.test/real-mod.zip', '', '', new DateTimeImmutable, true,
-        ));
+        ), '^2.0', null, null, []));
         $fetcher->shouldReceive('downloadRelease')->andReturnUsing(function (GitHubReleaseInfo $release, string $destination) use ($zip): string {
             File::ensureDirectoryExists(dirname($destination));
             File::copy($zip, $destination);
