@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Application\Modules\DTOs\RejectedModuleDTO;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
-use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
 use App\Modules\ModuleServiceProvider;
+use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -206,6 +209,11 @@ class AdminPanelProvider extends PanelProvider
                         'settingsUrl' => SiteSettings::canAccess() ? SiteSettings::getMaintenanceTabUrl() : null,
                     ])->render()
                     : '',
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                // Read on render, never while the panel is being registered
+                fn (): string => $this->incompatibleModulesBanner(),
             );
 
         // Discover resources from enabled modules
@@ -414,7 +422,38 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * Get the names of all enabled modules.
+     * Every signed-in panel user sees it while an enabled module is not loaded because this host cannot run it.
+     */
+    private function incompatibleModulesBanner(): string
+    {
+        try {
+            // Not on the login page: module names and versions are for panel users only
+            if (! auth()->check()) {
+                return '';
+            }
+
+            $rejected = app(EnabledModulesResolverInterface::class)->rejected();
+
+            if ($rejected === []) {
+                return '';
+            }
+
+            $formatter = app(CompatibilityIssueFormatter::class);
+
+            return view('filament.components.incompatible-modules-banner', [
+                'modules' => array_map(static fn (RejectedModuleDTO $module): array => [
+                    'display_name' => $module->displayName !== '' ? $module->displayName : $module->name,
+                    'reasons' => $formatter->summary($module->issues),
+                ], $rejected),
+                'modulesUrl' => ModulesPage::canAccess() ? ModulesPage::getUrl() : null,
+            ])->render();
+        } catch (Throwable) {
+            return '';
+        }
+    }
+
+    /**
+     * Names of the enabled modules whose module.json this host satisfies.
      *
      * @return array<string>
      */
@@ -431,19 +470,12 @@ class AdminPanelProvider extends PanelProvider
                 return $this->enabledModuleNamesCache = [];
             }
 
-            if (! app()->bound(ModuleRepositoryInterface::class)) {
+            if (! app()->bound(EnabledModulesResolverInterface::class)) {
                 return $this->enabledModuleNamesCache = [];
             }
 
-            $repository = app(ModuleRepositoryInterface::class);
-            $enabledModules = $repository->enabled()->all();
-
-            $names = array_map(
-                static fn ($module) => $module->name()->value,
-                $enabledModules
-            );
-
-            return $this->enabledModuleNamesCache = $names;
+            // Enabled AND compatible: nothing below may require_once an incompatible module
+            return $this->enabledModuleNamesCache = app(EnabledModulesResolverInterface::class)->names();
         } catch (Throwable) {
             return $this->enabledModuleNamesCache = [];
         }

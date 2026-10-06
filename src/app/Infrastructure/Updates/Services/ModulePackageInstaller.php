@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Updates\Services;
 
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Updates\Services\ModulePackageInstallerInterface;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Updates\Exceptions\UpdateException;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +20,11 @@ use ZipArchive;
  */
 final class ModulePackageInstaller implements ModulePackageInstallerInterface
 {
+    public function __construct(
+        private readonly ModuleCompatibilityServiceInterface $compatibility,
+    ) {
+    }
+
     public function stage(string $zipPath, string $moduleName): string
     {
         $staging = $this->modulesPath()."/.staging-{$moduleName}-".Str::lower(Str::random(8));
@@ -32,15 +39,26 @@ final class ModulePackageInstaller implements ModulePackageInstallerInterface
             $zip->close();
 
             $stagedRoot = "{$staging}/{$root}";
-            $this->assertManifestName($stagedRoot, $moduleName);
+            $manifest = $this->assertManifestName($stagedRoot, $moduleName);
+
+            // Last line of defence: the release may have changed since the update check
+            $compatibility = $this->compatibility->checkManifestFile("{$stagedRoot}/module.json");
+
+            if (! $compatibility->isCompatible()) {
+                $version = is_string($manifest['version'] ?? null) ? $manifest['version'] : null;
+
+                throw ModuleIncompatibleException::forModule($moduleName, $version, $compatibility);
+            }
 
             return $stagedRoot;
         } catch (\Throwable $e) {
             $this->discard($staging);
 
-            throw $e instanceof UpdateException
-                ? $e
-                : UpdateException::extractionFailed($moduleName, $e->getMessage());
+            if ($e instanceof UpdateException || $e instanceof ModuleIncompatibleException) {
+                throw $e;
+            }
+
+            throw UpdateException::extractionFailed($moduleName, $e->getMessage());
         }
     }
 
@@ -142,7 +160,10 @@ final class ModulePackageInstaller implements ModulePackageInstallerInterface
         return $root;
     }
 
-    private function assertManifestName(string $stagedRoot, string $moduleName): void
+    /**
+     * @return array<string, mixed>
+     */
+    private function assertManifestName(string $stagedRoot, string $moduleName): array
     {
         /** @var array<string, mixed>|null $manifest */
         $manifest = json_decode((string) File::get("{$stagedRoot}/module.json"), true);
@@ -150,6 +171,8 @@ final class ModulePackageInstaller implements ModulePackageInstallerInterface
         if (! is_array($manifest) || ($manifest['name'] ?? null) !== $moduleName) {
             throw UpdateException::extractionFailed($moduleName, 'The package belongs to a different module');
         }
+
+        return $manifest;
     }
 
     private function modulesPath(): string

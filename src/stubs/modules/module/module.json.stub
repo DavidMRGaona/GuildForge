@@ -6,8 +6,9 @@
     "description": "{{ moduleDescription }}",
     "author": "{{ moduleAuthor }}",
     "requires": {
+        "core": "{{ coreConstraint }}",
         "php": ">=8.2",
-        "laravel": ">=11.0"
+        "laravel": ">=12.0"
     },
     "dependencies": []
 }

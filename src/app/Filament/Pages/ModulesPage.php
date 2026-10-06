@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Exceptions\InvalidModuleNameException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleCannotUninstallException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -171,46 +176,69 @@ final class ModulesPage extends Page implements HasForms
                 ->action(function (array $data, ModuleInstallerInterface $installer, ModuleManagerServiceInterface $moduleManager): void {
                     try {
                         $uploadedFile = $this->resolveUploadedFile($data['zipFile']);
-
-                        // Peek at the manifest to determine if this is an install or update
-                        $manifest = $installer->peekManifest($uploadedFile);
-                        $isUpdate = $installer->moduleExists($manifest->name);
-
-                        if ($isUpdate) {
-                            $manifest = $installer->updateFromZip($uploadedFile);
-
-                            session()->flash('module_action_notification', [
-                                'title' => __('modules.filament.notifications.updated', [
-                                    'name' => $manifest->name,
-                                    'version' => $manifest->version,
-                                ]),
-                                'status' => 'success',
-                            ]);
-                        } else {
-                            $manifest = $installer->installFromZip($uploadedFile);
-
-                            // Discover to register in DB
-                            $moduleManager->discover();
-
-                            session()->flash('module_action_notification', [
-                                'title' => __('modules.filament.notifications.installed', ['name' => $manifest->name]),
-                                'status' => 'success',
-                            ]);
-                        }
-
-                        $this->js('window.location.href = '.json_encode(static::getUrl()));
                     } catch (ModuleInstallationException $e) {
-                        Notification::make()
-                            ->title(__('modules.filament.notifications.cannot_install', ['error' => $e->getMessage()]))
-                            ->danger()
-                            ->send();
+                        $this->notifyCannotInstall($e->getMessage());
+
+                        return;
                     }
+
+                    $this->installPackage($uploadedFile, $installer, $moduleManager);
                 }),
         ];
     }
 
+    private function installPackage(UploadedFile $uploadedFile, ModuleInstallerInterface $installer, ModuleManagerServiceInterface $moduleManager): void
+    {
+        try {
+            // Peek at the manifest to determine if this is an install or update
+            $manifest = $installer->peekManifest($uploadedFile);
+            $isUpdate = $installer->moduleExists($manifest->name);
+
+            if ($isUpdate) {
+                $manifest = $installer->updateFromZip($uploadedFile);
+
+                session()->flash('module_action_notification', [
+                    'title' => __('modules.filament.notifications.updated', [
+                        'name' => $manifest->name,
+                        'version' => $manifest->version,
+                    ]),
+                    'status' => 'success',
+                ]);
+            } else {
+                $manifest = $installer->installFromZip($uploadedFile);
+
+                // Discover to register in DB
+                $moduleManager->discover();
+
+                session()->flash('module_action_notification', [
+                    'title' => __('modules.filament.notifications.installed', ['name' => $manifest->name]),
+                    'status' => 'success',
+                ]);
+            }
+
+            $this->js('window.location.href = '.json_encode(static::getUrl()));
+        } catch (ModuleIncompatibleException $e) {
+            Notification::make()
+                ->title(app(CompatibilityIssueFormatter::class)->incompatiblePackage($e->moduleName, $e->version, $e->issues))
+                ->danger()
+                ->send();
+        } catch (ModuleInstallationException $e) {
+            $this->notifyCannotInstall($e->getMessage());
+        }
+    }
+
+    private function notifyCannotInstall(string $error): void
+    {
+        Notification::make()
+            ->title(__('modules.filament.notifications.cannot_install', ['error' => $error]))
+            ->danger()
+            ->send();
+    }
+
     public function enableModule(string $name, ModuleManagerServiceInterface $moduleManager): void
     {
+        $displayName = $name;
+
         try {
             // Get display name and installation status before enabling
             $moduleName = new ModuleName($name);
@@ -232,6 +260,11 @@ final class ModulesPage extends Page implements HasForms
             Notification::make()
                 ->title($message)
                 ->success()
+                ->send();
+        } catch (ModuleIncompatibleException $e) {
+            Notification::make()
+                ->title(app(CompatibilityIssueFormatter::class)->cannotEnable($displayName, $e->issues))
+                ->danger()
                 ->send();
         } catch (ModuleNotFoundException|ModuleAlreadyEnabledException|ModuleDependencyException $e) {
             Notification::make()
@@ -338,6 +371,27 @@ final class ModulesPage extends Page implements HasForms
         } catch (ModuleNotFoundException) {
             return [];
         }
+    }
+
+    /**
+     * Read from module.json on disk; the result is memoized by the compatibility service.
+     *
+     * @return array{compatible: bool, reasons: list<string>}
+     */
+    public function getCompatibility(string $name): array
+    {
+        try {
+            $result = app(ModuleCompatibilityServiceInterface::class)->checkInstalled(new ModuleName($name));
+        } catch (InvalidModuleNameException) {
+            return ['compatible' => false, 'reasons' => []];
+        }
+
+        $formatter = app(CompatibilityIssueFormatter::class);
+
+        return [
+            'compatible' => $result->isCompatible(),
+            'reasons' => array_map(static fn (CompatibilityIssue $issue): string => $formatter->format($issue), $result->issues),
+        ];
     }
 
     private function resolveUploadedFile(mixed $tempFile): UploadedFile

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\DependencyCheckResultDTO;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
@@ -12,11 +13,14 @@ use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class ModuleManagerServiceTest extends TestCase
@@ -605,6 +609,147 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertSame('manual', $repository->findByName(new ModuleName('repo-module'))?->sourceOwner());
     }
 
+    public function test_discover_resyncs_requirements_and_manifest_metadata_of_existing_modules(): void
+    {
+        $this->createTestModule('test-module', ['requires' => ['php' => '>=8.2']]);
+        $this->service->discover();
+
+        $repository = $this->app->make(ModuleRepositoryInterface::class);
+        $stored = $repository->findByName(new ModuleName('test-module'));
+        $this->assertNotNull($stored);
+        $stored->enable();
+        $stored->updateSourceInfo('acme', 'manual-repo');
+        $stored->updateLatestAvailableVersion('1.1.0');
+        $repository->save($stored);
+
+        $this->mergeManifest('test-module', [
+            'requires' => ['core' => '^2.6', 'filament' => '^3.3', 'php' => '>=8.3', 'modules' => ['base-module:^1.0']],
+            'dependencies' => ['base-module'],
+            'namespace' => 'Modules\\Renamed',
+            'provider' => 'RenamedServiceProvider',
+            'author' => 'New Author',
+        ]);
+        $this->service->discover();
+
+        $module = $this->service->find(new ModuleName('test-module'));
+        $this->assertNotNull($module);
+        $this->assertSame('^2.6', $module->requirements()->coreVersion());
+        $this->assertSame('^3.3', $module->requirements()->filamentVersion());
+        $this->assertSame('>=8.3', $module->requirements()->phpVersion());
+        $this->assertSame(['base-module:^1.0'], $module->requirements()->requiredModules());
+        $this->assertSame(['base-module'], $module->dependencies());
+        $this->assertSame('Modules\\Renamed', $module->namespace());
+        $this->assertSame('RenamedServiceProvider', $module->provider());
+        $this->assertSame('New Author', $module->author());
+
+        // State that does not come from the manifest survives the re-sync
+        $this->assertTrue($module->isEnabled());
+        $this->assertSame('acme', $module->sourceOwner());
+        $this->assertSame('manual-repo', $module->sourceRepo());
+        $this->assertSame('1.1.0', $module->latestAvailableVersion());
+
+        // With the manifest unchanged, the next discovery saves nothing
+        $saves = 0;
+        ModuleModel::saving(function () use (&$saves): void {
+            $saves++;
+        });
+        $this->service->discover();
+        $this->assertSame(0, $saves);
+    }
+
+    public function test_first_discovery_keeps_only_string_dependencies_so_the_resync_saves_nothing(): void
+    {
+        $this->createTestModule('test-module', ['dependencies' => ['base-module', 7]]);
+        $this->service->discover();
+
+        $this->assertSame(['base-module'], $this->service->find(new ModuleName('test-module'))?->dependencies());
+
+        $saves = 0;
+        ModuleModel::saving(function () use (&$saves): void {
+            $saves++;
+        });
+        $this->service->discover();
+        $this->assertSame(0, $saves);
+    }
+
+    public function test_an_invalid_constraint_in_one_manifest_does_not_abort_discovery_of_the_others(): void
+    {
+        $this->createTestModule('bad-module', ['requires' => ['core' => 3, 'extensions' => 'intl']]);
+        $this->createTestModule('good-module', ['requires' => ['core' => '^2.6']]);
+
+        $modules = $this->service->discover();
+
+        $this->assertCount(2, $modules);
+        $bad = $this->service->find(new ModuleName('bad-module'));
+        $this->assertNotNull($bad);
+        $this->assertSame('', $bad->requirements()->coreVersion());
+        $this->assertSame([], $bad->requirements()->requiredExtensions());
+        $this->assertSame('^2.6', $this->service->find(new ModuleName('good-module'))?->requirements()->coreVersion());
+    }
+
+    public function test_enable_rejects_an_incompatible_module_without_migrating_or_changing_its_state(): void
+    {
+        $this->createTestModule('test-module', ['requires' => ['core' => '^99.0']]);
+        $this->createTestModuleMigration('test-module', 'create_test_module_table');
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'status' => ModuleStatus::Disabled->value,
+        ]);
+
+        try {
+            $this->service->enable(ModuleName::fromString('test-module'));
+            $this->fail('Expected ModuleIncompatibleException');
+        } catch (ModuleIncompatibleException $e) {
+            $this->assertSame('test-module', $e->moduleName);
+            $this->assertSame('1.0.0', $e->version);
+            $this->assertStringContainsString('requires core ^99.0', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('modules', ['name' => 'test-module', 'status' => 'disabled', 'installed_at' => null]);
+        $this->assertFalse(Schema::hasTable('test_module_table'));
+    }
+
+    public function test_enable_makes_the_module_loadable_in_the_same_process(): void
+    {
+        $this->createTestModule('test-module');
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value]);
+        $resolver = app(EnabledModulesResolverInterface::class);
+        $resolver->reset();
+        $this->assertSame([], $resolver->names());
+
+        $this->service->enable(ModuleName::fromString('test-module'));
+
+        $this->assertSame(['test-module'], $resolver->names());
+    }
+
+    public function test_discover_does_not_migrate_an_enabled_module_that_became_incompatible(): void
+    {
+        $this->createTestModule('test-module', ['version' => '1.1.0', 'requires' => ['core' => '^99.0']]);
+        $this->createTestModuleMigration('test-module', 'create_test_module_table');
+        ModuleModel::create([
+            'name' => 'test-module',
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'status' => ModuleStatus::Enabled->value,
+            'enabled_at' => now(),
+            'installed_at' => now(),
+        ]);
+
+        // Module migrations under a temp path never reach the migrator in tests, so the table
+        // assertion alone cannot fail: the skip is also observed through its warning
+        Log::spy();
+
+        $this->service->discover();
+
+        $this->assertFalse(Schema::hasTable('test_module_table'));
+        $this->assertDatabaseHas('modules', ['name' => 'test-module', 'version' => '1.1.0', 'status' => 'enabled']);
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message): bool => str_contains($message, 'Not migrating module test-module'))
+            ->once();
+    }
+
     private function writeManifestKey(string $name, string $key, string $value): void
     {
         $path = $this->testModulesPath.'/'.$name.'/module.json';
@@ -612,6 +757,17 @@ final class ModuleManagerServiceTest extends TestCase
         $manifest = json_decode((string) file_get_contents($path), true);
         $manifest[$key] = $value;
         file_put_contents($path, json_encode($manifest, JSON_PRETTY_PRINT));
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     */
+    private function mergeManifest(string $name, array $values): void
+    {
+        $path = $this->testModulesPath.'/'.$name.'/module.json';
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode((string) file_get_contents($path), true);
+        file_put_contents($path, json_encode(array_merge($manifest, $values), JSON_PRETTY_PRINT));
     }
 
     private function createTestModule(string $name, array $manifest = []): void

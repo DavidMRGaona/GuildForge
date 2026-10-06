@@ -278,6 +278,10 @@ return [
                 'no_changelog' => 'This release has no notes.',
                 'failed' => 'Could not load the details',
                 'close' => 'Close',
+                'compatibility' => 'Compatibility',
+                'compatible' => 'Compatible with this site',
+                'incompatible' => 'Not compatible with this site',
+                'core_requirement' => 'Requires core :constraint',
             ],
             'history' => [
                 'title' => 'Update history',
@@ -298,6 +302,10 @@ return [
             'without_source' => [
                 'title' => 'Modules without a repository',
                 'hint' => 'Add "repository": "owner/repo" to their module.json or run php artisan module:set-source.',
+            ],
+            'blocked' => [
+                'heading' => 'Incompatible versions',
+                'line' => ':version available, :reasons',
             ],
         ],
         'core' => [

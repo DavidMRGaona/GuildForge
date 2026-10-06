@@ -42,6 +42,7 @@ interface ModuleInstallerInterface
      * @return ModuleManifestDTO The installed module's manifest
      *
      * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
+     * @throws \App\Domain\Modules\Exceptions\ModuleIncompatibleException When the package does not fit this host
      */
     public function installFromZip(UploadedFile $file): ModuleManifestDTO;
 
@@ -54,6 +55,7 @@ interface ModuleInstallerInterface
      * @return ModuleManifestDTO The updated module's manifest
      *
      * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
+     * @throws \App\Domain\Modules\Exceptions\ModuleIncompatibleException When the package does not fit this host
      */
     public function updateFromZip(UploadedFile $file): ModuleManifestDTO;
 

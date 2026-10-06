@@ -91,6 +91,46 @@ jobs:
           echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
           echo "Version: $VERSION (prerelease: $IS_PRERELEASE)"
 
+      # Same grammar as App\Domain\Modules\Services\ConstraintMatcher (keep both in sync with its tests)
+      - name: Validate compatibility requirements
+        run: |
+          NUM='(0|[1-9][0-9]{0,8})'
+          VER="${NUM}([.]${NUM}([.]${NUM}(-[0-9A-Za-z]+([.][0-9A-Za-z]+)*)?)?)?"
+          SIMPLE="(>=|<=|[~^<>=])? *${VER}"
+          AND="${SIMPLE}(( *, *| +)${SIMPLE})*"
+          RE="^ *${AND}( *[|][|] *${AND})* *\$"
+
+          if ! jq -e '.requires | type == "object" and has("core")' module.json > /dev/null; then
+            echo "::error::requires.core is required in module.json (e.g. \"^2.6\")"
+            exit 1
+          fi
+
+          for KEY in core filament php laravel; do
+            # Optional keys may be absent; a present key must hold a string (null is refused too)
+            if ! jq -e --arg k "$KEY" '.requires | has($k)' module.json > /dev/null; then
+              continue
+            fi
+
+            # Values are shown JSON-encoded so a newline cannot break the log line
+            SHOWN=$(jq -c --arg k "$KEY" '.requires[$k]' module.json)
+
+            # NUL is refused here because bash variables cannot hold it
+            if ! jq -e --arg k "$KEY" '.requires[$k] | type == "string" and all(explode[]; . != 0)' module.json > /dev/null; then
+              echo "::error::requires.$KEY must be a constraint string in module.json, got $SHOWN"
+              exit 1
+            fi
+
+            # Raw value, nothing stripped: jq -j adds no newline and the "x" sentinel keeps
+            # the trailing newlines that $(...) would drop, so the anchored match rejects them
+            VALUE=$(jq -j --arg k "$KEY" '.requires[$k]' module.json; printf x)
+            VALUE=${VALUE%x}
+
+            if ! [[ "$VALUE" =~ $RE ]]; then
+              echo "::error::Invalid requires.$KEY constraint in module.json: $SHOWN"
+              exit 1
+            fi
+          done
+
   test:
     name: Test module
     needs: validate
@@ -285,5 +325,6 @@ jobs:
           files: |
             ${{ inputs.module_name }}-${{ needs.validate.outputs.version }}.zip
             ${{ inputs.module_name }}-${{ needs.validate.outputs.version }}.zip.sha256
+            module.json
           prerelease: ${{ needs.validate.outputs.is_prerelease }}
           generate_release_notes: false

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Application\Updates\Services;
 
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubCommitComparison;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Domain\Updates\ValueObjects\ReleaseSelection;
 
 /**
  * Service for fetching release information from GitHub.
@@ -14,14 +16,14 @@ use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 interface GitHubReleaseFetcherInterface
 {
     /**
-     * Get the highest-versioned published release of a repository.
+     * Choose among the published releases newer than $installed (drafts skipped; prereleases only
+     * when $includePrereleases): the highest one whose module.json this host satisfies, and the
+     * highest incompatible one newer than it. Releases without a module.json asset are evaluated
+     * with the default core constraint.
      *
-     * Drafts are ignored, and prereleases too unless $includePrereleases is true.
-     * Returns null when the repository has no matching release.
-     *
-     * @throws UpdateException When GitHub cannot be queried (missing or private repo, rate limit, network)
+     * @throws UpdateException When GitHub cannot be queried or a release's module.json cannot be downloaded
      */
-    public function getLatestRelease(string $owner, string $repo, bool $includePrereleases = false): ?GitHubReleaseInfo;
+    public function selectRelease(string $owner, string $repo, ModuleVersion $installed, bool $includePrereleases): ReleaseSelection;
 
     /**
      * Download a release ZIP file to local storage.
@@ -36,15 +38,13 @@ interface GitHubReleaseFetcherInterface
     public function fetchAndVerifyChecksum(GitHubReleaseInfo $release, string $downloadedFilePath): bool;
 
     /**
-     * Batch fetch latest releases for multiple repositories.
+     * A repository that cannot be queried maps to its UpdateException, so one failure
+     * does not hide the results of the others.
      *
-     * A repository that cannot be queried maps to its UpdateException, so one
-     * failure does not hide the results of the others.
-     *
-     * @param  array<array{owner: string, repo: string}>  $repos
-     * @return array<string, GitHubReleaseInfo|UpdateException|null> Keyed by "owner/repo"
+     * @param  list<array{owner: string, repo: string, installed: ModuleVersion}>  $repos
+     * @return array<string, ReleaseSelection|UpdateException> Keyed by "owner/repo"
      */
-    public function batchFetchLatestReleases(array $repos, bool $includePrereleases = false): array;
+    public function batchSelectReleases(array $repos, bool $includePrereleases = false): array;
 
     /**
      * Clear cached release information.

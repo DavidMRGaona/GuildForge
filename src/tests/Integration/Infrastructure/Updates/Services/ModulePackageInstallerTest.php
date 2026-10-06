@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Infrastructure\Updates\Services\ModulePackageInstaller;
 use Illuminate\Support\Facades\File;
@@ -25,7 +26,7 @@ final class ModulePackageInstallerTest extends TestCase
         File::makeDirectory($this->modulesPath, 0775, true);
         config(['modules.path' => $this->modulesPath]);
 
-        $this->installer = new ModulePackageInstaller;
+        $this->installer = $this->app->make(ModulePackageInstaller::class);
         $this->makeModule('game-tables', '1.0.0');
         $this->makeModule('channel-notifications', '1.0.0');
     }
@@ -139,17 +140,50 @@ final class ModulePackageInstallerTest extends TestCase
         $this->assertDirectoryExists($this->modulesPath.'/game-tables');
     }
 
+    public function test_stage_rejects_an_incompatible_release_and_leaves_the_installed_module_untouched(): void
+    {
+        $zip = $this->zipWith([
+            'game-tables-2.0.0/module.json' => $this->manifest('game-tables', '2.0.0', ['core' => '^99.0']),
+            'game-tables-2.0.0/src/Dummy.php' => '<?php',
+        ]);
+
+        try {
+            $this->installer->stage($zip, 'game-tables');
+            $this->fail('Expected ModuleIncompatibleException');
+        } catch (ModuleIncompatibleException $e) {
+            $this->assertSame('2.0.0', $e->version);
+            $this->assertStringContainsString('requires core ^99.0', $e->getMessage());
+        }
+
+        $this->assertSame('1.0.0', $this->manifestVersion('game-tables'));
+        $this->assertSame([], glob($this->modulesPath.'/.staging-*', GLOB_ONLYDIR));
+    }
+
+    /**
+     * @param  array<string, mixed>  $requires
+     */
+    private function manifest(string $name, string $version, array $requires = []): string
+    {
+        return (string) json_encode([
+            'name' => $name,
+            'version' => $version,
+            'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
+            'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
+            'requires' => $requires,
+        ]);
+    }
+
     private function makeModule(string $name, string $version): void
     {
         File::makeDirectory($this->modulesPath."/{$name}/src", 0775, true);
-        File::put($this->modulesPath."/{$name}/module.json", json_encode(['name' => $name, 'version' => $version]));
+        File::put($this->modulesPath."/{$name}/module.json", $this->manifest($name, $version));
         File::put($this->modulesPath."/{$name}/src/Dummy.php", '<?php');
     }
 
     private function releaseZip(string $name, string $version): string
     {
         return $this->zipWith([
-            "{$name}-{$version}/module.json" => (string) json_encode(['name' => $name, 'version' => $version]),
+            "{$name}-{$version}/module.json" => $this->manifest($name, $version),
             "{$name}-{$version}/src/Dummy.php" => '<?php',
             "{$name}-{$version}/public/build/manifest.json" => '{}',
         ]);

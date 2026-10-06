@@ -363,11 +363,15 @@ src/modules/
     module.json              # Module manifest
 ```
 
+### EnabledModulesResolver
+
+`App\Infrastructure\Modules\Services\EnabledModulesResolver` is the only filter on which modules a process loads. `AdminPanelProvider` (before compiling any module provider or Resource), `ModulesServiceProvider` (module migrations, from `migrationPaths()`: every compatible module on disk, enabled or not) and `ModuleLoader` all ask it. Compatibility comes from `ModuleCompatibilityService`, which reads `module.json` and evaluates it with `ModuleCompatibilityChecker` (`requires.core`, `filament`, `php`, `laravel`, `extensions`); it never loads module code and never writes module state. Enabling a module, installing a ZIP and staging an update go through the same check, and update detection evaluates each release's `module.json` asset with the same checker.
+
 ### ModuleLoader
 
 `App\Modules\ModuleLoader` is responsible for booting enabled modules. Its flow:
 
-1. Queries the repository for enabled modules (with optional cache)
+1. Asks `EnabledModulesResolver` for the modules to load: enabled in the database (with optional cache) and compatible according to their `module.json` on disk
 2. For each module, registers an SPL autoloader for its namespace
 3. Instantiates and registers the module's `ModuleServiceProvider`
 4. Registers the module's hooks: slots, permissions, pages, routes, navigation

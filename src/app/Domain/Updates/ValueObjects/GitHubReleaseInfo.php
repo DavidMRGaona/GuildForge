@@ -20,6 +20,7 @@ final readonly class GitHubReleaseInfo
         public string $releaseNotes,
         public DateTimeImmutable $publishedAt,
         public bool $isPrerelease,
+        public string $manifestUrl = '',
     ) {
     }
 
@@ -36,6 +37,7 @@ final readonly class GitHubReleaseInfo
         // Find the ZIP asset
         $downloadUrl = '';
         $checksumUrl = '';
+        $manifestUrl = '';
 
         foreach ($data['assets'] ?? [] as $asset) {
             $name = $asset['name'] ?? '';
@@ -47,6 +49,11 @@ final readonly class GitHubReleaseInfo
             if (str_ends_with($name, '.sha256')) {
                 $checksumUrl = $asset['browser_download_url'] ?? '';
             }
+
+            // Published since core 2.6 so the updater can read requirements before downloading
+            if ($name === 'module.json') {
+                $manifestUrl = $asset['browser_download_url'] ?? '';
+            }
         }
 
         return new self(
@@ -57,6 +64,7 @@ final readonly class GitHubReleaseInfo
             releaseNotes: $data['body'] ?? '',
             publishedAt: new DateTimeImmutable($data['published_at'] ?? 'now'),
             isPrerelease: $data['prerelease'] ?? false,
+            manifestUrl: $manifestUrl,
         );
     }
 
@@ -74,6 +82,11 @@ final readonly class GitHubReleaseInfo
     public function hasChecksum(): bool
     {
         return $this->checksumUrl !== '';
+    }
+
+    public function hasManifest(): bool
+    {
+        return $this->manifestUrl !== '';
     }
 
     /**
@@ -99,6 +112,7 @@ final readonly class GitHubReleaseInfo
             'release_notes' => $this->releaseNotes,
             'published_at' => $this->publishedAt->format('c'),
             'is_prerelease' => $this->isPrerelease,
+            'manifest_url' => $this->manifestUrl,
         ];
     }
 }

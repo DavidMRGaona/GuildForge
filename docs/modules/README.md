@@ -135,14 +135,18 @@ modules/my-module/
     "description": "My awesome module",
     "author": "Developer",
     "requires": {
+        "core": "^2.6",
+        "filament": "^3.3",
         "php": ">=8.2",
-        "laravel": ">=11.0",
+        "laravel": ">=12.0",
         "modules": ["another-module:^1.0"],
         "extensions": ["json"]
     },
     "dependencies": ["another-module"]
 }
 ```
+
+`requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). Declare the lowest core minor you tested against, e.g. `^2.6`.
 
 ---
 

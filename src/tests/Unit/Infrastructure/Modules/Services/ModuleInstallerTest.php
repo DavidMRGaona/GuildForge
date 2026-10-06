@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
+use App\Application\Modules\DTOs\ModuleManifestDTO;
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\Events\ModuleUpdated;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
+use App\Domain\Modules\ValueObjects\CompatibilityResult;
 use App\Domain\Modules\ValueObjects\CoreTableRegistry;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -49,6 +55,8 @@ final class ModuleInstallerTest extends TestCase
 
     private ModuleSeederRunner $seederRunner;
 
+    private MockInterface&ModuleCompatibilityServiceInterface $compatibility;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -77,12 +85,16 @@ final class ModuleInstallerTest extends TestCase
         $this->migrationRunner = new ModuleMigrationRunner($this->modulesPath, $analyzer, $schemaGuard);
         $this->seederRunner = new ModuleSeederRunner($this->modulesPath, $analyzer);
 
+        $this->compatibility = Mockery::mock(ModuleCompatibilityServiceInterface::class);
+        $this->compatibility->shouldReceive('checkManifest')->andReturn(CompatibilityResult::compatible())->byDefault();
+
         $this->installer = new ModuleInstaller(
             $this->dispatcher,
             $this->repository,
             $this->backupService,
             $this->migrationRunner,
-            $this->seederRunner
+            $this->seederRunner,
+            $this->compatibility,
         );
     }
 
@@ -571,6 +583,102 @@ final class ModuleInstallerTest extends TestCase
         // Verify source build directory is preserved (for re-publishing on redeploy)
         $moduleBuildPath = $this->modulesPath.'/assets-test-module/public/build';
         $this->assertTrue(File::isDirectory($moduleBuildPath));
+    }
+
+    public function test_install_rejects_an_incompatible_package_before_moving_anything(): void
+    {
+        $this->rejectEverything();
+        $zipPath = $this->createValidZip([
+            'module.json' => (string) json_encode([
+                'name' => 'future-module', 'version' => '9.0.0', 'namespace' => 'Modules\\FutureModule',
+                'provider' => 'FutureModuleServiceProvider', 'requires' => ['core' => '^3.0'],
+            ]),
+        ]);
+
+        try {
+            $this->installer->installFromZip(new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true));
+            $this->fail('Expected ModuleIncompatibleException');
+        } catch (ModuleIncompatibleException $e) {
+            $this->assertSame('future-module', $e->moduleName);
+            $this->assertSame('9.0.0', $e->version);
+        }
+
+        $this->assertDirectoryDoesNotExist($this->modulesPath.'/future-module');
+    }
+
+    public function test_update_rejects_an_incompatible_package_before_backing_up_or_deleting(): void
+    {
+        $this->rejectEverything();
+        File::makeDirectory($this->modulesPath.'/update-test-module', 0755, true);
+        File::put($this->modulesPath.'/update-test-module/old-file.txt', 'old content');
+        $this->backupService->shouldNotReceive('createBackup');
+        $this->repository->shouldNotReceive('save');
+        $zipPath = $this->createValidZip([
+            'module.json' => (string) json_encode([
+                'name' => 'update-test-module', 'version' => '2.0.0', 'namespace' => 'Modules\\UpdateTestModule',
+                'provider' => 'UpdateTestModuleServiceProvider', 'requires' => ['core' => '^3.0'],
+            ]),
+        ]);
+
+        $this->expectException(ModuleIncompatibleException::class);
+
+        try {
+            $this->installer->updateFromZip(new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true));
+        } finally {
+            $this->assertFileExists($this->modulesPath.'/update-test-module/old-file.txt');
+        }
+    }
+
+    public function test_a_malformed_requirement_is_refused_with_its_reason_not_as_invalid_json(): void
+    {
+        $this->compatibility->shouldReceive('checkManifest')
+            ->once()
+            ->with(Mockery::on(static fn (ModuleManifestDTO $manifest): bool => ($manifest->requires['core'] ?? null) === ''))
+            ->andReturn(new CompatibilityResult([
+                new CompatibilityIssue(RequirementType::Core, '', '2.6.0', CompatibilityIssue::INVALID_CONSTRAINT),
+            ]));
+        $zipPath = $this->createValidZip([
+            'module.json' => (string) json_encode([
+                'name' => 'future-module', 'version' => '9.0.0', 'namespace' => 'Modules\\FutureModule',
+                'provider' => 'FutureModuleServiceProvider', 'requires' => ['core' => null],
+            ]),
+        ]);
+
+        try {
+            $this->installer->installFromZip(new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true));
+            $this->fail('Expected ModuleIncompatibleException');
+        } catch (ModuleIncompatibleException $e) {
+            $this->assertSame(CompatibilityIssue::INVALID_CONSTRAINT, $e->issues[0]->reasonKey);
+        }
+
+        $this->assertDirectoryDoesNotExist($this->modulesPath.'/future-module');
+    }
+
+    public function test_malformed_requirement_lists_are_still_refused_as_an_invalid_manifest(): void
+    {
+        $this->compatibility->shouldNotReceive('checkManifest');
+        $zipPath = $this->createValidZip([
+            'module.json' => (string) json_encode([
+                'name' => 'future-module', 'version' => '9.0.0', 'namespace' => 'Modules\\FutureModule',
+                'provider' => 'FutureModuleServiceProvider', 'requires' => ['extensions' => 'intl', 'modules' => [1, 'announcements']],
+            ]),
+        ]);
+
+        try {
+            $this->installer->installFromZip(new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true));
+            $this->fail('Expected ModuleInstallationException');
+        } catch (ModuleInstallationException $e) {
+            $this->assertSame(ModuleInstallationException::invalidManifestJson()->getMessage(), $e->getMessage());
+        }
+
+        $this->assertDirectoryDoesNotExist($this->modulesPath.'/future-module');
+    }
+
+    private function rejectEverything(): void
+    {
+        $this->compatibility->shouldReceive('checkManifest')->andReturn(new CompatibilityResult([
+            new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED),
+        ]));
     }
 
     /**

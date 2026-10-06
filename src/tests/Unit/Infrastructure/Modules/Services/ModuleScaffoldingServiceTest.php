@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\ScaffoldResultDTO;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
 use App\Infrastructure\Modules\Services\StubRenderer;
 use PHPUnit\Framework\TestCase;
@@ -28,7 +30,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
         // Use real stubs path - stubs are in src/stubs/modules
         $stubsPath = dirname(__DIR__, 5).'/stubs/modules';
         $this->stubRenderer = new StubRenderer($stubsPath);
-        $this->service = new ModuleScaffoldingService($this->stubRenderer, $this->tempModulesPath);
+        $coreVersion = $this->createStub(CoreVersionServiceInterface::class);
+        $coreVersion->method('getCurrentVersion')->willReturn(ModuleVersion::fromString('2.6.3'));
+        $this->service = new ModuleScaffoldingService($this->stubRenderer, $this->tempModulesPath, $coreVersion);
     }
 
     protected function tearDown(): void
@@ -50,6 +54,17 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertDirectoryExists($this->tempModulesPath.'/blog');
         $this->assertFileExists($this->tempModulesPath.'/blog/module.json');
         $this->assertFileExists($this->tempModulesPath.'/blog/src/BlogServiceProvider.php');
+    }
+
+    public function test_the_generated_manifest_requires_the_running_core_minor(): void
+    {
+        $this->service->createModule('blog', 'A blog module', 'Test Author');
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog/module.json'), true);
+
+        $this->assertSame('^2.6', $manifest['requires']['core'] ?? null);
+        $this->assertSame('>=12.0', $manifest['requires']['laravel'] ?? null);
     }
 
     public function test_it_creates_module_with_correct_structure(): void

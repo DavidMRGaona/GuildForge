@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Updates;
 
+use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\View\Modules\CompatibilityIssueFormatter;
 use Illuminate\Console\Command;
 
 final class UpdateModuleCommand extends Command
@@ -66,7 +68,7 @@ final class UpdateModuleCommand extends Command
         }
 
         if (! $preview->coreCompatible) {
-            $this->error("Incompatible with current core version. Requires: {$preview->coreRequirement}");
+            $this->reportIncompatibility($preview);
 
             return self::FAILURE;
         }
@@ -104,6 +106,24 @@ final class UpdateModuleCommand extends Command
         }
 
         return self::FAILURE;
+    }
+
+    private function reportIncompatibility(UpdatePreviewDTO $preview): void
+    {
+        // A preview without issues predates them: only the core requirement is known
+        if ($preview->compatibilityIssues === []) {
+            $this->error("Incompatible with current core version. Requires: {$preview->coreRequirement}");
+
+            return;
+        }
+
+        $this->error("Version {$preview->toVersion} cannot be installed on this host:");
+
+        $formatter = app(CompatibilityIssueFormatter::class);
+
+        foreach ($preview->compatibilityIssues as $issue) {
+            $this->error('  - '.$formatter->format($issue));
+        }
     }
 
     private function updateAllModules(

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CompatibilityResult;
 use App\Domain\Modules\ValueObjects\CoreTableRegistry;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -67,7 +70,9 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $dependencyResolver,
             $migrationRunner,
             $seederRunner,
-            $events
+            $events,
+            $this->compatibleModules(),
+            Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
         );
 
         $module = $this->createModule('test-module', '1.0.0', ModuleStatus::Enabled, new \DateTimeImmutable);
@@ -134,7 +139,9 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $dependencyResolver,
             $migrationRunner,
             $seederRunner,
-            $events
+            $events,
+            $this->compatibleModules(),
+            Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
         );
 
         $module = $this->createModule('test-module', '1.0.0', ModuleStatus::Disabled, null);
@@ -197,7 +204,9 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $dependencyResolver,
             $migrationRunner,
             $seederRunner,
-            $events
+            $events,
+            $this->compatibleModules(),
+            Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
         );
 
         // Module entity with a path that does NOT exist on disk
@@ -365,5 +374,13 @@ PHP;
         }
 
         rmdir($path);
+    }
+
+    private function compatibleModules(): ModuleCompatibilityServiceInterface
+    {
+        $compatibility = Mockery::mock(ModuleCompatibilityServiceInterface::class);
+        $compatibility->shouldReceive('checkInstalled')->andReturn(CompatibilityResult::compatible());
+
+        return $compatibility;
     }
 }

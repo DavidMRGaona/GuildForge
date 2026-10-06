@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
+use App\Application\Updates\DTOs\BlockedReleaseDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Domain\Updates\ValueObjects\ReleaseSelection;
 use App\Infrastructure\Updates\Services\ModuleUpdateChecker;
 use DateTimeImmutable;
 use Illuminate\Support\Str;
@@ -54,9 +58,9 @@ final class ModuleUpdateCheckerTest extends TestCase
             ->with(Mockery::on(fn ($arg) => $arg instanceof ModuleName && $arg->value === 'forum'))
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('owner', 'forum-module', false)
-            ->andReturn($release);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->with('owner', 'forum-module', Mockery::type(ModuleVersion::class), false)
+            ->andReturn($this->selection($release));
 
         $this->moduleRepository->shouldReceive('save')
             ->with(Mockery::on(fn ($arg) => $arg instanceof Module))
@@ -102,8 +106,8 @@ final class ModuleUpdateCheckerTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn(null);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn(ReleaseSelection::none());
 
         $result = $this->service->checkForUpdate(ModuleName::fromString('forum'));
 
@@ -121,8 +125,8 @@ final class ModuleUpdateCheckerTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn($release);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn($this->selection($release));
 
         $result = $this->service->checkForUpdate(ModuleName::fromString('forum'));
 
@@ -140,8 +144,8 @@ final class ModuleUpdateCheckerTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn($release);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn($this->selection($release));
 
         $result = $this->service->checkForUpdate(ModuleName::fromString('forum'));
 
@@ -163,8 +167,8 @@ final class ModuleUpdateCheckerTest extends TestCase
             ->with(Mockery::on(fn ($arg) => $arg instanceof ModuleName && $arg->value === 'forumpr'))
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn($release);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn($this->selection($release));
 
         $this->moduleRepository->shouldReceive('save')->once();
 
@@ -182,8 +186,8 @@ final class ModuleUpdateCheckerTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn($release);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn($this->selection($release));
 
         $this->moduleRepository->shouldReceive('save')->once();
 
@@ -205,9 +209,9 @@ final class ModuleUpdateCheckerTest extends TestCase
 
         $release = $this->createReleaseInfo('1.5.0', false);
 
-        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')
-            ->with([['owner' => 'owner', 'repo' => 'forumall']], false)
-            ->andReturn(['owner/forumall' => $release]);
+        $this->githubFetcher->shouldReceive('batchSelectReleases')
+            ->with([['owner' => 'owner', 'repo' => 'forumall', 'installed' => $module1->version()]], false)
+            ->andReturn(['owner/forumall' => $this->selection($release)]);
 
         $this->moduleRepository->shouldReceive('save')->once();
 
@@ -234,9 +238,9 @@ final class ModuleUpdateCheckerTest extends TestCase
         $module = $this->createRealModule('eventreg', '1.0.8-beta', 'owner', 'eventreg');
         $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
         $this->moduleRepository->shouldReceive('save')->once();
-        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')
-            ->with([['owner' => 'owner', 'repo' => 'eventreg']], true)
-            ->andReturn(['owner/eventreg' => $this->createReleaseInfo('1.0.9-beta', true)]);
+        $this->githubFetcher->shouldReceive('batchSelectReleases')
+            ->with([['owner' => 'owner', 'repo' => 'eventreg', 'installed' => $module->version()]], true)
+            ->andReturn(['owner/eventreg' => $this->selection($this->createReleaseInfo('1.0.9-beta', true))]);
 
         $result = $this->service->checkAll();
 
@@ -250,7 +254,7 @@ final class ModuleUpdateCheckerTest extends TestCase
         $module = $this->createRealModule('gametables', '1.0.0-beta', 'owner', 'gametables');
         $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
         $this->moduleRepository->shouldReceive('save');
-        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')
+        $this->githubFetcher->shouldReceive('batchSelectReleases')
             ->andReturn(['owner/gametables' => UpdateException::githubRequestFailed('owner/gametables', 'HTTP 403')]);
 
         $result = $this->service->checkAll();
@@ -263,7 +267,7 @@ final class ModuleUpdateCheckerTest extends TestCase
     {
         $module = $this->createRealModuleWithoutSource('localonly');
         $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
-        $this->githubFetcher->shouldNotReceive('batchFetchLatestReleases');
+        $this->githubFetcher->shouldNotReceive('batchSelectReleases');
 
         $this->assertSame(['localonly'], $this->service->checkAll()->modulesWithoutSource);
     }
@@ -274,8 +278,8 @@ final class ModuleUpdateCheckerTest extends TestCase
         $module->updateLatestAvailableVersion('1.0.9-beta');
         $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
         $this->moduleRepository->shouldReceive('save')->once();
-        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')
-            ->andReturn(['owner/uptodate' => $this->createReleaseInfo('1.0.9-beta', true)]);
+        $this->githubFetcher->shouldReceive('batchSelectReleases')
+            ->andReturn(['owner/uptodate' => $this->selection($this->createReleaseInfo('1.0.9-beta', true))]);
 
         $this->service->checkAll();
 
@@ -289,8 +293,8 @@ final class ModuleUpdateCheckerTest extends TestCase
         $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
         $this->moduleRepository->shouldReceive('save');
         $this->githubFetcher->shouldReceive('clearCache')->with('owner', 'freshmod')->once()->ordered();
-        $this->githubFetcher->shouldReceive('batchFetchLatestReleases')->once()->ordered()
-            ->andReturn(['owner/freshmod' => null]);
+        $this->githubFetcher->shouldReceive('batchSelectReleases')->once()->ordered()
+            ->andReturn(['owner/freshmod' => ReleaseSelection::none()]);
 
         $this->service->checkAll(fresh: true);
     }
@@ -309,10 +313,59 @@ final class ModuleUpdateCheckerTest extends TestCase
             ->with('owner', 'repo')
             ->once();
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn(null);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn(ReleaseSelection::none());
 
         $this->service->forceCheck(ModuleName::fromString('forum'));
+    }
+
+    public function test_check_all_records_the_blocked_release_with_its_reasons(): void
+    {
+        $module = $this->createRealModule('announcements', '1.1.0', 'owner', 'announcements');
+        $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
+        $this->moduleRepository->shouldReceive('save')->once();
+        $this->githubFetcher->shouldReceive('batchSelectReleases')->andReturn([
+            'owner/announcements' => $this->selection(null, $this->createReleaseInfo('2.0.0', false)),
+        ]);
+
+        $result = $this->service->checkAll();
+
+        $this->assertTrue($result->updates->isEmpty());
+        $this->assertNull($module->latestAvailableVersion());
+        $this->assertSame('2.0.0', $module->latestBlockedVersion());
+        $this->assertCount(1, $result->blocked);
+        $this->assertInstanceOf(BlockedReleaseDTO::class, $result->blocked[0]);
+        $this->assertSame('2.0.0', $result->blocked[0]->blockedVersion);
+        $this->assertSame('modules.compatibility.reasons.unsatisfied', $result->blocked[0]->toArray()['issues'][0]['reason_key']);
+    }
+
+    public function test_check_records_the_compatible_update_and_the_blocked_release_in_one_save(): void
+    {
+        $module = $this->createRealModule('announcements', '1.1.0', 'owner', 'announcements');
+        $this->moduleRepository->shouldReceive('findByName')->andReturn($module);
+        $this->moduleRepository->shouldReceive('save')->once();
+        $this->githubFetcher->shouldReceive('selectRelease')->andReturn(
+            $this->selection($this->createReleaseInfo('1.2.0', false), $this->createReleaseInfo('2.0.0', false)),
+        );
+
+        $update = $this->service->checkForUpdate(ModuleName::fromString('announcements'));
+
+        $this->assertSame('1.2.0', $update?->availableVersion);
+        $this->assertSame('1.2.0', $module->latestAvailableVersion());
+        $this->assertSame('2.0.0', $module->latestBlockedVersion());
+    }
+
+    public function test_a_blocked_release_that_disappeared_is_cleared(): void
+    {
+        $module = $this->createRealModule('announcements', '1.1.0', 'owner', 'announcements');
+        $module->updateLatestBlocked('2.0.0', []);
+        $this->moduleRepository->shouldReceive('findByName')->andReturn($module);
+        $this->moduleRepository->shouldReceive('save')->once();
+        $this->githubFetcher->shouldReceive('selectRelease')->andReturn(ReleaseSelection::none());
+
+        $this->service->checkForUpdate(ModuleName::fromString('announcements'));
+
+        $this->assertNull($module->latestBlockedVersion());
     }
 
     public function test_get_last_check_time(): void
@@ -384,6 +437,17 @@ final class ModuleUpdateCheckerTest extends TestCase
             requirements: ModuleRequirements::fromArray([]),
             status: ModuleStatus::Enabled,
             lastUpdateCheckAt: $lastCheck,
+        );
+    }
+
+    private function selection(?GitHubReleaseInfo $compatible, ?GitHubReleaseInfo $blocked = null): ReleaseSelection
+    {
+        return new ReleaseSelection(
+            $compatible,
+            $compatible === null ? null : '^2.0',
+            $blocked,
+            $blocked === null ? null : '^3.0',
+            $blocked === null ? [] : [new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED)],
         );
     }
 

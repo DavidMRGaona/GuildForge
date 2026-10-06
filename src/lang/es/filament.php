@@ -541,6 +541,10 @@ return [
                 'no_changelog' => 'Esta versión no tiene notas.',
                 'failed' => 'No se han podido obtener los detalles',
                 'close' => 'Cerrar',
+                'compatibility' => 'Compatibilidad',
+                'compatible' => 'Compatible con este sitio',
+                'incompatible' => 'No compatible con este sitio',
+                'core_requirement' => 'Requiere core :constraint',
             ],
             'history' => [
                 'title' => 'Historial de actualizaciones',
@@ -561,6 +565,10 @@ return [
             'without_source' => [
                 'title' => 'Módulos sin repositorio configurado',
                 'hint' => 'Añade "repository": "propietario/repositorio" a su module.json o ejecuta php artisan module:set-source.',
+            ],
+            'blocked' => [
+                'heading' => 'Versiones no compatibles',
+                'line' => ':version disponible, :reasons',
             ],
         ],
         'core' => [
