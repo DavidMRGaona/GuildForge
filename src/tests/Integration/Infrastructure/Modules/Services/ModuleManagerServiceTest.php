@@ -605,6 +605,32 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertSame('manual', $repository->findByName(new ModuleName('repo-module'))?->sourceOwner());
     }
 
+    public function test_discover_resyncs_requirements_and_manifest_metadata_of_existing_modules(): void
+    {
+        $this->createTestModule('test-module', ['requires' => ['php' => '>=8.2']]);
+        $this->service->discover();
+
+        $this->mergeManifest('test-module', [
+            'requires' => ['core' => '^2.6', 'filament' => '^3.3', 'php' => '>=8.3', 'modules' => ['base-module:^1.0']],
+            'dependencies' => ['base-module'],
+            'namespace' => 'Modules\\Renamed',
+            'provider' => 'RenamedServiceProvider',
+            'author' => 'New Author',
+        ]);
+        $this->service->discover();
+
+        $module = $this->service->find(new ModuleName('test-module'));
+        $this->assertNotNull($module);
+        $this->assertSame('^2.6', $module->requirements()->coreVersion());
+        $this->assertSame('^3.3', $module->requirements()->filamentVersion());
+        $this->assertSame('>=8.3', $module->requirements()->phpVersion());
+        $this->assertSame(['base-module:^1.0'], $module->requirements()->requiredModules());
+        $this->assertSame(['base-module'], $module->dependencies());
+        $this->assertSame('Modules\\Renamed', $module->namespace());
+        $this->assertSame('RenamedServiceProvider', $module->provider());
+        $this->assertSame('New Author', $module->author());
+    }
+
     private function writeManifestKey(string $name, string $key, string $value): void
     {
         $path = $this->testModulesPath.'/'.$name.'/module.json';
@@ -612,6 +638,17 @@ final class ModuleManagerServiceTest extends TestCase
         $manifest = json_decode((string) file_get_contents($path), true);
         $manifest[$key] = $value;
         file_put_contents($path, json_encode($manifest, JSON_PRETTY_PRINT));
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     */
+    private function mergeManifest(string $name, array $values): void
+    {
+        $path = $this->testModulesPath.'/'.$name.'/module.json';
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode((string) file_get_contents($path), true);
+        file_put_contents($path, json_encode(array_merge($manifest, $values), JSON_PRETTY_PRINT));
     }
 
     private function createTestModule(string $name, array $manifest = []): void

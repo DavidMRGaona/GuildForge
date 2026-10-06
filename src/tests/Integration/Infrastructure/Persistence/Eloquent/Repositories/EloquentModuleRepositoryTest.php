@@ -11,6 +11,7 @@ use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -188,6 +189,25 @@ final class EloquentModuleRepositoryTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('modules', 1);
+    }
+
+    public function test_it_round_trips_core_and_filament_requirements(): void
+    {
+        ModuleModel::factory()->create([
+            'name' => 'req-module',
+            'requires' => ['core' => '^2.6', 'filament' => '^3.3', 'php' => '>=8.2'],
+        ]);
+
+        $module = $this->repository->findByName(new ModuleName('req-module'));
+        $this->assertNotNull($module);
+        $this->assertSame('^2.6', $module->requirements()->coreVersion());
+        $this->assertSame('^3.3', $module->requirements()->filamentVersion());
+
+        $this->repository->save($module);
+
+        $row = ModuleModel::query()->where('name', 'req-module')->firstOrFail();
+        $this->assertSame('^2.6', $row->requires['core_version'] ?? null);
+        $this->assertSame('^3.3', $row->requires['filament_version'] ?? null);
     }
 
     private function createModule(

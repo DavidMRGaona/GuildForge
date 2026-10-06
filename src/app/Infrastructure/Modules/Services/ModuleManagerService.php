@@ -76,6 +76,22 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                         $needsSave = true;
                     }
 
+                    $manifestRequirements = ModuleRequirements::fromManifest($manifest->requires ?? []);
+                    if (! $existing->requirements()->equals($manifestRequirements)) {
+                        $existing->updateRequirements($manifestRequirements);
+                        $needsSave = true;
+                    }
+
+                    $manifestAuthor = $manifest->author ?? '';
+                    $manifestDependencies = array_values(array_filter($manifest->dependencies ?? [], 'is_string'));
+                    if ($existing->namespace() !== $manifest->namespace
+                        || $existing->provider() !== $manifest->provider
+                        || $existing->author() !== $manifestAuthor
+                        || $existing->dependencies() !== $manifestDependencies) {
+                        $existing->updateManifestMetadata($manifest->namespace, $manifest->provider, $manifestAuthor, $manifestDependencies);
+                        $needsSave = true;
+                    }
+
                     $manifestOwner = $manifest->repositoryOwner();
                     $manifestRepo = $manifest->repositoryName();
                     if ($manifestOwner !== null && $manifestRepo !== null
@@ -131,7 +147,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 description: $manifest->description ?? '',
                 version: ModuleVersion::fromString($manifest->version),
                 author: $manifest->author ?? '',
-                requirements: $this->parseRequirements($manifest->requires),
+                requirements: ModuleRequirements::fromManifest($manifest->requires ?? []),
                 status: ModuleStatus::Disabled,
                 enabledAt: null,
                 createdAt: new DateTimeImmutable,
@@ -529,25 +545,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         if (app()->routesAreCached()) {
             Artisan::call('route:clear');
         }
-    }
-
-    /**
-     * Parse requirements from manifest format to ModuleRequirements.
-     *
-     * @param  array<string, mixed>|null  $requires
-     */
-    private function parseRequirements(?array $requires): ModuleRequirements
-    {
-        if ($requires === null) {
-            return ModuleRequirements::fromArray([]);
-        }
-
-        return ModuleRequirements::fromArray([
-            'php_version' => $requires['php'] ?? null,
-            'laravel_version' => $requires['laravel'] ?? null,
-            'required_modules' => $requires['modules'] ?? [],
-            'required_extensions' => $requires['extensions'] ?? [],
-        ]);
     }
 
     /**

@@ -226,6 +226,42 @@ final class ModuleDiscoveryServiceTest extends TestCase
         $this->assertSame('owner/good-repo', $manifests['good-repo']->repository);
     }
 
+    public function test_a_malformed_requires_does_not_block_discovery(): void
+    {
+        mkdir($this->testModulesPath.'/bad-requires', 0755, true);
+        file_put_contents($this->testModulesPath.'/bad-requires/module.json', json_encode([
+            'name' => 'bad-requires',
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\BadRequires',
+            'provider' => 'BadRequiresServiceProvider',
+            'requires' => ['core' => 3, 'extensions' => 'intl'],
+        ]));
+        mkdir($this->testModulesPath.'/good-requires', 0755, true);
+        file_put_contents($this->testModulesPath.'/good-requires/module.json', json_encode([
+            'name' => 'good-requires',
+            'version' => '1.0.0',
+            'namespace' => 'Modules\\GoodRequires',
+            'provider' => 'GoodRequiresServiceProvider',
+            'requires' => ['core' => '^2.6'],
+        ]));
+
+        $manifests = collect($this->service->discover())->keyBy('name');
+
+        $this->assertCount(2, $manifests);
+        $this->assertSame(['core' => '', 'extensions' => []], $manifests['bad-requires']->requires);
+        $this->assertSame(['core' => '^2.6'], $manifests['good-requires']->requires);
+    }
+
+    public function test_read_manifest_rejects_a_manifest_that_is_not_an_object(): void
+    {
+        mkdir($this->testModulesPath.'/list-module', 0755, true);
+        file_put_contents($this->testModulesPath.'/list-module/module.json', '["not", "an", "object"]');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->service->readManifest($this->testModulesPath.'/list-module/module.json');
+    }
+
     private function removeDirectory(string $path): void
     {
         if (! file_exists($path)) {

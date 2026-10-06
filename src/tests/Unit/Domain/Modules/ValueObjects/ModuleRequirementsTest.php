@@ -15,144 +15,104 @@ final class ModuleRequirementsTest extends TestCase
             phpVersion: '>=8.2',
             laravelVersion: '^11.0',
             requiredModules: ['core', 'auth'],
-            requiredExtensions: ['gd', 'mbstring']
+            requiredExtensions: ['gd', 'mbstring'],
+            coreVersion: '^2.6',
+            filamentVersion: '^3.3',
         );
 
-        $this->assertEquals('>=8.2', $requirements->phpVersion());
-        $this->assertEquals('^11.0', $requirements->laravelVersion());
-        $this->assertEquals(['core', 'auth'], $requirements->requiredModules());
-        $this->assertEquals(['gd', 'mbstring'], $requirements->requiredExtensions());
+        $this->assertSame('>=8.2', $requirements->phpVersion());
+        $this->assertSame('^11.0', $requirements->laravelVersion());
+        $this->assertSame(['core', 'auth'], $requirements->requiredModules());
+        $this->assertSame(['gd', 'mbstring'], $requirements->requiredExtensions());
+        $this->assertSame('^2.6', $requirements->coreVersion());
+        $this->assertSame('^3.3', $requirements->filamentVersion());
     }
 
-    public function test_it_creates_module_requirements_from_array(): void
+    public function test_it_reads_the_database_format(): void
     {
-        $data = [
+        $requirements = ModuleRequirements::fromArray([
             'php_version' => '>=8.2',
-            'laravel_version' => '^11.0',
-            'required_modules' => ['core', 'auth'],
-            'required_extensions' => ['gd', 'mbstring'],
-        ];
+            'laravel_version' => '>=12.0',
+            'core_version' => '^2.6',
+            'filament_version' => '^3.3',
+            'required_modules' => ['auth'],
+            'required_extensions' => ['intl'],
+        ]);
 
-        $requirements = ModuleRequirements::fromArray($data);
-
-        $this->assertEquals('>=8.2', $requirements->phpVersion());
-        $this->assertEquals('^11.0', $requirements->laravelVersion());
-        $this->assertEquals(['core', 'auth'], $requirements->requiredModules());
-        $this->assertEquals(['gd', 'mbstring'], $requirements->requiredExtensions());
+        $this->assertSame('^2.6', $requirements->coreVersion());
+        $this->assertSame('^3.3', $requirements->filamentVersion());
+        $this->assertSame(['auth'], $requirements->requiredModules());
     }
 
-    public function test_are_satisfied_returns_true_when_all_requirements_met(): void
+    public function test_rows_saved_before_core_existed_have_no_core_constraint(): void
     {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.2',
-            laravelVersion: '^11.0',
-            requiredModules: [],
-            requiredExtensions: ['json']
-        );
-
-        $availableModules = [];
-        $availableExtensions = ['json', 'mbstring'];
-
-        $this->assertTrue(
-            $requirements->areSatisfied(
-                phpVersion: '8.3.0',
-                laravelVersion: '11.5.0',
-                availableModules: $availableModules,
-                availableExtensions: $availableExtensions
-            )
-        );
-    }
-
-    public function test_are_satisfied_returns_false_when_php_version_not_met(): void
-    {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.3',
-            laravelVersion: '^11.0',
-            requiredModules: [],
-            requiredExtensions: []
-        );
-
-        $this->assertFalse(
-            $requirements->areSatisfied(
-                phpVersion: '8.2.0',
-                laravelVersion: '11.5.0',
-                availableModules: [],
-                availableExtensions: []
-            )
-        );
-    }
-
-    public function test_get_unsatisfied_returns_empty_array_when_all_satisfied(): void
-    {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.2',
-            laravelVersion: '^11.0',
-            requiredModules: [],
-            requiredExtensions: ['json']
-        );
-
-        $unsatisfied = $requirements->getUnsatisfied(
-            phpVersion: '8.3.0',
-            laravelVersion: '11.5.0',
-            availableModules: [],
-            availableExtensions: ['json']
-        );
-
-        $this->assertEmpty($unsatisfied);
-    }
-
-    public function test_get_unsatisfied_returns_list_of_unsatisfied_requirements(): void
-    {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.3',
-            laravelVersion: '^11.0',
-            requiredModules: ['auth', 'forum'],
-            requiredExtensions: ['gd', 'imagick']
-        );
-
-        $unsatisfied = $requirements->getUnsatisfied(
-            phpVersion: '8.2.0',
-            laravelVersion: '11.5.0',
-            availableModules: ['auth'],
-            availableExtensions: ['gd']
-        );
-
-        $this->assertContains('PHP version >=8.3 required, but 8.2.0 found', $unsatisfied);
-        $this->assertContains('Required module: forum', $unsatisfied);
-        $this->assertContains('Required extension: imagick', $unsatisfied);
-    }
-
-    public function test_it_handles_null_optional_requirements(): void
-    {
-        $requirements = new ModuleRequirements(
-            phpVersion: null,
-            laravelVersion: null,
-            requiredModules: [],
-            requiredExtensions: []
-        );
+        $requirements = ModuleRequirements::fromArray([
+            'php_version' => null,
+            'laravel_version' => '>=12.0',
+            'required_modules' => [],
+            'required_extensions' => [],
+        ]);
 
         $this->assertNull($requirements->phpVersion());
-        $this->assertNull($requirements->laravelVersion());
-        $this->assertEquals([], $requirements->requiredModules());
-        $this->assertEquals([], $requirements->requiredExtensions());
+        $this->assertNull($requirements->coreVersion());
     }
 
-    public function test_are_satisfied_returns_true_when_no_requirements(): void
+    public function test_it_reads_the_manifest_format(): void
     {
-        $requirements = new ModuleRequirements(
-            phpVersion: null,
-            laravelVersion: null,
-            requiredModules: [],
-            requiredExtensions: []
-        );
+        $requirements = ModuleRequirements::fromManifest([
+            'core' => '^2.6',
+            'filament' => '^3.3',
+            'php' => '>=8.2',
+            'laravel' => '>=12.0',
+            'modules' => ['base-module:^1.0'],
+            'extensions' => ['intl'],
+        ]);
 
-        $this->assertTrue(
-            $requirements->areSatisfied(
-                phpVersion: '8.2.0',
-                laravelVersion: '11.0.0',
-                availableModules: [],
-                availableExtensions: []
-            )
-        );
+        $this->assertSame('^2.6', $requirements->coreVersion());
+        $this->assertSame('^3.3', $requirements->filamentVersion());
+        $this->assertSame('>=8.2', $requirements->phpVersion());
+        $this->assertSame('>=12.0', $requirements->laravelVersion());
+        $this->assertSame(['base-module:^1.0'], $requirements->requiredModules());
+        $this->assertSame(['intl'], $requirements->requiredExtensions());
+    }
+
+    public function test_a_manifest_value_that_is_not_a_string_becomes_an_invalid_constraint(): void
+    {
+        $requirements = ModuleRequirements::fromManifest(['core' => 3, 'filament' => ['^3.3'], 'modules' => ['ok', 7]]);
+
+        $this->assertSame('', $requirements->coreVersion());
+        $this->assertSame('', $requirements->filamentVersion());
+        $this->assertSame(['ok'], $requirements->requiredModules());
+    }
+
+    public function test_core_defaults_to_any_2_x_when_not_declared(): void
+    {
+        $this->assertSame('^2.0', ModuleRequirements::fromManifest([])->effectiveCoreConstraint());
+        $this->assertSame('^2.6', ModuleRequirements::fromManifest(['core' => '^2.6'])->effectiveCoreConstraint());
+        $this->assertSame(ModuleRequirements::DEFAULT_CORE_CONSTRAINT, ModuleRequirements::fromArray([])->effectiveCoreConstraint());
+    }
+
+    public function test_to_array_round_trips_and_includes_core_and_filament(): void
+    {
+        $requirements = ModuleRequirements::fromManifest(['core' => '^2.6', 'filament' => '^3.3', 'php' => '>=8.2']);
+
+        $this->assertSame([
+            'php_version' => '>=8.2',
+            'laravel_version' => null,
+            'core_version' => '^2.6',
+            'filament_version' => '^3.3',
+            'required_modules' => [],
+            'required_extensions' => [],
+        ], $requirements->toArray());
+        $this->assertTrue(ModuleRequirements::fromArray($requirements->toArray())->equals($requirements));
+    }
+
+    public function test_equals_detects_any_difference(): void
+    {
+        $base = ModuleRequirements::fromManifest(['php' => '>=8.2']);
+
+        $this->assertTrue($base->equals(ModuleRequirements::fromManifest(['php' => '>=8.2'])));
+        $this->assertFalse($base->equals(ModuleRequirements::fromManifest(['php' => '>=8.2', 'core' => '^2.6'])));
+        $this->assertFalse($base->equals(ModuleRequirements::fromManifest(['php' => '>=8.2', 'extensions' => ['intl']])));
     }
 }
