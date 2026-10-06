@@ -8,6 +8,7 @@ use App\Application\Modules\DTOs\ModuleManifestDTO;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use TypeError;
 
 /**
  * Reads any module.json (installed, staged or extracted from a ZIP) without loading module code.
@@ -24,6 +25,7 @@ final readonly class ModuleManifestReader
      * and the requirement becomes an invalid constraint, which rejects the module.
      *
      * @throws InvalidArgumentException When the file cannot be read, is not a JSON object or lacks required fields
+     * @throws TypeError When a required field has the wrong type ("name": 123)
      */
     public function read(string $path): ModuleManifestDTO
     {

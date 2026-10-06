@@ -13,13 +13,18 @@ final class CoreVersionService implements CoreVersionServiceInterface
 {
     private ?ModuleVersion $cachedVersion = null;
 
+    public function __construct(
+        private readonly ?string $versionFile = null,
+    ) {
+    }
+
     public function getCurrentVersion(): ModuleVersion
     {
         if ($this->cachedVersion !== null) {
             return $this->cachedVersion;
         }
 
-        $versionFile = base_path('VERSION');
+        $versionFile = $this->versionFile ?? base_path('VERSION');
 
         if (! File::exists($versionFile)) {
             // Fallback to default version
