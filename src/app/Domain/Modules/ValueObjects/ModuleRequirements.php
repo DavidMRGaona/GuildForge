@@ -6,6 +6,9 @@ namespace App\Domain\Modules\ValueObjects;
 
 final readonly class ModuleRequirements
 {
+    /** Applied when a manifest declares no core constraint: 1.x modules keep loading on 2.x hosts only */
+    public const string DEFAULT_CORE_CONSTRAINT = '^2.0';
+
     /**
      * @param  list<string>  $requiredModules
      * @param  list<string>  $requiredExtensions
@@ -15,24 +18,43 @@ final readonly class ModuleRequirements
         private ?string $laravelVersion,
         private array $requiredModules = [],
         private array $requiredExtensions = [],
+        private ?string $coreVersion = null,
+        private ?string $filamentVersion = null,
     ) {
     }
 
     /**
-     * @param array{
-     *     php_version?: string|null,
-     *     laravel_version?: string|null,
-     *     required_modules?: list<string>,
-     *     required_extensions?: list<string>
-     * } $data
+     * Database format: php_version, laravel_version, core_version, filament_version,
+     * required_modules, required_extensions.
+     *
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {
         return new self(
-            phpVersion: $data['php_version'] ?? null,
-            laravelVersion: $data['laravel_version'] ?? null,
-            requiredModules: $data['required_modules'] ?? [],
-            requiredExtensions: $data['required_extensions'] ?? [],
+            phpVersion: self::constraint($data, 'php_version'),
+            laravelVersion: self::constraint($data, 'laravel_version'),
+            requiredModules: self::strings($data, 'required_modules'),
+            requiredExtensions: self::strings($data, 'required_extensions'),
+            coreVersion: self::constraint($data, 'core_version'),
+            filamentVersion: self::constraint($data, 'filament_version'),
+        );
+    }
+
+    /**
+     * Manifest format (module.json "requires"): php, laravel, core, filament, modules, extensions.
+     *
+     * @param  array<string, mixed>  $requires
+     */
+    public static function fromManifest(array $requires): self
+    {
+        return new self(
+            phpVersion: self::constraint($requires, 'php'),
+            laravelVersion: self::constraint($requires, 'laravel'),
+            requiredModules: self::strings($requires, 'modules'),
+            requiredExtensions: self::strings($requires, 'extensions'),
+            coreVersion: self::constraint($requires, 'core'),
+            filamentVersion: self::constraint($requires, 'filament'),
         );
     }
 
@@ -44,6 +66,21 @@ final readonly class ModuleRequirements
     public function laravelVersion(): ?string
     {
         return $this->laravelVersion;
+    }
+
+    public function coreVersion(): ?string
+    {
+        return $this->coreVersion;
+    }
+
+    public function effectiveCoreConstraint(): string
+    {
+        return $this->coreVersion ?? self::DEFAULT_CORE_CONSTRAINT;
+    }
+
+    public function filamentVersion(): ?string
+    {
+        return $this->filamentVersion;
     }
 
     /**
@@ -62,10 +99,17 @@ final readonly class ModuleRequirements
         return $this->requiredExtensions;
     }
 
+    public function equals(self $other): bool
+    {
+        return $this->toArray() === $other->toArray();
+    }
+
     /**
      * @return array{
      *     php_version: string|null,
      *     laravel_version: string|null,
+     *     core_version: string|null,
+     *     filament_version: string|null,
      *     required_modules: list<string>,
      *     required_extensions: list<string>
      * }
@@ -75,91 +119,38 @@ final readonly class ModuleRequirements
         return [
             'php_version' => $this->phpVersion,
             'laravel_version' => $this->laravelVersion,
+            'core_version' => $this->coreVersion,
+            'filament_version' => $this->filamentVersion,
             'required_modules' => $this->requiredModules,
             'required_extensions' => $this->requiredExtensions,
         ];
     }
 
     /**
-     * @param  list<string>  $availableModules
-     * @param  list<string>  $availableExtensions
+     * A present value that is not a string becomes '' (an invalid constraint), so a malformed
+     * requirement fails closed instead of disappearing.
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function areSatisfied(
-        string $phpVersion,
-        string $laravelVersion,
-        array $availableModules,
-        array $availableExtensions,
-    ): bool {
-        return empty($this->getUnsatisfied(
-            $phpVersion,
-            $laravelVersion,
-            $availableModules,
-            $availableExtensions,
-        ));
+    private static function constraint(array $data, string $key): ?string
+    {
+        $value = $data[$key] ?? null;
+
+        if ($value === null) {
+            return null;
+        }
+
+        return is_string($value) ? $value : '';
     }
 
     /**
-     * @param  list<string>  $availableModules
-     * @param  list<string>  $availableExtensions
+     * @param  array<string, mixed>  $data
      * @return list<string>
      */
-    public function getUnsatisfied(
-        string $phpVersion,
-        string $laravelVersion,
-        array $availableModules,
-        array $availableExtensions,
-    ): array {
-        $unsatisfied = [];
-
-        if ($this->phpVersion !== null && ! $this->versionSatisfiesConstraint($phpVersion, $this->phpVersion)) {
-            $unsatisfied[] = "PHP version {$this->phpVersion} required, but {$phpVersion} found";
-        }
-
-        if ($this->laravelVersion !== null && ! $this->versionSatisfiesConstraint($laravelVersion, $this->laravelVersion)) {
-            $unsatisfied[] = "Laravel version {$this->laravelVersion} required, but {$laravelVersion} found";
-        }
-
-        foreach ($this->requiredModules as $module) {
-            if (! in_array($module, $availableModules, true)) {
-                $unsatisfied[] = "Required module: {$module}";
-            }
-        }
-
-        foreach ($this->requiredExtensions as $extension) {
-            if (! in_array($extension, $availableExtensions, true)) {
-                $unsatisfied[] = "Required extension: {$extension}";
-            }
-        }
-
-        return $unsatisfied;
-    }
-
-    private function versionSatisfiesConstraint(string $version, string $constraint): bool
+    private static function strings(array $data, string $key): array
     {
-        // Normalize version to semver format
-        $normalizedVersion = $this->normalizeVersion($version);
+        $value = $data[$key] ?? [];
 
-        try {
-            $moduleVersion = ModuleVersion::fromString($normalizedVersion);
-
-            return $moduleVersion->satisfies($constraint);
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
-    private function normalizeVersion(string $version): string
-    {
-        // Extract just the version numbers (e.g., "8.3.0" from "8.3.0-dev")
-        if (preg_match('/^(\d+)\.(\d+)\.(\d+)/', $version, $matches)) {
-            return "{$matches[1]}.{$matches[2]}.{$matches[3]}";
-        }
-
-        // Handle two-part versions (e.g., "8.3" -> "8.3.0")
-        if (preg_match('/^(\d+)\.(\d+)$/', $version, $matches)) {
-            return "{$matches[1]}.{$matches[2]}.0";
-        }
-
-        return $version;
+        return is_array($value) ? array_values(array_filter($value, 'is_string')) : [];
     }
 }

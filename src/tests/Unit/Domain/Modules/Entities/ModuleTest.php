@@ -146,68 +146,25 @@ final class ModuleTest extends TestCase
         $this->assertNull($module->installedAt());
     }
 
-    public function test_requirements_satisfied_returns_true_when_all_met(): void
+    public function test_update_requirements_replaces_them(): void
     {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.2',
-            laravelVersion: '^11.0',
-            requiredModules: [],
-            requiredExtensions: ['json']
-        );
+        $module = $this->createModule();
 
-        $module = $this->createModule(requirements: $requirements);
+        $module->updateRequirements(ModuleRequirements::fromManifest(['core' => '^2.6']));
 
-        $satisfied = $module->requirementsSatisfied(
-            phpVersion: '8.3.0',
-            laravelVersion: '11.5.0',
-            availableModules: [],
-            availableExtensions: ['json', 'mbstring']
-        );
-
-        $this->assertTrue($satisfied);
+        $this->assertSame('^2.6', $module->requirements()->coreVersion());
     }
 
-    public function test_requirements_satisfied_returns_false_when_not_met(): void
+    public function test_update_manifest_metadata_replaces_namespace_provider_author_and_dependencies(): void
     {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.3',
-            laravelVersion: '^11.0',
-            requiredModules: [],
-            requiredExtensions: []
-        );
+        $module = $this->createModule();
 
-        $module = $this->createModule(requirements: $requirements);
+        $module->updateManifestMetadata('Modules\\Renamed', 'RenamedServiceProvider', 'New Author', ['base-module']);
 
-        $satisfied = $module->requirementsSatisfied(
-            phpVersion: '8.2.0',
-            laravelVersion: '11.5.0',
-            availableModules: [],
-            availableExtensions: []
-        );
-
-        $this->assertFalse($satisfied);
-    }
-
-    public function test_get_unsatisfied_requirements_returns_array_of_unmet_requirements(): void
-    {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.3',
-            laravelVersion: '^11.0',
-            requiredModules: ['auth'],
-            requiredExtensions: ['gd']
-        );
-
-        $module = $this->createModule(requirements: $requirements);
-
-        $unsatisfied = $module->getUnsatisfiedRequirements(
-            phpVersion: '8.2.0',
-            laravelVersion: '11.5.0',
-            availableModules: [],
-            availableExtensions: []
-        );
-
-        $this->assertNotEmpty($unsatisfied);
-        $this->assertContains('PHP version >=8.3 required, but 8.2.0 found', $unsatisfied);
+        $this->assertSame('Modules\\Renamed', $module->namespace());
+        $this->assertSame('RenamedServiceProvider', $module->provider());
+        $this->assertSame('New Author', $module->author());
+        $this->assertSame(['base-module'], $module->dependencies());
     }
 
     public function test_getters_return_correct_values(): void

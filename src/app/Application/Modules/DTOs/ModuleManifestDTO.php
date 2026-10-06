@@ -9,7 +9,7 @@ use InvalidArgumentException;
 final readonly class ModuleManifestDTO
 {
     /**
-     * @param  array<string, string>|null  $requires
+     * @param  array<string, mixed>|null  $requires
      * @param  array<string>|null  $dependencies
      */
     public function __construct(
@@ -42,6 +42,9 @@ final readonly class ModuleManifestDTO
             throw new InvalidArgumentException("Invalid repository, expected 'owner/repo'");
         }
 
+        $requires = $data['requires'] ?? [];
+        self::assertRequiresShape($requires);
+
         return new self(
             name: $data['name'],
             version: $data['version'],
@@ -50,7 +53,7 @@ final readonly class ModuleManifestDTO
             displayName: $data['displayName'] ?? null,
             description: $data['description'] ?? null,
             author: $data['author'] ?? null,
-            requires: $data['requires'] ?? [],
+            requires: $requires,
             dependencies: $data['dependencies'] ?? [],
             repository: $repository,
         );
@@ -88,6 +91,76 @@ final readonly class ModuleManifestDTO
         }
 
         return $result;
+    }
+
+    private const array CONSTRAINT_KEYS = ['php', 'laravel', 'core', 'filament'];
+
+    private const array LIST_KEYS = ['modules', 'extensions'];
+
+    /**
+     * Makes a requires block safe to evaluate: a constraint with the wrong shape becomes ''
+     * (an invalid constraint, so the module is rejected), lists keep only their strings, and
+     * an unreadable block becomes an invalid core constraint instead of the default ^2.0.
+     *
+     * @return array{requires: array<string, mixed>, invalid: list<string>}
+     */
+    public static function normalizeRequires(mixed $requires): array
+    {
+        if ($requires === null) {
+            return ['requires' => [], 'invalid' => []];
+        }
+
+        if (! is_array($requires) || ($requires !== [] && array_is_list($requires))) {
+            return ['requires' => ['core' => ''], 'invalid' => ['requires']];
+        }
+
+        /** @var array<string, mixed> $requires */
+        $invalid = [];
+
+        foreach (self::CONSTRAINT_KEYS as $key) {
+            if (array_key_exists($key, $requires) && ! is_string($requires[$key])) {
+                $requires[$key] = '';
+                $invalid[] = $key;
+            }
+        }
+
+        foreach (self::LIST_KEYS as $key) {
+            if (! array_key_exists($key, $requires)) {
+                continue;
+            }
+
+            if (! self::isListOfStrings($requires[$key])) {
+                $invalid[] = $key;
+            }
+
+            $requires[$key] = is_array($requires[$key]) ? array_values(array_filter($requires[$key], 'is_string')) : [];
+        }
+
+        return ['requires' => $requires, 'invalid' => $invalid];
+    }
+
+    private static function assertRequiresShape(mixed $requires): void
+    {
+        if (! is_array($requires) || ($requires !== [] && array_is_list($requires))) {
+            throw new InvalidArgumentException('Invalid requires');
+        }
+
+        foreach (self::CONSTRAINT_KEYS as $key) {
+            if (array_key_exists($key, $requires) && ! is_string($requires[$key])) {
+                throw new InvalidArgumentException("Invalid requires.{$key}");
+            }
+        }
+
+        foreach (self::LIST_KEYS as $key) {
+            if (array_key_exists($key, $requires) && ! self::isListOfStrings($requires[$key])) {
+                throw new InvalidArgumentException("Invalid requires.{$key}");
+            }
+        }
+    }
+
+    private static function isListOfStrings(mixed $value): bool
+    {
+        return is_array($value) && array_is_list($value) && array_filter($value, 'is_string') === $value;
     }
 
     /**

@@ -22,17 +22,17 @@ final class Module
         private string $displayName,
         private string $description,
         private ModuleVersion $version,
-        private readonly string $author,
-        private readonly ModuleRequirements $requirements,
+        private string $author,
+        private ModuleRequirements $requirements,
         private ModuleStatus $status,
         private ?DateTimeImmutable $enabledAt = null,
         private ?DateTimeImmutable $installedAt = null,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
-        private readonly ?string $namespace = null,
-        private readonly ?string $provider = null,
+        private ?string $namespace = null,
+        private ?string $provider = null,
         private readonly ?string $path = null,
-        private readonly array $dependencies = [],
+        private array $dependencies = [],
         private ?string $sourceOwner = null,
         private ?string $sourceRepo = null,
         private ?string $latestAvailableVersion = null,
@@ -207,6 +207,22 @@ final class Module
         $this->description = $description;
     }
 
+    public function updateRequirements(ModuleRequirements $requirements): void
+    {
+        $this->requirements = $requirements;
+    }
+
+    /**
+     * @param  array<string>  $dependencies
+     */
+    public function updateManifestMetadata(string $namespace, string $provider, string $author, array $dependencies): void
+    {
+        $this->namespace = $namespace;
+        $this->provider = $provider;
+        $this->author = $author;
+        $this->dependencies = $dependencies;
+    }
+
     public function enable(): void
     {
         $this->status = ModuleStatus::Enabled;
@@ -242,43 +258,6 @@ final class Module
     public function markUninstalled(): void
     {
         $this->installedAt = null;
-    }
-
-    /**
-     * @param  list<string>  $availableModules
-     * @param  list<string>  $availableExtensions
-     */
-    public function requirementsSatisfied(
-        string $phpVersion,
-        string $laravelVersion,
-        array $availableModules,
-        array $availableExtensions,
-    ): bool {
-        return $this->requirements->areSatisfied(
-            $phpVersion,
-            $laravelVersion,
-            $availableModules,
-            $availableExtensions,
-        );
-    }
-
-    /**
-     * @param  list<string>  $availableModules
-     * @param  list<string>  $availableExtensions
-     * @return list<string>
-     */
-    public function getUnsatisfiedRequirements(
-        string $phpVersion,
-        string $laravelVersion,
-        array $availableModules,
-        array $availableExtensions,
-    ): array {
-        return $this->requirements->getUnsatisfied(
-            $phpVersion,
-            $laravelVersion,
-            $availableModules,
-            $availableExtensions,
-        );
     }
 
     /**

@@ -188,33 +188,6 @@ final class ModuleDependencyResolverTest extends TestCase
         $this->assertNotContains('module-c', $dependentNames);
     }
 
-    public function test_it_validates_system_requirements(): void
-    {
-        // Arrange
-        $module = $this->createModule(
-            name: 'system-module',
-            version: '1.0.0',
-            requiredModules: [],
-            phpVersion: '>=8.2',
-            laravelVersion: '^11.0'
-        );
-
-        $phpVersion = '8.3.0';
-        $laravelVersion = '11.5.0';
-        $availableExtensions = ['json', 'mbstring', 'pdo'];
-
-        // Act
-        $result = $this->resolver->validateSystemRequirements(
-            $module,
-            $phpVersion,
-            $laravelVersion,
-            $availableExtensions
-        );
-
-        // Assert
-        $this->assertTrue($result);
-    }
-
     private function createModule(
         string $name,
         string $version,

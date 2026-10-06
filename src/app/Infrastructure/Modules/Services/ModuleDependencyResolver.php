@@ -6,7 +6,6 @@ namespace App\Infrastructure\Modules\Services;
 
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleCircularDependencyException;
-use App\Domain\Modules\ValueObjects\ModuleVersion;
 
 final readonly class ModuleDependencyResolver
 {
@@ -121,44 +120,6 @@ final readonly class ModuleDependencyResolver
         }
 
         return $dependents;
-    }
-
-    /**
-     * Validates system requirements for a module.
-     *
-     * @param  Module  $module  The module to validate
-     * @param  string  $phpVersion  Current PHP version
-     * @param  string  $laravelVersion  Current Laravel version
-     * @param  array<string>  $availableExtensions  Available PHP extensions
-     */
-    public function validateSystemRequirements(
-        Module $module,
-        string $phpVersion,
-        string $laravelVersion,
-        array $availableExtensions,
-    ): bool {
-        $requirements = $module->requirements();
-
-        // Check PHP version requirement
-        $requiredPhp = $requirements->phpVersion();
-        if ($requiredPhp !== null && ! $this->versionSatisfiesConstraint($phpVersion, $requiredPhp)) {
-            return false;
-        }
-
-        // Check Laravel version requirement
-        $requiredLaravel = $requirements->laravelVersion();
-        if ($requiredLaravel !== null && ! $this->versionSatisfiesConstraint($laravelVersion, $requiredLaravel)) {
-            return false;
-        }
-
-        // Check required extensions
-        foreach ($requirements->requiredExtensions() as $extension) {
-            if (! in_array($extension, $availableExtensions, true)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     /**
@@ -306,39 +267,5 @@ final readonly class ModuleDependencyResolver
         }
 
         $sorted[] = $module;
-    }
-
-    /**
-     * Checks if a version satisfies a constraint.
-     */
-    private function versionSatisfiesConstraint(string $version, string $constraint): bool
-    {
-        $normalizedVersion = $this->normalizeVersion($version);
-
-        try {
-            $moduleVersion = ModuleVersion::fromString($normalizedVersion);
-
-            return $moduleVersion->satisfies($constraint);
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
-    /**
-     * Normalizes a version string to semver format.
-     */
-    private function normalizeVersion(string $version): string
-    {
-        // Extract just the version numbers (e.g., "8.3.0" from "8.3.0-dev")
-        if (preg_match('/^(\d+)\.(\d+)\.(\d+)/', $version, $matches)) {
-            return "{$matches[1]}.{$matches[2]}.{$matches[3]}";
-        }
-
-        // Handle two-part versions (e.g., "8.3" -> "8.3.0")
-        if (preg_match('/^(\d+)\.(\d+)$/', $version, $matches)) {
-            return "{$matches[1]}.{$matches[2]}.0";
-        }
-
-        return $version;
     }
 }

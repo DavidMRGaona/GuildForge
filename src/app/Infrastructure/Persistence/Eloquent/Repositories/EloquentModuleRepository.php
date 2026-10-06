@@ -135,6 +135,8 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
         return [
             'php_version' => $requires['php'] ?? $requires['php_version'] ?? null,
             'laravel_version' => $requires['laravel'] ?? $requires['laravel_version'] ?? null,
+            'core_version' => $requires['core'] ?? $requires['core_version'] ?? null,
+            'filament_version' => $requires['filament'] ?? $requires['filament_version'] ?? null,
             'required_modules' => $requires['modules'] ?? $requires['required_modules'] ?? [],
             'required_extensions' => $requires['extensions'] ?? $requires['required_extensions'] ?? [],
         ];
