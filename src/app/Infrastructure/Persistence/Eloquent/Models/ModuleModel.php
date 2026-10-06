@@ -27,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $source_repo
  * @property string|null $latest_available_version
  * @property string|null $latest_blocked_version
- * @property array<mixed>|null $latest_blocked_reason Stored JSON, validated when read
+ * @property mixed $latest_blocked_reason Stored JSON (a list of CompatibilityIssue arrays), validated when read
  * @property Carbon|null $last_update_check_at
  * @property Carbon|null $discovered_at
  * @property Carbon|null $enabled_at

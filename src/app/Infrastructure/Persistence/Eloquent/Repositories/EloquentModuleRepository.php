@@ -116,11 +116,30 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
                 ? new DateTimeImmutable($model->last_update_check_at->toDateTimeString())
                 : null,
             latestBlockedVersion: $model->latest_blocked_version,
-            latestBlockedIssues: array_map(
-                static fn (mixed $issue): CompatibilityIssue => CompatibilityIssue::fromArray(is_array($issue) ? $issue : []),
-                array_values($model->latest_blocked_reason ?? []),
-            ),
+            latestBlockedIssues: $this->blockedIssues($model->latest_blocked_reason),
         );
+    }
+
+    /**
+     * Stored JSON is untrusted: anything but a list of issue objects reads as no issues.
+     *
+     * @return list<CompatibilityIssue>
+     */
+    private function blockedIssues(mixed $stored): array
+    {
+        if (! is_array($stored)) {
+            return [];
+        }
+
+        $issues = [];
+
+        foreach ($stored as $issue) {
+            if (is_array($issue)) {
+                $issues[] = CompatibilityIssue::fromArray($issue);
+            }
+        }
+
+        return $issues;
     }
 
     /**
