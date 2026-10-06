@@ -12,6 +12,7 @@ final readonly class UpdatePreviewDTO
     /**
      * @param  array<string>  $pendingMigrations
      * @param  array<string>  $newSeeders
+     * @param  list<array{requirement: string, required: string, found: string|null, reason_key: string}>  $compatibilityIssues  Empty when the target release is compatible
      */
     public function __construct(
         public string $moduleName,
@@ -25,6 +26,7 @@ final readonly class UpdatePreviewDTO
         public ?string $coreRequirement,
         public ?string $downloadUrl,
         public ?int $downloadSize,
+        public array $compatibilityIssues = [],
     ) {}
 
     public function hasMigrations(): bool
@@ -59,6 +61,7 @@ final readonly class UpdatePreviewDTO
             'core_requirement' => $this->coreRequirement,
             'download_url' => $this->downloadUrl,
             'download_size' => $this->downloadSize,
+            'compatibility_issues' => $this->compatibilityIssues,
         ];
     }
 }

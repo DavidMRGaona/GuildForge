@@ -9,6 +9,8 @@ use App\Application\Updates\DTOs\ModuleUpdateResultDTO;
 use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
@@ -185,6 +187,35 @@ final class UpdateModuleCommandTest extends TestCase
 
         $this->artisan('module:update', ['name' => 'notifications', '--force' => true])
             ->expectsOutput('Incompatible with current core version. Requires: ^3.0')
+            ->assertExitCode(1);
+    }
+
+    public function test_it_explains_every_compatibility_issue_of_a_blocked_release(): void
+    {
+        $preview = new UpdatePreviewDTO(
+            moduleName: 'notifications',
+            fromVersion: '1.0.0',
+            toVersion: '1.1.0',
+            pendingMigrations: [],
+            newSeeders: [],
+            changelog: '',
+            isMajorUpdate: false,
+            coreCompatible: false,
+            coreRequirement: '^2.6',
+            downloadUrl: null,
+            downloadSize: null,
+            compatibilityIssues: [
+                (new CompatibilityIssue(RequirementType::Extension, 'intl', null, CompatibilityIssue::MISSING_EXTENSION))->toArray(),
+            ],
+        );
+
+        $this->updater->shouldReceive('preview')->andReturn($preview);
+        $this->updater->shouldNotReceive('update');
+
+        $this->artisan('module:update', ['name' => 'notifications', '--force' => true])
+            ->expectsOutput('Version 1.1.0 cannot be installed on this host:')
+            ->expectsOutput('  - requiere la extensión PHP intl')
+            ->doesntExpectOutputToContain('Incompatible with current core version')
             ->assertExitCode(1);
     }
 

@@ -7,6 +7,8 @@ namespace Tests\Integration\Infrastructure\Updates\Services;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Infrastructure\Updates\Services\CoreVersionService;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class CoreVersionServiceTest extends TestCase
@@ -19,26 +21,24 @@ final class CoreVersionServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new CoreVersionService;
-        $this->versionFilePath = base_path('VERSION');
+        // Never touch src/VERSION: the parallel suite reads it to check module compatibility
+        $this->versionFilePath = sys_get_temp_dir().'/gf-version-'.uniqid();
+        $this->service = new CoreVersionService($this->versionFilePath);
     }
 
     protected function tearDown(): void
     {
-        // Restore original VERSION file if it existed
-        if (File::exists($this->versionFilePath.'.backup')) {
-            File::move($this->versionFilePath.'.backup', $this->versionFilePath);
-        }
+        File::delete($this->versionFilePath);
 
         parent::tearDown();
     }
 
     public function test_it_reads_version_from_file(): void
     {
-        $this->backupAndWriteVersion('2.5.10');
+        $this->writeVersion('2.5.10');
 
         // Clear cached version by creating new instance
-        $service = new CoreVersionService;
+        $service = new CoreVersionService($this->versionFilePath);
         $version = $service->getCurrentVersion();
 
         $this->assertEquals('2.5.10', $version->value());
@@ -49,10 +49,7 @@ final class CoreVersionServiceTest extends TestCase
 
     public function test_it_returns_fallback_when_file_missing(): void
     {
-        $this->backupVersionFile();
-        File::delete($this->versionFilePath);
-
-        $service = new CoreVersionService;
+        $service = new CoreVersionService($this->versionFilePath);
         $version = $service->getCurrentVersion();
 
         $this->assertEquals('0.0.0', $version->value());
@@ -60,9 +57,9 @@ final class CoreVersionServiceTest extends TestCase
 
     public function test_it_caches_version_on_subsequent_calls(): void
     {
-        $this->backupAndWriteVersion('1.0.0');
+        $this->writeVersion('1.0.0');
 
-        $service = new CoreVersionService;
+        $service = new CoreVersionService($this->versionFilePath);
         $firstCall = $service->getCurrentVersion();
 
         // Modify the file (but cache should preserve original)
@@ -97,9 +94,9 @@ final class CoreVersionServiceTest extends TestCase
 
     public function test_satisfies_returns_true_for_matching_constraint(): void
     {
-        $this->backupAndWriteVersion('1.5.3');
+        $this->writeVersion('1.5.3');
 
-        $service = new CoreVersionService;
+        $service = new CoreVersionService($this->versionFilePath);
 
         $this->assertTrue($service->satisfies('^1.0'));
         $this->assertTrue($service->satisfies('>=1.0.0'));
@@ -108,9 +105,9 @@ final class CoreVersionServiceTest extends TestCase
 
     public function test_satisfies_returns_false_for_non_matching_constraint(): void
     {
-        $this->backupAndWriteVersion('1.5.3');
+        $this->writeVersion('1.5.3');
 
-        $service = new CoreVersionService;
+        $service = new CoreVersionService($this->versionFilePath);
 
         $this->assertFalse($service->satisfies('^2.0'));
         $this->assertFalse($service->satisfies('>=2.0.0'));
@@ -126,24 +123,50 @@ final class CoreVersionServiceTest extends TestCase
 
     public function test_it_trims_whitespace_from_version_file(): void
     {
-        $this->backupAndWriteVersion("  3.2.1  \n");
+        $this->writeVersion("  3.2.1  \n");
 
-        $service = new CoreVersionService;
+        $service = new CoreVersionService($this->versionFilePath);
         $version = $service->getCurrentVersion();
 
         $this->assertEquals('3.2.1', $version->value());
     }
 
-    private function backupVersionFile(): void
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function malformedVersions(): array
     {
-        if (File::exists($this->versionFilePath)) {
-            File::move($this->versionFilePath, $this->versionFilePath.'.backup');
-        }
+        return [
+            'leading v' => ['v2.6.0'],
+            'missing patch' => ['2.6'],
+            'trailing garbage' => ["2.6.0 beta\n"],
+        ];
     }
 
-    private function backupAndWriteVersion(string $version): void
+    #[DataProvider('malformedVersions')]
+    public function test_a_malformed_version_file_falls_back_to_0_0_0_and_logs_once(string $content): void
     {
-        $this->backupVersionFile();
+        Log::spy();
+        $this->writeVersion($content);
+
+        $service = new CoreVersionService($this->versionFilePath);
+
+        $this->assertSame('0.0.0', $service->getCurrentVersion()->value());
+        $this->assertSame('0.0.0', $service->getCurrentVersion()->value());
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'core version')
+                && $context['file'] === $this->versionFilePath
+                && $context['value'] === trim($content));
+    }
+
+    public function test_it_reads_the_application_version_file_by_default(): void
+    {
+        $this->assertSame(trim(File::get(base_path('VERSION'))), (new CoreVersionService())->getCurrentVersion()->value());
+    }
+
+    private function writeVersion(string $version): void
+    {
         File::put($this->versionFilePath, $version);
     }
 }

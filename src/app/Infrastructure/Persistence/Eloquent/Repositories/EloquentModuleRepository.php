@@ -8,6 +8,7 @@ use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
@@ -114,14 +115,41 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             lastUpdateCheckAt: $model->last_update_check_at !== null
                 ? new DateTimeImmutable($model->last_update_check_at->toDateTimeString())
                 : null,
+            latestBlockedVersion: $model->latest_blocked_version,
+            latestBlockedIssues: $this->blockedIssues($model->latest_blocked_reason),
         );
     }
 
     /**
-     * Normalize database requires format to ModuleRequirements format.
+     * Stored JSON is untrusted: anything but a list of issue objects reads as no issues.
      *
-     * Database format: ['modules' => [...], 'php' => '...']
-     * ModuleRequirements format: ['required_modules' => [...], 'php_version' => '...']
+     * @return list<CompatibilityIssue>
+     */
+    private function blockedIssues(mixed $stored): array
+    {
+        if (! is_array($stored)) {
+            return [];
+        }
+
+        $issues = [];
+
+        foreach ($stored as $issue) {
+            if (is_array($issue)) {
+                $issues[] = CompatibilityIssue::fromArray($issue);
+            }
+        }
+
+        return $issues;
+    }
+
+    /**
+     * Normalize the stored requires column to the ModuleRequirements::fromArray() format.
+     *
+     * Two shapes are accepted, the manifest keys winning when both are present:
+     * - Manifest keys: ['php' => ..., 'laravel' => ..., 'core' => ..., 'filament' => ..., 'modules' => [...], 'extensions' => [...]]
+     * - Database keys (what save() writes): ['php_version' => ..., 'laravel_version' => ..., 'core_version' => ...,
+     *   'filament_version' => ..., 'required_modules' => [...], 'required_extensions' => [...]]
+     * Rows saved before core/filament existed lack those keys and read as null (core falls back to ^2.0).
      *
      * @param  array<string, mixed>|null  $requires
      * @return array<string, mixed>
@@ -135,6 +163,8 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
         return [
             'php_version' => $requires['php'] ?? $requires['php_version'] ?? null,
             'laravel_version' => $requires['laravel'] ?? $requires['laravel_version'] ?? null,
+            'core_version' => $requires['core'] ?? $requires['core_version'] ?? null,
+            'filament_version' => $requires['filament'] ?? $requires['filament_version'] ?? null,
             'required_modules' => $requires['modules'] ?? $requires['required_modules'] ?? [],
             'required_extensions' => $requires['extensions'] ?? $requires['required_extensions'] ?? [],
         ];
@@ -161,6 +191,10 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             'source_repo' => $module->sourceRepo(),
             'latest_available_version' => $module->latestAvailableVersion(),
             'last_update_check_at' => $module->lastUpdateCheckAt()?->format('Y-m-d H:i:s'),
+            'latest_blocked_version' => $module->latestBlockedVersion(),
+            'latest_blocked_reason' => $module->latestBlockedVersion() === null
+                ? null
+                : array_map(static fn (CompatibilityIssue $issue): array => $issue->toArray(), $module->latestBlockedIssues()),
             'status' => $module->status()->value,
             'enabled_at' => $module->enabledAt()?->format('Y-m-d H:i:s'),
             'installed_at' => $module->installedAt()?->format('Y-m-d H:i:s'),

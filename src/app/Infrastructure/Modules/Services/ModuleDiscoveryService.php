@@ -50,32 +50,17 @@ final readonly class ModuleDiscoveryService
                 continue;
             }
 
-            $modules[] = $this->parseManifest($manifestPath);
+            $modules[] = $this->readManifest($manifestPath);
         }
 
         return $modules;
     }
 
-    private function parseManifest(string $path): ModuleManifestDTO
+    /**
+     * @throws InvalidArgumentException When the manifest cannot be read or lacks required fields
+     */
+    public function readManifest(string $path): ModuleManifestDTO
     {
-        $content = file_get_contents($path);
-
-        if ($content === false) {
-            throw new InvalidArgumentException("Cannot read manifest file: {$path}");
-        }
-
-        $data = json_decode($content, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new InvalidArgumentException('Invalid JSON: '.json_last_error_msg());
-        }
-
-        // A bad repository only disables updates for this module; it must not block discovery
-        if (isset($data['repository']) && ! ModuleManifestDTO::isValidRepository($data['repository'])) {
-            $this->logger->warning("Ignoring invalid repository in {$path}, expected 'owner/repo'");
-            unset($data['repository']);
-        }
-
-        return ModuleManifestDTO::fromArray($data);
+        return (new ModuleManifestReader($this->logger))->read($path);
     }
 }

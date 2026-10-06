@@ -13,6 +13,9 @@ interface CoreVersionServiceInterface
 {
     /**
      * Get the current core version from VERSION file.
+     *
+     * Never throws: a missing or malformed file yields 0.0.0 (a malformed one is logged as an
+     * error), which no module's core constraint accepts, so modules are blocked visibly.
      */
     public function getCurrentVersion(): ModuleVersion;
 

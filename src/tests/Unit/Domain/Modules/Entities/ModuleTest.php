@@ -6,6 +6,8 @@ namespace Tests\Unit\Domain\Modules\Entities;
 
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
@@ -146,68 +148,25 @@ final class ModuleTest extends TestCase
         $this->assertNull($module->installedAt());
     }
 
-    public function test_requirements_satisfied_returns_true_when_all_met(): void
+    public function test_update_requirements_replaces_them(): void
     {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.2',
-            laravelVersion: '^11.0',
-            requiredModules: [],
-            requiredExtensions: ['json']
-        );
+        $module = $this->createModule();
 
-        $module = $this->createModule(requirements: $requirements);
+        $module->updateRequirements(ModuleRequirements::fromManifest(['core' => '^2.6']));
 
-        $satisfied = $module->requirementsSatisfied(
-            phpVersion: '8.3.0',
-            laravelVersion: '11.5.0',
-            availableModules: [],
-            availableExtensions: ['json', 'mbstring']
-        );
-
-        $this->assertTrue($satisfied);
+        $this->assertSame('^2.6', $module->requirements()->coreVersion());
     }
 
-    public function test_requirements_satisfied_returns_false_when_not_met(): void
+    public function test_update_manifest_metadata_replaces_namespace_provider_author_and_dependencies(): void
     {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.3',
-            laravelVersion: '^11.0',
-            requiredModules: [],
-            requiredExtensions: []
-        );
+        $module = $this->createModule();
 
-        $module = $this->createModule(requirements: $requirements);
+        $module->updateManifestMetadata('Modules\\Renamed', 'RenamedServiceProvider', 'New Author', ['base-module']);
 
-        $satisfied = $module->requirementsSatisfied(
-            phpVersion: '8.2.0',
-            laravelVersion: '11.5.0',
-            availableModules: [],
-            availableExtensions: []
-        );
-
-        $this->assertFalse($satisfied);
-    }
-
-    public function test_get_unsatisfied_requirements_returns_array_of_unmet_requirements(): void
-    {
-        $requirements = new ModuleRequirements(
-            phpVersion: '>=8.3',
-            laravelVersion: '^11.0',
-            requiredModules: ['auth'],
-            requiredExtensions: ['gd']
-        );
-
-        $module = $this->createModule(requirements: $requirements);
-
-        $unsatisfied = $module->getUnsatisfiedRequirements(
-            phpVersion: '8.2.0',
-            laravelVersion: '11.5.0',
-            availableModules: [],
-            availableExtensions: []
-        );
-
-        $this->assertNotEmpty($unsatisfied);
-        $this->assertContains('PHP version >=8.3 required, but 8.2.0 found', $unsatisfied);
+        $this->assertSame('Modules\\Renamed', $module->namespace());
+        $this->assertSame('RenamedServiceProvider', $module->provider());
+        $this->assertSame('New Author', $module->author());
+        $this->assertSame(['base-module'], $module->dependencies());
     }
 
     public function test_getters_return_correct_values(): void
@@ -258,6 +217,31 @@ final class ModuleTest extends TestCase
 
         $expected = base_path('modules/test-module');
         $this->assertSame($expected, $module->path());
+    }
+
+    public function test_it_records_and_clears_the_highest_blocked_release(): void
+    {
+        $module = $this->createModule(version: new ModuleVersion(1, 1, 0));
+        $issue = new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED);
+
+        $this->assertFalse($module->hasBlockedRelease());
+
+        $module->updateLatestBlocked('2.0.0', [$issue]);
+        $this->assertTrue($module->hasBlockedRelease());
+        $this->assertSame('2.0.0', $module->latestBlockedVersion());
+        $this->assertSame([$issue], $module->latestBlockedIssues());
+
+        $module->clearLatestBlocked();
+        $this->assertFalse($module->hasBlockedRelease());
+        $this->assertSame([], $module->latestBlockedIssues());
+    }
+
+    public function test_a_blocked_release_that_is_not_newer_than_the_installed_one_is_not_reported(): void
+    {
+        $module = $this->createModule(version: new ModuleVersion(2, 0, 0));
+        $module->updateLatestBlocked('2.0.0', []);
+
+        $this->assertFalse($module->hasBlockedRelease());
     }
 
     private function createModule(

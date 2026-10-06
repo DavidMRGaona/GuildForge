@@ -43,6 +43,9 @@ final class ModuleMigrateCommandTest extends TestCase
         $modulePath = $this->modulesPath.'/test-module';
         $migrationsPath = $modulePath.'/database/migrations';
         File::makeDirectory($migrationsPath, 0755, true);
+        File::put($modulePath.'/module.json', (string) json_encode([
+            'name' => 'test-module', 'version' => '1.0.0', 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
+        ]));
 
         // Create a simple test migration file
         $migrationFile = $migrationsPath.'/2024_01_01_000000_create_test_table.php';
@@ -86,6 +89,20 @@ PHP
     {
         $this->artisan('module:migrate', ['module' => 'non-existent-module'])
             ->expectsOutput('Module "non-existent-module" not found.')
+            ->assertExitCode(1);
+    }
+
+    public function test_it_refuses_to_migrate_an_incompatible_module(): void
+    {
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'version' => '1.0.0', 'path' => $this->modulesPath.'/test-module']);
+        File::makeDirectory($this->modulesPath.'/test-module/database/migrations', 0755, true);
+        File::put($this->modulesPath.'/test-module/module.json', (string) json_encode([
+            'name' => 'test-module', 'version' => '1.0.0', 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
+            'requires' => ['core' => '^99.0'],
+        ]));
+
+        $this->artisan('module:migrate', ['module' => 'test-module'])
+            ->expectsOutput('No se puede habilitar test-module: requiere core ^99.0, instalado 2.6.0')
             ->assertExitCode(1);
     }
 }

@@ -7,13 +7,17 @@ namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class EloquentModuleRepositoryTest extends TestCase
@@ -188,6 +192,78 @@ final class EloquentModuleRepositoryTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('modules', 1);
+    }
+
+    public function test_it_round_trips_core_and_filament_requirements(): void
+    {
+        ModuleModel::factory()->create([
+            'name' => 'req-module',
+            'requires' => ['core' => '^2.6', 'filament' => '^3.3', 'php' => '>=8.2'],
+        ]);
+
+        $module = $this->repository->findByName(new ModuleName('req-module'));
+        $this->assertNotNull($module);
+        $this->assertSame('^2.6', $module->requirements()->coreVersion());
+        $this->assertSame('^3.3', $module->requirements()->filamentVersion());
+
+        $this->repository->save($module);
+
+        $row = ModuleModel::query()->where('name', 'req-module')->firstOrFail();
+        $this->assertSame('^2.6', $row->requires['core_version'] ?? null);
+        $this->assertSame('^3.3', $row->requires['filament_version'] ?? null);
+    }
+
+    public function test_a_row_saved_before_core_existed_falls_back_to_the_default_core_constraint(): void
+    {
+        ModuleModel::factory()->create([
+            'name' => 'old-module',
+            'requires' => [
+                'php_version' => '>=8.2',
+                'laravel_version' => '>=12.0',
+                'required_modules' => [],
+                'required_extensions' => [],
+            ],
+        ]);
+
+        $module = $this->repository->findByName(new ModuleName('old-module'));
+
+        $this->assertNotNull($module);
+        $this->assertSame('>=8.2', $module->requirements()->phpVersion());
+        $this->assertNull($module->requirements()->coreVersion());
+        $this->assertSame('^2.0', $module->requirements()->effectiveCoreConstraint());
+    }
+
+    public function test_it_round_trips_the_blocked_release(): void
+    {
+        ModuleModel::factory()->create(['name' => 'blocked-module', 'version' => '1.1.0']);
+        $module = $this->repository->findByName(new ModuleName('blocked-module'));
+        $this->assertNotNull($module);
+        $issue = new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED);
+
+        $module->updateLatestBlocked('2.0.0', [$issue]);
+        $this->repository->save($module);
+
+        $row = ModuleModel::query()->where('name', 'blocked-module')->firstOrFail();
+        $this->assertSame('2.0.0', $row->latest_blocked_version);
+        $this->assertSame([$issue->toArray()], $row->latest_blocked_reason);
+
+        $reloaded = $this->repository->findByName(new ModuleName('blocked-module'));
+        $this->assertEquals([$issue], $reloaded?->latestBlockedIssues());
+
+        $reloaded?->clearLatestBlocked();
+        $this->repository->save($reloaded);
+        $this->assertNull(ModuleModel::query()->where('name', 'blocked-module')->firstOrFail()->latest_blocked_reason);
+    }
+
+    public function test_a_blocked_reason_that_is_not_a_list_loads_as_no_issues(): void
+    {
+        ModuleModel::factory()->create(['name' => 'scalar-string', 'version' => '1.1.0', 'latest_blocked_version' => '2.0.0']);
+        ModuleModel::factory()->create(['name' => 'scalar-int', 'version' => '1.1.0', 'latest_blocked_version' => '2.0.0']);
+        DB::table('modules')->where('name', 'scalar-string')->update(['latest_blocked_reason' => '"x"']);
+        DB::table('modules')->where('name', 'scalar-int')->update(['latest_blocked_reason' => '1']);
+
+        $this->assertSame([], $this->repository->findByName(new ModuleName('scalar-string'))?->latestBlockedIssues());
+        $this->assertSame([], $this->repository->findByName(new ModuleName('scalar-int'))?->latestBlockedIssues());
     }
 
     private function createModule(

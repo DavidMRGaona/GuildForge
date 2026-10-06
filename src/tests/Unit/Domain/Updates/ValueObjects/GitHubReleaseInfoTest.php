@@ -304,4 +304,33 @@ final class GitHubReleaseInfoTest extends TestCase
         $this->assertEquals('', $release->downloadUrl);
         $this->assertFalse($release->hasDownloadableAssets());
     }
+
+    public function test_it_finds_the_module_json_asset(): void
+    {
+        $release = GitHubReleaseInfo::fromGitHubResponse([
+            'tag_name' => 'v1.1.0',
+            'published_at' => '2026-10-06T10:00:00Z',
+            'assets' => [
+                ['name' => 'announcements-1.1.0.zip', 'browser_download_url' => 'https://example.test/a.zip'],
+                ['name' => 'announcements-1.1.0.zip.sha256', 'browser_download_url' => 'https://example.test/a.zip.sha256'],
+                ['name' => 'module.json', 'browser_download_url' => 'https://example.test/module.json'],
+            ],
+        ]);
+
+        $this->assertTrue($release->hasManifest());
+        $this->assertSame('https://example.test/module.json', $release->manifestUrl);
+        $this->assertSame('https://example.test/a.zip', $release->downloadUrl);
+        $this->assertSame('https://example.test/module.json', $release->toArray()['manifest_url']);
+    }
+
+    public function test_a_release_without_module_json_has_no_manifest(): void
+    {
+        $release = GitHubReleaseInfo::fromGitHubResponse([
+            'tag_name' => 'v1.0.7-beta',
+            'assets' => [['name' => 'other-module.json', 'browser_download_url' => 'https://example.test/other-module.json']],
+        ]);
+
+        $this->assertFalse($release->hasManifest());
+        $this->assertSame('', $release->manifestUrl);
+    }
 }

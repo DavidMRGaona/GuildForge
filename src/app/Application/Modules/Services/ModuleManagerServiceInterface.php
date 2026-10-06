@@ -18,6 +18,8 @@ interface ModuleManagerServiceInterface
 
     /**
      * Enable a module by name.
+     *
+     * @throws \App\Domain\Modules\Exceptions\ModuleIncompatibleException When this host does not satisfy its module.json
      */
     public function enable(ModuleName $name): Module;
 

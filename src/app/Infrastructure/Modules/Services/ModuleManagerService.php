@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\DependencyCheckResultDTO;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
@@ -17,6 +19,7 @@ use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleCannotUninstallException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleId;
@@ -39,6 +42,8 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private ModuleMigrationRunner $migrationRunner,
         private ModuleSeederRunner $seederRunner,
         private Dispatcher $events,
+        private ModuleCompatibilityServiceInterface $compatibility,
+        private EnabledModulesResolverInterface $resolver,
     ) {}
 
     public function discover(): ModuleCollection
@@ -76,6 +81,22 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                         $needsSave = true;
                     }
 
+                    $manifestRequirements = ModuleRequirements::fromManifest($manifest->requires ?? []);
+                    if (! $existing->requirements()->equals($manifestRequirements)) {
+                        $existing->updateRequirements($manifestRequirements);
+                        $needsSave = true;
+                    }
+
+                    $manifestAuthor = $manifest->author ?? '';
+                    $manifestDependencies = array_values(array_filter($manifest->dependencies ?? [], 'is_string'));
+                    if ($existing->namespace() !== $manifest->namespace
+                        || $existing->provider() !== $manifest->provider
+                        || $existing->author() !== $manifestAuthor
+                        || $existing->dependencies() !== $manifestDependencies) {
+                        $existing->updateManifestMetadata($manifest->namespace, $manifest->provider, $manifestAuthor, $manifestDependencies);
+                        $needsSave = true;
+                    }
+
                     $manifestOwner = $manifest->repositoryOwner();
                     $manifestRepo = $manifest->repositoryName();
                     if ($manifestOwner !== null && $manifestRepo !== null
@@ -90,17 +111,27 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                         $existing->updateVersion($manifestVersion);
                         $needsSave = true;
 
-                        // Run pending migrations and seeders for enabled+installed modules
+                        // Run pending migrations and seeders for enabled+installed modules, unless
+                        // the new version is not compatible: they may reference its classes
                         if ($existing->isEnabled() && $existing->isInstalled()) {
-                            try {
-                                $this->migrationRunner->run($existing);
-                                $this->seederRunner->run($existing);
-                            } catch (\Throwable $e) {
-                                Log::warning("Failed to run migrations/seeders after version change for module {$moduleName->value}", [
-                                    'previous_version' => $previousVersion,
-                                    'new_version' => $manifestVersion->value(),
-                                    'error' => $e->getMessage(),
+                            $compatibility = $this->compatibility->checkInstalled($moduleName);
+
+                            if (! $compatibility->isCompatible()) {
+                                Log::warning("Not migrating module {$moduleName->value}: it is not compatible with this site", [
+                                    'version' => $manifestVersion->value(),
+                                    'reasons' => $compatibility->summary(),
                                 ]);
+                            } else {
+                                try {
+                                    $this->migrationRunner->run($existing);
+                                    $this->seederRunner->run($existing);
+                                } catch (\Throwable $e) {
+                                    Log::warning("Failed to run migrations/seeders after version change for module {$moduleName->value}", [
+                                        'previous_version' => $previousVersion,
+                                        'new_version' => $manifestVersion->value(),
+                                        'error' => $e->getMessage(),
+                                    ]);
+                                }
                             }
                         }
 
@@ -131,7 +162,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 description: $manifest->description ?? '',
                 version: ModuleVersion::fromString($manifest->version),
                 author: $manifest->author ?? '',
-                requirements: $this->parseRequirements($manifest->requires),
+                requirements: ModuleRequirements::fromManifest($manifest->requires ?? []),
                 status: ModuleStatus::Disabled,
                 enabledAt: null,
                 createdAt: new DateTimeImmutable,
@@ -139,7 +170,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 namespace: $manifest->namespace,
                 provider: $manifest->provider,
                 path: $modulesPath.'/'.$manifest->name,
-                dependencies: $manifest->dependencies ?? [],
+                dependencies: array_values(array_filter($manifest->dependencies ?? [], 'is_string')),
                 sourceOwner: $manifest->repositoryOwner(),
                 sourceRepo: $manifest->repositoryName(),
             );
@@ -168,6 +199,12 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
         if ($module->isEnabled()) {
             throw ModuleAlreadyEnabledException::withName($name->value);
+        }
+
+        // Before dependencies and migrations: an incompatible module's code must never run
+        $compatibility = $this->compatibility->checkInstalled($name);
+        if (! $compatibility->isCompatible()) {
+            throw ModuleIncompatibleException::forModule($name->value, $module->version()->value(), $compatibility);
         }
 
         // Check dependencies
@@ -199,6 +236,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
         // Invalidate cache
         $this->invalidateModuleCache();
+        $this->resolver->reset();
         $this->clearRouteCacheIfNeeded();
 
         // Dispatch event
@@ -529,25 +567,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         if (app()->routesAreCached()) {
             Artisan::call('route:clear');
         }
-    }
-
-    /**
-     * Parse requirements from manifest format to ModuleRequirements.
-     *
-     * @param  array<string, mixed>|null  $requires
-     */
-    private function parseRequirements(?array $requires): ModuleRequirements
-    {
-        if ($requires === null) {
-            return ModuleRequirements::fromArray([]);
-        }
-
-        return ModuleRequirements::fromArray([
-            'php_version' => $requires['php'] ?? null,
-            'laravel_version' => $requires['laravel'] ?? null,
-            'required_modules' => $requires['modules'] ?? [],
-            'required_extensions' => $requires['extensions'] ?? [],
-        ]);
     }
 
     /**

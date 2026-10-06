@@ -26,6 +26,21 @@
             <p class="text-sm text-danger-600 dark:text-danger-400">{{ __('filament.updates.modules.preview.major_warning') }}</p>
         @endif
 
+        <div class="flex flex-col gap-1 text-sm">
+            <h3 class="font-medium text-gray-950 dark:text-white">{{ __('filament.updates.modules.preview.compatibility') }}</h3>
+            @if($preview['core_compatible'])
+                <p class="text-gray-950 dark:text-white">{{ __('filament.updates.modules.preview.compatible') }}</p>
+            @else
+                <p class="font-medium text-danger-600 dark:text-danger-400">{{ __('filament.updates.modules.preview.incompatible') }}</p>
+            @endif
+            @if($preview['core_requirement'] !== null)
+                <p class="text-gray-500 dark:text-gray-400">{{ __('filament.updates.modules.preview.core_requirement', ['constraint' => $preview['core_requirement']]) }}</p>
+            @endif
+            @foreach($preview['compatibility_reasons'] as $reason)
+                <p class="text-danger-600 dark:text-danger-400">{{ $reason }}</p>
+            @endforeach
+        </div>
+
         <div class="flex flex-col gap-2">
             <h3 class="text-sm font-medium text-gray-950 dark:text-white">{{ __('filament.updates.modules.preview.changelog') }}</h3>
 

@@ -6,6 +6,7 @@ namespace App\Filament\Pages;
 
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
+use App\Application\Updates\DTOs\BlockedReleaseDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Modules\Entities\Module;
@@ -15,6 +16,7 @@ use App\Domain\Updates\Enums\UpdateStatus;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
+use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -62,6 +64,13 @@ final class ModuleUpdatesPage extends Page implements HasTable
 
     /** @var array<int, string> */
     public array $modulesWithoutSource = [];
+
+    /**
+     * Newer releases this host cannot run (BlockedReleaseDTO::toArray()); shown, never offered.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    public array $blockedReleases = [];
 
     public static function canAccess(): bool
     {
@@ -112,6 +121,12 @@ final class ModuleUpdatesPage extends Page implements HasTable
         $this->modulesWithoutSource = collect(app(ModuleRepositoryInterface::class)->all()->all())
             ->reject(fn (Module $module): bool => $module->hasUpdateSource())
             ->map(fn (Module $module): string => $module->name()->value)
+            ->values()
+            ->all();
+
+        $this->blockedReleases = collect(app(ModuleRepositoryInterface::class)->all()->all())
+            ->filter(fn (Module $module): bool => $module->hasBlockedRelease())
+            ->map(fn (Module $module): array => BlockedReleaseDTO::fromModule($module)->toArray())
             ->values()
             ->all();
     }
@@ -182,6 +197,10 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 ->all();
             $this->checkErrors = $result->errors;
             $this->modulesWithoutSource = $result->modulesWithoutSource;
+            $this->blockedReleases = array_map(
+                static fn (BlockedReleaseDTO $blocked): array => $blocked->toArray(),
+                $result->blocked,
+            );
 
             if ($result->hasErrors()) {
                 Notification::make()
@@ -378,6 +397,12 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 'changelog_html' => trim($preview->changelog) === ''
                     ? null
                     : Str::markdown($preview->changelog, ['html_input' => 'strip', 'allow_unsafe_links' => false]),
+                'core_compatible' => $preview->coreCompatible,
+                'core_requirement' => $preview->coreRequirement,
+                'compatibility_reasons' => array_map(
+                    static fn (array $issue): string => app(CompatibilityIssueFormatter::class)->format($issue),
+                    $preview->compatibilityIssues,
+                ),
             ],
             'error' => null,
         ]);

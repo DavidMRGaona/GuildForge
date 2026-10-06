@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Modules\Entities;
 
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
@@ -15,6 +16,7 @@ final class Module
 {
     /**
      * @param  array<string>  $dependencies
+     * @param  list<CompatibilityIssue>  $latestBlockedIssues
      */
     public function __construct(
         private readonly ModuleId $id,
@@ -22,21 +24,23 @@ final class Module
         private string $displayName,
         private string $description,
         private ModuleVersion $version,
-        private readonly string $author,
-        private readonly ModuleRequirements $requirements,
+        private string $author,
+        private ModuleRequirements $requirements,
         private ModuleStatus $status,
         private ?DateTimeImmutable $enabledAt = null,
         private ?DateTimeImmutable $installedAt = null,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
-        private readonly ?string $namespace = null,
-        private readonly ?string $provider = null,
+        private ?string $namespace = null,
+        private ?string $provider = null,
         private readonly ?string $path = null,
-        private readonly array $dependencies = [],
+        private array $dependencies = [],
         private ?string $sourceOwner = null,
         private ?string $sourceRepo = null,
         private ?string $latestAvailableVersion = null,
         private ?DateTimeImmutable $lastUpdateCheckAt = null,
+        private ?string $latestBlockedVersion = null,
+        private array $latestBlockedIssues = [],
     ) {}
 
     public function id(): ModuleId
@@ -187,6 +191,50 @@ final class Module
         $this->latestAvailableVersion = null;
     }
 
+    public function latestBlockedVersion(): ?string
+    {
+        return $this->latestBlockedVersion;
+    }
+
+    /**
+     * @return list<CompatibilityIssue>
+     */
+    public function latestBlockedIssues(): array
+    {
+        return $this->latestBlockedIssues;
+    }
+
+    /**
+     * @param  list<CompatibilityIssue>  $issues
+     */
+    public function updateLatestBlocked(string $version, array $issues): void
+    {
+        $this->latestBlockedVersion = $version;
+        $this->latestBlockedIssues = $issues;
+    }
+
+    public function clearLatestBlocked(): void
+    {
+        $this->latestBlockedVersion = null;
+        $this->latestBlockedIssues = [];
+    }
+
+    /**
+     * A newer release exists but this host cannot run it.
+     */
+    public function hasBlockedRelease(): bool
+    {
+        if ($this->latestBlockedVersion === null) {
+            return false;
+        }
+
+        try {
+            return ModuleVersion::fromString($this->latestBlockedVersion)->isGreaterThan($this->version);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     public function updateLastCheckAt(DateTimeImmutable $timestamp): void
     {
         $this->lastUpdateCheckAt = $timestamp;
@@ -205,6 +253,22 @@ final class Module
     public function updateDescription(string $description): void
     {
         $this->description = $description;
+    }
+
+    public function updateRequirements(ModuleRequirements $requirements): void
+    {
+        $this->requirements = $requirements;
+    }
+
+    /**
+     * @param  array<string>  $dependencies
+     */
+    public function updateManifestMetadata(string $namespace, string $provider, string $author, array $dependencies): void
+    {
+        $this->namespace = $namespace;
+        $this->provider = $provider;
+        $this->author = $author;
+        $this->dependencies = $dependencies;
     }
 
     public function enable(): void
@@ -242,43 +306,6 @@ final class Module
     public function markUninstalled(): void
     {
         $this->installedAt = null;
-    }
-
-    /**
-     * @param  list<string>  $availableModules
-     * @param  list<string>  $availableExtensions
-     */
-    public function requirementsSatisfied(
-        string $phpVersion,
-        string $laravelVersion,
-        array $availableModules,
-        array $availableExtensions,
-    ): bool {
-        return $this->requirements->areSatisfied(
-            $phpVersion,
-            $laravelVersion,
-            $availableModules,
-            $availableExtensions,
-        );
-    }
-
-    /**
-     * @param  list<string>  $availableModules
-     * @param  list<string>  $availableExtensions
-     * @return list<string>
-     */
-    public function getUnsatisfiedRequirements(
-        string $phpVersion,
-        string $laravelVersion,
-        array $availableModules,
-        array $availableExtensions,
-    ): array {
-        return $this->requirements->getUnsatisfied(
-            $phpVersion,
-            $laravelVersion,
-            $availableModules,
-            $availableExtensions,
-        );
     }
 
     /**

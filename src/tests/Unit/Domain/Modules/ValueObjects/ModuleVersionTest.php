@@ -161,11 +161,10 @@ final class ModuleVersionTest extends TestCase
         $this->assertTrue($version->satisfies('~1.2'));
     }
 
-    public function test_satisfies_tilde_constraint_returns_false_for_one_dot_three_dot_zero(): void
+    public function test_satisfies_tilde_constraint_follows_composer_and_allows_the_next_minor(): void
     {
-        $version = new ModuleVersion(1, 3, 0);
-
-        $this->assertFalse($version->satisfies('~1.2'));
+        $this->assertTrue((new ModuleVersion(1, 3, 0))->satisfies('~1.2'));
+        $this->assertFalse((new ModuleVersion(2, 0, 0))->satisfies('~1.2'));
     }
 
     public function test_satisfies_exact_version_returns_true_only_for_exact_match(): void
@@ -257,5 +256,37 @@ final class ModuleVersionTest extends TestCase
         $version = ModuleVersion::fromString('1.0.0');
 
         $this->assertNull($version->preRelease);
+    }
+
+    public function test_numeric_pre_release_identifiers_compare_numerically(): void
+    {
+        $this->assertTrue(ModuleVersion::fromString('1.0.0-beta.9')->isLessThan(ModuleVersion::fromString('1.0.0-beta.10')));
+    }
+
+    public function test_numeric_identifiers_have_lower_precedence_than_alphanumeric_ones(): void
+    {
+        $this->assertTrue(ModuleVersion::fromString('1.0.0-1')->isLessThan(ModuleVersion::fromString('1.0.0-alpha')));
+    }
+
+    public function test_a_larger_set_of_pre_release_fields_wins_when_the_prefix_is_equal(): void
+    {
+        $this->assertTrue(ModuleVersion::fromString('1.0.0-alpha')->isLessThan(ModuleVersion::fromString('1.0.0-alpha.1')));
+        $this->assertTrue(ModuleVersion::fromString('1.0.0-alpha.beta')->isLessThan(ModuleVersion::fromString('1.0.0-beta')));
+        $this->assertTrue(ModuleVersion::fromString('1.0.0-rc.1')->isLessThan(ModuleVersion::fromString('1.0.0')));
+    }
+
+    public function test_satisfies_is_false_for_an_invalid_constraint(): void
+    {
+        $this->assertFalse(ModuleVersion::fromString('2.0.0')->satisfies('2.x'));
+    }
+
+    public function test_satisfies_is_false_for_an_oversized_constraint(): void
+    {
+        $this->assertFalse(ModuleVersion::fromString('2.0.0')->satisfies('^9223372036854775807'));
+    }
+
+    public function test_satisfies_supports_or_constraints(): void
+    {
+        $this->assertTrue(ModuleVersion::fromString('4.1.0')->satisfies('^3.2 || ^4.0'));
     }
 }

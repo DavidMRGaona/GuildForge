@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\ModuleManifestDTO;
+use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Domain\Modules\Events\ModuleInstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -24,12 +26,16 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 {
     private const string TEMP_DIRECTORY = 'temp/modules';
 
+    /** requires keys whose malformed value may become an invalid constraint */
+    private const array CONSTRAINT_REQUIREMENTS = ['php', 'laravel', 'core', 'filament'];
+
     public function __construct(
         private Dispatcher $events,
         private ModuleRepositoryInterface $repository,
         private ModuleBackupServiceInterface $backupService,
         private ModuleMigrationRunner $migrationRunner,
         private ModuleSeederRunner $seederRunner,
+        private ModuleCompatibilityServiceInterface $compatibility,
     ) {}
 
     public function installFromZip(UploadedFile $file): ModuleManifestDTO
@@ -41,6 +47,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         try {
             $manifest = $this->findAndValidateManifest($tempPath);
             $this->validateModuleNameForInstall($manifest);
+            $this->assertCompatible($manifest);
 
             $targetPath = $this->moveToModulesDirectory($tempPath, $manifest->name);
             $this->publishPreBuiltAssets($targetPath, $manifest->name);
@@ -65,6 +72,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 
         try {
             $manifest = $this->findAndValidateManifest($tempPath);
+            $this->assertCompatible($manifest);
             $moduleName = new ModuleName($manifest->name);
 
             $module = $this->repository->findByName($moduleName);
@@ -220,10 +228,36 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
             }
         }
 
+        // A malformed version constraint becomes an invalid constraint, so the package is refused
+        // with that reason instead of "invalid JSON". Anything else malformed in requires (the block
+        // itself, the modules or extensions lists) is still refused as an invalid manifest: repairing
+        // a list would drop the requirement and let the package in
+        if (array_key_exists('requires', $data)) {
+            $normalized = ModuleManifestDTO::normalizeRequires($data['requires']);
+
+            if (array_diff($normalized['invalid'], self::CONSTRAINT_REQUIREMENTS) !== []) {
+                throw ModuleInstallationException::invalidManifestJson();
+            }
+
+            $data['requires'] = $normalized['requires'];
+        }
+
         try {
             return ModuleManifestDTO::fromArray($data);
         } catch (InvalidArgumentException $e) {
             throw ModuleInstallationException::invalidManifestJson();
+        }
+    }
+
+    /**
+     * Runs before anything is moved, backed up or deleted; the finally block removes the extracted copy.
+     */
+    private function assertCompatible(ModuleManifestDTO $manifest): void
+    {
+        $result = $this->compatibility->checkManifest($manifest);
+
+        if (! $result->isCompatible()) {
+            throw ModuleIncompatibleException::forModule($manifest->name, $manifest->version, $result);
         }
     }
 

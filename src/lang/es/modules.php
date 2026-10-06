@@ -74,6 +74,38 @@ return [
         'seeder_violation' => 'El módulo :name contiene operaciones prohibidas en su seeder :file: :violations',
     ],
 
+    // Module compatibility with this host (core, PHP, Laravel, Filament, extensions)
+    'compatibility' => [
+        'requirements' => [
+            'core' => 'core',
+            'php' => 'PHP',
+            'laravel' => 'Laravel',
+            'filament' => 'Filament',
+            'extension' => 'extensión',
+            'manifest' => 'module.json',
+        ],
+        'reasons' => [
+            'unsatisfied' => 'requiere :requirement :required, instalado :found',
+            'missing_extension' => 'requiere la extensión PHP :required',
+            'invalid_constraint' => 'restricción de :requirement no válida: «:required»',
+            'unknown_host_version' => 'requiere :requirement :required y no se pudo determinar la versión instalada',
+            'manifest_missing' => 'no se encuentra module.json',
+            'manifest_invalid' => 'module.json no válido',
+        ],
+        'short' => [
+            'unsatisfied' => 'requiere :requirement :required',
+        ],
+        'badge' => 'Incompatible',
+        'enable_blocked' => 'No se puede habilitar: :reasons',
+        'banner' => '{1} Un módulo habilitado no se ha cargado porque no es compatible con esta versión:|[2,*] :count módulos habilitados no se han cargado porque no son compatibles con esta versión:',
+        'cannot_seed' => 'No se pueden ejecutar los seeders de :name en este servidor: :reasons',
+        'banner_link' => 'Ver módulos',
+        'list' => [
+            'yes' => 'sí',
+            'no' => 'no: :reason',
+        ],
+    ],
+
     // Filament admin interface
     'filament' => [
         'page' => [
@@ -145,6 +177,8 @@ return [
             'migrations_run' => 'Se ejecutaron :count migración(es).',
             'migrations_run_first_install' => 'Las migraciones se han ejecutado.',
             'data_deleted' => 'Los datos del módulo han sido eliminados.',
+            'incompatible' => 'No se puede habilitar :name: :reasons',
+            'incompatible_package' => 'El paquete :name :version no es compatible: :reasons',
         ],
         'confirm' => [
             'uninstall_title' => '¿Desinstalar módulo?',

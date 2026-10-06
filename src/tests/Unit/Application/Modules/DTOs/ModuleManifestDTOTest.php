@@ -6,6 +6,7 @@ namespace Tests\Unit\Application\Modules\DTOs;
 
 use App\Application\Modules\DTOs\ModuleManifestDTO;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ModuleManifestDTOTest extends TestCase
@@ -237,5 +238,73 @@ final class ModuleManifestDTOTest extends TestCase
         $this->assertNull($dto->repositoryOwner());
         $this->assertNull($dto->repositoryName());
         $this->assertArrayNotHasKey('repository', $dto->toArray());
+    }
+
+    /**
+     * @return iterable<string, array{0: mixed, 1: string}>
+     */
+    public static function malformedRequires(): iterable
+    {
+        yield 'requires is a string' => ['>=8.2', 'Invalid requires'];
+        yield 'requires is a list' => [['^2.6'], 'Invalid requires'];
+        yield 'core is a number' => [['core' => 3], 'Invalid requires.core'];
+        yield 'core is null' => [['core' => null], 'Invalid requires.core'];
+        yield 'filament is a list' => [['filament' => ['^3.3']], 'Invalid requires.filament'];
+        yield 'php is a number' => [['php' => 8.2], 'Invalid requires.php'];
+        yield 'modules is a string' => [['modules' => 'base-module'], 'Invalid requires.modules'];
+        yield 'extensions holds a number' => [['extensions' => ['intl', 5]], 'Invalid requires.extensions'];
+    }
+
+    #[DataProvider('malformedRequires')]
+    public function test_from_array_rejects_a_malformed_requires(mixed $requires, string $message): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        ModuleManifestDTO::fromArray([
+            'name' => 'm', 'version' => '1.0.0', 'namespace' => 'Modules\\M', 'provider' => 'MServiceProvider', 'requires' => $requires,
+        ]);
+    }
+
+    public function test_from_array_keeps_unknown_requires_keys(): void
+    {
+        $dto = ModuleManifestDTO::fromArray([
+            'name' => 'm', 'version' => '1.0.0', 'namespace' => 'Modules\\M', 'provider' => 'MServiceProvider',
+            'requires' => ['core' => '^2.6', 'ext-json' => '*'],
+        ]);
+
+        $this->assertSame(['core' => '^2.6', 'ext-json' => '*'], $dto->requires);
+    }
+
+    public function test_normalize_requires_replaces_malformed_constraints_with_an_invalid_one(): void
+    {
+        $normalized = ModuleManifestDTO::normalizeRequires([
+            'core' => 3,
+            'filament' => null,
+            'php' => '>=8.2',
+            'modules' => ['base-module', 7],
+            'extensions' => 'intl',
+        ]);
+
+        $this->assertSame([
+            'core' => '',
+            'filament' => '',
+            'php' => '>=8.2',
+            'modules' => ['base-module'],
+            'extensions' => [],
+        ], $normalized['requires']);
+        $this->assertSame(['core', 'filament', 'modules', 'extensions'], $normalized['invalid']);
+    }
+
+    public function test_normalize_requires_never_lets_an_unreadable_requires_fall_back_to_the_default_core(): void
+    {
+        $this->assertSame(['requires' => ['core' => ''], 'invalid' => ['requires']], ModuleManifestDTO::normalizeRequires('^2.6'));
+        $this->assertSame(['requires' => ['core' => ''], 'invalid' => ['requires']], ModuleManifestDTO::normalizeRequires(['^2.6']));
+    }
+
+    public function test_normalize_requires_accepts_missing_or_empty_requires(): void
+    {
+        $this->assertSame(['requires' => [], 'invalid' => []], ModuleManifestDTO::normalizeRequires(null));
+        $this->assertSame(['requires' => [], 'invalid' => []], ModuleManifestDTO::normalizeRequires([]));
     }
 }

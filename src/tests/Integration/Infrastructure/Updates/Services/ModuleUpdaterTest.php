@@ -12,14 +12,18 @@ use App\Application\Updates\Services\ModulePostUpdateRunnerInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleId;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
+use App\Domain\Updates\ValueObjects\ReleaseSelection;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\Infrastructure\Updates\Services\ModulePackageInstaller;
 use App\Infrastructure\Updates\Services\ModuleUpdater;
@@ -73,7 +77,7 @@ final class ModuleUpdaterTest extends TestCase
             $this->githubFetcher,
             $this->backupService,
             $this->events,
-            new ModulePackageInstaller,
+            app(ModulePackageInstaller::class),
             new ReleaseChannelPolicy(allowPrereleases: false),
             $this->postUpdateRunner,
         );
@@ -107,8 +111,8 @@ final class ModuleUpdaterTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn($release);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn(new ReleaseSelection($release, '^2.0', null, null, []));
 
         $preview = $this->service->preview(ModuleName::fromString('forum'));
 
@@ -150,8 +154,8 @@ final class ModuleUpdaterTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn($release);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn(new ReleaseSelection($release, '^2.0', null, null, []));
 
         $this->expectException(UpdateException::class);
         $this->expectExceptionMessage('No update available');
@@ -167,8 +171,8 @@ final class ModuleUpdaterTest extends TestCase
         $this->moduleRepository->shouldReceive('findByName')
             ->andReturn($module);
 
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->andReturn($release);
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->andReturn(new ReleaseSelection($release, '^2.0', null, null, []));
 
         $preview = $this->service->preview(ModuleName::fromString('forum'));
 
@@ -393,14 +397,85 @@ final class ModuleUpdaterTest extends TestCase
     {
         $this->prepareInstalledModules();
         $this->events->shouldReceive('dispatch')->andReturnNull();
-        $this->githubFetcher->shouldReceive('getLatestRelease')
-            ->with('owner', 'updtest-game', true)
+        $this->githubFetcher->shouldReceive('selectRelease')
+            ->with('owner', 'updtest-game', Mockery::type(ModuleVersion::class), true)
             ->once()
-            ->andReturn(null);
+            ->andReturn(ReleaseSelection::none());
 
         $result = $this->service->update(ModuleName::fromString('updtest-game'));
 
         $this->assertFalse($result->isSuccess()); // noUpdateAvailable is caught and returned as a failed result
+    }
+
+    public function test_an_incompatible_release_fails_in_staging_and_never_touches_the_installed_module(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new', ['core' => '^99.0']));
+        $this->postUpdateRunner->shouldNotReceive('run');
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertSame(UpdateStatus::Failed, $result->status);
+        $this->assertStringContainsString('requires core ^99.0', (string) $result->errorMessage);
+        $this->assertStringContainsString('requires core ^99.0', (string) ModuleUpdateHistoryModel::findOrFail($result->historyId)->error_message);
+        $this->assertSame('1.0.0-beta', $this->manifestVersion('updtest-game'));
+        $this->assertSame('old', File::get(public_path('build/modules/updtest-game/manifest.json')));
+        $this->assertSame([], glob($this->modulesPath.'/.*updtest-game-*', GLOB_ONLYDIR));
+    }
+
+    public function test_preview_of_an_only_blocked_release_explains_why(): void
+    {
+        $this->moduleRepository->shouldReceive('findByName')->andReturn($this->createRealModule('forum', '1.1.0', true));
+        $issue = new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED);
+        $this->githubFetcher->shouldReceive('selectRelease')->andReturn(
+            new ReleaseSelection(null, null, $this->createReleaseInfo('2.0.0'), '^3.0', [$issue]),
+        );
+
+        $preview = $this->service->preview(ModuleName::fromString('forum'));
+
+        $this->assertSame('2.0.0', $preview->toVersion);
+        $this->assertFalse($preview->coreCompatible);
+        $this->assertSame('^3.0', $preview->coreRequirement);
+        $this->assertSame([$issue->toArray()], $preview->compatibilityIssues);
+    }
+
+    public function test_preview_prefers_the_compatible_release(): void
+    {
+        $this->moduleRepository->shouldReceive('findByName')->andReturn($this->createRealModule('forum', '1.1.0', true));
+        $this->githubFetcher->shouldReceive('selectRelease')->andReturn(new ReleaseSelection(
+            $this->createReleaseInfo('1.2.0'),
+            '^2.6',
+            $this->createReleaseInfo('2.0.0'),
+            '^3.0',
+            [new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED)],
+        ));
+
+        $preview = $this->service->preview(ModuleName::fromString('forum'));
+
+        $this->assertSame('1.2.0', $preview->toVersion);
+        $this->assertTrue($preview->coreCompatible);
+        $this->assertSame('^2.6', $preview->coreRequirement);
+        $this->assertSame([], $preview->compatibilityIssues);
+    }
+
+    public function test_update_never_applies_a_blocked_release(): void
+    {
+        $this->prepareInstalledModules();
+        $this->events->shouldReceive('dispatch')->andReturnNull();
+        $this->githubFetcher->shouldReceive('selectRelease')->andReturn(new ReleaseSelection(
+            null,
+            null,
+            $this->createReleaseInfo('2.0.0'),
+            '^3.0',
+            [new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED)],
+        ));
+        $this->githubFetcher->shouldNotReceive('downloadRelease');
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertSame(UpdateStatus::Failed, $result->status);
+        $this->assertSame("No compatible update for 'updtest-game': 2.0.0 is available but requires core ^3.0, found 2.6.0.", $result->errorMessage);
+        $this->assertSame('1.0.0-beta', $this->manifestVersion('updtest-game'));
     }
 
     private function prepareInstalledModules(): Module
@@ -443,7 +518,7 @@ final class ModuleUpdaterTest extends TestCase
     private function expectRelease(string $version, string $zipPath): void
     {
         $this->events->shouldReceive('dispatch')->andReturnNull();
-        $this->githubFetcher->shouldReceive('getLatestRelease')->andReturn($this->createReleaseInfo($version));
+        $this->githubFetcher->shouldReceive('selectRelease')->andReturn(new ReleaseSelection($this->createReleaseInfo($version), '^2.0', null, null, []));
         $this->githubFetcher->shouldReceive('downloadRelease')->andReturnUsing(
             function (GitHubReleaseInfo $release, string $destination) use ($zipPath): string {
                 File::ensureDirectoryExists(dirname($destination));
@@ -454,13 +529,22 @@ final class ModuleUpdaterTest extends TestCase
         );
     }
 
-    private function releaseZip(string $name, string $version, string $assetContent): string
+    /**
+     * @param  array<string, mixed>  $requires
+     */
+    private function releaseZip(string $name, string $version, string $assetContent, array $requires = []): string
     {
         $path = $this->tempDir.'/fixtures/'.uniqid().'.release';
         File::ensureDirectoryExists(dirname($path));
         $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        $zip->addFromString("{$name}-{$version}/module.json", (string) json_encode(['name' => $name, 'version' => $version]));
+        $zip->addFromString("{$name}-{$version}/module.json", (string) json_encode([
+            'name' => $name,
+            'version' => $version,
+            'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
+            'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
+            'requires' => $requires,
+        ]));
         $zip->addFromString("{$name}-{$version}/public/build/manifest.json", $assetContent);
         $zip->close();
 
@@ -480,7 +564,7 @@ final class ModuleUpdaterTest extends TestCase
             $this->githubFetcher,
             $this->backupService,
             $this->events,
-            new ModulePackageInstaller,
+            app(ModulePackageInstaller::class),
             new ReleaseChannelPolicy(allowPrereleases: false),
             $this->postUpdateRunner,
         );
