@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Modules\ValueObjects;
 
 use App\Domain\Modules\Exceptions\InvalidModuleVersionException;
+use App\Domain\Modules\Exceptions\InvalidVersionConstraintException;
+use App\Domain\Modules\Services\ConstraintMatcher;
 use Stringable;
 
 final readonly class ModuleVersion implements Stringable
@@ -69,39 +71,27 @@ final readonly class ModuleVersion implements Stringable
         return $this->compare($other) === 0;
     }
 
+    /**
+     * False when the constraint is not valid: callers fail closed.
+     */
     public function satisfies(string $constraint): bool
     {
-        // Caret constraint (^1.0 or ^1.2)
-        if (str_starts_with($constraint, '^')) {
-            return $this->satisfiesCaretConstraint(substr($constraint, 1));
+        try {
+            return (new ConstraintMatcher())->matches($constraint, $this);
+        } catch (InvalidVersionConstraintException) {
+            return false;
         }
-
-        // Greater than or equal constraint (>=1.2.0)
-        if (str_starts_with($constraint, '>=')) {
-            return $this->satisfiesGreaterThanOrEqualConstraint(substr($constraint, 2));
-        }
-
-        // Tilde constraint (~1.2)
-        if (str_starts_with($constraint, '~')) {
-            return $this->satisfiesTildeConstraint(substr($constraint, 1));
-        }
-
-        // Exact version match (1.0.0)
-        return $this->satisfiesExactConstraint($constraint);
     }
 
+    /**
+     * SemVer 2.0.0 §11 precedence.
+     */
     private function compare(self $other): int
     {
-        if ($this->major !== $other->major) {
-            return $this->major <=> $other->major;
-        }
+        $core = [$this->major, $this->minor, $this->patch] <=> [$other->major, $other->minor, $other->patch];
 
-        if ($this->minor !== $other->minor) {
-            return $this->minor <=> $other->minor;
-        }
-
-        if ($this->patch !== $other->patch) {
-            return $this->patch <=> $other->patch;
+        if ($core !== 0) {
+            return $core;
         }
 
         if ($this->preRelease === $other->preRelease) {
@@ -117,70 +107,46 @@ final readonly class ModuleVersion implements Stringable
             return -1;
         }
 
-        return $this->preRelease <=> $other->preRelease;
+        return self::comparePreRelease($this->preRelease, $other->preRelease);
     }
 
-    private function satisfiesCaretConstraint(string $constraint): bool
+    private static function comparePreRelease(string $left, string $right): int
     {
-        $parts = explode('.', $constraint);
-        $constraintMajor = (int) $parts[0];
-        $constraintMinor = isset($parts[1]) ? (int) $parts[1] : 0;
+        $leftIds = explode('.', $left);
+        $rightIds = explode('.', $right);
 
-        // Must be same major version
-        if ($this->major !== $constraintMajor) {
-            return false;
+        foreach ($leftIds as $index => $identifier) {
+            if (! isset($rightIds[$index])) {
+                return 1;
+            }
+
+            $result = self::compareIdentifier($identifier, $rightIds[$index]);
+
+            if ($result !== 0) {
+                return $result;
+            }
         }
 
-        // Must be >= the minor version specified
-        if ($this->minor < $constraintMinor) {
-            return false;
-        }
-
-        return true;
+        return count($leftIds) <=> count($rightIds);
     }
 
-    private function satisfiesGreaterThanOrEqualConstraint(string $constraint): bool
+    private static function compareIdentifier(string $left, string $right): int
     {
-        $normalizedConstraint = $this->normalizeVersionString($constraint);
-        $constraintVersion = self::fromString($normalizedConstraint);
+        $leftNumeric = ctype_digit($left);
+        $rightNumeric = ctype_digit($right);
 
-        return $this->isGreaterThanOrEqual($constraintVersion);
-    }
-
-    private function normalizeVersionString(string $version): string
-    {
-        // Already in X.Y.Z format
-        if (preg_match('/^\d+\.\d+\.\d+$/', $version)) {
-            return $version;
+        if ($leftNumeric && $rightNumeric) {
+            return (int) $left <=> (int) $right;
         }
 
-        // X.Y format - add .0
-        if (preg_match('/^(\d+)\.(\d+)$/', $version, $matches)) {
-            return "{$matches[1]}.{$matches[2]}.0";
+        if ($leftNumeric) {
+            return -1;
         }
 
-        // X format - add .0.0
-        if (preg_match('/^(\d+)$/', $version, $matches)) {
-            return "{$matches[1]}.0.0";
+        if ($rightNumeric) {
+            return 1;
         }
 
-        return $version;
-    }
-
-    private function satisfiesTildeConstraint(string $constraint): bool
-    {
-        $parts = explode('.', $constraint);
-        $constraintMajor = (int) $parts[0];
-        $constraintMinor = isset($parts[1]) ? (int) $parts[1] : 0;
-
-        // Must be same major and minor version
-        return $this->major === $constraintMajor && $this->minor === $constraintMinor;
-    }
-
-    private function satisfiesExactConstraint(string $constraint): bool
-    {
-        $constraintVersion = self::fromString($constraint);
-
-        return $this->isEqualTo($constraintVersion);
+        return strcmp($left, $right) <=> 0;
     }
 }
