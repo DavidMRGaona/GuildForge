@@ -32,20 +32,7 @@ final class ModuleCompatibilityServiceTest extends TestCase
         File::ensureDirectoryExists($this->modulesPath);
         config(['modules.path' => $this->modulesPath]);
 
-        $host = new class () implements HostEnvironmentProviderInterface {
-            public function current(): HostEnvironment
-            {
-                return new HostEnvironment(
-                    core: new ModuleVersion(2, 6, 0),
-                    php: new ModuleVersion(8, 4, 26),
-                    laravel: new ModuleVersion(12, 69, 3),
-                    filament: new ModuleVersion(3, 3, 56),
-                    extensions: ['json'],
-                );
-            }
-        };
-
-        $this->service = new ModuleCompatibilityService(new ModuleManifestReader(), new ModuleCompatibilityChecker(new ConstraintMatcher()), $host);
+        $this->service = $this->serviceForCore(new ModuleVersion(2, 6, 0));
     }
 
     protected function tearDown(): void
@@ -117,6 +104,34 @@ final class ModuleCompatibilityServiceTest extends TestCase
         $this->assertTrue($this->service->checkInstalled(new ModuleName('announcements'))->isCompatible());
     }
 
+    public function test_an_unchanged_manifest_is_read_once(): void
+    {
+        $path = $this->modulesPath.'/announcements/module.json';
+        $this->manifest('announcements', ['core' => '^3.0']);
+        $this->assertFalse($this->service->checkInstalled(new ModuleName('announcements'))->isCompatible());
+
+        // Same size and mtime: only a memo hit can still see the first content
+        $mtime = (int) filemtime($path);
+        $size = (int) filesize($path);
+        $this->manifest('announcements', ['core' => '^2.6']);
+        touch($path, $mtime);
+        clearstatcache(true, $path);
+        $this->assertSame($size, filesize($path));
+
+        $this->assertFalse($this->service->checkInstalled(new ModuleName('announcements'))->isCompatible());
+    }
+
+    public function test_an_unknown_core_version_blocks_modules_that_need_a_real_one(): void
+    {
+        // CoreVersionService reports 0.0.0 when VERSION is missing or malformed
+        $this->manifest('announcements', ['core' => '^2.6']);
+
+        $this->assertEquals(
+            [new CompatibilityIssue(RequirementType::Core, '^2.6', '0.0.0', CompatibilityIssue::UNSATISFIED)],
+            $this->serviceForCore(new ModuleVersion(0, 0, 0))->checkInstalled(new ModuleName('announcements'))->issues,
+        );
+    }
+
     public function test_check_manifest_file_reads_any_path(): void
     {
         $this->manifest('staged', ['core' => '^99.0']);
@@ -128,6 +143,29 @@ final class ModuleCompatibilityServiceTest extends TestCase
     public function test_it_is_bound_as_a_singleton(): void
     {
         $this->assertSame(app(ModuleCompatibilityServiceInterface::class), app(ModuleCompatibilityServiceInterface::class));
+    }
+
+    private function serviceForCore(ModuleVersion $core): ModuleCompatibilityService
+    {
+        $host = new class ($core) implements HostEnvironmentProviderInterface {
+            public function __construct(
+                private readonly ModuleVersion $core,
+            ) {
+            }
+
+            public function current(): HostEnvironment
+            {
+                return new HostEnvironment(
+                    core: $this->core,
+                    php: new ModuleVersion(8, 4, 26),
+                    laravel: new ModuleVersion(12, 69, 3),
+                    filament: new ModuleVersion(3, 3, 56),
+                    extensions: ['json'],
+                );
+            }
+        };
+
+        return new ModuleCompatibilityService(new ModuleManifestReader(), new ModuleCompatibilityChecker(new ConstraintMatcher()), $host);
     }
 
     /**

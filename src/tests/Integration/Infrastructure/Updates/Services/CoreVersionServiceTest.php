@@ -7,6 +7,8 @@ namespace Tests\Integration\Infrastructure\Updates\Services;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Infrastructure\Updates\Services\CoreVersionService;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class CoreVersionServiceTest extends TestCase
@@ -127,6 +129,35 @@ final class CoreVersionServiceTest extends TestCase
         $version = $service->getCurrentVersion();
 
         $this->assertEquals('3.2.1', $version->value());
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function malformedVersions(): array
+    {
+        return [
+            'leading v' => ['v2.6.0'],
+            'missing patch' => ['2.6'],
+            'trailing garbage' => ["2.6.0 beta\n"],
+        ];
+    }
+
+    #[DataProvider('malformedVersions')]
+    public function test_a_malformed_version_file_falls_back_to_0_0_0_and_logs_once(string $content): void
+    {
+        Log::spy();
+        $this->writeVersion($content);
+
+        $service = new CoreVersionService($this->versionFilePath);
+
+        $this->assertSame('0.0.0', $service->getCurrentVersion()->value());
+        $this->assertSame('0.0.0', $service->getCurrentVersion()->value());
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'core version')
+                && $context['file'] === $this->versionFilePath
+                && $context['value'] === trim($content));
     }
 
     public function test_it_reads_the_application_version_file_by_default(): void

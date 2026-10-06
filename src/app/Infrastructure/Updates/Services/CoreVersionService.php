@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Infrastructure\Updates\Services;
 
 use App\Application\Updates\Services\CoreVersionServiceInterface;
+use App\Domain\Modules\Exceptions\InvalidModuleVersionException;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 final class CoreVersionService implements CoreVersionServiceInterface
@@ -34,7 +36,14 @@ final class CoreVersionService implements CoreVersionServiceInterface
         }
 
         $version = trim(File::get($versionFile));
-        $this->cachedVersion = ModuleVersion::fromString($version);
+
+        try {
+            $this->cachedVersion = ModuleVersion::fromString($version);
+        } catch (InvalidModuleVersionException) {
+            // Never throw: the compatibility gate runs at boot, and 0.0.0 blocks every module visibly instead
+            Log::error('Malformed core version file, using 0.0.0', ['file' => $versionFile, 'value' => $version]);
+            $this->cachedVersion = ModuleVersion::fromString('0.0.0');
+        }
 
         return $this->cachedVersion;
     }
