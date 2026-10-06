@@ -46,34 +46,27 @@ abstract class TestCase extends BaseTestCase
             $reflection = new \ReflectionClass($instance);
 
             $componentProp = $reflection->getProperty('component');
-            $componentProp->setAccessible(true);
             $componentProp->setValue($instance, $page['component']);
 
             $urlProp = $reflection->getProperty('url');
-            $urlProp->setAccessible(true);
             $urlProp->setValue($instance, $page['url']);
 
             $versionProp = $reflection->getProperty('version');
-            $versionProp->setAccessible(true);
             $versionProp->setValue($instance, $page['version']);
 
             $encryptHistoryProp = $reflection->getProperty('encryptHistory');
-            $encryptHistoryProp->setAccessible(true);
             $encryptHistoryProp->setValue($instance, $page['encryptHistory']);
 
             $clearHistoryProp = $reflection->getProperty('clearHistory');
-            $clearHistoryProp->setAccessible(true);
             $clearHistoryProp->setValue($instance, $page['clearHistory']);
 
             if (isset($page['deferredProps'])) {
                 $deferredPropsProp = $reflection->getProperty('deferredProps');
-                $deferredPropsProp->setAccessible(true);
                 $deferredPropsProp->setValue($instance, $page['deferredProps']);
             }
 
             if (isset($page['flash'])) {
                 $flashProp = $reflection->getProperty('flash');
-                $flashProp->setAccessible(true);
                 $flashProp->setValue($instance, $page['flash']);
             }
 

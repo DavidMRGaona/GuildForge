@@ -241,7 +241,6 @@ final class ImageOptimizationServiceTest extends TestCase
         ob_start();
         imagejpeg($image, null, $quality);
         $contents = ob_get_clean();
-        imagedestroy($image);
 
         return $contents;
     }
@@ -258,7 +257,6 @@ final class ImageOptimizationServiceTest extends TestCase
         ob_start();
         imagepng($image);
         $contents = ob_get_clean();
-        imagedestroy($image);
 
         return $contents;
     }
@@ -275,7 +273,6 @@ final class ImageOptimizationServiceTest extends TestCase
         ob_start();
         imagegif($image);
         $contents = ob_get_clean();
-        imagedestroy($image);
 
         return $contents;
     }
@@ -310,7 +307,6 @@ final class ImageOptimizationServiceTest extends TestCase
 
         $width = imagesx($image);
         $height = imagesy($image);
-        imagedestroy($image);
 
         return [$width, $height];
     }
