@@ -33,6 +33,16 @@ final class MaintenanceBannerTest extends TestCase
             ->assertSee('href="'.SiteSettings::getUrl(['tab' => 'settings-maintenance-tab']).'"', false);
     }
 
+    public function test_banner_uses_background_utilities_present_in_the_compiled_panel_css(): void
+    {
+        app(SettingsServiceInterface::class)->set('maintenance_enabled', '1');
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get('/admin')
+            ->assertSee('bg-custom-600', false)
+            ->assertSee('var(--warning-600)', false);
+    }
+
     public function test_panel_shows_no_banner_while_maintenance_is_disabled(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());
