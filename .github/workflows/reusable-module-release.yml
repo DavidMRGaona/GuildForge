@@ -11,7 +11,7 @@ on:
         description: 'PHP version'
         required: false
         type: string
-        default: '8.4'
+        default: '8.5'
       node_version:
         description: 'Node.js version for building Vue components'
         required: false

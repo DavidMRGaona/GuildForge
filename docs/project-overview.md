@@ -16,7 +16,7 @@ The project follows a Clean Architecture with an extensible module system that a
 
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
-| **Backend** | PHP / Laravel | ^8.4 / ^12.0 | MVC framework with IoC |
+| **Backend** | PHP / Laravel | ^8.5 / ^12.0 | MVC framework with IoC |
 | **Admin panel** | Filament | ^3.2 | CRUD and admin management |
 | **Frontend bridge** | Inertia.js | ^2.0 | SSR without a separate REST API |
 | **Frontend** | Vue 3 / TypeScript | ^3.5 / ^5.9 | Reactive UI (Composition API, strict) |

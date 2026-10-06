@@ -169,7 +169,7 @@ Runs on every push or pull request to `main`.
 
 **Job `test`:**
 - Services: PostgreSQL 17, Redis 7.2
-- Steps: checkout, setup PHP 8.4, composer install, setup Node 24, npm ci, build assets, prepare `.env`, run migrations, run tests
+- Steps: checkout, setup PHP 8.5, composer install, setup Node 24, npm ci, build assets, prepare `.env`, run migrations, run tests
 
 > **Note on PostgreSQL versions:** CI, development and prod-local use PostgreSQL 17, the major version production runs. Migrations use Laravel's schema builder, so they also run on SQLite (tests).
 
