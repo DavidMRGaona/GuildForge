@@ -202,9 +202,9 @@ CI: test (PHP + PostgreSQL + Redis)    ←── en paralelo ──→    CI: li
 Reusable workflow for publishing modules as ZIP packages in GitHub Releases.
 
 **Stages:**
-1. **Validate**: verifies that `module.json` exists, the version is valid semver, and matches the tag
+1. **Validate**: verifies that `module.json` exists, the version is valid semver and matches the tag, and `requires.core` (and any `filament`, `php`, `laravel` constraint) is present and valid
 2. **Test**: runs the module's PHPUnit suite inside the host application checked out at `host_ref` (default `main`); see `docs/module-ci-cd.md`
-3. **Release**: compiles Vue assets (if the module has them), creates ZIP, generates changelog, publishes GitHub Release with ZIP and SHA-256 checksum
+3. **Release**: compiles Vue assets (if the module has them), creates ZIP, generates changelog, publishes GitHub Release with ZIP, SHA-256 checksum and `module.json`
 
 ### Required secrets
 
@@ -493,6 +493,18 @@ A module update runs as a queued job (`UpdateModuleJob`, one per module at a tim
 4. On a failure between the swap and the commit, restores the previous files. Finally runs `php artisan queue:restart` so the worker drops the old module classes.
 
 Sending `USR2` to PID 1 does not reload PHP-FPM: PID 1 is supervisord. To restart PHP-FPM or the workers by hand, use `supervisorctl` (see [Supervisord](#supervisord)).
+
+### Core version and module compatibility
+
+`src/VERSION` is the version modules declare compatibility against (`requires.core`). Bump it whenever the contract modules see changes: a minor version for compatible additions, a major version for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). Other deployments leave it alone.
+
+Every boot (each request and each `artisan` command, entrypoint included) loads only the enabled modules whose `module.json` this core satisfies; the others stay enabled in the database, are not loaded, and the panel shows a banner. Only compatible modules register migrations, so an incompatible module's migrations wait until it is compatible again. After deploying a core version, check on each tenant:
+
+- `php artisan core:version`
+- `php artisan module:list`: the `Compatible` column
+- `php artisan module:check-updates --force`: available updates and releases blocked by the new core
+
+If a module's version changed while it was incompatible (`module:discover` records the new version but skips its migrations and seeders), the entrypoint's `migrate` runs its pending migrations once the module is compatible, but nothing reruns its seeders: run `php artisan module:seed <name>`, which only runs the seeders that have not run yet.
 
 ### Production PHP configuration
 
