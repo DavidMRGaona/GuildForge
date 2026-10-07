@@ -59,7 +59,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
 
         $discoveryService = new ModuleDiscoveryService($this->tempModulesPath);
         $dependencyResolver = new ModuleDependencyResolver;
-        $analyzer = $this->createMock(ModuleMigrationAnalyzerInterface::class);
+        $analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $migrationRunner = new ModuleMigrationRunner($this->tempModulesPath, $analyzer, $schemaGuard);
         $seederRunner = new ModuleSeederRunner($this->tempModulesPath, $analyzer);
@@ -128,7 +128,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
 
         $discoveryService = new ModuleDiscoveryService($this->tempModulesPath);
         $dependencyResolver = new ModuleDependencyResolver;
-        $analyzer = $this->createMock(ModuleMigrationAnalyzerInterface::class);
+        $analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $migrationRunner = new ModuleMigrationRunner($this->tempModulesPath, $analyzer, $schemaGuard);
         $seederRunner = new ModuleSeederRunner($this->tempModulesPath, $analyzer);
@@ -193,7 +193,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
         // the entity path AND the fallback path are missing, triggering
         // ModuleNotFoundException from the runner
         $nonExistentRunnerPath = '/nonexistent/runner/path';
-        $analyzer = $this->createMock(ModuleMigrationAnalyzerInterface::class);
+        $analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $migrationRunner = new ModuleMigrationRunner($nonExistentRunnerPath, $analyzer, $schemaGuard);
         $seederRunner = new ModuleSeederRunner($nonExistentRunnerPath, $analyzer);

@@ -8,6 +8,7 @@ use App\Application\Modules\Services\HostEnvironmentProviderInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\HostEnvironmentProvider;
+use Illuminate\Foundation\Application;
 use Mockery;
 use Tests\TestCase;
 
@@ -36,7 +37,7 @@ final class HostEnvironmentProviderTest extends TestCase
 
         $this->assertSame('2.6.0', $host->core->value());
         $this->assertSame(PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION.'.'.PHP_RELEASE_VERSION, $host->php->value());
-        $this->assertSame(12, $host->laravel->major);
+        $this->assertSame(Application::VERSION, $host->laravel->value());
         $this->assertNotNull($host->filament);
         $this->assertMatchesRegularExpression('/^\d+\.\d+\.\d+$/', $host->filament->value());
         $this->assertContains('json', $host->extensions);

@@ -16,15 +16,15 @@ The project follows a Clean Architecture with an extensible module system that a
 
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
-| **Backend** | PHP / Laravel | ^8.5 / ^12.0 | MVC framework with IoC |
-| **Admin panel** | Filament | ^3.2 | CRUD and admin management |
+| **Backend** | PHP / Laravel | ^8.5 / ^13.35 | MVC framework with IoC |
+| **Admin panel** | Filament | ^3.3.54 | CRUD and admin management |
 | **Frontend bridge** | Inertia.js | ^2.0 | SSR without a separate REST API |
 | **Frontend** | Vue 3 / TypeScript | ^3.5 / ^5.9 | Reactive UI (Composition API, strict) |
 | **Build and styling** | Vite / Tailwind CSS | ^7.0 / ^4.0 | Bundler, HMR, utility-first CSS |
 | **State and i18n** | Pinia / vue-i18n | ^3.0 / ^11.2 | State management, internationalization |
 | **Database** | PostgreSQL / SQLite | 16 / in-memory | Production / testing |
 | **Cache and queues** | Redis | Alpine | Cache, sessions, job queues |
-| **Images** | Cloudinary | ^3.0 | Storage, CDN, optimization |
+| **Images** | Cloudinary (`cloudinary/cloudinary_php`) | ^3.1.3 | Storage, CDN, optimization |
 | **Email** | Resend / AWS SES | ^1.1 / ^3.369 | Transactional email |
 | **Observability** | Elasticsearch / Kibana | 9.2.4 | Centralized logging and visualization |
 | **Containers** | Docker + Compose | - | Development and production |

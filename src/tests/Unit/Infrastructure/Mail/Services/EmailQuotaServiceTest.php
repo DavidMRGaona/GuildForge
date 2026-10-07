@@ -9,14 +9,14 @@ use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
 use App\Infrastructure\Mail\Services\EmailQuotaService;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Tests\TestCase;
 
 final class EmailQuotaServiceTest extends TestCase
 {
-    private MockObject&EmailLogRepositoryInterface $emailLogRepository;
+    private Stub&EmailLogRepositoryInterface $emailLogRepository;
 
-    private MockObject&SettingsServiceInterface $settingsService;
+    private Stub&SettingsServiceInterface $settingsService;
 
     private EmailQuotaService $service;
 
@@ -24,8 +24,8 @@ final class EmailQuotaServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->emailLogRepository = $this->createMock(EmailLogRepositoryInterface::class);
-        $this->settingsService = $this->createMock(SettingsServiceInterface::class);
+        $this->emailLogRepository = $this->createStub(EmailLogRepositoryInterface::class);
+        $this->settingsService = $this->createStub(SettingsServiceInterface::class);
 
         $this->service = new EmailQuotaService(
             $this->emailLogRepository,
@@ -47,10 +47,12 @@ final class EmailQuotaServiceTest extends TestCase
                 ['mail_quota_warning_threshold', '80', '80'],
             ]);
 
-        $this->emailLogRepository->expects($this->never())
+        $emailLogRepository = $this->createMock(EmailLogRepositoryInterface::class);
+        $emailLogRepository->expects($this->never())
             ->method('countByStatusSince');
+        $service = new EmailQuotaService($emailLogRepository, $this->settingsService);
 
-        $result = $this->service->canSendEmail();
+        $result = $service->canSendEmail();
 
         $this->assertTrue($result);
     }

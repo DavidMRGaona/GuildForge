@@ -11,13 +11,13 @@ use App\Infrastructure\Services\LegalPageService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Tests\TestCase;
 
 #[CoversClass(LegalPageService::class)]
 final class LegalPageServiceTest extends TestCase
 {
-    private MockObject&SettingsServiceInterface $settings;
+    private Stub&SettingsServiceInterface $settings;
 
     private LegalPageServiceInterface $service;
 
@@ -25,7 +25,7 @@ final class LegalPageServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->settings = $this->createMock(SettingsServiceInterface::class);
+        $this->settings = $this->createStub(SettingsServiceInterface::class);
         $this->service = new LegalPageService($this->settings);
     }
 
