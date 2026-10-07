@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "87451e34cfcdb45a1e560a3e2b1a0ed6",
+    "content-hash": "348f14e0445da9dbae18cbb41bf40293",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -505,76 +505,6 @@
                 }
             ],
             "time": "2026-09-06T14:11:38+00:00"
-        },
-        {
-            "name": "cloudinary-labs/cloudinary-laravel",
-            "version": "3.0.2",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/cloudinary-community/cloudinary-laravel.git",
-                "reference": "575f4508f9fb50ee9b915e7b53868f5bc9ccf2bb"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/cloudinary-community/cloudinary-laravel/zipball/575f4508f9fb50ee9b915e7b53868f5bc9ccf2bb",
-                "reference": "575f4508f9fb50ee9b915e7b53868f5bc9ccf2bb",
-                "shasum": ""
-            },
-            "require": {
-                "cloudinary/cloudinary_php": "^3.0",
-                "ext-json": "*",
-                "illuminate/support": "^11.0|^12.0",
-                "php": "^8.2"
-            },
-            "require-dev": {
-                "laravel/pint": "^1.20",
-                "mockery/mockery": "^1.6",
-                "orchestra/testbench": "^8.0|^9.0|^10.0",
-                "pestphp/pest": "^2.35|^3.0",
-                "phpspec/prophecy-phpunit": "^2.3",
-                "sempro/phpunit-pretty-print": "^1.2"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "CloudinaryLabs\\CloudinaryLaravel\\CloudinaryServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "files": [
-                    "src/helpers.php"
-                ],
-                "psr-4": {
-                    "CloudinaryLabs\\CloudinaryLaravel\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Josh Manders",
-                    "homepage": "https://github.com/joshmanders"
-                }
-            ],
-            "description": "A Laravel Cloudinary Package",
-            "homepage": "https://github.com/cloudinary-labs/cloudinary-laravel",
-            "keywords": [
-                "File Transformations",
-                "Media management",
-                "cloudinary",
-                "cloudinary-laravel",
-                "file uploads",
-                "laravel"
-            ],
-            "support": {
-                "issues": "https://github.com/cloudinary-community/cloudinary-laravel/issues",
-                "source": "https://github.com/cloudinary-community/cloudinary-laravel/tree/3.0.2"
-            },
-            "time": "2025-10-13T05:21:21+00:00"
         },
         {
             "name": "cloudinary/cloudinary_php",

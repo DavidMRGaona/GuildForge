@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Storage;
 
+use App\Infrastructure\Storage\Cloudinary\CloudinaryStorageAdapter;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -34,6 +35,11 @@ final class CloudinaryImagesDiskTest extends TestCase
         Storage::forgetDisk('images');
 
         parent::tearDown();
+    }
+
+    public function test_the_disk_uses_the_application_adapter(): void
+    {
+        $this->assertInstanceOf(CloudinaryStorageAdapter::class, Storage::disk('images')->getAdapter());
     }
 
     #[DataProvider('urls')]
