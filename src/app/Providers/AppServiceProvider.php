@@ -122,7 +122,6 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
 use App\Infrastructure\Services\AboutPageService;
 use App\Infrastructure\Services\ArticleQueryService;
 use App\Infrastructure\Services\AuthService;
-use App\Infrastructure\Services\CloudinaryStorageAdapter;
 use App\Infrastructure\Services\ContactService;
 use App\Infrastructure\Services\DashboardWidgetConfigService;
 use App\Infrastructure\Services\EventQueryService;
@@ -137,6 +136,8 @@ use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
 use App\Infrastructure\Services\UserModelQueryService;
 use App\Infrastructure\Services\UserService;
+use App\Infrastructure\Storage\Cloudinary\CloudinaryPathMapper;
+use App\Infrastructure\Storage\Cloudinary\CloudinaryStorageAdapter;
 use App\Infrastructure\Updates\Services\CoreUpdateChecker;
 use App\Infrastructure\Updates\Services\CoreVersionService;
 use App\Infrastructure\Updates\Services\GitHubReleaseFetcher;
@@ -412,17 +413,15 @@ class AppServiceProvider extends ServiceProvider
             $component->firstDayOfWeek(1);
         });
 
-        // Override cloudinary driver with a safe adapter that:
-        // - Generates URLs directly (no Admin API calls)
-        // - Ignores "not found" errors on delete
-        // - Optimizes images before upload (resize/compress)
-        Storage::extend('cloudinary', static function ($app, $config) {
+        // Cloudinary driver of the "images" disk (App\Infrastructure\Storage\Cloudinary):
+        // URLs built locally, images optimized before upload, missing assets ignored on delete
+        Storage::extend('cloudinary', function ($app, $config) {
             $cloudinaryUrl = $config['url'] ?? config('cloudinary.cloud_url');
             $prefix = $config['prefix'] ?? null;
 
             $cloudinary = new Cloudinary($cloudinaryUrl);
             $imageOptimization = $app->make(ImageOptimizationServiceInterface::class);
-            $adapter = new CloudinaryStorageAdapter($cloudinary, null, $prefix, $imageOptimization);
+            $adapter = new CloudinaryStorageAdapter($cloudinary, new CloudinaryPathMapper($prefix), $imageOptimization);
 
             return new FilesystemAdapter(
                 new Filesystem($adapter),

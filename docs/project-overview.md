@@ -24,7 +24,7 @@ The project follows a Clean Architecture with an extensible module system that a
 | **State and i18n** | Pinia / vue-i18n | ^3.0 / ^11.2 | State management, internationalization |
 | **Database** | PostgreSQL / SQLite | 16 / in-memory | Production / testing |
 | **Cache and queues** | Redis | Alpine | Cache, sessions, job queues |
-| **Images** | Cloudinary | ^3.0 | Storage, CDN, optimization |
+| **Images** | Cloudinary (`cloudinary/cloudinary_php`) | ^3.1.3 | Storage, CDN, optimization |
 | **Email** | Resend / AWS SES | ^1.1 / ^3.369 | Transactional email |
 | **Observability** | Elasticsearch / Kibana | 9.2.4 | Centralized logging and visualization |
 | **Containers** | Docker + Compose | - | Development and production |
