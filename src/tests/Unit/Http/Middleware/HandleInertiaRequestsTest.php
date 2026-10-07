@@ -105,7 +105,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -138,7 +137,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -168,7 +166,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -194,7 +191,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -221,7 +217,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -235,7 +230,6 @@ TS;
     {
         $reflection = new ReflectionClass(HandleInertiaRequests::class);
         $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-        $method->setAccessible(true);
 
         $result = $method->invoke($this->middleware, '/nonexistent/file.ts');
 
@@ -258,7 +252,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -292,7 +285,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -322,7 +314,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -365,7 +356,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 
@@ -396,7 +386,6 @@ TS;
         try {
             $reflection = new ReflectionClass(HandleInertiaRequests::class);
             $method = $reflection->getMethod('parseTypeScriptLocaleFile');
-            $method->setAccessible(true);
 
             $result = $method->invoke($this->middleware, $tempFile);
 

@@ -39,7 +39,7 @@ make up
 ```
 
 This brings up all the services defined in `docker-compose.yml`:
-- **app** (PHP 8.4 FPM) - application server
+- **app** (PHP 8.5 FPM) - application server
 - **nginx** - web server (port 8080)
 - **db** - PostgreSQL 17 (port 5432)
 - **node** - Node.js 24 with Vite HMR (port 5173)
@@ -48,6 +48,8 @@ This brings up all the services defined in `docker-compose.yml`:
 - **redis** - cache and sessions (port 6379)
 - **elasticsearch** - search engine and logging (port 9200)
 - **kibana** - log visualization (port 5601)
+
+`make up` does not rebuild existing images. After a change to `docker/php/Dockerfile` (for example a PHP upgrade), rebuild the two containers that use it: `docker compose build app queue && docker compose up -d app queue`. With an older image the application does not start: Composer's platform check stops it with "Composer detected issues in your platform".
 
 ### 3. Full initial setup
 
@@ -447,4 +449,4 @@ npm run dev     # Vite server with HMR only
 npm run build   # Type checking + production build
 ```
 
-> **Note**: requires PHP 8.4, Node 24 (22.13+ also works, see `engines` in `src/package.json`), PostgreSQL 17, and Redis installed locally. See `src/composer.json` and `src/package.json` for the full list of scripts.
+> **Note**: requires PHP 8.5, Node 24 (22.13+ also works, see `engines` in `src/package.json`), PostgreSQL 17, and Redis installed locally. See `src/composer.json` and `src/package.json` for the full list of scripts.

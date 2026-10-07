@@ -175,7 +175,7 @@ The reusable workflow accepts these parameters:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `module_name` | string | (required) | Module name in kebab-case |
-| `php_version` | string | `8.4` | PHP version for tests |
+| `php_version` | string | `8.5` | PHP version for tests |
 | `node_version` | string | `24` | Node.js version for building Vue components |
 | `host_ref` | string | `main` | Branch, tag or SHA of `DavidMRGaona/GuildForge` the module is tested and built against |
 | `run_tests` | boolean | `true` | Run tests before the release |
