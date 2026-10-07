@@ -9,7 +9,7 @@ use App\Infrastructure\Services\Logging\ElasticsearchHandler;
 use DateTimeImmutable;
 use Monolog\Level;
 use Monolog\LogRecord;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Tests\TestCase;
 
 final class ElasticsearchHandlerTest extends TestCase
@@ -131,8 +131,8 @@ final class ElasticsearchHandlerTest extends TestCase
 
     public function test_handler_constructs_with_context_provider(): void
     {
-        /** @var LogContextProviderInterface&MockObject $contextProvider */
-        $contextProvider = $this->createMock(LogContextProviderInterface::class);
+        /** @var LogContextProviderInterface&Stub $contextProvider */
+        $contextProvider = $this->createStub(LogContextProviderInterface::class);
         $contextProvider->method('getRequestId')->willReturn('test-request-id-123');
 
         $handler = new ElasticsearchHandler(

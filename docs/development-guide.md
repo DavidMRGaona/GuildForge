@@ -357,6 +357,8 @@ The `src/phpunit.xml` file disables external services during tests:
 - `BCRYPT_ROUNDS=4` (faster hashing)
 - `memory_limit=512M`
 
+PHPUnit notices and deprecations fail the suite (`failOnPhpunitNotice`, `failOnPhpunitDeprecation`). Use `createStub()` for a test double without expectations and `createMock()` only when the test calls `expects()`; use attributes (`#[DataProvider]`, `#[Group]`) instead of doc-comment annotations, which PHPUnit 12 ignores. With `--compact` the summary only says "PHPUnit Notices: N": run `vendor/bin/phpunit --display-phpunit-notices <file>` to see them. Module `phpunit.xml` files do not set these options.
+
 ---
 
 ## Linting and formatting

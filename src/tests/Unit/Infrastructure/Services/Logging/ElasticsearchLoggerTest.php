@@ -102,7 +102,7 @@ final class ElasticsearchLoggerTest extends TestCase
     {
         config(['elasticsearch.enabled' => true]);
 
-        $contextProvider = $this->createMock(LogContextProviderInterface::class);
+        $contextProvider = $this->createStub(LogContextProviderInterface::class);
         $factory = new ElasticsearchLogger($contextProvider);
 
         $logger = $factory([]);

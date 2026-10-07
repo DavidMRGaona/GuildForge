@@ -33,7 +33,7 @@ final class ModuleMigrationRunnerTest extends TestCase
         parent::setUp();
 
         $this->testModulesPath = sys_get_temp_dir().'/guildforge_test_modules_migrations_'.uniqid();
-        $this->analyzer = $this->createMock(ModuleMigrationAnalyzerInterface::class);
+        $this->analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $this->schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $this->runner = new ModuleMigrationRunner(
             $this->testModulesPath,
@@ -144,12 +144,14 @@ final class ModuleMigrationRunnerTest extends TestCase
         );
 
         // Assert
-        $this->analyzer->expects($this->once())
+        $analyzer = $this->createMock(ModuleMigrationAnalyzerInterface::class);
+        $analyzer->expects($this->once())
             ->method('analyzeMigrations')
             ->with('analyzed-module', $migrationsDir);
+        $runner = new ModuleMigrationRunner($this->testModulesPath, $analyzer, $this->schemaGuard);
 
         // Act
-        $this->runner->run($module);
+        $runner->run($module);
     }
 
     public function test_it_throws_when_analyzer_detects_violation(): void
