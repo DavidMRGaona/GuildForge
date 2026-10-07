@@ -80,7 +80,7 @@ final class ModuleInstallerTest extends TestCase
         $this->backupService = Mockery::mock(ModuleBackupServiceInterface::class);
 
         // Create real instances since they're final classes
-        $analyzer = $this->createMock(ModuleMigrationAnalyzerInterface::class);
+        $analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $this->migrationRunner = new ModuleMigrationRunner($this->modulesPath, $analyzer, $schemaGuard);
         $this->seederRunner = new ModuleSeederRunner($this->modulesPath, $analyzer);

@@ -22,7 +22,7 @@ final class ThemeSettingsServicePaletteTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->settingsService = $this->createMock(SettingsServiceInterface::class);
+        $this->settingsService = $this->createStub(SettingsServiceInterface::class);
         $this->paletteGenerator = new OklchColorPaletteGenerator();
         $this->service = new ThemeSettingsService($this->settingsService, $this->paletteGenerator);
     }

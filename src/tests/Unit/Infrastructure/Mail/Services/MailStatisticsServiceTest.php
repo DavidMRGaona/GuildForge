@@ -31,6 +31,8 @@ final class MailStatisticsServiceTest extends TestCase
 
     public function test_it_implements_mail_statistics_service_interface(): void
     {
+        $this->repository->expects($this->never())->method($this->anything());
+
         $this->assertInstanceOf(MailStatisticsServiceInterface::class, $this->service);
     }
 

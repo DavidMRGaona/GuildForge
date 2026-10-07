@@ -7,14 +7,14 @@ namespace Tests\Unit\Infrastructure\Mail\Listeners;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Infrastructure\Mail\Listeners\CheckQuotaBeforeSending;
 use Illuminate\Mail\Events\MessageSending;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Tests\TestCase;
 
 final class CheckQuotaBeforeSendingTest extends TestCase
 {
-    private MockObject&EmailQuotaServiceInterface $quotaService;
+    private Stub&EmailQuotaServiceInterface $quotaService;
 
     private CheckQuotaBeforeSending $listener;
 
@@ -22,7 +22,7 @@ final class CheckQuotaBeforeSendingTest extends TestCase
     {
         parent::setUp();
 
-        $this->quotaService = $this->createMock(EmailQuotaServiceInterface::class);
+        $this->quotaService = $this->createStub(EmailQuotaServiceInterface::class);
         $this->listener = new CheckQuotaBeforeSending($this->quotaService);
     }
 

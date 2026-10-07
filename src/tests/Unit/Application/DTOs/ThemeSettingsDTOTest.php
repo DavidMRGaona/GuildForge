@@ -26,7 +26,7 @@ final class ThemeSettingsDTOTest extends TestCase
 
     public function test_from_settings_returns_dto_with_values_from_settings_service(): void
     {
-        $settingsService = $this->createMock(SettingsServiceInterface::class);
+        $settingsService = $this->createStub(SettingsServiceInterface::class);
         $settingsService->method('get')->willReturnMap([
             // String fields use '' as default in getStringOrDefault
             ['theme_font_heading', '', 'Roboto'],
@@ -55,7 +55,7 @@ final class ThemeSettingsDTOTest extends TestCase
 
     public function test_from_settings_uses_defaults_when_settings_are_empty(): void
     {
-        $settingsService = $this->createMock(SettingsServiceInterface::class);
+        $settingsService = $this->createStub(SettingsServiceInterface::class);
         $settingsService->method('get')->willReturnCallback(
             fn (string $key, mixed $default = null): mixed => $default
         );
@@ -97,7 +97,7 @@ final class ThemeSettingsDTOTest extends TestCase
 
     public function test_from_settings_handles_boolean_conversion(): void
     {
-        $settingsService = $this->createMock(SettingsServiceInterface::class);
+        $settingsService = $this->createStub(SettingsServiceInterface::class);
         $settingsService->method('get')->willReturnMap([
             // String fields use '' as default
             ['theme_font_heading', '', 'Inter'],
