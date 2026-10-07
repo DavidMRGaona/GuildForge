@@ -51,6 +51,8 @@ This brings up all the services defined in `docker-compose.yml`:
 
 `make up` does not rebuild existing images. After a change to `docker/php/Dockerfile` (for example a PHP upgrade), rebuild the two containers that use it: `docker compose build app queue && docker compose up -d app queue`. With an older image the application does not start: Composer's platform check stops it with "Composer detected issues in your platform".
 
+Composer dependencies live in `src/vendor`, shared by the `app` and `queue` containers. After pulling a change to `src/composer.lock`, or switching to a branch with a different one, run `docker exec guildforge_app composer install` and `docker compose restart queue`. Until then `bootstrap/cache/packages.php` can still list service providers of packages that are gone, and the application does not boot.
+
 ### 3. Full initial setup
 
 ```bash
@@ -354,6 +356,8 @@ The `src/phpunit.xml` file disables external services during tests:
 - `LOG_CHANNEL=null`
 - `BCRYPT_ROUNDS=4` (faster hashing)
 - `memory_limit=512M`
+
+PHPUnit notices and deprecations fail the suite (`failOnPhpunitNotice`, `failOnPhpunitDeprecation`). Use `createStub()` for a test double without expectations and `createMock()` only when the test calls `expects()`; use attributes (`#[DataProvider]`, `#[Group]`) instead of doc-comment annotations, which PHPUnit 12 ignores. With `--compact` the summary only says "PHPUnit Notices: N": run `vendor/bin/phpunit --display-phpunit-notices <file>` to see them. Module `phpunit.xml` files do not set these options.
 
 ---
 

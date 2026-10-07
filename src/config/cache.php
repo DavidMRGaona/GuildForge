@@ -114,4 +114,31 @@ return [
 
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Serializable Classes
+    |--------------------------------------------------------------------------
+    |
+    | Classes that may be unserialized from the cache; any other object comes
+    | back as __PHP_Incomplete_Class, which limits gadget chain attacks if the
+    | APP_KEY leaks. The application caches arrays and scalars, except the
+    | enabled modules list (modules.cache.enabled): Module entities and their
+    | value objects (enums are listed for completeness: PHP restores them
+    | regardless). Never set this to false: with the modules cache enabled
+    | the panel would fail to boot.
+    |
+    */
+
+    'serializable_classes' => [
+        \App\Domain\Modules\Entities\Module::class,
+        \App\Domain\Modules\Enums\ModuleStatus::class,
+        \App\Domain\Modules\Enums\RequirementType::class,
+        \App\Domain\Modules\ValueObjects\CompatibilityIssue::class,
+        \App\Domain\Modules\ValueObjects\ModuleId::class,
+        \App\Domain\Modules\ValueObjects\ModuleName::class,
+        \App\Domain\Modules\ValueObjects\ModuleRequirements::class,
+        \App\Domain\Modules\ValueObjects\ModuleVersion::class,
+        \DateTimeImmutable::class,
+    ],
+
 ];

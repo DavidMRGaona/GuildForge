@@ -8,7 +8,7 @@
 
 GuildForge is a web platform for wargames and role-playing games guilds. It combines a public frontend (events, articles, galleries, calendar) with an admin panel (Filament 3) for content management by guild members.
 
-The architecture follows Clean Architecture principles with four concentric layers (Domain, Application, Infrastructure, Presentation), an extensible module system, and strict separation between reads (Query Services) and writes (Repositories). The main technology stack is Laravel 12+, Vue 3 with TypeScript, Inertia.js as the SSR bridge, PostgreSQL as the database, and Filament 3 for the admin panel.
+The architecture follows Clean Architecture principles with four concentric layers (Domain, Application, Infrastructure, Presentation), an extensible module system, and strict separation between reads (Query Services) and writes (Repositories). The main technology stack is Laravel 13+, Vue 3 with TypeScript, Inertia.js as the SSR bridge, PostgreSQL as the database, and Filament 3 for the admin panel.
 
 ---
 
@@ -274,7 +274,7 @@ In `Infrastructure/Persistence/Eloquent/Concerns/`:
 
 #### External services
 
-- **`CloudinaryStorageAdapter`** - Flysystem adapter for Cloudinary with image optimization before upload, direct URL generation without Admin API calls, and ignoring "not found" errors on deletion
+- **`Storage\Cloudinary\CloudinaryStorageAdapter`** - Flysystem adapter of the `images` disk, built on the official SDK (`cloudinary/cloudinary_php`, no Laravel package) with `CloudinaryPathMapper` (path to public id and resource type, prefix applied once). Optimizes images before upload, builds URLs without Admin API calls, ignores "not found" on deletion, and answers "exists" when the Admin API fails, so a rate-limited form never drops (and later deletes) a stored image
 - **`SnsMessageValidator`** - Validation of Amazon SES SNS notifications
 - **`HttpLogContextProvider`** - Log context for HTTP requests
 
@@ -850,7 +850,7 @@ Modules inject Vue components into predefined layout positions through the slot 
 
 Cloud image storage and transformation service.
 
-- **Adapter**: `CloudinaryStorageAdapter` implements Laravel's Flysystem driver
+- **Adapter**: `App\Infrastructure\Storage\Cloudinary\CloudinaryStorageAdapter`, registered as the `cloudinary` driver in `AppServiceProvider`
 - **Disk**: Configured as `images` in `filesystems.php`
 - **Optimization**: `ImageOptimizationService` resizes and compresses images before upload
 - **Cleanup**: `DeletesCloudinaryImages` trait automatically deletes images when models are deleted/updated
