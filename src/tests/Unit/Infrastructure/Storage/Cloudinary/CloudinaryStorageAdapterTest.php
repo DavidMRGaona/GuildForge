@@ -22,7 +22,7 @@ use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToRetrieveMetadata;
 use LogicException;
 use Mockery;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 use Throwable;
 use TypeError;
 
