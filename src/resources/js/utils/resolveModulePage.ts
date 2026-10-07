@@ -94,7 +94,10 @@ async function getModuleManifest(
 
     const manifestUrl = `/build/modules/${moduleName}/manifest.json`;
 
-    const promise = fetch(manifestUrl)
+    // The manifest keeps the same URL across module updates while the chunks it
+    // points to are renamed, so a cached copy must always be revalidated. Browsers
+    // that cached it as immutable would otherwise import chunks that no longer exist.
+    const promise = fetch(manifestUrl, { cache: 'no-cache' })
         .then((response) => {
             if (!response.ok) {
                 return null;
