@@ -8,7 +8,7 @@
 
 GuildForge is a web platform for wargames and role-playing games guilds. It combines a public frontend (events, articles, galleries, calendar) with an admin panel (Filament 3) for content management by guild members.
 
-The architecture follows Clean Architecture principles with four concentric layers (Domain, Application, Infrastructure, Presentation), an extensible module system, and strict separation between reads (Query Services) and writes (Repositories). The main technology stack is Laravel 12+, Vue 3 with TypeScript, Inertia.js as the SSR bridge, PostgreSQL as the database, and Filament 3 for the admin panel.
+The architecture follows Clean Architecture principles with four concentric layers (Domain, Application, Infrastructure, Presentation), an extensible module system, and strict separation between reads (Query Services) and writes (Repositories). The main technology stack is Laravel 13+, Vue 3 with TypeScript, Inertia.js as the SSR bridge, PostgreSQL as the database, and Filament 3 for the admin panel.
 
 ---
 

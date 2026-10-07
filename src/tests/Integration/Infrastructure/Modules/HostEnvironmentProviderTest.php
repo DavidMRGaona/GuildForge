@@ -36,7 +36,7 @@ final class HostEnvironmentProviderTest extends TestCase
 
         $this->assertSame('2.6.0', $host->core->value());
         $this->assertSame(PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION.'.'.PHP_RELEASE_VERSION, $host->php->value());
-        $this->assertSame(12, $host->laravel->major);
+        $this->assertSame((int) explode('.', app()->version())[0], $host->laravel->major);
         $this->assertNotNull($host->filament);
         $this->assertMatchesRegularExpression('/^\d+\.\d+\.\d+$/', $host->filament->value());
         $this->assertContains('json', $host->extensions);
