@@ -214,4 +214,20 @@ return [
 
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Session Serialization
+    |--------------------------------------------------------------------------
+    |
+    | "php" is the format every stored session already uses, so deploys and
+    | rollbacks keep people signed in, and it lets the session hold PHP objects
+    | (validation errors, Filament notifications). Switching to "json" ends
+    | every open session and needs its own rollout.
+    |
+    | Supported: "json", "php"
+    |
+    */
+
+    'serialization' => 'php',
+
 ];
