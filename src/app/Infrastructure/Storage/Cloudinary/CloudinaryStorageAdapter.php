@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Infrastructure\Storage\Cloudinary;
 
 use App\Application\Services\ImageOptimizationServiceInterface;
+use Cloudinary\Api\Exception\ApiError;
 use Cloudinary\Api\Exception\NotFound;
 use Cloudinary\Cloudinary;
 use DateTimeImmutable;
+use GuzzleHttp\Exception\TransferException;
+use Illuminate\Support\Facades\Log;
 use League\Flysystem\ChecksumProvider;
 use League\Flysystem\Config;
 use League\Flysystem\FileAttributes;
@@ -24,13 +27,16 @@ use Throwable;
  * Differences with the adapter it derives from: the prefix applies to every
  * resource type, URLs are built locally (no Admin API call), images are
  * optimized and uploaded with their asset folder, a missing asset is not a
- * delete error, and fileExists() answers true when the Admin API fails (a
- * rate-limited answer must not make Filament drop the stored path, which would
- * delete the image on save). Upload errors reach the caller unchanged: Laravel
- * turns UnableToWriteFile into a silent false on disks without "throw".
+ * delete error, and fileExists() answers true, with a warning, when the Admin
+ * API or the transport fails (a rate-limited answer must not make Filament drop
+ * the stored path, which would delete the image on save). Upload errors reach
+ * the caller unchanged: Laravel turns UnableToWriteFile into a silent false on
+ * disks without "throw".
  *
  * Derived from CloudinaryLabs\CloudinaryLaravel\CloudinaryStorageAdapter
- * (cloudinary-labs/cloudinary-laravel 3.0.2), distributed under this license:
+ * (cloudinary-labs/cloudinary-laravel 3.0.2,
+ * https://github.com/cloudinary-community/cloudinary-laravel/tree/3.0.2),
+ * distributed under this license:
  *
  * The MIT License (MIT)
  *
@@ -82,7 +88,13 @@ final class CloudinaryStorageAdapter implements ChecksumProvider, FilesystemAdap
             return true;
         } catch (NotFound) {
             return false;
-        } catch (Throwable) {
+        } catch (ApiError|TransferException $e) {
+            // The message is not logged: transport errors can carry the request URL.
+            Log::warning('Cloudinary existence check failed; assuming the file exists', [
+                'path' => $path,
+                'exception' => $e::class,
+            ]);
+
             return true;
         }
     }

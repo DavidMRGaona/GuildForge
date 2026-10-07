@@ -9,19 +9,33 @@ use App\Infrastructure\Storage\Cloudinary\CloudinaryPathMapper;
 use App\Infrastructure\Storage\Cloudinary\CloudinaryStorageAdapter;
 use Cloudinary\Api\Admin\AdminApi;
 use Cloudinary\Api\ApiResponse;
+use Cloudinary\Api\Exception\ApiError;
 use Cloudinary\Api\Exception\NotFound;
 use Cloudinary\Api\Exception\RateLimited;
 use Cloudinary\Api\Upload\UploadApi;
 use Cloudinary\Cloudinary;
+use GuzzleHttp\Exception\TransferException;
+use Illuminate\Support\Facades\Log;
 use League\Flysystem\Config;
 use League\Flysystem\StorageAttributes;
 use League\Flysystem\UnableToDeleteFile;
 use League\Flysystem\UnableToRetrieveMetadata;
 use LogicException;
+use Mockery;
 use PHPUnit\Framework\TestCase;
+use Throwable;
+use TypeError;
 
 final class CloudinaryStorageAdapterTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        Log::clearResolvedInstance();
+        Mockery::close();
+
+        parent::tearDown();
+    }
+
     public function test_write_uploads_a_data_uri_with_the_prefixed_public_id_and_its_folder(): void
     {
         $upload = $this->createMock(UploadApi::class);
@@ -123,12 +137,30 @@ final class CloudinaryStorageAdapterTest extends TestCase
         $this->assertFalse($this->adapter(admin: $admin)->fileExists('events/a.jpg'));
     }
 
+    public function test_file_exists_assumes_the_file_is_there_when_the_admin_api_is_rate_limited(): void
+    {
+        $this->assertFileExistsFailsSafeOn(new RateLimited('slow down'));
+    }
+
     public function test_file_exists_assumes_the_file_is_there_when_the_admin_api_fails(): void
     {
-        $admin = $this->createStub(AdminApi::class);
-        $admin->method('asset')->willThrowException(new RateLimited('slow down'));
+        $this->assertFileExistsFailsSafeOn(new ApiError('https://key:secret@api.cloudinary.com/v1_1/test-cloud failed'));
+    }
 
-        $this->assertTrue($this->adapter(admin: $admin)->fileExists('events/a.jpg'));
+    public function test_file_exists_assumes_the_file_is_there_when_the_transport_fails(): void
+    {
+        $this->assertFileExistsFailsSafeOn(new TransferException('cURL error 28 on https://key:secret@api.cloudinary.com'));
+    }
+
+    public function test_file_exists_lets_programming_errors_through(): void
+    {
+        Log::spy();
+        $admin = $this->createStub(AdminApi::class);
+        $admin->method('asset')->willThrowException(new TypeError('bad argument'));
+
+        $this->expectException(TypeError::class);
+
+        $this->adapter(admin: $admin)->fileExists('events/a.jpg');
     }
 
     public function test_size_and_last_modified_come_from_the_asset(): void
@@ -181,6 +213,20 @@ final class CloudinaryStorageAdapterTest extends TestCase
 
         $this->assertStringStartsWith('https://res.cloudinary.com/test-cloud/image/upload/v1/guildforge/events/a?', $adapter->getUrl('events/a.jpg'));
         $this->assertStringStartsWith('https://res.cloudinary.com/test-cloud/video/upload/v1/guildforge/videos/intro?', $adapter->getUrl('videos/intro.mp4'));
+    }
+
+    private function assertFileExistsFailsSafeOn(Throwable $error): void
+    {
+        Log::spy();
+        $admin = $this->createStub(AdminApi::class);
+        $admin->method('asset')->willThrowException($error);
+
+        $this->assertTrue($this->adapter(admin: $admin)->fileExists('events/a.jpg'));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(
+            static fn (string $message, array $context): bool => $context === ['path' => 'events/a.jpg', 'exception' => $error::class]
+                && ! str_contains($message.json_encode($context), 'secret'),
+        );
     }
 
     private function adapter(?UploadApi $upload = null, ?AdminApi $admin = null, ?ImageOptimizationServiceInterface $optimizer = null): CloudinaryStorageAdapter
