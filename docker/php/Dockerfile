@@ -1,4 +1,4 @@
-FROM php:8.4-fpm-alpine
+FROM php:8.5-fpm-alpine3.24
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -31,17 +31,16 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         bcmath \
         gd \
         zip \
-        intl \
-        opcache
+        intl
 
 # Install Redis extension
-RUN pecl install redis && docker-php-ext-enable redis
+RUN pecl install redis-6.3.0 && docker-php-ext-enable redis
 
 # Install Imagick extension (better quality than GD for image processing)
-RUN pecl install imagick && docker-php-ext-enable imagick
+RUN pecl install imagick-3.8.1 && docker-php-ext-enable imagick
 
 # Install Xdebug
-RUN pecl install xdebug && docker-php-ext-enable xdebug
+RUN pecl install xdebug-3.5.3 && docker-php-ext-enable xdebug
 
 # Configure Xdebug
 RUN echo "xdebug.mode=develop,debug,coverage" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
@@ -55,6 +54,10 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.max_accelerated_files=10000" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.memory_consumption=192" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.interned_strings_buffer=16" >> /usr/local/etc/php/conf.d/opcache.ini
+
+# OPcache is compiled into PHP 8.5 (no docker-php-ext-install, no zend_extension):
+# fail the build if the CLI or the FPM binary comes without it
+RUN php -m | grep -qx 'Zend OPcache' && php-fpm -m | grep -qx 'Zend OPcache'
 
 # PHP configuration
 RUN echo "memory_limit=512M" >> /usr/local/etc/php/conf.d/custom.ini \

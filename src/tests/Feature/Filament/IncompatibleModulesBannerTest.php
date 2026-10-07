@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -37,12 +38,13 @@ final class IncompatibleModulesBannerTest extends TestCase
     {
         $this->enabledModule('announcements', 'Anuncios', ['core' => '^99.0']);
         $this->actingAs(UserModel::factory()->admin()->create());
+        $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
 
         $this->get('/admin')
             ->assertOk()
             ->assertSee(trans_choice('modules.compatibility.banner', 1))
             ->assertSee('Anuncios')
-            ->assertSee('requiere core ^99.0, instalado 2.6.0');
+            ->assertSee("requiere core ^99.0, instalado {$core}");
     }
 
     public function test_banner_names_an_enabled_module_whose_directory_disappeared(): void

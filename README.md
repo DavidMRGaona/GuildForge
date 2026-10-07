@@ -198,7 +198,7 @@ The project uses GitHub Actions for CI/CD:
 
 ### CI jobs
 
-- **test**: PHP 8.4, PostgreSQL 17, Redis 7.2. Runs migrations and tests in parallel.
+- **test**: PHP 8.5, PostgreSQL 17, Redis 7.2. Runs migrations and tests in parallel.
 - **lint**: TypeScript type-check and ESLint.
 
 ### Required secrets
