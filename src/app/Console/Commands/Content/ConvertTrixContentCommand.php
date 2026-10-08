@@ -20,6 +20,12 @@ final class ConvertTrixContentCommand extends Command
         $restore = $this->option('restore');
 
         if (is_string($restore) && $restore !== '') {
+            if ((bool) $this->option('dry-run')) {
+                $this->error('--dry-run cannot be combined with --restore: nothing was restored.');
+
+                return self::FAILURE;
+            }
+
             $this->info("Restored {$migrator->restore($restore)} value(s) from {$restore}.");
 
             return self::SUCCESS;
