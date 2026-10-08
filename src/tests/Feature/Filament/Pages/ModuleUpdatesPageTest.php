@@ -384,6 +384,7 @@ final class ModuleUpdatesPageTest extends TestCase
 
         Livewire::test(ModuleUpdatesPage::class)
             ->mountAction('preview', ['module' => 'event-registrations'])
+            ->assertSee('Notas')
             ->assertDontSeeHtml("<script>alert('x')</script>");
     }
 
