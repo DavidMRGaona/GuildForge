@@ -10,7 +10,7 @@ Platform for wargames and role-playing games guilds with:
 | Layer               | Technology                                    |
 |---------------------|-----------------------------------------------|
 | Backend framework   | Laravel 13+                                   |
-| Admin panel         | Filament 3                                    |
+| Admin panel         | Filament 5                                    |
 | Frontend bridge     | Inertia.js                                    |
 | Frontend framework  | Vue 3 (Composition API with `<script setup>`) |
 | Frontend language   | TypeScript (strict mode)                      |

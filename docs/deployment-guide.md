@@ -75,9 +75,16 @@ All containers communicate through the `guildforge_prod` Docker network (bridge 
 
 The `Dockerfile.prod` file uses a multi-stage build to optimize image size and security:
 
+**Stage 0a: `vendor` (Composer 2.10)**
+- Installs the production PHP dependencies (`composer install --no-dev --no-scripts --no-autoloader --ignore-platform-reqs`), cached while `composer.json` and `composer.lock` do not change
+- Extracts the CSS the admin panel theme imports from `vendor/filament` (`resources/css` and the prebuilt `dist/*.css`), so a Filament release that changes no CSS keeps the cached asset build
+
+**Stage 0b: `frontend-sources` (Alpine)**
+- Keeps only the files the frontend build reads (`resources`, `modules`, the npm and Vite configuration, and `app/Filament` for the panel theme's `@source`), so commits that only touch other PHP code reuse the cached asset build
+
 **Stage 1: `assets` (Node 24 Alpine)**
 - Installs npm dependencies (`npm ci`)
-- Compiles frontend assets (`npx vite build`; types are checked by CI, which every deployment waits for)
+- Compiles frontend assets and the admin panel theme (`resources/css/filament/admin/theme.css`) with `npx vite build`, using Filament's CSS from the `vendor` stage; types are checked by CI, which every deployment waits for
 - Compiles module assets that have `package.json` and `vite.config.ts` with `npm ci` and `npm run build`; a module that fails to install or build fails the image. Coolify builds carry no modules (they live outside the host repository), so this only does work in prod-local
 - Consolidates module build artifacts for copying to the final stage
 
@@ -85,7 +92,7 @@ The `Dockerfile.prod` file uses a multi-stage build to optimize image size and s
 - Installs system dependencies (Nginx, Supervisor, image libraries)
 - Installs PHP extensions: `pdo_pgsql`, `pgsql`, `gd`, `zip`, `bcmath`, `intl`, `mbstring`, `exif`, `pcntl`, plus `redis` 6.3.0 and `imagick` 3.8.1 from PECL (pinned versions)
 - OPcache is compiled into PHP 8.5, so it is not in that list. Do not add `zend_extension=opcache`: PHP would print "Failed loading Zend extension" on every start. The build fails if `php -m` or `php-fpm -m` does not list `Zend OPcache`
-- Installs Composer and production PHP dependencies (`--no-dev --optimize-autoloader`)
+- Copies the PHP dependencies from the `vendor` stage and runs `composer check-platform-reqs --no-dev` against this PHP build; after copying the source, `composer dump-autoload --optimize` publishes Filament's assets
 - Copies source code and compiled assets from stage 1
 - Copies compiled module assets to their corresponding directories
 - Backs up modules to `/opt/modules-image` (Docker volumes mask the modules directory)
@@ -506,6 +513,18 @@ Every boot (each request and each `artisan` command, entrypoint included) loads 
 - `php artisan module:check-updates --force`: available updates and releases blocked by the new core
 
 If a module's version changed while it was incompatible (`module:discover` records the new version but skips its migrations and seeders), the entrypoint's `migrate` runs its pending migrations once the module is compatible, but nothing reruns its seeders: run `php artisan module:seed <name>`, which only runs the seeders that have not run yet.
+
+### Rich text written with Trix (core 3.0)
+
+Core 2 edited rich text with Trix; core 3 uses Filament 5's TipTap editor, which would restructure Trix HTML (empty paragraphs, image captions) on its first save. The migration `2026_10_08_000001_convert_trix_rich_text` converts it once, when the entrypoint's `migrate --force` runs, before anyone can edit:
+
+- It reads `articles.content`, `events.description` and the settings `about_history` and `legal_{privacy,notice,cookies,terms}_content` (a setting that was never saved is skipped), and writes only the values that change. Tables are written directly, without touching `updated_at` or firing model events; settings go through the settings service.
+- Before writing, it saves the original and the converted value of every changed field to `storage/app/backups/rich-text/trix-<Ymd-His>-<hex>.json` (in the storage volume). Nothing deletes these files: remove them once the converted content has been reviewed.
+- It is idempotent: converted HTML comes back unchanged, so a second run changes nothing and writes no backup.
+
+`php artisan content:convert-trix --dry-run` lists the values a conversion would change (`<table>.<column>#<id>` or `settings#<key>`) without writing anything. `php artisan content:convert-trix --restore=<backup>` puts back the original values that nobody edited after the conversion; the restored HTML is in Trix format again, so use it only before rolling back to core 2.8, never on a site that stays on core 3.
+
+Modules convert their own rich text fields in a migration of their first release for core 3, with the same converter (see [Panel code for core 3](modules/README.md#panel-code-for-core-3-filament-5)).
 
 ### Production PHP configuration
 
