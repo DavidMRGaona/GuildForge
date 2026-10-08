@@ -9,6 +9,8 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
+                // Filament admin panel theme (registered with ->viteTheme())
+                'resources/css/filament/admin/theme.css',
                 'resources/js/app.ts',
                 // Vendor exports for module runtime loading (import maps)
                 'resources/js/vendor-exports/vue.ts',

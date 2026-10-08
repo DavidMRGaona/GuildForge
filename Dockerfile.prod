@@ -1,16 +1,35 @@
 # syntax=docker/dockerfile:1
 # ↑ Enables BuildKit features (cache mounts, parallel builds)
 
-# Stage 0: only the files the frontend build reads. BuildKit caches COPY --from by
-# content, so commits that only touch PHP reuse the cached asset build below
+# Stage 0a: PHP dependencies, shared by the asset build (Filament's CSS for the panel
+# theme) and the final image. Installed without extensions: the final stage checks
+# the platform against the real PHP build (composer check-platform-reqs)
+FROM composer:2.10 AS vendor
+WORKDIR /app
+COPY src/composer.json src/composer.lock ./
+RUN --mount=type=cache,target=/tmp/composer-cache \
+    COMPOSER_CACHE_DIR=/tmp/composer-cache \
+    composer install --no-dev --no-scripts --no-autoloader --no-interaction \
+        --prefer-dist --ignore-platform-reqs
+# Only the CSS the panel theme imports (resources/css and the prebuilt dist/*.css),
+# so Filament releases that change no CSS keep the cached asset build
+RUN mkdir -p /filament-css \
+    && cd vendor/filament \
+    && find . -name '*.css' \( -path './*/resources/css/*' -o -path './*/dist/*' \) \
+        | tar -cf - -T - | tar -xf - -C /filament-css
+
+# Stage 0b: only the files the frontend build reads. BuildKit caches COPY --from by
+# content, so commits that only touch PHP reuse the cached asset build below.
+# app/Filament stays for the panel theme's @source: a change there rebuilds assets
 FROM alpine:3.22 AS frontend-sources
 WORKDIR /src
 COPY src/ .
 RUN find . -mindepth 1 -maxdepth 1 \
-        ! -name resources ! -name modules \
+        ! -name app ! -name resources ! -name modules \
         ! -name package.json ! -name package-lock.json \
         ! -name vite.config.ts ! -name tsconfig.json ! -name tsconfig.node.json \
-        -exec rm -rf {} +
+        -exec rm -rf {} + \
+    && find app -mindepth 1 -maxdepth 1 ! -name Filament -exec rm -rf {} +
 
 # Stage 1: Build frontend assets
 FROM node:24-alpine AS assets
@@ -19,6 +38,7 @@ COPY src/package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
 COPY --from=frontend-sources /src/ .
+COPY --from=vendor /filament-css/ vendor/filament/
 # vite build only: types are checked by CI, which every deployment waits for
 RUN npx vite build
 
@@ -100,13 +120,11 @@ COPY --from=composer:2.10 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copy composer files FIRST (better cache invalidation)
+# PHP dependencies from the vendor stage (cached while composer.* are unchanged).
+# That stage skipped the platform check: run it here against this PHP build
 COPY src/composer.json src/composer.lock ./
-
-# Install PHP dependencies (cached if composer.* unchanged)
-RUN --mount=type=cache,target=/root/.composer/cache \
-    mkdir -p /root/.composer/cache/files /root/.composer/cache/vcs /root/.composer/cache/repo && \
-    composer install --no-dev --optimize-autoloader --no-scripts --no-interaction --no-autoloader
+COPY --from=vendor /app/vendor vendor
+RUN composer check-platform-reqs --no-dev
 
 # Copy PHP source code
 COPY src/ .

@@ -1,0 +1,14 @@
+/* Admin panel theme (Filament 5, Tailwind 4).
+
+   Filament styles its own components through the imported CSS, which uses
+   `source(none)`: its views are not scanned. Only the core's panel code is
+   scanned below, so the build needs Filament's CSS from `vendor/filament`
+   plus `app/Filament` and `resources/views/filament`.
+
+   Modules are not scanned: src/modules is not in the host repository and is
+   absent from Coolify builds. Module panel code uses Filament components and
+   their props (badge, color, icon), never Tailwind classes of its own. */
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
