@@ -16,6 +16,7 @@ use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
 use DateTimeImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -406,5 +407,93 @@ final class UpdateModuleCommandTest extends TestCase
         $this->artisan('module:update', ['--all' => true, '--dry-run' => true])
             ->expectsOutput('Dry run - no changes made.')
             ->assertExitCode(0);
+    }
+
+    public function test_an_applied_update_restarts_the_queue_workers(): void
+    {
+        $this->updater->shouldReceive('preview')->andReturn($this->compatiblePreview('gallery'));
+        $this->updater->shouldReceive('update')->andReturn($this->updateResult('gallery', UpdateStatus::Completed));
+
+        $this->artisan('module:update', ['name' => 'gallery', '--force' => true])->assertExitCode(0);
+
+        // Same signal as UpdateModuleJob: workers still hold the previous module code
+        $this->assertNotNull(Cache::get('illuminate:queue:restart'));
+    }
+
+    public function test_a_rolled_back_update_also_restarts_the_queue_workers(): void
+    {
+        $this->updater->shouldReceive('preview')->andReturn($this->compatiblePreview('gallery'));
+        $this->updater->shouldReceive('update')->andReturn($this->updateResult('gallery', UpdateStatus::RolledBack));
+
+        $this->artisan('module:update', ['name' => 'gallery', '--force' => true])->assertExitCode(1);
+
+        $this->assertNotNull(Cache::get('illuminate:queue:restart'));
+    }
+
+    public function test_updating_all_modules_restarts_the_queue_workers(): void
+    {
+        $this->updateChecker->shouldReceive('checkAllForUpdates')->andReturn(new Collection([
+            new AvailableUpdateDTO(
+                moduleName: 'forum',
+                displayName: 'Forum Module',
+                currentVersion: '1.0.0',
+                availableVersion: '2.0.0',
+                releaseNotes: '',
+                publishedAt: new DateTimeImmutable(),
+                isPrerelease: false,
+                isMajorUpdate: true,
+                downloadUrl: '',
+                hasChecksum: false,
+            ),
+        ]));
+        $this->updater->shouldReceive('update')->andReturn($this->updateResult('forum', UpdateStatus::Completed));
+
+        $this->artisan('module:update', ['--all' => true, '--force' => true])->assertExitCode(0);
+
+        $this->assertNotNull(Cache::get('illuminate:queue:restart'));
+    }
+
+    public function test_nothing_restarts_without_an_update(): void
+    {
+        $this->updater->shouldReceive('preview')->andReturn($this->compatiblePreview('gallery'));
+        $this->updater->shouldNotReceive('update');
+        $this->updateChecker->shouldReceive('checkAllForUpdates')->andReturn(new Collection());
+
+        $this->artisan('module:update', ['name' => 'gallery', '--dry-run' => true])->assertExitCode(0);
+        $this->artisan('module:update', ['--all' => true, '--force' => true])->assertExitCode(0);
+
+        $this->assertNull(Cache::get('illuminate:queue:restart'));
+    }
+
+    private function compatiblePreview(string $module): UpdatePreviewDTO
+    {
+        return new UpdatePreviewDTO(
+            moduleName: $module,
+            fromVersion: '1.0.0',
+            toVersion: '1.1.0',
+            pendingMigrations: [],
+            newSeeders: [],
+            changelog: '',
+            isMajorUpdate: false,
+            coreCompatible: true,
+            coreRequirement: null,
+            downloadUrl: null,
+            downloadSize: null,
+        );
+    }
+
+    private function updateResult(string $module, UpdateStatus $status): ModuleUpdateResultDTO
+    {
+        return new ModuleUpdateResultDTO(
+            moduleName: $module,
+            fromVersion: '1.0.0',
+            toVersion: '1.1.0',
+            status: $status,
+            migrationsRun: [],
+            seedersRun: [],
+            errorMessage: $status === UpdateStatus::Completed ? null : 'Health check failed',
+            backupPath: null,
+            historyId: 'test-id',
+        );
     }
 }
