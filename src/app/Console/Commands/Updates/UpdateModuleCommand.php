@@ -92,6 +92,7 @@ final class UpdateModuleCommand extends Command
         $this->info('Starting update...');
 
         $result = $updater->update($moduleName);
+        $this->restartQueueWorkers();
 
         if ($result->isSuccess()) {
             $this->info("Successfully updated {$name} to {$result->toVersion}");
@@ -106,6 +107,15 @@ final class UpdateModuleCommand extends Command
         }
 
         return self::FAILURE;
+    }
+
+    /**
+     * Workers keep the module code they loaded: make them exit once module files changed,
+     * as UpdateModuleJob does. Rolled-back and failed updates also touched the files.
+     */
+    private function restartQueueWorkers(): void
+    {
+        $this->call('queue:restart');
     }
 
     private function reportIncompatibility(UpdatePreviewDTO $preview): void
@@ -174,6 +184,8 @@ final class UpdateModuleCommand extends Command
                 $failed++;
             }
         }
+
+        $this->restartQueueWorkers();
 
         $this->newLine();
         $this->info("Update complete: {$success} succeeded, {$failed} failed.");
