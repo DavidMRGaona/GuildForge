@@ -91,12 +91,18 @@ final readonly class MenuService implements MenuServiceInterface
                 continue;
             }
 
+            // A link to a module that is not loaded is skipped, never the whole menu
+            $href = $this->hrefResolver->resolve($item);
+            if ($href === null) {
+                continue;
+            }
+
             $children = $this->filterAndTransformItems($item->children(), $user);
 
             $result[] = new MenuItemDTO(
                 id: $item->id()->value,
                 label: $item->label(),
-                href: $this->hrefResolver->resolve($item),
+                href: $href,
                 target: $item->target()->value,
                 icon: $item->icon(),
                 children: $children,
