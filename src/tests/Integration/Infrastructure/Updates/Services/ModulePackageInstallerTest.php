@@ -169,7 +169,7 @@ final class ModulePackageInstallerTest extends TestCase
             'version' => $version,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
-            'requires' => $requires,
+            'requires' => $requires + ['core' => '>=2.0'],
         ]);
     }
 

@@ -46,6 +46,7 @@ final class ModuleMigrateCommandTest extends TestCase
         File::makeDirectory($migrationsPath, 0755, true);
         File::put($modulePath.'/module.json', (string) json_encode([
             'name' => 'test-module', 'version' => '1.0.0', 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
+            'requires' => ['core' => '>=2.0'],
         ]));
 
         // Create a simple test migration file

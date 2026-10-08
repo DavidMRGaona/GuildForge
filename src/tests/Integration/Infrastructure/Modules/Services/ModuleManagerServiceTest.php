@@ -783,10 +783,13 @@ final class ModuleManagerServiceTest extends TestCase
             'description' => 'Test module',
             'author' => 'Test Author',
         ];
+        $manifest = array_merge($defaultManifest, $manifest);
+        // Loadable on any core from 2.0 unless the test asks for something else
+        $manifest['requires'] = (is_array($manifest['requires'] ?? null) ? $manifest['requires'] : []) + ['core' => '>=2.0'];
 
         file_put_contents(
             $modulePath.'/module.json',
-            json_encode(array_merge($defaultManifest, $manifest), JSON_PRETTY_PRINT)
+            json_encode($manifest, JSON_PRETTY_PRINT)
         );
     }
 
