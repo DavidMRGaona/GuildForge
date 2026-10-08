@@ -8,6 +8,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Modules\ModuleLoader;
 use App\Modules\ModuleServiceProvider;
 use Illuminate\Http\Request;
+use Livewire\Livewire;
 use ReflectionClass;
 use Tests\TestCase;
 
@@ -399,7 +400,8 @@ TS;
 
     public function test_admin_routes_bypass_middleware(): void
     {
-        $adminPaths = ['admin', 'admin/dashboard', 'admin/users', 'livewire/component'];
+        // Wherever the installed Livewire serves its update endpoint
+        $adminPaths = ['admin', 'admin/dashboard', 'admin/users', ltrim(Livewire::getUpdateUri(), '/')];
 
         foreach ($adminPaths as $path) {
             $request = Request::create('/' . $path, 'GET');

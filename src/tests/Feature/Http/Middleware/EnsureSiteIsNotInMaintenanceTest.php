@@ -8,6 +8,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 final class EnsureSiteIsNotInMaintenanceTest extends TestCase
@@ -101,6 +102,18 @@ final class EnsureSiteIsNotInMaintenanceTest extends TestCase
 
         $this->assertAuthenticatedAs($member);
         $this->get('/')->assertStatus(503);
+    }
+
+    public function test_livewire_endpoint_stays_reachable_during_maintenance(): void
+    {
+        $this->enableMaintenance();
+
+        // The admin login posts here before any session exists. Past the maintenance
+        // middleware, Livewire itself answers the empty payload, never with a 503
+        $response = $this->withHeaders(['X-Livewire' => 'true'])
+            ->postJson(Livewire::getUpdateUri(), ['components' => []]);
+
+        $this->assertNotSame(503, $response->getStatusCode(), Livewire::getUpdateUri().' answered with the maintenance page');
     }
 
     public function test_health_check_stays_up_during_maintenance(): void
