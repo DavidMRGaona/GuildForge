@@ -11,6 +11,7 @@ use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -76,6 +77,18 @@ final class TrixContentMigratorTest extends TestCase
 
         $this->assertSame([], $again->changed);
         $this->assertNull($again->backupPath);
+    }
+
+    public function test_settings_are_read_from_the_table_not_from_the_cache(): void
+    {
+        app(SettingsServiceInterface::class)->set('legal_terms_content', self::TRIX);
+        // A stale settings cache (seeders write settings without clearing it)
+        Cache::forever('site_settings', []);
+
+        $report = $this->migrator()->migrate();
+
+        $this->assertSame(['settings#legal_terms_content'], $report->changed);
+        $this->assertSame(self::TIPTAP, DB::table('settings')->where('key', 'legal_terms_content')->value('value'));
     }
 
     public function test_restoring_a_backup_skips_what_was_edited_since(): void

@@ -54,9 +54,11 @@ final readonly class TrixContentMigrator implements TrixContentMigratorInterface
         }
 
         foreach (self::SETTINGS as $key) {
-            $original = $this->settings->get($key);
+            // From the table, not the settings cache: a migration must not cache settings that
+            // seeders write next, and a stale cache must never be converted over the stored value
+            $original = $this->read('settings', 'value', $key);
 
-            if (! is_string($original)) {
+            if ($original === null) {
                 continue;
             }
 
