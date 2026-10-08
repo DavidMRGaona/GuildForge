@@ -229,6 +229,13 @@ The application is available at **http://localhost:8080** through Nginx, which p
 
 Vite runs automatically inside the Node container when starting the containers with `make up`. Changes to `.vue`, `.ts`, and `.css` files are reflected instantly in the browser without needing to reload the page.
 
+The admin panel's theme (`resources/css/filament/admin/theme.css`) is a Vite entry too, so `/admin` depends on Vite like the public site. It scans `app/Filament` and `resources/views/filament` (never `src/modules`), and Laravel reads it from the dev server while `public/hot` exists, or from `public/build/manifest.json` otherwise:
+
+- With the Node container stopped and `public/hot` left behind, the panel loads without its styles.
+- With no `public/hot` and a `public/build` compiled before the theme existed (its manifest has no theme entry), every `/admin` page answers 500 (`Unable to locate file in Vite manifest`). This happens after pulling the Filament 5 upgrade onto a checkout with an old build.
+
+Keep the Node container running, or run `docker exec guildforge_node npx vite build` once (and again after adding Tailwind classes to panel code if you work without the dev server). `make build-assets` also runs `vue-tsc`, which is not needed for this.
+
 If you need to restart the Vite server manually:
 
 ```bash
