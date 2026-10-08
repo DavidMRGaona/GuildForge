@@ -11,6 +11,7 @@ use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
+use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Modules\ModuleLoader;
 use Closure;
 use Illuminate\Http\Request;
@@ -20,6 +21,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class HandleInertiaRequests extends Middleware
 {
+    use IdentifiesLivewireRequests;
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -34,7 +37,7 @@ final class HandleInertiaRequests extends Middleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->is('admin', 'admin/*', 'livewire/*')) {
+        if ($request->is('admin', 'admin/*') || $this->isLivewireRequest($request)) {
             return $next($request);
         }
 
