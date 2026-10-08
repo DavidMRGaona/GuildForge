@@ -1,8 +1,8 @@
-{{-- Filament's compiled CSS has no bg-danger-* utilities: the custom color utilities read --c-* --}}
+{{-- Filament's compiled CSS has no bg-danger-* utilities: the custom color utilities read --color-* --}}
 <div
     role="alert"
     class="flex flex-col items-center gap-y-1 bg-custom-600 px-4 py-2 text-center text-sm font-medium text-white dark:bg-custom-500"
-    style="--c-500: var(--danger-500); --c-600: var(--danger-600);"
+    style="--color-500: var(--danger-500); --color-600: var(--danger-600);"
 >
     <span>{{ trans_choice('modules.compatibility.banner', count($modules), ['count' => count($modules)]) }}</span>
     <ul>
