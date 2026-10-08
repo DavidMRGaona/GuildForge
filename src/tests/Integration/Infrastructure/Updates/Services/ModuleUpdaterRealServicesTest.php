@@ -54,7 +54,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $this->tempDir = sys_get_temp_dir().'/gf-real-update-'.uniqid();
         $this->modulesPath = $this->tempDir.'/modules';
         File::ensureDirectoryExists("{$this->modulesPath}/real-mod/src");
-        File::put("{$this->modulesPath}/real-mod/module.json", (string) json_encode(['name' => 'real-mod', 'version' => '1.0.0-beta']));
+        File::put("{$this->modulesPath}/real-mod/module.json", (string) json_encode(['name' => 'real-mod', 'version' => '1.0.0-beta', 'requires' => ['core' => '>=2.0']]));
 
         config([
             'modules.path' => $this->modulesPath,
@@ -114,7 +114,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $zip = $this->tempDir.'/release.zip';
         $archive = new ZipArchive;
         $archive->open($zip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        $archive->addFromString('real-mod-1.0.1-beta/module.json', (string) json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta', 'namespace' => 'Modules\\RealMod', 'provider' => 'RealModServiceProvider']));
+        $archive->addFromString('real-mod-1.0.1-beta/module.json', (string) json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta', 'namespace' => 'Modules\\RealMod', 'provider' => 'RealModServiceProvider', 'requires' => ['core' => '>=2.0']]));
         $archive->close();
 
         $fetcher = Mockery::mock(GitHubReleaseFetcherInterface::class);

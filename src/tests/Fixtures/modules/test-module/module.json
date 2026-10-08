@@ -5,6 +5,8 @@
     "author": "GuildForge",
     "namespace": "Modules\\TestModule",
     "provider": "TestModuleServiceProvider",
-    "requires": {},
+    "requires": {
+        "core": ">=2.0"
+    },
     "dependencies": {}
 }

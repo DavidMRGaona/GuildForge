@@ -86,7 +86,7 @@ final class IncompatibleModulesBannerTest extends TestCase
 
     public function test_no_banner_while_every_enabled_module_is_compatible(): void
     {
-        $this->enabledModule('announcements', 'Anuncios', ['core' => '^2.0']);
+        $this->enabledModule('announcements', 'Anuncios', ['core' => '>=2.0']);
         $this->actingAs(UserModel::factory()->admin()->create());
 
         $this->get('/admin')
