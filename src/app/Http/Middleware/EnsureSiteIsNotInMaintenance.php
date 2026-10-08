@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
 use Filament\Facades\Filament;
@@ -20,17 +21,20 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class EnsureSiteIsNotInMaintenance
 {
+    use IdentifiesLivewireRequests;
+
     private const int RETRY_AFTER_SECONDS = 600;
 
     /**
      * The public login stays open so staff can sign in and get past the maintenance page.
+     * Livewire requests are let through separately: the admin login posts to them
+     * before any session exists.
      *
      * @var array<string>
      */
     private const array EXCLUDED_PATHS = [
         'admin',
         'admin/*',
-        'livewire/*',
         'up',
         'iniciar-sesion',
     ];
@@ -44,6 +48,7 @@ final readonly class EnsureSiteIsNotInMaintenance
     {
         if (! $this->settings->isMaintenanceModeEnabled()
             || $request->is(...self::EXCLUDED_PATHS)
+            || $this->isLivewireRequest($request)
             || $this->canAccessPanel($request)) {
             return $next($request);
         }

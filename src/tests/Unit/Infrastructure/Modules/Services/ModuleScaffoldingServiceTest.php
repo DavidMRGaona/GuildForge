@@ -64,7 +64,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog/module.json'), true);
 
         $this->assertSame('^2.6', $manifest['requires']['core'] ?? null);
-        $this->assertSame('>=12.0', $manifest['requires']['laravel'] ?? null);
+        $this->assertSame('>=13.0', $manifest['requires']['laravel'] ?? null);
+        $this->assertSame('^5.0', $manifest['requires']['filament'] ?? null);
     }
 
     public function test_it_creates_module_with_correct_structure(): void

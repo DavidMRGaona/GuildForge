@@ -8,7 +8,9 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Modules\ModuleLoader;
 use App\Modules\ModuleServiceProvider;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Livewire\Livewire;
+use Livewire\LivewireManager;
 use ReflectionClass;
 use Tests\TestCase;
 
@@ -413,5 +415,22 @@ TS;
             $this->assertSame(200, $response->getStatusCode());
             $this->assertSame('Bypassed', $response->getContent());
         }
+    }
+
+    public function test_livewire_endpoint_under_its_computed_prefix_bypasses_middleware(): void
+    {
+        // Livewire 4 serves its endpoints under `/livewire-{hash}/`, the hash derived
+        // from APP_KEY; like `/livewire/update` under Livewire 3, Inertia must stay out
+        $path = '/'.ltrim(app(LivewireManager::class)->getUriPrefix(), '/').'/update';
+        Inertia::flushShared();
+
+        $request = Request::create($path, 'POST');
+        $request->setLaravelSession($this->app['session']->driver());
+
+        $response = $this->middleware->handle($request, fn () => response('Bypassed', 200));
+
+        $this->assertSame('Bypassed', $response->getContent());
+        $this->assertFalse($response->headers->has('Vary'), $path.' went through the Inertia middleware');
+        $this->assertSame([], Inertia::getShared(), $path.' received the Inertia shared props');
     }
 }

@@ -7,8 +7,9 @@
     "author": "{{ moduleAuthor }}",
     "requires": {
         "core": "{{ coreConstraint }}",
-        "php": ">=8.2",
-        "laravel": ">=12.0"
+        "php": ">=8.5",
+        "laravel": ">=13.0",
+        "filament": "^5.0"
     },
     "dependencies": []
 }
