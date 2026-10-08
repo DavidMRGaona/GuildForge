@@ -6,6 +6,8 @@ namespace App\Providers;
 
 use App\Application\Calendar\Services\CalendarAggregatorServiceInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
+use App\Application\Content\Services\TrixContentMigratorInterface;
+use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
@@ -67,6 +69,8 @@ use App\Domain\Repositories\GalleryRepositoryInterface;
 use App\Domain\Repositories\PhotoRepositoryInterface;
 use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
+use App\Infrastructure\Content\Services\TrixContentMigrator;
+use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Calendar\Services\CalendarAggregatorService;
 use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
@@ -312,6 +316,16 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(MenuItemHrefResolverInterface::class, MenuItemHrefResolver::class);
         $this->app->singleton(MenuServiceInterface::class, MenuService::class);
         $this->app->singleton(RouteRegistryInterface::class, RouteRegistry::class);
+
+        // Rich text written with the Trix editor (admin panel before core 3.0)
+        $this->app->singleton(TrixHtmlConverterInterface::class, TrixHtmlConverter::class);
+        $this->app->singleton(TrixContentMigratorInterface::class, function ($app) {
+            return new TrixContentMigrator(
+                $app->make(TrixHtmlConverterInterface::class),
+                $app->make(SettingsServiceInterface::class),
+                storage_path('app/backups/rich-text'),
+            );
+        });
 
         // Update system bindings
         $this->app->singleton(GitHubReleaseFetcherInterface::class, GitHubReleaseFetcher::class);
