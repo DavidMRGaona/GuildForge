@@ -4,20 +4,23 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use App\Filament\Resources\TagResource\Pages\ListTags;
+use App\Filament\Resources\TagResource\Pages\CreateTag;
+use App\Filament\Resources\TagResource\Pages\EditTag;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Filament\Resources\TagResource\Pages;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\ColorPicker;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Forms\Set;
 use App\Filament\Resources\BaseResource;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -29,9 +32,9 @@ class TagResource extends BaseResource
 {
     protected static ?string $model = TagModel::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-tag';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static string | \UnitEnum | null $navigationGroup = 'Configuración';
 
     protected static ?int $navigationSort = 10;
 
@@ -45,10 +48,10 @@ class TagResource extends BaseResource
         return __('filament.tags.plural');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make(__('filament.tags.sections.general'))
                     ->schema([
                         TextInput::make('name')
@@ -177,7 +180,7 @@ class TagResource extends BaseResource
                         fn (Builder $q, string $value): Builder => $q->where('parent_id', $value)
                     )),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 DeleteAction::make()
                     ->hidden(fn (TagModel $record): bool => ! self::getTagQueryService()->canDelete($record->id)),
@@ -197,7 +200,10 @@ class TagResource extends BaseResource
         $hierarchicalTags = $tagService->getAllInHierarchicalOrder();
 
         if (empty($hierarchicalTags)) {
-            return parent::getEloquentQuery();
+            /** @var Builder<TagModel> $query */
+            $query = parent::getEloquentQuery();
+
+            return $query;
         }
 
         $orderedIds = array_map(fn ($tag) => $tag->id, $hierarchicalTags);
@@ -223,9 +229,9 @@ class TagResource extends BaseResource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListTags::route('/'),
-            'create' => Pages\CreateTag::route('/create'),
-            'edit' => Pages\EditTag::route('/{record}/edit'),
+            'index' => ListTags::route('/'),
+            'create' => CreateTag::route('/create'),
+            'edit' => EditTag::route('/{record}/edit'),
         ];
     }
 

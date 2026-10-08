@@ -4,22 +4,27 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
+use App\Filament\Resources\MenuItemResource\Pages\CreateMenuItem;
+use App\Filament\Resources\MenuItemResource\Pages\EditMenuItem;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use Throwable;
 use App\Application\Navigation\Services\RouteRegistryInterface;
 use App\Domain\Navigation\Enums\LinkTarget;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Domain\Navigation\Enums\MenuVisibility;
 use App\Filament\Resources\MenuItemResource\Pages;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
 use App\Filament\Resources\BaseResource;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -32,7 +37,7 @@ class MenuItemResource extends BaseResource
 {
     protected static ?string $model = MenuItemModel::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-bars-3';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bars-3';
 
     protected static ?int $navigationSort = 50;
 
@@ -56,10 +61,10 @@ class MenuItemResource extends BaseResource
         return __('filament.menu_items.plural');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Grid::make(2)
                     ->schema([
                         Select::make('location')
@@ -261,12 +266,12 @@ class MenuItemResource extends BaseResource
                         MenuVisibility::Permission->value => __('filament.menu_items.visibility.permission'),
                     ]),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 DeleteAction::make()
                     ->hidden(fn (MenuItemModel $record): bool => $record->module !== null),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 DeleteBulkAction::make()
                     ->using(function (Collection $records): void {
                         $records
@@ -289,9 +294,9 @@ class MenuItemResource extends BaseResource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListMenuItems::route('/'),
-            'create' => Pages\CreateMenuItem::route('/create'),
-            'edit' => Pages\EditMenuItem::route('/{record}/edit'),
+            'index' => ListMenuItems::route('/'),
+            'create' => CreateMenuItem::route('/create'),
+            'edit' => EditMenuItem::route('/{record}/edit'),
         ];
     }
 
@@ -326,13 +331,13 @@ class MenuItemResource extends BaseResource
     {
         // Get permissions from the database
         try {
-            $permissions = \App\Infrastructure\Persistence\Eloquent\Models\PermissionModel::query()
+            $permissions = PermissionModel::query()
                 ->orderBy('key')
                 ->pluck('label', 'key')
                 ->toArray();
 
             return $permissions;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return [];
         }
     }

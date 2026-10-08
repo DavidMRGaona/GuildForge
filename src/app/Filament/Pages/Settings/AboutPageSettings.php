@@ -4,36 +4,37 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Settings;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
- * @property Form $form
+ * @property \Filament\Schemas\Schema $form
  */
 final class AboutPageSettings extends Page implements HasForms
 {
     use InteractsWithForms;
     use ManagesPageSettings;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?int $navigationSort = 10;
 
-    protected static string $view = 'filament.pages.settings.about-page-settings';
+    protected string $view = 'filament.pages.settings.about-page-settings';
 
     /**
      * @var array<string, mixed>
@@ -65,13 +66,13 @@ final class AboutPageSettings extends Page implements HasForms
         $this->form->fill($this->loadSettings($settingsService));
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Tabs::make('Tabs')
                     ->tabs([
-                        Tabs\Tab::make(__('filament.pages.about.tabs.hero'))
+                        Tab::make(__('filament.pages.about.tabs.hero'))
                             ->schema([
                                 FileUpload::make('about_hero_image')
                                     ->label(__('filament.settings.about.hero_image'))
@@ -93,7 +94,7 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->columnSpanFull(),
                             ]),
 
-                        Tabs\Tab::make(__('filament.pages.about.tabs.content'))
+                        Tab::make(__('filament.pages.about.tabs.content'))
                             ->schema([
                                 Repeater::make('about_activities')
                                     ->label(__('filament.settings.about.activities'))
@@ -127,7 +128,7 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->columnSpanFull(),
                             ]),
 
-                        Tabs\Tab::make(__('filament.pages.about.tabs.join'))
+                        Tab::make(__('filament.pages.about.tabs.join'))
                             ->schema([
                                 Repeater::make('join_steps')
                                     ->label(__('filament.settings.about.join_steps'))
@@ -150,7 +151,7 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->columnSpanFull(),
                             ]),
 
-                        Tabs\Tab::make(__('filament.pages.about.tabs.location'))
+                        Tab::make(__('filament.pages.about.tabs.location'))
                             ->schema([
                                 TextInput::make('location_name')
                                     ->label(__('filament.settings.location.name'))
@@ -179,7 +180,7 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->default('15'),
                             ])->columns(2),
 
-                        Tabs\Tab::make(__('filament.pages.about.tabs.contact'))
+                        Tab::make(__('filament.pages.about.tabs.contact'))
                             ->schema([
                                 TextInput::make('contact_email')
                                     ->label(__('filament.settings.contact.email'))
@@ -196,7 +197,7 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->columnSpanFull(),
                             ])->columns(2),
 
-                        Tabs\Tab::make(__('filament.pages.about.tabs.social'))
+                        Tab::make(__('filament.pages.about.tabs.social'))
                             ->schema([
                                 TextInput::make('social_facebook')
                                     ->label(__('filament.settings.social.facebook'))

@@ -158,6 +158,13 @@ use App\Policies\UserPolicy;
 use Cloudinary\Cloudinary;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Infolists\Components\ImageEntry;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Table;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
@@ -413,6 +420,8 @@ class AppServiceProvider extends ServiceProvider
             $component->firstDayOfWeek(1);
         });
 
+        $this->preserveFilamentV3Defaults();
+
         // Cloudinary driver of the "images" disk (App\Infrastructure\Storage\Cloudinary):
         // URLs built locally, images optimized before upload, missing assets ignored on delete
         Storage::extend('cloudinary', function ($app, $config) {
@@ -429,5 +438,28 @@ class AppServiceProvider extends ServiceProvider
                 $config
             );
         });
+    }
+
+    /**
+     * Filament 4 changed several defaults; keep the Filament 3 behaviour the admin panel was built on.
+     */
+    private function preserveFilamentV3Defaults(): void
+    {
+        // Filters applied on change, not behind an "Apply" button; no hidden key sort
+        // (UUID keys would shuffle rows); every page size, including "all"
+        Table::configureUsing(fn (Table $table): Table => $table
+            ->deferFilters(false)
+            ->defaultKeySort(false)
+            ->paginationPageOptions([5, 10, 25, 50, 'all']));
+
+        // Layout components span the full width of their parent grid
+        Section::configureUsing(fn (Section $section): Section => $section->columnSpanFull());
+        Grid::configureUsing(fn (Grid $grid): Grid => $grid->columnSpanFull());
+        Fieldset::configureUsing(fn (Fieldset $fieldset): Fieldset => $fieldset->columnSpanFull());
+
+        // The "images" disk (Cloudinary) serves public URLs; private visibility would try temporary URLs first
+        FileUpload::configureUsing(fn (FileUpload $upload): FileUpload => $upload->visibility('public'));
+        ImageColumn::configureUsing(fn (ImageColumn $column): ImageColumn => $column->visibility('public'));
+        ImageEntry::configureUsing(fn (ImageEntry $entry): ImageEntry => $entry->visibility('public'));
     }
 }

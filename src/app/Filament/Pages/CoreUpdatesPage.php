@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use Throwable;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
@@ -32,11 +33,11 @@ final class CoreUpdatesPage extends Page implements HasTable
 
     private const string LAST_CHECK_CACHE_KEY = 'updates.core.last_check';
 
-    protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cube';
 
-    protected static string $view = 'filament.pages.core-updates';
+    protected string $view = 'filament.pages.core-updates';
 
-    protected static ?string $navigationGroup = 'Sistema';
+    protected static string | \UnitEnum | null $navigationGroup = 'Sistema';
 
     protected static ?int $navigationSort = 101;
 
@@ -124,7 +125,7 @@ final class CoreUpdatesPage extends Page implements HasTable
     {
         try {
             $status = app(CoreUpdateCheckerInterface::class)->check();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->status = null;
             $this->checkError = $e->getMessage();
 

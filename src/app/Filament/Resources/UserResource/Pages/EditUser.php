@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UserResource\Pages;
 
+use Filament\Schemas\Components\Utilities\Get;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource;
@@ -13,7 +14,6 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Auth;
@@ -76,7 +76,7 @@ class EditUser extends EditRecord
                 })
                 ->modalIcon('heroicon-o-exclamation-triangle')
                 ->modalIconColor('danger')
-                ->form(function () use ($record): array {
+                ->schema(function () use ($record): array {
                     $userService = app(UserServiceInterface::class);
                     $contentCounts = $userService->countUserContent($record->id);
                     $articlesCount = $contentCounts['articles'];

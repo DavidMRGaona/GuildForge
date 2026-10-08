@@ -208,7 +208,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * Get the Filament form schema for module settings.
      * Override in subclass to provide configurable settings.
      *
-     * @return array<\Filament\Forms\Components\Component>
+     * @return array<\Filament\Schemas\Components\Component>
      */
     public function getSettingsSchema(): array
     {

@@ -4,31 +4,31 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\View;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Tabs;
-use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\View;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
-use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
- * @property Form $form
+ * @property \Filament\Schemas\Schema $form
  */
 final class SiteSettings extends Page implements HasForms
 {
@@ -87,15 +87,15 @@ final class SiteSettings extends Page implements HasForms
     ];
 
     /**
-     * Filament tab id: tabs container id, tab id and "-tab", used by the ?tab= query string.
+     * Filament 4+ matches ?tab= against the tab key or its custom id
      */
-    private const string MAINTENANCE_TAB = 'settings-maintenance-tab';
+    private const string MAINTENANCE_TAB = 'maintenance';
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?int $navigationSort = 100;
 
-    protected static string $view = 'filament.pages.site-settings';
+    protected string $view = 'filament.pages.site-settings';
 
     /**
      * @var array<string, mixed>
@@ -209,12 +209,12 @@ final class SiteSettings extends Page implements HasForms
         $this->form->fill($this->loadSettings($settingsService));
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
         $canManage = self::userCan('settings.manage');
 
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Tabs::make('Settings')
                     ->id('settings')
                     ->persistTabInQueryString()

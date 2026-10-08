@@ -4,6 +4,17 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use RuntimeException;
+use Filament\Schemas\Components\Section;
+use Filament\Actions\EditAction;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\Action;
+use Filament\Actions\RestoreAction;
+use Filament\Schemas\Components\Utilities\Get;
+use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Resources\UserResource\Pages\CreateUser;
+use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
@@ -14,16 +25,9 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Notifications\Notification;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\ActionGroup;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -42,9 +46,9 @@ class UserResource extends BaseResource
 {
     protected static ?string $model = UserModel::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationGroup = 'Administración';
+    protected static string | \UnitEnum | null $navigationGroup = 'Administración';
 
     protected static ?int $navigationSort = 1;
 
@@ -58,10 +62,10 @@ class UserResource extends BaseResource
         return __('Usuarios');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('name')
                     ->label(__('Nombre de usuario'))
                     ->required()
@@ -99,7 +103,7 @@ class UserResource extends BaseResource
 
                         $contents = $file->get();
                         if ($contents === false) {
-                            throw new \RuntimeException('Failed to read uploaded file');
+                            throw new RuntimeException('Failed to read uploaded file');
                         }
 
                         $optimizedContents = $imageOptimizer->optimize(
@@ -209,7 +213,7 @@ class UserResource extends BaseResource
                     ->label(__('filament.users.filters.status'))
                     ->default('with'),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 ActionGroup::make([
                     Action::make('sendVerificationEmail')
@@ -300,7 +304,7 @@ class UserResource extends BaseResource
                         })
                         ->modalIcon('heroicon-o-exclamation-triangle')
                         ->modalIconColor('danger')
-                        ->form(function (UserModel $record): array {
+                        ->schema(function (UserModel $record): array {
                             $userService = app(UserServiceInterface::class);
                             $contentCounts = $userService->countUserContent($record->id);
                             $articlesCount = $contentCounts['articles'];
@@ -370,9 +374,9 @@ class UserResource extends BaseResource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListUsers::route('/'),
-            'create' => Pages\CreateUser::route('/create'),
-            'edit' => Pages\EditUser::route('/{record}/edit'),
+            'index' => ListUsers::route('/'),
+            'create' => CreateUser::route('/create'),
+            'edit' => EditUser::route('/{record}/edit'),
         ];
     }
 
@@ -381,9 +385,12 @@ class UserResource extends BaseResource
      */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        /** @var Builder<UserModel> $query */
+        $query = parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
+
+        return $query;
     }
 }

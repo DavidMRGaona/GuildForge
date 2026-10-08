@@ -7,7 +7,6 @@ namespace App\Infrastructure\Services;
 use App\Application\Services\DashboardWidgetConfigServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use Filament\Facades\Filament;
-use Filament\Widgets\Widget;
 use Filament\Widgets\WidgetConfiguration;
 use JsonException;
 
@@ -100,16 +99,9 @@ final class DashboardWidgetConfigService implements DashboardWidgetConfigService
     {
         $defaults = [];
 
-        $widgets = Filament::getWidgets();
-
-        foreach ($widgets as $widget) {
-            if ($widget instanceof WidgetConfiguration) {
-                $widgetClass = $widget->widget;
-            } elseif (is_string($widget) && is_subclass_of($widget, Widget::class)) {
-                $widgetClass = $widget;
-            } else {
-                continue;
-            }
+        foreach (Filament::getCurrentOrDefaultPanel()?->getWidgets() ?? [] as $widget) {
+            // A panel holds widget classes or configurations of them
+            $widgetClass = $widget instanceof WidgetConfiguration ? $widget->widget : $widget;
 
             $defaults[$widgetClass] = [
                 'enabled' => true,

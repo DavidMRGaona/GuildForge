@@ -30,7 +30,7 @@ final class MaintenanceBannerTest extends TestCase
         $this->actingAs(UserModel::factory()->admin()->create());
 
         $this->get('/admin')
-            ->assertSee('href="'.SiteSettings::getUrl(['tab' => 'settings-maintenance-tab']).'"', false);
+            ->assertSee('href="'.SiteSettings::getUrl(['tab' => 'maintenance']).'"', false);
     }
 
     public function test_banner_uses_background_utilities_present_in_the_compiled_panel_css(): void

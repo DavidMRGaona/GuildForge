@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\MenuItemResource\Pages;
 
+use Filament\Schemas\Components\Tabs\Tab;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Filament\Resources\MenuItemResource;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -26,7 +26,7 @@ class ListMenuItems extends ListRecords
     }
 
     /**
-     * @return array<string, Tab>
+     * @return array<string, \Filament\Schemas\Components\Tabs\Tab>
      */
     public function getTabs(): array
     {
