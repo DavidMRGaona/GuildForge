@@ -48,6 +48,23 @@ final class PublicMenuTest extends TestCase
                 ->where('navigation.header.0.children.0.label', 'Galería'));
     }
 
+    public function test_a_link_whose_route_lacks_its_parameters_leaves_the_rest_of_the_menu(): void
+    {
+        $this->menuItem(MenuLocation::Header, 'Eventos', url: '/eventos', sort: 1);
+        // articles.show needs {slug} and the item stores no route parameters
+        $this->menuItem(MenuLocation::Header, 'Artículo', route: 'articles.show', sort: 2);
+        $this->menuItem(MenuLocation::Footer, 'Contacto', url: '/contacto', sort: 1);
+        $this->menuItem(MenuLocation::Footer, 'Artículo', route: 'articles.show', sort: 2);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('navigation.header', 1)
+                ->where('navigation.header.0.label', 'Eventos')
+                ->has('navigation.footer', 1)
+                ->where('navigation.footer.0.label', 'Contacto'));
+    }
+
     public function test_links_to_registered_routes_keep_their_url(): void
     {
         $this->menuItem(MenuLocation::Header, 'Artículos', route: 'articles.index', sort: 1);

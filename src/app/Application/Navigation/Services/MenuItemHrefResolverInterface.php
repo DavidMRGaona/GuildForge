@@ -11,7 +11,8 @@ interface MenuItemHrefResolverInterface
     /**
      * Resolve the href for a menu item.
      * Returns the URL if set, otherwise generates from route; null when the route is
-     * not registered (its module is disabled or rejected), so the item is left out.
+     * not registered (its module is disabled or rejected) or its URL cannot be generated
+     * (missing required parameters), so the item is left out.
      */
     public function resolve(MenuItem $menuItem): ?string;
 }

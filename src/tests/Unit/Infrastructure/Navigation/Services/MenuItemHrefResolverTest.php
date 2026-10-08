@@ -30,6 +30,12 @@ final class MenuItemHrefResolverTest extends TestCase
         $this->assertNull((new MenuItemHrefResolver())->resolve($this->item(route: 'gametables.index')));
     }
 
+    public function test_a_route_missing_its_required_parameters_resolves_to_nothing(): void
+    {
+        // articles.show needs {slug} and the item stores no route parameters
+        $this->assertNull((new MenuItemHrefResolver())->resolve($this->item(route: 'articles.show')));
+    }
+
     public function test_an_item_without_url_or_route_points_nowhere(): void
     {
         $this->assertSame('#', (new MenuItemHrefResolver())->resolve($this->item()));
