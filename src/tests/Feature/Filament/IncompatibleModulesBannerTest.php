@@ -44,7 +44,9 @@ final class IncompatibleModulesBannerTest extends TestCase
             ->assertOk()
             ->assertSee(trans_choice('modules.compatibility.banner', 1))
             ->assertSee('Anuncios')
-            ->assertSee("requiere core ^99.0, instalado {$core}");
+            ->assertSee("requiere core ^99.0, instalado {$core}")
+            ->assertSee('bg-custom-600', false)
+            ->assertSee('--color-600: var(--danger-600)', false);
     }
 
     public function test_banner_names_an_enabled_module_whose_directory_disappeared(): void
