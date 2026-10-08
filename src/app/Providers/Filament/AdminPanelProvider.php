@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use Filament\Widgets\Widget;
+use Filament\Pages\Page;
 use App\Application\Modules\DTOs\RejectedModuleDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
@@ -98,10 +100,7 @@ class AdminPanelProvider extends PanelProvider
                 fn (): string => '<style>
                         /* Time picker input wrapper - focus ring with Filament primary color */
                         .time-picker-input-wrapper:focus-within {
-                            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-                            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-                            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
-                            --tw-ring-color: rgb(var(--primary-600));
+                            box-shadow: 0 0 0 2px var(--primary-600);
                         }
 
                         /* Time wheel picker - iOS style with infinite scroll */
@@ -262,7 +261,7 @@ class AdminPanelProvider extends PanelProvider
     /**
      * Get the primary color for Filament from settings.
      *
-     * @return array{50: string, 100: string, 200: string, 300: string, 400: string, 500: string, 600: string, 700: string, 800: string, 900: string, 950: string}
+     * @return array<int, string> Shades 50 to 950
      */
     private function getPrimaryColor(): array
     {
@@ -271,7 +270,7 @@ class AdminPanelProvider extends PanelProvider
             /** @var string $hexColor */
             $hexColor = $settingsService->get('theme_primary_color', '#D97706');
 
-            return Color::hex($hexColor);
+            return Color::generateV3Palette($hexColor);
         } catch (Throwable) {
             // Fallback to amber if settings are unavailable
             return Color::Amber;
@@ -611,7 +610,7 @@ class AdminPanelProvider extends PanelProvider
     /**
      * Discover and collect Filament widgets from enabled modules.
      *
-     * @return array<class-string<\Filament\Widgets\Widget>>
+     * @return array<class-string<Widget>>
      */
     private function discoverModuleWidgets(): array
     {
@@ -696,7 +695,7 @@ class AdminPanelProvider extends PanelProvider
     /**
      * Discover and collect Filament pages from enabled modules.
      *
-     * @return array<class-string<\Filament\Pages\Page>>
+     * @return array<class-string<Page>>
      */
     private function discoverModulePages(): array
     {

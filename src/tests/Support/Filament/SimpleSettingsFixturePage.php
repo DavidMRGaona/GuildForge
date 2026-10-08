@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace Tests\Support\Filament;
 
+use Filament\Schemas\Schema;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Pages\Page;
 
 /**
  * Stands in for the module settings pages that render the core's
  * "filament.pages.simple-settings" view (game-tables, memberships, venue-bookings).
  *
- * @property Form $form
+ * @property \Filament\Schemas\Schema $form
  */
 final class SimpleSettingsFixturePage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static string $view = 'filament.pages.simple-settings';
+    protected string $view = 'filament.pages.simple-settings';
 
     protected static bool $shouldRegisterNavigation = false;
 
@@ -37,10 +37,10 @@ final class SimpleSettingsFixturePage extends Page implements HasForms
         $this->form->fill(['club_name' => 'Gremio']);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('club_name')->label('Nombre del club')->required(),
             ])
             ->statePath('data');

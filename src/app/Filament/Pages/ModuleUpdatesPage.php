@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use Throwable;
+use Filament\Support\Enums\Width;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
 use App\Application\Updates\DTOs\BlockedReleaseDTO;
@@ -20,7 +22,6 @@ use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Filament\Support\Enums\MaxWidth;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -36,11 +37,11 @@ final class ModuleUpdatesPage extends Page implements HasTable
     use ChecksPermissions;
     use InteractsWithTable;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-path';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-path';
 
-    protected static string $view = 'filament.pages.module-updates';
+    protected string $view = 'filament.pages.module-updates';
 
-    protected static ?string $navigationGroup = 'Sistema';
+    protected static string | \UnitEnum | null $navigationGroup = 'Sistema';
 
     protected static ?int $navigationSort = 100;
 
@@ -225,7 +226,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                     ->info()
                     ->send();
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Notification::make()
                 ->title(__('filament.updates.modules.notifications.check_failed'))
                 ->body($e->getMessage())
@@ -377,14 +378,14 @@ final class ModuleUpdatesPage extends Page implements HasTable
             ->modalContent(fn (array $arguments): View => $this->previewContent((string) ($arguments['module'] ?? '')))
             ->modalSubmitAction(false)
             ->modalCancelActionLabel(__('filament.updates.modules.preview.close'))
-            ->modalWidth(MaxWidth::TwoExtraLarge);
+            ->modalWidth(Width::TwoExtraLarge);
     }
 
     private function previewContent(string $moduleName): View
     {
         try {
             $preview = app(ModuleUpdaterInterface::class)->preview(new ModuleName($moduleName));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return view('filament.pages.partials.module-update-preview', ['preview' => null, 'error' => $e->getMessage()]);
         }
 

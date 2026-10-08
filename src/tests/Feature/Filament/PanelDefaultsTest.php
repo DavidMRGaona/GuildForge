@@ -7,7 +7,7 @@ namespace Tests\Feature\Filament;
 use App\Filament\Resources\ArticleResource\Pages\ListArticles;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Section;
+use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\ImageColumn;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;

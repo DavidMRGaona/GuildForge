@@ -6,7 +6,6 @@ namespace Tests\Feature\Filament\Pages;
 
 use App\Filament\Pages\SiteSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use Filament\Forms\Components\Tabs;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -27,7 +26,7 @@ final class SiteSettingsMaintenanceTabTest extends TestCase
         $page = Livewire::test(SiteSettings::class)->instance();
         request()->query->replace($query);
 
-        /** @var Tabs $tabs */
+        /** @var \Filament\Schemas\Components\Tabs $tabs */
         $tabs = $page->form->getComponents()[0];
         $labels = array_map(static fn ($tab): string => (string) $tab->getLabel(), $tabs->getChildComponents());
 

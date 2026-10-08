@@ -31,19 +31,19 @@ use Illuminate\Support\Collection;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
- * @property \Filament\Forms\Form $form
+ * @property \Filament\Schemas\Schema $form
  */
 final class ModulesPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-puzzle-piece';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-puzzle-piece';
 
-    protected static ?string $navigationGroup = 'Administración';
+    protected static string | \UnitEnum | null $navigationGroup = 'Administración';
 
     protected static ?int $navigationSort = 90;
 
-    protected static string $view = 'filament.pages.modules';
+    protected string $view = 'filament.pages.modules';
 
     public string $filter = 'all';
 
@@ -156,7 +156,7 @@ final class ModulesPage extends Page implements HasForms
                 ->label(__('modules.filament.install_form.submit'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('primary')
-                ->form([
+                ->schema([
                     FileUpload::make('zipFile')
                         ->label(__('modules.filament.install_form.file_label'))
                         ->helperText(__('modules.filament.install_form.file_help', ['size' => 50]))

@@ -61,7 +61,7 @@ final class ModuleUpdatesPageTest extends TestCase
         $this->actingAs(UserModel::factory()->admin()->create());
 
         Livewire::test(ModuleUpdatesPage::class)
-            ->assertSeeHtml('href="'.SiteSettings::getUrl(['tab' => 'settings-maintenance-tab']).'"');
+            ->assertSeeHtml('href="'.SiteSettings::getUrl(['tab' => 'maintenance']).'"');
     }
 
     public function test_page_does_not_warn_while_maintenance_mode_is_enabled(): void
@@ -308,10 +308,10 @@ final class ModuleUpdatesPageTest extends TestCase
         Livewire::test(ModuleUpdatesPage::class)
             ->mountAction('preview', ['module' => 'event-registrations'])
             ->assertActionMounted('preview')
-            ->assertSee('v1.0.8-beta')
-            ->assertSee('v1.0.9-beta')
-            ->assertSeeHtml('<li>Arreglados los correos duplicados</li>')
-            ->assertSee(__('filament.updates.modules.preview.compatible'));
+            ->assertMountedActionModalSee('v1.0.8-beta')
+            ->assertMountedActionModalSee('v1.0.9-beta')
+            ->assertMountedActionModalSeeHtml('<li>Arreglados los correos duplicados</li>')
+            ->assertMountedActionModalSee(__('filament.updates.modules.preview.compatible'));
     }
 
     public function test_page_lists_persisted_blocked_releases_without_an_update_button(): void
@@ -372,9 +372,9 @@ final class ModuleUpdatesPageTest extends TestCase
 
         Livewire::test(ModuleUpdatesPage::class)
             ->mountAction('preview', ['module' => 'announcements'])
-            ->assertSee(__('filament.updates.modules.preview.incompatible'))
-            ->assertSee('Requiere core ^3.0')
-            ->assertSee('requiere core ^3.0, instalado 2.6.0');
+            ->assertMountedActionModalSee(__('filament.updates.modules.preview.incompatible'))
+            ->assertMountedActionModalSee('Requiere core ^3.0')
+            ->assertMountedActionModalSee('requiere core ^3.0, instalado 2.6.0');
     }
 
     public function test_preview_does_not_render_html_from_the_release_notes(): void
@@ -384,8 +384,8 @@ final class ModuleUpdatesPageTest extends TestCase
 
         Livewire::test(ModuleUpdatesPage::class)
             ->mountAction('preview', ['module' => 'event-registrations'])
-            ->assertSee('Notas')
-            ->assertDontSeeHtml("<script>alert('x')</script>");
+            ->assertMountedActionModalSee('Notas')
+            ->assertMountedActionModalDontSeeHtml("<script>alert('x')</script>");
     }
 
     public function test_preview_shows_why_the_details_could_not_be_loaded(): void
@@ -398,7 +398,7 @@ final class ModuleUpdatesPageTest extends TestCase
         Livewire::test(ModuleUpdatesPage::class)
             ->mountAction('preview', ['module' => 'event-registrations'])
             ->assertActionMounted('preview')
-            ->assertSee('HTTP 403');
+            ->assertMountedActionModalSee('HTTP 403');
     }
 
     private function previewReturns(string $changelog): void

@@ -42,7 +42,7 @@
         <x-filament::section :heading="__('filament.updates.modules.available.title')">
             @if($availableUpdates === [])
                 <div class="flex flex-col items-center py-8 text-center">
-                    <x-heroicon-o-check-circle style="width: 3rem; height: 3rem; color: rgb(var(--success-500));" />
+                    <x-heroicon-o-check-circle style="width: 3rem; height: 3rem; color: var(--success-500);" />
                     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         {{ __('filament.updates.modules.available.empty') }}
                     </p>

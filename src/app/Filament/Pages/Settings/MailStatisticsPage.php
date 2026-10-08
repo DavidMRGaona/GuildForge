@@ -17,11 +17,11 @@ final class MailStatisticsPage extends Page implements HasTable
 {
     use InteractsWithTable;
 
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar-square';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-chart-bar-square';
 
     protected static ?int $navigationSort = 13;
 
-    protected static string $view = 'filament.pages.settings.mail-statistics';
+    protected string $view = 'filament.pages.settings.mail-statistics';
 
     public static function getNavigationLabel(): string
     {
