@@ -47,4 +47,16 @@ final class ConvertTrixContentCommandTest extends TestCase
             ->expectsOutput('Restored 3 value(s) from /backups/trix.json.')
             ->assertExitCode(0);
     }
+
+    public function test_a_dry_run_never_restores(): void
+    {
+        $migrator = Mockery::mock(TrixContentMigratorInterface::class);
+        $migrator->shouldNotReceive('restore');
+        $migrator->shouldNotReceive('migrate');
+        $this->app->instance(TrixContentMigratorInterface::class, $migrator);
+
+        $this->artisan('content:convert-trix', ['--restore' => '/backups/trix.json', '--dry-run' => true])
+            ->expectsOutput('--dry-run cannot be combined with --restore: nothing was restored.')
+            ->assertExitCode(1);
+    }
 }
