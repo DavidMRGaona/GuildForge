@@ -113,7 +113,8 @@ final class EnabledModulesResolverTest extends TestCase
         File::put($manifest, str_replace('^99.0', '>=2.0.0', File::get($manifest)));
         $resolver->reset();
 
-        $this->assertSame(['test-module', 'incompatible-module'], $resolver->names());
+        // The enabled modules query has no ORDER BY, so PostgreSQL may return them in any order
+        $this->assertEqualsCanonicalizing(['test-module', 'incompatible-module'], $resolver->names());
     }
 
     public function test_results_are_memoized_until_reset(): void
