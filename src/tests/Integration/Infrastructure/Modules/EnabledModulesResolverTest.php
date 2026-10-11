@@ -6,6 +6,7 @@ namespace Tests\Integration\Infrastructure\Modules;
 
 use App\Application\Modules\DTOs\RejectedModuleDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
@@ -61,7 +62,7 @@ final class EnabledModulesResolverTest extends TestCase
         $this->assertSame(['test-module'], $resolver->names());
         $this->assertSame(['test-module'], array_map(static fn (Module $m): string => $m->name()->value, $resolver->modules()));
         $this->assertEquals([new RejectedModuleDTO('incompatible-module', 'Incompatible module', [
-            new CompatibilityIssue(RequirementType::Core, '^99.0', app(\App\Application\Updates\Services\CoreVersionServiceInterface::class)->getCurrentVersion()->value(), CompatibilityIssue::UNSATISFIED),
+            new CompatibilityIssue(RequirementType::Core, '^99.0', app(CoreVersionServiceInterface::class)->getCurrentVersion()->value(), CompatibilityIssue::UNSATISFIED),
         ])], $resolver->rejected());
     }
 
