@@ -158,6 +158,7 @@ class ArticleResource extends BaseResource
                     ->sortable()
                     ->limit(50),
                 TextColumn::make('author.display_name')
+                    ->getStateUsing(fn (ArticleModel $record): string => $record->author->display_name ?? $record->author->name)
                     ->label(__('Autor'))
                     ->sortable(),
                 IconColumn::make('is_published')
@@ -179,7 +180,8 @@ class ArticleResource extends BaseResource
                     ->label(__('Publicado')),
                 SelectFilter::make('author_id')
                     ->label(__('Autor'))
-                    ->relationship('author', 'display_name'),
+                    ->relationship('author', 'display_name')
+                    ->getOptionLabelFromRecordUsing(fn (UserModel $record): string => $record->display_name ?? $record->name),
             ])
             ->defaultSort('created_at', 'desc');
     }
