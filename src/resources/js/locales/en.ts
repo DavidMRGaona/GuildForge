@@ -34,6 +34,8 @@ export default {
         upcoming: 'Upcoming events',
         past: 'Past events',
         date: 'Date',
+        startTime: 'Start time',
+        schedule: 'Schedule',
         location: 'Location',
         noUpcoming: 'No upcoming events',
         free: 'Free',

@@ -22,7 +22,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { t } = useI18n();
-const { formatDateRange, isUpcoming, getExcerpt } = useEvents();
+const { formatDateRange, formatEventTime, formatTimeRange, isUpcoming, getExcerpt } = useEvents();
 const { getDateBadge } = useEventDateBadge();
 const routes = useRoutes();
 
@@ -66,6 +66,10 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 120));
                 </span>
                 <span class="text-xs uppercase tracking-wide text-base-secondary">
                     {{ dateBadge.month }}
+                </span>
+                <span class="mt-0.5 text-xs text-base-muted">
+                    <span class="sr-only">{{ t('events.startTime') }}:</span>
+                    {{ formatEventTime(props.event.startDate) }}
                 </span>
             </div>
 
@@ -120,6 +124,9 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 120));
             <p v-if="!isCompact" class="mb-2 text-sm text-primary-600 dark:text-primary-500">
                 <span class="sr-only">{{ t('events.date') }}:</span>
                 {{ formatDateRange(props.event.startDate, props.event.endDate) }}
+                <span aria-hidden="true">·</span>
+                <span class="sr-only">{{ t('events.schedule') }}:</span>
+                {{ formatTimeRange(props.event.startDate, props.event.endDate) }}
             </p>
 
             <!-- Location -->
