@@ -21,7 +21,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
  */
 final class {{ nameStudly }}Widget extends StatsOverviewWidget
 {
-    protected static ?string $pollingInterval = null;
+    protected ?string $pollingInterval = null;
 
     protected static ?int $sort = 10;
 

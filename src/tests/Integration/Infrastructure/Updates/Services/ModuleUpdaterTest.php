@@ -485,7 +485,7 @@ final class ModuleUpdaterTest extends TestCase
 
         foreach (['updtest-game', 'updtest-aaa'] as $name) {
             File::ensureDirectoryExists("{$this->modulesPath}/{$name}/public/build");
-            File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode(['name' => $name, 'version' => '1.0.0-beta']));
+            File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode(['name' => $name, 'version' => '1.0.0-beta', 'requires' => ['core' => '>=2.0']]));
             File::put("{$this->modulesPath}/{$name}/public/build/manifest.json", 'old');
         }
 
@@ -543,7 +543,7 @@ final class ModuleUpdaterTest extends TestCase
             'version' => $version,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
-            'requires' => $requires,
+            'requires' => $requires + ['core' => '>=2.0'],
         ]));
         $zip->addFromString("{$name}-{$version}/public/build/manifest.json", $assetContent);
         $zip->close();

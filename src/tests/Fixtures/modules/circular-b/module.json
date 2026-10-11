@@ -5,7 +5,9 @@
     "author": "GuildForge",
     "namespace": "Modules\\CircularB",
     "provider": "CircularBServiceProvider",
-    "requires": {},
+    "requires": {
+        "core": ">=2.0"
+    },
     "dependencies": {
         "circular-a": "^1.0"
     }

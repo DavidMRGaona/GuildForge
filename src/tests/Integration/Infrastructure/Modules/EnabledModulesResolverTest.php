@@ -40,6 +40,7 @@ final class EnabledModulesResolverTest extends TestCase
         File::ensureDirectoryExists("{$this->modulesPath}/disabled-module/database/migrations");
         File::put("{$this->modulesPath}/disabled-module/module.json", (string) json_encode([
             'name' => 'disabled-module', 'version' => '1.0.0', 'namespace' => 'Modules\\DisabledModule', 'provider' => 'DisabledModuleServiceProvider',
+            'requires' => ['core' => '>=2.0'],
         ]));
     }
 
@@ -108,7 +109,8 @@ final class EnabledModulesResolverTest extends TestCase
 
         // The host becomes compatible again (image rollback, module update): no database change needed
         $manifest = "{$this->modulesPath}/incompatible-module/module.json";
-        File::put($manifest, str_replace('^99.0', '^2.0', File::get($manifest)));
+        // Another length than '^99.0': compatibility is cached by path, mtime and size, and this write lands in the same second
+        File::put($manifest, str_replace('^99.0', '>=2.0.0', File::get($manifest)));
         $resolver->reset();
 
         $this->assertSame(['test-module', 'incompatible-module'], $resolver->names());

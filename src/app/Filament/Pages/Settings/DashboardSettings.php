@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Settings;
 
+use Filament\Schemas\Schema;
 use App\Application\Services\DashboardWidgetConfigServiceInterface;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
@@ -12,24 +13,23 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\TableWidget;
 
 /**
- * @property Form $form
+ * @property \Filament\Schemas\Schema $form
  */
 final class DashboardSettings extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-squares-2x2';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-squares-2x2';
 
     protected static ?int $navigationSort = 99;
 
-    protected static string $view = 'filament.pages.settings.dashboard-settings';
+    protected string $view = 'filament.pages.settings.dashboard-settings';
 
     /**
      * @var array<string, mixed>
@@ -63,10 +63,10 @@ final class DashboardSettings extends Page implements HasForms
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Repeater::make('widgets')
                     ->label('')
                     ->schema([
@@ -148,7 +148,7 @@ final class DashboardSettings extends Page implements HasForms
     }
 
     /**
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getFormActions(): array
     {
@@ -160,7 +160,7 @@ final class DashboardSettings extends Page implements HasForms
     }
 
     /**
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {

@@ -67,7 +67,7 @@ final class ModuleListCommandTest extends TestCase
             'version' => '1.0.0',
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
-            'requires' => $requires,
+            'requires' => $requires + ['core' => '>=2.0'],
         ]));
     }
 }

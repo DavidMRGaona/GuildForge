@@ -223,7 +223,7 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      * Get the Filament form schema for module settings.
      * Override to provide configurable settings that appear in the admin panel.
      *
-     * @return array<\Filament\Forms\Components\Component>
+     * @return array<\Filament\Schemas\Components\Component>
      */
     public function getSettingsSchema(): array
     {

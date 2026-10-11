@@ -4,26 +4,28 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use Filament\Panel;
+use Filament\Schemas\Schema;
+use Filament\Actions\Action;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Modules\ModuleLoader;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
 /**
- * @property Form $form
+ * @property \Filament\Schemas\Schema $form
  */
 final class ModuleSettingsPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static string $view = 'filament.pages.module-settings';
+    protected string $view = 'filament.pages.module-settings';
 
     protected static bool $shouldRegisterNavigation = false;
 
@@ -49,12 +51,12 @@ final class ModuleSettingsPage extends Page implements HasForms
      */
     public ?array $data = [];
 
-    public static function getRoutePath(): string
+    public static function getRoutePath(Panel $panel): string
     {
         return '/modules/{module}/settings';
     }
 
-    public static function getSlug(): string
+    public static function getSlug(?Panel $panel = null): string
     {
         return 'module-settings';
     }
@@ -114,17 +116,17 @@ final class ModuleSettingsPage extends Page implements HasForms
         $this->form->fill($settings);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         $schema = $this->getModuleSettingsSchema();
 
         return $form
-            ->schema($schema)
+            ->components($schema)
             ->statePath('data');
     }
 
     /**
-     * @return array<\Filament\Forms\Components\Component>
+     * @return array<\Filament\Schemas\Components\Component>
      */
     protected function getModuleSettingsSchema(): array
     {
@@ -166,7 +168,7 @@ final class ModuleSettingsPage extends Page implements HasForms
     }
 
     /**
-     * @return array<\Filament\Actions\Action>
+     * @return array<Action>
      */
     protected function getFormActions(): array
     {
@@ -175,7 +177,7 @@ final class ModuleSettingsPage extends Page implements HasForms
         }
 
         return [
-            \Filament\Actions\Action::make('save')
+            Action::make('save')
                 ->label(__('modules.filament.settings_page.save'))
                 ->submit('save'),
         ];
