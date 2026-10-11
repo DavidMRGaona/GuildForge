@@ -6,6 +6,9 @@ import { VENUE_TIMEZONE, venueDayKey } from '@/utils/datetime';
 interface UseEventsReturn {
     formatEventDate: (dateString: string) => string;
     formatDateRange: (startDate: string, endDate: string) => string;
+    formatEventTime: (dateString: string) => string;
+    formatTimeRange: (startDate: string, endDate: string) => string;
+    formatSchedule: (startDate: string, endDate: string) => string;
     formatPrice: (price: number | null) => string;
     isUpcoming: (event: Event) => boolean;
     getExcerpt: (description: string, maxLength?: number) => string;
@@ -59,6 +62,44 @@ export function useEvents(): UseEventsReturn {
         return `${formatShort(start)} - ${formatShort(end)} ${endDay.slice(0, 4)}`;
     }
 
+    function formatEventTime(dateString: string): string {
+        // "18:00"
+        return new Date(dateString).toLocaleTimeString(locale.value, {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: VENUE_TIMEZONE,
+        });
+    }
+
+    function isSingleDay(startDate: string, endDate: string): boolean {
+        return venueDayKey(new Date(startDate)) === venueDayKey(new Date(endDate));
+    }
+
+    function formatTimeRange(startDate: string, endDate: string): string {
+        // Single day: "18:00 – 22:00"
+        if (isSingleDay(startDate, endDate)) {
+            return `${formatEventTime(startDate)} – ${formatEventTime(endDate)}`;
+        }
+
+        // Multi-day: "18:00", the days are already in the date range
+        return formatEventTime(startDate);
+    }
+
+    function formatSchedule(startDate: string, endDate: string): string {
+        if (isSingleDay(startDate, endDate)) {
+            return formatTimeRange(startDate, endDate);
+        }
+
+        // Multi-day: "15 ene, 18:00 – 17 ene, 14:00"
+        const formatDayAndTime = (dateString: string): string =>
+            `${new Date(dateString).toLocaleDateString(locale.value, {
+                day: 'numeric',
+                month: 'short',
+                timeZone: VENUE_TIMEZONE,
+            })}, ${formatEventTime(dateString)}`;
+        return `${formatDayAndTime(startDate)} – ${formatDayAndTime(endDate)}`;
+    }
+
     function formatPrice(price: number | null): string {
         if (price === null) return t('events.free');
         return `${price.toFixed(2)} €`;
@@ -93,6 +134,9 @@ export function useEvents(): UseEventsReturn {
     return {
         formatEventDate,
         formatDateRange,
+        formatEventTime,
+        formatTimeRange,
+        formatSchedule,
         formatPrice,
         isUpcoming,
         getExcerpt,
