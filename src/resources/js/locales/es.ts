@@ -34,6 +34,8 @@ export default {
         upcoming: 'Próximos eventos',
         past: 'Eventos pasados',
         date: 'Fecha',
+        startTime: 'Hora de inicio',
+        schedule: 'Horario',
         location: 'Lugar',
         noUpcoming: 'No hay eventos próximos',
         free: 'Gratuito',
