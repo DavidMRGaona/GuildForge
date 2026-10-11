@@ -40,13 +40,13 @@
         {{-- Settings Form --}}
         @if($this->hasSettings())
             <x-filament::section>
-                <x-filament-panels::form wire:submit="save">
+                <form wire:submit="save" class="fi-sc-form">
                     {{ $this->form }}
 
-                    <x-filament-panels::form.actions
+                    <x-filament::actions
                         :actions="$this->getFormActions()"
                     />
-                </x-filament-panels::form>
+                </form>
             </x-filament::section>
         @else
             <x-filament::section>

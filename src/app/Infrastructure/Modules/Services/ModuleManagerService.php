@@ -504,6 +504,13 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             throw ModuleNotFoundException::withName($name->value);
         }
 
+        // Filament 4+ hands enum-backed fields over as enum instances; settings.php keeps scalars
+        array_walk_recursive($settings, static function (mixed &$value): void {
+            if ($value instanceof \BackedEnum) {
+                $value = $value->value;
+            }
+        });
+
         $settingsPath = $module->path().'/config/settings.php';
 
         // Store settings in the module's config directory

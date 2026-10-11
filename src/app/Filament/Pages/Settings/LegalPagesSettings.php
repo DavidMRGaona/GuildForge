@@ -4,31 +4,32 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Settings;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Forms\Components\RichEditor;
-use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
 /**
- * @property Form $form
+ * @property \Filament\Schemas\Schema $form
  */
 final class LegalPagesSettings extends Page implements HasForms
 {
     use InteractsWithForms;
     use ManagesPageSettings;
 
-    protected static ?string $navigationIcon = 'heroicon-o-scale';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-scale';
 
     protected static ?int $navigationSort = 11;
 
-    protected static string $view = 'filament.pages.settings.legal-pages-settings';
+    protected string $view = 'filament.pages.settings.legal-pages-settings';
 
     /**
      * @var array<string, mixed>
@@ -60,13 +61,13 @@ final class LegalPagesSettings extends Page implements HasForms
         $this->form->fill($this->loadSettings($settingsService));
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Tabs::make('Tabs')
                     ->tabs([
-                        Tabs\Tab::make(__('filament.pages.legal.tabs.entity'))
+                        Tab::make(__('filament.pages.legal.tabs.entity'))
                             ->schema([
                                 TextInput::make('legal_entity_name')
                                     ->label(__('filament.pages.legal.fields.entity_name'))
@@ -99,7 +100,7 @@ final class LegalPagesSettings extends Page implements HasForms
                                     ->maxLength(255),
                             ])->columns(2),
 
-                        Tabs\Tab::make(__('filament.pages.legal.tabs.privacy'))
+                        Tab::make(__('filament.pages.legal.tabs.privacy'))
                             ->schema([
                                 Toggle::make('legal_privacy_published')
                                     ->label(__('filament.pages.legal.fields.published')),
@@ -109,7 +110,7 @@ final class LegalPagesSettings extends Page implements HasForms
                                     ->columnSpanFull(),
                             ]),
 
-                        Tabs\Tab::make(__('filament.pages.legal.tabs.notice'))
+                        Tab::make(__('filament.pages.legal.tabs.notice'))
                             ->schema([
                                 Toggle::make('legal_notice_published')
                                     ->label(__('filament.pages.legal.fields.published')),
@@ -119,7 +120,7 @@ final class LegalPagesSettings extends Page implements HasForms
                                     ->columnSpanFull(),
                             ]),
 
-                        Tabs\Tab::make(__('filament.pages.legal.tabs.cookies'))
+                        Tab::make(__('filament.pages.legal.tabs.cookies'))
                             ->schema([
                                 Toggle::make('legal_cookies_published')
                                     ->label(__('filament.pages.legal.fields.published')),
@@ -129,7 +130,7 @@ final class LegalPagesSettings extends Page implements HasForms
                                     ->columnSpanFull(),
                             ]),
 
-                        Tabs\Tab::make(__('filament.pages.legal.tabs.terms'))
+                        Tab::make(__('filament.pages.legal.tabs.terms'))
                             ->schema([
                                 Toggle::make('legal_terms_published')
                                     ->label(__('filament.pages.legal.fields.published')),

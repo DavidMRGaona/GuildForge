@@ -93,10 +93,10 @@ The `module.json` must have:
   "provider": "ModuleNameServiceProvider",
   "repository": "owner/repo",
   "requires": {
-    "core": "^2.6",
-    "filament": "^3.3",
-    "php": ">=8.2",
-    "laravel": ">=12.0"
+    "core": "^3.0",
+    "filament": "^5.0",
+    "php": ">=8.5",
+    "laravel": ">=13.0"
   },
   "dependencies": []
 }
@@ -108,7 +108,7 @@ The `module.json` must have:
 
 Sites decide from `module.json` alone, before loading any module code, whether a module can run on them. An incompatible module is never loaded at boot (its database state is kept and it loads again as soon as the site is compatible), its migrations are not registered, and it cannot be enabled, installed from a ZIP or applied as an update; the admin panel says why.
 
-- `requires.core` (required): constraint on the GuildForge core version (`src/VERSION`). The release workflow rejects a tag without it. Modules published before this field existed are treated as `^2.0`.
+- `requires.core` (required): constraint on the GuildForge core version (`src/VERSION`). The release workflow rejects a tag without it. Modules published before this field existed are treated as `^2.0`, so core 3 rejects them.
 - `requires.filament` (optional): constraint on the installed `filament/filament` version.
 - `requires.php`, `requires.laravel` (optional): constraints on the running PHP and Laravel versions.
 - `requires.extensions` (optional): PHP extensions that must be loaded (case-insensitive, `ext-` prefix allowed).
@@ -220,7 +220,7 @@ jobs:
 - Tag `v1.0.0` → version `"1.0.0"`
 
 **Error:** `requires.core is required in module.json`
-- Add the core constraint the module was tested against, e.g. `"core": "^2.6"`
+- Add the core constraint the module was tested against, e.g. `"core": "^3.0"`
 
 **Error:** `Invalid requires.<key> constraint` or `requires.<key> must be a constraint string`
 - Use the supported syntax (see [Compatibility requirements](#compatibility-requirements)); `2.x`, `*` and `^2.6-beta` are not supported, and `null` or a number is not a constraint

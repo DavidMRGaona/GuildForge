@@ -10,6 +10,7 @@ This guide covers how to create and develop modules for GuildForge using the Mod
 4. [Service provider](#service-provider)
 5. [Permissions & navigation](#permissions--navigation)
 6. [Module settings](#module-settings)
+   - [Panel code for core 3 (Filament 5)](#panel-code-for-core-3-filament-5)
 7. [Filament integration](#filament-integration)
 8. [Slot registration](#slot-registration)
 9. [Building module assets](#building-module-assets)
@@ -135,10 +136,10 @@ modules/my-module/
     "description": "My awesome module",
     "author": "Developer",
     "requires": {
-        "core": "^2.6",
-        "filament": "^3.3",
-        "php": ">=8.2",
-        "laravel": ">=12.0",
+        "core": "^3.0",
+        "filament": "^5.0",
+        "php": ">=8.5",
+        "laravel": ">=13.0",
         "modules": ["another-module:^1.0"],
         "extensions": ["json"]
     },
@@ -146,7 +147,7 @@ modules/my-module/
 }
 ```
 
-`requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). Declare the lowest core minor you tested against, e.g. `^2.6`.
+`requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). Declare the lowest core minor you tested against, e.g. `^3.0`.
 
 ---
 
@@ -479,9 +480,9 @@ return [
 Override `getSettingsSchema()` in your ServiceProvider to define Filament form components:
 
 ```php
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
 
 public function getSettingsSchema(): array
 {
@@ -508,6 +509,21 @@ public function getSettingsSchema(): array
     ];
 }
 ```
+
+### Panel code for core 3 (Filament 5)
+
+Core 3.0 runs Filament 5 on Livewire 4. A module that adds panel code declares `"core": "^3.0"` and `"filament": "^5.0"` in `module.json`; releases for core 2 (`"filament": "^3.3"`) are rejected by sites on core 3, and the reverse.
+
+- **Namespaces.** Forms and infolists are schemas: `form(Schema $schema): Schema` and `infolist(Schema $schema): Schema` with `Filament\Schemas\Schema`. Layout components (`Section`, `Grid`, `Fieldset`, `Tabs`, `Group`, `Wizard`) live in `Filament\Schemas\Components`, and `Get`/`Set` in `Filament\Schemas\Components\Utilities`. Every action (row, bulk, header, form) is a `Filament\Actions\*` class; tables use `->recordActions()` and `->toolbarActions()`. `Filament\Support\Enums\Width` replaces `MaxWidth`.
+- **Resources** extend `App\Filament\Resources\BaseResource` and type their static properties as Filament 5 does: `protected static string|\BackedEnum|null $navigationIcon`, `protected static string|\UnitEnum|null $navigationGroup`. `php artisan module:make-filament-resource` (and `module:make-relation-manager` and `module:make-widget`) generate this shape.
+- **Registering panel code.** The panel only looks at enabled, compatible modules. Resources are discovered from `src/Filament/Resources/*Resource.php`; pages come from `registerFilamentPages()` (declared on `ModuleServiceProvider`, returns page classes); widgets come from a `registerFilamentWidgets()` method that the module adds to its provider (not declared on `ModuleServiceProvider`: the panel calls it only when it exists). There is no `registerFilamentResources()`.
+- **Settings.** `getSettingsSchema()` returns schema components (`Filament\Schemas\Components\*` for layout, `Filament\Forms\Components\*` for fields), rendered by the core's module settings page. Enum-backed fields save their value (`$enum->value`) to the module's `config/settings.php`; inside the form, `$get()` returns the enum instance (compare with `=== MyEnum::Case`).
+- **Settings pages of your own** that render the core's `filament.pages.simple-settings` view set `protected string $view` (no longer static) and define `form(Schema $schema): Schema` (state path `data`), `getFormActions(): array` and `save(): void`. The view renders `<form wire:submit="save">` with the form and `<x-filament::actions :actions="$this->getFormActions()" />`.
+- **Defaults kept from core 2.** The core sets them globally with `configureUsing()`, so the panel behaves as it did on core 2 and module code inherits them too: table filters apply on change (`deferFilters(false)`), no implicit key sort (`defaultKeySort(false)`), page sizes `5, 10, 25, 50, all`; `Section`, `Grid` and `Fieldset` span the full width; `FileUpload`, `ImageColumn` and `ImageEntry` use public visibility. Override them per component when you need otherwise.
+- **No panel CSS.** The panel theme (`resources/css/filament/admin/theme.css`, built with Vite) only scans the core's `app/Filament` and `resources/views/filament`: module views and classes are not compiled into it, and modules cannot add a stylesheet to the panel. Style module panel code with Filament components and their props (`badge()`, `color()`, `icon()`, `->extraAttributes()` with existing classes), never with Tailwind classes of your own.
+- **Rich text.** `RichEditor` is TipTap. HTML stored with the Trix editor (core 2) loses paragraphs and image captions on its first save: convert it in a migration of the release that moves to core 3, with `app(App\Application\Content\Services\TrixHtmlConverterInterface::class)->convert($html)` (idempotent: converted HTML comes back unchanged). Write the rows with `DB::table()` so `updated_at` and model events stay untouched, and keep a copy of the originals if you want to be able to restore them: the core's conversion (`content:convert-trix`) only covers core tables.
+- **Livewire 4.** Its endpoints live under `/livewire-{hash}/`, with a hash that differs per site: never match `livewire/*` by path; use `app(\Livewire\LivewireManager::class)->getUriPrefix()`.
+- **Tests.** `ModuleTestCase` enables the module through the same compatibility check as a site, so the module's real `module.json` must accept core 3 (`"core": "^3.0"`), or every test fails in `setUp()` with `ModuleIncompatibleException`.
 
 ### Accessing settings
 
@@ -572,10 +588,10 @@ public function registerPolicies(): array
 
 ### Auto-discovery
 
-Filament automatically discovers Resources, Pages, and Widgets from enabled modules:
-- **Resources**: `modules/{name}/src/Filament/Resources/`
-- **Pages**: `modules/{name}/src/Filament/Pages/`
-- **Widgets**: `modules/{name}/src/Filament/Widgets/`
+The panel collects Filament code from enabled, compatible modules:
+- **Resources**: discovered from `modules/{name}/src/Filament/Resources/*Resource.php`
+- **Pages**: the classes returned by `registerFilamentPages()`
+- **Widgets**: the classes returned by `registerFilamentWidgets()`, an optional method the module adds to its provider (it is not declared on `ModuleServiceProvider`)
 
 ---
 
@@ -840,7 +856,7 @@ The `manifest.json` is used by `useModuleSlots` composable to resolve component 
 
 ## Tailwind CSS in modules
 
-Modules have two options for styling: using the core safelist utilities (recommended) or adding custom module CSS.
+Modules have two options for styling: using the core safelist utilities (recommended) or adding custom module CSS. This section is about the public frontend: panel code cannot bring its own CSS (see [Panel code for core 3](#panel-code-for-core-3-filament-5)).
 
 ### Using core safelist utilities (recommended)
 
@@ -1139,7 +1155,7 @@ $table->uuid('id')->primary();  // Table: my_module_games
 
 ### 4. Register Filament resources
 
-Filament resources from modules need to be discovered. Add them to the Filament panel provider or use auto-discovery.
+Keep resources in `src/Filament/Resources/` with the `Resource` suffix so the panel discovers them, and register pages and widgets from the service provider (see [Auto-discovery](#auto-discovery)).
 
 ### 5. Handle module dependencies
 
@@ -1793,6 +1809,7 @@ final class Registration
 | `registerNavigationGroups()` | `array` | Filament navigation groups |
 | `registerPolicies()` | `array` | Model to policy mappings |
 | `registerSlots()` | `SlotRegistrationDTO[]` | Slot component registrations |
+| `registerFilamentPages()` | `Page[]` (class names) | Filament pages |
 | `getSettingsSchema()` | `Component[]` | Filament form schema for settings |
 | `onEnable()` | `void` | Called when module is enabled |
 | `onDisable()` | `void` | Called when module is disabled |

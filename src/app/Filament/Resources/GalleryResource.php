@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
+use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
+use App\Filament\Resources\GalleryResource\Pages\CreateGallery;
+use App\Filament\Resources\GalleryResource\Pages\EditGallery;
 use App\Filament\Resources\GalleryResource\Pages;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
@@ -13,9 +19,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use App\Filament\Resources\BaseResource;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -30,9 +33,9 @@ class GalleryResource extends BaseResource
 {
     protected static ?string $model = GalleryModel::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-photo';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-photo';
 
-    protected static ?string $navigationGroup = 'Contenido';
+    protected static string | \UnitEnum | null $navigationGroup = 'Contenido';
 
     protected static ?int $navigationSort = 3;
 
@@ -46,10 +49,10 @@ class GalleryResource extends BaseResource
         return __('Galerías');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('title')
                     ->label(__('Título'))
                     ->required()
@@ -179,9 +182,9 @@ class GalleryResource extends BaseResource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListGalleries::route('/'),
-            'create' => Pages\CreateGallery::route('/create'),
-            'edit' => Pages\EditGallery::route('/{record}/edit'),
+            'index' => ListGalleries::route('/'),
+            'create' => CreateGallery::route('/create'),
+            'edit' => EditGallery::route('/{record}/edit'),
         ];
     }
 }

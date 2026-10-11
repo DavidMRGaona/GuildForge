@@ -6,9 +6,9 @@
 
 ## 1. Executive summary
 
-GuildForge is a web platform for wargames and role-playing games guilds. It combines a public frontend (events, articles, galleries, calendar) with an admin panel (Filament 3) for content management by guild members.
+GuildForge is a web platform for wargames and role-playing games guilds. It combines a public frontend (events, articles, galleries, calendar) with an admin panel (Filament 5) for content management by guild members.
 
-The architecture follows Clean Architecture principles with four concentric layers (Domain, Application, Infrastructure, Presentation), an extensible module system, and strict separation between reads (Query Services) and writes (Repositories). The main technology stack is Laravel 13+, Vue 3 with TypeScript, Inertia.js as the SSR bridge, PostgreSQL as the database, and Filament 3 for the admin panel.
+The architecture follows Clean Architecture principles with four concentric layers (Domain, Application, Infrastructure, Presentation), an extensible module system, and strict separation between reads (Query Services) and writes (Repositories). The main technology stack is Laravel 13+, Vue 3 with TypeScript, Inertia.js as the SSR bridge, PostgreSQL as the database, and Filament 5 (Livewire 4) for the admin panel.
 
 ---
 
@@ -715,7 +715,7 @@ Dashboard widgets, configurable by the administrator via `DashboardWidgetConfigS
 - `MailHealthWidget` - Mail system status (admin only)
 - `MailStatsOverviewWidget` - Mail delivery statistics (admin only)
 
-**Module widgets**: Registered via `registerFilamentWidgets()` in the module's ServiceProvider.
+**Module widgets**: Registered via `registerFilamentWidgets()` in the module's ServiceProvider (an optional method: it is not declared on `ModuleServiceProvider`, and the panel calls it only when it exists).
 
 **Dashboard configuration**: The `DashboardSettings` page (`/admin/dashboard-settings`) allows enabling/disabling widgets, setting order, and configuring table row limits.
 
