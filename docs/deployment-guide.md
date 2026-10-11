@@ -524,6 +524,8 @@ Core 2 edited rich text with Trix; core 3 uses Filament 5's TipTap editor, which
 
 `php artisan content:convert-trix --dry-run` lists the values a conversion would change (`<table>.<column>#<id>` or `settings#<key>`) without writing anything. `php artisan content:convert-trix --restore=<backup>` puts back the original values that nobody edited after the conversion; the restored HTML is in Trix format again, so use it only before rolling back to core 2.8, never on a site that stays on core 3.
 
+The migration runs once: after a rollback to core 2.8 that keeps the database, it stays recorded, and deploying core 3 again does not convert what was restored or saved with Trix in the meantime. After that redeploy, and before anyone edits, run `php artisan content:convert-trix --dry-run` and, if it lists anything, `php artisan content:convert-trix` (as root, or as `www-data` once the backup directory belongs to it: the first conversion creates `storage/app/backups/rich-text` as root, after the entrypoint's `chown`).
+
 Modules convert their own rich text fields in a migration of their first release for core 3, with the same converter (see [Panel code for core 3](modules/README.md#panel-code-for-core-3-filament-5)).
 
 ### Production PHP configuration
