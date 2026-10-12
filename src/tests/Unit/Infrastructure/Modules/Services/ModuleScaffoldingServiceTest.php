@@ -65,6 +65,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertSame('^2.6', $manifest['requires']['core'] ?? null);
         $this->assertSame('>=13.0', $manifest['requires']['laravel'] ?? null);
+        $this->assertSame('>=8.5', $manifest['requires']['php'] ?? null);
         $this->assertSame('^5.0', $manifest['requires']['filament'] ?? null);
     }
 
