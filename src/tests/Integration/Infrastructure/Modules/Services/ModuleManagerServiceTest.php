@@ -198,7 +198,7 @@ final class ModuleManagerServiceTest extends TestCase
         ]);
     }
 
-    public function test_enabling_and_disabling_forget_the_cached_module_list(): void
+    public function test_enabling_disabling_and_uninstalling_forget_the_cached_module_list(): void
     {
         config(['modules.cache.enabled' => true, 'modules.cache.key' => 'modules.discovered']);
         $this->createTestModule('test-module');
@@ -218,6 +218,10 @@ final class ModuleManagerServiceTest extends TestCase
 
         Cache::put('modules.discovered', ['stale'], 3600);
         $this->service->disable(ModuleName::fromString('test-module'));
+        $this->assertFalse(Cache::has('modules.discovered'));
+
+        Cache::put('modules.discovered', ['stale'], 3600);
+        $this->service->uninstall(ModuleName::fromString('test-module'));
         $this->assertFalse(Cache::has('modules.discovered'));
     }
 
