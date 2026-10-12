@@ -19,6 +19,7 @@ use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -195,6 +196,29 @@ final class ModuleManagerServiceTest extends TestCase
             'name' => 'test-module',
             'status' => ModuleStatus::Disabled->value,
         ]);
+    }
+
+    public function test_enabling_and_disabling_forget_the_cached_module_list(): void
+    {
+        config(['modules.cache.enabled' => true, 'modules.cache.key' => 'modules.discovered']);
+        $this->createTestModule('test-module');
+
+        ModuleModel::create([
+            'name' => 'test-module',
+            'path' => "{$this->testModulesPath}/test-module",
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'status' => ModuleStatus::Disabled->value,
+            'requires' => null,
+        ]);
+
+        Cache::put('modules.discovered', ['stale'], 3600);
+        $this->service->enable(ModuleName::fromString('test-module'));
+        $this->assertFalse(Cache::has('modules.discovered'));
+
+        Cache::put('modules.discovered', ['stale'], 3600);
+        $this->service->disable(ModuleName::fromString('test-module'));
+        $this->assertFalse(Cache::has('modules.discovered'));
     }
 
     public function test_it_throws_when_disabling_already_disabled_module(): void
