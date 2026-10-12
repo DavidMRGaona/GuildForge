@@ -29,5 +29,3 @@ _ide_helper.php
 _ide_helper_models.php
 .phpstorm.meta.php
 
-# PHP CS Fixer cache
-.php-cs-fixer.cache
