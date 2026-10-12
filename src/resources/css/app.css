@@ -1156,6 +1156,24 @@ button[data-headlessui-state]:hover {
     border-color: var(--color-border);
 }
 
+/* The panel's editor (TipTap) stores a table's header row as the first row of <tbody>, with
+   <th> cells: style it like the <thead> row the typography plugin knows */
+.prose :where(tbody tr:has(> th)):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    border-bottom-width: 1px;
+    border-bottom-color: var(--color-border);
+}
+
+.prose :where(tbody th):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    font-weight: 600;
+    text-align: start;
+    vertical-align: bottom;
+    padding: 0.5714286em;
+}
+
+.prose :where(tbody th:first-child):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+    padding-inline-start: 0;
+}
+
 .prose :where(ul > li, ol > li):not(:where([class~='not-prose'], [class~='not-prose'] *))::marker {
     color: var(--color-text-muted);
 }
