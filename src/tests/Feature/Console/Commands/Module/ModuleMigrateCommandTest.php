@@ -20,15 +20,17 @@ final class ModuleMigrateCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->modulesPath = base_path('modules');
+
+        // Never the real modules directory: other test classes running in parallel resolve
+        // modules without a stored path to base_path('modules/<name>'). Kept under base_path()
+        // so the module migrations are passed to the migrator as a relative path
+        $this->modulesPath = base_path('storage/framework/testing/module-migrate-'.bin2hex(random_bytes(8)).'/modules');
+        config(['modules.path' => $this->modulesPath]);
     }
 
     protected function tearDown(): void
     {
-        // Clean up test module
-        if (File::exists($this->modulesPath.'/test-module')) {
-            File::deleteDirectory($this->modulesPath.'/test-module');
-        }
+        File::deleteDirectory(dirname($this->modulesPath));
 
         parent::tearDown();
     }

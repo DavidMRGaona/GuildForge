@@ -73,6 +73,7 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
 
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => $this->testModulesPath.'/test-module',
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'description' => 'Test module',
@@ -98,6 +99,7 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
 
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => $this->testModulesPath.'/test-module',
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'description' => 'Test module',
@@ -124,6 +126,7 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
 
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => $this->testModulesPath.'/test-module',
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'description' => 'Test module',
