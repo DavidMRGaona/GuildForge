@@ -93,7 +93,7 @@ final class ModuleSettingsPage extends Page implements HasForms
         // Redirect if module is disabled
         if ($moduleEntity->isDisabled()) {
             Notification::make()
-                ->title(__('modules.filament.notifications.cannot_enable', ['error' => 'Module is disabled']))
+                ->title(__('modules.filament.settings_page.module_disabled'))
                 ->warning()
                 ->send();
 

@@ -93,7 +93,8 @@ final class ModuleSettingsPageTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(ModuleSettingsPage::class, ['module' => 'disabled-module'])
-            ->assertRedirect(ModulesPage::getUrl());
+            ->assertRedirect(ModulesPage::getUrl())
+            ->assertNotified(__('modules.filament.settings_page.module_disabled'));
     }
 
     public function test_a_module_without_settings_goes_back_to_the_modules_page_with_a_notice(): void
