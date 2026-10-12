@@ -5,7 +5,6 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import GalleryGrid from '@/components/gallery/GalleryGrid.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import TagFilter from '@/components/ui/TagFilter.vue';
-import { useSeo } from '@/composables/useSeo';
 import { usePagination } from '@/composables/usePagination';
 import { useRoutes } from '@/composables/useRoutes';
 
@@ -22,11 +21,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { t } = useI18n();
 const routes = useRoutes();
-
-useSeo({
-    title: t('gallery.title'),
-    description: t('gallery.subtitle'),
-});
 
 const {
     firstItemNumber,

@@ -1,4 +1,5 @@
 import type { AuthSettings, User } from './models';
+import type { SeoProps } from './seo';
 import type { ModuleSlots } from './slots';
 
 interface ThemeSettings {
@@ -34,6 +35,7 @@ declare module '@inertiajs/vue3' {
         };
         errors: Record<string, string>;
         moduleSlots: ModuleSlots;
+        seo: SeoProps;
     }
 }
 

@@ -2,7 +2,6 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { useSeo } from '@/composables/useSeo';
 
 interface Props {
     message: string | null;
@@ -11,10 +10,6 @@ interface Props {
 const props = defineProps<Props>();
 
 const { t } = useI18n();
-
-useSeo({
-    title: t('maintenance.title'),
-});
 
 const message = computed(() => props.message ?? t('maintenance.defaultMessage'));
 </script>

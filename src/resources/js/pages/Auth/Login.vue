@@ -3,7 +3,6 @@ import { useForm, Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
-import { useSeo } from '@/composables/useSeo';
 import { useAuth } from '@/composables/useAuth';
 import { useNotifications } from '@/composables/useNotifications';
 import { useRoutes } from '@/composables/useRoutes';
@@ -13,10 +12,6 @@ const { t } = useI18n();
 const { authSettings } = useAuth();
 const notifications = useNotifications();
 const routes = useRoutes();
-
-useSeo({
-    title: t('auth.login.title'),
-});
 
 const form = useForm<LoginFormData>({
     email: '',

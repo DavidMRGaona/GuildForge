@@ -8,7 +8,6 @@ import EventsSection from '@/components/events/EventsSection.vue';
 import ArticleCard from '@/components/articles/ArticleCard.vue';
 import PhotoLightbox from '@/components/gallery/PhotoLightbox.vue';
 import HeroSlider from '@/components/hero/HeroSlider.vue';
-import { useSeo } from '@/composables/useSeo';
 import { useLightbox } from '@/composables/useLightbox';
 import { useRoutes } from '@/composables/useRoutes';
 import { buildMosaicLargeUrl, buildMosaicSmallUrl } from '@/utils/cloudinary';
@@ -25,10 +24,6 @@ const props = defineProps<Props>();
 
 const { t } = useI18n();
 const routes = useRoutes();
-
-useSeo({
-    description: t('home.subtitle'),
-});
 
 // Gallery photos for lightbox
 const allPhotos = computed<Photo[]>(() => props.featuredGallery?.photos ?? []);
@@ -58,11 +53,7 @@ function openLightbox(index: number): void {
 
         <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
             <!-- Events Section (Events Grid + Calendar Widget) -->
-            <EventsSection
-                :events="props.events"
-                :are-past="props.eventsArePast"
-                class="mb-16"
-            />
+            <EventsSection :events="props.events" :are-past="props.eventsArePast" class="mb-16" />
 
             <!-- Latest Articles Section -->
             <section class="mb-16">

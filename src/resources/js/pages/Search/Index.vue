@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { Event, Article } from '@/types';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
@@ -27,10 +26,6 @@ function pluralize(count: number, key: string): string {
 </script>
 
 <template>
-    <Head :title="t('search.title')">
-        <meta name="robots" content="noindex,nofollow" />
-    </Head>
-
     <DefaultLayout>
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- Page Title -->

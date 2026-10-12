@@ -1,6 +1,6 @@
 import '../css/app.css';
 
-import { createApp, h, type DefineComponent } from 'vue';
+import { createApp, h, type DefineComponent, type VNode } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { createHead } from '@unhead/vue/client';
 import { createPinia } from 'pinia';
@@ -15,6 +15,7 @@ import {
     type ModuleTranslationsPayload,
 } from '@/utils/moduleTranslations';
 import { setCloudinaryConfig, type CloudinaryConfig } from '@/utils/cloudinary';
+import { removeServerSeoTags, useServerSeo } from '@/composables/useSeo';
 
 const appName = import.meta.env.VITE_APP_NAME ?? 'GuildForge';
 
@@ -107,13 +108,21 @@ void createInertiaApp({
     setup({ el, App, props, plugin }) {
         // Update module pages mapping when props change (for subsequent navigations)
         const modulePagesProp = (props.initialPage.props as Record<string, unknown>).modulePages as
-            | Record<string, string>
-            | undefined;
+            Record<string, string> | undefined;
         if (modulePagesProp) {
             setModulePageMapping(modulePagesProp);
         }
 
-        createApp({ render: () => h(App, props) })
+        // The server rendered the first page's SEO tags for crawlers; unhead
+        // owns the head from here on.
+        removeServerSeoTags();
+
+        createApp({
+            setup(): () => VNode {
+                useServerSeo();
+                return () => h(App, props);
+            },
+        })
             .use(plugin)
             .use(head)
             .use(pinia)

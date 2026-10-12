@@ -6,7 +6,6 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import BaseCard from '@/components/ui/BaseCard.vue';
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue';
 import ContactForm from '@/components/contact/ContactForm.vue';
-import { useSeo } from '@/composables/useSeo';
 import { buildFullScreenHeroImageUrl } from '@/utils/cloudinary';
 import { activityIconMap } from '@/utils/icons';
 import SocialLinks from '@/components/ui/SocialLinks.vue';
@@ -37,11 +36,6 @@ const props = defineProps<Props>();
 const LocationMap = defineAsyncComponent(() => import('@/components/map/LocationMap.vue'));
 
 const { t } = useI18n();
-
-useSeo({
-    title: t('about.title', { appName: props.guildName }),
-    description: props.aboutTagline || t('about.subtitle'),
-});
 
 const openStreetMapUrl = computed(() => {
     if (!props.location) return 'https://www.openstreetmap.org';
