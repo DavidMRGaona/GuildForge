@@ -337,11 +337,32 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
     {
         foreach ($element->childNodes as $child) {
             if ($child instanceof Text) {
-                $child->data = preg_replace('~(?<=\S)\s*\R\s*(?=\S)~u', ' ', $child->data) ?? $child->data;
+                $data = preg_replace('~(?<=\S)\s*\R\s*(?=\S)~u', ' ', $child->data) ?? $child->data;
+
+                // A break next to an inline element (but not <br>) is a space between words too
+                if ($this->isInlineText($child->previousSibling)) {
+                    $data = preg_replace('~^\s*\R\s*(?=\S)~u', ' ', $data) ?? $data;
+                }
+
+                if ($this->isInlineText($child->nextSibling)) {
+                    $data = preg_replace('~(?<=\S)\s*\R\s*$~u', ' ', $data) ?? $data;
+                }
+
+                if ($this->isInlineText($child->previousSibling) && $this->isInlineText($child->nextSibling)) {
+                    $data = preg_replace('~^\s*\R\s*$~u', ' ', $data) ?? $data;
+                }
+
+                $child->data = $data;
             } elseif ($child instanceof Element && $child->localName !== 'pre') {
                 $this->joinLines($child);
             }
         }
+    }
+
+    private function isInlineText(?Node $node): bool
+    {
+        return $node instanceof Element && $node->localName !== 'br'
+            && ! in_array($node->localName, [...self::BLOCKS, 'li', 'tr', 'td', 'th', 'tbody', 'thead'], true);
     }
 
     private function rename(HTMLDocument $document, Element $element, string $name): void

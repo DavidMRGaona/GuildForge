@@ -57,6 +57,11 @@ final class TrixHtmlConverterTest extends TestCase
                 "Primer párrafo.\n\nSegundo párrafo\ncon un salto.",
                 '<p>Primer párrafo. Segundo párrafo con un salto.</p>',
             ],
+            // Hand-written HTML: a break next to an inline element is a space too
+            'line breaks next to inline elements' => [
+                "<p><strong>negrita</strong>\n<em>cursiva</em> y un <a href=\"https://gremio.example/a\">enlace</a>\nfin</p>",
+                '<p><strong>negrita</strong> <em>cursiva</em> y un <a href="https://gremio.example/a">enlace</a> fin</p>',
+            ],
             'paragraphs and a blank line' => [
                 '<p>Primera línea<br>segunda línea</p><p><br></p><p>Segundo párrafo</p>',
                 '<p>Primera línea<br>segunda línea</p><p><br></p><p>Segundo párrafo</p>',
