@@ -9,6 +9,7 @@ use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
@@ -88,6 +89,8 @@ final class HandleInertiaRequests extends Middleware
             'cloudinary' => fn (): array => $this->getCloudinaryConfig(),
             'navigation' => fn () => $this->getNavigation($request),
             'socialLinks' => fn () => $this->getSocialLinks(),
+            // Site-wide defaults; a page's own `seo` prop overrides this one
+            'seo' => fn (): array => app(SeoMetadataFactoryInterface::class)->forSite()->toArray(),
         ];
     }
 
