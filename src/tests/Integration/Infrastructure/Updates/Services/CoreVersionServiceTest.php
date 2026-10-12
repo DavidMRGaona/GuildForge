@@ -140,6 +140,8 @@ final class CoreVersionServiceTest extends TestCase
             'leading v' => ['v2.6.0'],
             'missing patch' => ['2.6'],
             'trailing garbage' => ["2.6.0 beta\n"],
+            'empty' => [''],
+            'whitespace only' => [" \n"],
         ];
     }
 
@@ -158,6 +160,22 @@ final class CoreVersionServiceTest extends TestCase
             ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'core version')
                 && $context['file'] === $this->versionFilePath
                 && $context['value'] === trim($content));
+    }
+
+    public function test_a_directory_in_place_of_the_version_file_falls_back_to_0_0_0_and_logs(): void
+    {
+        Log::spy();
+        File::ensureDirectoryExists($this->versionFilePath);
+
+        try {
+            $this->assertSame('0.0.0', (new CoreVersionService($this->versionFilePath))->getCurrentVersion()->value());
+            Log::shouldHaveReceived('error')
+                ->once()
+                ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'core version')
+                    && $context['file'] === $this->versionFilePath);
+        } finally {
+            File::deleteDirectory($this->versionFilePath);
+        }
     }
 
     public function test_it_reads_the_application_version_file_by_default(): void

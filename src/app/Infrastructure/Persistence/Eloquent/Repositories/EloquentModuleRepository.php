@@ -15,6 +15,8 @@ use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use DateTimeImmutable;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 final readonly class EloquentModuleRepository implements ModuleRepositoryInterface
 {
@@ -70,16 +72,35 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             ['id' => $module->id()->value],
             $this->toArray($module),
         );
+
+        $this->forgetCachedModules();
     }
 
     public function delete(Module $module): void
     {
         ModuleModel::query()->where('id', $module->id()->value)->delete();
+
+        $this->forgetCachedModules();
     }
 
     public function exists(ModuleName $name): bool
     {
         return ModuleModel::query()->where('name', $name->value)->exists();
+    }
+
+    /**
+     * EnabledModulesResolver caches the enabled modules when modules.cache.enabled is on:
+     * every write must drop that copy (ZIP installs and updates do not go through enable()).
+     * Inside a transaction it is dropped after the commit: dropped before, a request could
+     * cache the old rows again and keep them for the whole cache TTL. Outside one, at once.
+     */
+    private function forgetCachedModules(): void
+    {
+        if ((bool) config('modules.cache.enabled', false)) {
+            $key = (string) config('modules.cache.key', 'modules.discovered');
+
+            DB::afterCommit(static fn (): bool => Cache::forget($key));
+        }
     }
 
     private function toDomain(ModuleModel $model): Module

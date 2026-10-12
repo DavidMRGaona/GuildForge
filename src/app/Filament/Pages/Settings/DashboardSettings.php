@@ -111,7 +111,9 @@ final class DashboardSettings extends Page implements HasForms
     {
         $formData = $this->form->getState();
 
-        $config = [];
+        // Keep the entries of widgets the panel does not offer right now (a module that is
+        // disabled or rejected): saving must not wipe their order and limits
+        $config = array_diff_key($configService->getConfig(), $configService->getDefaults());
         foreach ($formData['widgets'] ?? [] as $row) {
             $entry = [
                 'enabled' => (bool) $row['enabled'],

@@ -359,4 +359,7 @@ return [
             'refresh' => 'Refresh',
         ],
     ],
+    'time_picker' => [
+        'invalid' => 'Type the time as HH:MM, for example 10:00.',
+    ],
 ];

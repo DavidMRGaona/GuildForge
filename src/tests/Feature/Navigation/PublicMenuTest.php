@@ -7,6 +7,7 @@ namespace Tests\Feature\Navigation;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -74,6 +75,59 @@ final class PublicMenuTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->has('navigation.header', 1)
                 ->where('navigation.header.0.href', route('articles.index')));
+    }
+
+    public function test_a_left_out_link_is_logged_once_and_not_on_every_request(): void
+    {
+        Log::spy();
+        $this->menuItem(MenuLocation::Header, 'Mesas', route: 'gametables.index', module: 'game-tables', sort: 1);
+
+        $this->get('/')->assertOk();
+        $this->get('/')->assertOk();
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []): bool => str_starts_with($message, 'Menu item left out')
+                && ($context['label'] ?? null) === 'Mesas'
+                && ($context['route'] ?? null) === 'gametables.index')
+            ->once();
+    }
+
+    public function test_a_parent_without_a_link_whose_children_are_all_left_out_is_left_out_too(): void
+    {
+        $this->menuItem(MenuLocation::Header, 'Eventos', url: '/eventos', sort: 1);
+        $parent = $this->menuItem(MenuLocation::Header, 'Partidas', sort: 2);
+        $this->menuItem(MenuLocation::Header, 'Mesas', route: 'gametables.index', module: 'game-tables', sort: 1, parentId: $parent->id);
+        $this->menuItem(MenuLocation::Header, 'Campañas', route: 'campaigns.index', module: 'game-tables', sort: 2, parentId: $parent->id);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('navigation.header', 1)
+                ->where('navigation.header.0.label', 'Eventos'));
+    }
+
+    public function test_a_parent_with_its_own_link_stays_when_its_children_are_all_left_out(): void
+    {
+        $parent = $this->menuItem(MenuLocation::Header, 'Comunidad', url: '/comunidad', sort: 1);
+        $this->menuItem(MenuLocation::Header, 'Mesas', route: 'gametables.index', module: 'game-tables', sort: 1, parentId: $parent->id);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('navigation.header', 1)
+                ->where('navigation.header.0.href', '/comunidad')
+                ->has('navigation.header.0.children', 0));
+    }
+
+    public function test_an_item_without_link_or_children_is_kept(): void
+    {
+        $this->menuItem(MenuLocation::Header, 'Próximamente', sort: 1);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('navigation.header', 1)
+                ->where('navigation.header.0.href', '#'));
     }
 
     private function menuItem(

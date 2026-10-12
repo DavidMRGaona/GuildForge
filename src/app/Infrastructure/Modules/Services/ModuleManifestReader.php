@@ -55,6 +55,13 @@ final readonly class ModuleManifestReader
             $normalized = ModuleManifestDTO::normalizeRequires($data['requires']);
 
             foreach ($normalized['invalid'] as $key) {
+                // A list is repaired, not refused: its entries that are not strings are dropped
+                if (in_array($key, ['modules', 'extensions'], true)) {
+                    $this->logger->warning("Invalid requires.{$key} in {$path}: only its string entries are checked");
+
+                    continue;
+                }
+
                 $label = $key === 'requires' ? 'requires' : "requires.{$key}";
                 $this->logger->warning("Invalid {$label} in {$path}: the module is treated as incompatible");
             }

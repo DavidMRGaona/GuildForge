@@ -35,7 +35,7 @@ final class ModuleManagerServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.uniqid();
+        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.bin2hex(random_bytes(8));
         mkdir($this->testModulesPath, 0755, true);
 
         // Override the modules path in config
@@ -494,6 +494,7 @@ final class ModuleManagerServiceTest extends TestCase
 
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => "{$this->testModulesPath}/test-module",
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'description' => 'Test module',
@@ -515,7 +516,7 @@ final class ModuleManagerServiceTest extends TestCase
     {
         // The data the seeders created is gone, so a reinstall must seed again
         $this->createTestModule('test-module');
-        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'installed_at' => now()]);
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'installed_at' => now()]);
         ModuleSeederHistoryModel::markExecuted('test-module', 'Modules\\TestModule\\Database\\Seeders\\ItemsSeeder');
 
         $this->service->uninstall(ModuleName::fromString('test-module'), true);
@@ -526,7 +527,7 @@ final class ModuleManagerServiceTest extends TestCase
     public function test_uninstall_keeping_data_keeps_the_seeder_history(): void
     {
         $this->createTestModule('test-module');
-        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'installed_at' => now()]);
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'installed_at' => now()]);
         ModuleSeederHistoryModel::markExecuted('test-module', 'Modules\\TestModule\\Database\\Seeders\\ItemsSeeder');
 
         $this->service->uninstall(ModuleName::fromString('test-module'), false);
@@ -693,6 +694,7 @@ final class ModuleManagerServiceTest extends TestCase
         $this->createTestModuleMigration('test-module', 'create_test_module_table');
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => "{$this->testModulesPath}/test-module",
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'status' => ModuleStatus::Disabled->value,
@@ -711,10 +713,22 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertFalse(Schema::hasTable('test_module_table'));
     }
 
+    public function test_enable_runs_the_migrations_of_a_compatible_module(): void
+    {
+        // Positive control for the "no table" assertions of the incompatible cases
+        $this->createTestModule('test-module');
+        $this->createTestModuleMigration('test-module', 'create_test_module_table');
+        ModuleModel::create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value]);
+
+        $this->service->enable(ModuleName::fromString('test-module'));
+
+        $this->assertTrue(Schema::hasTable('test_module_table'));
+    }
+
     public function test_enable_makes_the_module_loadable_in_the_same_process(): void
     {
         $this->createTestModule('test-module');
-        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value]);
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value, 'path' => "{$this->testModulesPath}/test-module"]);
         $resolver = app(EnabledModulesResolverInterface::class);
         $resolver->reset();
         $this->assertSame([], $resolver->names());
@@ -737,8 +751,7 @@ final class ModuleManagerServiceTest extends TestCase
             'installed_at' => now(),
         ]);
 
-        // Module migrations under a temp path never reach the migrator in tests, so the table
-        // assertion alone cannot fail: the skip is also observed through its warning
+        // The skip is also observed through its warning
         Log::spy();
 
         $this->service->discover();

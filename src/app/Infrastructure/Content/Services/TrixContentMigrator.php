@@ -91,10 +91,9 @@ final readonly class TrixContentMigrator implements TrixContentMigratorInterface
 
     public function restore(string $backupPath): int
     {
-        /** @var list<array{table: string, column: string, id: string, original: string, converted: string}>|null $changes */
-        $changes = json_decode((string) File::get($backupPath), true);
+        $changes = json_decode((string) File::get($this->resolveBackup($backupPath)), true);
 
-        if (! is_array($changes)) {
+        if (! is_array($changes) || ! array_is_list($changes)) {
             throw new RuntimeException("Not a rich text backup: {$backupPath}");
         }
 
@@ -102,6 +101,11 @@ final readonly class TrixContentMigrator implements TrixContentMigratorInterface
 
         DB::transaction(function () use ($changes, &$restored): void {
             foreach ($changes as $change) {
+                // A backup is data, not a list of targets: only what migrate() converts
+                if (! $this->isConvertedValue($change)) {
+                    continue;
+                }
+
                 // Never overwrite what an admin saved after the conversion
                 if ($this->read($change['table'], $change['column'], $change['id']) !== $change['converted']) {
                     continue;
@@ -113,6 +117,45 @@ final readonly class TrixContentMigrator implements TrixContentMigratorInterface
         });
 
         return $restored;
+    }
+
+    /**
+     * Backups are only read from the backup directory: by file name, or by a path inside it,
+     * absolute or relative to the application root (as the deployment guide writes it).
+     */
+    private function resolveBackup(string $backupPath): string
+    {
+        $directory = realpath($this->backupDirectory);
+
+        foreach ([$backupPath, base_path($backupPath), $this->backupDirectory.'/'.$backupPath] as $candidate) {
+            $real = realpath($candidate);
+
+            if ($directory !== false && $real !== false && is_file($real) && str_starts_with($real, $directory.DIRECTORY_SEPARATOR)) {
+                return $real;
+            }
+        }
+
+        throw new RuntimeException("Not a backup in {$this->backupDirectory}: {$backupPath}");
+    }
+
+    /**
+     * @phpstan-assert-if-true array{table: string, column: string, id: string, original: string, converted: string} $change
+     */
+    private function isConvertedValue(mixed $change): bool
+    {
+        if (! is_array($change)) {
+            return false;
+        }
+
+        foreach (['table', 'column', 'id', 'original', 'converted'] as $key) {
+            if (! isset($change[$key]) || ! is_string($change[$key])) {
+                return false;
+            }
+        }
+
+        return $change['table'] === 'settings'
+            ? $change['column'] === 'value' && in_array($change['id'], self::SETTINGS, true)
+            : (self::COLUMNS[$change['table']] ?? null) === $change['column'];
     }
 
     /**

@@ -253,7 +253,7 @@ final class ModuleUpdateCheckerTest extends TestCase
     {
         $module = $this->createRealModule('gametables', '1.0.0-beta', 'owner', 'gametables');
         $this->moduleRepository->shouldReceive('all')->andReturn(new ModuleCollection($module));
-        $this->moduleRepository->shouldReceive('save');
+        $this->moduleRepository->shouldNotReceive('save');
         $this->githubFetcher->shouldReceive('batchSelectReleases')
             ->andReturn(['owner/gametables' => UpdateException::githubRequestFailed('owner/gametables', 'HTTP 403')]);
 
