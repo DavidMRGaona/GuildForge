@@ -48,7 +48,7 @@ final readonly class CompatibilityIssue
             self::INVALID_CONSTRAINT => "invalid {$label} constraint '{$this->required}'",
             self::UNKNOWN_HOST_VERSION => "requires {$label} {$this->required} but its installed version is unknown",
             self::MANIFEST_MISSING => 'module.json not found',
-            self::BELOW_CORE_MINIMUM => "this core requires version {$this->required} or later, found {$this->found}",
+            self::BELOW_CORE_MINIMUM => "this core requires version {$this->required} or later of the module, not {$this->found}",
             default => 'module.json is not valid',
         };
     }

@@ -70,8 +70,11 @@ final readonly class ModuleCompatibilityChecker
         try {
             $version = ModuleVersion::fromString($manifest->version);
         } catch (InvalidModuleVersionException) {
-            // The manifest reader already rejects malformed versions
-            return $result;
+            // The manifest reader does not validate the version: fail closed, as for an unreadable manifest
+            return new CompatibilityResult([
+                ...$result->issues,
+                new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID),
+            ]);
         }
 
         if ($version->isGreaterThanOrEqual($minimum)) {
