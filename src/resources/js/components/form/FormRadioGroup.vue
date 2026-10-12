@@ -35,9 +35,9 @@ function handleChange(value: string): void {
 <template>
     <RadioGroup
         :model-value="modelValue"
-        @update:model-value="handleChange"
         :disabled="disabled"
         :name="name"
+        @update:model-value="handleChange"
     >
         <label v-if="label" class="block text-sm font-medium text-base-primary mb-2">
             {{ label }}
@@ -47,8 +47,8 @@ function handleChange(value: string): void {
             <RadioGroupOption
                 v-for="option in options"
                 :key="option.value"
-                :value="option.value"
                 v-slot="{ checked, active }"
+                :value="option.value"
                 as="template"
             >
                 <div

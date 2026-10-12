@@ -60,7 +60,7 @@ const submit = (): void => {
             </p>
         </div>
 
-        <form @submit.prevent="submit" class="space-y-6">
+        <form class="space-y-6" @submit.prevent="submit">
             <!-- Name field -->
             <div>
                 <label

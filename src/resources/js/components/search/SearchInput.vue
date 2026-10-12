@@ -50,7 +50,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <form @submit.prevent="handleSubmit" class="relative">
+    <form class="relative" @submit.prevent="handleSubmit">
         <div class="relative">
             <input
                 ref="inputRef"

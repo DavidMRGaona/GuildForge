@@ -38,8 +38,8 @@ function toggle(): void {
             :id="id"
             type="checkbox"
             :checked="isChecked()"
-            @change="toggle"
             class="peer sr-only"
+            @change="toggle"
         />
 
         <!-- Custom checkbox visual -->
