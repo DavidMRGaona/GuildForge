@@ -712,6 +712,18 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertFalse(Schema::hasTable('test_module_table'));
     }
 
+    public function test_enable_runs_the_migrations_of_a_compatible_module(): void
+    {
+        // Positive control for the "no table" assertions of the incompatible cases
+        $this->createTestModule('test-module');
+        $this->createTestModuleMigration('test-module', 'create_test_module_table');
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value]);
+
+        $this->service->enable(ModuleName::fromString('test-module'));
+
+        $this->assertTrue(Schema::hasTable('test_module_table'));
+    }
+
     public function test_enable_makes_the_module_loadable_in_the_same_process(): void
     {
         $this->createTestModule('test-module');
@@ -738,8 +750,7 @@ final class ModuleManagerServiceTest extends TestCase
             'installed_at' => now(),
         ]);
 
-        // Module migrations under a temp path never reach the migrator in tests, so the table
-        // assertion alone cannot fail: the skip is also observed through its warning
+        // The skip is also observed through its warning
         Log::spy();
 
         $this->service->discover();

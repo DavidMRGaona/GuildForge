@@ -151,7 +151,9 @@ final readonly class ModuleMigrationRunner
             // Runtime guard: protect core tables during migration execution
             $this->schemaGuard->protect($moduleName, function () use ($migrationsPath): void {
                 Artisan::call('migrate', [
-                    '--path' => str_replace(base_path().'/', '', $migrationsPath),
+                    // Absolute and real: a module outside base_path() migrates too (tests)
+                    '--path' => $migrationsPath,
+                    '--realpath' => true,
                     '--force' => true,
                 ]);
             });
@@ -181,7 +183,9 @@ final readonly class ModuleMigrationRunner
             }
 
             Artisan::call('migrate:rollback', [
-                '--path' => str_replace(base_path().'/', '', $migrationsPath),
+                // Absolute and real: a module outside base_path() rolls back too (tests)
+                '--path' => $migrationsPath,
+                '--realpath' => true,
                 '--step' => $steps,
                 '--force' => true,
             ]);
