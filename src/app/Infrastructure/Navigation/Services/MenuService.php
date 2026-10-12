@@ -104,6 +104,12 @@ final readonly class MenuService implements MenuServiceInterface
 
             $children = $this->filterAndTransformItems($item->children(), $user);
 
+            // A parent that only groups links (no URL or route of its own) and lost all of
+            // them would render as a dead "#" link
+            if ($children === [] && $item->children() !== [] && $href === '#') {
+                continue;
+            }
+
             $result[] = new MenuItemDTO(
                 id: $item->id()->value,
                 label: $item->label(),

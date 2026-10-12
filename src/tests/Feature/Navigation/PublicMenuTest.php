@@ -92,6 +92,20 @@ final class PublicMenuTest extends TestCase
             ->once();
     }
 
+    public function test_a_parent_without_a_link_whose_children_are_all_left_out_is_left_out_too(): void
+    {
+        $this->menuItem(MenuLocation::Header, 'Eventos', url: '/eventos', sort: 1);
+        $parent = $this->menuItem(MenuLocation::Header, 'Partidas', sort: 2);
+        $this->menuItem(MenuLocation::Header, 'Mesas', route: 'gametables.index', module: 'game-tables', sort: 1, parentId: $parent->id);
+        $this->menuItem(MenuLocation::Header, 'Campañas', route: 'campaigns.index', module: 'game-tables', sort: 2, parentId: $parent->id);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('navigation.header', 1)
+                ->where('navigation.header.0.label', 'Eventos'));
+    }
+
     private function menuItem(
         MenuLocation $location,
         string $label,
