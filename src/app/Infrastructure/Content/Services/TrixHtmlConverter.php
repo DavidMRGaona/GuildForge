@@ -344,10 +344,6 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
                     $data = preg_replace('~^\s*\R\s*(?=\S)~u', ' ', $data) ?? $data;
                 }
 
-                if ($this->isInlineText($child->nextSibling)) {
-                    $data = preg_replace('~(?<=\S)\s*\R\s*$~u', ' ', $data) ?? $data;
-                }
-
                 if ($this->isInlineText($child->previousSibling) && $this->isInlineText($child->nextSibling)) {
                     $data = preg_replace('~^\s*\R\s*$~u', ' ', $data) ?? $data;
                 }
