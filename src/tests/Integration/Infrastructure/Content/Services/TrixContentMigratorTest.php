@@ -109,6 +109,8 @@ final class TrixContentMigratorTest extends TestCase
 
     public function test_a_backup_outside_the_backup_directory_is_refused(): void
     {
+        // The backup directory exists: the file is refused for where it is, not because nothing is there
+        File::ensureDirectoryExists($this->backups);
         $outside = sys_get_temp_dir().'/gf-richtext-outside-'.bin2hex(random_bytes(4)).'.json';
         File::put($outside, '[]');
 
@@ -132,13 +134,31 @@ final class TrixContentMigratorTest extends TestCase
     public function test_restoring_never_writes_outside_the_converted_columns(): void
     {
         $user = UserModel::factory()->create(['name' => 'Ana']);
+        app(SettingsServiceInterface::class)->set('site_name', 'GuildForge');
         File::ensureDirectoryExists($this->backups);
         File::put($this->backups.'/trix-edited-by-hand.json', json_encode([
             ['table' => 'users', 'column' => 'name', 'id' => (string) $user->id, 'original' => 'Mallory', 'converted' => 'Ana'],
+            ['table' => 'settings', 'column' => 'value', 'id' => 'site_name', 'original' => 'Mallory', 'converted' => 'GuildForge'],
         ], JSON_THROW_ON_ERROR));
 
         $this->assertSame(0, $this->migrator()->restore($this->backups.'/trix-edited-by-hand.json'));
         $this->assertSame('Ana', $user->fresh()?->name);
+        $this->assertSame('GuildForge', DB::table('settings')->where('key', 'site_name')->value('value'));
+    }
+
+    public function test_a_relative_path_cannot_climb_out_of_the_backup_directory(): void
+    {
+        File::ensureDirectoryExists($this->backups);
+        $sibling = $this->backups.'-sibling';
+        File::ensureDirectoryExists($sibling);
+        File::put($sibling.'/trix-x.json', '[]');
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->migrator()->restore('../'.basename($sibling).'/trix-x.json');
+        } finally {
+            File::deleteDirectory($sibling);
+        }
     }
 
     public function test_the_migration_converts_on_deploy(): void
