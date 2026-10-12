@@ -95,7 +95,8 @@ final readonly class ModuleManifestDTO
 
     private const array CONSTRAINT_KEYS = ['php', 'laravel', 'core', 'filament'];
 
-    private const array LIST_KEYS = ['modules', 'extensions'];
+    /** Requirements that are lists of strings, repaired rather than refused. */
+    public const array LIST_KEYS = ['modules', 'extensions'];
 
     /**
      * Makes a requires block safe to evaluate: a constraint with the wrong shape becomes ''
