@@ -45,6 +45,18 @@ final class SeoDescriptionBuilderTest extends TestCase
         $this->assertSame('10 de julio de 2026, 00:30 · Texto', $this->builder->build('Texto', $schedule, ''));
     }
 
+    public function test_event_ending_at_midnight_is_a_single_day(): void
+    {
+        // 20:00 to 00:00 in Madrid (winter, UTC+1)
+        $schedule = new SeoScheduleDTO(
+            start: new DateTimeImmutable('2026-01-15T19:00:00Z'),
+            end: new DateTimeImmutable('2026-01-15T23:00:00Z'),
+            location: 'La Taberna',
+        );
+
+        $this->assertSame('15 de enero de 2026, 20:00 · La Taberna · Texto', $this->builder->build('Texto', $schedule, ''));
+    }
+
     public function test_schedule_without_end_is_a_single_day(): void
     {
         $schedule = new SeoScheduleDTO(start: new DateTimeImmutable('2026-03-02T09:00:00Z'));
