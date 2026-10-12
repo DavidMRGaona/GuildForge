@@ -506,7 +506,9 @@ Sending `USR2` to PID 1 does not reload PHP-FPM: PID 1 is supervisord. To restar
 
 `src/VERSION` is the version modules declare compatibility against (`requires.core`). Bump it whenever the contract modules see changes: a minor version for compatible additions, a major version for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). Other deployments leave it alone.
 
-Every boot (each request and each `artisan` command, entrypoint included) loads only the enabled modules whose `module.json` this core satisfies; the others stay enabled in the database, are not loaded, and the panel shows a banner. Only compatible modules register migrations, so an incompatible module's migrations wait until it is compatible again. After deploying a core version, check on each tenant:
+The core can also reject old releases of a module that would break on it, whatever their `requires.core` says: `App\Domain\Modules\CoreModuleMinimumVersions` lists the oldest version of each such module (today `game-tables` 2.2.0, because the core no longer declares `EventModel::gameTables()`). Update those modules on every tenant before deploying a core that raises their minimum.
+
+Every boot (each request and each `artisan` command, entrypoint included) loads only the enabled modules whose `module.json` this core satisfies, and that are not older than its minimum for them; the others stay enabled in the database, are not loaded, and the panel shows a banner. Only compatible modules register migrations, so an incompatible module's migrations wait until it is compatible again. After deploying a core version, check on each tenant:
 
 - `php artisan core:version`
 - `php artisan module:list`: the `Compatible` column
