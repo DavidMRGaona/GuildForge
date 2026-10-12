@@ -3,7 +3,6 @@ import { useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
-import { useSeo } from '@/composables/useSeo';
 import type { ResetPasswordFormData } from '@/types/models';
 
 interface Props {
@@ -14,10 +13,6 @@ interface Props {
 const props = defineProps<Props>();
 
 const { t } = useI18n();
-
-useSeo({
-    title: t('auth.resetPassword.title'),
-});
 
 const form = useForm<ResetPasswordFormData>({
     token: props.token,

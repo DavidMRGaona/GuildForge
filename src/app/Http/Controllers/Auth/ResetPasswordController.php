@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ResetPasswordRequest;
@@ -16,6 +18,7 @@ final class ResetPasswordController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {
     }
 
@@ -24,6 +27,10 @@ final class ResetPasswordController extends Controller
         return Inertia::render('Auth/ResetPassword', [
             'token' => $token,
             'email' => $request->query('email', ''),
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.reset_password'),
+                noindex: true,
+            ))->toArray(),
         ]);
     }
 

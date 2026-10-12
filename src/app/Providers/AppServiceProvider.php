@@ -29,6 +29,7 @@ use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuItemHrefResolverInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Navigation\Services\RouteRegistryInterface;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\AuthServiceInterface;
@@ -41,6 +42,7 @@ use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\LegalPageServiceInterface;
 use App\Application\Services\LogContextProviderInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
 use App\Application\Services\SlugRedirectService;
 use App\Application\Services\SlugRedirectServiceInterface;
@@ -123,6 +125,10 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepositor
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentPhotoRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentSlugRedirectRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
+use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
+use App\Infrastructure\Seo\SeoDescriptionBuilder;
+use App\Infrastructure\Seo\SeoMetadataFactory;
+use App\Infrastructure\Seo\StructuredDataBuilder;
 use App\Infrastructure\Services\AboutPageService;
 use App\Infrastructure\Services\ArticleQueryService;
 use App\Infrastructure\Services\AuthService;
@@ -135,6 +141,7 @@ use App\Infrastructure\Services\ImageOptimizationService;
 use App\Infrastructure\Services\LegalPageService;
 use App\Infrastructure\Services\Logging\HttpLogContextProvider;
 use App\Infrastructure\Services\SettingsService;
+use App\Infrastructure\Services\SiteBrandingService;
 use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
@@ -237,6 +244,16 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(SitemapQueryServiceInterface::class, SitemapQueryService::class);
         $this->app->singleton(TagQueryServiceInterface::class, TagQueryService::class);
         $this->app->singleton(AboutPageServiceInterface::class, AboutPageService::class);
+        $this->app->singleton(SiteBrandingServiceInterface::class, SiteBrandingService::class);
+
+        // SEO: bind, not singleton — they read config and the current request URL
+        $this->app->bind(CloudinaryImageUrlBuilder::class, fn (): CloudinaryImageUrlBuilder => new CloudinaryImageUrlBuilder(
+            (string) config('cloudinary.cloud_name', ''),
+            (string) config('cloudinary.prefix', ''),
+        ));
+        $this->app->bind(SeoDescriptionBuilder::class, fn (): SeoDescriptionBuilder => new SeoDescriptionBuilder((string) config('app.timezone')));
+        $this->app->bind(StructuredDataBuilder::class, fn (): StructuredDataBuilder => new StructuredDataBuilder((string) config('app.timezone')));
+        $this->app->bind(SeoMetadataFactoryInterface::class, SeoMetadataFactory::class);
 
         // Module system bindings
         $this->app->bind(ModuleRepositoryInterface::class, EloquentModuleRepository::class);

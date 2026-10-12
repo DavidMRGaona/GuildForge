@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Http\Concerns\BuildsPaginatedResponse;
@@ -22,6 +24,7 @@ final class EventController extends Controller
     public function __construct(
         private readonly EventQueryServiceInterface $eventQuery,
         private readonly TagQueryServiceInterface $tagQuery,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {
     }
 
@@ -45,6 +48,7 @@ final class EventController extends Controller
             ),
             'tags' => TagResource::collection($availableTags)->resolve(),
             'currentTags' => $tagSlugs ?? [],
+            'seo' => $this->seo->forPage(new SeoPageDTO(title: (string) __('seo.titles.events')))->toArray(),
         ]);
     }
 
@@ -58,6 +62,7 @@ final class EventController extends Controller
 
         return Inertia::render('Events/Show', [
             'event' => EventResource::make($event)->resolve(),
+            'seo' => $this->seo->forEvent($event)->toArray(),
         ]);
     }
 }

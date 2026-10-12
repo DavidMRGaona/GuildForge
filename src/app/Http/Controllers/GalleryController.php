@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\GalleryQueryServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Http\Concerns\BuildsPaginatedResponse;
@@ -23,6 +25,7 @@ final class GalleryController extends Controller
     public function __construct(
         private readonly GalleryQueryServiceInterface $galleryQuery,
         private readonly TagQueryServiceInterface $tagQuery,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {
     }
 
@@ -46,6 +49,10 @@ final class GalleryController extends Controller
             ),
             'tags' => TagResource::collection($availableTags)->resolve(),
             'currentTags' => $tagSlugs ?? [],
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.gallery'),
+                description: (string) __('seo.descriptions.gallery'),
+            ))->toArray(),
         ]);
     }
 
@@ -59,6 +66,7 @@ final class GalleryController extends Controller
 
         return Inertia::render('Gallery/Show', [
             'gallery' => GalleryWithPhotosResource::make($gallery)->resolve(),
+            'seo' => $this->seo->forGallery($gallery)->toArray(),
         ]);
     }
 }

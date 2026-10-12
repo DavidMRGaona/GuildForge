@@ -5,7 +5,6 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import EventList from '@/components/events/EventList.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import TagFilter from '@/components/ui/TagFilter.vue';
-import { useSeo } from '@/composables/useSeo';
 import { usePagination } from '@/composables/usePagination';
 import { useRoutes } from '@/composables/useRoutes';
 
@@ -22,11 +21,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { t } = useI18n();
 const routes = useRoutes();
-
-useSeo({
-    title: t('events.title'),
-    description: t('home.subtitle'),
-});
 
 const {
     firstItemNumber,

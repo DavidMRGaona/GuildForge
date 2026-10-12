@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
@@ -21,6 +23,7 @@ final class ProfileController extends Controller
     public function __construct(
         private readonly AuthServiceInterface $authService,
         private readonly ResponseDTOFactoryInterface $dtoFactory,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {
     }
 
@@ -31,6 +34,10 @@ final class ProfileController extends Controller
 
         return Inertia::render('Profile/Show', [
             'user' => $this->dtoFactory->createUserDTO($user),
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.profile'),
+                noindex: true,
+            ))->toArray(),
         ]);
     }
 

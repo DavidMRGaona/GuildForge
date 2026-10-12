@@ -9,7 +9,6 @@ import TagList from '@/components/ui/TagList.vue';
 import { useLightbox } from '@/composables/useLightbox';
 import { useGallery } from '@/composables/useGallery';
 import { useTags } from '@/composables/useTags';
-import { useSeo } from '@/composables/useSeo';
 import { useRoutes } from '@/composables/useRoutes';
 import { buildGalleryImageUrl } from '@/utils/cloudinary';
 
@@ -24,11 +23,6 @@ const props = defineProps<Props>();
 const { t } = useI18n();
 const { formatGalleryDate } = useGallery();
 const routes = useRoutes();
-
-useSeo({
-    title: props.gallery.title,
-    description: props.gallery.description ?? t('gallery.subtitle'),
-});
 
 const photos = computed<Photo[]>(() => props.gallery.photos ?? []);
 const { isOpen, currentIndex, open, close, next, prev } = useLightbox(photos);

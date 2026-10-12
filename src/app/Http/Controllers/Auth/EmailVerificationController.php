@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
@@ -15,12 +17,18 @@ final class EmailVerificationController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {
     }
 
     public function notice(): Response
     {
-        return Inertia::render('Auth/VerifyEmail');
+        return Inertia::render('Auth/VerifyEmail', [
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.verify_email'),
+                noindex: true,
+            ))->toArray(),
+        ]);
     }
 
     public function verify(Request $request, string $id, string $hash): RedirectResponse

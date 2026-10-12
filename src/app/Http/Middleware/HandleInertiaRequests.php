@@ -9,7 +9,9 @@ use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Modules\ModuleLoader;
@@ -87,6 +89,8 @@ final class HandleInertiaRequests extends Middleware
             'cloudinary' => fn (): array => $this->getCloudinaryConfig(),
             'navigation' => fn () => $this->getNavigation($request),
             'socialLinks' => fn () => $this->getSocialLinks(),
+            // Site-wide defaults; a page's own `seo` prop overrides this one
+            'seo' => fn (): array => app(SeoMetadataFactoryInterface::class)->forSite()->toArray(),
         ];
     }
 
@@ -140,15 +144,7 @@ final class HandleInertiaRequests extends Middleware
     private function getFavicons(): array
     {
         try {
-            $settingsService = app(SettingsServiceInterface::class);
-
-            $lightPath = (string) $settingsService->get('site_favicon_light', '');
-            $darkPath = (string) $settingsService->get('site_favicon_dark', '');
-
-            return [
-                'light' => $lightPath !== '' ? Storage::disk('images')->url($lightPath) : null,
-                'dark' => $darkPath !== '' ? Storage::disk('images')->url($darkPath) : null,
-            ];
+            return app(SiteBrandingServiceInterface::class)->customFavicons();
         } catch (\Throwable $e) {
             $this->logDebugError('getFavicons', $e);
 

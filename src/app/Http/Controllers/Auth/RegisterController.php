@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Application\DTOs\CreateUserDTO;
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
@@ -16,12 +18,18 @@ final class RegisterController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {
     }
 
     public function create(): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/Register', [
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.register'),
+                noindex: true,
+            ))->toArray(),
+        ]);
     }
 
     public function store(RegisterRequest $request): RedirectResponse
