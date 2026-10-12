@@ -19,20 +19,25 @@ final class CoreDoesNotDependOnModulesTest extends TestCase
 {
     private const string PATTERN = '/^\s*use\s+\\\\?Modules\\\\|(?<![\w\\\\])\\\\?Modules\\\\[\w\\\\]+::class/m';
 
-    public function test_application_code_never_references_module_classes(): void
+    private const array DIRECTORIES = ['app', 'bootstrap', 'config', 'database', 'routes'];
+
+    public function test_core_code_never_references_module_classes(): void
     {
         $offenders = [];
-        $files = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator(dirname(__DIR__, 3).'/app', FilesystemIterator::SKIP_DOTS),
-        );
 
-        foreach ($files as $file) {
-            if (! $file instanceof SplFileInfo || $file->getExtension() !== 'php') {
-                continue;
-            }
+        foreach (self::DIRECTORIES as $directory) {
+            $files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator(dirname(__DIR__, 3).'/'.$directory, FilesystemIterator::SKIP_DOTS),
+            );
 
-            if (preg_match(self::PATTERN, (string) file_get_contents($file->getPathname())) === 1) {
-                $offenders[] = $file->getPathname();
+            foreach ($files as $file) {
+                if (! $file instanceof SplFileInfo || $file->getExtension() !== 'php' || str_contains($file->getPathname(), '/bootstrap/cache/')) {
+                    continue;
+                }
+
+                if (preg_match(self::PATTERN, (string) file_get_contents($file->getPathname())) === 1) {
+                    $offenders[] = $file->getPathname();
+                }
             }
         }
 
