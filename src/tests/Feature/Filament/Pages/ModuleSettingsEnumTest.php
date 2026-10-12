@@ -7,13 +7,13 @@ namespace Tests\Feature\Filament\Pages;
 use App\Filament\Pages\ModuleSettingsPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use App\Modules\ModuleLoader;
 use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Components\Select;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 use Tests\Support\Filament\FixtureTheme;
+use Tests\Support\Modules\RegistersBootedModuleProviders;
 use Tests\TestCase;
 
 /**
@@ -23,6 +23,7 @@ use Tests\TestCase;
 final class ModuleSettingsEnumTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RegistersBootedModuleProviders;
 
     private string $modulePath;
 
@@ -65,13 +66,5 @@ final class ModuleSettingsEnumTest extends TestCase
 
         $this->assertSame(['theme' => 'dark'], require $this->modulePath.'/config/settings.php');
         $this->assertSame('dark', config('modules.settings.settings-fixture.theme'));
-    }
-
-    private function loadProvider(ModuleServiceProvider $provider): void
-    {
-        // As if the module had booted: ModuleSettingsPage asks the loader for its provider
-        (function (ModuleServiceProvider $provider): void {
-            $this->loadedProviders[$provider->moduleName()] = $provider;
-        })->call(app(ModuleLoader::class), $provider);
     }
 }
