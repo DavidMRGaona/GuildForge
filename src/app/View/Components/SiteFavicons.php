@@ -22,7 +22,9 @@ final class SiteFavicons extends Component
     public function render(): View
     {
         try {
-            $custom = $this->branding->customFavicons()['light'];
+            $favicons = $this->branding->customFavicons();
+            // The light theme loads first; a dark-only favicon is still the site's own
+            $custom = $favicons['light'] ?? $favicons['dark'];
         } catch (Throwable) {
             $custom = null;
         }

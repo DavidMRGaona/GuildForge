@@ -46,11 +46,12 @@ final class SeoMetadataFactoryTest extends TestCase
         app('url')->setRequest($request);
     }
 
-    private function branding(?string $logoPath, ?string $logoUrl = null): void
+    private function branding(?string $logoPath, ?string $logoUrl = null, bool $logoIsDark = false): void
     {
         $branding = Mockery::mock(SiteBrandingServiceInterface::class);
         $branding->shouldReceive('customLogoPath')->andReturn($logoPath);
         $branding->shouldReceive('customLogoUrl')->andReturn($logoUrl);
+        $branding->shouldReceive('customLogoIsDark')->andReturn($logoIsDark);
         $branding->shouldReceive('socialProfileUrls')->andReturn(['https://instagram.com/tolerol']);
         $this->app->instance(SiteBrandingServiceInterface::class, $branding);
     }
@@ -119,6 +120,18 @@ final class SeoMetadataFactoryTest extends TestCase
 
         $this->assertSame('https://tolerol.com/storage/settings/logo.png', $seo->image?->url);
         $this->assertStringNotContainsString('images/defaults', json_encode($seo->toArray(), JSON_THROW_ON_ERROR));
+    }
+
+    public function test_dark_only_logo_is_used_on_a_dark_background_never_the_default(): void
+    {
+        $this->branding(logoPath: 'settings/dark.png', logoIsDark: true);
+
+        $seo = $this->factory()->forEvent($this->event(null));
+
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_600,h_600,c_pad,b_black,q_auto,f_png/guildforge/settings/dark',
+            $seo->image?->url,
+        );
     }
 
     public function test_default_logo_only_when_the_site_has_none(): void

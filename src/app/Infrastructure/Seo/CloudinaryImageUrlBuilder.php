@@ -33,11 +33,14 @@ final readonly class CloudinaryImageUrlBuilder
     }
 
     /**
-     * Square logo padded on white, for the small "summary" card.
+     * Square logo padded on white (black for a logo drawn for dark themes),
+     * for the small "summary" card.
      */
-    public function logo(string $publicId): ?string
+    public function logo(string $publicId, bool $darkBackground = false): ?string
     {
-        return $this->build($publicId, 'w_'.self::LOGO_SIZE.',h_'.self::LOGO_SIZE.',c_pad,b_white,q_auto,f_png');
+        $background = $darkBackground ? 'b_black' : 'b_white';
+
+        return $this->build($publicId, 'w_'.self::LOGO_SIZE.',h_'.self::LOGO_SIZE.",c_pad,{$background},q_auto,f_png");
     }
 
     private function build(string $publicId, string $transformations): ?string

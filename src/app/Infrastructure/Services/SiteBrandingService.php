@@ -20,12 +20,19 @@ final readonly class SiteBrandingService implements SiteBrandingServiceInterface
 
     public function customLogoPath(): ?string
     {
-        return $this->path('site_logo_light');
+        return $this->path('site_logo_light') ?? $this->path('site_logo_dark');
     }
 
     public function customLogoUrl(): ?string
     {
-        return $this->url('site_logo_light');
+        $path = $this->customLogoPath();
+
+        return $path !== null ? Storage::disk('images')->url($path) : null;
+    }
+
+    public function customLogoIsDark(): bool
+    {
+        return $this->path('site_logo_light') === null && $this->path('site_logo_dark') !== null;
     }
 
     public function customFavicons(): array

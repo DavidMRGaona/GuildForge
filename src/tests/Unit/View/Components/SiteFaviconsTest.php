@@ -35,6 +35,18 @@ final class SiteFaviconsTest extends TestCase
         $this->assertStringNotContainsString('/favicons/light/favicon', $html);
     }
 
+    public function test_dark_favicon_is_used_when_there_is_no_light_one(): void
+    {
+        $branding = Mockery::mock(SiteBrandingServiceInterface::class);
+        $branding->shouldReceive('customFavicons')->andReturn(['light' => null, 'dark' => 'https://res.cloudinary.com/demo/fav-dark.png']);
+        $this->app->instance(SiteBrandingServiceInterface::class, $branding);
+
+        $html = $this->render();
+
+        $this->assertStringContainsString('href="https://res.cloudinary.com/demo/fav-dark.png"', $html);
+        $this->assertStringNotContainsString('/favicons/light/favicon', $html);
+    }
+
     public function test_defaults_when_the_site_has_no_favicon(): void
     {
         $this->favicons(null);
