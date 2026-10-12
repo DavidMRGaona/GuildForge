@@ -171,7 +171,7 @@ src/
 │   │   │   ├── useGallery.ts           # Gallery utilities
 │   │   │   ├── useRoutes.ts            # Centralized route definitions
 │   │   │   ├── usePagination.ts        # Pagination
-│   │   │   ├── useSeo.ts              # Meta tags and OG tags
+│   │   │   ├── useSeo.ts              # Applies the server's seo prop (head tags)
 │   │   │   ├── useNotifications.ts     # Toast notification system
 │   │   │   ├── useModuleSlots.ts       # Dynamic loading of module components
 │   │   │   ├── useProfileTabs.ts       # Extensible profile tabs
