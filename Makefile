@@ -164,11 +164,11 @@ check: cs phpstan lint-js types ## Run ALL checks
 check-fix: cs-fix lint-js-fix ## Fix all auto-fixable issues
 	@echo "All auto-fixable issues resolved!"
 
-cs: ## PHP CS Fixer (dry-run)
-	docker exec $(PHP_CONTAINER) vendor/bin/php-cs-fixer fix --dry-run --diff
+cs: ## PHP code style check (Pint)
+	docker exec $(PHP_CONTAINER) vendor/bin/pint --test
 
-cs-fix: ## Fix PHP code style
-	docker exec $(PHP_CONTAINER) vendor/bin/php-cs-fixer fix
+cs-fix: ## Fix PHP code style (Pint)
+	docker exec $(PHP_CONTAINER) vendor/bin/pint
 
 phpstan: ## Static analysis
 	docker exec $(PHP_CONTAINER) vendor/bin/phpstan analyse
@@ -187,7 +187,7 @@ types: ## TypeScript type check
 # =============================================================================
 
 check-q: ## Check with minimal output
-	@docker exec $(PHP_CONTAINER) vendor/bin/php-cs-fixer fix --dry-run --quiet && echo "✓ CS" || echo "✗ CS"
+	@docker exec $(PHP_CONTAINER) vendor/bin/pint --test -q && echo "✓ CS" || echo "✗ CS"
 	@docker exec $(PHP_CONTAINER) vendor/bin/phpstan analyse --no-progress -q && echo "✓ PHPStan" || echo "✗ PHPStan"
 	@docker exec $(NODE_CONTAINER) npm run lint --silent && echo "✓ ESLint" || echo "✗ ESLint"
 	@docker exec $(NODE_CONTAINER) npm run type-check --silent && echo "✓ Types" || echo "✗ Types"
@@ -197,8 +197,8 @@ test-q: ## Tests with compact output (parallel)
 
 lint: check ## Alias for check
 
-format: ## Format all (CS Fixer + ESLint + Prettier)
-	@docker exec $(PHP_CONTAINER) vendor/bin/php-cs-fixer fix --quiet
+format: ## Format all (Pint + ESLint + Prettier)
+	@docker exec $(PHP_CONTAINER) vendor/bin/pint -q
 	@docker exec $(NODE_CONTAINER) npm run lint:fix --silent
 	@docker exec $(NODE_CONTAINER) npx prettier --write "resources/js/**/*.{ts,vue}" --log-level error
 

@@ -136,8 +136,8 @@ All commands are executed through `make` and run inside Docker containers.
 | `make check` | Run all linters (CS Fixer + PHPStan + ESLint + types) |
 | `make check-q` | Checks with minimal output |
 | `make format` | Format all code (CS Fixer + ESLint + Prettier) |
-| `make cs` | PHP CS Fixer (check only) |
-| `make cs-fix` | PHP CS Fixer (fix) |
+| `make cs` | PHP code style with Pint (check only) |
+| `make cs-fix` | PHP code style with Pint (fix) |
 | `make phpstan` | PHP static analysis |
 | `make lint-js` | ESLint for TypeScript/Vue |
 | `make lint-js-fix` | Fix ESLint issues |
@@ -370,9 +370,9 @@ PHPUnit notices and deprecations fail the suite (`failOnPhpunitNotice`, `failOnP
 
 ## Linting and formatting
 
-### PHP CS Fixer (PHP code style)
+### Pint (PHP code style)
 
-Uses `friendsofphp/php-cs-fixer` to check and fix PHP code style:
+Uses `laravel/pint` with the `laravel` preset plus `declare_strict_types` (`src/pint.json`); `modules/` is excluded because each module is its own repository. CI fails on any style difference (`vendor/bin/pint --test`):
 
 ```bash
 make cs       # Check (dry-run)

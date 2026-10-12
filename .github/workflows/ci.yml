@@ -51,6 +51,9 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
 
+      - name: PHP code style
+        run: vendor/bin/pint --test
+
       - name: Setup Node
         uses: actions/setup-node@v7
         with:

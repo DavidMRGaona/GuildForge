@@ -23,7 +23,6 @@
         "barryvdh/laravel-ide-helper": "^3.6",
         "brianium/paratest": "^7.20",
         "fakerphp/faker": "^1.23",
-        "friendsofphp/php-cs-fixer": "^3.92",
         "larastan/larastan": "^3.8",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
