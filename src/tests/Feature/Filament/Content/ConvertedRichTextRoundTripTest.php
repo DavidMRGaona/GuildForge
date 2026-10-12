@@ -37,7 +37,7 @@ final class ConvertedRichTextRoundTripTest extends TestCase
     #[DataProvider('convertedHtml')]
     public function test_saving_a_converted_event_description_keeps_it(string $trix): void
     {
-        $converted = (new TrixHtmlConverter())->convert($trix);
+        $converted = (new TrixHtmlConverter)->convert($trix);
         $event = EventModel::factory()->create([
             'description' => $converted,
             'start_date' => now()->addDays(10)->startOfHour(),
@@ -55,7 +55,7 @@ final class ConvertedRichTextRoundTripTest extends TestCase
     #[DataProvider('convertedHtml')]
     public function test_saving_a_converted_legal_page_keeps_it(string $trix): void
     {
-        $converted = (new TrixHtmlConverter())->convert($trix);
+        $converted = (new TrixHtmlConverter)->convert($trix);
         $settings = app(SettingsServiceInterface::class);
         $settings->set('legal_privacy_content', $converted);
 
@@ -68,7 +68,7 @@ final class ConvertedRichTextRoundTripTest extends TestCase
 
     public function test_saving_the_converted_real_article_keeps_it(): void
     {
-        $converted = (new TrixHtmlConverter())->convert((string) file_get_contents(base_path('tests/Fixtures/rich-text/trix-article.html')));
+        $converted = (new TrixHtmlConverter)->convert((string) file_get_contents(base_path('tests/Fixtures/rich-text/trix-article.html')));
         $article = ArticleModel::factory()->create(['content' => $converted]);
         $article->tags()->attach(TagModel::factory()->forArticles()->create(['parent_id' => null])->id);
 

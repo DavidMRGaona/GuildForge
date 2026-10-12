@@ -25,8 +25,7 @@ final class ModuleLoader
     public function __construct(
         private readonly Application $app,
         private readonly EnabledModulesResolverInterface $resolver,
-    ) {
-    }
+    ) {}
 
     /**
      * Boot all enabled modules.

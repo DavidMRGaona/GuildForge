@@ -15,8 +15,7 @@ final class AboutController extends Controller
     public function __construct(
         private readonly AboutPageServiceInterface $aboutPage,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function __invoke(): Response
     {

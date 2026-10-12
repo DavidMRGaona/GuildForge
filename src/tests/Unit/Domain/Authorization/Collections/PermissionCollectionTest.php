@@ -14,7 +14,7 @@ final class PermissionCollectionTest extends TestCase
 {
     public function test_it_creates_empty_collection(): void
     {
-        $collection = new PermissionCollection();
+        $collection = new PermissionCollection;
 
         $this->assertTrue($collection->isEmpty());
         $this->assertEquals(0, $collection->count());
@@ -33,7 +33,7 @@ final class PermissionCollectionTest extends TestCase
 
     public function test_it_adds_single_permission(): void
     {
-        $collection = new PermissionCollection();
+        $collection = new PermissionCollection;
         $permission = $this->createPermission('events.create');
 
         $collection->add($permission);
@@ -44,7 +44,7 @@ final class PermissionCollectionTest extends TestCase
 
     public function test_it_adds_multiple_permissions(): void
     {
-        $collection = new PermissionCollection();
+        $collection = new PermissionCollection;
         $permission1 = $this->createPermission('events.create');
         $permission2 = $this->createPermission('events.delete');
         $permission3 = $this->createPermission('users.view');
@@ -80,7 +80,7 @@ final class PermissionCollectionTest extends TestCase
 
     public function test_find_by_key_returns_null_if_not_found(): void
     {
-        $collection = new PermissionCollection();
+        $collection = new PermissionCollection;
 
         $result = $collection->findByKey(new PermissionKey('nonexistent.permission'));
 
@@ -97,7 +97,7 @@ final class PermissionCollectionTest extends TestCase
 
     public function test_has_returns_false_if_permission_does_not_exist(): void
     {
-        $collection = new PermissionCollection();
+        $collection = new PermissionCollection;
 
         $this->assertFalse($collection->has(new PermissionKey('nonexistent.permission')));
     }
@@ -173,7 +173,7 @@ final class PermissionCollectionTest extends TestCase
 
     public function test_grouped_returns_empty_array_for_empty_collection(): void
     {
-        $collection = new PermissionCollection();
+        $collection = new PermissionCollection;
 
         $result = $collection->grouped();
 
@@ -215,7 +215,7 @@ final class PermissionCollectionTest extends TestCase
 
     public function test_is_empty_returns_true_for_empty_collection(): void
     {
-        $collection = new PermissionCollection();
+        $collection = new PermissionCollection;
 
         $this->assertTrue($collection->isEmpty());
     }

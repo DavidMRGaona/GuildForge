@@ -25,8 +25,7 @@ final class EventController extends Controller
         private readonly EventQueryServiceInterface $eventQuery,
         private readonly TagQueryServiceInterface $tagQuery,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function index(TagFilterRequest $request): Response
     {

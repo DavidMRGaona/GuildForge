@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 trait InteractsWithModulePanel
 {
     /**
-     * @param  list<class-string<Resource>>  $resources
+     * @param  list<class-string<resource>>  $resources
      * @param  list<class-string<Page>>  $pages
      */
     protected function registerOnAdminPanel(array $resources = [], array $pages = []): void

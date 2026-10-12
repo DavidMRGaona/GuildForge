@@ -10,8 +10,7 @@ final readonly class ActivityDTO
         public string $icon,
         public string $title,
         public string $description,
-    ) {
-    }
+    ) {}
 
     /**
      * Create from array.

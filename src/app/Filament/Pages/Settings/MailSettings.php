@@ -25,14 +25,14 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 /**
- * @property \Filament\Schemas\Schema $form
+ * @property Schema $form
  */
 final class MailSettings extends Page implements HasForms
 {
     use InteractsWithForms;
     use ManagesPageSettings;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-envelope';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-envelope';
 
     protected static ?int $navigationSort = 12;
 

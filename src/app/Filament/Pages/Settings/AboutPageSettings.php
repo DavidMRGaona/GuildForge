@@ -23,14 +23,14 @@ use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
- * @property \Filament\Schemas\Schema $form
+ * @property Schema $form
  */
 final class AboutPageSettings extends Page implements HasForms
 {
     use InteractsWithForms;
     use ManagesPageSettings;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?int $navigationSort = 10;
 

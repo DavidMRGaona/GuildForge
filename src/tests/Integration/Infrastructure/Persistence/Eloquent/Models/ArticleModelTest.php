@@ -50,7 +50,7 @@ final class ArticleModelTest extends TestCase
             'author_id',
         ];
 
-        $model = new ArticleModel();
+        $model = new ArticleModel;
 
         $this->assertEquals($fillable, $model->getFillable());
     }

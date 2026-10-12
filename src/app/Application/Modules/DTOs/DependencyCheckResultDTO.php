@@ -18,8 +18,7 @@ final readonly class DependencyCheckResultDTO
         public array $versionMismatch = [],
         public array $circularDependencies = [],
         public array $unsatisfiedRequirements = [],
-    ) {
-    }
+    ) {}
 
     public function hasErrors(): bool
     {

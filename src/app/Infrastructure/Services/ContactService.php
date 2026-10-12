@@ -14,8 +14,7 @@ final readonly class ContactService implements ContactServiceInterface
 {
     public function __construct(
         private SettingsServiceInterface $settings,
-    ) {
-    }
+    ) {}
 
     public function sendContactMessage(ContactMessageDTO $dto): bool
     {

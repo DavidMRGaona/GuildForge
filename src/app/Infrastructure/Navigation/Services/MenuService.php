@@ -29,8 +29,7 @@ final readonly class MenuService implements MenuServiceInterface
         private AuthorizationServiceInterface $authService,
         private MenuItemHrefResolverInterface $hrefResolver,
         private ?ModuleNavigationRegistryInterface $moduleNavigationRegistry = null,
-    ) {
-    }
+    ) {}
 
     public function getHeaderMenu(?Authenticatable $user): array
     {

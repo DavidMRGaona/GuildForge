@@ -22,8 +22,7 @@ final class SearchController extends Controller
         private readonly EventQueryServiceInterface $eventQuery,
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function __invoke(SearchRequest $request): Response
     {

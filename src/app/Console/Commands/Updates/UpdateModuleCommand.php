@@ -74,7 +74,7 @@ final class UpdateModuleCommand extends Command
         }
 
         if ($preview->hasMigrations()) {
-            $this->info('Pending migrations: ' . count($preview->pendingMigrations));
+            $this->info('Pending migrations: '.count($preview->pendingMigrations));
         }
 
         if ($dryRun) {

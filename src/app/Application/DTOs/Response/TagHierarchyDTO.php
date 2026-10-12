@@ -24,8 +24,7 @@ final readonly class TagHierarchyDTO
         public string $indentedNameForSelect,
         public string $hierarchySortKey,
         public ?string $description = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Create from TagResponseDTO with computed hierarchical data.

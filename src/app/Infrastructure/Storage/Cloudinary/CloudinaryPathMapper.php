@@ -19,7 +19,7 @@ final readonly class CloudinaryPathMapper
 {
     private string $prefix;
 
-    public function __construct(?string $prefix = null, private MimeTypeDetector $mimeTypes = new FinfoMimeTypeDetector())
+    public function __construct(?string $prefix = null, private MimeTypeDetector $mimeTypes = new FinfoMimeTypeDetector)
     {
         $this->prefix = $prefix !== null ? trim(str_replace('\\', '/', $prefix), '/') : '';
     }

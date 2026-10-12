@@ -21,8 +21,7 @@ final readonly class RoleService implements RoleServiceInterface
     public function __construct(
         private RoleRepositoryInterface $roleRepository,
         private PermissionRepositoryInterface $permissionRepository,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<RoleResponseDTO>

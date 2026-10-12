@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Services;
 
 use App\Application\DTOs\Response\TagHierarchyDTO;
+use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Services\TagQueryService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -19,7 +22,7 @@ final class TagQueryServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new TagQueryService();
+        $this->service = new TagQueryService;
     }
 
     public function test_get_all_in_hierarchical_order_returns_empty_array_when_no_tags(): void
@@ -235,9 +238,9 @@ final class TagQueryServiceTest extends TestCase
         ]);
 
         // Create related events, articles, and galleries
-        $events = \App\Infrastructure\Persistence\Eloquent\Models\EventModel::factory()->count(3)->create();
-        $articles = \App\Infrastructure\Persistence\Eloquent\Models\ArticleModel::factory()->count(2)->create();
-        $galleries = \App\Infrastructure\Persistence\Eloquent\Models\GalleryModel::factory()->count(4)->create();
+        $events = EventModel::factory()->count(3)->create();
+        $articles = ArticleModel::factory()->count(2)->create();
+        $galleries = GalleryModel::factory()->count(4)->create();
 
         // Attach tag to items
         foreach ($events as $event) {

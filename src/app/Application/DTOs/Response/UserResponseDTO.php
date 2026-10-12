@@ -19,8 +19,7 @@ final readonly class UserResponseDTO implements JsonSerializable
         public string $role,
         public bool $emailVerified,
         public DateTimeImmutable $createdAt,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>

@@ -22,8 +22,7 @@ final readonly class GitHubReleaseInfo
         public bool $isPrerelease,
         public string $manifestUrl = '',
         public int $manifestSize = 0,
-    ) {
-    }
+    ) {}
 
     /**
      * Create from GitHub API response.

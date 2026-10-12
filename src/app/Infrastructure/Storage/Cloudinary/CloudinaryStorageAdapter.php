@@ -66,8 +66,7 @@ final class CloudinaryStorageAdapter implements ChecksumProvider, FilesystemAdap
         private readonly Cloudinary $cloudinary,
         private readonly CloudinaryPathMapper $paths,
         private readonly ?ImageOptimizationServiceInterface $imageOptimization = null,
-    ) {
-    }
+    ) {}
 
     public function getUrl(string $path): string
     {

@@ -1,5 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+
 return [
 
     /*
@@ -62,7 +66,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'uuid-eloquent',
-            'model' => env('AUTH_MODEL', App\Infrastructure\Persistence\Eloquent\Models\UserModel::class),
+            'model' => env('AUTH_MODEL', UserModel::class),
         ],
 
         // 'users' => [

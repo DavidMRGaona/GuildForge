@@ -24,8 +24,7 @@ final class ModuleContextService implements ModuleContextServiceInterface
         private readonly ViewFactory $viewFactory,
         private readonly Translator $translator,
         private readonly UrlGenerator $urlGenerator,
-    ) {
-    }
+    ) {}
 
     public function current(): ?string
     {

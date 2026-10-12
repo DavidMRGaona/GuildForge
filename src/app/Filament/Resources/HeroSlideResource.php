@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\BaseResource;
-use App\Filament\Resources\HeroSlideResource\Pages;
 use App\Filament\Resources\HeroSlideResource\Pages\CreateHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\EditHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\ListHeroSlides;
@@ -25,9 +23,9 @@ class HeroSlideResource extends BaseResource
 {
     protected static ?string $model = HeroSlideModel::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-photo';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-photo';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Contenido';
+    protected static string|\UnitEnum|null $navigationGroup = 'Contenido';
 
     protected static ?int $navigationSort = 0;
 

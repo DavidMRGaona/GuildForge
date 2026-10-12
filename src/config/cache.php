@@ -1,5 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\ValueObjects\CompatibilityIssue;
+use App\Domain\Modules\ValueObjects\ModuleId;
+use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Domain\Modules\ValueObjects\ModuleRequirements;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use Illuminate\Support\Str;
 
 return [
@@ -130,15 +140,15 @@ return [
     */
 
     'serializable_classes' => [
-        \App\Domain\Modules\Entities\Module::class,
-        \App\Domain\Modules\Enums\ModuleStatus::class,
-        \App\Domain\Modules\Enums\RequirementType::class,
-        \App\Domain\Modules\ValueObjects\CompatibilityIssue::class,
-        \App\Domain\Modules\ValueObjects\ModuleId::class,
-        \App\Domain\Modules\ValueObjects\ModuleName::class,
-        \App\Domain\Modules\ValueObjects\ModuleRequirements::class,
-        \App\Domain\Modules\ValueObjects\ModuleVersion::class,
-        \DateTimeImmutable::class,
+        Module::class,
+        ModuleStatus::class,
+        RequirementType::class,
+        CompatibilityIssue::class,
+        ModuleId::class,
+        ModuleName::class,
+        ModuleRequirements::class,
+        ModuleVersion::class,
+        DateTimeImmutable::class,
     ],
 
 ];

@@ -44,7 +44,7 @@ interface PermissionRepositoryInterface
      * Find permission IDs by their keys.
      *
      * @param  array<string>  $keys
-     * @return array<string>  Permission IDs
+     * @return array<string> Permission IDs
      */
     public function findIdsByKeys(array $keys): array;
 }

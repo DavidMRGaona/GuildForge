@@ -21,7 +21,7 @@ final class ModuleCompatibilityCheckerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->checker = new ModuleCompatibilityChecker(new ConstraintMatcher());
+        $this->checker = new ModuleCompatibilityChecker(new ConstraintMatcher);
     }
 
     public function test_a_module_with_satisfied_requirements_is_compatible(): void

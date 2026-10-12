@@ -1,5 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Http\Middleware\BlockBotsMiddleware;
+use App\Http\Middleware\EnsureLoginIsEnabled;
+use App\Http\Middleware\EnsureRegistrationIsEnabled;
+use App\Http\Middleware\EnsureSiteIsNotInMaintenance;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeadersMiddleware;
 use App\Providers\ModulesServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -27,18 +35,18 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
-            \App\Http\Middleware\SecurityHeadersMiddleware::class,
-            \App\Http\Middleware\EnsureSiteIsNotInMaintenance::class,
+            HandleInertiaRequests::class,
+            SecurityHeadersMiddleware::class,
+            EnsureSiteIsNotInMaintenance::class,
         ]);
 
         // Bot protection - runs on ALL requests
-        $middleware->append(\App\Http\Middleware\BlockBotsMiddleware::class);
+        $middleware->append(BlockBotsMiddleware::class);
 
         $middleware->alias([
-            'registration.enabled' => \App\Http\Middleware\EnsureRegistrationIsEnabled::class,
-            'login.enabled' => \App\Http\Middleware\EnsureLoginIsEnabled::class,
-            'bot-protection' => \App\Http\Middleware\BlockBotsMiddleware::class,
+            'registration.enabled' => EnsureRegistrationIsEnabled::class,
+            'login.enabled' => EnsureLoginIsEnabled::class,
+            'bot-protection' => BlockBotsMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

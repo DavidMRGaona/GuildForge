@@ -15,8 +15,7 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
 {
     public function __construct(
         private ModuleManagerServiceInterface $moduleManager,
-    ) {
-    }
+    ) {}
 
     public function check(ModuleName $name): HealthCheckResultDTO
     {
@@ -56,7 +55,7 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
                 return false;
             }
 
-            $providerClass = $module->namespace() . '\\' . $module->provider();
+            $providerClass = $module->namespace().'\\'.$module->provider();
 
             if (! class_exists($providerClass)) {
                 Log::warning("Module provider class not found: {$providerClass}");
@@ -87,8 +86,8 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
             }
 
             // Check if route files exist
-            $webRoutePath = $module->path() . '/routes/web.php';
-            $apiRoutePath = $module->path() . '/routes/api.php';
+            $webRoutePath = $module->path().'/routes/web.php';
+            $apiRoutePath = $module->path().'/routes/api.php';
 
             $hasRoutes = file_exists($webRoutePath) || file_exists($apiRoutePath);
 
@@ -131,7 +130,7 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
                 return false;
             }
 
-            $filamentPath = $module->path() . '/src/Filament';
+            $filamentPath = $module->path().'/src/Filament';
 
             if (! is_dir($filamentPath)) {
                 // No Filament resources - this is okay
@@ -139,9 +138,9 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
             }
 
             // Check Resources directory
-            $resourcesPath = $filamentPath . '/Resources';
+            $resourcesPath = $filamentPath.'/Resources';
             if (is_dir($resourcesPath)) {
-                $files = glob($resourcesPath . '/*Resource.php');
+                $files = glob($resourcesPath.'/*Resource.php');
                 if ($files !== false) {
                     foreach ($files as $file) {
                         if (! $this->isValidPhp($file)) {

@@ -72,7 +72,7 @@ final class InteractsWithModulePanelTest extends TestCase
 
     private function forgetPanelRoutes(): void
     {
-        $routes = new RouteCollection();
+        $routes = new RouteCollection;
 
         foreach (app('router')->getRoutes()->getRoutes() as $route) {
             $name = (string) $route->getName();

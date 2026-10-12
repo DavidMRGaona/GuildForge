@@ -11,6 +11,5 @@ final readonly class AuthorResponseDTO
         public string $name,
         public string $displayName,
         public ?string $avatarPublicId,
-    ) {
-    }
+    ) {}
 }

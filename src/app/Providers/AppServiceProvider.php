@@ -61,6 +61,11 @@ use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
+use App\Domain\Modules\Events\ModuleDisabled;
+use App\Domain\Modules\Events\ModuleEnabled;
+use App\Domain\Modules\Events\ModuleInstalled;
+use App\Domain\Modules\Events\ModuleUninstalled;
+use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\Services\ConstraintMatcher;
 use App\Domain\Modules\ValueObjects\CoreTableRegistry;
@@ -85,6 +90,8 @@ use App\Infrastructure\Mail\Services\MailStatisticsService;
 use App\Infrastructure\Mail\Services\MailTestService;
 use App\Infrastructure\Mail\Ses\SnsMessageValidator;
 use App\Infrastructure\Mail\Ses\SnsMessageValidatorInterface;
+use App\Infrastructure\Modules\Listeners\BuildModuleAssetsOnEnabled;
+use App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange;
 use App\Infrastructure\Modules\Services\EnabledModulesResolver;
 use App\Infrastructure\Modules\Services\HostEnvironmentProvider;
 use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
@@ -105,6 +112,9 @@ use App\Infrastructure\Modules\Services\ModuleSchemaGuard;
 use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use App\Infrastructure\Modules\Services\ModuleSlotRegistry;
 use App\Infrastructure\Modules\Services\StubRenderer;
+use App\Infrastructure\Navigation\Listeners\ActivateMenuItemsOnModuleEnabled;
+use App\Infrastructure\Navigation\Listeners\DeactivateMenuItemsOnModuleDisabled;
+use App\Infrastructure\Navigation\Listeners\DeleteMenuItemsOnModuleUninstalled;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Repositories\EloquentMenuItemRepository;
 use App\Infrastructure\Navigation\Services\MenuItemHrefResolver;
@@ -158,6 +168,7 @@ use App\Infrastructure\Updates\Services\ModulePackageInstaller;
 use App\Infrastructure\Updates\Services\ModuleUpdateChecker;
 use App\Infrastructure\Updates\Services\ModuleUpdater;
 use App\Infrastructure\Updates\Services\ProcessModulePostUpdateRunner;
+use App\Modules\ModuleLoader;
 use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
@@ -360,8 +371,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CoreUpdateCheckerInterface::class, CoreUpdateChecker::class);
 
         // Module loader (for booting enabled modules)
-        $this->app->singleton(\App\Modules\ModuleLoader::class, function ($app) {
-            return new \App\Modules\ModuleLoader(
+        $this->app->singleton(ModuleLoader::class, function ($app) {
+            return new ModuleLoader(
                 $app,
                 $app->make(EnabledModulesResolverInterface::class),
             );
@@ -402,39 +413,39 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(MenuItemModel::class, MenuItemPolicy::class);
 
         Event::listen(
-            \App\Domain\Modules\Events\ModuleDisabled::class,
-            \App\Infrastructure\Navigation\Listeners\DeactivateMenuItemsOnModuleDisabled::class,
+            ModuleDisabled::class,
+            DeactivateMenuItemsOnModuleDisabled::class,
         );
         Event::listen(
-            \App\Domain\Modules\Events\ModuleEnabled::class,
-            \App\Infrastructure\Navigation\Listeners\ActivateMenuItemsOnModuleEnabled::class,
+            ModuleEnabled::class,
+            ActivateMenuItemsOnModuleEnabled::class,
         );
 
         // Clear Laravel caches when modules change (required for cached routes in production)
         Event::listen(
-            \App\Domain\Modules\Events\ModuleEnabled::class,
-            \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+            ModuleEnabled::class,
+            ClearCachesOnModuleChange::class,
         );
         // Build module Vue component assets when enabled (runs async via queue)
         Event::listen(
-            \App\Domain\Modules\Events\ModuleEnabled::class,
-            \App\Infrastructure\Modules\Listeners\BuildModuleAssetsOnEnabled::class,
+            ModuleEnabled::class,
+            BuildModuleAssetsOnEnabled::class,
         );
         Event::listen(
-            \App\Domain\Modules\Events\ModuleDisabled::class,
-            \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+            ModuleDisabled::class,
+            ClearCachesOnModuleChange::class,
         );
         Event::listen(
-            \App\Domain\Modules\Events\ModuleInstalled::class,
-            \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+            ModuleInstalled::class,
+            ClearCachesOnModuleChange::class,
         );
         Event::listen(
-            \App\Domain\Modules\Events\ModuleUpdated::class,
-            \App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange::class,
+            ModuleUpdated::class,
+            ClearCachesOnModuleChange::class,
         );
         Event::listen(
-            \App\Domain\Modules\Events\ModuleUninstalled::class,
-            \App\Infrastructure\Navigation\Listeners\DeleteMenuItemsOnModuleUninstalled::class,
+            ModuleUninstalled::class,
+            DeleteMenuItemsOnModuleUninstalled::class,
         );
 
         // Email quota enforcement: check quota before sending

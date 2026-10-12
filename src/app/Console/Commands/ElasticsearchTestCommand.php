@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use Elastic\Elasticsearch\ClientBuilder;
+use Elastic\Elasticsearch\Response\Elasticsearch;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -68,7 +69,7 @@ final class ElasticsearchTestCommand extends Command
 
             $client = $builder->build();
 
-            /** @var \Elastic\Elasticsearch\Response\Elasticsearch $response */
+            /** @var Elasticsearch $response */
             $response = $client->info();
             $info = $response->asArray();
 

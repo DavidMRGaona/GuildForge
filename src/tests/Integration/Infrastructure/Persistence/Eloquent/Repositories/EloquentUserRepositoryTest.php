@@ -22,7 +22,7 @@ final class EloquentUserRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->repository = new EloquentUserRepository();
+        $this->repository = new EloquentUserRepository;
     }
 
     public function test_it_implements_user_repository_interface(): void

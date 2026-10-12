@@ -44,8 +44,7 @@ final readonly class EnsureSiteIsNotInMaintenance
     public function __construct(
         private SettingsServiceInterface $settings,
         private SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {

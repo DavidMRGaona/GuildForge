@@ -13,8 +13,7 @@ final readonly class EnsureLoginIsEnabled
 {
     public function __construct(
         private SettingsServiceInterface $settings,
-    ) {
-    }
+    ) {}
 
     /**
      * Handle an incoming request.

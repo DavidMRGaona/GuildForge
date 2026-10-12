@@ -16,9 +16,8 @@ use TypeError;
 final readonly class ModuleManifestReader
 {
     public function __construct(
-        private LoggerInterface $logger = new NullLogger(),
-    ) {
-    }
+        private LoggerInterface $logger = new NullLogger,
+    ) {}
 
     /**
      * A bad repository or requirement never aborts the read: the repository is dropped

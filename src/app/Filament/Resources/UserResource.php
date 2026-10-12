@@ -8,7 +8,6 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\UserServiceInterface;
-use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
@@ -46,9 +45,9 @@ class UserResource extends BaseResource
 {
     protected static ?string $model = UserModel::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-users';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Administración';
+    protected static string|\UnitEnum|null $navigationGroup = 'Administración';
 
     protected static ?int $navigationSort = 1;
 

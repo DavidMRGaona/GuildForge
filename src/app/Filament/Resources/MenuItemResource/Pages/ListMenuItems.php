@@ -26,7 +26,7 @@ class ListMenuItems extends ListRecords
     }
 
     /**
-     * @return array<string, \Filament\Schemas\Components\Tabs\Tab>
+     * @return array<string, Tab>
      */
     public function getTabs(): array
     {

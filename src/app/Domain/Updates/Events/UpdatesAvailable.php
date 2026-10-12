@@ -12,8 +12,7 @@ final readonly class UpdatesAvailable
     public function __construct(
         public array $moduleUpdates,
         public ?string $coreUpdate = null,
-    ) {
-    }
+    ) {}
 
     public function hasUpdates(): bool
     {

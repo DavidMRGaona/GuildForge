@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console\Commands\Updates;
 
+use App\Application\Updates\Services\CoreVersionServiceInterface;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -77,11 +79,11 @@ final class RecordDeploymentCommandTest extends TestCase
     public function test_an_unknown_commit_is_not_recorded_and_does_not_break_the_boot(): void
     {
         config(['updates.core.commit' => null]);
-        $this->app->instance(\App\Application\Updates\Services\CoreVersionServiceInterface::class, new class implements \App\Application\Updates\Services\CoreVersionServiceInterface
+        $this->app->instance(CoreVersionServiceInterface::class, new class implements CoreVersionServiceInterface
         {
-            public function getCurrentVersion(): \App\Domain\Modules\ValueObjects\ModuleVersion
+            public function getCurrentVersion(): ModuleVersion
             {
-                return \App\Domain\Modules\ValueObjects\ModuleVersion::fromString('1.0.0');
+                return ModuleVersion::fromString('1.0.0');
             }
 
             public function getCurrentCommit(): string

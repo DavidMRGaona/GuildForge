@@ -14,8 +14,7 @@ final readonly class SlugRedirectService implements SlugRedirectServiceInterface
 {
     public function __construct(
         private SlugRedirectRepositoryInterface $repository,
-    ) {
-    }
+    ) {}
 
     public function resolveCurrentSlug(string $slug, string $entityType): ?string
     {
@@ -51,7 +50,7 @@ final readonly class SlugRedirectService implements SlugRedirectServiceInterface
                 newSlug: $newSlugVO,
                 entityType: $entityType,
                 entityId: $entityId,
-                createdAt: new DateTimeImmutable(),
+                createdAt: new DateTimeImmutable,
             );
             $this->repository->save($redirect);
         }

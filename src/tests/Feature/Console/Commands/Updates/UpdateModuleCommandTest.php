@@ -440,7 +440,7 @@ final class UpdateModuleCommandTest extends TestCase
                 currentVersion: '1.0.0',
                 availableVersion: '2.0.0',
                 releaseNotes: '',
-                publishedAt: new DateTimeImmutable(),
+                publishedAt: new DateTimeImmutable,
                 isPrerelease: false,
                 isMajorUpdate: true,
                 downloadUrl: '',
@@ -458,7 +458,7 @@ final class UpdateModuleCommandTest extends TestCase
     {
         $this->updater->shouldReceive('preview')->andReturn($this->compatiblePreview('gallery'));
         $this->updater->shouldNotReceive('update');
-        $this->updateChecker->shouldReceive('checkAllForUpdates')->andReturn(new Collection());
+        $this->updateChecker->shouldReceive('checkAllForUpdates')->andReturn(new Collection);
 
         $this->artisan('module:update', ['name' => 'gallery', '--dry-run' => true])->assertExitCode(0);
         $this->artisan('module:update', ['--all' => true, '--force' => true])->assertExitCode(0);
@@ -513,7 +513,7 @@ final class UpdateModuleCommandTest extends TestCase
             currentVersion: '1.0.0',
             availableVersion: '2.0.0',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
             isMajorUpdate: true,
             downloadUrl: '',

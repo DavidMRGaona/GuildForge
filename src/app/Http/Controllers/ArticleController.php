@@ -25,8 +25,7 @@ final class ArticleController extends Controller
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly TagQueryServiceInterface $tagQuery,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function index(TagFilterRequest $request): Response
     {

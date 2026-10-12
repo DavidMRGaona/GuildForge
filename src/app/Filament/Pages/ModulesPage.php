@@ -27,20 +27,21 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Schema;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
- * @property \Filament\Schemas\Schema $form
+ * @property Schema $form
  */
 final class ModulesPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-puzzle-piece';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-puzzle-piece';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Administración';
+    protected static string|\UnitEnum|null $navigationGroup = 'Administración';
 
     protected static ?int $navigationSort = 90;
 
@@ -217,7 +218,7 @@ final class ModulesPage extends Page implements HasForms
                 ]);
             }
 
-            $this->js('window.location.href = '.json_encode(static::getUrl()));
+            $this->js('window.location.href = '.json_encode(self::getUrl()));
         } catch (ModuleIncompatibleException $e) {
             Notification::make()
                 ->title(app(CompatibilityIssueFormatter::class)->incompatiblePackage($e->moduleName, $e->version, $e->issues))

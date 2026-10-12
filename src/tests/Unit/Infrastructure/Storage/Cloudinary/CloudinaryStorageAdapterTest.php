@@ -44,7 +44,7 @@ final class CloudinaryStorageAdapterTest extends TestCase
             ['public_id' => 'guildforge/events/2026/01/abc', 'resource_type' => 'image', 'asset_folder' => 'guildforge/events/2026/01'],
         );
 
-        $this->adapter(upload: $upload)->write('events/2026/01/abc.jpg', 'bytes', new Config());
+        $this->adapter(upload: $upload)->write('events/2026/01/abc.jpg', 'bytes', new Config);
     }
 
     public function test_write_stream_uploads_the_optimized_image(): void
@@ -60,7 +60,7 @@ final class CloudinaryStorageAdapterTest extends TestCase
         fwrite($stream, 'large');
         rewind($stream);
 
-        $this->adapter(upload: $upload, optimizer: $optimizer)->writeStream('hero/slide.png', $stream, new Config());
+        $this->adapter(upload: $upload, optimizer: $optimizer)->writeStream('hero/slide.png', $stream, new Config);
     }
 
     public function test_upload_errors_reach_the_caller(): void
@@ -70,7 +70,7 @@ final class CloudinaryStorageAdapterTest extends TestCase
 
         $this->expectException(RateLimited::class);
 
-        $this->adapter(upload: $upload)->write('events/a.jpg', 'bytes', new Config());
+        $this->adapter(upload: $upload)->write('events/a.jpg', 'bytes', new Config);
     }
 
     public function test_delete_destroys_the_prefixed_public_id(): void
@@ -203,7 +203,8 @@ final class CloudinaryStorageAdapterTest extends TestCase
 
     public function test_urls_are_built_locally_without_the_admin_api(): void
     {
-        $cloudinary = new class ('cloudinary://key:secret@test-cloud') extends Cloudinary {
+        $cloudinary = new class('cloudinary://key:secret@test-cloud') extends Cloudinary
+        {
             public function adminApi(): AdminApi
             {
                 throw new LogicException('URLs must not call the Admin API');

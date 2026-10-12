@@ -15,7 +15,7 @@ use Filament\Schemas\Schema;
  * Stands in for the module settings pages that render the core's
  * "filament.pages.simple-settings" view (game-tables, memberships, venue-bookings).
  *
- * @property \Filament\Schemas\Schema $form
+ * @property Schema $form
  */
 final class SimpleSettingsFixturePage extends Page implements HasForms
 {
