@@ -31,7 +31,16 @@ final class TimePickerTest extends TestCase
             ->fillForm(['starts_at' => '10:00', 'ends_at' => '14:30:00'])
             ->call('save')
             ->assertHasNoFormErrors()
-            ->assertSet('saved', ['starts_at' => '10:00', 'ends_at' => '14:30:00']);
+            ->assertSet('saved', ['starts_at' => '10:00', 'ends_at' => '14:30', 'closes_at' => null]);
+    }
+
+    public function test_a_picker_that_asks_for_seconds_hands_them_over(): void
+    {
+        Livewire::test(TimePickerFixturePage::class)
+            ->fillForm(['starts_at' => '10:00', 'closes_at' => '22:15:30'])
+            ->call('save')
+            ->assertHasNoFormErrors()
+            ->assertSet('saved', ['starts_at' => '10:00', 'ends_at' => null, 'closes_at' => '22:15:30']);
     }
 
     public function test_a_mistyped_time_is_a_form_error(): void

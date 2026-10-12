@@ -45,6 +45,7 @@ final class TimePickerFixturePage extends Page implements HasForms
             ->components([
                 TimePicker::make('starts_at')->label('Hora de inicio')->required(),
                 TimePicker::make('ends_at')->label('Hora de fin'),
+                TimePicker::make('closes_at')->label('Hora de cierre')->seconds(),
             ])
             ->statePath('data');
     }
