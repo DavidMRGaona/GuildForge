@@ -111,6 +111,19 @@ final class ModuleSettingsPage extends Page implements HasForms
         $this->moduleNamespace = $moduleEntity->namespace();
         $this->moduleIsEnabled = $moduleEntity->isEnabled();
 
+        // The generic page only edits getSettingsSchema(): a module without one has nothing here
+        // (a module with its own settings page lists that page in the panel navigation)
+        if (! $this->hasSettings()) {
+            Notification::make()
+                ->title(__('modules.filament.settings_page.no_settings'))
+                ->warning()
+                ->send();
+
+            $this->redirect(ModulesPage::getUrl());
+
+            return;
+        }
+
         // Load current settings
         $settings = $moduleManager->getSettings(new ModuleName($module));
         $this->form->fill($settings);
