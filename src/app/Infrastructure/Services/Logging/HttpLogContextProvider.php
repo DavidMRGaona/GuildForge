@@ -14,8 +14,7 @@ final class HttpLogContextProvider implements LogContextProviderInterface
 {
     public function __construct(
         private readonly ?Request $request = null,
-    ) {
-    }
+    ) {}
 
     public function getRequestId(): ?string
     {

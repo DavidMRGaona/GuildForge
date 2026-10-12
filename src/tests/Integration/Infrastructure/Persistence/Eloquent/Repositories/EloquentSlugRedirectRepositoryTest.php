@@ -22,7 +22,7 @@ final class EloquentSlugRedirectRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->repository = new EloquentSlugRedirectRepository();
+        $this->repository = new EloquentSlugRedirectRepository;
     }
 
     public function test_it_implements_interface(): void
@@ -104,7 +104,7 @@ final class EloquentSlugRedirectRepositoryTest extends TestCase
             newSlug: new Slug('new-slug'),
             entityType: 'article',
             entityId: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
-            createdAt: new DateTimeImmutable(),
+            createdAt: new DateTimeImmutable,
         );
 
         $this->repository->save($redirect);
@@ -134,7 +134,7 @@ final class EloquentSlugRedirectRepositoryTest extends TestCase
             newSlug: new Slug('final-slug'),
             entityType: 'article',
             entityId: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
-            createdAt: new DateTimeImmutable(),
+            createdAt: new DateTimeImmutable,
         );
 
         $this->repository->save($redirect);

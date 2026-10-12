@@ -16,8 +16,7 @@ final class Permission
         private readonly string $resource,
         private readonly string $action,
         private readonly ?string $module = null,
-    ) {
-    }
+    ) {}
 
     public function id(): PermissionId
     {

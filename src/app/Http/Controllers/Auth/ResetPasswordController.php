@@ -19,8 +19,7 @@ final class ResetPasswordController extends Controller
     public function __construct(
         private readonly AuthServiceInterface $authService,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function create(Request $request, string $token): Response
     {

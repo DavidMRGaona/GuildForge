@@ -13,8 +13,7 @@ final readonly class UpdateRoleDTO
         public ?string $displayName = null,
         public ?string $description = null,
         public ?array $permissionKeys = null,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{display_name?: string|null, description?: string|null, permission_keys?: array<string>|null}  $data

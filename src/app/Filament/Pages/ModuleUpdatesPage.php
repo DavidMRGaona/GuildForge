@@ -37,11 +37,11 @@ final class ModuleUpdatesPage extends Page implements HasTable
     use ChecksPermissions;
     use InteractsWithTable;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-path';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-path';
 
     protected string $view = 'filament.pages.module-updates';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Sistema';
+    protected static string|\UnitEnum|null $navigationGroup = 'Sistema';
 
     protected static ?int $navigationSort = 100;
 

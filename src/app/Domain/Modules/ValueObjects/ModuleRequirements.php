@@ -20,8 +20,7 @@ final readonly class ModuleRequirements
         private array $requiredExtensions = [],
         private ?string $coreVersion = null,
         private ?string $filamentVersion = null,
-    ) {
-    }
+    ) {}
 
     /**
      * Database format: php_version, laravel_version, core_version, filament_version,

@@ -13,6 +13,5 @@ final readonly class TrixContentMigrationReportDTO
         public int $checked,
         public array $changed,
         public ?string $backupPath,
-    ) {
-    }
+    ) {}
 }

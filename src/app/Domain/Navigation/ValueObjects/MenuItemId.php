@@ -6,6 +6,4 @@ namespace App\Domain\Navigation\ValueObjects;
 
 use App\Domain\ValueObjects\EntityId;
 
-final readonly class MenuItemId extends EntityId
-{
-}
+final readonly class MenuItemId extends EntityId {}

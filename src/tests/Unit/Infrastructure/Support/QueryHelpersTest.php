@@ -6,6 +6,7 @@ namespace Tests\Unit\Infrastructure\Support;
 
 use App\Infrastructure\Support\QueryHelpers;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Mockery;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +21,7 @@ final class QueryHelpersTest extends TestCase
 
     public function test_apply_tag_filter_adds_where_has_when_tags_provided(): void
     {
-        /** @var Builder<\Illuminate\Database\Eloquent\Model>&MockInterface $builder */
+        /** @var Builder<Model>&MockInterface $builder */
         $builder = Mockery::mock(Builder::class);
 
         $tagSlugs = ['warhammer', 'dnd'];
@@ -37,7 +38,7 @@ final class QueryHelpersTest extends TestCase
 
     public function test_apply_tag_filter_returns_unchanged_builder_when_null(): void
     {
-        /** @var Builder<\Illuminate\Database\Eloquent\Model>&MockInterface $builder */
+        /** @var Builder<Model>&MockInterface $builder */
         $builder = Mockery::mock(Builder::class);
 
         $builder->shouldNotReceive('whereHas');
@@ -49,7 +50,7 @@ final class QueryHelpersTest extends TestCase
 
     public function test_apply_tag_filter_returns_unchanged_builder_when_empty_array(): void
     {
-        /** @var Builder<\Illuminate\Database\Eloquent\Model>&MockInterface $builder */
+        /** @var Builder<Model>&MockInterface $builder */
         $builder = Mockery::mock(Builder::class);
 
         $builder->shouldNotReceive('whereHas');
@@ -61,7 +62,7 @@ final class QueryHelpersTest extends TestCase
 
     public function test_apply_pagination_calculates_offset_correctly(): void
     {
-        /** @var Builder<\Illuminate\Database\Eloquent\Model>&MockInterface $builder */
+        /** @var Builder<Model>&MockInterface $builder */
         $builder = Mockery::mock(Builder::class);
 
         // Page 1, 10 per page -> offset 0
@@ -75,7 +76,7 @@ final class QueryHelpersTest extends TestCase
 
     public function test_apply_pagination_calculates_offset_for_page_3(): void
     {
-        /** @var Builder<\Illuminate\Database\Eloquent\Model>&MockInterface $builder */
+        /** @var Builder<Model>&MockInterface $builder */
         $builder = Mockery::mock(Builder::class);
 
         // Page 3, 12 per page -> offset 24

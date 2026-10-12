@@ -10,6 +10,7 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePermissionRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Modules\ModuleLoader;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -108,7 +109,7 @@ abstract class ModuleTestCase extends TestCase
         $module = $this->moduleManager()->enable(new ModuleName($moduleName));
 
         // Boot the module's service provider since app boot already happened
-        $moduleLoader = app(\App\Modules\ModuleLoader::class);
+        $moduleLoader = app(ModuleLoader::class);
         $moduleLoader->bootModule($module);
 
         return $module;

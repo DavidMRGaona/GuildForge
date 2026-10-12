@@ -33,8 +33,7 @@ final class BuildModuleAssetsOnEnabled implements ShouldQueue
     public function __construct(
         private readonly ModuleAssetBuilder $assetBuilder,
         private readonly ModuleRepositoryInterface $moduleRepository,
-    ) {
-    }
+    ) {}
 
     public function handle(ModuleEnabled $event): void
     {

@@ -92,7 +92,7 @@ final class ConstraintMatcherTest extends TestCase
     #[DataProvider('cases')]
     public function test_matches(string $constraint, string $version, bool $expected): void
     {
-        $this->assertSame($expected, (new ConstraintMatcher())->matches($constraint, ModuleVersion::fromString($version)));
+        $this->assertSame($expected, (new ConstraintMatcher)->matches($constraint, ModuleVersion::fromString($version)));
     }
 
     /**
@@ -121,13 +121,13 @@ final class ConstraintMatcherTest extends TestCase
     #[DataProvider('validConstraints')]
     public function test_valid_constraints(string $constraint): void
     {
-        $this->assertTrue((new ConstraintMatcher())->isValid($constraint));
+        $this->assertTrue((new ConstraintMatcher)->isValid($constraint));
     }
 
     #[DataProvider('invalidConstraints')]
     public function test_invalid_constraints(string $constraint): void
     {
-        $this->assertFalse((new ConstraintMatcher())->isValid($constraint));
+        $this->assertFalse((new ConstraintMatcher)->isValid($constraint));
     }
 
     public function test_matching_an_invalid_constraint_throws(): void
@@ -135,6 +135,6 @@ final class ConstraintMatcherTest extends TestCase
         $this->expectException(InvalidVersionConstraintException::class);
         $this->expectExceptionMessage("Invalid version constraint '2.x'");
 
-        (new ConstraintMatcher())->matches('2.x', ModuleVersion::fromString('2.0.0'));
+        (new ConstraintMatcher)->matches('2.x', ModuleVersion::fromString('2.0.0'));
     }
 }

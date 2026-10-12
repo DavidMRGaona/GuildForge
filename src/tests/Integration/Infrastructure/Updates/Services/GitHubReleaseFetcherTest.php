@@ -30,7 +30,7 @@ final class GitHubReleaseFetcherTest extends TestCase
     {
         parent::setUp();
 
-        $this->fetcher = new GitHubReleaseFetcher(new ModuleCompatibilityChecker(new ConstraintMatcher()), $this->hostAt('2.6.0'));
+        $this->fetcher = new GitHubReleaseFetcher(new ModuleCompatibilityChecker(new ConstraintMatcher), $this->hostAt('2.6.0'));
         Cache::flush();
     }
 
@@ -537,7 +537,7 @@ final class GitHubReleaseFetcherTest extends TestCase
 
     public function test_a_core_3_host_blocks_releases_that_require_core_2(): void
     {
-        $fetcher = new GitHubReleaseFetcher(new ModuleCompatibilityChecker(new ConstraintMatcher()), $this->hostAt('3.0.0'));
+        $fetcher = new GitHubReleaseFetcher(new ModuleCompatibilityChecker(new ConstraintMatcher), $this->hostAt('3.0.0'));
         Http::fake(['api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0')])]);
 
         $selection = $fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
@@ -563,11 +563,11 @@ final class GitHubReleaseFetcherTest extends TestCase
 
     private function hostAt(string $core): HostEnvironmentProviderInterface
     {
-        return new class ($core) implements HostEnvironmentProviderInterface {
+        return new class($core) implements HostEnvironmentProviderInterface
+        {
             public function __construct(
                 private readonly string $core,
-            ) {
-            }
+            ) {}
 
             public function current(): HostEnvironment
             {

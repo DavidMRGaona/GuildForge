@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Infrastructure\Services\Logging\ElasticsearchLogger;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;

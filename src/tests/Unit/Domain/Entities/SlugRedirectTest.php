@@ -45,7 +45,7 @@ final class SlugRedirectTest extends TestCase
             newSlug: new Slug('same-slug'),
             entityType: 'article',
             entityId: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
-            createdAt: new DateTimeImmutable(),
+            createdAt: new DateTimeImmutable,
         );
 
         $this->assertTrue($redirect->pointsToSameSlug());
@@ -59,7 +59,7 @@ final class SlugRedirectTest extends TestCase
             newSlug: new Slug('new-slug'),
             entityType: 'article',
             entityId: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
-            createdAt: new DateTimeImmutable(),
+            createdAt: new DateTimeImmutable,
         );
 
         $this->assertFalse($redirect->pointsToSameSlug());

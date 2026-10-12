@@ -4,7 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules;
 
+use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
+use App\Application\Modules\DTOs\ModuleRouteDTO;
+use App\Application\Modules\DTOs\NavigationItemDTO;
+use App\Application\Modules\DTOs\PagePrefixDTO;
+use App\Application\Modules\DTOs\PermissionDTO;
+use App\Application\Modules\DTOs\SlotRegistrationDTO;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Component;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 abstract class ModuleServiceProvider extends ServiceProvider
@@ -80,12 +89,12 @@ abstract class ModuleServiceProvider extends ServiceProvider
         $apiRoutes = $this->modulePath('routes/api.php');
 
         if (file_exists($webRoutes)) {
-            \Illuminate\Support\Facades\Route::middleware('web')
+            Route::middleware('web')
                 ->group($webRoutes);
         }
 
         if (file_exists($apiRoutes)) {
-            \Illuminate\Support\Facades\Route::middleware('api')
+            Route::middleware('api')
                 ->prefix('api')
                 ->group($apiRoutes);
         }
@@ -176,7 +185,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
     /**
      * Register permissions provided by this module.
      *
-     * @return array<\App\Application\Modules\DTOs\PermissionDTO>
+     * @return array<PermissionDTO>
      */
     public function registerPermissions(): array
     {
@@ -186,7 +195,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
     /**
      * Register navigation items provided by this module.
      *
-     * @return array<\App\Application\Modules\DTOs\NavigationItemDTO>
+     * @return array<NavigationItemDTO>
      */
     public function registerNavigation(): array
     {
@@ -197,7 +206,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * Register slot components provided by this module.
      * Slots allow modules to inject Vue components into layout positions.
      *
-     * @return array<\App\Application\Modules\DTOs\SlotRegistrationDTO>
+     * @return array<SlotRegistrationDTO>
      */
     public function registerSlots(): array
     {
@@ -208,7 +217,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * Get the Filament form schema for module settings.
      * Override in subclass to provide configurable settings.
      *
-     * @return array<\Filament\Schemas\Components\Component>
+     * @return array<Component>
      */
     public function getSettingsSchema(): array
     {
@@ -219,7 +228,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * Register page prefixes provided by this module.
      * Allows module Vue pages to be resolved by Inertia.
      *
-     * @return array<\App\Application\Modules\DTOs\PagePrefixDTO>
+     * @return array<PagePrefixDTO>
      */
     public function registerPagePrefixes(): array
     {
@@ -230,7 +239,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * Register public routes for menu item configuration.
      * Allows module routes to appear in the menu item dropdown.
      *
-     * @return array<\App\Application\Modules\DTOs\ModuleRouteDTO>
+     * @return array<ModuleRouteDTO>
      */
     public function registerRoutes(): array
     {
@@ -241,7 +250,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * Register calendar sources provided by this module.
      * Allows module entries to appear in the public calendars.
      *
-     * @return array<class-string<\App\Application\Calendar\Contracts\CalendarEntrySourceInterface>>
+     * @return array<class-string<CalendarEntrySourceInterface>>
      */
     public function registerCalendarSources(): array
     {
@@ -252,7 +261,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * Register Filament pages provided by this module.
      * Override in subclass to provide Filament pages.
      *
-     * @return array<class-string<\Filament\Pages\Page>>
+     * @return array<class-string<Page>>
      */
     public function registerFilamentPages(): array
     {

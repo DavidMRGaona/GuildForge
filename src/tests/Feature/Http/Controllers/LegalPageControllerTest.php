@@ -29,9 +29,9 @@ final class LegalPageControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(
             fn ($page) => $page
-            ->component('Legal/Show')
-            ->has('title')
-            ->where('content', '<p>Test legal content</p>')
+                ->component('Legal/Show')
+                ->has('title')
+                ->where('content', '<p>Test legal content</p>')
         );
     }
 
@@ -73,8 +73,8 @@ final class LegalPageControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(
             fn ($page) => $page
-            ->component('Legal/Show')
-            ->where('content', 'Entity: Test Association, CIF: G12345678')
+                ->component('Legal/Show')
+                ->where('content', 'Entity: Test Association, CIF: G12345678')
         );
     }
 

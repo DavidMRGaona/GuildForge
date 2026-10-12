@@ -18,8 +18,7 @@ final class Photo
         private readonly int $sortOrder = 0,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
-    ) {
-    }
+    ) {}
 
     public function id(): PhotoId
     {

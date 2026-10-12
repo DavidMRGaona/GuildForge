@@ -26,8 +26,7 @@ final class GalleryController extends Controller
         private readonly GalleryQueryServiceInterface $galleryQuery,
         private readonly TagQueryServiceInterface $tagQuery,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function index(TagFilterRequest $request): Response
     {

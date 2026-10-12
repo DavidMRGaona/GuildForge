@@ -32,7 +32,7 @@ final class SlugRedirectServiceTest extends TestCase
             newSlug: new Slug($newSlug),
             entityType: $entityType,
             entityId: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
-            createdAt: new DateTimeImmutable(),
+            createdAt: new DateTimeImmutable,
         );
 
         $repository = Mockery::mock(SlugRedirectRepositoryInterface::class);

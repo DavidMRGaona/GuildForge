@@ -14,11 +14,10 @@ final readonly class RouteRegistry implements RouteRegistryInterface
 {
     public function __construct(
         private ModuleRouteRegistryInterface $moduleRouteRegistry,
-    ) {
-    }
+    ) {}
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function getAvailableRoutes(): array
     {

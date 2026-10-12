@@ -10,8 +10,7 @@ final readonly class ContactMessageDTO
         public string $senderName,
         public string $senderEmail,
         public string $messageBody,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{name: string, email: string, message: string}  $data

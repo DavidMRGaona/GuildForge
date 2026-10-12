@@ -22,8 +22,7 @@ final class ModulePackageInstaller implements ModulePackageInstallerInterface
 {
     public function __construct(
         private readonly ModuleCompatibilityServiceInterface $compatibility,
-    ) {
-    }
+    ) {}
 
     public function stage(string $zipPath, string $moduleName): string
     {

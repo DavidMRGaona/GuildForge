@@ -7,6 +7,8 @@ namespace Tests;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
+use PHPUnit\Framework\Assert;
+use PHPUnit\Framework\AssertionFailedError;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -29,15 +31,15 @@ abstract class TestCase extends BaseTestCase
                     true
                 );
 
-                \PHPUnit\Framework\Assert::assertIsArray($page);
-                \PHPUnit\Framework\Assert::assertArrayHasKey('component', $page);
-                \PHPUnit\Framework\Assert::assertArrayHasKey('props', $page);
-                \PHPUnit\Framework\Assert::assertArrayHasKey('url', $page);
-                \PHPUnit\Framework\Assert::assertArrayHasKey('version', $page);
-                \PHPUnit\Framework\Assert::assertArrayHasKey('encryptHistory', $page);
-                \PHPUnit\Framework\Assert::assertArrayHasKey('clearHistory', $page);
-            } catch (\PHPUnit\Framework\AssertionFailedError $e) {
-                \PHPUnit\Framework\Assert::fail('Not a valid Inertia response.');
+                Assert::assertIsArray($page);
+                Assert::assertArrayHasKey('component', $page);
+                Assert::assertArrayHasKey('props', $page);
+                Assert::assertArrayHasKey('url', $page);
+                Assert::assertArrayHasKey('version', $page);
+                Assert::assertArrayHasKey('encryptHistory', $page);
+                Assert::assertArrayHasKey('clearHistory', $page);
+            } catch (AssertionFailedError $e) {
+                Assert::fail('Not a valid Inertia response.');
             }
 
             $instance = AssertableInertia::fromArray($page['props']);

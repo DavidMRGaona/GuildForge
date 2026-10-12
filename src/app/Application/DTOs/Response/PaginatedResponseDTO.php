@@ -15,8 +15,7 @@ final readonly class PaginatedResponseDTO
         public array $data,
         public array $meta,
         public array $links,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<int, mixed>  $data

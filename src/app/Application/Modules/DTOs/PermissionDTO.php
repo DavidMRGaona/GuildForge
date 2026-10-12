@@ -16,8 +16,7 @@ final readonly class PermissionDTO
         public ?string $description = null,
         public ?string $module = null,
         public array $roles = [],
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data

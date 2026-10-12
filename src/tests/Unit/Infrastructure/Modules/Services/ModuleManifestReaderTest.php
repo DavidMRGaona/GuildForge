@@ -13,7 +13,8 @@ final class ModuleManifestReaderTest extends TestCase
 {
     public function test_a_malformed_list_requirement_is_reported_as_ignored_entries_not_as_incompatible(): void
     {
-        $logger = new class () extends AbstractLogger {
+        $logger = new class extends AbstractLogger
+        {
             /** @var list<string> */
             public array $messages = [];
 

@@ -17,8 +17,7 @@ final readonly class HostEnvironment
         public ModuleVersion $laravel,
         public ?ModuleVersion $filament,
         public array $extensions,
-    ) {
-    }
+    ) {}
 
     public function versionOf(RequirementType $type): ?ModuleVersion
     {

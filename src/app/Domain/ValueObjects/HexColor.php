@@ -190,14 +190,14 @@ final readonly class HexColor implements Stringable
 
         // Try full hex format (6 chars)
         if (preg_match(self::PATTERN_FULL, $value, $matches)) {
-            return '#' . strtoupper($matches[1]);
+            return '#'.strtoupper($matches[1]);
         }
 
         // Try shorthand format (3 chars)
         if (preg_match(self::PATTERN_SHORT, $value, $matches)) {
             $short = strtoupper($matches[1]);
 
-            return '#' . $short[0] . $short[0] . $short[1] . $short[1] . $short[2] . $short[2];
+            return '#'.$short[0].$short[0].$short[1].$short[1].$short[2].$short[2];
         }
 
         throw InvalidHexColorException::invalidFormat($value);

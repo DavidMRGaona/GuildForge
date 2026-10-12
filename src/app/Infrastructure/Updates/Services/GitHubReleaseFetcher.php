@@ -36,8 +36,7 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
     public function __construct(
         private readonly ModuleCompatibilityChecker $checker,
         private readonly HostEnvironmentProviderInterface $hostEnvironment,
-    ) {
-    }
+    ) {}
 
     public function selectRelease(string $owner, string $repo, ModuleVersion $installed, bool $includePrereleases): ReleaseSelection
     {

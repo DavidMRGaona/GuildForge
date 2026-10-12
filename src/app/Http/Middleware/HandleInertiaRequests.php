@@ -442,7 +442,7 @@ final class HandleInertiaRequests extends Middleware
                 while ($index < $length && $content[$index] !== $quote) {
                     if ($content[$index] === '\\' && $index + 1 < $length) {
                         // Keep escape sequence as-is for now
-                        $stringContent .= $content[$index] . $content[$index + 1];
+                        $stringContent .= $content[$index].$content[$index + 1];
                         $index += 2;
                     } else {
                         $stringContent .= $content[$index];
@@ -454,7 +454,7 @@ final class HandleInertiaRequests extends Middleware
 
                 $placeholderIndex = count($strings);
                 $strings[] = $stringContent;
-                $result .= '__PLACEHOLDER_' . $placeholderIndex . '__';
+                $result .= '__PLACEHOLDER_'.$placeholderIndex.'__';
             } else {
                 $result .= $char;
                 $index++;
@@ -480,7 +480,7 @@ final class HandleInertiaRequests extends Middleware
             // Escape " for JSON double-quoted strings
             $value = str_replace('"', '\\"', $value);
 
-            $json = str_replace('__PLACEHOLDER_' . $i . '__', '"' . $value . '"', $json);
+            $json = str_replace('__PLACEHOLDER_'.$i.'__', '"'.$value.'"', $json);
         }
 
         return $json;
@@ -533,7 +533,7 @@ final class HandleInertiaRequests extends Middleware
             return $url;
         }
 
-        return 'https://' . $url;
+        return 'https://'.$url;
     }
 
     /**

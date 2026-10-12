@@ -41,7 +41,7 @@ final readonly class BlockBotsMiddleware
         /** @var array<int, string> $allowedBots */
         $allowedBots = config('bot-protection.allowed_bots', []);
 
-        return array_any($allowedBots, fn($pattern) => stripos($userAgent, $pattern) !== false);
+        return array_any($allowedBots, fn ($pattern) => stripos($userAgent, $pattern) !== false);
     }
 
     private function isBlockedBot(string $userAgent): bool
@@ -49,7 +49,7 @@ final readonly class BlockBotsMiddleware
         /** @var array<int, string> $blockedBots */
         $blockedBots = config('bot-protection.blocked_bots', []);
 
-        return array_any($blockedBots, fn($pattern) => stripos($userAgent, $pattern) !== false);
+        return array_any($blockedBots, fn ($pattern) => stripos($userAgent, $pattern) !== false);
     }
 
     private function logBlockedRequest(Request $request, string $userAgent): void

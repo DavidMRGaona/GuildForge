@@ -16,29 +16,29 @@ final class MenuItemHrefResolverTest extends TestCase
 {
     public function test_the_url_wins_over_the_route(): void
     {
-        $this->assertSame('/eventos', (new MenuItemHrefResolver())->resolve($this->item(url: '/eventos', route: 'articles.index')));
+        $this->assertSame('/eventos', (new MenuItemHrefResolver)->resolve($this->item(url: '/eventos', route: 'articles.index')));
     }
 
     public function test_a_registered_route_is_turned_into_its_url(): void
     {
-        $this->assertSame(route('articles.index'), (new MenuItemHrefResolver())->resolve($this->item(route: 'articles.index')));
+        $this->assertSame(route('articles.index'), (new MenuItemHrefResolver)->resolve($this->item(route: 'articles.index')));
     }
 
     public function test_a_route_that_is_not_registered_resolves_to_nothing(): void
     {
         // Routes of a module that is disabled or rejected by the compatibility gate
-        $this->assertNull((new MenuItemHrefResolver())->resolve($this->item(route: 'gametables.index')));
+        $this->assertNull((new MenuItemHrefResolver)->resolve($this->item(route: 'gametables.index')));
     }
 
     public function test_a_route_missing_its_required_parameters_resolves_to_nothing(): void
     {
         // articles.show needs {slug} and the item stores no route parameters
-        $this->assertNull((new MenuItemHrefResolver())->resolve($this->item(route: 'articles.show')));
+        $this->assertNull((new MenuItemHrefResolver)->resolve($this->item(route: 'articles.show')));
     }
 
     public function test_an_item_without_url_or_route_points_nowhere(): void
     {
-        $this->assertSame('#', (new MenuItemHrefResolver())->resolve($this->item()));
+        $this->assertSame('#', (new MenuItemHrefResolver)->resolve($this->item()));
     }
 
     private function item(?string $url = null, ?string $route = null): MenuItem

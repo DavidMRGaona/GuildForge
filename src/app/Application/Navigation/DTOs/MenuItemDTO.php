@@ -17,8 +17,7 @@ final readonly class MenuItemDTO
         public ?string $icon,
         public array $children = [],
         public bool $isActive = true,
-    ) {
-    }
+    ) {}
 
     /**
      * Convert to array for Inertia sharing.

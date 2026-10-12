@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Http\Middleware;
 
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Modules\ModuleLoader;
-use App\Modules\ModuleServiceProvider;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Livewire\Livewire;
@@ -21,7 +19,7 @@ final class HandleInertiaRequestsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->middleware = new HandleInertiaRequests();
+        $this->middleware = new HandleInertiaRequests;
     }
 
     public function test_share_returns_expected_keys(): void
@@ -407,7 +405,7 @@ TS;
         $adminPaths = ['admin', 'admin/dashboard', 'admin/users', ltrim(Livewire::getUpdateUri(), '/')];
 
         foreach ($adminPaths as $path) {
-            $request = Request::create('/' . $path, 'GET');
+            $request = Request::create('/'.$path, 'GET');
 
             $response = $this->middleware->handle($request, function ($req) {
                 return response('Bypassed', 200);

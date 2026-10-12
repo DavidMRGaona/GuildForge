@@ -13,8 +13,7 @@ final readonly class ActivateMenuItemsOnModuleEnabled
     public function __construct(
         private MenuItemRepositoryInterface $menuItemRepository,
         private MenuServiceInterface $menuService,
-    ) {
-    }
+    ) {}
 
     public function handle(ModuleEnabled $event): void
     {
