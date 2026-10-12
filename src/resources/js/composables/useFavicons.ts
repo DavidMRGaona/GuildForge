@@ -31,7 +31,10 @@ export function useFavicons(): void {
     function updateFavicons(isDark: boolean): void {
         const basePath = `/favicons/${isDark ? 'dark' : 'light'}`;
         const favicons = page.props.favicons as FaviconSettings | undefined;
-        const customFavicon = isDark ? favicons?.dark : favicons?.light;
+        // Either custom favicon beats the GuildForge default (as <x-site-favicons> does)
+        const customFavicon = isDark
+            ? (favicons?.dark ?? favicons?.light)
+            : (favicons?.light ?? favicons?.dark);
 
         updateLinkHref(
             'link[rel="icon"][sizes="32x32"]',

@@ -20,6 +20,16 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         );
     }
 
+    public function test_dark_logo_is_padded_on_black(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'guildforge');
+
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_600,h_600,c_pad,b_black,q_auto,f_png/guildforge/settings/logo-dark',
+            $builder->logo('settings/logo-dark.png', darkBackground: true),
+        );
+    }
+
     public function test_logo_url_is_padded_square_png(): void
     {
         $builder = new CloudinaryImageUrlBuilder('demo', 'guildforge');

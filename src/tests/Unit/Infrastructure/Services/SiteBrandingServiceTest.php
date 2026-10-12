@@ -58,6 +58,23 @@ final class SiteBrandingServiceTest extends TestCase
         ], $service->customFavicons());
     }
 
+    public function test_light_logo_wins_over_the_dark_one(): void
+    {
+        $service = $this->service(['site_logo_light' => 'settings/light.png', 'site_logo_dark' => 'settings/dark.png']);
+
+        $this->assertSame('settings/light.png', $service->customLogoPath());
+        $this->assertFalse($service->customLogoIsDark());
+    }
+
+    public function test_dark_logo_is_the_site_logo_when_there_is_no_light_one(): void
+    {
+        $service = $this->service(['site_logo_dark' => 'settings/dark.png']);
+
+        $this->assertSame('settings/dark.png', $service->customLogoPath());
+        $this->assertSame(Storage::disk('images')->url('settings/dark.png'), $service->customLogoUrl());
+        $this->assertTrue($service->customLogoIsDark());
+    }
+
     public function test_social_profiles_are_absolute_and_skip_empty_values(): void
     {
         $service = $this->service([

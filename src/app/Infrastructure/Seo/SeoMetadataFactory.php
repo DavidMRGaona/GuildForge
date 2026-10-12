@@ -194,7 +194,7 @@ final readonly class SeoMetadataFactory implements SeoMetadataFactoryInterface
         $logoPath = $this->branding->customLogoPath();
 
         if ($logoPath !== null) {
-            $url = $this->images->logo($logoPath);
+            $url = $this->images->logo($logoPath, $this->branding->customLogoIsDark());
 
             if ($url !== null) {
                 return new SeoImage($url, CloudinaryImageUrlBuilder::LOGO_SIZE, CloudinaryImageUrlBuilder::LOGO_SIZE, $alt, false);
