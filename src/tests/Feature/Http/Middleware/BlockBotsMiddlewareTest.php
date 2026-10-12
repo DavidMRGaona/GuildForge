@@ -276,4 +276,26 @@ final class BlockBotsMiddlewareTest extends TestCase
         $response->assertStatus(403);
         $response->assertJsonStructure(['message']);
     }
+
+    public function test_shipped_config_lets_facebook_link_previews_through(): void
+    {
+        Config::set('bot-protection.enabled', true);
+
+        $response = $this->get('/test-bot-protection', [
+            'User-Agent' => 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+        ]);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_shipped_config_still_blocks_meta_ai_crawlers(): void
+    {
+        Config::set('bot-protection.enabled', true);
+
+        $response = $this->get('/test-bot-protection', [
+            'User-Agent' => 'meta-externalagent/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)',
+        ]);
+
+        $response->assertStatus(403);
+    }
 }
