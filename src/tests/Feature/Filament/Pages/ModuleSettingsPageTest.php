@@ -9,6 +9,7 @@ use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -103,6 +104,31 @@ final class ModuleSettingsPageTest extends TestCase
 
         Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module'])
             ->assertSee(__('modules.filament.settings_page.no_settings'));
+    }
+
+    public function test_saving_a_module_without_settings_leaves_its_settings_file_untouched(): void
+    {
+        // The page has no form then, but Livewire still lets anyone call save()
+        $modulePath = sys_get_temp_dir().'/gf-no-settings-'.bin2hex(random_bytes(8));
+        $settingsFile = $modulePath.'/config/settings.php';
+        $original = "<?php\n\nreturn ['gtm_container_id' => ''];\n";
+        File::ensureDirectoryExists(dirname($settingsFile));
+        File::put($settingsFile, $original);
+        ModuleModel::factory()->enabled()->create([
+            'name' => 'test-module',
+            'provider' => 'NonExistentProvider',
+            'path' => $modulePath,
+        ]);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        try {
+            Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module'])
+                ->call('save');
+
+            $this->assertSame($original, File::get($settingsFile));
+        } finally {
+            File::deleteDirectory($modulePath);
+        }
     }
 
     public function test_breadcrumbs_include_modules_page(): void
