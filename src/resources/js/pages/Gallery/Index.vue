@@ -11,8 +11,8 @@ import { useRoutes } from '@/composables/useRoutes';
 
 interface Props {
     galleries: PaginatedResponse<Gallery>;
-    tags: Tag[];
-    currentTags: string[];
+    tags?: Tag[];
+    currentTags?: string[];
 }
 
 const props = withDefaults(defineProps<Props>(), {

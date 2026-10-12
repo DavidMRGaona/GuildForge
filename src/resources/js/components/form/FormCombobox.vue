@@ -73,10 +73,10 @@ watch(
 <template>
     <Combobox
         :model-value="modelValue"
-        @update:model-value="handleChange"
         :disabled="disabled"
         as="div"
         class="relative"
+        @update:model-value="handleChange"
     >
         <div class="relative">
             <ComboboxInput
@@ -89,8 +89,8 @@ watch(
                 ]"
                 :display-value="() => displayValue"
                 :placeholder="placeholder"
-                @change="query = ($event.target as HTMLInputElement).value"
                 autocomplete="off"
+                @change="query = ($event.target as HTMLInputElement).value"
             />
             <ComboboxButton
                 class="absolute inset-y-0 right-0 flex items-center pr-3"
@@ -129,8 +129,8 @@ watch(
                 <ComboboxOption
                     v-for="option in filteredOptions"
                     :key="String(option[optionValue])"
-                    :value="option[optionValue] as string | number | null"
                     v-slot="{ active, selected }"
+                    :value="option[optionValue] as string | number | null"
                     as="template"
                 >
                     <li

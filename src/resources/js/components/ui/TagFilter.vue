@@ -8,7 +8,7 @@ import { useAppStore } from '@/stores/useAppStore';
 
 interface Props {
     tags: Tag[];
-    currentTags: string[];
+    currentTags?: string[];
     basePath: string;
 }
 

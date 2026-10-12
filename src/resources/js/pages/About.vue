@@ -150,8 +150,8 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                 -->
                 <!-- eslint-disable vue/no-v-html -->
                 <div
-                    v-html="aboutHistory"
                     class="prose prose-stone dark:prose-invert max-w-none"
+                    v-html="aboutHistory"
                 ></div>
                 <!-- eslint-enable vue/no-v-html -->
             </BaseCard>
