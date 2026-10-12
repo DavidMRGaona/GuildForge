@@ -6,6 +6,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+    title: '',
+    subtitle: '',
     padding: true,
 });
 </script>
