@@ -63,9 +63,9 @@ final readonly class SeoDescriptionBuilder
     private function formatSchedule(SeoScheduleDTO $schedule): string
     {
         $locale = app()->getLocale();
-        $start = CarbonImmutable::instance($schedule->start)->setTimezone($this->timezone)->locale($locale);
+        $start = CarbonImmutable::instance($schedule->start)->setTimezone($this->timezone)->settings(['locale' => $locale]);
         $end = $schedule->end !== null
-            ? CarbonImmutable::instance($schedule->end)->setTimezone($this->timezone)->locale($locale)
+            ? CarbonImmutable::instance($schedule->end)->setTimezone($this->timezone)->settings(['locale' => $locale])
             : null;
 
         $dateFormat = $this->translate('seo.formats.date');
