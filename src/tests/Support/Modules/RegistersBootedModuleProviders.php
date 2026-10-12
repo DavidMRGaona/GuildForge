@@ -9,7 +9,7 @@ use App\Modules\ModuleServiceProvider;
 
 trait RegistersBootedModuleProviders
 {
-    private function loadProvider(ModuleServiceProvider $provider): void
+    private function registerBootedProvider(ModuleServiceProvider $provider): void
     {
         // As if the module had booted: the page asks the loader for its provider
         (function (ModuleServiceProvider $provider): void {

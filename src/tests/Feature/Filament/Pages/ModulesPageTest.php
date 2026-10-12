@@ -170,7 +170,7 @@ final class ModulesPageTest extends TestCase
     public function test_an_enabled_module_with_a_settings_schema_links_to_its_settings(): void
     {
         ModuleModel::factory()->enabled()->create(['name' => 'configurable-module', 'display_name' => 'Configurable Module']);
-        $this->loadProvider(new class (app()) extends ModuleServiceProvider {
+        $this->registerBootedProvider(new class (app()) extends ModuleServiceProvider {
             public function moduleName(): string
             {
                 return 'configurable-module';
