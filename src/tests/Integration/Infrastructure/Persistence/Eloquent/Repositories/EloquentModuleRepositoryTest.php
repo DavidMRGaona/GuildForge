@@ -17,6 +17,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepository;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -49,6 +50,17 @@ final class EloquentModuleRepositoryTest extends TestCase
             'author' => 'Test Author',
             'status' => ModuleStatus::Enabled->value,
         ]);
+    }
+
+    public function test_saving_a_module_forgets_the_cached_module_list(): void
+    {
+        // A ZIP install or an update saves through here, not through enable()/disable()
+        config(['modules.cache.enabled' => true, 'modules.cache.key' => 'modules.discovered']);
+        Cache::put('modules.discovered', ['stale'], 3600);
+
+        $this->repository->save($this->createModule(name: 'test-module', status: ModuleStatus::Enabled));
+
+        $this->assertFalse(Cache::has('modules.discovered'));
     }
 
     public function test_it_finds_module_by_id(): void
