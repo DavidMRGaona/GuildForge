@@ -32,7 +32,7 @@ final class ModuleMigrationRunnerTest extends TestCase
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir().'/guildforge_test_modules_migrations_'.uniqid();
+        $this->testModulesPath = sys_get_temp_dir().'/guildforge_test_modules_migrations_'.bin2hex(random_bytes(8));
         $this->analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $this->schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $this->runner = new ModuleMigrationRunner(

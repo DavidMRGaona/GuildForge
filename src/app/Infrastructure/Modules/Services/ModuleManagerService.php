@@ -29,7 +29,6 @@ use App\Domain\Modules\ValueObjects\ModuleVersion;
 use DateTimeImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
@@ -234,8 +233,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         $module->enable();
         $this->repository->save($module);
 
-        // Invalidate cache
-        $this->invalidateModuleCache();
         $this->resolver->reset();
         $this->clearRouteCacheIfNeeded();
 
@@ -279,8 +276,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         $module->disable();
         $this->repository->save($module);
 
-        // Invalidate cache
-        $this->invalidateModuleCache();
         $this->clearRouteCacheIfNeeded();
 
         // Dispatch event
@@ -473,9 +468,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         // Delete from database
         $this->repository->delete($module);
 
-        // Invalidate cache
-        $this->invalidateModuleCache();
-
         // Dispatch event
         $this->events->dispatch(new ModuleUninstalled(
             $name->value,
@@ -553,16 +545,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     public function findByName(string $name): ?Module
     {
         return $this->repository->findByName(new ModuleName($name));
-    }
-
-    /**
-     * Invalidate the module cache.
-     */
-    private function invalidateModuleCache(): void
-    {
-        if (config('modules.cache.enabled', false)) {
-            Cache::forget(config('modules.cache.key', 'modules.enabled'));
-        }
     }
 
     /**

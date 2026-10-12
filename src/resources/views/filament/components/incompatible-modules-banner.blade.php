@@ -1,4 +1,4 @@
-{{-- Filament's compiled CSS has no bg-danger-* utilities: the custom color utilities read --color-* --}}
+{{-- bg-custom-* reads --color-*: the inline style points it at the danger palette. bg-danger-* would also compile, as the panel theme scans this folder; IncompatibleModulesBannerTest pins the inline style --}}
 <div
     role="alert"
     class="flex flex-col items-center gap-y-1 bg-custom-600 px-4 py-2 text-center text-sm font-medium text-white dark:bg-custom-500"

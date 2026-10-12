@@ -17,7 +17,6 @@ use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use App\Modules\ModuleLoader;
 use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -26,11 +25,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 use Mockery;
+use Tests\Support\Modules\RegistersBootedModuleProviders;
 use Tests\TestCase;
 
 final class ModulesPageTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RegistersBootedModuleProviders;
 
     private string $modulesPath;
 
@@ -38,7 +39,7 @@ final class ModulesPageTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-modules-page-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-modules-page-'.bin2hex(random_bytes(8));
         config(['modules.path' => $this->modulesPath]);
     }
 
@@ -169,7 +170,7 @@ final class ModulesPageTest extends TestCase
     public function test_an_enabled_module_with_a_settings_schema_links_to_its_settings(): void
     {
         ModuleModel::factory()->enabled()->create(['name' => 'configurable-module', 'display_name' => 'Configurable Module']);
-        $this->loadProvider(new class (app()) extends ModuleServiceProvider {
+        $this->registerBootedProvider(new class (app()) extends ModuleServiceProvider {
             public function moduleName(): string
             {
                 return 'configurable-module';
@@ -367,13 +368,5 @@ final class ModulesPageTest extends TestCase
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
         ]));
-    }
-
-    private function loadProvider(ModuleServiceProvider $provider): void
-    {
-        // As if the module had booted: the page asks the loader for its provider
-        (function (ModuleServiceProvider $provider): void {
-            $this->loadedProviders[$provider->moduleName()] = $provider;
-        })->call(app(ModuleLoader::class), $provider);
     }
 }

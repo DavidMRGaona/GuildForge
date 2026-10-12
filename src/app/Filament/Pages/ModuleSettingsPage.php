@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use Filament\Panel;
-use Filament\Schemas\Schema;
-use Filament\Actions\Action;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Modules\ModuleLoader;
+use Filament\Actions\Action;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Panel;
+use Filament\Schemas\Schema;
 
 /**
  * @property \Filament\Schemas\Schema $form
@@ -93,7 +93,7 @@ final class ModuleSettingsPage extends Page implements HasForms
         // Redirect if module is disabled
         if ($moduleEntity->isDisabled()) {
             Notification::make()
-                ->title(__('modules.filament.notifications.cannot_enable', ['error' => 'Module is disabled']))
+                ->title(__('modules.filament.settings_page.module_disabled'))
                 ->warning()
                 ->send();
 
@@ -110,6 +110,19 @@ final class ModuleSettingsPage extends Page implements HasForms
         $this->moduleProvider = $moduleEntity->provider();
         $this->moduleNamespace = $moduleEntity->namespace();
         $this->moduleIsEnabled = $moduleEntity->isEnabled();
+
+        // The generic page only edits getSettingsSchema(): a module without one has nothing here
+        // (a module with its own settings page lists that page in the panel navigation)
+        if (! $this->hasSettings()) {
+            Notification::make()
+                ->title(__('modules.filament.settings_page.no_settings'))
+                ->warning()
+                ->send();
+
+            $this->redirect(ModulesPage::getUrl());
+
+            return;
+        }
 
         // Load current settings
         $settings = $moduleManager->getSettings(new ModuleName($module));

@@ -20,7 +20,7 @@ final class ModuleContextServiceViewTest extends TestCase
     {
         parent::setUp();
 
-        $this->viewsPath = sys_get_temp_dir().'/guildforge-test-module-views-'.uniqid();
+        $this->viewsPath = sys_get_temp_dir().'/guildforge-test-module-views-'.bin2hex(random_bytes(8));
         File::ensureDirectoryExists($this->viewsPath);
         File::put($this->viewsPath.'/greeting.blade.php', 'Hola {{ $name }}');
 

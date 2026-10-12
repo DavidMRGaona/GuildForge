@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Support\Filament;
 
-use Filament\Schemas\Schema;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
+use Filament\Schemas\Schema;
 
 /**
  * Stands in for the module settings pages that render the core's

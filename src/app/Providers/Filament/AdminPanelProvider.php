@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
-use Filament\Widgets\Widget;
-use Filament\Pages\Page;
 use App\Application\Modules\DTOs\RejectedModuleDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
@@ -19,10 +17,12 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\MenuItem;
 use Filament\Navigation\NavigationGroup;
+use Filament\Pages\Page;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
+use Filament\Widgets\Widget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -96,8 +96,10 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            // Static JS is served as immutable for a year: the script URL changes with its content
-            // (a missing script leaves the URL unversioned: a 404 for the script, not a broken panel)
+            // Static JS is served as immutable for a year, so the script URL changes with its content.
+            // A missing script leaves the URL unversioned: a 404 for the script, not a broken panel.
+            // Our own scripts live in public/js/admin. public/js/filament is where filament:upgrade
+            // publishes Filament's assets.
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): string => '<style>
@@ -202,7 +204,7 @@ class AdminPanelProvider extends PanelProvider
                             background: linear-gradient(to top, rgb(31 41 55) 0%, transparent 100%);
                         }
                     </style>'
-                    .'<script src="'.asset('js/filament/time-picker.js').(is_file($script = public_path('js/filament/time-picker.js')) ? '?v='.substr((string) md5_file($script), 0, 12) : '').'"></script>'
+                    .'<script src="'.asset('js/admin/time-picker.js').(is_file($script = public_path('js/admin/time-picker.js')) ? '?v='.substr((string) md5_file($script), 0, 12) : '').'"></script>'
             )
             ->renderHook(
                 PanelsRenderHook::BODY_START,

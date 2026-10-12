@@ -93,6 +93,7 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
      * every write must drop that copy (ZIP installs and updates do not go through enable()).
      * Inside a transaction it is dropped after the commit: dropped before, a request could
      * cache the old rows again and keep them for the whole cache TTL. Outside one, at once.
+     * This is the only place that drops it: callers must not forget the key themselves.
      */
     private function forgetCachedModules(): void
     {
