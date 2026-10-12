@@ -16,8 +16,7 @@ final class HostEnvironmentProvider implements HostEnvironmentProviderInterface
 
     public function __construct(
         private readonly CoreVersionServiceInterface $coreVersion,
-    ) {
-    }
+    ) {}
 
     public function current(): HostEnvironment
     {

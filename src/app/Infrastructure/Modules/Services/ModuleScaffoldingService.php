@@ -8,6 +8,7 @@ use App\Application\Modules\DTOs\ScaffoldResultDTO;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\Exceptions\InvalidModuleNameException;
+use App\Domain\Modules\ValueObjects\ModuleName;
 use Illuminate\Support\Str;
 
 final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterface
@@ -462,7 +463,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
 
         // Validate format (kebab-case)
         try {
-            new \App\Domain\Modules\ValueObjects\ModuleName($name);
+            new ModuleName($name);
         } catch (InvalidModuleNameException $e) {
             return ScaffoldResultDTO::failure(
                 "Invalid module name '{$name}'.",

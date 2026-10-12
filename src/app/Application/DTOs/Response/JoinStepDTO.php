@@ -9,8 +9,7 @@ final readonly class JoinStepDTO
     public function __construct(
         public string $title,
         public ?string $description,
-    ) {
-    }
+    ) {}
 
     /**
      * Create from array.

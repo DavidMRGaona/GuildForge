@@ -44,7 +44,8 @@ final class ModuleSettingsEnumTest extends TestCase
     public function test_an_enum_backed_select_is_stored_as_its_value(): void
     {
         ModuleModel::factory()->enabled()->create(['name' => 'settings-fixture', 'path' => $this->modulePath]);
-        $this->registerBootedProvider(new class (app()) extends ModuleServiceProvider {
+        $this->registerBootedProvider(new class(app()) extends ModuleServiceProvider
+        {
             public function moduleName(): string
             {
                 return 'settings-fixture';

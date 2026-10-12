@@ -147,11 +147,11 @@ final class ModuleCompatibilityServiceTest extends TestCase
 
     private function serviceForCore(ModuleVersion $core): ModuleCompatibilityService
     {
-        $host = new class ($core) implements HostEnvironmentProviderInterface {
+        $host = new class($core) implements HostEnvironmentProviderInterface
+        {
             public function __construct(
                 private readonly ModuleVersion $core,
-            ) {
-            }
+            ) {}
 
             public function current(): HostEnvironment
             {
@@ -165,7 +165,7 @@ final class ModuleCompatibilityServiceTest extends TestCase
             }
         };
 
-        return new ModuleCompatibilityService(new ModuleManifestReader(), new ModuleCompatibilityChecker(new ConstraintMatcher()), $host);
+        return new ModuleCompatibilityService(new ModuleManifestReader, new ModuleCompatibilityChecker(new ConstraintMatcher), $host);
     }
 
     /**

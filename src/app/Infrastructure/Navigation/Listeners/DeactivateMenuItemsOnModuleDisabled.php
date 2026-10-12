@@ -11,8 +11,7 @@ final readonly class DeactivateMenuItemsOnModuleDisabled
 {
     public function __construct(
         private MenuItemRepositoryInterface $menuItemRepository,
-    ) {
-    }
+    ) {}
 
     public function handle(ModuleDisabled $event): void
     {

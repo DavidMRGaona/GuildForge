@@ -12,6 +12,5 @@ final readonly class ModuleUpdateFailed
         public string $toVersion,
         public string $errorMessage,
         public bool $wasRolledBack,
-    ) {
-    }
+    ) {}
 }

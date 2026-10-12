@@ -33,11 +33,11 @@ final class CoreUpdatesPage extends Page implements HasTable
 
     private const string LAST_CHECK_CACHE_KEY = 'updates.core.last_check';
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cube';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cube';
 
     protected string $view = 'filament.pages.core-updates';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Sistema';
+    protected static string|\UnitEnum|null $navigationGroup = 'Sistema';
 
     protected static ?int $navigationSort = 101;
 

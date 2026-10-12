@@ -6,6 +6,4 @@ namespace App\Domain\Authorization\ValueObjects;
 
 use App\Domain\ValueObjects\EntityId;
 
-final readonly class RoleId extends EntityId
-{
-}
+final readonly class RoleId extends EntityId {}

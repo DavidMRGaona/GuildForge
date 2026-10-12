@@ -9,6 +9,7 @@ use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
+use App\Infrastructure\Authorization\CorePermissionDefinitions;
 use App\Infrastructure\Authorization\Repositories\EloquentPermissionRepository;
 use App\Infrastructure\Authorization\Repositories\EloquentRoleRepository;
 use App\Infrastructure\Authorization\Services\AuthorizationService;
@@ -37,7 +38,7 @@ class AuthorizationServiceProvider extends ServiceProvider
         $this->app->booted(function () {
             /** @var PermissionRegistryInterface $registry */
             $registry = $this->app->make(PermissionRegistryInterface::class);
-            $registry->registerMany(\App\Infrastructure\Authorization\CorePermissionDefinitions::all());
+            $registry->registerMany(CorePermissionDefinitions::all());
         });
     }
 }

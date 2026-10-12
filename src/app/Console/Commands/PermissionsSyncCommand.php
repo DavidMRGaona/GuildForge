@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Infrastructure\Authorization\CorePermissionDefinitions;
 use Illuminate\Console\Command;
@@ -60,7 +61,7 @@ final class PermissionsSyncCommand extends Command
     }
 
     /**
-     * @param  array<\App\Application\Authorization\DTOs\PermissionDefinitionDTO>  $permissions
+     * @param  array<PermissionDefinitionDTO>  $permissions
      */
     private function showDryRunOutput(array $permissions): void
     {

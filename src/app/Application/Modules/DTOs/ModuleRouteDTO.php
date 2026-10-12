@@ -10,11 +10,10 @@ final readonly class ModuleRouteDTO
         public string $routeName,
         public string $label,
         public string $module,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {

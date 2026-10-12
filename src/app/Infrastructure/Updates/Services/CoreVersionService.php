@@ -18,8 +18,7 @@ final class CoreVersionService implements CoreVersionServiceInterface
 
     public function __construct(
         private readonly ?string $versionFile = null,
-    ) {
-    }
+    ) {}
 
     public function getCurrentVersion(): ModuleVersion
     {

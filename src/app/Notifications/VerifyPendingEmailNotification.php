@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -16,8 +17,7 @@ final class VerifyPendingEmailNotification extends Notification implements Shoul
 
     public function __construct(
         private readonly string $pendingEmail,
-    ) {
-    }
+    ) {}
 
     /**
      * Get the notification's delivery channels.
@@ -34,10 +34,10 @@ final class VerifyPendingEmailNotification extends Notification implements Shoul
      */
     public function toMail(object $notifiable): MailMessage
     {
-        /** @var \App\Infrastructure\Persistence\Eloquent\Models\UserModel $notifiable */
+        /** @var UserModel $notifiable */
         $verificationUrl = $this->verificationUrl($notifiable);
 
-        return (new MailMessage())
+        return (new MailMessage)
             ->subject(__('auth.verify_email_change_subject'))
             ->line(__('auth.verify_email_change_line1'))
             ->action(__('auth.verify_email_change_action'), $verificationUrl)
@@ -49,7 +49,7 @@ final class VerifyPendingEmailNotification extends Notification implements Shoul
      */
     protected function verificationUrl(object $notifiable): string
     {
-        /** @var \App\Infrastructure\Persistence\Eloquent\Models\UserModel $notifiable */
+        /** @var UserModel $notifiable */
         return URL::temporarySignedRoute(
             'verification.pending-email',
             now()->addMinutes(60),

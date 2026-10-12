@@ -11,8 +11,7 @@ final readonly class CompatibilityResult
      */
     public function __construct(
         public array $issues,
-    ) {
-    }
+    ) {}
 
     public static function compatible(): self
     {

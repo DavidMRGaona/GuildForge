@@ -9,8 +9,7 @@ final readonly class PagePrefixDTO
     public function __construct(
         public string $prefix,
         public string $module,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data

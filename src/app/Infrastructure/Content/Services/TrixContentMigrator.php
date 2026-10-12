@@ -33,8 +33,7 @@ final readonly class TrixContentMigrator implements TrixContentMigratorInterface
         private TrixHtmlConverterInterface $converter,
         private SettingsServiceInterface $settings,
         private string $backupDirectory,
-    ) {
-    }
+    ) {}
 
     public function migrate(bool $dryRun = false): TrixContentMigrationReportDTO
     {

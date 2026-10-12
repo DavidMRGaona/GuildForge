@@ -16,7 +16,7 @@ final class ModuleRouteRegistryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->registry = new ModuleRouteRegistry();
+        $this->registry = new ModuleRouteRegistry;
     }
 
     #[Test]

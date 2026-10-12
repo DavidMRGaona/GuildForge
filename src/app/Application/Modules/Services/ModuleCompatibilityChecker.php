@@ -21,8 +21,7 @@ final readonly class ModuleCompatibilityChecker
 {
     public function __construct(
         private ConstraintMatcher $matcher,
-    ) {
-    }
+    ) {}
 
     public function check(ModuleRequirements $requirements, HostEnvironment $host): CompatibilityResult
     {

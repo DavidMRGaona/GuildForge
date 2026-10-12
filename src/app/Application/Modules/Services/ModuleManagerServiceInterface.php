@@ -7,6 +7,9 @@ namespace App\Application\Modules\Services;
 use App\Application\Modules\DTOs\DependencyCheckResultDTO;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Exceptions\ModuleCannotUninstallException;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
+use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 
 interface ModuleManagerServiceInterface
@@ -19,7 +22,7 @@ interface ModuleManagerServiceInterface
     /**
      * Enable a module by name.
      *
-     * @throws \App\Domain\Modules\Exceptions\ModuleIncompatibleException When this host does not satisfy its module.json
+     * @throws ModuleIncompatibleException When this host does not satisfy its module.json
      */
     public function enable(ModuleName $name): Module;
 
@@ -75,8 +78,8 @@ interface ModuleManagerServiceInterface
      *
      * @param  bool  $deleteData  If true, revert migrations to delete module tables
      *
-     * @throws \App\Domain\Modules\Exceptions\ModuleNotFoundException
-     * @throws \App\Domain\Modules\Exceptions\ModuleCannotUninstallException
+     * @throws ModuleNotFoundException
+     * @throws ModuleCannotUninstallException
      */
     public function uninstall(ModuleName $name, bool $deleteData = false): void;
 

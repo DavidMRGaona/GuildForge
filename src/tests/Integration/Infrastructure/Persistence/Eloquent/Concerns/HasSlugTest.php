@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Concerns;
 
-use App\Application\Services\SlugRedirectServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Concerns\HasSlug;
 use App\Infrastructure\Persistence\Eloquent\Models\SlugRedirectModel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -125,12 +124,12 @@ final class HasSlugTest extends TestCase
         ]);
 
         // Manually create collision by setting same base slug
-        $model1->slug = 'collision-test-' . substr($model1->id, 0, 8);
+        $model1->slug = 'collision-test-'.substr($model1->id, 0, 8);
         $model1->saveQuietly();
 
-        $model2 = new TestSluggableModel();
+        $model2 = new TestSluggableModel;
         $model2->id = $model1->id; // Force same ID prefix to test collision logic
-        $model2->id = 'aaaaaaaa' . substr($model1->id, 8); // Same first 8 chars
+        $model2->id = 'aaaaaaaa'.substr($model1->id, 8); // Same first 8 chars
 
         // This forces the collision detection to extend the UUID portion
         // but in practice, different UUIDs will produce different slugs

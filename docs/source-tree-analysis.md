@@ -18,8 +18,7 @@ runesword/                              # Repository root
 ├── docker-compose.yml                  # Development stack (9 services)
 ├── docker-compose.prod.yml             # Production stack
 ├── Dockerfile.prod                     # Production Docker image
-├── README.md                           # Quick start guide
-└── VERSION                             # Current version (1.0.0)
+└── README.md                           # Quick start guide
 ```
 
 ---
@@ -35,8 +34,10 @@ src/
 ├── tsconfig.json                       # TypeScript strict mode
 ├── vite.config.ts                      # Vite configuration + modules
 ├── eslint.config.js                    # ESLint for TypeScript/Vue
-├── phpstan.neon                        # PHPStan/Larastan level 7
+├── phpstan.neon                        # PHPStan/Larastan level 8
+├── pint.json                           # Pint (PHP code style, checked in CI)
 ├── rector.php                          # Rector for automated refactoring
+├── VERSION                             # Core version (modules' requires.core)
 │
 ├── app/                                # ★ APPLICATION CODE
 │   ├── Domain/                         # Domain layer (no external dependencies)

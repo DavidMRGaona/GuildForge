@@ -17,7 +17,7 @@ final class OklchColorPaletteGeneratorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->generator = new OklchColorPaletteGenerator();
+        $this->generator = new OklchColorPaletteGenerator;
     }
 
     public function test_it_implements_interface(): void

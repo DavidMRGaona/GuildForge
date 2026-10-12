@@ -7,6 +7,7 @@ namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Models;
 use App\Domain\Enums\UserRole;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class UserModelTest extends TestCase
@@ -133,7 +134,7 @@ final class UserModelTest extends TestCase
     public function test_it_normalizes_email_to_lowercase_via_mass_assignment(): void
     {
         $user = UserModel::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'name' => 'Mass Assign User',
             'display_name' => 'Mass Assign',
             'email' => 'MASS.ASSIGN@EXAMPLE.COM',

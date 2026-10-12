@@ -16,7 +16,7 @@ final class ModuleSlotRegistryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->registry = new ModuleSlotRegistry();
+        $this->registry = new ModuleSlotRegistry;
     }
 
     #[Test]

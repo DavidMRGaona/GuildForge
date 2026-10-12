@@ -24,8 +24,7 @@ final class ModuleCompatibilityService implements ModuleCompatibilityServiceInte
         private readonly ModuleManifestReader $reader,
         private readonly ModuleCompatibilityChecker $checker,
         private readonly HostEnvironmentProviderInterface $host,
-    ) {
-    }
+    ) {}
 
     public function checkInstalled(ModuleName $name): CompatibilityResult
     {

@@ -173,6 +173,6 @@ final class TrixContentMigratorTest extends TestCase
 
     private function migrator(): TrixContentMigrator
     {
-        return new TrixContentMigrator(new TrixHtmlConverter(), app(SettingsServiceInterface::class), $this->backups);
+        return new TrixContentMigrator(new TrixHtmlConverter, app(SettingsServiceInterface::class), $this->backups);
     }
 }

@@ -136,7 +136,7 @@ final class ArticleTest extends TestCase
             content: 'Test article content.',
             authorId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
             isPublished: $isPublished,
-            publishedAt: $isPublished ? ($publishedAt ?? new DateTimeImmutable()) : null,
+            publishedAt: $isPublished ? ($publishedAt ?? new DateTimeImmutable) : null,
         );
     }
 }

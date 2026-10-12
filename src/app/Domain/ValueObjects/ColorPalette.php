@@ -11,7 +11,7 @@ final readonly class ColorPalette
     private const array REQUIRED_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
     /**
-     * @param array<int, HexColor> $shades
+     * @param  array<int, HexColor>  $shades
      */
     public function __construct(
         private string $name,
@@ -113,7 +113,7 @@ final readonly class ColorPalette
     }
 
     /**
-     * @param array<int, HexColor> $shades
+     * @param  array<int, HexColor>  $shades
      */
     private function validate(array $shades): void
     {

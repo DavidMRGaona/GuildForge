@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Concerns;
 
+use Filament\Schemas\Components\Component;
+
 /**
  * Allows Filament Resources to be extended with additional form sections
  * from external modules without modifying the core Resource class.
@@ -35,7 +37,7 @@ trait HasExtendableFormSections
     /**
      * Additional form sections added by modules.
      *
-     * @var array<\Filament\Schemas\Components\Component>
+     * @var array<Component>
      */
     protected static array $extendedFormSections = [];
 
@@ -43,7 +45,7 @@ trait HasExtendableFormSections
      * Extend this Resource with additional form sections.
      * Called by modules during boot to inject their form sections.
      *
-     * @param array<\Filament\Schemas\Components\Component> $sections
+     * @param  array<Component>  $sections
      */
     public static function extendFormSections(array $sections): void
     {
@@ -56,7 +58,7 @@ trait HasExtendableFormSections
     /**
      * Get all extended form sections for this Resource.
      *
-     * @return array<\Filament\Schemas\Components\Component>
+     * @return array<Component>
      */
     public static function getExtendedFormSections(): array
     {

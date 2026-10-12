@@ -33,7 +33,7 @@ final class RefreshCachesCommandTest extends TestCase
             Artisan::shouldReceive('call')->once()->ordered()->with($command)->andReturn(0);
         }
 
-        $ran = (new RefreshCachesCommand())->refresh(configCached: true, routesCached: true);
+        $ran = (new RefreshCachesCommand)->refresh(configCached: true, routesCached: true);
 
         $this->assertSame($expected, $ran);
     }
@@ -44,7 +44,7 @@ final class RefreshCachesCommandTest extends TestCase
             Artisan::shouldReceive('call')->once()->ordered()->with($command)->andReturn(0);
         }
 
-        $ran = (new RefreshCachesCommand())->refresh(configCached: false, routesCached: false);
+        $ran = (new RefreshCachesCommand)->refresh(configCached: false, routesCached: false);
 
         $this->assertSame(self::CLEAR, $ran);
     }
@@ -53,7 +53,7 @@ final class RefreshCachesCommandTest extends TestCase
     {
         Artisan::shouldReceive('call')->andReturn(0);
 
-        $ran = (new RefreshCachesCommand())->refresh(configCached: true, routesCached: true);
+        $ran = (new RefreshCachesCommand)->refresh(configCached: true, routesCached: true);
 
         $this->assertNotContains('cache:clear', $ran);
         $this->assertNotContains('optimize:clear', $ran);

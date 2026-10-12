@@ -28,7 +28,7 @@ use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
- * @property \Filament\Schemas\Schema $form
+ * @property Schema $form
  */
 final class SiteSettings extends Page implements HasForms
 {
@@ -91,7 +91,7 @@ final class SiteSettings extends Page implements HasForms
      */
     private const string MAINTENANCE_TAB = 'maintenance';
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?int $navigationSort = 100;
 

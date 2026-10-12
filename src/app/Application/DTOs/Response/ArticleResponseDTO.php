@@ -24,6 +24,5 @@ final readonly class ArticleResponseDTO
         public ?DateTimeImmutable $createdAt,
         public ?DateTimeImmutable $updatedAt,
         public array $tags = [],
-    ) {
-    }
+    ) {}
 }

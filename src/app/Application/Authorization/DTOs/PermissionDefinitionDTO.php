@@ -16,8 +16,7 @@ final readonly class PermissionDefinitionDTO
         public string $action,
         public ?string $module = null,
         public array $defaultRoles = [],
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{key: string, label: string, resource: string, action: string, module?: string|null, default_roles?: array<string>}  $data

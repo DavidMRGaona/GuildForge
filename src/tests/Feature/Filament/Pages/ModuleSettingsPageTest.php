@@ -155,7 +155,8 @@ final class ModuleSettingsPageTest extends TestCase
 
     private function loadTestModuleWithSettings(): void
     {
-        $this->registerBootedProvider(new class (app()) extends ModuleServiceProvider {
+        $this->registerBootedProvider(new class(app()) extends ModuleServiceProvider
+        {
             public function moduleName(): string
             {
                 return 'test-module';

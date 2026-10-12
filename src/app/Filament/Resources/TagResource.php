@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Filament\Resources;
 
 use App\Application\Services\TagQueryServiceInterface;
-use App\Filament\Resources\BaseResource;
-use App\Filament\Resources\TagResource\Pages;
 use App\Filament\Resources\TagResource\Pages\CreateTag;
 use App\Filament\Resources\TagResource\Pages\EditTag;
 use App\Filament\Resources\TagResource\Pages\ListTags;
@@ -32,9 +30,9 @@ class TagResource extends BaseResource
 {
     protected static ?string $model = TagModel::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-tag';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Configuración';
+    protected static string|\UnitEnum|null $navigationGroup = 'Configuración';
 
     protected static ?int $navigationSort = 10;
 

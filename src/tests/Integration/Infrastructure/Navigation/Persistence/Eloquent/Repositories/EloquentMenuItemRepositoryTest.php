@@ -18,7 +18,7 @@ final class EloquentMenuItemRepositoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->repository = new EloquentMenuItemRepository();
+        $this->repository = new EloquentMenuItemRepository;
     }
 
     public function test_deactivate_by_module(): void

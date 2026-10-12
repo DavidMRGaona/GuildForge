@@ -29,7 +29,8 @@ final class RequestForgeryProtectionTest extends TestCase
     {
         parent::setUp();
 
-        $this->app->bind(PreventRequestForgery::class, static fn (Application $app): PreventRequestForgery => new class ($app, $app['encrypter']) extends PreventRequestForgery {
+        $this->app->bind(PreventRequestForgery::class, static fn (Application $app): PreventRequestForgery => new class($app, $app['encrypter']) extends PreventRequestForgery
+        {
             protected function runningUnitTests(): bool
             {
                 return false;

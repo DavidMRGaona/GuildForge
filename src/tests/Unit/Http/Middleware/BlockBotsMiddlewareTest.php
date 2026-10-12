@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Http\Middleware;
 
 use App\Http\Middleware\BlockBotsMiddleware;
-use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +17,7 @@ final class BlockBotsMiddlewareTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->middleware = new BlockBotsMiddleware();
+        $this->middleware = new BlockBotsMiddleware;
     }
 
     public function test_it_passes_request_when_protection_is_disabled(): void

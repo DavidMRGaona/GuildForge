@@ -7,6 +7,7 @@ namespace App\Application\Services;
 use App\Application\DTOs\CreateUserDTO;
 use App\Application\DTOs\Response\UserResponseDTO;
 use App\Application\DTOs\UpdateUserDTO;
+use Illuminate\Http\UploadedFile;
 
 interface AuthServiceInterface
 {
@@ -79,10 +80,10 @@ interface AuthServiceInterface
      * Upload and optimize a user avatar from an uploaded file.
      *
      * @param  string  $userId  The user ID
-     * @param  \Illuminate\Http\UploadedFile  $file  The uploaded file
+     * @param  UploadedFile  $file  The uploaded file
      * @return string|null The avatar public ID, or null if upload failed
      */
-    public function uploadAvatarFromFile(string $userId, \Illuminate\Http\UploadedFile $file): ?string;
+    public function uploadAvatarFromFile(string $userId, UploadedFile $file): ?string;
 
     /**
      * Check if the user has verified their email address.

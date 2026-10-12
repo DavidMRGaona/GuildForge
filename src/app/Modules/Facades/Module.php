@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static mixed moduleConfig(string $moduleName, string $key, mixed $default = null)
  * @method static string modulePath(string $moduleName, string $path = '')
  *
- * @see \App\Application\Modules\Services\ModuleContextServiceInterface
+ * @see ModuleContextServiceInterface
  */
 final class Module extends Facade
 {

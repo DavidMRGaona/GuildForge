@@ -269,13 +269,13 @@ class {$ucName}ModuleServiceProvider extends ServiceProvider
         return new Module(
             id: new ModuleId(Str::uuid()->toString()),
             name: ModuleName::fromString($name),
-            displayName: ucfirst($name) . ' Module',
+            displayName: ucfirst($name).' Module',
             description: 'Test module',
             version: ModuleVersion::fromString('1.0.0'),
             author: 'Test Author',
             requirements: ModuleRequirements::fromArray([]),
             status: ModuleStatus::Enabled,
-            namespace: 'Modules\\' . ucfirst($name),
+            namespace: 'Modules\\'.ucfirst($name),
             provider: $providerClass,
             path: $path,
         );
