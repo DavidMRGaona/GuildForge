@@ -96,7 +96,8 @@ final class ModuleUpdatesPageTest extends TestCase
 
         Livewire::test(ModuleUpdatesPage::class)
             ->assertSee('1.0.9-beta')
-            ->assertDontSeeHtml('>'.__('filament.updates.modules.available.published').'</th>');
+            ->assertDontSeeHtml('>'.__('filament.updates.modules.available.published').'</th>')
+            ->assertDontSee('—');
     }
 
     public function test_a_check_shows_the_release_date(): void
