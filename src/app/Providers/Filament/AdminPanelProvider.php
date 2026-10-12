@@ -96,10 +96,10 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            // Static JS is served as immutable for a year: the script URL changes with its content
-            // (a missing script leaves the URL unversioned: a 404 for the script, not a broken panel;
-            // our own scripts live in public/js/admin: public/js/filament is where filament:upgrade
-            // publishes Filament's assets)
+            // Static JS is served as immutable for a year, so the script URL changes with its content.
+            // A missing script leaves the URL unversioned: a 404 for the script, not a broken panel.
+            // Our own scripts live in public/js/admin. public/js/filament is where filament:upgrade
+            // publishes Filament's assets.
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): string => '<style>
