@@ -45,10 +45,10 @@ function handleChange(value: string | number | null): void {
 <template>
     <Listbox
         :model-value="modelValue"
-        @update:model-value="handleChange"
         :disabled="disabled"
         as="div"
         class="relative"
+        @update:model-value="handleChange"
     >
         <ListboxButton
             :id="id"
@@ -89,7 +89,7 @@ function handleChange(value: string | number | null): void {
                 class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-surface border border-default shadow-lg focus:outline-none"
             >
                 <!-- Placeholder option to allow clearing -->
-                <ListboxOption v-if="placeholder" :value="''" v-slot="{ active }" as="template">
+                <ListboxOption v-if="placeholder" v-slot="{ active }" :value="''" as="template">
                     <li
                         class="relative cursor-pointer select-none px-4 py-2.5 text-base-muted transition-colors duration-150 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                         :class="{ 'bg-primary-50 dark:bg-primary-900/20': active }"
@@ -101,8 +101,8 @@ function handleChange(value: string | number | null): void {
                 <ListboxOption
                     v-for="option in options"
                     :key="String(option.value)"
-                    :value="option.value"
                     v-slot="{ active, selected }"
+                    :value="option.value"
                     as="template"
                 >
                     <li

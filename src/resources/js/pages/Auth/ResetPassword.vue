@@ -35,7 +35,7 @@ const submit = () => {
 
 <template>
     <AuthLayout :title="t('auth.resetPassword.title')" :subtitle="t('auth.resetPassword.subtitle')">
-        <form @submit.prevent="submit" class="space-y-6">
+        <form class="space-y-6" @submit.prevent="submit">
             <div>
                 <label for="email" class="block text-sm font-medium text-base-secondary">
                     {{ t('auth.resetPassword.email') }}

@@ -165,8 +165,8 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                                 <input
                                     type="checkbox"
                                     :checked="isChecked(option.id)"
-                                    @change="toggleOption(option.id)"
                                     class="peer sr-only"
+                                    @change="toggleOption(option.id)"
                                 />
 
                                 <!-- Custom checkbox visual -->
@@ -256,8 +256,8 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                         <input
                             type="checkbox"
                             :checked="isChecked(option.id)"
-                            @change="toggleOption(option.id)"
                             class="peer sr-only"
+                            @change="toggleOption(option.id)"
                         />
 
                         <!-- Custom checkbox visual -->

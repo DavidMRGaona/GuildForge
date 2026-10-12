@@ -40,7 +40,7 @@ const submit = () => {
             <p class="text-sm text-success">{{ successMessage }}</p>
         </div>
 
-        <form @submit.prevent="submit" class="space-y-6">
+        <form class="space-y-6" @submit.prevent="submit">
             <div>
                 <label for="email" class="block text-sm font-medium text-base-secondary">
                     {{ t('auth.forgotPassword.email') }}

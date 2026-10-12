@@ -1,11 +1,13 @@
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
+import prettier from 'eslint-config-prettier';
 import vue from 'eslint-plugin-vue';
 import vueParser from 'vue-eslint-parser';
 
 export default [
     js.configs.recommended,
+    ...vue.configs['flat/recommended'],
     {
         ignores: ['node_modules/**', 'public/**', 'vendor/**', 'bootstrap/cache/**', 'storage/**'],
     },
@@ -66,6 +68,8 @@ export default [
                 parser: typescriptParser,
                 ecmaVersion: 'latest',
                 sourceType: 'module',
+                // Vue 3 has no filters: '|' in a TypeScript cast is not one
+                vueFeatures: { filter: false },
             },
             globals: {
                 console: 'readonly',
@@ -85,14 +89,9 @@ export default [
             },
         },
         plugins: {
-            vue,
             '@typescript-eslint': typescript,
         },
-        // Honours eslint-disable comments inside <template>
-        processor: 'vue/vue',
         rules: {
-            'vue/comment-directive': 'error',
-            ...vue.configs['flat/recommended'].rules,
             ...typescript.configs.recommended.rules,
             'vue/multi-word-component-names': 'off',
             'vue/no-v-html': 'warn',
@@ -100,4 +99,6 @@ export default [
             '@typescript-eslint/no-explicit-any': 'error',
         },
     },
+    // Last: turns off the formatting rules that Prettier owns
+    prettier,
 ];

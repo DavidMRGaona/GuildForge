@@ -85,7 +85,7 @@ const changePassword = () => {
                     </div>
                 </template>
 
-                <form @submit.prevent="updateProfile" class="space-y-4">
+                <form class="space-y-4" @submit.prevent="updateProfile">
                     <div>
                         <label for="name" class="block text-sm font-medium text-base-secondary">
                             {{ t('auth.profile.name') }}
@@ -191,7 +191,7 @@ const changePassword = () => {
                     </div>
                 </template>
 
-                <form @submit.prevent="changePassword" class="space-y-4">
+                <form class="space-y-4" @submit.prevent="changePassword">
                     <div>
                         <label
                             for="current_password"
