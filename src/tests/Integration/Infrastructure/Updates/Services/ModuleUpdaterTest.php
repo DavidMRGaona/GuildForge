@@ -60,9 +60,17 @@ final class ModuleUpdaterTest extends TestCase
 
     private string $modulesPath;
 
+    private string $publicPath;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        // public_path() reads the application's public path, not the "path.public" binding:
+        // without this, parallel processes create and delete the real public/build/modules
+        $this->publicPath = sys_get_temp_dir().'/gf-public-'.bin2hex(random_bytes(8));
+        File::ensureDirectoryExists($this->publicPath.'/build/modules');
+        $this->app->usePublicPath($this->publicPath);
 
         $this->moduleRepository = Mockery::mock(ModuleRepositoryInterface::class);
         $this->moduleManager = Mockery::mock(ModuleManagerServiceInterface::class);
@@ -98,7 +106,7 @@ final class ModuleUpdaterTest extends TestCase
     protected function tearDown(): void
     {
         File::deleteDirectory($this->tempDir);
-        File::deleteDirectory(public_path('build/modules/updtest-game'));
+        File::deleteDirectory($this->publicPath);
         Cache::flush();
         parent::tearDown();
     }
