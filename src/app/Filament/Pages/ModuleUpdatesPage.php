@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use Throwable;
-use Filament\Support\Enums\Width;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
 use App\Application\Updates\DTOs\BlockedReleaseDTO;
@@ -22,6 +20,7 @@ use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -31,6 +30,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Throwable;
 
 final class ModuleUpdatesPage extends Page implements HasTable
 {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament\Pages;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Updates\DTOs\AvailableUpdateDTO;
 use App\Application\Updates\DTOs\BlockedReleaseDTO;
 use App\Application\Updates\DTOs\UpdateCheckResultDTO;
 use App\Application\Updates\DTOs\UpdatePreviewDTO;
@@ -20,6 +21,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
+use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
@@ -84,6 +86,44 @@ final class ModuleUpdatesPageTest extends TestCase
         Livewire::test(ModuleUpdatesPage::class)
             ->assertSee('1.0.9-beta')
             ->assertSee('event-registrations');
+    }
+
+    public function test_release_dates_are_not_shown_before_a_check(): void
+    {
+        // The persisted pending update carries no release date: a column of dashes says nothing
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->pendingUpdate();
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->assertSee('1.0.9-beta')
+            ->assertDontSeeHtml('>'.__('filament.updates.modules.available.published').'</th>')
+            ->assertDontSee('—');
+    }
+
+    public function test_a_check_shows_the_release_date(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $checker = Mockery::mock(ModuleUpdateCheckerInterface::class);
+        $checker->shouldReceive('checkAll')->with(true)->once()->andReturn(new UpdateCheckResultDTO(new Collection([
+            new AvailableUpdateDTO(
+                moduleName: 'event-registrations',
+                displayName: 'Inscripciones',
+                currentVersion: '1.0.8-beta',
+                availableVersion: '1.0.9-beta',
+                releaseNotes: '',
+                publishedAt: new DateTimeImmutable('2026-10-01T10:00:00Z'),
+                isPrerelease: false,
+                isMajorUpdate: false,
+                downloadUrl: 'https://example.com/event-registrations.zip',
+                hasChecksum: true,
+            ),
+        ]), [], []));
+        $this->app->instance(ModuleUpdateCheckerInterface::class, $checker);
+
+        Livewire::test(ModuleUpdatesPage::class)
+            ->call('checkForUpdates')
+            ->assertSeeHtml('>'.__('filament.updates.modules.available.published').'</th>')
+            ->assertSee('01/10/2026');
     }
 
     public function test_page_lists_modules_without_repository(): void

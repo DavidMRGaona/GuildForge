@@ -1,4 +1,4 @@
-{{-- Filament's compiled CSS has no bg-warning-* utilities: the custom color utilities read --color-* --}}
+{{-- bg-custom-* reads --color-*: the inline style points it at the warning palette. bg-warning-* would also compile, as the panel theme scans this folder; MaintenanceBannerTest pins the inline style --}}
 <div
     role="status"
     class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-custom-600 px-4 py-2 text-center text-sm font-medium text-white dark:bg-custom-500"

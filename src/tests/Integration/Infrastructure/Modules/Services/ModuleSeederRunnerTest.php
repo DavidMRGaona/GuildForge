@@ -36,7 +36,7 @@ final class ModuleSeederRunnerTest extends TestCase
         // Unique namespace per test: seeder classes cannot be unloaded between tests
         $suffix = 'S'.str_replace('.', '', uniqid('', true));
         $this->namespace = "Modules\\SeedMod{$suffix}";
-        $this->modulesPath = sys_get_temp_dir().'/gf-seed-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-seed-'.bin2hex(random_bytes(8));
         config(['modules.path' => $this->modulesPath]);
 
         Schema::create('seedmod_items', function (Blueprint $table): void {

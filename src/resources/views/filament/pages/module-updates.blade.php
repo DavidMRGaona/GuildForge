@@ -1,4 +1,4 @@
-{{-- Uses Filament components and only utility classes present in Filament's compiled CSS: this panel has no custom theme --}}
+{{-- Filament components plus Tailwind utilities: the panel theme (resources/css/filament/admin/theme.css) compiles the classes used in resources/views/filament --}}
 <x-filament-panels::page>
     @php($maintenanceEnabled = $this->isMaintenanceModeEnabled())
     <div class="flex flex-col gap-6" @if($queuedModules !== []) wire:poll.3s="pollUpdates" @endif>
@@ -51,6 +51,8 @@
                     </p>
                 </div>
             @else
+                {{-- Release dates come with a check: the persisted pending updates have none --}}
+                @php($showPublished = collect($availableUpdates)->contains(fn (array $update): bool => $update['published_at'] !== null))
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm" style="width: 100%;">
                         <thead>
@@ -58,7 +60,9 @@
                                 <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.module') }}</th>
                                 <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.current') }}</th>
                                 <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.available') }}</th>
-                                <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.published') }}</th>
+                                @if($showPublished)
+                                    <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.published') }}</th>
+                                @endif
                                 <th class="px-4 py-3 font-medium">{{ __('filament.updates.modules.available.type') }}</th>
                                 <th class="px-4 py-3 text-end font-medium">{{ __('filament.updates.modules.available.actions') }}</th>
                             </tr>
@@ -76,9 +80,11 @@
                                     <td class="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
                                         v{{ $update['available_version'] }}
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
-                                        {{ $update['published_at'] !== null ? \Illuminate\Support\Carbon::parse($update['published_at'])->format('d/m/Y') : '—' }}
-                                    </td>
+                                    @if($showPublished)
+                                        <td class="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
+                                            {{ $update['published_at'] !== null ? \Illuminate\Support\Carbon::parse($update['published_at'])->format('d/m/Y') : '—' }}
+                                        </td>
+                                    @endif
                                     <td class="whitespace-nowrap px-4 py-3">
                                         <div class="flex">
                                             @if($update['is_major_update'])

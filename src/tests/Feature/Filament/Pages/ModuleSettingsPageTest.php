@@ -8,14 +8,18 @@ use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Modules\ModuleServiceProvider;
+use Filament\Forms\Components\TextInput;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
+use Tests\Support\Modules\RegistersBootedModuleProviders;
 use Tests\TestCase;
 
 final class ModuleSettingsPageTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RegistersBootedModuleProviders;
 
     public function test_settings_page_requires_admin(): void
     {
@@ -39,6 +43,7 @@ final class ModuleSettingsPageTest extends TestCase
             'name' => 'test-module',
             'display_name' => 'Test Module',
         ]);
+        $this->loadTestModuleWithSettings();
 
         $this->actingAs($user);
 
@@ -57,6 +62,7 @@ final class ModuleSettingsPageTest extends TestCase
             'author' => 'Test Author',
             'description' => 'A test module description',
         ]);
+        $this->loadTestModuleWithSettings();
 
         $this->actingAs($user);
 
@@ -87,28 +93,24 @@ final class ModuleSettingsPageTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(ModuleSettingsPage::class, ['module' => 'disabled-module'])
-            ->assertRedirect(ModulesPage::getUrl());
+            ->assertRedirect(ModulesPage::getUrl())
+            ->assertNotified(__('modules.filament.settings_page.module_disabled'));
     }
 
-    public function test_shows_no_settings_message_when_module_has_no_settings(): void
+    public function test_a_module_without_settings_goes_back_to_the_modules_page_with_a_notice(): void
     {
-        $user = UserModel::factory()->admin()->create();
-
-        ModuleModel::factory()->enabled()->create([
-            'name' => 'test-module',
-            'display_name' => 'Test Module',
-            'provider' => 'NonExistentProvider',
-        ]);
-
-        $this->actingAs($user);
+        $this->actingAs(UserModel::factory()->admin()->create());
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'provider' => 'NonExistentProvider']);
 
         Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module'])
-            ->assertSee(__('modules.filament.settings_page.no_settings'));
+            ->assertRedirect(ModulesPage::getUrl())
+            ->assertNotified(__('modules.filament.settings_page.no_settings'));
     }
 
     public function test_saving_a_module_without_settings_leaves_its_settings_file_untouched(): void
     {
-        // The page has no form then, but Livewire still lets anyone call save()
+        // mount() sends such a module away, but Livewire still lets anyone call save() on a
+        // component it has rendered before: the guard in save() is the defence of last resort
         $modulePath = sys_get_temp_dir().'/gf-no-settings-'.bin2hex(random_bytes(8));
         $settingsFile = $modulePath.'/config/settings.php';
         $original = "<?php\n\nreturn ['gtm_container_id' => ''];\n";
@@ -122,8 +124,9 @@ final class ModuleSettingsPageTest extends TestCase
         $this->actingAs(UserModel::factory()->admin()->create());
 
         try {
-            Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module'])
-                ->call('save');
+            $page = app(ModuleSettingsPage::class);
+            $page->module = 'test-module';
+            $page->save();
 
             $this->assertSame($original, File::get($settingsFile));
         } finally {
@@ -139,6 +142,7 @@ final class ModuleSettingsPageTest extends TestCase
             'name' => 'test-module',
             'display_name' => 'Test Module',
         ]);
+        $this->loadTestModuleWithSettings();
 
         $this->actingAs($user);
 
@@ -147,5 +151,20 @@ final class ModuleSettingsPageTest extends TestCase
         $breadcrumbs = $component->instance()->getBreadcrumbs();
 
         $this->assertArrayHasKey(ModulesPage::getUrl(), $breadcrumbs);
+    }
+
+    private function loadTestModuleWithSettings(): void
+    {
+        $this->registerBootedProvider(new class (app()) extends ModuleServiceProvider {
+            public function moduleName(): string
+            {
+                return 'test-module';
+            }
+
+            public function getSettingsSchema(): array
+            {
+                return [TextInput::make('greeting')];
+            }
+        });
     }
 }

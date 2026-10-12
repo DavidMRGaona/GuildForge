@@ -69,11 +69,11 @@ use App\Domain\Repositories\GalleryRepositoryInterface;
 use App\Domain\Repositories\PhotoRepositoryInterface;
 use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
-use App\Infrastructure\Content\Services\TrixContentMigrator;
-use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Calendar\Services\CalendarAggregatorService;
 use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
+use App\Infrastructure\Content\Services\TrixContentMigrator;
+use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Mail\Listeners\CheckQuotaBeforeSending;
 use App\Infrastructure\Mail\Listeners\LogSentEmail;
@@ -160,6 +160,7 @@ use App\Policies\RolePolicy;
 use App\Policies\TagPolicy;
 use App\Policies\UserPolicy;
 use Cloudinary\Cloudinary;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -435,6 +436,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->preserveFilamentV3Defaults();
+        $this->keepSentenceCaseInBulkDeleteHeadings();
 
         // Cloudinary driver of the "images" disk (App\Infrastructure\Storage\Cloudinary):
         // URLs built locally, images optimized before upload, missing assets ignored on delete
@@ -475,5 +477,17 @@ class AppServiceProvider extends ServiceProvider
         FileUpload::configureUsing(fn (FileUpload $upload): FileUpload => $upload->visibility('public'));
         ImageColumn::configureUsing(fn (ImageColumn $column): ImageColumn => $column->visibility('public'));
         ImageEntry::configureUsing(fn (ImageEntry $entry): ImageEntry => $entry->visibility('public'));
+    }
+
+    /**
+     * Spanish sentence case: the bulk delete heading title-cases the plural label, which BaseResource cannot reach.
+     */
+    private function keepSentenceCaseInBulkDeleteHeadings(): void
+    {
+        DeleteBulkAction::configureUsing(fn (DeleteBulkAction $action): DeleteBulkAction => $action
+            ->modalHeading(fn (DeleteBulkAction $action): string => __(
+                'filament-actions::delete.multiple.modal.heading',
+                ['label' => mb_lcfirst((string) $action->getPluralModelLabel())],
+            )));
     }
 }

@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Components\Utilities\Get;
-use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
+use App\Filament\Resources\BaseResource;
+use App\Filament\Resources\GalleryResource\Pages;
 use App\Filament\Resources\GalleryResource\Pages\CreateGallery;
 use App\Filament\Resources\GalleryResource\Pages\EditGallery;
-use App\Filament\Resources\GalleryResource\Pages;
+use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Filament\Forms\Components\FileUpload;
@@ -19,7 +17,9 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Resources\BaseResource;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;

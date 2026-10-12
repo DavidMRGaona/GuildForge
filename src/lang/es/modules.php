@@ -159,6 +159,7 @@ return [
             'title' => 'Configuración de :name',
             'back' => 'Volver a módulos',
             'no_settings' => 'Este módulo no tiene opciones de configuración.',
+            'module_disabled' => 'Este módulo está deshabilitado: habilítalo para configurarlo.',
             'save' => 'Guardar configuración',
             'saved' => 'Configuración guardada correctamente.',
         ],

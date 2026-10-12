@@ -17,7 +17,7 @@ final class TimePickerAssetTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    private const string SCRIPT = 'js/filament/time-picker.js';
+    private const string SCRIPT = 'js/admin/time-picker.js';
 
     private ?string $publicPath = null;
 
@@ -47,7 +47,7 @@ final class TimePickerAssetTest extends TestCase
     public function test_changing_the_script_changes_its_url(): void
     {
         $this->publicPath = sys_get_temp_dir().'/time-picker-asset-'.bin2hex(random_bytes(6));
-        File::ensureDirectoryExists($this->publicPath.'/js/filament');
+        File::ensureDirectoryExists($this->publicPath.'/js/admin');
         File::put($this->publicPath.'/'.self::SCRIPT, '// a changed time picker');
         $this->app->usePublicPath($this->publicPath);
         $this->withoutVite();

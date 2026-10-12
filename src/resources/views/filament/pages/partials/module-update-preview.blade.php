@@ -1,4 +1,4 @@
-{{-- Body of the "Ver detalles" modal on the module updates page. Only utility classes present in Filament's compiled CSS --}}
+{{-- Body of the "Ver detalles" modal on the module updates page. Its utilities are compiled by the panel theme --}}
 @if($error !== null)
     <div class="flex flex-col gap-1 text-sm">
         <p class="font-medium text-gray-950 dark:text-white">{{ __('filament.updates.modules.preview.failed') }}</p>

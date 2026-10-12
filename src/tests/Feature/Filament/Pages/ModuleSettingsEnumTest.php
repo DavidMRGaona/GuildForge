@@ -7,13 +7,13 @@ namespace Tests\Feature\Filament\Pages;
 use App\Filament\Pages\ModuleSettingsPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use App\Modules\ModuleLoader;
 use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Components\Select;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 use Tests\Support\Filament\FixtureTheme;
+use Tests\Support\Modules\RegistersBootedModuleProviders;
 use Tests\TestCase;
 
 /**
@@ -23,6 +23,7 @@ use Tests\TestCase;
 final class ModuleSettingsEnumTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RegistersBootedModuleProviders;
 
     private string $modulePath;
 
@@ -30,7 +31,7 @@ final class ModuleSettingsEnumTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulePath = sys_get_temp_dir().'/gf-settings-'.uniqid();
+        $this->modulePath = sys_get_temp_dir().'/gf-settings-'.bin2hex(random_bytes(8));
         File::ensureDirectoryExists($this->modulePath);
     }
 
@@ -43,7 +44,7 @@ final class ModuleSettingsEnumTest extends TestCase
     public function test_an_enum_backed_select_is_stored_as_its_value(): void
     {
         ModuleModel::factory()->enabled()->create(['name' => 'settings-fixture', 'path' => $this->modulePath]);
-        $this->loadProvider(new class (app()) extends ModuleServiceProvider {
+        $this->registerBootedProvider(new class (app()) extends ModuleServiceProvider {
             public function moduleName(): string
             {
                 return 'settings-fixture';
@@ -65,13 +66,5 @@ final class ModuleSettingsEnumTest extends TestCase
 
         $this->assertSame(['theme' => 'dark'], require $this->modulePath.'/config/settings.php');
         $this->assertSame('dark', config('modules.settings.settings-fixture.theme'));
-    }
-
-    private function loadProvider(ModuleServiceProvider $provider): void
-    {
-        // As if the module had booted: ModuleSettingsPage asks the loader for its provider
-        (function (ModuleServiceProvider $provider): void {
-            $this->loadedProviders[$provider->moduleName()] = $provider;
-        })->call(app(ModuleLoader::class), $provider);
     }
 }

@@ -1,4 +1,4 @@
-{{-- Uses Filament components and only utility classes present in Filament's compiled CSS: this panel has no custom theme --}}
+{{-- Filament components plus Tailwind utilities: the panel theme (resources/css/filament/admin/theme.css) compiles the classes used in resources/views/filament --}}
 <x-filament-panels::page>
     <div class="flex flex-col gap-6">
         <x-filament::section :heading="__('filament.updates.core.deployed.title')">

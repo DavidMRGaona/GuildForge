@@ -21,8 +21,9 @@ final class ModuleDiscoverCommandTest extends TestCase
     {
         parent::setUp();
 
-        // Use isolated test directory to avoid interference from real modules
-        $this->modulesPath = storage_path('app/test-modules-discover');
+        // A folder of this test only: real modules would interfere, and a fixed path collides
+        // with another suite running on the same tree
+        $this->modulesPath = storage_path('framework/testing/discover-command-'.bin2hex(random_bytes(8)));
         File::makeDirectory($this->modulesPath, 0755, true, true);
         config(['modules.path' => $this->modulesPath]);
 

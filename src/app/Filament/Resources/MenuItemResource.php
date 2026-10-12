@@ -4,27 +4,26 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
-use App\Filament\Resources\MenuItemResource\Pages\CreateMenuItem;
-use App\Filament\Resources\MenuItemResource\Pages\EditMenuItem;
-use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
-use Throwable;
 use App\Application\Navigation\Services\RouteRegistryInterface;
 use App\Domain\Navigation\Enums\LinkTarget;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Domain\Navigation\Enums\MenuVisibility;
+use App\Filament\Resources\BaseResource;
 use App\Filament\Resources\MenuItemResource\Pages;
+use App\Filament\Resources\MenuItemResource\Pages\CreateMenuItem;
+use App\Filament\Resources\MenuItemResource\Pages\EditMenuItem;
+use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Resources\BaseResource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -32,6 +31,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Throwable;
 
 class MenuItemResource extends BaseResource
 {

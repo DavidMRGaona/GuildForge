@@ -23,7 +23,7 @@ final class ModuleMigrationAnalyzerTest extends TestCase
 
         $this->analyzer = new ModuleMigrationAnalyzer(new CoreTableRegistry);
 
-        $basePath = sys_get_temp_dir().'/module_migration_analyzer_test_'.uniqid();
+        $basePath = sys_get_temp_dir().'/module_migration_analyzer_test_'.bin2hex(random_bytes(8));
         $this->migrationsPath = $basePath.'/migrations';
         $this->seedersPath = $basePath.'/seeders';
 
@@ -304,7 +304,7 @@ PHP);
     public function test_it_passes_for_nonexistent_directory(): void
     {
         // Arrange
-        $nonExistentPath = sys_get_temp_dir().'/nonexistent_migrations_'.uniqid();
+        $nonExistentPath = sys_get_temp_dir().'/nonexistent_migrations_'.bin2hex(random_bytes(8));
 
         // Act & Assert - should not throw for nonexistent directory
         $this->analyzer->analyzeMigrations('game-tables', $nonExistentPath);

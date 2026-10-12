@@ -33,7 +33,9 @@ final class ModuleHealthCheckerTest extends TestCase
         $this->moduleManager = Mockery::mock(ModuleManagerServiceInterface::class);
         $this->service = new ModuleHealthChecker($this->moduleManager);
 
-        $this->tempDir = storage_path('app/test-modules');
+        // A folder of this test only: storage/app is not for tests, and a fixed path collides
+        // with another suite running on the same tree
+        $this->tempDir = storage_path('framework/testing/health-checker-'.bin2hex(random_bytes(8)));
         File::ensureDirectoryExists($this->tempDir);
     }
 

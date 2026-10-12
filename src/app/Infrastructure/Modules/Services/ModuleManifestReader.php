@@ -56,7 +56,7 @@ final readonly class ModuleManifestReader
 
             foreach ($normalized['invalid'] as $key) {
                 // A list is repaired, not refused: its entries that are not strings are dropped
-                if (in_array($key, ['modules', 'extensions'], true)) {
+                if (in_array($key, ModuleManifestDTO::LIST_KEYS, true)) {
                     $this->logger->warning("Invalid requires.{$key} in {$path}: only its string entries are checked");
 
                     continue;

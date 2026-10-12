@@ -19,7 +19,7 @@ final class ModuleListCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-module-list-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-module-list-'.bin2hex(random_bytes(8));
         config(['modules.path' => $this->modulesPath]);
     }
 

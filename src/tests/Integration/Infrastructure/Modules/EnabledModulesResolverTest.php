@@ -29,7 +29,7 @@ final class EnabledModulesResolverTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-resolver-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-resolver-'.bin2hex(random_bytes(8));
         File::ensureDirectoryExists($this->modulesPath);
         config(['modules.path' => $this->modulesPath]);
 

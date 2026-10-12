@@ -22,7 +22,7 @@ final class CoreVersionServiceTest extends TestCase
         parent::setUp();
 
         // Never touch src/VERSION: the parallel suite reads it to check module compatibility
-        $this->versionFilePath = sys_get_temp_dir().'/gf-version-'.uniqid();
+        $this->versionFilePath = sys_get_temp_dir().'/gf-version-'.bin2hex(random_bytes(8));
         $this->service = new CoreVersionService($this->versionFilePath);
     }
 
