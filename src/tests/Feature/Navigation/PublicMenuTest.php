@@ -106,6 +106,30 @@ final class PublicMenuTest extends TestCase
                 ->where('navigation.header.0.label', 'Eventos'));
     }
 
+    public function test_a_parent_with_its_own_link_stays_when_its_children_are_all_left_out(): void
+    {
+        $parent = $this->menuItem(MenuLocation::Header, 'Comunidad', url: '/comunidad', sort: 1);
+        $this->menuItem(MenuLocation::Header, 'Mesas', route: 'gametables.index', module: 'game-tables', sort: 1, parentId: $parent->id);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('navigation.header', 1)
+                ->where('navigation.header.0.href', '/comunidad')
+                ->has('navigation.header.0.children', 0));
+    }
+
+    public function test_an_item_without_link_or_children_is_kept(): void
+    {
+        $this->menuItem(MenuLocation::Header, 'Próximamente', sort: 1);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('navigation.header', 1)
+                ->where('navigation.header.0.href', '#'));
+    }
+
     private function menuItem(
         MenuLocation $location,
         string $label,
