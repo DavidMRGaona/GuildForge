@@ -68,6 +68,11 @@ final readonly class SeoDescriptionBuilder
             ? CarbonImmutable::instance($schedule->end)->setTimezone($this->timezone)->settings(['locale' => $locale])
             : null;
 
+        // An end at 00:00 belongs to the day before: 20:00–00:00 is a one-day event
+        if ($end !== null && $end->greaterThan($start) && $end->format('H:i:s') === '00:00:00') {
+            $end = $end->subSecond();
+        }
+
         $dateFormat = $this->translate('seo.formats.date');
 
         if ($end === null || $start->isSameDay($end)) {
