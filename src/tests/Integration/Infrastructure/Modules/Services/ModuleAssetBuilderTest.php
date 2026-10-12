@@ -28,15 +28,15 @@ final class ModuleAssetBuilderTest extends TestCase
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.uniqid();
-        $this->testPublicPath = sys_get_temp_dir().'/guildforge-test-public-'.uniqid();
+        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.bin2hex(random_bytes(8));
+        $this->testPublicPath = sys_get_temp_dir().'/guildforge-test-public-'.bin2hex(random_bytes(8));
 
         mkdir($this->testModulesPath, 0755, true);
         mkdir($this->testPublicPath.'/build/modules', 0755, true);
 
         // Override paths
         config(['modules.path' => $this->testModulesPath]);
-        $this->app->instance('path.public', $this->testPublicPath);
+        $this->app->usePublicPath($this->testPublicPath);
 
         $this->builder = new ModuleAssetBuilder($this->testModulesPath);
     }

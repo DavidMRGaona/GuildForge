@@ -23,7 +23,7 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.uniqid();
+        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.bin2hex(random_bytes(8));
         mkdir($this->testModulesPath, 0755, true);
         config(['modules.path' => $this->testModulesPath]);
     }

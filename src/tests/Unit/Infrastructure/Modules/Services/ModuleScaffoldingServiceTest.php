@@ -24,7 +24,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         parent::setUp();
 
         // Create temporary directory for test modules
-        $this->tempModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.uniqid();
+        $this->tempModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.bin2hex(random_bytes(8));
         mkdir($this->tempModulesPath, 0755, true);
 
         // Use real stubs path - stubs are in src/stubs/modules

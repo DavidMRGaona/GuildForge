@@ -57,9 +57,17 @@ final class ModuleInstallerTest extends TestCase
 
     private MockInterface&ModuleCompatibilityServiceInterface $compatibility;
 
+    private string $publicPath;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        // public_path() reads the application's public path, not the "path.public" binding:
+        // without this, parallel processes create and delete the real public/build/modules
+        $this->publicPath = sys_get_temp_dir().'/gf-public-'.bin2hex(random_bytes(8));
+        File::ensureDirectoryExists($this->publicPath.'/build/modules');
+        $this->app->usePublicPath($this->publicPath);
 
         Log::spy();
 
@@ -102,7 +110,7 @@ final class ModuleInstallerTest extends TestCase
     {
         File::deleteDirectory($this->tempDir);
         File::deleteDirectory($this->modulesPath);
-        File::deleteDirectory(public_path('build/modules'));
+        File::deleteDirectory($this->publicPath);
 
         parent::tearDown();
     }
