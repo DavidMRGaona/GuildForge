@@ -35,7 +35,7 @@ const submit = () => {
 
 <template>
     <AuthLayout :title="t('auth.register.title')" :subtitle="t('auth.register.subtitle')">
-        <form @submit.prevent="submit" class="space-y-6">
+        <form class="space-y-6" @submit.prevent="submit">
             <div>
                 <label for="name" class="block text-sm font-medium text-base-secondary">
                     {{ t('auth.register.name') }}
