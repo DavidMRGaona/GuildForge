@@ -14,9 +14,17 @@ final class ModuleViteHelperTest extends TestCase
 {
     private string $manifestDirectory;
 
+    private string $publicPath;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        // public_path() reads the application's public path, not the "path.public" binding:
+        // without this, parallel processes create and delete the real public/build/modules
+        $this->publicPath = sys_get_temp_dir().'/gf-public-'.bin2hex(random_bytes(8));
+        File::ensureDirectoryExists($this->publicPath.'/build/modules');
+        $this->app->usePublicPath($this->publicPath);
 
         $this->manifestDirectory = public_path('build/modules/vite-helper-fixture');
         File::ensureDirectoryExists($this->manifestDirectory);
@@ -30,7 +38,7 @@ final class ModuleViteHelperTest extends TestCase
 
     protected function tearDown(): void
     {
-        File::deleteDirectory($this->manifestDirectory);
+        File::deleteDirectory($this->publicPath);
 
         parent::tearDown();
     }

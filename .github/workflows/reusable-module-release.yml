@@ -131,6 +131,15 @@ jobs:
             fi
           done
 
+          for KEY in modules extensions; do
+            # Optional lists: a present key must be a list of strings (the ZIP installer refuses anything else)
+            if jq -e --arg k "$KEY" '.requires | has($k)' module.json > /dev/null \
+              && ! jq -e --arg k "$KEY" '.requires[$k] | type == "array" and all(.[]; type == "string")' module.json > /dev/null; then
+              echo "::error::requires.$KEY must be a list of strings in module.json, got $(jq -c --arg k "$KEY" '.requires[$k]' module.json)"
+              exit 1
+            fi
+          done
+
   test:
     name: Test module
     needs: validate

@@ -10,6 +10,7 @@ use App\Domain\Modules\ValueObjects\ModuleVersion;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
+use Throwable;
 
 final class CoreVersionService implements CoreVersionServiceInterface
 {
@@ -35,7 +36,15 @@ final class CoreVersionService implements CoreVersionServiceInterface
             return $this->cachedVersion;
         }
 
-        $version = trim(File::get($versionFile));
+        try {
+            $version = trim(File::get($versionFile));
+        } catch (Throwable $e) {
+            // Never throw: the compatibility gate runs at boot (a directory, an unreadable file)
+            Log::error('Unreadable core version file, using 0.0.0', ['file' => $versionFile, 'error' => $e->getMessage()]);
+            $this->cachedVersion = ModuleVersion::fromString('0.0.0');
+
+            return $this->cachedVersion;
+        }
 
         try {
             $this->cachedVersion = ModuleVersion::fromString($version);

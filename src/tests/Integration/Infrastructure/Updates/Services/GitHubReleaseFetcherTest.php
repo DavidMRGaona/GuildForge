@@ -17,6 +17,7 @@ use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use App\Domain\Updates\ValueObjects\ReleaseSelection;
 use App\Infrastructure\Updates\Services\GitHubReleaseFetcher;
 use DateTimeImmutable;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -477,6 +478,20 @@ final class GitHubReleaseFetcherTest extends TestCase
         $this->assertSame(CompatibilityIssue::INVALID_CONSTRAINT, $selection->blockedIssues[0]->reasonKey);
     }
 
+    public function test_an_oversized_manifest_asset_is_never_downloaded(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0', withManifest: true, manifestSize: 70_000)]),
+            'example.test/*' => Http::response('{}'),
+        ]);
+
+        $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertNull($selection->compatible);
+        $this->assertEquals([new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID)], $selection->blockedIssues);
+        Http::assertNotSent(fn (Request $request): bool => str_ends_with($request->url(), '/module.json'));
+    }
+
     public function test_an_oversized_manifest_asset_blocks_the_release(): void
     {
         Http::fake([
@@ -570,7 +585,7 @@ final class GitHubReleaseFetcherTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function release(string $tag, bool $prerelease = false, bool $draft = false, string $body = '', bool $withManifest = false): array
+    private function release(string $tag, bool $prerelease = false, bool $draft = false, string $body = '', bool $withManifest = false, ?int $manifestSize = null): array
     {
         $version = ltrim($tag, 'v');
         $assets = [
@@ -579,7 +594,8 @@ final class GitHubReleaseFetcherTest extends TestCase
         ];
 
         if ($withManifest) {
-            $assets[] = ['name' => 'module.json', 'browser_download_url' => "https://example.test/{$tag}/module.json"];
+            $assets[] = ['name' => 'module.json', 'browser_download_url' => "https://example.test/{$tag}/module.json"]
+                + ($manifestSize === null ? [] : ['size' => $manifestSize]);
         }
 
         return [
