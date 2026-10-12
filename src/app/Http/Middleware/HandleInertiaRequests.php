@@ -10,6 +10,7 @@ use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Modules\ModuleLoader;
@@ -140,15 +141,7 @@ final class HandleInertiaRequests extends Middleware
     private function getFavicons(): array
     {
         try {
-            $settingsService = app(SettingsServiceInterface::class);
-
-            $lightPath = (string) $settingsService->get('site_favicon_light', '');
-            $darkPath = (string) $settingsService->get('site_favicon_dark', '');
-
-            return [
-                'light' => $lightPath !== '' ? Storage::disk('images')->url($lightPath) : null,
-                'dark' => $darkPath !== '' ? Storage::disk('images')->url($darkPath) : null,
-            ];
+            return app(SiteBrandingServiceInterface::class)->customFavicons();
         } catch (\Throwable $e) {
             $this->logDebugError('getFavicons', $e);
 
