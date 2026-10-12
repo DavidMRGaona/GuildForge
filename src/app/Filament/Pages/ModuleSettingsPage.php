@@ -154,6 +154,11 @@ final class ModuleSettingsPage extends Page implements HasForms
 
     public function save(): void
     {
+        // Nothing to save, and an empty state would blank the module's settings file
+        if (! $this->hasSettings()) {
+            return;
+        }
+
         /** @var ModuleManagerServiceInterface $moduleManager */
         $moduleManager = app(ModuleManagerServiceInterface::class);
 
