@@ -10,6 +10,5 @@ final readonly class ModuleInstalled
         public string $moduleName,
         public string $moduleVersion,
         public string $modulePath,
-    ) {
-    }
+    ) {}
 }

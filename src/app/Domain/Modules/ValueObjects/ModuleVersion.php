@@ -18,8 +18,7 @@ final readonly class ModuleVersion implements Stringable
         public int $minor,
         public int $patch,
         public ?string $preRelease = null,
-    ) {
-    }
+    ) {}
 
     public static function fromString(string $version): self
     {
@@ -77,7 +76,7 @@ final readonly class ModuleVersion implements Stringable
     public function satisfies(string $constraint): bool
     {
         try {
-            return (new ConstraintMatcher())->matches($constraint, $this);
+            return (new ConstraintMatcher)->matches($constraint, $this);
         } catch (InvalidVersionConstraintException) {
             return false;
         }

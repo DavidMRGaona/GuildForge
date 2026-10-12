@@ -35,8 +35,7 @@ final readonly class MenuItem
         private ?DateTimeImmutable $createdAt = null,
         private ?DateTimeImmutable $updatedAt = null,
         private array $children = [],
-    ) {
-    }
+    ) {}
 
     public function id(): MenuItemId
     {

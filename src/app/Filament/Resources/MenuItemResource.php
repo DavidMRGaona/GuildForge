@@ -8,8 +8,6 @@ use App\Application\Navigation\Services\RouteRegistryInterface;
 use App\Domain\Navigation\Enums\LinkTarget;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Domain\Navigation\Enums\MenuVisibility;
-use App\Filament\Resources\BaseResource;
-use App\Filament\Resources\MenuItemResource\Pages;
 use App\Filament\Resources\MenuItemResource\Pages\CreateMenuItem;
 use App\Filament\Resources\MenuItemResource\Pages\EditMenuItem;
 use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
@@ -37,7 +35,7 @@ class MenuItemResource extends BaseResource
 {
     protected static ?string $model = MenuItemModel::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bars-3';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-bars-3';
 
     protected static ?int $navigationSort = 50;
 
@@ -117,7 +115,7 @@ class MenuItemResource extends BaseResource
                                 }
                                 $routeParams = $record->route_params;
                                 if (isset($routeParams['slug'])) {
-                                    $component->state($state . ':' . $routeParams['slug']);
+                                    $component->state($state.':'.$routeParams['slug']);
                                 }
                             }),
 
@@ -207,7 +205,7 @@ class MenuItemResource extends BaseResource
                             $key = $record->route;
                             $routeParams = $record->route_params;
                             if (isset($routeParams['slug'])) {
-                                $key .= ':' . $routeParams['slug'];
+                                $key .= ':'.$routeParams['slug'];
                             }
 
                             return $routes[$key] ?? $routes[$record->route] ?? $record->route;

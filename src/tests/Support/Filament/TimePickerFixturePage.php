@@ -14,7 +14,7 @@ use Filament\Schemas\Schema;
 /**
  * A form with the core's own TimePicker, as module forms use it (game-tables time slots).
  *
- * @property \Filament\Schemas\Schema $form
+ * @property Schema $form
  */
 final class TimePickerFixturePage extends Page implements HasForms
 {

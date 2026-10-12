@@ -16,8 +16,7 @@ final readonly class RoleResponseDTO
         public ?string $description,
         public bool $isProtected,
         public array $permissionKeys = [],
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{id: string, name: string, display_name: string, description: string|null, is_protected: bool, permission_keys: array<string>}

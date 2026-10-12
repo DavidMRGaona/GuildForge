@@ -29,8 +29,7 @@ final class EnabledModulesResolver implements EnabledModulesResolverInterface
     public function __construct(
         private readonly ModuleRepositoryInterface $repository,
         private readonly ModuleCompatibilityServiceInterface $compatibility,
-    ) {
-    }
+    ) {}
 
     public function names(): array
     {

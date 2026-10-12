@@ -8,6 +8,7 @@ use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,8 +19,7 @@ final class EmailVerificationController extends Controller
     public function __construct(
         private readonly AuthServiceInterface $authService,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function notice(): Response
     {
@@ -44,7 +44,7 @@ final class EmailVerificationController extends Controller
 
     public function resend(Request $request): RedirectResponse
     {
-        /** @var \App\Infrastructure\Persistence\Eloquent\Models\UserModel $user */
+        /** @var UserModel $user */
         $user = $request->user();
         $userId = (string) $user->id;
 

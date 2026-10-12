@@ -19,8 +19,7 @@ final readonly class SlotRegistrationDTO
         public array $props = [],
         public array $dataKeys = [],
         public ?array $profileTab = null,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data

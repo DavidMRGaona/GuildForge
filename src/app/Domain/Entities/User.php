@@ -20,8 +20,7 @@ final class User
         private readonly ?DateTimeImmutable $anonymizedAt = null,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
-    ) {
-    }
+    ) {}
 
     public function id(): UserId
     {

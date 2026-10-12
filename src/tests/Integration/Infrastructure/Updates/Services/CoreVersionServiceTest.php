@@ -180,7 +180,7 @@ final class CoreVersionServiceTest extends TestCase
 
     public function test_it_reads_the_application_version_file_by_default(): void
     {
-        $this->assertSame(trim(File::get(base_path('VERSION'))), (new CoreVersionService())->getCurrentVersion()->value());
+        $this->assertSame(trim(File::get(base_path('VERSION'))), (new CoreVersionService)->getCurrentVersion()->value());
     }
 
     private function writeVersion(string $version): void

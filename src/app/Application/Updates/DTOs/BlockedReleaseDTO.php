@@ -21,8 +21,7 @@ final readonly class BlockedReleaseDTO
         public string $currentVersion,
         public string $blockedVersion,
         public array $issues,
-    ) {
-    }
+    ) {}
 
     public static function fromModule(Module $module): self
     {

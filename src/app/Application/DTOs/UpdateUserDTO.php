@@ -11,8 +11,7 @@ final readonly class UpdateUserDTO
         public ?string $displayName,
         public string $email,
         public ?string $avatarPublicId = null,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{name: string, display_name?: string|null, email: string, avatar_public_id?: string|null}  $data

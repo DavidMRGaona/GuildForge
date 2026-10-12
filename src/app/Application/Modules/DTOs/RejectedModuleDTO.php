@@ -15,6 +15,5 @@ final readonly class RejectedModuleDTO
         public string $name,
         public string $displayName,
         public array $issues,
-    ) {
-    }
+    ) {}
 }

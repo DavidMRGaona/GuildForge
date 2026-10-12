@@ -15,8 +15,7 @@ final class LegalPageController extends Controller
     public function __construct(
         private readonly LegalPageServiceInterface $legalPageService,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function show(string $slug): Response
     {

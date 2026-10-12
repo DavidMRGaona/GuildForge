@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -15,8 +16,7 @@ final class WelcomeNotification extends Notification implements ShouldQueue
 
     public function __construct(
         private readonly string $appName,
-    ) {
-    }
+    ) {}
 
     /**
      * Get the notification's delivery channels.
@@ -33,10 +33,10 @@ final class WelcomeNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        /** @var \App\Infrastructure\Persistence\Eloquent\Models\UserModel $notifiable */
+        /** @var UserModel $notifiable */
         $loginUrl = route('login');
 
-        return (new MailMessage())
+        return (new MailMessage)
             ->subject(__('auth.welcome_subject', ['app' => $this->appName]))
             ->greeting(__('auth.welcome_greeting', ['name' => $notifiable->name]))
             ->line(__('auth.welcome_line1', ['app' => $this->appName]))

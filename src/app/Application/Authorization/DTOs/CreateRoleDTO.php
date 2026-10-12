@@ -15,8 +15,7 @@ final readonly class CreateRoleDTO
         public ?string $description = null,
         public bool $isProtected = false,
         public array $permissionKeys = [],
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{name: string, display_name: string, description?: string|null, is_protected?: bool, permission_keys?: array<string>}  $data

@@ -15,7 +15,7 @@ final class RouteRegistryTest extends TestCase
     #[Test]
     public function it_returns_core_routes(): void
     {
-        $moduleRouteRegistry = new ModuleRouteRegistry();
+        $moduleRouteRegistry = new ModuleRouteRegistry;
         $registry = new RouteRegistry($moduleRouteRegistry);
 
         $routes = $registry->getAvailableRoutes();
@@ -29,7 +29,7 @@ final class RouteRegistryTest extends TestCase
     #[Test]
     public function it_merges_module_routes_with_core_routes(): void
     {
-        $moduleRouteRegistry = new ModuleRouteRegistry();
+        $moduleRouteRegistry = new ModuleRouteRegistry;
         $moduleRouteRegistry->register(
             new ModuleRouteDTO(
                 routeName: 'gametables.index',
@@ -50,7 +50,7 @@ final class RouteRegistryTest extends TestCase
     #[Test]
     public function it_gives_priority_to_core_routes_on_key_collision(): void
     {
-        $moduleRouteRegistry = new ModuleRouteRegistry();
+        $moduleRouteRegistry = new ModuleRouteRegistry;
         $moduleRouteRegistry->register(
             new ModuleRouteDTO(
                 routeName: 'home',

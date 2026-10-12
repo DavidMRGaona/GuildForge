@@ -22,8 +22,7 @@ final readonly class NavigationItemDTO
         public ?string $module = null,
         public ?string $badge = null,
         public ?string $badgeColor = null,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data

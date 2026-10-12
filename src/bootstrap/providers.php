@@ -1,8 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Infrastructure\Mail\Providers\DynamicMailServiceProvider;
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthorizationServiceProvider;
+use App\Providers\Filament\AdminPanelProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\AuthorizationServiceProvider::class,
-    App\Infrastructure\Mail\Providers\DynamicMailServiceProvider::class,
-    App\Providers\Filament\AdminPanelProvider::class,
+    AppServiceProvider::class,
+    AuthorizationServiceProvider::class,
+    DynamicMailServiceProvider::class,
+    AdminPanelProvider::class,
 ];

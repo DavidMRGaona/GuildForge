@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Application\Modules\Services;
 
 use App\Application\Modules\DTOs\ModuleManifestDTO;
+use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
+use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use Illuminate\Http\UploadedFile;
 
 interface ModuleInstallerInterface
@@ -41,8 +43,8 @@ interface ModuleInstallerInterface
      *
      * @return ModuleManifestDTO The installed module's manifest
      *
-     * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
-     * @throws \App\Domain\Modules\Exceptions\ModuleIncompatibleException When the package does not fit this host
+     * @throws ModuleInstallationException
+     * @throws ModuleIncompatibleException When the package does not fit this host
      */
     public function installFromZip(UploadedFile $file): ModuleManifestDTO;
 
@@ -54,8 +56,8 @@ interface ModuleInstallerInterface
      *
      * @return ModuleManifestDTO The updated module's manifest
      *
-     * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
-     * @throws \App\Domain\Modules\Exceptions\ModuleIncompatibleException When the package does not fit this host
+     * @throws ModuleInstallationException
+     * @throws ModuleIncompatibleException When the package does not fit this host
      */
     public function updateFromZip(UploadedFile $file): ModuleManifestDTO;
 
@@ -67,7 +69,7 @@ interface ModuleInstallerInterface
     /**
      * Extract and validate the manifest from a ZIP file without installing it.
      *
-     * @throws \App\Domain\Modules\Exceptions\ModuleInstallationException
+     * @throws ModuleInstallationException
      */
     public function peekManifest(UploadedFile $file): ModuleManifestDTO;
 }

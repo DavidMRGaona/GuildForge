@@ -10,8 +10,7 @@ final readonly class AnonymizeUserDTO
         public string $userId,
         public string $contentAction,
         public ?string $transferToUserId = null,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{user_id: string, content_action: string, transfer_to_user_id?: string|null}  $data

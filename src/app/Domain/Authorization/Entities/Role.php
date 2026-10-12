@@ -15,8 +15,7 @@ final class Role
         private readonly string $displayName,
         private readonly ?string $description = null,
         private readonly bool $isProtected = false,
-    ) {
-    }
+    ) {}
 
     public function id(): RoleId
     {

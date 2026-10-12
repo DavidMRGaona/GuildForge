@@ -13,18 +13,18 @@ final class TrixHtmlConverterTest extends TestCase
     #[DataProvider('trixHtml')]
     public function test_trix_markup_becomes_the_html_the_editor_keeps(string $trix, string $expected): void
     {
-        $this->assertSame($expected, (new TrixHtmlConverter())->convert($trix));
+        $this->assertSame($expected, (new TrixHtmlConverter)->convert($trix));
     }
 
     #[DataProvider('trixHtml')]
     public function test_converting_twice_changes_nothing(string $trix, string $expected): void
     {
-        $this->assertSame($expected, (new TrixHtmlConverter())->convert($expected));
+        $this->assertSame($expected, (new TrixHtmlConverter)->convert($expected));
     }
 
     public function test_empty_content_stays_empty(): void
     {
-        $this->assertSame('', (new TrixHtmlConverter())->convert(''));
+        $this->assertSame('', (new TrixHtmlConverter)->convert(''));
     }
 
     /**

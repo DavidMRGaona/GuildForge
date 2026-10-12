@@ -56,7 +56,7 @@ final readonly class EloquentSlugRedirectRepository implements SlugRedirectRepos
             entityId: $model->entity_id,
             createdAt: $model->created_at !== null
                 ? new DateTimeImmutable($model->created_at->toDateTimeString())
-                : new DateTimeImmutable(),
+                : new DateTimeImmutable,
         );
     }
 

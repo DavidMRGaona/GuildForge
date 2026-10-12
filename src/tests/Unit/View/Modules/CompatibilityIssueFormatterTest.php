@@ -22,7 +22,7 @@ final class CompatibilityIssueFormatterTest extends TestCase
     {
         parent::setUp();
 
-        $this->formatter = new CompatibilityIssueFormatter();
+        $this->formatter = new CompatibilityIssueFormatter;
         $this->core = new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED);
         $this->extension = new CompatibilityIssue(RequirementType::Extension, 'intl', null, CompatibilityIssue::MISSING_EXTENSION);
     }

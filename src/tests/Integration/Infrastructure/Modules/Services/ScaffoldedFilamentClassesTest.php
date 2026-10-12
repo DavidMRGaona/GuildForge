@@ -51,7 +51,7 @@ final class ScaffoldedFilamentClassesTest extends TestCase
 
         foreach ($files as $file) {
             $process = new Process([
-                (string) (new PhpExecutableFinder())->find(false),
+                (string) (new PhpExecutableFinder)->find(false),
                 '-r',
                 'require $argv[1]; require $argv[2];',
                 base_path('vendor/autoload.php'),

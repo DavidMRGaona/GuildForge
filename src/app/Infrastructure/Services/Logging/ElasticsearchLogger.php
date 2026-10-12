@@ -12,8 +12,7 @@ final class ElasticsearchLogger
 {
     public function __construct(
         private readonly ?LogContextProviderInterface $contextProvider = null,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $config
@@ -21,7 +20,7 @@ final class ElasticsearchLogger
     public function __invoke(array $config): Logger
     {
         if (! config('elasticsearch.enabled', false)) {
-            return new Logger('elasticsearch', [new NullHandler()]);
+            return new Logger('elasticsearch', [new NullHandler]);
         }
 
         $handler = new ElasticsearchHandler(

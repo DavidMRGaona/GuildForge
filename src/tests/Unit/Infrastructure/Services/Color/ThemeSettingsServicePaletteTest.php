@@ -7,7 +7,6 @@ namespace Tests\Unit\Infrastructure\Services\Color;
 use App\Application\Services\ColorPaletteGeneratorInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\ValueObjects\ColorPalette;
-use App\Domain\ValueObjects\HexColor;
 use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 use App\Infrastructure\Services\ThemeSettingsService;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +22,7 @@ final class ThemeSettingsServicePaletteTest extends TestCase
     protected function setUp(): void
     {
         $this->settingsService = $this->createStub(SettingsServiceInterface::class);
-        $this->paletteGenerator = new OklchColorPaletteGenerator();
+        $this->paletteGenerator = new OklchColorPaletteGenerator;
         $this->service = new ThemeSettingsService($this->settingsService, $this->paletteGenerator);
     }
 

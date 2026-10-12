@@ -24,8 +24,7 @@ final class ProfileController extends Controller
         private readonly AuthServiceInterface $authService,
         private readonly ResponseDTOFactoryInterface $dtoFactory,
         private readonly SeoMetadataFactoryInterface $seo,
-    ) {
-    }
+    ) {}
 
     public function show(Request $request): Response
     {

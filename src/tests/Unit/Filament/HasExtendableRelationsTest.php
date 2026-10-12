@@ -7,6 +7,7 @@ namespace Tests\Unit\Filament;
 use App\Filament\Concerns\HasExtendableRelations;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Resources\Resource;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use PHPUnit\Framework\Attributes\Test;
@@ -83,7 +84,7 @@ final class HasExtendableRelationsTest extends TestCase
 
 class TestModel extends Model
 {
-    use \Illuminate\Database\Eloquent\Concerns\HasUuids;
+    use HasUuids;
 
     protected $table = 'test_models';
 

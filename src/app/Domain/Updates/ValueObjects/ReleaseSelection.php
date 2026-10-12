@@ -21,8 +21,7 @@ final readonly class ReleaseSelection
         public ?GitHubReleaseInfo $blocked,
         public ?string $blockedCoreConstraint,
         public array $blockedIssues,
-    ) {
-    }
+    ) {}
 
     public static function none(): self
     {

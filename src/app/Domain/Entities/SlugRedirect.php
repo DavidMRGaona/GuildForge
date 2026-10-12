@@ -16,8 +16,7 @@ final class SlugRedirect
         private readonly string $entityType,
         private readonly string $entityId,
         private readonly DateTimeImmutable $createdAt,
-    ) {
-    }
+    ) {}
 
     public function id(): string
     {

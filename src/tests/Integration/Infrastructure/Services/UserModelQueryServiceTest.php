@@ -20,7 +20,7 @@ final class UserModelQueryServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new UserModelQueryService();
+        $this->service = new UserModelQueryService;
     }
 
     public function test_it_implements_user_model_query_service_interface(): void

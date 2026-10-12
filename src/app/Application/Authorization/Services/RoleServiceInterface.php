@@ -7,6 +7,7 @@ namespace App\Application\Authorization\Services;
 use App\Application\Authorization\DTOs\CreateRoleDTO;
 use App\Application\Authorization\DTOs\RoleResponseDTO;
 use App\Application\Authorization\DTOs\UpdateRoleDTO;
+use App\Domain\Authorization\Exceptions\RoleProtectedException;
 
 interface RoleServiceInterface
 {
@@ -40,7 +41,7 @@ interface RoleServiceInterface
     /**
      * Delete a role by ID.
      *
-     * @throws \App\Domain\Authorization\Exceptions\RoleProtectedException
+     * @throws RoleProtectedException
      */
     public function delete(string $id): void;
 

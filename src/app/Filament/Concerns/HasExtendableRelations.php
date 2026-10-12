@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Concerns;
 
+use Illuminate\Database\Eloquent\Model;
+
 /**
  * Allows Filament Resources to be extended with additional RelationManagers
  * from external modules without modifying the core Resource class.
@@ -77,7 +79,7 @@ trait HasExtendableRelations
      */
     protected static function filterValidRelations(array $relationManagers): array
     {
-        /** @var class-string<\Illuminate\Database\Eloquent\Model> $modelClass */
+        /** @var class-string<Model> $modelClass */
         $modelClass = static::getModel();
 
         return array_filter($relationManagers, static function (string $relationManagerClass) use ($modelClass): bool {
@@ -100,7 +102,7 @@ trait HasExtendableRelations
      * Check if a model has a relation resolver registered for the given relationship.
      */
     /**
-     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     * @param  class-string<Model>  $modelClass
      */
     private static function hasRelationResolver(string $modelClass, string $relationshipName): bool
     {

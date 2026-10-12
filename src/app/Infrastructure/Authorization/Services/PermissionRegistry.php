@@ -20,8 +20,7 @@ final class PermissionRegistry implements PermissionRegistryInterface
 
     public function __construct(
         private readonly ?PermissionRepositoryInterface $permissionRepository = null,
-    ) {
-    }
+    ) {}
 
     public function register(PermissionDefinitionDTO $permission): void
     {

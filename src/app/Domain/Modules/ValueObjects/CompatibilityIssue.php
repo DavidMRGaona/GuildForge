@@ -30,8 +30,7 @@ final readonly class CompatibilityIssue
         public string $required,
         public ?string $found,
         public string $reasonKey,
-    ) {
-    }
+    ) {}
 
     /**
      * English, for logs and exception messages; the panel translates $reasonKey instead.

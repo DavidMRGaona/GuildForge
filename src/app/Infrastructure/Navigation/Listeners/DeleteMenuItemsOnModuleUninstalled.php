@@ -11,8 +11,7 @@ final readonly class DeleteMenuItemsOnModuleUninstalled
 {
     public function __construct(
         private MenuItemRepositoryInterface $menuItemRepository,
-    ) {
-    }
+    ) {}
 
     public function handle(ModuleUninstalled $event): void
     {

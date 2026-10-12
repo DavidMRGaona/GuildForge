@@ -15,8 +15,7 @@ class TagPolicy
 
     public function __construct(
         private readonly TagQueryServiceInterface $tagQueryService,
-    ) {
-    }
+    ) {}
 
     public function viewAny(UserModel $user): bool
     {

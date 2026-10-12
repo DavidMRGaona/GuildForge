@@ -15,7 +15,7 @@ final class ModuleImportMapTest extends TestCase
         Vite::shouldReceive('asset')
             ->andThrow(new \Exception('Manifest not found'));
 
-        $component = new ModuleImportMap();
+        $component = new ModuleImportMap;
         $view = $component->render();
         $html = $view->render();
 
@@ -44,7 +44,7 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/unhead.ts')
             ->andThrow(new \Exception('Not found'));
 
-        $component = new ModuleImportMap();
+        $component = new ModuleImportMap;
         $view = $component->render();
         $html = $view->render();
 
@@ -74,7 +74,7 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/unhead.ts')
             ->andThrow(new \Exception('Not found'));
 
-        $component = new ModuleImportMap();
+        $component = new ModuleImportMap;
         $view = $component->render();
         $html = $view->render();
 
@@ -104,7 +104,7 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/unhead.ts')
             ->andThrow(new \Exception('Not found'));
 
-        $component = new ModuleImportMap();
+        $component = new ModuleImportMap;
         $view = $component->render();
         $html = $view->render();
 
@@ -134,7 +134,7 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/unhead.ts')
             ->andReturn('/build/assets/unhead-MNO345.js');
 
-        $component = new ModuleImportMap();
+        $component = new ModuleImportMap;
         $view = $component->render();
         $html = $view->render();
 
@@ -164,7 +164,7 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/unhead.ts')
             ->andReturn('/build/assets/unhead-MNO345.js');
 
-        $component = new ModuleImportMap();
+        $component = new ModuleImportMap;
         $view = $component->render();
         $html = $view->render();
 
@@ -197,7 +197,7 @@ final class ModuleImportMapTest extends TestCase
             ->with('resources/js/vendor-exports/unhead.ts')
             ->andReturn('/build/assets/unhead-MNO345.js');
 
-        $component = new ModuleImportMap();
+        $component = new ModuleImportMap;
         $view = $component->render();
         $html = $view->render();
 

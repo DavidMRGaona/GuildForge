@@ -11,6 +11,7 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePermissionRegistryInterface;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use Illuminate\Support\Facades\File;
+use PHPUnit\Framework\Attributes\After;
 
 /**
  * Trait for tests that need to interact with the module system.
@@ -227,7 +228,7 @@ trait InteractsWithModules
     /**
      * Clean up after each test if the trait is used.
      */
-    #[\PHPUnit\Framework\Attributes\After]
+    #[After]
     protected function cleanupModulesAfterTest(): void
     {
         // Skip cleanup if no modules were created during this test

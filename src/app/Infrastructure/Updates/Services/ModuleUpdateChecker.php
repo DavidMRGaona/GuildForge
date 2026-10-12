@@ -159,7 +159,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
             && ($this->channelPolicy->includesPrereleasesFor($currentVersion) || ! $release->isPrerelease)
             && $release->version->isGreaterThan($currentVersion);
 
-        $module->updateLastCheckAt(new DateTimeImmutable());
+        $module->updateLastCheckAt(new DateTimeImmutable);
 
         if ($selection->blocked !== null && $selection->blocked->version->isGreaterThan($currentVersion)) {
             $module->updateLatestBlocked($selection->blocked->version->value(), $selection->blockedIssues);

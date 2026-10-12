@@ -7,7 +7,6 @@ namespace Tests\Unit\Domain\Updates\ValueObjects;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use DateTimeImmutable;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class GitHubReleaseInfoTest extends TestCase
@@ -121,7 +120,7 @@ final class GitHubReleaseInfoTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: 'Beta release',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: true,
         );
 
@@ -137,7 +136,7 @@ final class GitHubReleaseInfoTest extends TestCase
             downloadUrl: 'https://example.com/download.zip',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -152,7 +151,7 @@ final class GitHubReleaseInfoTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -167,7 +166,7 @@ final class GitHubReleaseInfoTest extends TestCase
             downloadUrl: 'https://example.com/download.zip',
             checksumUrl: 'https://example.com/download.zip.sha256',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -182,7 +181,7 @@ final class GitHubReleaseInfoTest extends TestCase
             downloadUrl: 'https://example.com/download.zip',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -197,7 +196,7 @@ final class GitHubReleaseInfoTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -214,7 +213,7 @@ final class GitHubReleaseInfoTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 
@@ -231,7 +230,7 @@ final class GitHubReleaseInfoTest extends TestCase
             downloadUrl: '',
             checksumUrl: '',
             releaseNotes: '',
-            publishedAt: new DateTimeImmutable(),
+            publishedAt: new DateTimeImmutable,
             isPrerelease: false,
         );
 

@@ -12,6 +12,5 @@ final readonly class LegalPageResponseDTO
         public string $title,
         public string $content,
         public ?DateTimeImmutable $lastUpdated,
-    ) {
-    }
+    ) {}
 }

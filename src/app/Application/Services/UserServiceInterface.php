@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Services;
 
 use App\Application\DTOs\AnonymizeUserDTO;
+use App\Domain\Exceptions\UserNotFoundException;
 
 interface UserServiceInterface
 {
@@ -17,7 +18,7 @@ interface UserServiceInterface
      * Anonymize user data for GDPR compliance.
      * This action is irreversible.
      *
-     * @throws \App\Domain\Exceptions\UserNotFoundException
+     * @throws UserNotFoundException
      */
     public function anonymize(string $userId): void;
 
@@ -25,7 +26,7 @@ interface UserServiceInterface
      * Anonymize user data with content transfer option.
      * Allows transferring user's content to another user before anonymization.
      *
-     * @throws \App\Domain\Exceptions\UserNotFoundException
+     * @throws UserNotFoundException
      */
     public function anonymizeWithContentTransfer(AnonymizeUserDTO $dto): void;
 
