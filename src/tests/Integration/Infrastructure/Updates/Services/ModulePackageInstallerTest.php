@@ -27,7 +27,7 @@ final class ModulePackageInstallerTest extends TestCase
         config(['modules.path' => $this->modulesPath]);
 
         $this->installer = $this->app->make(ModulePackageInstaller::class);
-        $this->makeModule('game-tables', '1.0.0');
+        $this->makeModule('sample-module', '1.0.0');
         $this->makeModule('channel-notifications', '1.0.0');
     }
 
@@ -40,20 +40,20 @@ final class ModulePackageInstallerTest extends TestCase
 
     public function test_stage_and_swap_install_the_new_version(): void
     {
-        $zip = $this->releaseZip('game-tables', '1.1.0');
+        $zip = $this->releaseZip('sample-module', '1.1.0');
 
-        $previous = $this->installer->swap($this->installer->stage($zip, 'game-tables'), 'game-tables');
+        $previous = $this->installer->swap($this->installer->stage($zip, 'sample-module'), 'sample-module');
 
-        $this->assertSame('1.1.0', $this->manifestVersion('game-tables'));
-        $this->assertFileExists($this->modulesPath.'/game-tables/public/build/manifest.json');
+        $this->assertSame('1.1.0', $this->manifestVersion('sample-module'));
+        $this->assertFileExists($this->modulesPath.'/sample-module/public/build/manifest.json');
         $this->assertSame('1.0.0', json_decode(File::get($previous.'/module.json'), true)['version']);
     }
 
     public function test_swap_never_touches_sibling_modules(): void
     {
-        $zip = $this->releaseZip('game-tables', '1.1.0');
+        $zip = $this->releaseZip('sample-module', '1.1.0');
 
-        $this->installer->swap($this->installer->stage($zip, 'game-tables'), 'game-tables');
+        $this->installer->swap($this->installer->stage($zip, 'sample-module'), 'sample-module');
 
         $this->assertSame('channel-notifications', json_decode(File::get($this->modulesPath.'/channel-notifications/module.json'), true)['name']);
         $this->assertSame([], glob($this->modulesPath.'/.staging-*', GLOB_ONLYDIR));
@@ -61,24 +61,24 @@ final class ModulePackageInstallerTest extends TestCase
 
     public function test_revert_restores_previous_version(): void
     {
-        $zip = $this->releaseZip('game-tables', '1.1.0');
-        $previous = $this->installer->swap($this->installer->stage($zip, 'game-tables'), 'game-tables');
+        $zip = $this->releaseZip('sample-module', '1.1.0');
+        $previous = $this->installer->swap($this->installer->stage($zip, 'sample-module'), 'sample-module');
 
-        $this->installer->revert($previous, 'game-tables');
+        $this->installer->revert($previous, 'sample-module');
 
-        $this->assertSame('1.0.0', $this->manifestVersion('game-tables'));
+        $this->assertSame('1.0.0', $this->manifestVersion('sample-module'));
         $this->assertDirectoryDoesNotExist($previous);
     }
 
     public function test_discard_removes_the_previous_version(): void
     {
-        $zip = $this->releaseZip('game-tables', '1.1.0');
-        $previous = $this->installer->swap($this->installer->stage($zip, 'game-tables'), 'game-tables');
+        $zip = $this->releaseZip('sample-module', '1.1.0');
+        $previous = $this->installer->swap($this->installer->stage($zip, 'sample-module'), 'sample-module');
 
         $this->installer->discard($previous);
 
         $this->assertDirectoryDoesNotExist($previous);
-        $this->assertSame('1.1.0', $this->manifestVersion('game-tables'));
+        $this->assertSame('1.1.0', $this->manifestVersion('sample-module'));
     }
 
     /**
@@ -87,9 +87,9 @@ final class ModulePackageInstallerTest extends TestCase
     public static function invalidPackages(): iterable
     {
         yield 'other module' => [['tournaments-1.0.0/module.json' => '{"name":"tournaments","version":"1.0.0"}']];
-        yield 'two roots' => [['a/module.json' => '{"name":"game-tables"}', 'b/x.txt' => 'x']];
-        yield 'no manifest' => [['game-tables-1.1.0/readme.md' => 'x']];
-        yield 'zip slip' => [['game-tables-1.1.0/module.json' => '{"name":"game-tables"}', '../evil.php' => '<?php']];
+        yield 'two roots' => [['a/module.json' => '{"name":"sample-module"}', 'b/x.txt' => 'x']];
+        yield 'no manifest' => [['sample-module-1.1.0/readme.md' => 'x']];
+        yield 'zip slip' => [['sample-module-1.1.0/module.json' => '{"name":"sample-module"}', '../evil.php' => '<?php']];
     }
 
     /**
@@ -101,12 +101,12 @@ final class ModulePackageInstallerTest extends TestCase
         $zip = $this->zipWith($entries);
 
         try {
-            $this->installer->stage($zip, 'game-tables');
+            $this->installer->stage($zip, 'sample-module');
             $this->fail('Expected UpdateException');
         } catch (UpdateException) {
         }
 
-        $this->assertSame('1.0.0', $this->manifestVersion('game-tables'));
+        $this->assertSame('1.0.0', $this->manifestVersion('sample-module'));
         $this->assertSame([], glob($this->modulesPath.'/.staging-*', GLOB_ONLYDIR));
         $this->assertFileDoesNotExist(dirname($this->modulesPath).'/evil.php');
     }
@@ -119,7 +119,7 @@ final class ModulePackageInstallerTest extends TestCase
         $this->expectException(UpdateException::class);
 
         try {
-            $this->installer->stage($path, 'game-tables');
+            $this->installer->stage($path, 'sample-module');
         } finally {
             File::delete($path);
         }
@@ -127,35 +127,35 @@ final class ModulePackageInstallerTest extends TestCase
 
     public function test_cleanup_leftovers_removes_only_this_modules_staging_dirs(): void
     {
-        File::makeDirectory($this->modulesPath.'/.staging-game-tables-old');
-        File::makeDirectory($this->modulesPath.'/.previous-game-tables-old');
+        File::makeDirectory($this->modulesPath.'/.staging-sample-module-old');
+        File::makeDirectory($this->modulesPath.'/.previous-sample-module-old');
         File::makeDirectory($this->modulesPath.'/.staging-tournaments-old');
 
-        $this->installer->cleanupLeftovers('game-tables');
+        $this->installer->cleanupLeftovers('sample-module');
 
-        $this->assertDirectoryDoesNotExist($this->modulesPath.'/.staging-game-tables-old');
+        $this->assertDirectoryDoesNotExist($this->modulesPath.'/.staging-sample-module-old');
         // A previous copy may be the only good version left after a failed revert
-        $this->assertDirectoryExists($this->modulesPath.'/.previous-game-tables-old');
+        $this->assertDirectoryExists($this->modulesPath.'/.previous-sample-module-old');
         $this->assertDirectoryExists($this->modulesPath.'/.staging-tournaments-old');
-        $this->assertDirectoryExists($this->modulesPath.'/game-tables');
+        $this->assertDirectoryExists($this->modulesPath.'/sample-module');
     }
 
     public function test_stage_rejects_an_incompatible_release_and_leaves_the_installed_module_untouched(): void
     {
         $zip = $this->zipWith([
-            'game-tables-2.0.0/module.json' => $this->manifest('game-tables', '2.0.0', ['core' => '^99.0']),
-            'game-tables-2.0.0/src/Dummy.php' => '<?php',
+            'sample-module-2.0.0/module.json' => $this->manifest('sample-module', '2.0.0', ['core' => '^99.0']),
+            'sample-module-2.0.0/src/Dummy.php' => '<?php',
         ]);
 
         try {
-            $this->installer->stage($zip, 'game-tables');
+            $this->installer->stage($zip, 'sample-module');
             $this->fail('Expected ModuleIncompatibleException');
         } catch (ModuleIncompatibleException $e) {
             $this->assertSame('2.0.0', $e->version);
             $this->assertStringContainsString('requires core ^99.0', $e->getMessage());
         }
 
-        $this->assertSame('1.0.0', $this->manifestVersion('game-tables'));
+        $this->assertSame('1.0.0', $this->manifestVersion('sample-module'));
         $this->assertSame([], glob($this->modulesPath.'/.staging-*', GLOB_ONLYDIR));
     }
 

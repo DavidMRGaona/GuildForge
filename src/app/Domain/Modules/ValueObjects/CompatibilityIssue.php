@@ -20,6 +20,9 @@ final readonly class CompatibilityIssue
 
     public const string MANIFEST_INVALID = 'modules.compatibility.reasons.manifest_invalid';
 
+    /** The module is older than the minimum this core declares for it ($required = minimum, $found = module version) */
+    public const string BELOW_CORE_MINIMUM = 'modules.compatibility.reasons.below_core_minimum';
+
     /**
      * @param  string  $required  Constraint (or extension name) as written in the manifest, '' when not applicable
      * @param  string|null  $found  Host version, when known
@@ -45,6 +48,7 @@ final readonly class CompatibilityIssue
             self::INVALID_CONSTRAINT => "invalid {$label} constraint '{$this->required}'",
             self::UNKNOWN_HOST_VERSION => "requires {$label} {$this->required} but its installed version is unknown",
             self::MANIFEST_MISSING => 'module.json not found',
+            self::BELOW_CORE_MINIMUM => "this core requires version {$this->required} or later of the module, not {$this->found}",
             default => 'module.json is not valid',
         };
     }

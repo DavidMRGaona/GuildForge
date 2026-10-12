@@ -12,9 +12,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
-use Modules\GameTables\Infrastructure\Persistence\Eloquent\Models\GameTableModel;
 
 /**
  * @property string $id
@@ -90,14 +88,6 @@ final class EventModel extends Model
     {
         return $this->belongsToMany(TagModel::class, 'event_tag', 'event_id', 'tag_id')
             ->withTimestamps();
-    }
-
-    /**
-     * @return HasMany<GameTableModel, $this>
-     */
-    public function gameTables(): HasMany
-    {
-        return $this->hasMany(GameTableModel::class, 'event_id');
     }
 
     /**

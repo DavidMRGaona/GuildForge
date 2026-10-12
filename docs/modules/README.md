@@ -150,6 +150,8 @@ modules/my-module/
 
 `requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). Declare the lowest core minor you tested against, e.g. `^3.0`.
 
+The core may also declare a minimum version for a module (`App\Domain\Modules\CoreModuleMinimumVersions`) when older releases of it would break on that core; releases below it are rejected the same way, pre-releases of the minimum included (`2.2.0-rc.1` is older than `2.2.0`). Extend core models from the module (`EventModel::resolveRelationUsing()` in the service provider), never by asking the core to reference module classes: the core must not import anything from `Modules\`.
+
 ---
 
 ## Scaffolding commands
