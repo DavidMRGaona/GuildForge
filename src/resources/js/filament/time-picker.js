@@ -212,9 +212,16 @@ document.addEventListener('alpine:init', () => {
         },
 
         handleInput(event) {
-            const value = this.state;
-            if (/^\d{2}$/.test(value)) {
-                this.state = value + ':';
+            // Typing the colon after the one added for you must not leave two ("10::00")
+            let value = String(this.state ?? '').replace(/:{2,}/g, ':');
+
+            // Add the colon only while typing forward: deleting it must not bring it back
+            if (!event.inputType?.startsWith('delete') && /^\d{2}$/.test(value)) {
+                value += ':';
+            }
+
+            if (value !== this.state) {
+                this.state = value;
                 this.$nextTick(() => {
                     const input = event.target;
                     input.selectionStart = input.selectionEnd = input.value.length;
@@ -278,7 +285,7 @@ document.addEventListener('alpine:init', () => {
             if (!this.state) return;
 
             const value = String(this.state).trim();
-            const match = value.match(/^(\d{1,2}):?(\d{0,2})$/);
+            const match = value.match(/^(\d{1,2}):*(\d{0,2})$/);
 
             if (match) {
                 let hour = parseInt(match[1], 10);
