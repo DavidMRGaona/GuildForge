@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -41,6 +43,7 @@ final readonly class EnsureSiteIsNotInMaintenance
 
     public function __construct(
         private SettingsServiceInterface $settings,
+        private SeoMetadataFactoryInterface $seo,
     ) {
     }
 
@@ -55,6 +58,10 @@ final readonly class EnsureSiteIsNotInMaintenance
 
         $response = Inertia::render('Maintenance', [
             'message' => $this->settings->getMaintenanceMessage(),
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.maintenance'),
+                noindex: true,
+            ))->toArray(),
         ])->toResponse($request);
 
         $response->setStatusCode(Response::HTTP_SERVICE_UNAVAILABLE);
