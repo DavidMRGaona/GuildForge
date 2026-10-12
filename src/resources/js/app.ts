@@ -17,8 +17,6 @@ import {
 import { setCloudinaryConfig, type CloudinaryConfig } from '@/utils/cloudinary';
 import { removeServerSeoTags, useServerSeo } from '@/composables/useSeo';
 
-const appName = import.meta.env.VITE_APP_NAME ?? 'GuildForge';
-
 const i18n = createI18n({
     legacy: false,
     locale: 'es',
@@ -103,7 +101,9 @@ const pageResolver = createPageResolver({
 });
 
 void createInertiaApp({
-    title: (title: string): string => (title ? `${title} - ${appName}` : appName),
+    // unhead owns <title> (useServerSeo). An empty default keeps Inertia from
+    // adding a second <title inertia> to the head.
+    title: (title: string): string => title,
     resolve: pageResolver,
     setup({ el, App, props, plugin }) {
         // Update module pages mapping when props change (for subsequent navigations)
