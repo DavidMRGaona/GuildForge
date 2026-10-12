@@ -7,6 +7,7 @@ namespace Tests\Feature\Navigation;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -74,6 +75,21 @@ final class PublicMenuTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->has('navigation.header', 1)
                 ->where('navigation.header.0.href', route('articles.index')));
+    }
+
+    public function test_a_left_out_link_is_logged_once_and_not_on_every_request(): void
+    {
+        Log::spy();
+        $this->menuItem(MenuLocation::Header, 'Mesas', route: 'gametables.index', module: 'game-tables', sort: 1);
+
+        $this->get('/')->assertOk();
+        $this->get('/')->assertOk();
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []): bool => str_starts_with($message, 'Menu item left out')
+                && ($context['label'] ?? null) === 'Mesas'
+                && ($context['route'] ?? null) === 'gametables.index')
+            ->once();
     }
 
     private function menuItem(

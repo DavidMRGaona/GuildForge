@@ -17,7 +17,10 @@ use App\Domain\Navigation\Enums\MenuVisibility;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Domain\Navigation\ValueObjects\MenuItemId;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final readonly class MenuService implements MenuServiceInterface
 {
@@ -94,6 +97,8 @@ final readonly class MenuService implements MenuServiceInterface
             // A link to a module that is not loaded is skipped, never the whole menu
             $href = $this->hrefResolver->resolve($item);
             if ($href === null) {
+                $this->reportLeftOut($item);
+
                 continue;
             }
 
@@ -111,6 +116,26 @@ final readonly class MenuService implements MenuServiceInterface
         }
 
         return $result;
+    }
+
+    /**
+     * Once an hour per item, not per request: a tenant with four links to a module that is
+     * not loaded would otherwise log four lines on every page view.
+     */
+    private function reportLeftOut(MenuItem $item): void
+    {
+        try {
+            if (Cache::add('menu:left-out:'.$item->id()->value, true, now()->addHour())) {
+                Log::warning('Menu item left out: its route is not registered or lacks parameters', [
+                    'id' => $item->id()->value,
+                    'label' => $item->label(),
+                    'route' => $item->route(),
+                    'module' => $item->module(),
+                ]);
+            }
+        } catch (Throwable) {
+            // Reporting must never cost the menu
+        }
     }
 
     /**
