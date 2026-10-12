@@ -68,6 +68,16 @@ final class HasSlugTest extends TestCase
         $this->assertEquals('my-test-title', $model->slug);
     }
 
+    public function test_a_unique_slug_can_be_generated_for_an_existing_record(): void
+    {
+        // Used by commands that backfill slugs without firing model events
+        $taken = TestSluggableWithoutUuidModel::create(['title' => 'Mesa de rol']);
+        $other = TestSluggableWithoutUuidModel::create(['title' => 'Otra']);
+
+        $this->assertSame('mesa-de-rol', $taken->generateUniqueSlug('Mesa de rol', $taken->id));
+        $this->assertSame('mesa-de-rol-2', $other->generateUniqueSlug('Mesa de rol', $other->id));
+    }
+
     public function test_updating_title_creates_redirect(): void
     {
         $model = TestSluggableModel::create([

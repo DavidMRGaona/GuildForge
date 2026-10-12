@@ -85,9 +85,10 @@ trait HasSlug
     }
 
     /**
-     * Generate a unique slug based on the configured mode.
+     * Generate a unique slug based on the configured mode. Public so commands can
+     * backfill slugs with a direct update, without firing model events.
      */
-    private function generateUniqueSlug(string $title, string $uuid): string
+    public function generateUniqueSlug(string $title, string $uuid): string
     {
         if ($this->slugIncludesUuid()) {
             return $this->generateSlugWithUuid($title, $uuid);
