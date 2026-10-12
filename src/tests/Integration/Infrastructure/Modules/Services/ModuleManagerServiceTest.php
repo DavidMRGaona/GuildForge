@@ -728,7 +728,7 @@ final class ModuleManagerServiceTest extends TestCase
     public function test_enable_makes_the_module_loadable_in_the_same_process(): void
     {
         $this->createTestModule('test-module');
-        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value]);
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value, 'path' => "{$this->testModulesPath}/test-module"]);
         $resolver = app(EnabledModulesResolverInterface::class);
         $resolver->reset();
         $this->assertSame([], $resolver->names());
