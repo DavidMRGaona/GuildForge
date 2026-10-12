@@ -36,7 +36,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->tempModulesPath = sys_get_temp_dir().'/test-modules-'.uniqid();
+        $this->tempModulesPath = sys_get_temp_dir().'/test-modules-'.bin2hex(random_bytes(8));
         mkdir($this->tempModulesPath, 0755, true);
     }
 

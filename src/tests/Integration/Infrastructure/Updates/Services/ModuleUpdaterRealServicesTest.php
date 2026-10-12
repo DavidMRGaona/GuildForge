@@ -59,7 +59,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $this->app->usePublicPath($this->publicPath);
 
         Queue::fake();
-        $this->tempDir = sys_get_temp_dir().'/gf-real-update-'.uniqid();
+        $this->tempDir = sys_get_temp_dir().'/gf-real-update-'.bin2hex(random_bytes(8));
         $this->modulesPath = $this->tempDir.'/modules';
         File::ensureDirectoryExists("{$this->modulesPath}/real-mod/src");
         File::put("{$this->modulesPath}/real-mod/module.json", (string) json_encode(['name' => 'real-mod', 'version' => '1.0.0-beta', 'requires' => ['core' => '>=2.0']]));

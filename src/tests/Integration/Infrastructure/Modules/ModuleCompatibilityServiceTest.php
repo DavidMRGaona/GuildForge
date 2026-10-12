@@ -28,7 +28,7 @@ final class ModuleCompatibilityServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-compat-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-compat-'.bin2hex(random_bytes(8));
         File::ensureDirectoryExists($this->modulesPath);
         config(['modules.path' => $this->modulesPath]);
 

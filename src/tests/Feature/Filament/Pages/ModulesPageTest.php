@@ -38,7 +38,7 @@ final class ModulesPageTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-modules-page-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-modules-page-'.bin2hex(random_bytes(8));
         config(['modules.path' => $this->modulesPath]);
     }
 

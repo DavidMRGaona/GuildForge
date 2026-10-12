@@ -25,7 +25,7 @@ final class BackfillModuleSeederHistoryMigrationTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-backfill-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-backfill-'.bin2hex(random_bytes(8));
         config(['modules.path' => $this->modulesPath]);
     }
 

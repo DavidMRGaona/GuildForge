@@ -20,7 +20,7 @@ final class ModuleSeedCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-module-seed-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-module-seed-'.bin2hex(random_bytes(8));
         config(['modules.path' => $this->modulesPath]);
     }
 

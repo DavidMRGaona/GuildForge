@@ -23,7 +23,7 @@ final class IncompatibleModulesBannerTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-banner-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-banner-'.bin2hex(random_bytes(8));
         File::ensureDirectoryExists($this->modulesPath);
         config(['modules.path' => $this->modulesPath]);
     }

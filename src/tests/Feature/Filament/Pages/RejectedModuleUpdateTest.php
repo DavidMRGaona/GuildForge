@@ -35,7 +35,7 @@ final class RejectedModuleUpdateTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-rejected-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-rejected-'.bin2hex(random_bytes(8));
         File::ensureDirectoryExists($this->modulesPath);
         config(['modules.path' => $this->modulesPath]);
         Cache::flush();

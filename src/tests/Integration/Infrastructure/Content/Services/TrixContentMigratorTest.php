@@ -32,7 +32,7 @@ final class TrixContentMigratorTest extends TestCase
     {
         parent::setUp();
 
-        $this->backups = sys_get_temp_dir().'/gf-richtext-'.uniqid();
+        $this->backups = sys_get_temp_dir().'/gf-richtext-'.bin2hex(random_bytes(8));
     }
 
     protected function tearDown(): void

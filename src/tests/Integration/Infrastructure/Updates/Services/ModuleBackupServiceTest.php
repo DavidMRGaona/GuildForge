@@ -40,7 +40,7 @@ final class ModuleBackupServiceTest extends TestCase
         $this->service = new ModuleBackupService($this->moduleManager);
 
         // Use unique ID for parallel test isolation
-        $this->testId = uniqid('test_', true);
+        $this->testId = 'test_'.bin2hex(random_bytes(8));
         $this->tempDir = storage_path("app/test-modules-{$this->testId}");
         $this->backupDir = storage_path("app/backups-{$this->testId}/modules");
 
