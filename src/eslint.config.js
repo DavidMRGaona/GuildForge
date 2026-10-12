@@ -7,13 +7,7 @@ import vueParser from 'vue-eslint-parser';
 export default [
     js.configs.recommended,
     {
-        ignores: [
-            'node_modules/**',
-            'public/**',
-            'vendor/**',
-            'bootstrap/cache/**',
-            'storage/**',
-        ],
+        ignores: ['node_modules/**', 'public/**', 'vendor/**', 'bootstrap/cache/**', 'storage/**'],
     },
     {
         files: ['**/*.js'],
@@ -94,7 +88,10 @@ export default [
             vue,
             '@typescript-eslint': typescript,
         },
+        // Honours eslint-disable comments inside <template>
+        processor: 'vue/vue',
         rules: {
+            'vue/comment-directive': 'error',
             ...vue.configs['flat/recommended'].rules,
             ...typescript.configs.recommended.rules,
             'vue/multi-word-component-names': 'off',
