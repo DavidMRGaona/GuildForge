@@ -75,6 +75,22 @@ final class EloquentModuleRepositoryTest extends TestCase
         $this->assertFalse(Cache::has('modules.discovered'));
     }
 
+    public function test_saving_inside_a_transaction_forgets_the_cached_module_list_once_it_commits(): void
+    {
+        // module:finish-update saves the new version inside a transaction: a request that
+        // cached the list before the commit would keep the old row for the whole cache TTL
+        config(['modules.cache.enabled' => true, 'modules.cache.key' => 'modules.discovered']);
+        Cache::put('modules.discovered', ['stale'], 3600);
+
+        DB::transaction(function (): void {
+            $this->repository->save($this->createModule(name: 'test-module', status: ModuleStatus::Enabled));
+
+            $this->assertTrue(Cache::has('modules.discovered'));
+        });
+
+        $this->assertFalse(Cache::has('modules.discovered'));
+    }
+
     public function test_it_finds_module_by_id(): void
     {
         $module = $this->createModule(name: 'findable-module');
