@@ -100,7 +100,46 @@ final class ModuleCompatibilityCheckerTest extends TestCase
         $this->assertTrue($this->checker->checkManifest(new ModuleManifestDTO('m', '1.0.0', 'Modules\\M', 'MServiceProvider'), $this->host())->isCompatible());
     }
 
-    private function host(string $core = '2.6.0', ?string $filament = '3.3.56'): HostEnvironment
+    public function test_a_module_below_the_cores_minimum_version_is_incompatible(): void
+    {
+        $manifest = new ModuleManifestDTO('game-tables', '2.1.1', 'Modules\\GameTables', 'GameTablesServiceProvider', requires: ['core' => '^2.6']);
+
+        $issues = $this->checker->checkManifest($manifest, $this->host(moduleMinimums: ['game-tables' => '2.2.0']))->issues;
+
+        $this->assertEquals([new CompatibilityIssue(RequirementType::Core, '2.2.0', '2.1.1', CompatibilityIssue::BELOW_CORE_MINIMUM)], $issues);
+    }
+
+    public function test_a_module_at_or_above_the_cores_minimum_version_is_compatible(): void
+    {
+        $host = $this->host(moduleMinimums: ['game-tables' => '2.2.0']);
+
+        foreach (['2.2.0', '2.3.1', '3.0.0'] as $version) {
+            $manifest = new ModuleManifestDTO('game-tables', $version, 'Modules\\GameTables', 'GameTablesServiceProvider', requires: ['core' => '^2.6']);
+            $this->assertTrue($this->checker->checkManifest($manifest, $host)->isCompatible(), $version);
+        }
+    }
+
+    public function test_a_malformed_version_of_a_module_with_a_minimum_is_rejected_without_throwing(): void
+    {
+        // e.g. a hand-edited "v2.1.0": the gate fails closed, as for an unreadable manifest
+        $manifest = new ModuleManifestDTO('game-tables', 'v2.1.0', 'Modules\\GameTables', 'GameTablesServiceProvider', requires: ['core' => '^2.6']);
+
+        $issues = $this->checker->checkManifest($manifest, $this->host(moduleMinimums: ['game-tables' => '2.2.0']))->issues;
+
+        $this->assertEquals([new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID)], $issues);
+    }
+
+    public function test_the_minimum_only_applies_to_the_module_it_names(): void
+    {
+        $manifest = new ModuleManifestDTO('tournaments', '1.0.0', 'Modules\\Tournaments', 'TournamentsServiceProvider', requires: ['core' => '^2.6']);
+
+        $this->assertTrue($this->checker->checkManifest($manifest, $this->host(moduleMinimums: ['game-tables' => '2.2.0']))->isCompatible());
+    }
+
+    /**
+     * @param  array<string, string>  $moduleMinimums
+     */
+    private function host(string $core = '2.6.0', ?string $filament = '3.3.56', array $moduleMinimums = []): HostEnvironment
     {
         return new HostEnvironment(
             core: ModuleVersion::fromString($core),
@@ -108,6 +147,7 @@ final class ModuleCompatibilityCheckerTest extends TestCase
             laravel: ModuleVersion::fromString('12.69.3'),
             filament: $filament === null ? null : ModuleVersion::fromString($filament),
             extensions: ['intl', 'pdo_pgsql', 'json'],
+            moduleMinimums: array_map(ModuleVersion::fromString(...), $moduleMinimums),
         );
     }
 }
