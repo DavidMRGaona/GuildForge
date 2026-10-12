@@ -5,7 +5,6 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleList from '@/components/articles/ArticleList.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import TagFilter from '@/components/ui/TagFilter.vue';
-import { useSeo } from '@/composables/useSeo';
 import { usePagination } from '@/composables/usePagination';
 import { useRoutes } from '@/composables/useRoutes';
 
@@ -22,11 +21,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { t } = useI18n();
 const routes = useRoutes();
-
-useSeo({
-    title: t('articles.title'),
-    description: t('articles.subtitle'),
-});
 
 const {
     firstItemNumber,

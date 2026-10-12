@@ -20,7 +20,8 @@ function updateLinkHref(selector: string, href: string): void {
  * allowing favicons to follow the app's theme toggle instead of just
  * responding to OS prefers-color-scheme.
  *
- * If custom favicons are configured in settings, those are used.
+ * If custom favicons are configured in settings, those are used for every
+ * icon, the iOS home screen one included (as <x-site-favicons> renders them).
  * Otherwise, falls back to the static favicons in /favicons/{theme}/.
  */
 export function useFavicons(): void {
@@ -28,28 +29,23 @@ export function useFavicons(): void {
     const page = usePage();
 
     function updateFavicons(isDark: boolean): void {
-        const theme = isDark ? 'dark' : 'light';
+        const basePath = `/favicons/${isDark ? 'dark' : 'light'}`;
         const favicons = page.props.favicons as FaviconSettings | undefined;
-
-        // Use custom favicon if configured, otherwise use static defaults
         const customFavicon = isDark ? favicons?.dark : favicons?.light;
 
-        if (customFavicon) {
-            // Custom favicon from settings - use for all icon links
-            updateLinkHref('link[rel="icon"][sizes="32x32"]', customFavicon);
-            updateLinkHref('link[rel="icon"][sizes="16x16"]', customFavicon);
-            updateLinkHref('link[rel="shortcut icon"]', customFavicon);
-        } else {
-            // Use static default favicons
-            const basePath = `/favicons/${theme}`;
-            updateLinkHref('link[rel="icon"][sizes="32x32"]', `${basePath}/favicon-32x32.png`);
-            updateLinkHref('link[rel="icon"][sizes="16x16"]', `${basePath}/favicon-16x16.png`);
-            updateLinkHref('link[rel="shortcut icon"]', `${basePath}/favicon.ico`);
-        }
-
-        // Apple touch icon and manifest always use static files (or could be extended)
-        const basePath = `/favicons/${theme}`;
-        updateLinkHref('link[rel="apple-touch-icon"]', `${basePath}/apple-touch-icon.png`);
+        updateLinkHref(
+            'link[rel="icon"][sizes="32x32"]',
+            customFavicon ?? `${basePath}/favicon-32x32.png`
+        );
+        updateLinkHref(
+            'link[rel="icon"][sizes="16x16"]',
+            customFavicon ?? `${basePath}/favicon-16x16.png`
+        );
+        updateLinkHref('link[rel="shortcut icon"]', customFavicon ?? `${basePath}/favicon.ico`);
+        updateLinkHref(
+            'link[rel="apple-touch-icon"]',
+            customFavicon ?? `${basePath}/apple-touch-icon.png`
+        );
         updateLinkHref('link[rel="manifest"]', `${basePath}/site.webmanifest`);
     }
 

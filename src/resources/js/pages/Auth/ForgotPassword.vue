@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n';
 import { usePage } from '@inertiajs/vue3';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
-import { useSeo } from '@/composables/useSeo';
 import type { ForgotPasswordFormData } from '@/types/models';
 import { computed } from 'vue';
 
@@ -15,10 +14,6 @@ interface FlashProps {
 const { t } = useI18n();
 const page = usePage();
 const props = page.props as FlashProps;
-
-useSeo({
-    title: t('auth.forgotPassword.title'),
-});
 
 const form = useForm<ForgotPasswordFormData>({
     email: '',

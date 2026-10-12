@@ -9,10 +9,8 @@ import TagBadge from '@/components/ui/TagBadge.vue';
 import TagList from '@/components/ui/TagList.vue';
 import { useEvents } from '@/composables/useEvents';
 import { useTags } from '@/composables/useTags';
-import { useSeo } from '@/composables/useSeo';
 import { useRoutes } from '@/composables/useRoutes';
 import { buildHeroImageUrl } from '@/utils/cloudinary';
-import { stripHtml } from '@/utils/html';
 import ModuleSlot from '@/components/layout/ModuleSlot.vue';
 
 interface Props {
@@ -28,13 +26,6 @@ const routes = useRoutes();
 const heroImageUrl = computed(() => buildHeroImageUrl(props.event.imagePublicId));
 
 const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.event.tags));
-
-useSeo({
-    title: props.event.title,
-    description: props.event.description ? stripHtml(props.event.description) : null,
-    image: heroImageUrl.value,
-    type: 'article',
-});
 </script>
 
 <template>

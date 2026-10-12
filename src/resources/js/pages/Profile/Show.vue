@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ProfileHeader from '@/components/profile/ProfileHeader.vue';
 import ProfileSidebar from '@/components/profile/ProfileSidebar.vue';
 import ProfileTabBar from '@/components/profile/ProfileTabBar.vue';
 import ProfileAccountTab from '@/components/profile/ProfileAccountTab.vue';
-import { useSeo } from '@/composables/useSeo';
 import { useProfileTabs } from '@/composables/useProfileTabs';
 import { useModuleSlots } from '@/composables/useModuleSlots';
 import { useFlashMessages } from '@/composables/useFlashMessages';
@@ -18,14 +16,9 @@ interface Props {
 
 defineProps<Props>();
 
-const { t } = useI18n();
 const { tabs, activeTabId, setActiveTab } = useProfileTabs();
 const { getSlotComponents, hasSlotComponents } = useModuleSlots();
 const { success: successMessage, error: errorMessage } = useFlashMessages();
-
-useSeo({
-    title: t('auth.profile.title'),
-});
 
 const moduleComponents = computed(() => getSlotComponents('profile-sections'));
 const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
