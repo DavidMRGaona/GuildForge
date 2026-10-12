@@ -90,6 +90,7 @@ return [
             'invalid_constraint' => 'restricción de :requirement no válida: «:required»',
             'unknown_host_version' => 'requiere :requirement :required y no se pudo determinar la versión instalada',
             'manifest_missing' => 'no se encuentra module.json',
+            'below_core_minimum' => 'este core necesita la versión :required o superior, instalada :found',
             'manifest_invalid' => 'module.json no válido',
         ],
         'short' => [
