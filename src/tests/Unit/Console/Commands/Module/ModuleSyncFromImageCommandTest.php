@@ -28,8 +28,11 @@ final class ModuleSyncFromImageCommandTest extends TestCase
 
         Log::spy();
 
-        $this->imagePath = storage_path('app/test-image-modules');
-        $this->volumePath = storage_path('app/test-volume-modules');
+        // A folder of this test only: storage/app is not for tests, and a fixed path collides
+        // with another suite running on the same tree
+        $testing = storage_path('framework/testing/sync-from-image-'.bin2hex(random_bytes(8)));
+        $this->imagePath = $testing.'/image';
+        $this->volumePath = $testing.'/volume';
 
         File::makeDirectory($this->imagePath, 0755, true, true);
         File::makeDirectory($this->volumePath, 0755, true, true);
@@ -39,8 +42,7 @@ final class ModuleSyncFromImageCommandTest extends TestCase
 
     protected function tearDown(): void
     {
-        File::deleteDirectory($this->imagePath);
-        File::deleteDirectory($this->volumePath);
+        File::deleteDirectory(dirname($this->imagePath));
         File::deleteDirectory($this->publicPath);
 
         parent::tearDown();
