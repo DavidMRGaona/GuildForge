@@ -15,15 +15,15 @@ namespace App\Filament\Concerns;
  *
  * @example
  * // In your Resource class:
- * public static function form(Form $form): Form
+ * public static function form(Schema $schema): Schema
  * {
- *     return $form->schema([
- *         // ... your base form fields
+ *     return $schema->components([
+ *         // ... your base form components
  *         ...static::getExtendedFormSections(),
  *     ]);
  * }
  *
- * // In a module's ServiceProvider:
+ * // In a module's ServiceProvider (Section is Filament\Schemas\Components\Section):
  * EventResource::extendFormSections([
  *     Section::make('Registration Settings')
  *         ->schema([...])
