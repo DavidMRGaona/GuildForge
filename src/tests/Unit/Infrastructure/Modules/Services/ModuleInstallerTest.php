@@ -71,8 +71,11 @@ final class ModuleInstallerTest extends TestCase
 
         Log::spy();
 
-        $this->tempDir = storage_path('app/temp/modules-test');
-        $this->modulesPath = storage_path('app/test-modules');
+        // Folders of this test only: storage/app/test-modules was also the folder of
+        // ModuleHealthCheckerTest, and each class deleted it under the other in parallel runs
+        $testing = storage_path('framework/testing/installer-'.bin2hex(random_bytes(8)));
+        $this->tempDir = $testing.'/temp';
+        $this->modulesPath = $testing.'/modules';
 
         File::makeDirectory($this->tempDir, 0755, true, true);
         File::makeDirectory($this->modulesPath, 0755, true, true);
@@ -108,8 +111,7 @@ final class ModuleInstallerTest extends TestCase
 
     protected function tearDown(): void
     {
-        File::deleteDirectory($this->tempDir);
-        File::deleteDirectory($this->modulesPath);
+        File::deleteDirectory(dirname($this->tempDir));
         File::deleteDirectory($this->publicPath);
 
         parent::tearDown();
