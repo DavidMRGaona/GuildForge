@@ -41,6 +41,7 @@ use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\LegalPageServiceInterface;
 use App\Application\Services\LogContextProviderInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
 use App\Application\Services\SlugRedirectService;
 use App\Application\Services\SlugRedirectServiceInterface;
@@ -135,6 +136,7 @@ use App\Infrastructure\Services\ImageOptimizationService;
 use App\Infrastructure\Services\LegalPageService;
 use App\Infrastructure\Services\Logging\HttpLogContextProvider;
 use App\Infrastructure\Services\SettingsService;
+use App\Infrastructure\Services\SiteBrandingService;
 use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
@@ -237,6 +239,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(SitemapQueryServiceInterface::class, SitemapQueryService::class);
         $this->app->singleton(TagQueryServiceInterface::class, TagQueryService::class);
         $this->app->singleton(AboutPageServiceInterface::class, AboutPageService::class);
+        $this->app->singleton(SiteBrandingServiceInterface::class, SiteBrandingService::class);
 
         // Module system bindings
         $this->app->bind(ModuleRepositoryInterface::class, EloquentModuleRepository::class);
