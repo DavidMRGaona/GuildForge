@@ -96,6 +96,7 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            // Static JS is served as immutable for a year: the script URL changes with its content
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): string => '<style>
@@ -200,7 +201,7 @@ class AdminPanelProvider extends PanelProvider
                             background: linear-gradient(to top, rgb(31 41 55) 0%, transparent 100%);
                         }
                     </style>'
-                    .'<script src="'.asset('js/filament/time-picker.js').'"></script>'
+                    .'<script src="'.asset('js/filament/time-picker.js').'?v='.substr((string) md5_file(public_path('js/filament/time-picker.js')), 0, 12).'"></script>'
             )
             ->renderHook(
                 PanelsRenderHook::BODY_START,
