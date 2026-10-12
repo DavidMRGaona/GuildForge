@@ -57,6 +57,18 @@ final class TimePickerAssetTest extends TestCase
             ->assertSee($this->scriptUrl(md5('// a changed time picker')), false);
     }
 
+    public function test_the_panel_still_loads_when_the_script_is_missing(): void
+    {
+        $this->publicPath = sys_get_temp_dir().'/time-picker-asset-'.bin2hex(random_bytes(6));
+        File::ensureDirectoryExists($this->publicPath);
+        $this->app->usePublicPath($this->publicPath);
+        $this->withoutVite();
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertSee('<script src="'.asset(self::SCRIPT).'"></script>', false);
+    }
+
     private function scriptUrl(string $hash): string
     {
         return asset(self::SCRIPT).'?v='.substr($hash, 0, 12);
