@@ -9,7 +9,6 @@ import TagBadge from '@/components/ui/TagBadge.vue';
 import TagList from '@/components/ui/TagList.vue';
 import { useArticles } from '@/composables/useArticles';
 import { useTags } from '@/composables/useTags';
-import { useSeo } from '@/composables/useSeo';
 import { useRoutes } from '@/composables/useRoutes';
 import { buildHeroImageUrl, buildAvatarUrl } from '@/utils/cloudinary';
 
@@ -27,13 +26,6 @@ const heroImageUrl = computed(() => buildHeroImageUrl(props.article.featuredImag
 const authorAvatarUrl = computed(() => buildAvatarUrl(props.article.author.avatarPublicId, 40));
 
 const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.article.tags));
-
-useSeo({
-    title: props.article.title,
-    description: props.article.excerpt,
-    image: heroImageUrl.value,
-    type: 'article',
-});
 </script>
 
 <template>

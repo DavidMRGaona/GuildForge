@@ -45,6 +45,7 @@ final class HandleInertiaRequestsTest extends TestCase
         $this->assertArrayHasKey('moduleTranslations', $shared);
         $this->assertArrayHasKey('navigation', $shared);
         $this->assertArrayHasKey('cloudinary', $shared);
+        $this->assertArrayHasKey('seo', $shared);
     }
 
     public function test_cloudinary_config_is_shared_for_runtime_url_building(): void

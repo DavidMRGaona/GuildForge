@@ -12,44 +12,44 @@ All pages are located in `src/resources/js/pages/`.
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Auth/Login.vue` | `/iniciar-sesion` | -- (uses `useForm`) | `useSeo`, `useAuth`, `useNotifications`, `useRoutes` | Login form with email/password, "remember" checkbox, conditional link to registration (`authSettings.registrationEnabled`) |
-| `Auth/Register.vue` | `/registro` | -- (uses `useForm`) | `useSeo`, `useAuth`, `useNotifications`, `useRoutes` | Registration form with name, email, password and confirmation. Conditional link to login (`authSettings.loginEnabled`) |
-| `Auth/ForgotPassword.vue` | `/olvide-contrasena` | -- (flash messages via `usePage`) | `useSeo` | Password recovery form by email. Shows success message after submission |
-| `Auth/ResetPassword.vue` | `/restablecer-contrasena` | `token: string`, `email: string` | `useSeo` | Password reset form with token, email, new password and confirmation |
-| `Auth/VerifyEmail.vue` | `/verificar-email` | -- (flash messages via `usePage`) | `useSeo` | Email verification page with button to resend email |
+| `Auth/Login.vue` | `/iniciar-sesion` | -- (uses `useForm`) | `useAuth`, `useNotifications`, `useRoutes` | Login form with email/password, "remember" checkbox, conditional link to registration (`authSettings.registrationEnabled`) |
+| `Auth/Register.vue` | `/registro` | -- (uses `useForm`) | `useAuth`, `useNotifications`, `useRoutes` | Registration form with name, email, password and confirmation. Conditional link to login (`authSettings.loginEnabled`) |
+| `Auth/ForgotPassword.vue` | `/olvide-contrasena` | -- (flash messages via `usePage`) | -- | Password recovery form by email. Shows success message after submission |
+| `Auth/ResetPassword.vue` | `/restablecer-contrasena` | `token: string`, `email: string` | -- | Password reset form with token, email, new password and confirmation |
+| `Auth/VerifyEmail.vue` | `/verificar-email` | -- (flash messages via `usePage`) | -- | Email verification page with button to resend email |
 
 ### Events
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Events/Index.vue` | `/eventos` | `events: PaginatedResponse<Event>`, `tags: Tag[]`, `currentTags: string[]` | `useSeo`, `usePagination`, `useRoutes` | Paginated event listing with tag filter (`TagFilter`). Pagination with previous/next buttons |
-| `Events/Show.vue` | `/eventos/:slug` | `event: Event` | `useEvents`, `useTags`, `useSeo`, `useRoutes` | Event detail with hero image, status badges (upcoming/past), tags, date range, location, prices, download links, module slot (`event-detail-actions`), HTML description |
+| `Events/Index.vue` | `/eventos` | `events: PaginatedResponse<Event>`, `tags: Tag[]`, `currentTags: string[]` | `usePagination`, `useRoutes` | Paginated event listing with tag filter (`TagFilter`). Pagination with previous/next buttons |
+| `Events/Show.vue` | `/eventos/:slug` | `event: Event` | `useEvents`, `useTags`, `useRoutes` | Event detail with hero image, status badges (upcoming/past), tags, date range, location, prices, download links, module slot (`event-detail-actions`), HTML description |
 
 ### Articles
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Articles/Index.vue` | `/articulos` | `articles: PaginatedResponse<Article>`, `tags: Tag[]`, `currentTags: string[]` | `useSeo`, `usePagination`, `useRoutes` | Paginated article listing with tag filter |
-| `Articles/Show.vue` | `/articulos/:slug` | `article: Article` | `useArticles`, `useTags`, `useSeo`, `useRoutes` | Article detail with hero image, author avatar, publication date, tags, HTML content |
+| `Articles/Index.vue` | `/articulos` | `articles: PaginatedResponse<Article>`, `tags: Tag[]`, `currentTags: string[]` | `usePagination`, `useRoutes` | Paginated article listing with tag filter |
+| `Articles/Show.vue` | `/articulos/:slug` | `article: Article` | `useArticles`, `useTags`, `useRoutes` | Article detail with hero image, author avatar, publication date, tags, HTML content |
 
 ### Gallery
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Gallery/Index.vue` | `/galeria` | `galleries: PaginatedResponse<Gallery>`, `tags: Tag[]`, `currentTags: string[]` | `useSeo`, `usePagination`, `useRoutes` | Paginated gallery listing with tag filter |
-| `Gallery/Show.vue` | `/galeria/:slug` | `gallery: Gallery` | `useLightbox`, `useGallery`, `useTags`, `useSeo`, `useRoutes` | Gallery detail with photo grid, tags, photo count, lightbox for full-screen viewing. `PhotoLightbox` loaded as `defineAsyncComponent` |
+| `Gallery/Index.vue` | `/galeria` | `galleries: PaginatedResponse<Gallery>`, `tags: Tag[]`, `currentTags: string[]` | `usePagination`, `useRoutes` | Paginated gallery listing with tag filter |
+| `Gallery/Show.vue` | `/galeria/:slug` | `gallery: Gallery` | `useLightbox`, `useGallery`, `useTags`, `useRoutes` | Gallery detail with photo grid, tags, photo count, lightbox for full-screen viewing. `PhotoLightbox` loaded as `defineAsyncComponent` |
 
 ### Calendar
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Calendar/Index.vue` | `/calendario` | -- | `useSeo`, `useMediaQuery` | Full calendar page. On desktop: calendar (2/3) + side detail panel (1/3). On mobile: calendar + bottom modal for detail. Automatic selection of next event |
+| `Calendar/Index.vue` | `/calendario` | -- | `useMediaQuery` | Full calendar page. On desktop: calendar (2/3) + side detail panel (1/3). On mobile: calendar + bottom modal for detail. Automatic selection of next event |
 
 ### Profile
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Profile/Show.vue` | `/perfil` | `user: User` | `useSeo`, `useProfileTabs`, `useModuleSlots`, `useFlashMessages` | User profile with header, tab bar (mobile) / sidebar (desktop), account tab, dynamic module tabs via `profile-sections` slot. Success/error flash messages |
+| `Profile/Show.vue` | `/perfil` | `user: User` | `useProfileTabs`, `useModuleSlots`, `useFlashMessages` | User profile with header, tab bar (mobile) / sidebar (desktop), account tab, dynamic module tabs via `profile-sections` slot. Success/error flash messages |
 
 ### Search
 
@@ -61,14 +61,14 @@ All pages are located in `src/resources/js/pages/`.
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Legal/Show.vue` | (dynamic) | `title: string`, `content: string`, `lastUpdated: string \| null` | `useSeo` | Renders legal pages (legal notice, privacy, cookies) with HTML content and last updated date |
+| `Legal/Show.vue` | (dynamic) | `title: string`, `content: string`, `lastUpdated: string \| null` | -- | Renders legal pages (legal notice, privacy, cookies) with HTML content and last updated date |
 
 ### Other
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Home.vue` | `/` | `heroSlides: HeroSlide[]`, `upcomingEvents: Event[]`, `latestArticles: Article[]`, `featuredGallery: Gallery \| null` | `useSeo`, `useLightbox`, `useRoutes` | Home page with hero slider, events section (grid + compact calendar), recent articles, featured gallery in asymmetric mosaic with lightbox |
-| `About.vue` | `/nosotros` | `guildName: string`, `aboutHistory: string`, `contactEmail/Phone/Address: string`, `aboutHeroImage: string`, `aboutTagline: string`, `activities: Activity[]`, `joinSteps: JoinStep[]`, `social*: string`, `location: object \| null` | `useSeo` | "About us" page with hero image, association activities, history (HTML), steps to join (horizontal/vertical timeline), contact (email, phone, address, social media), contact form, Leaflet map |
+| `Home.vue` | `/` | `heroSlides: HeroSlide[]`, `upcomingEvents: Event[]`, `latestArticles: Article[]`, `featuredGallery: Gallery \| null` | `useLightbox`, `useRoutes` | Home page with hero slider, events section (grid + compact calendar), recent articles, featured gallery in asymmetric mosaic with lightbox |
+| `About.vue` | `/nosotros` | `guildName: string`, `aboutHistory: string`, `contactEmail/Phone/Address: string`, `aboutHeroImage: string`, `aboutTagline: string`, `activities: Activity[]`, `joinSteps: JoinStep[]`, `social*: string`, `location: object \| null` | -- | "About us" page with hero image, association activities, history (HTML), steps to join (horizontal/vertical timeline), contact (email, phone, address, social media), contact form, Leaflet map |
 
 ---
 
@@ -484,10 +484,9 @@ Located in `src/resources/js/composables/`.
 
 ### useSeo
 
-- **Parameters**: `options: SeoOptions` (`title?`, `description?`, `image?`, `url?`, `canonical?`, `type?`)
-- **Returns**: `void`
-- **Dependencies**: `@unhead/vue`, Inertia `usePage`, `vue-i18n`
-- **Purpose**: SEO meta tag management. Generates full title (`title - siteName`), description truncated to 160 chars, canonical URL, Open Graph (title, description, type, url, site_name, image), Twitter Card
+- **Exports**: `useServerSeo()`, `removeServerSeoTags()`, `buildSeoHead(seo)`, deprecated `useSeo(options?)`
+- **Dependencies**: `@unhead/vue`, Inertia `usePage`
+- **Purpose**: Applies the `seo` prop the server builds for each page (`SeoMetadataFactoryInterface`): title, description, canonical URL, Open Graph, Twitter Card and JSON-LD. `app.ts` removes the server-rendered tags (`data-seo-server`) on boot and calls `useServerSeo()` once in the app root, so it follows every navigation; pages do not call it. `useSeo(options)` only applies its options while the server sent the site defaults (modules built for core 3.0)
 
 ### usePagination
 

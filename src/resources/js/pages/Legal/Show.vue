@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import { useSeo } from '@/composables/useSeo';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import type { LegalPageProps } from '@/types/legal';
 
 defineOptions({ layout: DefaultLayout });
 
-const props = defineProps<LegalPageProps>();
-
-useSeo({ title: props.title });
+defineProps<LegalPageProps>();
 </script>
 
 <template>

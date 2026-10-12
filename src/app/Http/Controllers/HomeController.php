@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\GalleryQueryServiceInterface;
@@ -22,6 +23,7 @@ final class HomeController extends Controller
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly GalleryQueryServiceInterface $galleryQuery,
         private readonly HeroSlideQueryServiceInterface $heroSlideQuery,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {}
 
     public function __invoke(): Response
@@ -36,6 +38,7 @@ final class HomeController extends Controller
             'eventsArePast' => $eventsArePast,
             'latestArticles' => ArticleResource::collection($this->articleQuery->getLatestPublished(3))->resolve(),
             'featuredGallery' => $this->getFeaturedGallery(),
+            'seo' => $this->seo->forHome()->toArray(),
         ]);
     }
 

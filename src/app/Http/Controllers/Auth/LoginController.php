@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
@@ -17,12 +19,18 @@ final class LoginController extends Controller
 {
     public function __construct(
         private readonly AuthServiceInterface $authService,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {
     }
 
     public function create(): Response
     {
-        return Inertia::render('Auth/Login');
+        return Inertia::render('Auth/Login', [
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.login'),
+                noindex: true,
+            ))->toArray(),
+        ]);
     }
 
     public function store(LoginRequest $request): RedirectResponse

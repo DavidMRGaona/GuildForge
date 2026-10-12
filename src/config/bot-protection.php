@@ -66,7 +66,6 @@ return [
         'Omgili',
         'img2dataset',
         'Scrapy',
-        'facebookexternalhit',
     ],
 
     /*
@@ -103,6 +102,8 @@ return [
         'Slackbot',
         'Discordbot',
         'WhatsApp',
+        // Facebook, Messenger and Instagram link previews (Meta's AI crawlers stay blocked)
+        'facebookexternalhit',
     ],
 
     /*

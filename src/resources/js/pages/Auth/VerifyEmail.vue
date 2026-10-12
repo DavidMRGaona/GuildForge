@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
-import { useSeo } from '@/composables/useSeo';
 
 interface FlashProps {
     flash?: { success?: string };
@@ -13,10 +12,6 @@ interface FlashProps {
 const { t } = useI18n();
 const page = usePage();
 const props = page.props as FlashProps;
-
-useSeo({
-    title: t('auth.verifyEmail.title'),
-});
 
 const form = useForm({});
 const successMessage = computed(() => props.flash?.success);
