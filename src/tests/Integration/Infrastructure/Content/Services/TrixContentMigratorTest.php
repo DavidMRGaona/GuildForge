@@ -10,10 +10,12 @@ use App\Infrastructure\Content\Services\TrixContentMigrator;
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use RuntimeException;
 use Tests\TestCase;
 
 final class TrixContentMigratorTest extends TestCase
@@ -103,6 +105,40 @@ final class TrixContentMigratorTest extends TestCase
         $this->assertSame(1, $restored);
         $this->assertSame(self::TRIX, $kept->fresh()?->content);
         $this->assertSame('<p>Editado después</p>', $edited->fresh()?->content);
+    }
+
+    public function test_a_backup_outside_the_backup_directory_is_refused(): void
+    {
+        $outside = sys_get_temp_dir().'/gf-richtext-outside-'.bin2hex(random_bytes(4)).'.json';
+        File::put($outside, '[]');
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->migrator()->restore($outside);
+        } finally {
+            File::delete($outside);
+        }
+    }
+
+    public function test_a_backup_is_found_by_its_file_name(): void
+    {
+        app(SettingsServiceInterface::class)->set('legal_terms_content', self::TRIX);
+        $backup = (string) $this->migrator()->migrate()->backupPath;
+
+        $this->assertSame(1, $this->migrator()->restore(basename($backup)));
+        $this->assertSame(self::TRIX, DB::table('settings')->where('key', 'legal_terms_content')->value('value'));
+    }
+
+    public function test_restoring_never_writes_outside_the_converted_columns(): void
+    {
+        $user = UserModel::factory()->create(['name' => 'Ana']);
+        File::ensureDirectoryExists($this->backups);
+        File::put($this->backups.'/trix-edited-by-hand.json', json_encode([
+            ['table' => 'users', 'column' => 'name', 'id' => (string) $user->id, 'original' => 'Mallory', 'converted' => 'Ana'],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->assertSame(0, $this->migrator()->restore($this->backups.'/trix-edited-by-hand.json'));
+        $this->assertSame('Ana', $user->fresh()?->name);
     }
 
     public function test_the_migration_converts_on_deploy(): void
