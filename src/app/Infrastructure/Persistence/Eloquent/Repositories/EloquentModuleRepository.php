@@ -16,6 +16,7 @@ use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 final readonly class EloquentModuleRepository implements ModuleRepositoryInterface
 {
@@ -90,11 +91,15 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
     /**
      * EnabledModulesResolver caches the enabled modules when modules.cache.enabled is on:
      * every write must drop that copy (ZIP installs and updates do not go through enable()).
+     * Inside a transaction it is dropped after the commit: dropped before, a request could
+     * cache the old rows again and keep them for the whole cache TTL. Outside one, at once.
      */
     private function forgetCachedModules(): void
     {
         if ((bool) config('modules.cache.enabled', false)) {
-            Cache::forget((string) config('modules.cache.key', 'modules.discovered'));
+            $key = (string) config('modules.cache.key', 'modules.discovered');
+
+            DB::afterCommit(static fn (): bool => Cache::forget($key));
         }
     }
 
