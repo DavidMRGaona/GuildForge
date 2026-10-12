@@ -21,6 +21,7 @@ final readonly class GitHubReleaseInfo
         public DateTimeImmutable $publishedAt,
         public bool $isPrerelease,
         public string $manifestUrl = '',
+        public int $manifestSize = 0,
     ) {
     }
 
@@ -38,6 +39,7 @@ final readonly class GitHubReleaseInfo
         $downloadUrl = '';
         $checksumUrl = '';
         $manifestUrl = '';
+        $manifestSize = 0;
 
         foreach ($data['assets'] ?? [] as $asset) {
             $name = $asset['name'] ?? '';
@@ -53,6 +55,8 @@ final readonly class GitHubReleaseInfo
             // Published since core 2.6 so the updater can read requirements before downloading
             if ($name === 'module.json') {
                 $manifestUrl = $asset['browser_download_url'] ?? '';
+                // 0 when GitHub does not list it: the size is then checked after downloading
+                $manifestSize = is_int($asset['size'] ?? null) ? $asset['size'] : 0;
             }
         }
 
@@ -65,6 +69,7 @@ final readonly class GitHubReleaseInfo
             publishedAt: new DateTimeImmutable($data['published_at'] ?? 'now'),
             isPrerelease: $data['prerelease'] ?? false,
             manifestUrl: $manifestUrl,
+            manifestSize: $manifestSize,
         );
     }
 
@@ -113,6 +118,7 @@ final readonly class GitHubReleaseInfo
             'published_at' => $this->publishedAt->format('c'),
             'is_prerelease' => $this->isPrerelease,
             'manifest_url' => $this->manifestUrl,
+            'manifest_size' => $this->manifestSize,
         ];
     }
 }

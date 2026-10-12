@@ -330,6 +330,11 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
      */
     private function downloadManifest(string $owner, string $repo, GitHubReleaseInfo $release): array
     {
+        // The release lists each asset's size: never download what cannot be a manifest
+        if ($release->manifestSize > self::MANIFEST_MAX_BYTES) {
+            return ['invalid' => true];
+        }
+
         try {
             $response = $this->createClient()->get($release->manifestUrl);
         } catch (\Throwable $e) {
