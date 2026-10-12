@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use Filament\Schemas\Schema;
-use App\Filament\Resources\HeroSlideResource\Pages\ListHeroSlides;
+use App\Filament\Resources\BaseResource;
+use App\Filament\Resources\HeroSlideResource\Pages;
 use App\Filament\Resources\HeroSlideResource\Pages\CreateHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\EditHeroSlide;
-use App\Filament\Resources\HeroSlideResource\Pages;
+use App\Filament\Resources\HeroSlideResource\Pages\ListHeroSlides;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Resources\BaseResource;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;

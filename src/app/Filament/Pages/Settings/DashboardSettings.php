@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Settings;
 
-use Filament\Schemas\Schema;
 use App\Application\Services\DashboardWidgetConfigServiceInterface;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
@@ -15,6 +14,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Schema;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\TableWidget;
 

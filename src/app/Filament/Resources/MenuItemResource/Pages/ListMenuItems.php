@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\MenuItemResource\Pages;
 
-use Filament\Schemas\Components\Tabs\Tab;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Filament\Resources\MenuItemResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
 class ListMenuItems extends ListRecords
