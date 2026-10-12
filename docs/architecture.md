@@ -794,7 +794,7 @@ Reusable functions that encapsulate reactive logic:
 | `useGallery` | Gallery logic |
 | `useLightbox` | Full-screen image viewer |
 | `useHeroSlider` | Hero carousel with autoplay |
-| `useSeo` | Dynamic meta tags for SEO |
+| `useSeo` | Deprecated (modules built for core 3.0). Pages send a `seo` prop from the server; `useServerSeo()` in `app.ts` applies it on every navigation |
 | `usePagination` | Reusable pagination |
 | `useAuth` | Authentication state |
 | `useNotifications` | Toast notification system |

@@ -13,15 +13,16 @@ This guide covers how to create and develop modules for GuildForge using the Mod
    - [Panel code for core 3 (Filament 5)](#panel-code-for-core-3-filament-5)
 7. [Filament integration](#filament-integration)
 8. [Slot registration](#slot-registration)
-9. [Building module assets](#building-module-assets)
-10. [Tailwind CSS in modules](#tailwind-css-in-modules)
-11. [Module installation](#module-installation)
-12. [Extending core functionality](#extending-core-functionality)
-13. [Domain events and listeners](#domain-events-and-listeners)
-14. [State machine pattern](#state-machine-pattern)
-15. [Testing modules](#testing-modules)
-16. [Best practices](#best-practices)
-17. [Quick reference](#quick-reference)
+9. [SEO of public pages](#seo-of-public-pages)
+10. [Building module assets](#building-module-assets)
+11. [Tailwind CSS in modules](#tailwind-css-in-modules)
+12. [Module installation](#module-installation)
+13. [Extending core functionality](#extending-core-functionality)
+14. [Domain events and listeners](#domain-events-and-listeners)
+15. [State machine pattern](#state-machine-pattern)
+16. [Testing modules](#testing-modules)
+17. [Best practices](#best-practices)
+18. [Quick reference](#quick-reference)
 
 ---
 
@@ -670,6 +671,34 @@ if (hasComponents('home.sidebar')) {
   </aside>
 </template>
 ```
+
+---
+
+## SEO of public pages
+
+Link previews (WhatsApp, Facebook, Telegram, Discord) and search engines read the HTML the server renders; SSR is off, so client-side `useHead` is invisible to them.
+
+Every public module page sends a `seo` prop built by the core factory (core ^3.1):
+
+```php
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\DTOs\SeoScheduleDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
+
+return Inertia::render('GameTables/Show', [
+    'table' => $resource,
+    'seo' => $this->seo->forPage(new SeoPageDTO(
+        title: $table->title,
+        description: $table->synopsis,          // HTML is stripped, cut to 160 chars
+        imagePublicId: $table->imagePublicId,   // falls back to the site's own logo
+        schedule: new SeoScheduleDTO($start, $end, $table->location), // adds date/place and Event JSON-LD
+    ))->toArray(),
+]);
+```
+
+- Private pages (my bookings, create, edit, check-in…) pass `noindex: true`.
+- Pages do not call `useSeo()`; the app root applies the `seo` prop. Pages without one get the site defaults.
+- The factory never throws; on failure it returns the site defaults.
 
 ---
 
