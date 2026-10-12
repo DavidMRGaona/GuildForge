@@ -25,7 +25,7 @@ final class ModuleSyncFromImageCommand extends Command
     {
         $imagePath = $this->argument('path');
 
-        if (! is_string($imagePath) || ! File::isDirectory($imagePath)) {
+        if (! File::isDirectory($imagePath)) {
             $this->warn("Image path does not exist: {$imagePath}");
 
             return self::SUCCESS;
