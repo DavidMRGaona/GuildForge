@@ -100,13 +100,40 @@ final class IncompatibleModuleBootTest extends TestCase
             'LOG_CHANNEL' => 'null',
         ];
 
+        // A compatible module with a migration next to the incompatible one: proves the
+        // subprocess reads MODULES_PATH (with a cached config every absence below would pass)
+        File::ensureDirectoryExists("{$this->modulesPath}/test-module/database/migrations");
+        File::put("{$this->modulesPath}/test-module/database/migrations/2026_01_01_000000_create_compatible_widgets_table.php", <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            use Illuminate\Database\Migrations\Migration;
+            use Illuminate\Database\Schema\Blueprint;
+            use Illuminate\Support\Facades\Schema;
+
+            return new class () extends Migration {
+                public function up(): void
+                {
+                    Schema::create('compatible_widgets', function (Blueprint $table): void {
+                        $table->uuid('id')->primary();
+                    });
+                }
+
+                public function down(): void
+                {
+                    Schema::dropIfExists('compatible_widgets');
+                }
+            };
+            PHP);
         // Fresh install: no modules table while the providers register
         $this->runArtisan($env, ['migrate', '--force']);
 
         $pdo = new PDO("sqlite:{$database}");
         $pdo->prepare("INSERT INTO modules (id, name, display_name, version, status, namespace, provider, created_at, updated_at)
-            VALUES (?, 'incompatible-module', 'Incompatible module', '1.0.0', 'enabled', 'Modules\\IncompatibleModule', 'IncompatibleModuleServiceProvider', datetime('now'), datetime('now'))")
-            ->execute([(string) Str::uuid()]);
+            VALUES (?, 'incompatible-module', 'Incompatible module', '1.0.0', 'enabled', 'Modules\\IncompatibleModule', 'IncompatibleModuleServiceProvider', datetime('now'), datetime('now')),
+            (?, 'test-module', 'Test module', '1.0.0', 'enabled', 'Modules\\TestModule', 'TestModuleServiceProvider', datetime('now'), datetime('now'))")
+            ->execute([(string) Str::uuid(), (string) Str::uuid()]);
 
         // Every entrypoint step boots the panel and the module providers
         $this->runArtisan($env, ['migrate', '--force']);
@@ -114,6 +141,7 @@ final class IncompatibleModuleBootTest extends TestCase
 
         $this->assertFileDoesNotExist($marker);
         $this->assertSame([], $pdo->query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'incompatible_widgets'")?->fetchAll());
+        $this->assertCount(1, $pdo->query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'compatible_widgets'")?->fetchAll() ?? []);
     }
 
     /**
