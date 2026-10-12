@@ -63,6 +63,18 @@ final class EloquentModuleRepositoryTest extends TestCase
         $this->assertFalse(Cache::has('modules.discovered'));
     }
 
+    public function test_deleting_a_module_forgets_the_cached_module_list(): void
+    {
+        config(['modules.cache.enabled' => true, 'modules.cache.key' => 'modules.discovered']);
+        $module = $this->createModule(name: 'test-module', status: ModuleStatus::Enabled);
+        $this->repository->save($module);
+        Cache::put('modules.discovered', ['stale'], 3600);
+
+        $this->repository->delete($module);
+
+        $this->assertFalse(Cache::has('modules.discovered'));
+    }
+
     public function test_it_finds_module_by_id(): void
     {
         $module = $this->createModule(name: 'findable-module');
