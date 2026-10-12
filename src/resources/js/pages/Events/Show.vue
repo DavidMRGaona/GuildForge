@@ -232,10 +232,7 @@ useSeo({
                             {{ t('events.downloads') }}
                         </h3>
                         <ul class="space-y-3">
-                            <li
-                                v-for="(link, index) in props.event.downloadLinks"
-                                :key="index"
-                            >
+                            <li v-for="(link, index) in props.event.downloadLinks" :key="index">
                                 <a
                                     :href="link.url"
                                     target="_blank"
@@ -257,13 +254,12 @@ useSeo({
                                         />
                                     </svg>
                                     <div>
-                                        <span class="font-medium text-primary-600 group-hover:text-primary-700 group-hover:underline">
+                                        <span
+                                            class="font-medium text-primary-600 group-hover:text-primary-700 group-hover:underline"
+                                        >
                                             {{ link.label }}
                                         </span>
-                                        <p
-                                            v-if="link.description"
-                                            class="text-sm text-base-muted"
-                                        >
+                                        <p v-if="link.description" class="text-sm text-base-muted">
                                             {{ link.description }}
                                         </p>
                                     </div>
@@ -282,7 +278,12 @@ useSeo({
                         Content is sanitized server-side via SanitizesHtml trait (HTMLPurifier).
                         @see App\Infrastructure\Factories\EloquentResponseDTOFactory
                     -->
-                    <div class="prose max-w-none dark:prose-invert" v-html="props.event.description" />
+                    <!-- eslint-disable vue/no-v-html -->
+                    <div
+                        class="prose max-w-none dark:prose-invert"
+                        v-html="props.event.description"
+                    />
+                    <!-- eslint-enable vue/no-v-html -->
 
                     <div class="mt-8 border-t border-default pt-6">
                         <Link :href="routes.events.index">

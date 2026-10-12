@@ -145,15 +145,15 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
             <BaseCard v-if="aboutHistory" :title="t('about.history.title')" class="mb-8">
                 <!--
                     SECURITY: v-html is used to render rich text content from site settings.
-                    Content MUST be sanitized server-side before storage in the database.
-                    XSS RISK: If content is not properly sanitized, this could execute malicious scripts.
-                    @see App\Filament\Pages\SiteSettings - about_history field validation
-                    @see App\Infrastructure\Services\SettingsService - settings persistence
+                    Content is sanitized server-side via SanitizesHtml trait (HTMLPurifier).
+                    @see App\Infrastructure\Services\AboutPageService
                 -->
+                <!-- eslint-disable vue/no-v-html -->
                 <div
                     v-html="aboutHistory"
                     class="prose prose-stone dark:prose-invert max-w-none"
                 ></div>
+                <!-- eslint-enable vue/no-v-html -->
             </BaseCard>
 
             <!-- Join Section -->
