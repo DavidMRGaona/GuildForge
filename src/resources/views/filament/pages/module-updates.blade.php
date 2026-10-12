@@ -1,4 +1,4 @@
-{{-- Uses Filament components and only utility classes present in Filament's compiled CSS: this panel has no custom theme --}}
+{{-- Filament components plus Tailwind utilities: the panel theme (resources/css/filament/admin/theme.css) compiles the classes used in resources/views/filament --}}
 <x-filament-panels::page>
     @php($maintenanceEnabled = $this->isMaintenanceModeEnabled())
     <div class="flex flex-col gap-6" @if($queuedModules !== []) wire:poll.3s="pollUpdates" @endif>
