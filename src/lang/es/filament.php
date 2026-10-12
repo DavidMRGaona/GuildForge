@@ -646,4 +646,7 @@ return [
             'consent_stats_widget' => 'Estadísticas de consentimiento',
         ],
     ],
+    'time_picker' => [
+        'invalid' => 'Escribe la hora como HH:MM, por ejemplo 10:00.',
+    ],
 ];
