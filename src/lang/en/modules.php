@@ -157,6 +157,7 @@ return [
             'title' => ':name Settings',
             'back' => 'Back to modules',
             'no_settings' => 'This module has no configuration options.',
+            'module_disabled' => 'This module is disabled: enable it to configure it.',
             'save' => 'Save settings',
             'saved' => 'Settings saved successfully.',
         ],
