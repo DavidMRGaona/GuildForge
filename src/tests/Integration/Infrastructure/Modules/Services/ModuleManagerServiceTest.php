@@ -494,6 +494,7 @@ final class ModuleManagerServiceTest extends TestCase
 
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => "{$this->testModulesPath}/test-module",
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'description' => 'Test module',
@@ -515,7 +516,7 @@ final class ModuleManagerServiceTest extends TestCase
     {
         // The data the seeders created is gone, so a reinstall must seed again
         $this->createTestModule('test-module');
-        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'installed_at' => now()]);
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'installed_at' => now()]);
         ModuleSeederHistoryModel::markExecuted('test-module', 'Modules\\TestModule\\Database\\Seeders\\ItemsSeeder');
 
         $this->service->uninstall(ModuleName::fromString('test-module'), true);
@@ -526,7 +527,7 @@ final class ModuleManagerServiceTest extends TestCase
     public function test_uninstall_keeping_data_keeps_the_seeder_history(): void
     {
         $this->createTestModule('test-module');
-        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'installed_at' => now()]);
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'installed_at' => now()]);
         ModuleSeederHistoryModel::markExecuted('test-module', 'Modules\\TestModule\\Database\\Seeders\\ItemsSeeder');
 
         $this->service->uninstall(ModuleName::fromString('test-module'), false);

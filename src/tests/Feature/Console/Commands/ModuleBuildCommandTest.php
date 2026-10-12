@@ -50,6 +50,7 @@ final class ModuleBuildCommandTest extends TestCase
 
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => $this->testModulesPath.'/test-module',
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'description' => 'Test module',
@@ -70,6 +71,7 @@ final class ModuleBuildCommandTest extends TestCase
 
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => $this->testModulesPath.'/test-module',
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'description' => 'Test module',
@@ -97,6 +99,7 @@ final class ModuleBuildCommandTest extends TestCase
 
         ModuleModel::create([
             'name' => 'module-one',
+            'path' => $this->testModulesPath.'/module-one',
             'display_name' => 'Module One',
             'version' => '1.0.0',
             'description' => 'First module',
@@ -118,6 +121,7 @@ final class ModuleBuildCommandTest extends TestCase
 
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => $this->testModulesPath.'/test-module',
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'description' => 'Test module',
