@@ -62,6 +62,11 @@ final class TrixHtmlConverterTest extends TestCase
                 "<p><strong>negrita</strong>\n<em>cursiva</em> y un <a href=\"https://gremio.example/a\">enlace</a>\nfin</p>",
                 '<p><strong>negrita</strong> <em>cursiva</em> y un <a href="https://gremio.example/a">enlace</a> fin</p>',
             ],
+            // The editor drops the comment, so the break it leaves must not change on a second pass
+            'html comment between text and an inline element' => [
+                "<p>Antes\n<!-- nota -->\n<strong>negrita</strong></p>",
+                "<p>Antes\n<strong>negrita</strong></p>",
+            ],
             'paragraphs and a blank line' => [
                 '<p>Primera línea<br>segunda línea</p><p><br></p><p>Segundo párrafo</p>',
                 '<p>Primera línea<br>segunda línea</p><p><br></p><p>Segundo párrafo</p>',
