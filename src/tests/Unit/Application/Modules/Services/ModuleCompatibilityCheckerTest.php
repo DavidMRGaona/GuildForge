@@ -119,11 +119,14 @@ final class ModuleCompatibilityCheckerTest extends TestCase
         }
     }
 
-    public function test_a_malformed_module_version_never_throws(): void
+    public function test_a_malformed_version_of_a_module_with_a_minimum_is_rejected_without_throwing(): void
     {
-        $manifest = new ModuleManifestDTO('game-tables', 'not-a-version', 'Modules\\GameTables', 'GameTablesServiceProvider', requires: ['core' => '^2.6']);
+        // e.g. a hand-edited "v2.1.0": the gate fails closed, as for an unreadable manifest
+        $manifest = new ModuleManifestDTO('game-tables', 'v2.1.0', 'Modules\\GameTables', 'GameTablesServiceProvider', requires: ['core' => '^2.6']);
 
-        $this->assertTrue($this->checker->checkManifest($manifest, $this->host(moduleMinimums: ['game-tables' => '2.2.0']))->isCompatible());
+        $issues = $this->checker->checkManifest($manifest, $this->host(moduleMinimums: ['game-tables' => '2.2.0']))->issues;
+
+        $this->assertEquals([new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID)], $issues);
     }
 
     public function test_the_minimum_only_applies_to_the_module_it_names(): void
