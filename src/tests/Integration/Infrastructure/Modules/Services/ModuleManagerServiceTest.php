@@ -694,6 +694,7 @@ final class ModuleManagerServiceTest extends TestCase
         $this->createTestModuleMigration('test-module', 'create_test_module_table');
         ModuleModel::create([
             'name' => 'test-module',
+            'path' => "{$this->testModulesPath}/test-module",
             'display_name' => 'Test Module',
             'version' => '1.0.0',
             'status' => ModuleStatus::Disabled->value,
@@ -717,7 +718,7 @@ final class ModuleManagerServiceTest extends TestCase
         // Positive control for the "no table" assertions of the incompatible cases
         $this->createTestModule('test-module');
         $this->createTestModuleMigration('test-module', 'create_test_module_table');
-        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value]);
+        ModuleModel::create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value]);
 
         $this->service->enable(ModuleName::fromString('test-module'));
 
