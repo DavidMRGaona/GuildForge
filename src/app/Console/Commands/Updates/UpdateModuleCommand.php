@@ -91,8 +91,12 @@ final class UpdateModuleCommand extends Command
 
         $this->info('Starting update...');
 
-        $result = $updater->update($moduleName);
-        $this->restartQueueWorkers();
+        try {
+            $result = $updater->update($moduleName);
+        } finally {
+            // Also when update() throws: it may have changed module files first
+            $this->restartQueueWorkers();
+        }
 
         if ($result->isSuccess()) {
             $this->info("Successfully updated {$name} to {$result->toVersion}");
@@ -171,21 +175,23 @@ final class UpdateModuleCommand extends Command
         $success = 0;
         $failed = 0;
 
-        foreach ($updates as $update) {
-            $this->info("Updating {$update->moduleName}...");
+        try {
+            foreach ($updates as $update) {
+                $this->info("Updating {$update->moduleName}...");
 
-            $result = $updater->update(new ModuleName($update->moduleName));
+                $result = $updater->update(new ModuleName($update->moduleName));
 
-            if ($result->isSuccess()) {
-                $this->info("  ✓ Updated to {$result->toVersion}");
-                $success++;
-            } else {
-                $this->error("  ✗ Failed: {$result->errorMessage}");
-                $failed++;
+                if ($result->isSuccess()) {
+                    $this->info("  ✓ Updated to {$result->toVersion}");
+                    $success++;
+                } else {
+                    $this->error("  ✗ Failed: {$result->errorMessage}");
+                    $failed++;
+                }
             }
+        } finally {
+            $this->restartQueueWorkers();
         }
-
-        $this->restartQueueWorkers();
 
         $this->newLine();
         $this->info("Update complete: {$success} succeeded, {$failed} failed.");

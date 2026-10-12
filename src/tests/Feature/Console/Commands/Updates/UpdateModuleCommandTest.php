@@ -19,6 +19,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Mockery\MockInterface;
+use RuntimeException;
 use Tests\TestCase;
 
 final class UpdateModuleCommandTest extends TestCase
@@ -463,6 +464,61 @@ final class UpdateModuleCommandTest extends TestCase
         $this->artisan('module:update', ['--all' => true, '--force' => true])->assertExitCode(0);
 
         $this->assertNull(Cache::get('illuminate:queue:restart'));
+    }
+
+    public function test_an_update_that_throws_still_restarts_the_queue_workers(): void
+    {
+        $this->updater->shouldReceive('preview')->andReturn($this->compatiblePreview('gallery'));
+        $this->updater->shouldReceive('update')->andThrow(new RuntimeException('Lock held by a queued update'));
+
+        try {
+            $this->artisan('module:update', ['name' => 'gallery', '--force' => true])->run();
+            $this->fail('The update error must reach the caller');
+        } catch (RuntimeException $e) {
+            $this->assertSame('Lock held by a queued update', $e->getMessage());
+        }
+
+        // Files may have changed before update() threw
+        $this->assertNotNull(Cache::get('illuminate:queue:restart'));
+    }
+
+    public function test_updating_all_modules_restarts_the_workers_when_one_update_throws(): void
+    {
+        $this->updateChecker->shouldReceive('checkAllForUpdates')->andReturn(new Collection([
+            $this->availableUpdate('forum'),
+            $this->availableUpdate('gallery'),
+        ]));
+        $this->updater->shouldReceive('update')
+            ->with(Mockery::on(fn (ModuleName $name): bool => $name->value === 'forum'))
+            ->andReturn($this->updateResult('forum', UpdateStatus::Completed));
+        $this->updater->shouldReceive('update')
+            ->with(Mockery::on(fn (ModuleName $name): bool => $name->value === 'gallery'))
+            ->andThrow(new RuntimeException('Lock held by a queued update'));
+
+        try {
+            $this->artisan('module:update', ['--all' => true, '--force' => true])->run();
+            $this->fail('The update error must reach the caller');
+        } catch (RuntimeException $e) {
+            $this->assertSame('Lock held by a queued update', $e->getMessage());
+        }
+
+        $this->assertNotNull(Cache::get('illuminate:queue:restart'));
+    }
+
+    private function availableUpdate(string $module): AvailableUpdateDTO
+    {
+        return new AvailableUpdateDTO(
+            moduleName: $module,
+            displayName: ucfirst($module),
+            currentVersion: '1.0.0',
+            availableVersion: '2.0.0',
+            releaseNotes: '',
+            publishedAt: new DateTimeImmutable(),
+            isPrerelease: false,
+            isMajorUpdate: true,
+            downloadUrl: '',
+            hasChecksum: false,
+        );
     }
 
     private function compatiblePreview(string $module): UpdatePreviewDTO
