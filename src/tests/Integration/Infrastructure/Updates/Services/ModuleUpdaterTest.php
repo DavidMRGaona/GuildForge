@@ -90,7 +90,9 @@ final class ModuleUpdaterTest extends TestCase
             $this->postUpdateRunner,
         );
 
-        $this->tempDir = storage_path('app/test-updates');
+        // One folder per test: a fixed storage/app/test-updates was shared with any other suite
+        // running at the same time, which deleted it under this one (mkdir(): File exists)
+        $this->tempDir = storage_path('framework/testing/updates-'.bin2hex(random_bytes(8)));
         File::ensureDirectoryExists($this->tempDir);
 
         config(['updates.temp_path' => $this->tempDir]);
