@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\Seo\DTOs\SeoPageDTO;
+use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Http\Concerns\BuildsPaginatedResponse;
@@ -22,6 +24,7 @@ final class ArticleController extends Controller
     public function __construct(
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly TagQueryServiceInterface $tagQuery,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {
     }
 
@@ -45,6 +48,10 @@ final class ArticleController extends Controller
             ),
             'tags' => TagResource::collection($availableTags)->resolve(),
             'currentTags' => $tagSlugs ?? [],
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.articles'),
+                description: (string) __('seo.descriptions.articles'),
+            ))->toArray(),
         ]);
     }
 
@@ -58,6 +65,7 @@ final class ArticleController extends Controller
 
         return Inertia::render('Articles/Show', [
             'article' => ArticleResource::make($article)->resolve(),
+            'seo' => $this->seo->forArticle($article)->toArray(),
         ]);
     }
 }
