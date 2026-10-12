@@ -19,6 +19,7 @@ use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Modules\ModuleLoader;
 use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -392,6 +393,17 @@ final class ModulesPage extends Page implements HasForms
             'compatible' => $result->isCompatible(),
             'reasons' => array_map(static fn (CompatibilityIssue $issue): string => $formatter->format($issue), $result->issues),
         ];
+    }
+
+    /**
+     * The generic settings page only edits getSettingsSchema(): without one it has nothing to show
+     * (a module with its own settings page lists that page in the panel navigation).
+     */
+    public function hasSettingsSchema(string $name): bool
+    {
+        $provider = app(ModuleLoader::class)->getProvider($name);
+
+        return $provider !== null && $provider->getSettingsSchema() !== [];
     }
 
     private function resolveUploadedFile(mixed $tempFile): UploadedFile

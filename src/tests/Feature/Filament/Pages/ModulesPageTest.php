@@ -13,9 +13,13 @@ use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\CompatibilityResult;
+use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Modules\ModuleLoader;
+use App\Modules\ModuleServiceProvider;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -149,6 +153,37 @@ final class ModulesPageTest extends TestCase
             ->set('search', 'alpha')
             ->assertSee('Alpha Module')
             ->assertDontSee('Beta Module');
+    }
+
+    public function test_an_enabled_module_without_a_settings_schema_has_no_settings_link(): void
+    {
+        // The generic settings page would only say that there is nothing to configure
+        ModuleModel::factory()->enabled()->create(['name' => 'plain-module', 'display_name' => 'Plain Module']);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModulesPage::class)
+            ->assertSee('Plain Module')
+            ->assertDontSee(ModuleSettingsPage::getUrl(['module' => 'plain-module']));
+    }
+
+    public function test_an_enabled_module_with_a_settings_schema_links_to_its_settings(): void
+    {
+        ModuleModel::factory()->enabled()->create(['name' => 'configurable-module', 'display_name' => 'Configurable Module']);
+        $this->loadProvider(new class (app()) extends ModuleServiceProvider {
+            public function moduleName(): string
+            {
+                return 'configurable-module';
+            }
+
+            public function getSettingsSchema(): array
+            {
+                return [TextInput::make('greeting')];
+            }
+        });
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModulesPage::class)
+            ->assertSee(ModuleSettingsPage::getUrl(['module' => 'configurable-module']));
     }
 
     public function test_can_enable_disabled_module(): void
@@ -332,5 +367,13 @@ final class ModulesPageTest extends TestCase
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
         ]));
+    }
+
+    private function loadProvider(ModuleServiceProvider $provider): void
+    {
+        // As if the module had booted: the page asks the loader for its provider
+        (function (ModuleServiceProvider $provider): void {
+            $this->loadedProviders[$provider->moduleName()] = $provider;
+        })->call(app(ModuleLoader::class), $provider);
     }
 }
