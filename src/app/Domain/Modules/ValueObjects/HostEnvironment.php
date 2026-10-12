@@ -10,6 +10,7 @@ final readonly class HostEnvironment
 {
     /**
      * @param  list<string>  $extensions  Loaded PHP extensions, lowercase
+     * @param  array<string, ModuleVersion>  $moduleMinimums  Module name => oldest version this core can run
      */
     public function __construct(
         public ModuleVersion $core,
@@ -17,7 +18,13 @@ final readonly class HostEnvironment
         public ModuleVersion $laravel,
         public ?ModuleVersion $filament,
         public array $extensions,
+        public array $moduleMinimums = [],
     ) {}
+
+    public function minimumVersionOf(string $module): ?ModuleVersion
+    {
+        return $this->moduleMinimums[$module] ?? null;
+    }
 
     public function versionOf(RequirementType $type): ?ModuleVersion
     {

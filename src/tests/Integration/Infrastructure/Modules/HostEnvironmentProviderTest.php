@@ -27,6 +27,18 @@ final class HostEnvironmentProviderTest extends TestCase
         $this->assertNull(HostEnvironmentProvider::normalizeVersion(null));
     }
 
+    public function test_the_host_carries_the_minimum_module_versions_this_core_needs(): void
+    {
+        $core = Mockery::mock(CoreVersionServiceInterface::class);
+        $core->shouldReceive('getCurrentVersion')->andReturn(new ModuleVersion(3, 2, 0));
+
+        $host = (new HostEnvironmentProvider($core))->current();
+
+        // game-tables registers EventModel::gameTables() itself since 2.2.0
+        $this->assertSame('2.2.0', $host->minimumVersionOf('game-tables')?->value());
+        $this->assertNull($host->minimumVersionOf('tournaments'));
+    }
+
     public function test_it_describes_the_running_host_once_per_process(): void
     {
         $core = Mockery::mock(CoreVersionServiceInterface::class);

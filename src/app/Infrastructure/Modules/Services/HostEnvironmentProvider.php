@@ -6,6 +6,7 @@ namespace App\Infrastructure\Modules\Services;
 
 use App\Application\Modules\Services\HostEnvironmentProviderInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
+use App\Domain\Modules\CoreModuleMinimumVersions;
 use App\Domain\Modules\ValueObjects\HostEnvironment;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use Composer\InstalledVersions;
@@ -26,6 +27,7 @@ final class HostEnvironmentProvider implements HostEnvironmentProviderInterface
             laravel: self::normalizeVersion(app()->version()) ?? new ModuleVersion(0, 0, 0),
             filament: self::packageVersion('filament/filament'),
             extensions: array_map('strtolower', get_loaded_extensions()),
+            moduleMinimums: array_map(ModuleVersion::fromString(...), CoreModuleMinimumVersions::VERSIONS),
         );
     }
 

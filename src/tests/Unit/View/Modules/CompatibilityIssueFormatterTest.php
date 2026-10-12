@@ -29,6 +29,9 @@ final class CompatibilityIssueFormatterTest extends TestCase
 
     public function test_it_translates_each_reason(): void
     {
+        $this->assertSame('este core necesita la versión 2.2.0 o superior, instalada 2.1.1', $this->formatter->format(
+            new CompatibilityIssue(RequirementType::Core, '2.2.0', '2.1.1', CompatibilityIssue::BELOW_CORE_MINIMUM),
+        ));
         $this->assertSame('requiere core ^3.0, instalado 2.6.0', $this->formatter->format($this->core));
         $this->assertSame('requiere la extensión PHP intl', $this->formatter->format($this->extension));
         $this->assertSame('restricción de PHP no válida: «>=8.x»', $this->formatter->format(

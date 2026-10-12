@@ -6,6 +6,7 @@ namespace App\Application\Modules\Services;
 
 use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\Exceptions\InvalidModuleVersionException;
 use App\Domain\Modules\Services\ConstraintMatcher;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\CompatibilityResult;
@@ -59,7 +60,28 @@ final readonly class ModuleCompatibilityChecker
 
     public function checkManifest(ModuleManifestDTO $manifest, HostEnvironment $host): CompatibilityResult
     {
-        return $this->check(ModuleRequirements::fromManifest($manifest->requires ?? []), $host);
+        $result = $this->check(ModuleRequirements::fromManifest($manifest->requires ?? []), $host);
+        $minimum = $host->minimumVersionOf($manifest->name);
+
+        if ($minimum === null) {
+            return $result;
+        }
+
+        try {
+            $version = ModuleVersion::fromString($manifest->version);
+        } catch (InvalidModuleVersionException) {
+            // The manifest reader already rejects malformed versions
+            return $result;
+        }
+
+        if ($version->isGreaterThanOrEqual($minimum)) {
+            return $result;
+        }
+
+        return new CompatibilityResult([
+            ...$result->issues,
+            new CompatibilityIssue(RequirementType::Core, $minimum->value(), $version->value(), CompatibilityIssue::BELOW_CORE_MINIMUM),
+        ]);
     }
 
     /**
