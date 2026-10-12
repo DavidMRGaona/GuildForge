@@ -544,7 +544,7 @@ final class ModuleUpdaterTest extends TestCase
      */
     private function releaseZip(string $name, string $version, string $assetContent, array $requires = []): string
     {
-        $path = $this->tempDir.'/fixtures/'.uniqid().'.release';
+        $path = $this->tempDir.'/fixtures/'.bin2hex(random_bytes(8)).'.release';
         File::ensureDirectoryExists(dirname($path));
         $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);

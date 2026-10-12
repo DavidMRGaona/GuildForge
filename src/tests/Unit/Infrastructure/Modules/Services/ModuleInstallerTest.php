@@ -696,7 +696,7 @@ final class ModuleInstallerTest extends TestCase
      */
     private function createValidZip(array $files): string
     {
-        $zipPath = $this->tempDir.'/test-module-'.uniqid().'.zip';
+        $zipPath = $this->tempDir.'/test-module-'.bin2hex(random_bytes(8)).'.zip';
 
         $zip = new ZipArchive;
         $zip->open($zipPath, ZipArchive::CREATE);

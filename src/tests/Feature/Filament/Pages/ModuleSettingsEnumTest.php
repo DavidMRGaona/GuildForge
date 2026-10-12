@@ -30,7 +30,7 @@ final class ModuleSettingsEnumTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulePath = sys_get_temp_dir().'/gf-settings-'.uniqid();
+        $this->modulePath = sys_get_temp_dir().'/gf-settings-'.bin2hex(random_bytes(8));
         File::ensureDirectoryExists($this->modulePath);
     }
 

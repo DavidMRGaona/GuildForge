@@ -22,7 +22,7 @@ final class ModulePackageInstallerTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-installer-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-installer-'.bin2hex(random_bytes(8));
         File::makeDirectory($this->modulesPath, 0775, true);
         config(['modules.path' => $this->modulesPath]);
 
@@ -113,7 +113,7 @@ final class ModulePackageInstallerTest extends TestCase
 
     public function test_stage_rejects_an_unreadable_zip(): void
     {
-        $path = $this->modulesPath.'/../broken-'.uniqid().'.zip';
+        $path = $this->modulesPath.'/../broken-'.bin2hex(random_bytes(8)).'.zip';
         File::put($path, 'not a zip');
 
         $this->expectException(UpdateException::class);
@@ -194,7 +194,7 @@ final class ModulePackageInstallerTest extends TestCase
      */
     private function zipWith(array $entries): string
     {
-        $path = sys_get_temp_dir().'/gf-release-'.uniqid().'.zip';
+        $path = sys_get_temp_dir().'/gf-release-'.bin2hex(random_bytes(8)).'.zip';
         $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 

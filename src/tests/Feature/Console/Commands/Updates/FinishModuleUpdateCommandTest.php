@@ -28,7 +28,7 @@ final class FinishModuleUpdateCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->modulesPath = sys_get_temp_dir().'/gf-finish-'.uniqid();
+        $this->modulesPath = sys_get_temp_dir().'/gf-finish-'.bin2hex(random_bytes(8));
         config(['modules.path' => $this->modulesPath, 'updates.behavior.health_check' => true]);
         $this->makeModule();
     }

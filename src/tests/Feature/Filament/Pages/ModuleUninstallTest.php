@@ -28,7 +28,7 @@ final class ModuleUninstallTest extends TestCase
         parent::setUp();
 
         // Use unique ID for parallel test isolation
-        $this->testId = uniqid('uninstall_', true);
+        $this->testId = 'uninstall_'.bin2hex(random_bytes(8));
         $this->modulesPath = storage_path("app/test-modules-uninstall-{$this->testId}");
         File::ensureDirectoryExists($this->modulesPath);
         config(['modules.path' => $this->modulesPath]);

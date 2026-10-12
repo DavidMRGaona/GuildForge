@@ -37,7 +37,7 @@ final class IncompatibleModuleBootTest extends TestCase
     {
         parent::setUp();
 
-        $this->relativeModulesPath = 'storage/framework/testing/boot-'.uniqid().'/modules';
+        $this->relativeModulesPath = 'storage/framework/testing/boot-'.bin2hex(random_bytes(8)).'/modules';
         $this->modulesPath = base_path($this->relativeModulesPath);
         $this->root = dirname($this->modulesPath);
 
