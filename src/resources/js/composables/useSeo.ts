@@ -106,7 +106,8 @@ export function removeServerSeoTags(): void {
 export function useServerSeo(): void {
     const page = usePage<SeoPageProps>();
     const head = computed<SeoHead | null>(() => {
-        const seo: SeoProps | undefined = page.props.seo;
+        // The root runs before Inertia sets the first page, so props may not exist yet
+        const seo: SeoProps | undefined = page.props?.seo;
         return seo ? buildSeoHead(seo) : null;
     });
 
