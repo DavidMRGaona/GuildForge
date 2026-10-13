@@ -5,20 +5,15 @@ declare(strict_types=1);
 namespace App\Infrastructure\Navigation\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
-use App\Application\Modules\DTOs\NavigationItemDTO;
-use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Navigation\DTOs\MenuItemDTO;
 use App\Application\Navigation\Services\MenuItemHrefResolverInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Domain\Navigation\Entities\MenuItem;
-use App\Domain\Navigation\Enums\LinkTarget;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Domain\Navigation\Enums\MenuVisibility;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
-use App\Domain\Navigation\ValueObjects\MenuItemId;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -28,7 +23,6 @@ final readonly class MenuService implements MenuServiceInterface
         private MenuItemRepositoryInterface $repository,
         private AuthorizationServiceInterface $authService,
         private MenuItemHrefResolverInterface $hrefResolver,
-        private ?ModuleNavigationRegistryInterface $moduleNavigationRegistry = null,
     ) {}
 
     public function getHeaderMenu(?Authenticatable $user): array
@@ -51,23 +45,6 @@ final readonly class MenuService implements MenuServiceInterface
             MenuVisibility::Guests => $user === null,
             MenuVisibility::Permission => $user !== null && $this->userHasAnyPermission($user, $permissions),
         };
-    }
-
-    public function syncModuleNavigation(?string $moduleName = null): void
-    {
-        if ($this->moduleNavigationRegistry === null) {
-            return;
-        }
-
-        $moduleItems = $moduleName !== null
-            ? $this->moduleNavigationRegistry->forModule($moduleName)
-            : $this->moduleNavigationRegistry->all();
-
-        DB::transaction(function () use ($moduleItems): void {
-            foreach ($moduleItems as $navItem) {
-                $this->syncModuleNavigationItem($navItem);
-            }
-        });
     }
 
     /**
@@ -153,38 +130,5 @@ final readonly class MenuService implements MenuServiceInterface
         }
 
         return $this->authService->canAny($user, $permissions);
-    }
-
-    private function syncModuleNavigationItem(NavigationItemDTO $navItem): void
-    {
-        // Check if item already exists in database (by module and route)
-        $existingItems = $this->repository->findByLocation(MenuLocation::Header);
-
-        foreach ($existingItems as $existing) {
-            if ($existing->module() === $navItem->module && $existing->route() === $navItem->route) {
-                // Item already exists, skip
-                return;
-            }
-        }
-
-        // Create new menu item from module navigation
-        $menuItem = new MenuItem(
-            id: MenuItemId::generate(),
-            location: MenuLocation::Header,
-            parentId: null,
-            label: $navItem->label,
-            url: null,
-            route: $navItem->route,
-            routeParams: [],
-            icon: $navItem->icon,
-            target: LinkTarget::Self,
-            visibility: $navItem->permissions !== [] ? MenuVisibility::Permission : MenuVisibility::Public,
-            permissions: $navItem->permissions,
-            sortOrder: $navItem->sort !== 0 ? $navItem->sort : $this->repository->maxSortOrder(MenuLocation::Header) + 1,
-            isActive: true,
-            module: $navItem->module,
-        );
-
-        $this->repository->save($menuItem);
     }
 }

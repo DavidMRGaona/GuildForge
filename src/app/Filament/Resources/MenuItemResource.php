@@ -104,7 +104,7 @@ class MenuItemResource extends BaseResource
                     ->schema([
                         Select::make('route')
                             ->label(__('filament.menu_items.fields.page'))
-                            ->options(fn () => resolve(RouteRegistryInterface::class)->getAvailableRoutes())
+                            ->options(fn (?MenuItemModel $record): array => self::pageOptions($record))
                             ->searchable()
                             ->nullable()
                             ->native(false)
@@ -296,6 +296,35 @@ class MenuItemResource extends BaseResource
             'create' => CreateMenuItem::route('/create'),
             'edit' => EditMenuItem::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * The selectable pages, plus the record's own route when it is no longer one of them
+     * (its module was uninstalled, or an old sync copied an admin route): the select
+     * validates the state against its options, so without it the admin could not even
+     * deactivate the link.
+     *
+     * @return array<string, string>
+     */
+    private static function pageOptions(?MenuItemModel $record): array
+    {
+        $options = resolve(RouteRegistryInterface::class)->getAvailableRoutes();
+
+        if ($record === null || $record->route === null) {
+            return $options;
+        }
+
+        $key = $record->route;
+        $routeParams = $record->route_params;
+        if (isset($routeParams['slug'])) {
+            $key .= ':'.$routeParams['slug'];
+        }
+
+        if (! isset($options[$key])) {
+            $options[$key] = __('filament.menu_items.fields.page_unavailable', ['route' => $key]);
+        }
+
+        return $options;
     }
 
     /**
