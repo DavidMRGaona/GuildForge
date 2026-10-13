@@ -12,7 +12,7 @@ export default [
         ignores: ['node_modules/**', 'public/**', 'vendor/**', 'bootstrap/cache/**', 'storage/**'],
     },
     {
-        files: ['**/*.js'],
+        files: ['**/*.js', 'scripts/**/*.mjs'],
         languageOptions: {
             parserOptions: {
                 ecmaVersion: 'latest',
@@ -20,6 +20,7 @@ export default [
             },
             globals: {
                 console: 'readonly',
+                process: 'readonly',
                 document: 'readonly',
                 window: 'readonly',
                 Alpine: 'readonly',

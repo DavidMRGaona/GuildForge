@@ -14,7 +14,8 @@
         "lint": "eslint resources/js --ext .ts,.vue",
         "lint:fix": "eslint resources/js --ext .ts,.vue --fix",
         "format": "prettier --write resources/js/**/*.{ts,vue}",
-        "format:check": "prettier --check resources/js/**/*.{ts,vue}"
+        "format:check": "prettier --check resources/js/**/*.{ts,vue}",
+        "verify:build": "node scripts/verify-build.mjs"
     },
     "dependencies": {
         "@fullcalendar/core": "^6.1.20",
@@ -48,11 +49,11 @@
         "eslint": "^10.12.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-vue": "^10.7.0",
-        "laravel-vite-plugin": "^2.0.0",
+        "laravel-vite-plugin": "^3.2.0",
         "prettier": "^3.8.0",
         "tailwindcss": "^4.0.0",
         "typescript": "~6.0.3",
-        "vite": "^7.0.7",
+        "vite": "^8.3.4",
         "vue-tsc": "^3.2.2"
     }
 }
