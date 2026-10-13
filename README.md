@@ -212,11 +212,11 @@ The project uses GitHub Actions for CI/CD:
 
 Configure in GitHub → Settings → Secrets and variables → Actions:
 
-| Secret                 | Description                                           |
-|------------------------|-------------------------------------------------------|
-| `WEBHOOK_URL_SERVER_1` | Coolify deploy URL (API webhook) of the first tenant  |
-| `WEBHOOK_URL_SERVER_2` | Coolify deploy URL (API webhook) of the second tenant |
-| `DEPLOY_API_TOKEN`     | Coolify API token sent as the webhooks' bearer token  |
+| Secret                 | Description                                               |
+|------------------------|-----------------------------------------------------------|
+| `WEBHOOK_URL_SERVER_1` | Deploy URL (deployment platform API) of the first target  |
+| `WEBHOOK_URL_SERVER_2` | Deploy URL (deployment platform API) of the second target |
+| `DEPLOY_API_TOKEN`     | Deployment platform API token, sent as bearer token       |
 
 ## License
 
