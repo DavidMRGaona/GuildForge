@@ -33,43 +33,45 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Initial page
+    | Pages
     |--------------------------------------------------------------------------
     |
-    | Emit the initial page as a JSON script element, as Inertia 3 does, so
-    | the client bootstrap in resources/js/app.ts reads one format only.
-    |
-    */
-
-    'use_script_element_for_initial_page' => true,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Testing
-    |--------------------------------------------------------------------------
-    |
-    | The values described here are used to locate Inertia components on the
+    | The paths and extensions used to locate Inertia page components on the
     | filesystem. For instance, when using `assertInertia`, the assertion
     | attempts to locate the component as a file relative to any of the
     | paths AND with any of the extensions specified here.
     |
     */
 
-    'testing' => [
+    'pages' => [
 
-        'ensure_pages_exist' => true,
-
-        'page_paths' => [
+        'paths' => [
 
             resource_path('js/pages'),
 
         ],
 
-        'page_extensions' => [
+        'extensions' => [
 
             'vue',
 
         ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Testing
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, `assertInertia` fails if the page component cannot be
+    | found under the `pages` paths and extensions above.
+    |
+    */
+
+    'testing' => [
+
+        'ensure_pages_exist' => true,
 
     ],
 
