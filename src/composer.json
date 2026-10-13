@@ -13,7 +13,7 @@
         "elasticsearch/elasticsearch": "^9.2",
         "filament/filament": "^5.10",
         "inertiajs/inertia-laravel": "^2.0",
-        "intervention/image-laravel": "^1.5",
+        "intervention/image": "^4.3",
         "laravel/framework": "^13.35",
         "laravel/tinker": "^3.0",
         "mews/purifier": "^3.4",
@@ -21,7 +21,7 @@
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",
-        "brianium/paratest": "^7.20",
+        "brianium/paratest": "^7.26",
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.8",
         "laravel/pail": "^1.2.2",
@@ -30,7 +30,7 @@
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.9",
         "phpstan/phpstan": "^2.1",
-        "phpunit/phpunit": "^12.5",
+        "phpunit/phpunit": "^13.4",
         "rector/rector": "^2.3"
     },
     "autoload": {

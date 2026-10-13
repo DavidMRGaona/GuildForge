@@ -33,7 +33,8 @@ final class ContactServiceTest extends TestCase
     #[Test]
     public function it_reports_contact_email_as_configured_when_set(): void
     {
-        $this->settings->method('get')
+        $this->settings->expects($this->atLeastOnce())
+            ->method('get')
             ->with('contact_email', '')
             ->willReturn('admin@example.com');
 
@@ -43,7 +44,8 @@ final class ContactServiceTest extends TestCase
     #[Test]
     public function it_reports_contact_email_as_not_configured_when_empty(): void
     {
-        $this->settings->method('get')
+        $this->settings->expects($this->atLeastOnce())
+            ->method('get')
             ->with('contact_email', '')
             ->willReturn('');
 
@@ -55,7 +57,8 @@ final class ContactServiceTest extends TestCase
     {
         Mail::fake();
 
-        $this->settings->method('get')
+        $this->settings->expects($this->atLeastOnce())
+            ->method('get')
             ->with('contact_email', '')
             ->willReturn('admin@example.com');
 
@@ -81,7 +84,8 @@ final class ContactServiceTest extends TestCase
     {
         Mail::fake();
 
-        $this->settings->method('get')
+        $this->settings->expects($this->atLeastOnce())
+            ->method('get')
             ->with('contact_email', '')
             ->willReturn('');
 

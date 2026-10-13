@@ -7,7 +7,11 @@ namespace Tests\Integration\Infrastructure\Services;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Infrastructure\Services\ImageOptimizationService;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
+use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use Psr\Log\LoggerInterface;
+use Tests\Support\Logging\RecordingLogger;
 use Tests\TestCase;
 
 final class ImageOptimizationServiceTest extends TestCase
@@ -214,6 +218,45 @@ final class ImageOptimizationServiceTest extends TestCase
         $service = $this->app->make(ImageOptimizationServiceInterface::class);
 
         $this->assertInstanceOf(ImageOptimizationService::class, $service);
+    }
+
+    public function test_a_valid_optimization_logs_nothing(): void
+    {
+        $logger = new RecordingLogger;
+        $service = new ImageOptimizationService($logger);
+        $contents = $this->createJpegImage(3000, 2000);
+
+        $result = $service->optimize($contents, 'image/jpeg', new ImageOptimizationSettingsDTO(maxWidth: 1024, maxHeight: 1024, minSizeBytes: 0));
+
+        $this->assertSame([], $logger->records, 'optimize() must not swallow an exception into a warning');
+        [$width] = $this->getImageDimensions($result);
+        $this->assertLessThanOrEqual(1024, $width);
+        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
+    }
+
+    public function test_it_optimizes_with_the_gd_driver(): void
+    {
+        $logger = new RecordingLogger;
+        $service = new ImageOptimizationService($logger, new GdDriver);
+
+        $result = $service->optimize($this->createJpegImage(3000, 2000), 'image/jpeg', new ImageOptimizationSettingsDTO(maxWidth: 1024, maxHeight: 1024, minSizeBytes: 0));
+
+        $this->assertSame([], $logger->records);
+        $this->assertLessThanOrEqual(1024, $this->getImageDimensions($result)[0]);
+        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
+    }
+
+    #[RequiresPhpExtension('imagick')]
+    public function test_it_optimizes_with_the_imagick_driver(): void
+    {
+        $logger = new RecordingLogger;
+        $service = new ImageOptimizationService($logger, new ImagickDriver);
+
+        $result = $service->optimize($this->createJpegImage(3000, 2000), 'image/jpeg', new ImageOptimizationSettingsDTO(maxWidth: 1024, maxHeight: 1024, minSizeBytes: 0));
+
+        $this->assertSame([], $logger->records);
+        $this->assertLessThanOrEqual(1024, $this->getImageDimensions($result)[0]);
+        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
     }
 
     /**
