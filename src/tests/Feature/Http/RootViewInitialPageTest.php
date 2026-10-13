@@ -32,26 +32,21 @@ final class RootViewInitialPageTest extends TestCase
         $html = $this->get('/')->assertOk()->getContent();
 
         $this->assertStringContainsString('<script data-page="app" type="application/json">', $html);
-        $this->assertDoesNotMatchRegularExpression('#<div id="app" data-page=#', $html);
+        $this->assertDoesNotMatchRegularExpression('#<div[^>]*\bdata-page=#', $html);
     }
 
     /**
-     * Mirrors extractInitialPageData() in resources/js/app.ts: the JSON script
-     * element first, the data-page attribute as the fallback.
+     * Decodes the initial page from the JSON script element app.ts reads.
      *
      * @return array{component: string, props: array<string, mixed>}
      */
     private function initialPage(string $html): array
     {
-        if (preg_match('#<script data-page="app" type="application/json">(.*?)</script>#s', $html, $m) === 1) {
-            $json = $m[1];
-        } elseif (preg_match('#<div id="app" data-page="([^"]*)"#', $html, $m) === 1) {
-            $json = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5);
-        } else {
-            $this->fail('The root view carries no initial page.');
+        if (preg_match('#<script data-page="app" type="application/json">(.*?)</script>#s', $html, $m) !== 1) {
+            $this->fail('The root view carries no initial page script element.');
         }
 
-        $page = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        $page = json_decode($m[1], true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($page);
 
         return $page;
