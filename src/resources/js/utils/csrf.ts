@@ -8,7 +8,7 @@
  * come back as 419 "CSRF token mismatch." while the page looks perfectly fine.
  *
  * Laravel refreshes the XSRF-TOKEN cookie on every response instead, which is why
- * Inertia's own requests never hit this: axios reads that cookie. Read the same
+ * Inertia's own requests never hit this: its HTTP client reads that cookie. Read the same
  * cookie and the token is always the current one.
  */
 

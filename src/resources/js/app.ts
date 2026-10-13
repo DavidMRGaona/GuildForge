@@ -41,7 +41,7 @@ const modulePages = import.meta.glob<DefineComponent>(
 );
 
 /**
- * Initial page data extracted from Inertia's data-page attribute.
+ * Shared props read from the initial page the server embeds in the HTML.
  */
 interface InitialPageData {
     modulePages: Record<string, string>;
@@ -49,30 +49,41 @@ interface InitialPageData {
     cloudinary: CloudinaryConfig | undefined;
 }
 
+const EMPTY_INITIAL_DATA: InitialPageData = {
+    modulePages: {},
+    moduleTranslations: undefined,
+    cloudinary: undefined,
+};
+
 /**
- * Extract initial page data from the #app element (embedded by Inertia).
- * This allows us to access shared props before the Vue app is mounted.
+ * Read the raw initial page JSON from the script element the server embeds.
+ */
+function readInitialPageJson(): string | null {
+    const script = document.querySelector<HTMLScriptElement>(
+        'script[data-page="app"][type="application/json"]'
+    );
+
+    return script?.textContent || null;
+}
+
+/**
+ * Extract the shared props the app needs before Vue mounts.
  */
 function extractInitialPageData(): InitialPageData {
-    const appElement = document.getElementById('app');
-    if (!appElement) {
-        return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
+    const json = readInitialPageJson();
+    if (json === null) {
+        return EMPTY_INITIAL_DATA;
     }
 
     try {
-        const dataPage = appElement.getAttribute('data-page');
-        if (!dataPage) {
-            return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
-        }
-
-        const pageData = JSON.parse(dataPage);
+        const pageData = JSON.parse(json);
         return {
             modulePages: pageData.props?.modulePages ?? {},
             moduleTranslations: pageData.props?.moduleTranslations ?? undefined,
             cloudinary: pageData.props?.cloudinary ?? undefined,
         };
     } catch {
-        return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
+        return EMPTY_INITIAL_DATA;
     }
 }
 
@@ -102,7 +113,7 @@ const pageResolver = createPageResolver({
 
 void createInertiaApp({
     // unhead owns <title> (useServerSeo). An empty default keeps Inertia from
-    // adding a second <title inertia> to the head.
+    // adding a second <title data-inertia> to the head.
     title: (title: string): string => title,
     resolve: pageResolver,
     setup({ el, App, props, plugin }) {

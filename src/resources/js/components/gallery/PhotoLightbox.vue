@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watch, ref, nextTick, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { X, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { X, ChevronLeft, ChevronRight } from '@lucide/vue';
 import type { Photo } from '@/types/models';
 import { buildLightboxImageUrl } from '@/utils/cloudinary';
 
