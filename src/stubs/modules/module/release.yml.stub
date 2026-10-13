@@ -1,0 +1,15 @@
+name: Module release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+jobs:
+  release:
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-release.yml@main
+    with:
+      module_name: '{{ moduleName }}'
+      # Host branch, tag or SHA to test and build against (main when the variable is unset)
+      host_ref: ${{ vars.GUILDFORGE_HOST_REF || 'main' }}
+    permissions:
+      contents: write

@@ -12,5 +12,5 @@ return [
     |
     */
 
-    'title' => '{{ moduleNameStudly }}',
+    'title' => '{{ moduleDisplayNamePhp }}',
 ];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Modules\Services;
 
+use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Application\Modules\DTOs\ScaffoldResultDTO;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
@@ -29,17 +30,37 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $this->modulesPath = $modulesPath ?? base_path('modules');
     }
 
-    public function createModule(string $name, ?string $description = null, ?string $author = null): ScaffoldResultDTO
-    {
+    public function createModule(
+        string $name,
+        ?string $description = null,
+        ?string $author = null,
+        ?string $displayName = null,
+        ?string $repository = null,
+    ): ScaffoldResultDTO {
         // Validate module name
         $validation = $this->validateModuleName($name);
         if ($validation !== null) {
             return $validation;
         }
 
+        if ($repository !== null && ! ModuleManifestDTO::isValidRepository($repository)) {
+            return ScaffoldResultDTO::failure(
+                "Invalid repository '{$repository}'.",
+                ["The repository must be a GitHub repository in 'owner/repo' form."]
+            );
+        }
+
         $modulePath = $this->modulesPath.'/'.$name;
+        $displayName ??= Str::ucfirst(str_replace('-', ' ', $name));
         $variables = $this->stubRenderer->getModuleVariables($name, $description, $author);
         $variables['coreConstraint'] = $this->coreConstraint();
+        $variables['moduleDisplayNamePhp'] = addcslashes($displayName, "'\\");
+        $variables['moduleDisplayNameJson'] = $this->jsonString($displayName);
+        $variables['moduleDescriptionJson'] = $this->jsonString($description ?? '');
+        $variables['moduleAuthorJson'] = $this->jsonString($author ?? '');
+        $variables['moduleRepositoryJson'] = $repository !== null
+            ? "\n    \"repository\": \"{$repository}\","
+            : '';
         $files = [];
         $warnings = [];
 
@@ -57,6 +78,10 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'module/vite.config.ts.stub' => 'vite.config.ts',
             'module/package.json.stub' => 'package.json',
             'module/tsconfig.json.stub' => 'tsconfig.json',
+            'module/module.css.stub' => 'resources/css/module.css',
+            'module/phpunit.xml.stub' => 'phpunit.xml',
+            'module/gitignore.stub' => '.gitignore',
+            'module/release.yml.stub' => '.github/workflows/release.yml',
         ];
 
         foreach ($fileMap as $stub => $destination) {
@@ -84,6 +109,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'resources/js/components',
             'resources/js/types',
             'tests/Unit',
+            'tests/Integration',
             'tests/Feature',
         ];
 
@@ -484,6 +510,14 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     }
 
     /**
+     * The inside of a JSON string literal holding the given text.
+     */
+    private function jsonString(string $value): string
+    {
+        return substr(json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), 1, -1);
+    }
+
+    /**
      * New modules require the core minor they were generated on: "^2.6" on core 2.6.x.
      */
     private function coreConstraint(): string
@@ -535,6 +569,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'src/Filament/Resources',
             'src/Policies',
             'tests/Unit',
+            'tests/Integration',
             'tests/Feature',
         ];
 

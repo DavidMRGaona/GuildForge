@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
+use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Application\Modules\DTOs\ScaffoldResultDTO;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
@@ -586,6 +587,134 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertTrue($result->isFailure());
         $this->assertStringContainsString("Module 'nonexistent' does not exist", $result->message);
+    }
+
+    public function test_a_new_module_has_the_files_its_tests_and_release_need(): void
+    {
+        $result = $this->service->createModule('blog-posts');
+
+        foreach (['phpunit.xml', '.gitignore', 'resources/css/module.css', '.github/workflows/release.yml'] as $file) {
+            $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$file] ?? null, $file);
+            $this->assertFileExists($this->tempModulesPath.'/blog-posts/'.$file);
+        }
+
+        $phpunit = simplexml_load_file($this->tempModulesPath.'/blog-posts/phpunit.xml');
+        $this->assertNotFalse($phpunit);
+        $this->assertSame('../../vendor/autoload.php', (string) $phpunit['bootstrap']);
+        $suites = [];
+        foreach ($phpunit->testsuites->testsuite as $suite) {
+            $suites[(string) $suite['name']] = (string) $suite->directory;
+        }
+        $this->assertSame(['Unit' => './tests/Unit', 'Integration' => './tests/Integration', 'Feature' => './tests/Feature'], $suites);
+        $this->assertStringContainsString('<env name="DB_CONNECTION" value="sqlite"/>', (string) file_get_contents($this->tempModulesPath.'/blog-posts/phpunit.xml'));
+
+        $gitignore = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.gitignore');
+        foreach (['/vendor', '/node_modules', '/public/build', '/.phpunit.cache'] as $entry) {
+            $this->assertStringContainsString($entry, $gitignore);
+        }
+
+        $workflow = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.github/workflows/release.yml');
+        $this->assertStringContainsString('reusable-module-release.yml@main', $workflow);
+        $this->assertStringContainsString("module_name: 'blog-posts'", $workflow);
+    }
+
+    public function test_the_vite_config_builds_like_the_release_workflow_expects(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $config = (string) file_get_contents($this->tempModulesPath.'/blog-posts/vite.config.ts');
+
+        $this->assertStringContainsString("const MODULE_NAME = 'blog-posts';", $config);
+        $this->assertStringContainsString("process.env.MODULE_STANDALONE_OUTPUT === 'true'", $config);
+        $this->assertStringContainsString("resolve(__dirname, '../public')", $config);
+        $this->assertStringContainsString('base: (isStandalone || forceStandaloneOutput)', $config);
+        $this->assertStringContainsString("discoverEntries(pagesDir, 'resources/js/pages')", $config);
+        $this->assertStringContainsString("discoverEntries(componentsDir, 'resources/js/components')", $config);
+        $this->assertStringContainsString("['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3', '@unhead/vue']", $config);
+        $this->assertStringContainsString("isStandalone && id.startsWith('@/')", $config);
+        $this->assertStringContainsString("'module-styles': resolve(__dirname, 'resources/css/module.css')", $config);
+        $this->assertStringContainsString('plugins: [vue(), tailwindcss()]', $config);
+    }
+
+    public function test_package_json_pins_the_module_toolchain(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        /** @var array<string, mixed> $package */
+        $package = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/package.json'), true);
+
+        $this->assertSame('@guildforge/module-blog-posts', $package['name']);
+        $this->assertSame('vite build', $package['scripts']['build']);
+        $this->assertSame('^7.3.1', $package['devDependencies']['vite']);
+        $this->assertSame('^6.0.3', $package['devDependencies']['@vitejs/plugin-vue']);
+        $this->assertSame('^4.1.18', $package['devDependencies']['@tailwindcss/vite']);
+    }
+
+    public function test_the_manifest_has_a_display_name_and_no_repository_by_default(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true);
+
+        $this->assertSame('Blog posts', $manifest['displayName']);
+        $this->assertArrayNotHasKey('repository', $manifest);
+        $this->assertSame('Blog posts', ModuleManifestDTO::fromArray($manifest)->displayName);
+    }
+
+    public function test_the_manifest_takes_the_given_display_name_repository_and_escaped_texts(): void
+    {
+        $result = $this->service->createModule(
+            'blog-posts',
+            'Entradas "destacadas" del blog',
+            'Gremio \\ Norte',
+            'Entradas del blog',
+            'acme/guildforge-blog-posts',
+        );
+
+        $this->assertTrue($result->isSuccess());
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame('Entradas del blog', $manifest['displayName']);
+        $this->assertSame('acme/guildforge-blog-posts', $manifest['repository']);
+        $this->assertSame('Entradas "destacadas" del blog', $manifest['description']);
+        $this->assertSame('Gremio \\ Norte', $manifest['author']);
+
+        $messages = include $this->tempModulesPath.'/blog-posts/lang/es/messages.php';
+        $this->assertSame('Entradas del blog', $messages['title']);
+    }
+
+    public function test_an_invalid_repository_is_refused_before_anything_is_written(): void
+    {
+        $result = $this->service->createModule('blog-posts', repository: 'not a repository');
+
+        $this->assertTrue($result->isFailure());
+        $this->assertDirectoryDoesNotExist($this->tempModulesPath.'/blog-posts');
+    }
+
+    public function test_the_service_provider_leaves_config_to_the_parent_and_shows_every_hook(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $provider = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+
+        $this->assertStringNotContainsString('mergeConfigFrom', $provider);
+        $this->assertStringContainsString("new PagePrefixDTO(prefix: 'BlogPosts', module: \$this->moduleName())", $provider);
+        foreach (['registerPolicies', 'registerPermissions', 'registerFilamentWidgets', 'registerFilamentPages', 'registerCalendarSources', 'registerPagePrefixes'] as $hook) {
+            $this->assertStringContainsString("public function {$hook}(): array", $provider);
+        }
+        $this->assertStringContainsString('RepositoryInterface::class', $provider);
+    }
+
+    public function test_the_module_title_is_a_spanish_style_label(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $messages = include $this->tempModulesPath.'/blog-posts/lang/es/messages.php';
+
+        $this->assertSame('Blog posts', $messages['title']);
     }
 
     private function deleteDirectory(string $dir): void

@@ -1,0 +1,76 @@
+/* Tailwind utilities for this module's own components.
+ *
+ * The core stylesheet cannot generate them: `src/modules/*` is gitignored (and
+ * absent entirely when the core is built in CI), so Tailwind never sees these
+ * files from there. Scanning them here works because, inside this repository,
+ * they are ordinary tracked sources. Note the dev server hides the problem --
+ * it resolves module classes on the fly, so it only shows in a built asset.
+ *
+ * `theme(reference)` keeps this cheap: the palette is referenced, not re-emitted,
+ * so the file holds only utility rules pointing at variables the core defines.
+ * No duplicated preflight, no duplicated theme.
+ */
+@import 'tailwindcss/theme' theme(reference);
+@import 'tailwindcss/utilities';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Mirrors the core's @theme so utilities for the project's own colour tokens
+ * (primary/accent/neutral scales, status colours) can be generated here too.
+ * The values themselves are injected at runtime by the core, which is why each
+ * token simply points at its own variable -- keep in sync with app.css. */
+@theme reference {
+    --color-page: var(--color-bg-page);
+    --color-surface: var(--color-bg-surface);
+    --color-muted: var(--color-bg-muted);
+    --color-elevated: var(--color-bg-elevated);
+    --color-tooltip: var(--color-bg-tooltip);
+    --color-base-primary: var(--color-text-primary);
+    --color-base-secondary: var(--color-text-secondary);
+    --color-base-muted: var(--color-text-muted);
+    --color-base-inverted: var(--color-text-inverted);
+    --color-primary-50: var(--color-primary-50);
+    --color-primary-100: var(--color-primary-100);
+    --color-primary-200: var(--color-primary-200);
+    --color-primary-300: var(--color-primary-300);
+    --color-primary-400: var(--color-primary-400);
+    --color-primary-500: var(--color-primary-500);
+    --color-primary-600: var(--color-primary-600);
+    --color-primary-700: var(--color-primary-700);
+    --color-primary-800: var(--color-primary-800);
+    --color-primary-900: var(--color-primary-900);
+    --color-primary-950: var(--color-primary-950);
+    --color-accent-50: var(--color-accent-50);
+    --color-accent-100: var(--color-accent-100);
+    --color-accent-200: var(--color-accent-200);
+    --color-accent-300: var(--color-accent-300);
+    --color-accent-400: var(--color-accent-400);
+    --color-accent-500: var(--color-accent-500);
+    --color-accent-600: var(--color-accent-600);
+    --color-accent-700: var(--color-accent-700);
+    --color-accent-800: var(--color-accent-800);
+    --color-accent-900: var(--color-accent-900);
+    --color-accent-950: var(--color-accent-950);
+    --color-neutral-50: var(--color-neutral-50);
+    --color-neutral-100: var(--color-neutral-100);
+    --color-neutral-200: var(--color-neutral-200);
+    --color-neutral-300: var(--color-neutral-300);
+    --color-neutral-400: var(--color-neutral-400);
+    --color-neutral-500: var(--color-neutral-500);
+    --color-neutral-600: var(--color-neutral-600);
+    --color-neutral-700: var(--color-neutral-700);
+    --color-neutral-800: var(--color-neutral-800);
+    --color-neutral-900: var(--color-neutral-900);
+    --color-neutral-950: var(--color-neutral-950);
+    --color-success: var(--color-success);
+    --color-success-bg: var(--color-success-bg);
+    --color-error: var(--color-error);
+    --color-error-bg: var(--color-error-bg);
+    --color-warning: var(--color-warning);
+    --color-warning-bg: var(--color-warning-bg);
+    --color-info: var(--color-info);
+    --color-info-bg: var(--color-info-bg);
+}
+
+@source '../js/**/*.vue';
+@source '../js/**/*.ts';

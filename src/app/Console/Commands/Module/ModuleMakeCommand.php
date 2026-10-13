@@ -19,7 +19,8 @@ final class ModuleMakeCommand extends Command
         {name : The name of the module (kebab-case)}
         {--description= : A description for the module}
         {--author= : The author of the module}
-        {--force : Overwrite existing files}';
+        {--display-name= : The name shown in the admin panel, in Spanish (e.g. "Mesas de rol")}
+        {--repository= : The GitHub repository (owner/repo) the updater reads releases from}';
 
     /**
      * The console command description.
@@ -45,10 +46,14 @@ final class ModuleMakeCommand extends Command
         $description = $this->option('description');
         /** @var string|null $author */
         $author = $this->option('author');
+        /** @var string|null $displayName */
+        $displayName = $this->option('display-name');
+        /** @var string|null $repository */
+        $repository = $this->option('repository');
 
         $this->info("Creating module '{$name}'...");
 
-        $result = $this->scaffoldingService->createModule($name, $description, $author);
+        $result = $this->scaffoldingService->createModule($name, $description, $author, $displayName, $repository);
 
         return $this->outputResult($result);
     }
@@ -83,9 +88,18 @@ final class ModuleMakeCommand extends Command
         $this->newLine();
         $this->info($result->message);
         $this->newLine();
+        /** @var string $name */
+        $name = $this->argument('name');
+
         $this->line('Next steps:');
-        $this->line('  1. Run <fg=cyan>php artisan module:discover</> to register the module');
-        $this->line('  2. Run <fg=cyan>php artisan module:enable '.$this->argument('name').'</> to enable it');
+        $this->line('  1. Check "displayName" in module.json and "title" in lang/es/messages.php (shown in the admin panel)');
+        $this->line('  2. Run <fg=cyan>php artisan module:discover</> to register the module');
+        $this->line("  3. Run <fg=cyan>php artisan module:enable {$name}</> to enable it");
+        if ($this->option('repository') === null) {
+            $this->line("  4. Set \"repository\" (owner/repo) in module.json, or run <fg=cyan>php artisan module:set-source {$name} owner/repo</> once installed, so updates are found");
+        }
+        $this->line("  Once it has Vue pages or components: <fg=cyan>php artisan module:build {$name}</> (or npm install && npm run build in the module)");
+        $this->line('  Tests: <fg=cyan>vendor/bin/phpunit -c modules/'.$name.'/phpunit.xml</>');
 
         return self::SUCCESS;
     }
