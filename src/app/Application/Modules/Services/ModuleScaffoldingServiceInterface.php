@@ -10,8 +10,17 @@ interface ModuleScaffoldingServiceInterface
 {
     /**
      * Create a new module with the complete directory structure.
+     *
+     * @param  string|null  $displayName  Name shown in the admin panel (defaults to the module name in sentence case)
+     * @param  string|null  $repository  GitHub repository in "owner/repo" form the updater reads releases from
      */
-    public function createModule(string $name, ?string $description = null, ?string $author = null): ScaffoldResultDTO;
+    public function createModule(
+        string $name,
+        ?string $description = null,
+        ?string $author = null,
+        ?string $displayName = null,
+        ?string $repository = null,
+    ): ScaffoldResultDTO;
 
     /**
      * Create a new domain entity for a module.
