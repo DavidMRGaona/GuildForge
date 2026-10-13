@@ -18,6 +18,7 @@ final readonly class ScaffoldResultDTO
      * @param  array<string, string>  $files  Files created/modified with their status
      * @param  array<string>  $errors  List of error messages
      * @param  array<string>  $warnings  List of warning messages
+     * @param  array<string>  $nextSteps  What is left to do by hand (registering, binding, building...)
      */
     public function __construct(
         public bool $success,
@@ -25,6 +26,7 @@ final readonly class ScaffoldResultDTO
         public array $files = [],
         public array $errors = [],
         public array $warnings = [],
+        public array $nextSteps = [],
     ) {}
 
     /**
@@ -32,14 +34,16 @@ final readonly class ScaffoldResultDTO
      *
      * @param  array<string, string>  $files
      * @param  array<string>  $warnings
+     * @param  array<string>  $nextSteps
      */
-    public static function success(string $message, array $files = [], array $warnings = []): self
+    public static function success(string $message, array $files = [], array $warnings = [], array $nextSteps = []): self
     {
         return new self(
             success: true,
             message: $message,
             files: $files,
             warnings: $warnings,
+            nextSteps: $nextSteps,
         );
     }
 
@@ -91,6 +95,7 @@ final readonly class ScaffoldResultDTO
             'files' => $this->files,
             'errors' => $this->errors,
             'warnings' => $this->warnings,
+            'next_steps' => $this->nextSteps,
         ];
     }
 }

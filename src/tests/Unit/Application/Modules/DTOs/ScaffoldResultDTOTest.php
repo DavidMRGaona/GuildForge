@@ -145,9 +145,19 @@ final class ScaffoldResultDTOTest extends TestCase
             'files' => $files,
             'errors' => $errors,
             'warnings' => $warnings,
+            'next_steps' => [],
         ];
 
         $this->assertEquals($expected, $array);
+    }
+
+    public function test_a_success_carries_the_next_steps_to_show(): void
+    {
+        $dto = ScaffoldResultDTO::success('Created', nextSteps: ['Register the widget']);
+
+        $this->assertSame(['Register the widget'], $dto->nextSteps);
+        $this->assertSame(['Register the widget'], $dto->toArray()['next_steps']);
+        $this->assertSame([], ScaffoldResultDTO::failure('Failed')->nextSteps);
     }
 
     public function test_to_array_includes_empty_arrays_for_optional_fields(): void

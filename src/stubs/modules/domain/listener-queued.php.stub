@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Infrastructure\Listeners;
 
-use {{ moduleNamespace }}\Domain\Events\{{ eventNameStudly }};
 use Illuminate\Contracts\Queue\ShouldQueue;
+use {{ moduleNamespace }}\Domain\Events\{{ eventNameStudly }};
 
+/**
+ * Register it in the module service provider's boot():
+ *
+ *     Event::listen({{ eventNameStudly }}::class, {{ nameStudly }}::class);
+ */
 final class {{ nameStudly }} implements ShouldQueue
 {
     public string $queue = 'listeners';

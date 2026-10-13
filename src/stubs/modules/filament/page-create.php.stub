@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource\Pages;
 
-use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
 use Filament\Resources\Pages\CreateRecord;
+use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
 
 final class Create{{ nameStudly }} extends CreateRecord
 {

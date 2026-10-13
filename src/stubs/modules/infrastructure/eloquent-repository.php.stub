@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent;
+namespace {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Repositories;
 
 use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
 use {{ moduleNamespace }}\Domain\Repositories\{{ nameStudly }}RepositoryInterface;
 use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
-use DateTimeImmutable;
+use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Models\{{ nameStudly }}Model;
 
 final class Eloquent{{ nameStudly }}Repository implements {{ nameStudly }}RepositoryInterface
 {
@@ -47,10 +47,10 @@ final class Eloquent{{ nameStudly }}Repository implements {{ nameStudly }}Reposi
     private function toDomain({{ nameStudly }}Model $model): {{ nameStudly }}
     {
         return new {{ nameStudly }}(
-            id: new {{ nameStudly }}Id($model->id),
+            id: {{ nameStudly }}Id::fromString($model->id),
             name: $model->name,
-            createdAt: new DateTimeImmutable($model->created_at->toDateTimeString()),
-            updatedAt: new DateTimeImmutable($model->updated_at->toDateTimeString()),
+            createdAt: $model->created_at->toDateTimeImmutable(),
+            updatedAt: $model->updated_at->toDateTimeImmutable(),
         );
     }
 }

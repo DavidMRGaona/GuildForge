@@ -54,10 +54,10 @@ enum {{ nameStudly }}: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending => __('{{ moduleNameSnake }}::messages.states.pending'),
-            self::Active => __('{{ moduleNameSnake }}::messages.states.active'),
-            self::Completed => __('{{ moduleNameSnake }}::messages.states.completed'),
-            self::Cancelled => __('{{ moduleNameSnake }}::messages.states.cancelled'),
+            self::Pending => __('{{ moduleName }}::messages.states.pending'),
+            self::Active => __('{{ moduleName }}::messages.states.active'),
+            self::Completed => __('{{ moduleName }}::messages.states.completed'),
+            self::Cancelled => __('{{ moduleName }}::messages.states.cancelled'),
         };
     }
 

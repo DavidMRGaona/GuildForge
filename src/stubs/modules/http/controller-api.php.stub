@@ -5,29 +5,36 @@ declare(strict_types=1);
 namespace {{ moduleNamespace }}\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
-use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
-use {{ moduleNamespace }}\Http\Requests\Store{{ nameStudly }}Request;
-use {{ moduleNamespace }}\Http\Requests\Update{{ nameStudly }}Request;
 use Illuminate\Http\JsonResponse;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}ResponseDTO;
+use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
+use {{ moduleNamespace }}\Http\Requests\{{ nameStudly }}Request;
 
+/**
+ * Needs module:make-entity, module:make-dto (plain and --response), module:make-service --interface
+ * and module:make-request for {{ nameStudly }}.
+ *
+ * Route, in routes/api.php (answers under /api/{{ moduleName }}/{{ namePluralKebab }}):
+ *
+ *     Route::apiResource('{{ namePluralKebab }}', Api\{{ nameStudly }}Controller::class);
+ */
 final class {{ nameStudly }}Controller extends Controller
 {
     public function __construct(
         private readonly {{ nameStudly }}ServiceInterface $service,
-    ) {
-    }
+    ) {}
 
     public function index(): JsonResponse
     {
         $items = $this->service->all();
 
         return response()->json([
-            'data' => array_map(fn ($item) => $item->toArray(), $items),
+            'data' => array_map(fn ({{ nameStudly }}ResponseDTO $item): array => $item->toArray(), $items),
         ]);
     }
 
-    public function store(Store{{ nameStudly }}Request $request): JsonResponse
+    public function store({{ nameStudly }}Request $request): JsonResponse
     {
         $dto = {{ nameStudly }}DTO::fromArray($request->validated());
         $item = $this->service->create($dto);
@@ -39,18 +46,14 @@ final class {{ nameStudly }}Controller extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $item = $this->service->findById($id);
-
-        if ($item === null) {
-            return response()->json(['message' => 'Not found'], 404);
-        }
+        $item = $this->service->findById($id) ?? abort(404);
 
         return response()->json([
             'data' => $item->toArray(),
         ]);
     }
 
-    public function update(Update{{ nameStudly }}Request $request, string $id): JsonResponse
+    public function update({{ nameStudly }}Request $request, string $id): JsonResponse
     {
         $dto = {{ nameStudly }}DTO::fromArray($request->validated());
         $item = $this->service->update($id, $dto);

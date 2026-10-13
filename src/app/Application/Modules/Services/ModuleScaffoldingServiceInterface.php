@@ -61,8 +61,10 @@ interface ModuleScaffoldingServiceInterface
 
     /**
      * Create a new migration for a module.
+     *
+     * @param  bool  $modify  Alter the existing $table (Schema::table) instead of creating it
      */
-    public function createMigration(string $module, string $name, ?string $table = null): ScaffoldResultDTO;
+    public function createMigration(string $module, string $name, ?string $table = null, bool $modify = false): ScaffoldResultDTO;
 
     /**
      * Create a new test for a module.
