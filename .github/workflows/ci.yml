@@ -67,6 +67,9 @@ jobs:
       - name: Build assets
         run: npm run build
 
+      - name: Verify module import map entries
+        run: npm run verify:build
+
       - name: Prepare environment
         run: |
           cp .env.example .env
