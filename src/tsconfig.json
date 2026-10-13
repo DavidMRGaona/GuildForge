@@ -29,10 +29,9 @@
         "noUnusedParameters": true,
         "exactOptionalPropertyTypes": true,
 
-        "baseUrl": ".",
         "paths": {
-            "@/*": ["resources/js/*"],
-            "@modules/*": ["modules/*"],
+            "@/*": ["./resources/js/*"],
+            "@modules/*": ["./modules/*"],
             "vue": ["./node_modules/vue"]
         },
 
