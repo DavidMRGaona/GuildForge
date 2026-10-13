@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { ChevronDown } from 'lucide-vue-next';
+import { ChevronDown } from '@lucide/vue';
 import type { MenuItem } from '@/types/navigation';
 
 interface Props {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Mail, Phone, MapPin } from 'lucide-vue-next';
+import { Mail, Phone, MapPin } from '@lucide/vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import BaseCard from '@/components/ui/BaseCard.vue';
 import LoadingSpinner from '@/components/ui/LoadingSpinner.vue';
