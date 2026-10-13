@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// Checks that the production build keeps the entries the module import map
-// serves (app/View/Components/ModuleImportMap.php) and that every bundle
-// shares one Vue instance. Run after `vite build`.
+// Checks the production build against the module import map
+// (app/View/Components/ModuleImportMap.php): its five vendor-exports entries
+// are entries in the manifest and keep their exports, and app.ts and
+// vendor-exports/vue.ts both import the same single vendor-vue chunk.
+// The other entries' chunk imports are not checked. Run after `vite build`.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -57,12 +59,12 @@ for (const [entry, minimum] of Object.entries(ENTRIES)) {
     if (names.size < minimum) {
         failures.push(`${entry}: ${names.size} exports, expected at least ${minimum}`);
     }
-    for (const name of REQUIRED[entry]) {
+    for (const name of REQUIRED[entry] ?? []) {
         if (!names.has(name)) failures.push(`${entry}: no longer exports ${name}`);
     }
 }
 
-// One Vue instance: app.ts and vendor-exports/vue.ts must import the same vendor chunk.
+// app.ts and vendor-exports/vue.ts must each import exactly one vendor-vue chunk, the same one.
 const vueChunks = (entry) =>
     (manifest[entry]?.imports ?? []).filter((name) => /vendor-vue/.test(name));
 const appVue = vueChunks('resources/js/app.ts');
