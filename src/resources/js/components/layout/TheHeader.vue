@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { Search, Sun, Moon, Monitor, Menu, X } from 'lucide-vue-next';
+import { Search, Sun, Moon, Monitor, Menu, X } from '@lucide/vue';
 import { useAppStore } from '@/stores/useAppStore';
 import type { ThemeMode } from '@/stores/useAppStore';
 import { useAuth } from '@/composables/useAuth';

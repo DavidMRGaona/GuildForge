@@ -2,7 +2,7 @@
 import { computed, toRef } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import type { HeroSlide } from '@/types/models';
 import { useHeroSlider } from '@/composables/useHeroSlider';
 import { buildFullScreenHeroImageUrl } from '@/utils/cloudinary';

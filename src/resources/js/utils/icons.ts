@@ -23,7 +23,7 @@ import {
     Trophy,
     User,
     Users,
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 
 export const activityIconMap: Record<ActivityIcon, Component> = {
     dice: Dices,
