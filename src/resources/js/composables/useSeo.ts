@@ -15,17 +15,13 @@ export interface SeoOptions {
 
 // Type aliases, not interfaces: unhead's tag types need the implicit index
 // signature (data-*) that only type aliases get.
-type HeadMeta = {
-    name?: string;
-    property?: string;
-    content: string;
-};
+type HeadMeta = { name: string; content: string } | { property: string; content: string };
 
 type SeoHead = {
     title: string;
-    link: { rel: string; href: string }[];
+    link: { rel: 'canonical'; href: string }[];
     meta: HeadMeta[];
-    script: { type: string; textContent: string }[];
+    script: { type: 'application/ld+json'; textContent: string }[];
 };
 
 interface SeoPageProps {
@@ -81,10 +77,10 @@ export function buildSeoHead(seo: SeoProps): SeoHead {
 
     return {
         title: seo.fullTitle,
-        link: [{ rel: 'canonical', href: seo.canonicalUrl }],
+        link: [{ rel: 'canonical' as const, href: seo.canonicalUrl }],
         meta,
         script: seo.structuredData.map((block) => ({
-            type: 'application/ld+json',
+            type: 'application/ld+json' as const,
             textContent: JSON.stringify(block),
         })),
     };
