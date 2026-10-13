@@ -1,6 +1,6 @@
 # System architecture
 
-> Generated: 2026-03-21 | Project: GuildForge v1.0.0
+> Updated: 2026-10-13 | Project: GuildForge core 3.5.1 (`src/VERSION`)
 
 ---
 
@@ -8,7 +8,7 @@
 
 GuildForge is a web platform for wargames and role-playing games guilds. It combines a public frontend (events, articles, galleries, calendar) with an admin panel (Filament 5) for content management by guild members.
 
-The architecture follows Clean Architecture principles with four concentric layers (Domain, Application, Infrastructure, Presentation), an extensible module system, and strict separation between reads (Query Services) and writes (Repositories). The main technology stack is Laravel 13+, Vue 3 with TypeScript, Inertia.js as the SSR bridge, PostgreSQL as the database, and Filament 5 (Livewire 4) for the admin panel.
+The architecture follows Clean Architecture principles with four concentric layers (Domain, Application, Infrastructure, Presentation), an extensible module system, and strict separation between reads (Query Services) and writes (Repositories). The main technology stack is Laravel 13, Vue 3 with TypeScript, Inertia.js 3 as the bridge between Laravel and Vue (client-side rendering: SSR is disabled in `config/inertia.php`, and the server renders only the SEO head tags), PostgreSQL as the database, and Filament 5 (Livewire 4) for the admin panel.
 
 ---
 
@@ -96,7 +96,7 @@ final class Event
 }
 ```
 
-#### Value Objects
+#### Value objects
 
 Immutable objects without identity that represent domain concepts:
 
@@ -108,12 +108,22 @@ Immutable objects without identity that represent domain concepts:
 | `HexColor`, `ColorPalette` | Visual theme colors |
 | `DownloadLink` | Download link associated with events |
 | `CoreTableRegistry` | Core table registry (module protection) |
+| `RoleId`, `RoleName`, `PermissionId`, `PermissionKey` | Authorization identifiers (`Domain/Authorization/`) |
+| `ModuleId`, `ModuleName`, `ModuleVersion`, `ModuleRequirements` | Module identity, semantic version and `requires` constraints (`Domain/Modules/`) |
+| `HostEnvironment`, `CompatibilityResult`, `CompatibilityIssue` | Versions of the running host, and the result of checking a module against them |
+| `GitHubReleaseInfo`, `ReleaseSelection` | A module release on GitHub, and the release picked for an update (`Domain/Updates/`) |
+| `GitHubCommitComparison` | Deployed core commit compared with the deploy branch |
+| `EmailQuota`, `SmtpPort` | Mail quota limits and SMTP port (`Domain/Mail/`) |
 
 #### Enums
 
 - `PublicationStatus` - Content publication status
 - `UserRole` - User roles (simple type with `label()`)
-- `MenuLocation`, `MenuVisibility` - Menu location and visibility
+- `MenuLocation`, `MenuVisibility`, `LinkTarget` - Menu location, visibility and link target
+- `ModuleStatus`, `RequirementType` - Module state and the kind of a `requires` constraint
+- `UpdateStatus` - Steps of a module update (downloading, verifying, applying, migrating...)
+- `MailDriver`, `EmailStatus`, `SmtpEncryption` - Mail configuration and delivery status
+- `CalendarSourceColor` - Color of a calendar source (`Domain/Calendar/`)
 
 #### Domain events
 
@@ -121,6 +131,8 @@ Events that notify significant state changes:
 
 - **User**: `UserRegistered`, `UserLoggedIn`, `UserLoggedOut`, `UserPasswordChanged`, `UserProfileUpdated`
 - **Modules**: `ModuleEnabled`, `ModuleDisabled`, `ModuleInstalled`, `ModuleUninstalled`, `ModuleUpdated`, `ModuleDiscovered`, `ModuleMigrated`
+- **Updates**: `ModuleUpdateStarted`, `ModuleUpdateCompleted`, `ModuleUpdateFailed`, `UpdatesAvailable`
+- **Mail**: `MailConfigurationUpdated`, `QuotaLimitReached`, `QuotaThresholdReached`, `SesBounceReceived`, `SesComplaintReceived`
 
 #### Domain exceptions
 
@@ -128,9 +140,10 @@ Specific exceptions that express business rule violations:
 
 - `InvalidEventDatesException`, `CannotPublishPastEventException`
 - `InvalidSlugException`, `InvalidPriceException`, `InvalidHexColorException`
-- `ModuleNotFoundException`, `ModuleDependencyException`, `ModuleCircularDependencyException`
+- `ModuleNotFoundException`, `ModuleDependencyException`, `ModuleCircularDependencyException`, `ModuleIncompatibleException`
 - `InvalidRoleNameException`, `RoleProtectedException`, `PermissionNotFoundException`
 - `QuotaExceededException`, `InvalidMailConfigurationException`
+- `UpdateException`
 
 #### Repository interfaces
 
@@ -199,6 +212,10 @@ Contracts that define application layer operations:
 - `DashboardWidgetConfigServiceInterface` - Dashboard widget configuration
 - `ImageOptimizationServiceInterface` - Image optimization
 - `SlugRedirectServiceInterface` - Slug redirects
+- `SiteBrandingServiceInterface` - The site's own logo, favicons and social profiles (empty when the GuildForge defaults are used)
+- `UserModelQueryServiceInterface` - Eloquent `UserModel` lookups for framework features (notifications, auth)
+- `ColorPaletteGeneratorInterface` - Theme palette generation from a base color (OKLCH)
+- `LogContextProviderInterface` - Request context added to log entries
 
 **Module services** (`Application/Modules/Services/`):
 - `ModuleManagerServiceInterface` - Module lifecycle management
@@ -210,6 +227,9 @@ Contracts that define application layer operations:
 - `ModuleRouteRegistryInterface` - Module route registry
 - `ModuleScaffoldingServiceInterface` - Module code generation
 - `ModuleMigrationAnalyzerInterface` - Module migration analysis
+- `EnabledModulesResolverInterface` - Which modules this process loads (enabled and compatible), and which enabled ones were rejected
+- `ModuleCompatibilityServiceInterface` - Checks a module's `module.json` against the host (with `ModuleCompatibilityChecker` and `HostEnvironmentProviderInterface`)
+- `ModuleInstallerInterface` - Installs or updates a module from a ZIP uploaded in the panel
 
 **Navigation services** (`Application/Navigation/Services/`):
 - `MenuServiceInterface` - Menu service
@@ -227,6 +247,21 @@ Contracts that define application layer operations:
 - `ModuleUpdateCheckerInterface`, `ModuleUpdaterInterface`
 - `ModuleBackupServiceInterface`, `ModuleHealthCheckerInterface`
 - `GitHubReleaseFetcherInterface`
+- `ModulePackageInstallerInterface` - Stages a release next to the installed module, swaps it in and reverts it on failure
+- `ModulePostUpdateRunnerInterface` - Runs migrations, seeders and the health check of an updated module in a separate process
+- `ReleaseChannelPolicy` - Whether prereleases count as updates (`updates.behavior.allow_prereleases`, or the module is already on a prerelease)
+
+**SEO** (`Application/Seo/`):
+- `SeoMetadataFactoryInterface` - Builds the `seo` prop (`forSite`, `forHome`, `forPage`, `forEvent`, `forArticle`, `forGallery`)
+
+**Calendar** (`Application/Calendar/`):
+- `CalendarAggregatorServiceInterface` - Merges the entries of every calendar source
+- `CalendarSourceRegistryInterface` - Registered sources (core events plus module sources)
+- `CalendarEntrySourceInterface` - Contract a source implements to return `CalendarEntryDTO`s
+
+**Content** (`Application/Content/`):
+- `TrixHtmlConverterInterface` - Converts rich text written with the old Trix editor to TipTap HTML
+- `TrixContentMigratorInterface` - Converts stored core rich text once (`content:convert-trix`)
 
 **Authorization services** (`Application/Authorization/Services/`):
 - `AuthorizationServiceInterface` - Permission verification
@@ -247,7 +282,9 @@ Concrete implementations that depend on frameworks, databases and external servi
 
 Located in `Infrastructure/Persistence/Eloquent/Models/`:
 
-`UserModel`, `EventModel`, `ArticleModel`, `GalleryModel`, `PhotoModel`, `TagModel`, `HeroSlideModel`, `RoleModel`, `PermissionModel`, `SettingModel`, `SlugRedirectModel`, `ModuleModel`, `EmailLogModel`, `SesUsageRecordModel`, `MenuItemModel`
+`UserModel`, `EventModel`, `ArticleModel`, `GalleryModel`, `PhotoModel`, `TagModel`, `HeroSlideModel`, `RoleModel`, `PermissionModel`, `SettingModel`, `SlugRedirectModel`, `ModuleModel`, `EmailLogModel`, `SesUsageRecordModel`
+
+`MenuItemModel` lives in `Infrastructure/Navigation/Persistence/Eloquent/Models/`. The update history models (`CoreUpdateHistoryModel`, `CoreSeederHistoryModel`, `ModuleUpdateHistoryModel`, `ModuleUpdateLogModel`, `ModuleSeederHistoryModel`) live in `Infrastructure/Updates/Persistence/Eloquent/Models/`.
 
 #### Eloquent repositories
 
@@ -269,14 +306,22 @@ Implementations of domain interfaces:
 
 In `Infrastructure/Persistence/Eloquent/Concerns/`:
 
-- **`HasSlug`** - Automatic slug generation with short UUID (`titulo-abc12345`). Supports mode with UUID (uniqueness guarantee) and without UUID (numeric suffix for collisions). Creates automatic redirects when slug changes.
-- **`DeletesCloudinaryImages`** - Automatic Cloudinary image deletion when a model is deleted or updated. Configured with `$cloudinaryImageFields`.
+- **`HasSlug`** (used by `EventModel`) - Automatic slug generation with short UUID (`titulo-abc12345`). Supports mode with UUID (uniqueness guarantee) and without UUID (numeric suffix for collisions). Creates a redirect when the slug changes. Articles and galleries take their slug from the admin form (`Str::slug` of the title), with no UUID suffix and no redirect.
+- **`DeletesCloudinaryImages`** (used by `UserModel`, `EventModel`, `ArticleModel`, `PhotoModel`, `HeroSlideModel`) - Automatic Cloudinary image deletion when a model is deleted or an image field changes. Configured with `$cloudinaryImageFields`.
 
 #### External services
 
 - **`Storage\Cloudinary\CloudinaryStorageAdapter`** - Flysystem adapter of the `images` disk, built on the official SDK (`cloudinary/cloudinary_php`, no Laravel package) with `CloudinaryPathMapper` (path to public id and resource type, prefix applied once). Optimizes images before upload, builds URLs without Admin API calls, ignores "not found" on deletion, and answers "exists" when the Admin API fails, so a rate-limited form never drops (and later deletes) a stored image
 - **`SnsMessageValidator`** - Validation of Amazon SES SNS notifications
 - **`HttpLogContextProvider`** - Log context for HTTP requests
+
+#### Other implementations
+
+- **`Seo/SeoMetadataFactory`** - Builds `SeoMetadata` (title, description, canonical URL, Open Graph, JSON-LD) for each page
+- **`Calendar/CalendarAggregatorService`** - Merges `EventCalendarSource` (core events) with module sources for `/eventos/calendario`
+- **`Content/TrixHtmlConverter`** - Trix to TipTap HTML conversion
+- **`Modules/Services/*`** - Module manager, loader support, compatibility (`ModuleCompatibilityService`, `EnabledModulesResolver`, `HostEnvironmentProvider`), ZIP installer, registries
+- **`Updates/Services/*`** and **`Updates/Jobs/*`** - Update checks, `ModuleUpdater`, `UpdateModuleJob`, `CheckModuleUpdatesJob` (see [Compatibility and updates](#compatibility-and-updates))
 
 #### DTO factory
 
@@ -301,10 +346,12 @@ Controllers that receive HTTP requests and return Inertia responses:
 - `SitemapController` - Sitemap generation
 - `AboutController` - "About us" page
 
-Authentication controllers in `Http/Controllers/Auth/`:
-- Login, Register, Profile, ForgotPassword, ResetPassword, VerifyEmail
+JSON controllers in `Http/Controllers/Api/`: `CalendarController` (`GET /eventos/calendario`, entries of every calendar source) and `SesWebhookController` (Amazon SES notifications).
 
-Controller pattern: Query Service injection, data query, Inertia response:
+Authentication controllers in `Http/Controllers/Auth/`:
+- `LoginController`, `RegisterController`, `ProfileController`, `ForgotPasswordController`, `ResetPasswordController`, `EmailVerificationController`
+
+Controller pattern: Query Service injection, data query, Inertia response. Every page also sends its own `seo` prop, built by `SeoMetadataFactoryInterface`:
 
 ```php
 final class EventController extends Controller
@@ -312,6 +359,7 @@ final class EventController extends Controller
     public function __construct(
         private readonly EventQueryServiceInterface $eventQuery,
         private readonly TagQueryServiceInterface $tagQuery,
+        private readonly SeoMetadataFactoryInterface $seo,
     ) {}
 
     public function index(TagFilterRequest $request): Response
@@ -322,6 +370,8 @@ final class EventController extends Controller
         return Inertia::render('Events/Index', [
             'events' => $this->buildPaginatedResponse(/* ... */),
             'tags' => TagResource::collection($availableTags)->resolve(),
+            'currentTags' => $tagSlugs ?? [],
+            'seo' => $this->seo->forPage(new SeoPageDTO(title: (string) __('seo.titles.events')))->toArray(),
         ]);
     }
 }
@@ -329,11 +379,28 @@ final class EventController extends Controller
 
 #### Middleware
 
-- `HandleInertiaRequests` - Shared data with the frontend (auth, theme, navigation, modules, slots, translations)
-- `SecurityHeadersMiddleware` - Security headers (CSP, HSTS, X-Frame-Options, etc.)
-- `BlockBotsMiddleware` - Malicious bot blocking by User-Agent
-- `EnsureLoginIsEnabled` - Verification that login is enabled
-- `EnsureRegistrationIsEnabled` - Verification that registration is enabled
+Registered in `bootstrap/app.php`:
+
+| Middleware | Placement | Purpose |
+|------------|-----------|---------|
+| `BlockBotsMiddleware` | Global (every request, alias `bot-protection`) | Malicious bot blocking by User-Agent |
+| `HandleInertiaRequests` | `web` group | Shared props (auth, theme, navigation, module slots/pages/translations, `cloudinary`, site `seo` defaults) |
+| `SecurityHeadersMiddleware` | `web` group | Security headers (CSP, X-Frame-Options, HSTS on HTTPS, etc.) |
+| `EnsureSiteIsNotInMaintenance` | `web` group | Maintenance mode (see below) |
+| `EnsureLoginIsEnabled` | Alias `login.enabled`, on the login routes | Verification that login is enabled |
+| `EnsureRegistrationIsEnabled` | Alias `registration.enabled`, on the registration routes | Verification that registration is enabled |
+
+`/api/*` routes do not run the `web` group, so they get neither Inertia nor the security headers.
+
+**Maintenance mode** is a site setting (`maintenance_enabled`, `maintenance_message`, edited in `SiteSettings`), not `artisan down`: the queue worker must keep running so queued module updates can be applied. While it is on, `EnsureSiteIsNotInMaintenance` answers with the Inertia page `Maintenance` (props `message`, `seo`), status **503** and `Retry-After: 600`. It lets through `admin/*`, `/up`, `/iniciar-sesion`, Livewire requests and users who pass `canAccessPanel()`. The admin panel shows a banner while it is on.
+
+#### View components
+
+Blade components in `app/View/Components/`, used by `resources/views/app.blade.php`:
+
+- `SeoHead` (`<x-seo-head>`) - Server-renders the first page's SEO tags (marked `data-seo-server`) for crawlers
+- `SiteFavicons` (`<x-site-favicons>`) - The site's favicons
+- `ModuleImportMap` (`<x-module-import-map>`) - Import map for module bundles (see [Runtime loading](#runtime-loading))
 
 ---
 
@@ -343,15 +410,17 @@ final class EventController extends Controller
 
 Modules are self-contained packages that extend core functionality without modifying it. Each module is an independent Git repository located in `src/modules/`.
 
+Generic module layout (each directory is optional; most modules have only some of them):
+
 ```
 src/modules/
-  game-tables/               # Module example
+  <module>/
     src/                     # PHP code (ServiceProvider, Controllers, Models, etc.)
     database/
       migrations/            # Module-specific migrations
     routes/
-      web.php                # Web routes
-      api.php                # API routes
+      web.php                # Web routes (web middleware group)
+      api.php                # API routes (prefix /api)
     resources/
       views/                 # Blade views (Filament)
       js/                    # Vue components, pages, locales
@@ -359,13 +428,16 @@ src/modules/
     config/
       module.php             # Module configuration
       settings.php           # Settings configuration
-    tests/                   # Module tests
+      <module>.php           # Module-specific config
+    tests/                   # Module tests (own phpunit.xml)
     module.json              # Module manifest
 ```
 
+`src/modules/*` is ignored by the core repository: each module is cloned from its own repository (or installed from a release ZIP).
+
 ### EnabledModulesResolver
 
-`App\Infrastructure\Modules\Services\EnabledModulesResolver` is the only filter on which modules a process loads. `AdminPanelProvider` (before compiling any module provider or Resource), `ModulesServiceProvider` (module migrations, from `migrationPaths()`: every compatible module on disk, enabled or not) and `ModuleLoader` all ask it. Compatibility comes from `ModuleCompatibilityService`, which reads `module.json` and evaluates it with `ModuleCompatibilityChecker` (`requires.core`, `filament`, `php`, `laravel`, `extensions`); it never loads module code and never writes module state. Enabling a module, installing a ZIP and staging an update go through the same check, and update detection evaluates each release's `module.json` asset with the same checker.
+`App\Infrastructure\Modules\Services\EnabledModulesResolver` is the only filter on which modules a process loads. `rejected()` lists the modules enabled in the database but left out as incompatible (`RejectedModuleDTO`). `AdminPanelProvider` (before compiling any module provider or Resource), `ModulesServiceProvider` (module migrations, from `migrationPaths()`: every compatible module on disk, enabled or not) and `ModuleLoader` all ask it. Compatibility comes from `ModuleCompatibilityService`, which reads `module.json` and evaluates it with `ModuleCompatibilityChecker` (`requires.core`, `filament`, `php`, `laravel`, `extensions`); it never loads module code and never writes module state. Enabling a module, installing a ZIP and staging an update go through the same check, and update detection evaluates each release's `module.json` asset with the same checker.
 
 ### ModuleLoader
 
@@ -374,7 +446,7 @@ src/modules/
 1. Asks `EnabledModulesResolver` for the modules to load: enabled in the database (with optional cache) and compatible according to their `module.json` on disk
 2. For each module, registers an SPL autoloader for its namespace
 3. Instantiates and registers the module's `ModuleServiceProvider`
-4. Registers the module's hooks: slots, permissions, pages, routes, navigation
+4. Registers the module's hooks: slots, permissions, page prefixes, routes, calendar sources, navigation
 
 ### ModuleServiceProvider
 
@@ -392,28 +464,33 @@ src/modules/
 | Hook | Return type | Purpose |
 |------|-------------|---------|
 | `registerPermissions()` | `PermissionDTO[]` | Module permissions |
-| `registerNavigation()` | `NavigationItemDTO[]` | Navigation items |
+| `registerNavigation()` | `NavigationItemDTO[]` | Admin-panel navigation items, collected in `ModuleNavigationRegistry`. They are never copied into the public menu |
 | `registerSlots()` | `SlotRegistrationDTO[]` | Vue components injectable into the layout |
 | `registerPagePrefixes()` | `PagePrefixDTO[]` | Page prefixes for Inertia resolution |
-| `registerRoutes()` | `ModuleRouteDTO[]` | Public routes for menus |
+| `registerRoutes()` | `ModuleRouteDTO[]` | Public pages offered in the menu editor (`MenuItemResource`) |
+| `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Entries for the public calendars (`/calendario` and the home widget, through `/eventos/calendario`) |
 | `registerPolicies()` | `array<model, policy>` | Authorization policies |
 | `registerNavigationGroups()` | `array<label, options>` | Filament navigation groups |
 | `registerFilamentPages()` | `Page[]` | Filament pages |
 | `getSettingsSchema()` | `Component[]` | Module settings form |
 | `onEnable()` / `onDisable()` | `void` | Lifecycle callbacks |
 
+Modules may also define `registerFilamentWidgets()`: it is not declared on `ModuleServiceProvider`, and the panel calls it only when it exists.
+
+**Public menu**: a module's public pages reach the header or footer only when an admin adds a link in the menu editor, picking one of the pages offered by `registerRoutes()` (or the core's own pages, from `RouteRegistry`). Enabling a module creates no menu links. A link whose route is no longer available (its module was uninstalled) still opens in the editor, labelled "Página no disponible: …", so it can be deactivated or repointed; `MenuService` leaves such links out of the rendered menu and logs a warning at most once an hour per link.
+
 ### Module lifecycle
 
 ```
-discover -> install -> enable -> boot -> (disable -> uninstall)
+(install ZIP) -> discover -> enable -> boot -> (disable -> uninstall)
 ```
 
-1. **Discover**: `php artisan module:discover` scans `src/modules/` and registers modules in the database
-2. **Install**: The module is registered, its migrations and seeders are executed
-3. **Enable**: `php artisan module:enable` activates the module. Fires `ModuleEnabled`, clears caches, builds Vue assets
-4. **Boot**: `ModuleLoader::boot()` loads the ServiceProvider and registers all hooks
-5. **Disable**: `php artisan module:disable` deactivates the module without deleting data. Fires `ModuleDisabled`
-6. **Uninstall**: Removes the module completely. Fires `ModuleUninstalled`
+1. **Install (optional)**: from `ModulesPage`, an admin uploads a release ZIP (maintenance mode required). `ModuleInstaller::installFromZip()` validates the manifest, rejects incompatible packages, moves the module into `src/modules/`, publishes its pre-built assets and fires `ModuleInstalled`; the page then runs discovery. A module cloned into `src/modules/` skips this step
+2. **Discover**: `php artisan module:discover` (or the panel) scans `src/modules/` and registers modules in the database. Fires `ModuleDiscovered`
+3. **Enable**: `php artisan module:enable` or the panel. Refuses an incompatible module, checks dependencies, runs the module's migrations and seeders the first time it is enabled, then fires `ModuleEnabled` (clears caches, queues the Vue asset build, reactivates the module's existing menu links)
+4. **Boot**: on every request, `ModuleLoader::boot()` loads the ServiceProvider of each module `EnabledModulesResolver` accepts and registers its hooks. Migrations of every compatible module on disk are known to `migrate` (`EnabledModulesResolver::migrationPaths()`); `module:migrate` runs one module's
+5. **Disable**: `php artisan module:disable` deactivates the module without deleting data. Fires `ModuleDisabled` (deactivates its menu links)
+6. **Uninstall**: `ModuleManagerService::uninstall()` deletes the module directory and, when asked to delete data, rolls back its migrations. Fires `ModuleUninstalled` (deletes its menu links)
 
 ### Module system events
 
@@ -431,9 +508,21 @@ discover -> install -> enable -> boot -> (disable -> uninstall)
 
 ### Module commands
 
-**Management**: `module:list`, `module:discover`, `module:enable`, `module:disable`, `module:migrate`, `module:publish-assets`, `module:sync-from-image`
+**Management**: `module:list`, `module:discover`, `module:enable`, `module:disable`, `module:migrate`, `module:seed`, `module:build`, `module:publish-assets`, `module:publish-build-assets`, `module:sync-from-image`
 
-**Scaffolding**: `module:make` (complete module), `module:make-entity`, `module:make-controller`, `module:make-request`, `module:make-service`, `module:make-dto`, `module:make-migration`, `module:make-test`, `module:make-filament-resource`, `module:make-vue-page`, `module:make-vue-component`
+**Updates**: `module:check-updates`, `module:update`, `module:set-source` (GitHub repository a module is updated from). `module:finish-update` and `module:refresh-caches` are hidden commands the updater runs in a separate process
+
+**Scaffolding**: `module:make` (complete module), `module:make-entity`, `module:make-enum`, `module:make-event`, `module:make-listener`, `module:make-notification`, `module:make-controller`, `module:make-request`, `module:make-service`, `module:make-dto`, `module:make-migration`, `module:make-test`, `module:make-filament-resource`, `module:make-relation-manager`, `module:make-widget`, `module:make-vue-page`, `module:make-vue-component`
+
+**Core**: `core:version`, `core:check-updates`, `core:record-deployment` (run by the container entrypoint), `content:convert-trix`, `permissions:sync`, `make:admin-user`, `elasticsearch:test`
+
+### Compatibility and updates
+
+**Compatibility.** `ModuleCompatibilityService` reads a module's `module.json` on disk and evaluates its `requires` block (`core`, `filament`, `php`, `laravel`, `extensions`) with `ModuleCompatibilityChecker` against `HostEnvironmentProvider`'s view of the host. `CoreModuleMinimumVersions` adds minimum module versions the core itself needs (`game-tables` 2.2.0). Enabling, ZIP install, update staging and update detection all use the same check. Enabled modules rejected as incompatible (`EnabledModulesResolver::rejected()`) are not loaded; `AdminPanelProvider` lists them in a `BODY_START` banner for signed-in users, and `ModulesPage` shows an "Incompatible" badge with the reasons and a disabled "Habilitar" action.
+
+**Module updates.** `CheckModuleUpdatesJob` is scheduled daily at 04:00 (`routes/console.php`) and `ModuleUpdatesPage` can check on demand. For each module with a repository, `ModuleUpdateChecker` asks GitHub for releases (`GitHubReleaseFetcher`; prereleases only through `ReleaseChannelPolicy`) and evaluates each release's `module.json` asset. The newest compatible release is offered (`ReleaseSelection`); a newer release this core cannot run is stored in `modules.latest_blocked_version` / `latest_blocked_reason` and listed under *Versiones no compatibles*, without an update button. Applying requires the `updates.apply` permission and maintenance mode: `ModuleUpdatesPage` re-checks both server-side and dispatches `UpdateModuleJob` (queued, `ShouldBeUnique`, one try, 600 s timeout), followed with `wire:poll`. `ModuleUpdater` backs up the module, downloads and verifies the checksum, stages and swaps the files (`ModulePackageInstaller`), runs migrations, seeders and the health check in a separate process (`module:finish-update`), refreshes caches, and restores the previous files if a step fails before the database commit. The job then runs `queue:restart` so workers drop the old module classes.
+
+**Core updates.** The core is not updated from the panel: it is deployed continuously from `updates.core.branch` (`main` by default): once CI passes on `main`, `deploy.yml` calls the deployment platform's webhook, which builds and rolls out the image. `CoreUpdatesPage` (`updates.apply`) and `core:check-updates` compare the deployed commit (`SOURCE_COMMIT`, injected by the deployment platform into the container environment) with the branch through the GitHub compare API; the page lists the commits not deployed yet and warns when commits are pending and maintenance mode is off. The container entrypoint records each deployment (`core:record-deployment`).
 
 ---
 
@@ -467,26 +556,37 @@ Laravel's service container manages all dependencies. Bindings are defined in th
 - `SettingsServiceInterface`, `DashboardWidgetConfigServiceInterface`, `ThemeSettingsServiceInterface`
 - `ImageOptimizationServiceInterface`, `AuthServiceInterface`, `UserServiceInterface`
 - `UserModelQueryServiceInterface`, `LegalPageServiceInterface`, `ContactServiceInterface`
-- `SlugRedirectServiceInterface`, `ResponseDTOFactoryInterface`
+- `SlugRedirectServiceInterface`, `ResponseDTOFactoryInterface`, `SiteBrandingServiceInterface`
+- `LogContextProviderInterface` (`bind`, resolves to `HttpLogContextProvider`)
+
+**SEO** (`bind`):
+- `SeoMetadataFactoryInterface` -> `SeoMetadataFactory`, with `CloudinaryImageUrlBuilder`, `SeoDescriptionBuilder` and `StructuredDataBuilder`
+
+**Calendar and content** (`singleton`):
+- `CalendarSourceRegistryInterface`, `CalendarAggregatorServiceInterface`
+- `TrixHtmlConverterInterface`, `TrixContentMigratorInterface`
 
 **Mail system** (mix of `singleton` and `bind`):
 - `MailConfigurationServiceInterface`, `MailTestServiceInterface`, `EmailQuotaServiceInterface`
 - `MailStatisticsServiceInterface`, `SnsMessageValidatorInterface`
 
-**Module system** (`singleton`):
+**Module system** (`singleton` unless noted):
+- `ModuleRepositoryInterface` (`bind`), `ModuleMigrationAnalyzerInterface` (`bind`)
 - `ModuleManagerServiceInterface`, `ModuleContextServiceInterface`
 - `ModulePermissionRegistryInterface`, `ModuleNavigationRegistryInterface`
 - `ModuleSlotRegistryInterface`, `ModulePageRegistryInterface`, `ModuleRouteRegistryInterface`
 - `ModuleScaffoldingServiceInterface`, `ModuleDiscoveryService`, `ModuleAssetBuilder`
 - `ModuleDependencyResolver`, `ModuleMigrationRunner`, `ModuleSeederRunner`
 - `CoreTableRegistry`, `ModuleSchemaGuard`, `ModuleLoader`
+- Compatibility: `ConstraintMatcher`, `ModuleManifestReader`, `ModuleCompatibilityChecker`, `HostEnvironmentProviderInterface`, `ModuleCompatibilityServiceInterface`, `EnabledModulesResolverInterface`
 
 **Navigation** (`singleton`):
 - `MenuServiceInterface`, `MenuItemHrefResolverInterface`, `RouteRegistryInterface`
 
 **Update system** (`singleton`):
 - `GitHubReleaseFetcherInterface`, `ModuleBackupServiceInterface`, `ModuleHealthCheckerInterface`
-- `ModuleUpdateCheckerInterface`, `ModuleUpdaterInterface`
+- `ModuleUpdateCheckerInterface`, `ModuleUpdaterInterface`, `ReleaseChannelPolicy`
+- `ModulePackageInstallerInterface`, `ModulePostUpdateRunnerInterface` (-> `ProcessModulePostUpdateRunner`)
 - `CoreVersionServiceInterface`, `CoreUpdateCheckerInterface`
 
 ### AuthorizationServiceProvider
@@ -560,11 +660,14 @@ Authorization is based on a role system with granular permissions:
 | `tags` | `view_any`, `create`, `update`, `delete` | `editor` |
 | `users` | `view_any`, `view`, `create`, `update`, `delete` | (admin only) |
 | `roles` | `view_any`, `view`, `create`, `update`, `delete` | (admin only) |
-| `settings` | `manage` | (admin only) |
+| `settings` | `manage`, `maintenance` | (admin only) |
+| `updates` | `apply` | (admin only) |
 | `mail` | `configure`, `view_stats` | (admin only) |
 | `admin` | `access` | `editor` |
 
 Modules extend this system with their own permissions using the format `module:resource.action`.
+
+Admins pass every check (fast path in `AuthorizationService`). `MenuItemPolicy` checks `menu_items.*` permissions that `CorePermissionDefinitions` does not define, so only admins manage menus. Several panel pages check `isAdmin()` instead of a permission: `ModulesPage`, `ModuleSettingsPage` and the pages in `Filament/Pages/Settings/`.
 
 ### AuthorizesWithPermissions trait
 
@@ -618,7 +721,8 @@ Nginx (reverse proxy)
 PHP-FPM (Docker container)
     |
 Middleware stack:
-    SecurityHeadersMiddleware -> BlockBotsMiddleware -> HandleInertiaRequests
+    BlockBotsMiddleware (global)
+    -> web group (session, CSRF, ...) -> HandleInertiaRequests -> SecurityHeadersMiddleware -> EnsureSiteIsNotInMaintenance
     |
 Router (Laravel)
     |
@@ -638,9 +742,9 @@ ResponseDTOFactory -> Response DTO (with HTML sanitization)
     |
 Controller -> Inertia::render('Page', props)
     |
-HandleInertiaRequests (shared data: auth, theme, navigation, slots)
+HandleInertiaRequests (shared data: auth, theme, navigation, slots, cloudinary, site seo)
     |
-Inertia (JSON for SPA navigation / HTML for first load)
+Inertia (JSON for SPA navigation / HTML for first load: page object in <script data-page="app" type="application/json">)
     |
 Vue 3 (component rendering)
     |
@@ -655,7 +759,7 @@ Client (browser)
 4. Internally, the Query Service uses Eloquent to query PostgreSQL
 5. `EloquentResponseDTOFactory::createEventDTO()` converts models to DTOs, sanitizing HTML
 6. `EventResource` transforms DTOs for the Inertia response
-7. `Inertia::render('Events/Index', [...])` returns the response
+7. `SeoMetadataFactoryInterface::forPage()` builds the page's `seo` prop, and `Inertia::render('Events/Index', [...])` returns the response
 8. `HandleInertiaRequests` adds shared data (auth, theme, navigation)
 9. Vue renders `Events/Index.vue` with the received props
 
@@ -701,8 +805,20 @@ Location: `src/app/Filament/Pages/`
 | `SiteSettings` | General site configuration |
 | `ModulesPage` | Listing and management of installed modules |
 | `ModuleSettingsPage` | Individual settings for each module |
-| `ModuleUpdatesPage` | Checking and applying module updates |
-| `CoreUpdatesPage` | Checking and applying core updates |
+| `ModuleUpdatesPage` | Checking module updates and queueing them (`updates.apply`, maintenance mode required) |
+| `CoreUpdatesPage` | Deployed commit and commits pending on the deploy branch (`updates.apply`); deploys run from `deploy.yml`, the page only reports |
+
+Settings pages in `src/app/Filament/Pages/Settings/` (admin only):
+
+| Page | Purpose |
+|------|---------|
+| `AboutPageSettings` | Content of the "About us" page |
+| `LegalPagesSettings` | Legal entity data and the content of the legal pages |
+| `DashboardSettings` | Dashboard widgets: on/off, order, table row limits |
+| `MailSettings` | Mail driver, SMTP/SES/Resend credentials, send quotas, test email |
+| `MailStatisticsPage` | Log of sent emails (`email_logs`), filterable by status |
+
+`SiteSettings` is open to `settings.manage` (all tabs except maintenance) and `settings.maintenance` (maintenance tab).
 
 ### Widget system
 
@@ -734,12 +850,25 @@ Modules can:
 
 ### Technology stack
 
-- **Vue 3** with Composition API and `<script setup>`
-- **TypeScript** in strict mode (no `any`)
-- **Inertia.js** as the bridge between Laravel and Vue (no separate REST API)
-- **Pinia** for state management
-- **Tailwind CSS** for styling
-- **Vite 7** for build and HMR
+- **Vue 3.5** with Composition API and `<script setup>`
+- **TypeScript 6** in strict mode (no `any`)
+- **Inertia.js 3** as the bridge between Laravel and Vue (no separate REST API; SSR disabled)
+- **Pinia 4** for state management
+- **vue-i18n 11** for translations (`locales/es.ts`, `locales/en.ts`)
+- **@unhead/vue 3** for the document head
+- **@lucide/vue** for icons (`utils/icons.ts`)
+- **Tailwind CSS 4** for styling
+- **Vite 8** (Rolldown) for build and HMR
+
+### Runtime loading
+
+**First load (Inertia 3).** `app.blade.php` renders `@inertia`, which embeds the page object in `<script data-page="app" type="application/json">` next to `<div id="app">`. Before Inertia boots, `app.ts` reads that script (`readInitialPageJson()`) and takes three shared props from it: `cloudinary` (passed to `setCloudinaryConfig()`), `modulePages` (page prefix to module mapping) and `moduleTranslations`.
+
+**SEO.** Every page sends a `seo` prop built by `SeoMetadataFactoryInterface`; the shared `seo` prop carries the site defaults (`forSite()`). On the first request `<x-seo-head>` server-renders the tags for crawlers (`data-seo-server`). `app.ts` removes them on boot and calls `useServerSeo()` once in the app root, so unhead owns the head and follows every navigation.
+
+**Cloudinary.** The cloud name and folder prefix come at runtime from the shared `cloudinary` prop (`{ cloudName, prefix }`, from `config/cloudinary.php`). `setCloudinaryConfig()` stores them on `globalThis`, so module bundles built in CI carry no installation config. `VITE_CLOUDINARY_*` is only a fallback.
+
+**Module import map.** Module bundles are compiled in their own CI with `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` kept external. `<x-module-import-map>` (`App\View\Components\ModuleImportMap`) maps those five bare specifiers to the five `resources/js/vendor-exports/*.ts` entries, resolved through the Vite manifest. `vite.config.ts` declares the entries, keeps their exports (`preserveEntrySignatures: 'exports-only'`) and splits the shared chunks `vendor-vue`, `vendor-inertia` and `vendor-head` (`build.rolldownOptions.output.codeSplitting.groups`), so the app and the modules load one copy of Vue. `npm run verify:build` (`scripts/verify-build.mjs`, run in CI after the build) fails if an entry is missing from the manifest, loses exports, or if `app.ts` and `vendor-exports/vue.ts` do not share one `vendor-vue` chunk.
 
 ### Layouts
 
@@ -771,6 +900,7 @@ pages/
     Show.vue                # Legal pages
   Search/
     Index.vue               # Global search
+  Maintenance.vue           # 503 page in maintenance mode
   Profile/
     Show.vue                # User profile
   Auth/
@@ -871,10 +1001,11 @@ Email sending system with dual support:
 
 Structured log destination for monitoring and analysis. `HttpLogContextProvider` enriches logs with HTTP request context (IP, User-Agent, URL, authenticated user).
 
-### Redis (cache/queues)
+### Cache, sessions and queues
 
-- **Cache**: Storage of enabled modules, theme configuration
-- **Queues**: Asynchronous task processing like `BuildModuleAssetsOnEnabled`
+- Cache, sessions and queues use the `database` driver by default (`src/.env.example`, `config/*.php`); Redis can be enabled through the environment (`CACHE_STORE`, `SESSION_DRIVER`, `QUEUE_CONNECTION`)
+- **Queued work**: `BuildModuleAssetsOnEnabled` (listener), `UpdateModuleJob`, `CheckModuleUpdatesJob`
+- **Scheduler**: `CheckModuleUpdatesJob` daily at 04:00 (`routes/console.php`). In production supervisord runs `queue:work` and `schedule:work` next to nginx and PHP-FPM (`docker/prod/supervisord.conf`)
 
 ---
 
@@ -903,7 +1034,7 @@ Read:  Controller -> QueryService -> Model -> ResponseDTOFactory -> DTO -> Inert
 
 ### HasSlug with automatic redirects
 
-The `HasSlug` trait manages URL slugs:
+The `HasSlug` trait manages URL slugs. Only `EventModel` uses it; articles and galleries take their slug from the admin form:
 
 - **Creation**: Automatically generates slug from title + short UUID (`mi-evento-abc12345`)
 - **Update**: When title changes, generates new slug and creates a redirect from old slug to new via `SlugRedirectService`
@@ -926,7 +1057,7 @@ Domain events decouple business logic from its side effects:
 ModuleEnabled
     -> ClearCachesOnModuleChange (clears route, config, view caches)
     -> BuildModuleAssetsOnEnabled (builds module Vue components)
-    -> ActivateMenuItemsOnModuleEnabled (reactivates module menu items)
+    -> ActivateMenuItemsOnModuleEnabled (reactivates the module's existing menu links)
 
 MessageSending -> CheckQuotaBeforeSending (prevents sending if quota exceeded)
 MessageSent -> LogSentEmail (records email in email_logs)
@@ -939,7 +1070,7 @@ MessageSent -> LogSentEmail (records email in email_logs)
 ### CSRF protection
 
 - Laravel automatically generates and verifies CSRF tokens on all POST/PUT/DELETE requests
-- Inertia.js includes the CSRF token in all its requests via `X-XSRF-TOKEN`
+- Inertia's HTTP client sends the `XSRF-TOKEN` cookie as `X-XSRF-TOKEN`; requests sent by hand with `fetch` use `csrfHeaders()` from `utils/csrf.ts` (the `<meta name="csrf-token">` goes stale once the session is regenerated)
 - CSRF middleware is never disabled
 
 ### XSS prevention
@@ -955,7 +1086,7 @@ X-Frame-Options: DENY                    -> Prevents clickjacking
 X-Content-Type-Options: nosniff          -> Prevents MIME type sniffing
 Referrer-Policy: strict-origin-when-cross-origin
 Permissions-Policy: camera=(), microphone=(), geolocation=(self)
-Strict-Transport-Security: max-age=31536000; includeSubDomains  -> HTTPS only
+Strict-Transport-Security: max-age=31536000; includeSubDomains  -> sent on HTTPS requests only
 Content-Security-Policy:
     default-src 'self'
     script-src 'self' 'unsafe-inline' 'unsafe-eval'
@@ -967,6 +1098,8 @@ Content-Security-Policy:
     base-uri 'self'
     form-action 'self'
 ```
+
+In the `local` environment the CSP also allows the Vite dev server (`http://localhost:5173`).
 
 ### Bot protection (BlockBotsMiddleware)
 
