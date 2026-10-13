@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Filament\Resources;
 
-use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource\Pages;
-use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\{{ nameStudly }}Model;
 use App\Filament\Resources\BaseResource;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -16,24 +14,28 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use UnitEnum;
+use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource\Pages;
+use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Models\{{ nameStudly }}Model;
 
 final class {{ nameStudly }}Resource extends BaseResource
 {
     protected static ?string $model = {{ nameStudly }}Model::class;
 
-    protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static string | UnitEnum | null $navigationGroup = '{{ moduleNameStudly }}';
+    public static function getNavigationGroup(): string
+    {
+        return __('{{ moduleName }}::filament.navigation_group');
+    }
 
     public static function getModelLabel(): string
     {
-        return __('{{ moduleNameSnake }}::filament.{{ nameSnake }}.label');
+        return __('{{ moduleName }}::filament.{{ nameSnake }}.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('{{ moduleNameSnake }}::filament.{{ nameSnake }}.plural_label');
+        return __('{{ moduleName }}::filament.{{ nameSnake }}.plural_label');
     }
 
     public static function form(Schema $schema): Schema
@@ -41,7 +43,7 @@ final class {{ nameStudly }}Resource extends BaseResource
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label(__('{{ moduleNameSnake }}::filament.{{ nameSnake }}.fields.name'))
+                    ->label(__('{{ moduleName }}::filament.{{ nameSnake }}.fields.name'))
                     ->required()
                     ->maxLength(255),
             ]);
@@ -52,16 +54,16 @@ final class {{ nameStudly }}Resource extends BaseResource
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label(__('{{ moduleNameSnake }}::filament.{{ nameSnake }}.fields.name'))
+                    ->label(__('{{ moduleName }}::filament.{{ nameSnake }}.fields.name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('created_at')
-                    ->label(__('{{ moduleNameSnake }}::filament.{{ nameSnake }}.fields.created_at'))
+                    ->label(__('{{ moduleName }}::filament.{{ nameSnake }}.fields.created_at'))
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->label(__('{{ moduleNameSnake }}::filament.{{ nameSnake }}.fields.updated_at'))
+                    ->label(__('{{ moduleName }}::filament.{{ nameSnake }}.fields.updated_at'))
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

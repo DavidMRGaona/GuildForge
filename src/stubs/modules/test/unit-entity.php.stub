@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Tests\Unit\Domain\Entities;
 
+use DateTimeImmutable;
 use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
 use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
-use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -17,8 +17,8 @@ final class {{ nameStudly }}Test extends TestCase
     {
         $id = {{ nameStudly }}Id::generate();
         $name = 'Test {{ nameStudly }}';
-        $createdAt = new DateTimeImmutable();
-        $updatedAt = new DateTimeImmutable();
+        $createdAt = new DateTimeImmutable;
+        $updatedAt = new DateTimeImmutable;
 
         $entity = new {{ nameStudly }}(
             id: $id,
@@ -39,8 +39,8 @@ final class {{ nameStudly }}Test extends TestCase
         $entity = new {{ nameStudly }}(
             id: {{ nameStudly }}Id::generate(),
             name: 'Original Name',
-            createdAt: new DateTimeImmutable(),
-            updatedAt: new DateTimeImmutable(),
+            createdAt: new DateTimeImmutable,
+            updatedAt: new DateTimeImmutable,
         );
 
         $originalUpdatedAt = $entity->updatedAt();

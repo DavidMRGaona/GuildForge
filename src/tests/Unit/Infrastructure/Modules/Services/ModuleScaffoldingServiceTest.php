@@ -10,6 +10,7 @@ use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
 use App\Infrastructure\Modules\Services\StubRenderer;
+use Illuminate\Support\Arr;
 use PHPUnit\Framework\TestCase;
 
 final class ModuleScaffoldingServiceTest extends TestCase
@@ -92,7 +93,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertArrayHasKey('database/migrations/.gitkeep', $result->files);
         $this->assertArrayHasKey('src/Domain/Entities/.gitkeep', $result->files);
         $this->assertArrayHasKey('src/Application/DTOs/.gitkeep', $result->files);
-        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/.gitkeep', $result->files);
+        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/Models/.gitkeep', $result->files);
+        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/Repositories/.gitkeep', $result->files);
     }
 
     public function test_it_creates_module_with_correct_namespace_in_files(): void
@@ -160,8 +162,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertArrayHasKey('src/Domain/Entities/Product.php', $result->files);
         $this->assertArrayHasKey('src/Domain/ValueObjects/ProductId.php', $result->files);
         $this->assertArrayHasKey('src/Domain/Repositories/ProductRepositoryInterface.php', $result->files);
-        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/ProductModel.php', $result->files);
-        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/EloquentProductRepository.php', $result->files);
+        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/Models/ProductModel.php', $result->files);
+        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/Repositories/EloquentProductRepository.php', $result->files);
 
         // Check migration file exists
         $migrationFiles = array_filter(array_keys($result->files), fn ($key) => str_contains($key, 'database/migrations/'));
@@ -715,6 +717,210 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $messages = include $this->tempModulesPath.'/blog-posts/lang/es/messages.php';
 
         $this->assertSame('Blog posts', $messages['title']);
+    }
+
+    public function test_hyphenated_modules_use_the_kebab_case_translation_namespace(): void
+    {
+        $this->generateEveryTranslatedClass('blog-posts');
+
+        foreach ($this->phpFiles($this->tempModulesPath.'/blog-posts') as $path => $content) {
+            $this->assertStringNotContainsString('blog_posts::', $content, $path);
+        }
+
+        $resource = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php');
+        $this->assertStringContainsString("__('blog-posts::filament.post.label')", $resource);
+        $this->assertStringContainsString("__('blog-posts::filament.navigation_group')", $resource);
+    }
+
+    public function test_generators_write_the_translation_keys_their_stubs_use(): void
+    {
+        $this->generateEveryTranslatedClass('blog-posts');
+        $langPath = $this->tempModulesPath.'/blog-posts/lang/es';
+        $checked = 0;
+
+        foreach ($this->phpFiles($this->tempModulesPath.'/blog-posts/src') as $path => $content) {
+            // Commented examples (provider docblocks) are not code
+            $code = (string) preg_replace('#^\s*(\*|//).*$#m', '', $content);
+            preg_match_all("#__\('blog-posts::([a-z_]+)\.([a-z0-9_.]+)'\)#", $code, $matches, PREG_SET_ORDER);
+
+            foreach ($matches as [, $file, $key]) {
+                $this->assertFileExists("{$langPath}/{$file}.php", $path);
+                $translations = include "{$langPath}/{$file}.php";
+                $this->assertTrue(Arr::has($translations, $key), "{$path}: blog-posts::{$file}.{$key} is not in lang/es/{$file}.php");
+                $this->assertIsString(Arr::get($translations, $key), "{$path}: blog-posts::{$file}.{$key}");
+                $checked++;
+            }
+        }
+
+        $this->assertGreaterThan(20, $checked);
+    }
+
+    public function test_translations_already_written_are_kept(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createFilamentResource('blog-posts', 'Post');
+        $file = $this->tempModulesPath.'/blog-posts/lang/es/filament.php';
+        $translations = include $file;
+        $translations['post']['label'] = 'entrada';
+        file_put_contents($file, '<?php return '.var_export($translations, true).';');
+
+        $this->service->createWidget('blog-posts', 'Stats');
+
+        $updated = include $file;
+        $this->assertSame('entrada', $updated['post']['label']);
+        $this->assertSame('Stats', $updated['widgets']['stats']['heading']);
+    }
+
+    public function test_resource_labels_follow_spanish_capitalization(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createFilamentResource('blog-posts', 'BlogPost');
+
+        $translations = include $this->tempModulesPath.'/blog-posts/lang/es/filament.php';
+
+        $this->assertSame('blog post', $translations['blog_post']['label']);
+        $this->assertSame('Blog posts', $translations['blog_post']['plural_label']);
+        $this->assertSame('Blog posts', $translations['navigation_group']);
+    }
+
+    public function test_api_routes_are_not_prefixed_twice(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $routes = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/api.php');
+
+        $this->assertStringNotContainsString("prefix('api/", $routes);
+        $this->assertStringNotContainsString("middleware('api')", $routes);
+        $this->assertStringContainsString("Route::prefix('blog-posts')", $routes);
+    }
+
+    public function test_a_service_without_interface_implements_nothing(): void
+    {
+        $this->service->createModule('utils');
+        $this->service->createService('utils', 'Logger', false);
+        $this->service->createService('utils', 'Mailer', true);
+
+        $logger = (string) file_get_contents($this->tempModulesPath.'/utils/src/Infrastructure/Services/LoggerService.php');
+        $mailer = (string) file_get_contents($this->tempModulesPath.'/utils/src/Infrastructure/Services/MailerService.php');
+
+        $this->assertStringNotContainsString('implements', $logger);
+        $this->assertStringNotContainsString('ServiceInterface', $logger);
+        $this->assertStringContainsString('final readonly class MailerService implements MailerServiceInterface', $mailer);
+        $this->assertStringContainsString('use Modules\Utils\Application\Services\MailerServiceInterface;', $mailer);
+    }
+
+    public function test_the_policy_guards_the_model_the_entity_scaffold_writes_with_module_permission_keys(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createEntity('blog-posts', 'Post');
+        $this->service->createFilamentResource('blog-posts', 'Post');
+
+        $model = 'use Modules\BlogPosts\Infrastructure\Persistence\Eloquent\Models\PostModel;';
+        $this->assertFileExists($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php');
+        $this->assertStringContainsString(
+            'namespace Modules\BlogPosts\Infrastructure\Persistence\Eloquent\Models;',
+            (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php'),
+        );
+        $this->assertStringContainsString($model, (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Repositories/EloquentPostRepository.php'));
+        $this->assertStringContainsString($model, (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php'));
+
+        $policy = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Policies/PostPolicy.php');
+        $this->assertStringContainsString($model, $policy);
+        foreach (['view_any', 'view', 'create', 'update', 'delete'] as $action) {
+            $this->assertStringContainsString("'blog-posts:posts.{$action}'", $policy);
+        }
+        $this->assertDoesNotMatchRegularExpression("#authorize\(\\\$user, '[^':]+'\)#", $policy);
+    }
+
+    public function test_a_migration_for_an_existing_table_modifies_it(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createMigration('blog-posts', 'add_slug_to_posts_table', 'blog_posts_posts', modify: true);
+
+        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.array_key_first($result->files));
+        $this->assertStringContainsString("Schema::table('blog_posts_posts', function (Blueprint \$table): void {", $content);
+        $this->assertStringNotContainsString('Schema::create', $content);
+        $this->assertStringNotContainsString('dropIfExists', $content);
+    }
+
+    public function test_a_migration_for_a_new_table_creates_it(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createMigration('blog-posts', 'create_posts_table');
+
+        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.array_key_first($result->files));
+        $this->assertStringContainsString("Schema::create('blog_posts_posts'", $content);
+        $this->assertStringContainsString("Schema::dropIfExists('blog_posts_posts')", $content);
+    }
+
+    public function test_controllers_render_inertia_pages_of_the_module(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createController('blog-posts', 'Post');
+        $this->service->createController('blog-posts', 'Archive', 'invokable');
+        $this->service->createController('blog-posts', 'Entry', 'resource');
+
+        $controllers = $this->tempModulesPath.'/blog-posts/src/Http/Controllers';
+        $default = (string) file_get_contents($controllers.'/PostController.php');
+        $invokable = (string) file_get_contents($controllers.'/ArchiveController.php');
+        $resource = (string) file_get_contents($controllers.'/EntryController.php');
+
+        $this->assertStringContainsString("Inertia::render('BlogPosts/Post')", $default);
+        $this->assertStringContainsString("Inertia::render('BlogPosts/Archive')", $invokable);
+        foreach (['EntryIndex', 'EntryCreate', 'EntryShow', 'EntryEdit'] as $page) {
+            $this->assertStringContainsString("Inertia::render('BlogPosts/{$page}'", $resource);
+        }
+        foreach ([$default, $invokable, $resource] as $content) {
+            $this->assertStringNotContainsString('response()->view(', $content);
+        }
+        // The single request module:make-request generates for the same name
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Requests\EntryRequest;', $resource);
+        $this->assertStringNotContainsString('StoreEntryRequest', $resource);
+    }
+
+    public function test_the_widget_explains_how_it_reaches_the_dashboard(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createWidget('blog-posts', 'Stats');
+
+        $widget = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Widgets/StatsWidget.php');
+
+        $this->assertStringContainsString('public function registerFilamentWidgets(): array', $widget);
+        $this->assertStringNotContainsString('auto-discovered', $widget);
+        $this->assertStringNotContainsString('Livewire::component', $widget);
+    }
+
+    private function generateEveryTranslatedClass(string $module): void
+    {
+        $this->service->createModule($module);
+        $this->service->createFilamentResource($module, 'Post');
+        $this->service->createRelationManager($module, 'Comments', 'Event');
+        $this->service->createWidget($module, 'Stats');
+        $this->service->createEnum($module, 'PostStatus');
+        $this->service->createNotification($module, 'PostPublished');
+        $this->service->createController($module, 'Post');
+        $this->service->createController($module, 'Entry', 'resource');
+        $this->service->createController($module, 'Archive', 'invokable');
+        $this->service->createRequest($module, 'Entry');
+    }
+
+    /**
+     * @return array<string, string> Contents of every PHP file under the directory, by path
+     */
+    private function phpFiles(string $directory): array
+    {
+        $files = [];
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS));
+
+        foreach ($iterator as $file) {
+            if ($file instanceof \SplFileInfo && $file->getExtension() === 'php') {
+                $files[$file->getPathname()] = (string) file_get_contents($file->getPathname());
+            }
+        }
+
+        return $files;
     }
 
     private function deleteDirectory(string $dir): void

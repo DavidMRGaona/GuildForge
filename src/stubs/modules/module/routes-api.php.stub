@@ -9,13 +9,14 @@ use Illuminate\Support\Facades\Route;
 | {{ moduleNameStudly }} API Routes
 |--------------------------------------------------------------------------
 |
-| API routes for the {{ moduleNameStudly }} module.
+| API routes for the {{ moduleNameStudly }} module. The module loader already
+| applies the "api" middleware and the "/api" prefix: these routes answer
+| under /api/{{ moduleName }}/...
 |
 */
 
-Route::prefix('api/{{ moduleName }}')
+Route::prefix('{{ moduleName }}')
     ->name('{{ moduleNameSnake }}.api.')
-    ->middleware('api')
     ->group(function (): void {
-        // Define your API routes here
+        // Route::apiResource('items', ItemController::class);
     });

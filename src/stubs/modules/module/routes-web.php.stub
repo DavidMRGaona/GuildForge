@@ -9,12 +9,13 @@ use Illuminate\Support\Facades\Route;
 | {{ moduleNameStudly }} Web Routes
 |--------------------------------------------------------------------------
 |
-| Web routes for the {{ moduleNameStudly }} module.
+| Web routes for the {{ moduleNameStudly }} module. The module loader already
+| applies the "web" middleware. Public URLs are in Spanish (e.g. "mesas").
 |
 */
 
 Route::prefix('{{ moduleName }}')
     ->name('{{ moduleNameSnake }}.')
     ->group(function (): void {
-        // Define your web routes here
+        // Route::get('items', [ItemController::class, 'index'])->name('items.index');
     });

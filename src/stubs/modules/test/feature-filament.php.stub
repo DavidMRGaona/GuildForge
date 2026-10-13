@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Tests\Feature\Filament;
 
-use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
-use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\{{ nameStudly }}Model;
 use App\Domain\User\Entities\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
+use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\{{ nameStudly }}Model;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 

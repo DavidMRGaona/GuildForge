@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Module;
 
-use App\Application\Modules\DTOs\ScaffoldResultDTO;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
+use App\Console\Commands\Module\Concerns\OutputsScaffoldResult;
 use Illuminate\Console\Command;
 
 final class ModuleMakeCommand extends Command
 {
+    use OutputsScaffoldResult;
+
     /**
      * The name and signature of the console command.
      *
@@ -56,51 +58,5 @@ final class ModuleMakeCommand extends Command
         $result = $this->scaffoldingService->createModule($name, $description, $author, $displayName, $repository);
 
         return $this->outputResult($result);
-    }
-
-    private function outputResult(ScaffoldResultDTO $result): int
-    {
-        if ($result->isFailure()) {
-            $this->error($result->message);
-            foreach ($result->errors as $error) {
-                $this->line("  - {$error}");
-            }
-
-            return self::FAILURE;
-        }
-
-        foreach ($result->files as $file => $status) {
-            $statusLabel = match ($status) {
-                ScaffoldResultDTO::STATUS_CREATED => '<fg=green>[CREATED]</>',
-                ScaffoldResultDTO::STATUS_SKIPPED => '<fg=yellow>[SKIPPED]</>',
-                ScaffoldResultDTO::STATUS_OVERWRITTEN => '<fg=blue>[OVERWRITTEN]</>',
-                ScaffoldResultDTO::STATUS_FAILED => '<fg=red>[FAILED]</>',
-                default => "<fg=gray>[{$status}]</>",
-            };
-
-            $this->line("  {$statusLabel} {$file}");
-        }
-
-        foreach ($result->warnings as $warning) {
-            $this->warn("  Warning: {$warning}");
-        }
-
-        $this->newLine();
-        $this->info($result->message);
-        $this->newLine();
-        /** @var string $name */
-        $name = $this->argument('name');
-
-        $this->line('Next steps:');
-        $this->line('  1. Check "displayName" in module.json and "title" in lang/es/messages.php (shown in the admin panel)');
-        $this->line('  2. Run <fg=cyan>php artisan module:discover</> to register the module');
-        $this->line("  3. Run <fg=cyan>php artisan module:enable {$name}</> to enable it");
-        if ($this->option('repository') === null) {
-            $this->line("  4. Set \"repository\" (owner/repo) in module.json, or run <fg=cyan>php artisan module:set-source {$name} owner/repo</> once installed, so updates are found");
-        }
-        $this->line("  Once it has Vue pages or components: <fg=cyan>php artisan module:build {$name}</> (or npm install && npm run build in the module)");
-        $this->line('  Tests: <fg=cyan>vendor/bin/phpunit -c modules/'.$name.'/phpunit.xml</>');
-
-        return self::SUCCESS;
     }
 }

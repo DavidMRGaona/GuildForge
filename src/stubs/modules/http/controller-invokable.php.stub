@@ -5,12 +5,20 @@ declare(strict_types=1);
 namespace {{ moduleNamespace }}\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Response;
+use Inertia\Inertia;
+use Inertia\Response;
 
+/**
+ * Renders resources/js/pages/{{ moduleNameStudly }}/{{ nameStudly }}.vue (module:make-vue-page {{ moduleName }} {{ nameStudly }}).
+ *
+ * Route, in routes/web.php:
+ *
+ *     Route::get('{{ nameKebab }}', {{ nameStudly }}Controller::class)->name('{{ nameSnake }}');
+ */
 final class {{ nameStudly }}Controller extends Controller
 {
     public function __invoke(): Response
     {
-        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}');
+        return Inertia::render('{{ moduleNameStudly }}/{{ nameStudly }}');
     }
 }
