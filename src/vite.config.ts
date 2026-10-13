@@ -33,8 +33,8 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            '@': resolve(__dirname, 'resources/js'),
-            '@modules': resolve(__dirname, 'modules'),
+            '@': resolve(import.meta.dirname, 'resources/js'),
+            '@modules': resolve(import.meta.dirname, 'modules'),
         },
     },
     server: {
@@ -49,12 +49,15 @@ export default defineConfig({
         },
     },
     build: {
-        rollupOptions: {
+        rolldownOptions: {
             output: {
-                manualChunks: {
-                    'vendor-vue': ['vue', 'vue-i18n', 'pinia'],
-                    'vendor-inertia': ['@inertiajs/vue3'],
-                    'vendor-head': ['@unhead/vue'],
+                // Shared vendor chunks: the import map entries and app.ts must load one Vue
+                codeSplitting: {
+                    groups: [
+                        { name: 'vendor-vue', test: /[\\/]node_modules[\\/](vue|@vue|vue-i18n|@intlify|pinia)[\\/]/, priority: 30 },
+                        { name: 'vendor-inertia', test: /[\\/]node_modules[\\/]@inertiajs[\\/]/, priority: 20 },
+                        { name: 'vendor-head', test: /[\\/]node_modules[\\/](@unhead|unhead)[\\/]/, priority: 10 },
+                    ],
                 },
             },
             // Preserve exports from vendor-export entry points for import maps
