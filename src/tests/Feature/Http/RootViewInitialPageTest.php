@@ -27,6 +27,14 @@ final class RootViewInitialPageTest extends TestCase
         $this->assertArrayHasKey('cloudinary', $page['props']);
     }
 
+    public function test_the_initial_page_is_a_json_script_element_not_a_data_attribute(): void
+    {
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('<script data-page="app" type="application/json">', $html);
+        $this->assertDoesNotMatchRegularExpression('#<div id="app" data-page=#', $html);
+    }
+
     /**
      * Mirrors extractInitialPageData() in resources/js/app.ts: the JSON script
      * element first, the data-page attribute as the fallback.

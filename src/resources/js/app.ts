@@ -49,30 +49,40 @@ interface InitialPageData {
     cloudinary: CloudinaryConfig | undefined;
 }
 
+const EMPTY_INITIAL_DATA: InitialPageData = { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
+
 /**
- * Extract initial page data from the #app element (embedded by Inertia).
- * This allows us to access shared props before the Vue app is mounted.
+ * Read the raw initial page JSON the server embeds: the script element
+ * (Inertia 3, and Inertia 2 with use_script_element_for_initial_page) or,
+ * failing that, the data-page attribute of the Inertia 2 root element.
+ */
+function readInitialPageJson(): string | null {
+    const script = document.querySelector<HTMLScriptElement>('script[data-page="app"][type="application/json"]');
+    if (script?.textContent) {
+        return script.textContent;
+    }
+
+    return document.getElementById('app')?.getAttribute('data-page') ?? null;
+}
+
+/**
+ * Extract the shared props the app needs before Vue mounts.
  */
 function extractInitialPageData(): InitialPageData {
-    const appElement = document.getElementById('app');
-    if (!appElement) {
-        return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
+    const json = readInitialPageJson();
+    if (json === null) {
+        return EMPTY_INITIAL_DATA;
     }
 
     try {
-        const dataPage = appElement.getAttribute('data-page');
-        if (!dataPage) {
-            return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
-        }
-
-        const pageData = JSON.parse(dataPage);
+        const pageData = JSON.parse(json);
         return {
             modulePages: pageData.props?.modulePages ?? {},
             moduleTranslations: pageData.props?.moduleTranslations ?? undefined,
             cloudinary: pageData.props?.cloudinary ?? undefined,
         };
     } catch {
-        return { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
+        return EMPTY_INITIAL_DATA;
     }
 }
 
