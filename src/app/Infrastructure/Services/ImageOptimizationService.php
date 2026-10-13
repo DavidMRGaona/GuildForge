@@ -113,7 +113,7 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
      */
     private function processImage(string $contents, string $mimeType, ImageOptimizationSettingsDTO $settings): string
     {
-        $image = $this->imageManager->read($contents);
+        $image = $this->imageManager->decodeBinary($contents);
 
         // Get original dimensions
         $originalWidth = $image->width();
