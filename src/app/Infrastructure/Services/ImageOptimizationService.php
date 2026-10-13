@@ -15,6 +15,7 @@ use Intervention\Image\Encoders\JpegEncoder;
 use Intervention\Image\Encoders\PngEncoder;
 use Intervention\Image\Encoders\WebpEncoder;
 use Intervention\Image\ImageManager;
+use Intervention\Image\Interfaces\DriverInterface;
 use Intervention\Image\Interfaces\EncoderInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -44,8 +45,9 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
 
     public function __construct(
         private readonly LoggerInterface $logger,
+        ?DriverInterface $driver = null,
     ) {
-        $this->imageManager = $this->createImageManager();
+        $this->imageManager = new ImageManager($driver ?? $this->defaultDriver());
     }
 
     public function optimize(string $contents, ?string $mimeType = null, ?ImageOptimizationSettingsDTO $settings = null): string
@@ -189,16 +191,10 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
     }
 
     /**
-     * Create the ImageManager with the best available driver.
+     * Prefer Imagick for better quality and performance, fall back to GD.
      */
-    private function createImageManager(): ImageManager
+    private function defaultDriver(): DriverInterface
     {
-        // Prefer Imagick for better quality and performance
-        if (extension_loaded('imagick')) {
-            return new ImageManager(new ImagickDriver);
-        }
-
-        // Fall back to GD
-        return new ImageManager(new GdDriver);
+        return extension_loaded('imagick') ? new ImagickDriver : new GdDriver;
     }
 }
