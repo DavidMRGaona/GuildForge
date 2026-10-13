@@ -18,7 +18,8 @@ abstract class TestCase extends BaseTestCase
 
         $this->withoutVite();
 
-        // Override Inertia's assertInertia macro to preserve float types in JSON round-trip
+        // Override Inertia's assertInertia macro to preserve float types in JSON round-trip.
+        // Inertia 3 omits encryptHistory and clearHistory when they are false.
         TestResponse::macro('assertInertia', function (?\Closure $callback = null) {
             try {
                 /** @var TestResponse $this */
@@ -36,8 +37,6 @@ abstract class TestCase extends BaseTestCase
                 Assert::assertArrayHasKey('props', $page);
                 Assert::assertArrayHasKey('url', $page);
                 Assert::assertArrayHasKey('version', $page);
-                Assert::assertArrayHasKey('encryptHistory', $page);
-                Assert::assertArrayHasKey('clearHistory', $page);
             } catch (AssertionFailedError $e) {
                 Assert::fail('Not a valid Inertia response.');
             }
@@ -57,10 +56,10 @@ abstract class TestCase extends BaseTestCase
             $versionProp->setValue($instance, $page['version']);
 
             $encryptHistoryProp = $reflection->getProperty('encryptHistory');
-            $encryptHistoryProp->setValue($instance, $page['encryptHistory']);
+            $encryptHistoryProp->setValue($instance, $page['encryptHistory'] ?? false);
 
             $clearHistoryProp = $reflection->getProperty('clearHistory');
-            $clearHistoryProp->setValue($instance, $page['clearHistory']);
+            $clearHistoryProp->setValue($instance, $page['clearHistory'] ?? false);
 
             if (isset($page['deferredProps'])) {
                 $deferredPropsProp = $reflection->getProperty('deferredProps');

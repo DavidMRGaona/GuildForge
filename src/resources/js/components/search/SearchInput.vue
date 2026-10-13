@@ -2,7 +2,7 @@
 import { ref, watch, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { Search } from 'lucide-vue-next';
+import { Search } from '@lucide/vue';
 
 interface Props {
     initialQuery?: string;
