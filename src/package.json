@@ -27,10 +27,11 @@
         "@inertiajs/vue3": "^3.9.1",
         "@unhead/vue": "^2.1.2",
         "@vue-leaflet/vue-leaflet": "^0.10.1",
+        "@vue/devtools-api": "^8.2.1",
         "leaflet": "^1.9.4",
         "lucide-vue-next": "^0.563.0",
         "luxon": "^3.7.2",
-        "pinia": "^3.0.4",
+        "pinia": "^4.0.3",
         "vue": "^3.5.26",
         "vue-i18n": "^11.2.8"
     },
