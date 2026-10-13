@@ -1,10 +1,10 @@
 # Project overview
 
-> Generated: 2026-03-21 | Project: GuildForge v1.0.0
+> Core 3.5.1
 
 ## 1. Executive summary
 
-**GuildForge** is a web platform for managing board game, wargame, and role-playing game guilds. It combines a public frontend for visitors (events, articles, photo galleries, calendar) with a full admin panel for content management by guild members.
+**GuildForge** is a web platform for managing wargame and role-playing game guilds. It combines a public frontend for visitors (events, articles, photo galleries, calendar) with a full admin panel for content management by guild members.
 
 The project follows a Clean Architecture with an extensible module system that allows adding features without modifying the core.
 
@@ -18,12 +18,12 @@ The project follows a Clean Architecture with an extensible module system that a
 |-------|-----------|---------|---------|
 | **Backend** | PHP / Laravel | ^8.5 / ^13.35 | MVC framework with IoC |
 | **Admin panel** | Filament | ^5.10 | CRUD and admin management |
-| **Frontend bridge** | Inertia.js | ^2.0 | SSR without a separate REST API |
-| **Frontend** | Vue 3 / TypeScript | ^3.5 / ^5.9 | Reactive UI (Composition API, strict) |
-| **Build and styling** | Vite / Tailwind CSS | ^7.0 / ^4.0 | Bundler, HMR, utility-first CSS |
-| **State and i18n** | Pinia / vue-i18n | ^3.0 / ^11.2 | State management, internationalization |
-| **Database** | PostgreSQL / SQLite | 16 / in-memory | Production / testing |
-| **Cache and queues** | Redis | Alpine | Cache, sessions, job queues |
+| **Frontend bridge** | Inertia.js | ^3.5 (Laravel) / ^3.9 (Vue) | Server-driven SPA without a separate REST API (no SSR) |
+| **Frontend** | Vue 3 / TypeScript | ^3.5 / ~6.0 | Reactive UI (Composition API, strict) |
+| **Build and styling** | Vite / Tailwind CSS | ^8.3 / ^4.0 | Bundler, HMR, utility-first CSS |
+| **State and i18n** | Pinia / vue-i18n | ^4.0 / ^11.2 | State management, internationalization |
+| **Database** | PostgreSQL / SQLite | 17 / in-memory | Development, CI and production / local tests |
+| **Cache and queues** | Redis | 7.2 | Cache, sessions, job queues (optional: the defaults are `database`) |
 | **Images** | Cloudinary (`cloudinary/cloudinary_php`) | ^3.1.3 | Storage, CDN, optimization |
 | **Email** | Resend / AWS SES | ^1.1 / ^3.369 | Transactional email |
 | **Observability** | Elasticsearch / Kibana | 9.2.4 | Centralized logging and visualization |
@@ -73,16 +73,15 @@ For the full annotated directory tree, see [Source tree analysis](./source-tree-
 | Module | Description | DB tables | Web routes |
 |--------|-------------|-----------|-----------|
 | **announcements** | Guild announcements system | 1 | 2 |
-| **channel-notifications** | Channel notifications (Discord, Telegram, Slack) | 0 | 0 |
+| **channel-notifications** | Channel notifications (Telegram, Discord, Slack, WhatsApp) | 0 | 0 |
 | **cookie-consent** | Cookie consent management (GDPR) | 4 | 3 |
 | **event-registrations** | Event registrations with waitlist | 2 | 5 |
-| **game-tables** | RPG/wargame table and campaign management | 11 | 25+ |
+| **game-tables** | RPG/wargame table and campaign management | 12 | 25+ |
 | **memberships** | Membership system with dues and types | 4 | 0 |
-| **security-test** | Development module to validate core table protection against module migrations | 1 | 0 |
 | **tournaments** | Tournaments with Swiss pairing and rankings | 7 | 12 |
 | **venue-bookings** | Venue and room bookings | 3 | 8 |
 
-Each module is an independent package with its own Clean Architecture structure, migrations, routes, tests, Filament resources, and Vue frontend.
+Modules are not in the core repository: each one is its own GitHub repository (`DavidMRGaona/guildforge-<name>`; venue-bookings is `guildforge-venue-booking`), cloned into `src/modules/<name>`, which the core repository ignores. Each has its own Clean Architecture structure, migrations, routes, tests, Filament resources and, when it needs one, a Vue frontend.
 
 ---
 
@@ -93,9 +92,9 @@ Each module is an independent package with its own Clean Architecture structure,
 | **Cloudinary** | Image storage and CDN | `CLOUDINARY_URL` in .env |
 | **Resend** | Transactional email delivery | `RESEND_API_KEY` in .env |
 | **AWS SES** | Alternative for email + bounce webhooks | `AWS_*` in .env |
-| **Elasticsearch** | Centralized logging and search | `ELASTICSEARCH_HOST` in .env |
+| **Elasticsearch** | Centralized logging (optional) | `ELASTICSEARCH_*` and `LOG_CHANNELS` in .env |
 | **Redis** | Application cache and job queues | `REDIS_HOST` in .env |
-| **GitHub API** | Module update checking | Via public API |
+| **GitHub API** | Module releases and core commits not yet deployed | `GITHUB_TOKEN` in .env (optional, raises the rate limit) |
 
 ---
 
@@ -122,3 +121,5 @@ Each module is an independent package with its own Clean Architecture structure,
 - **Navigation**: Menu editor (header/footer) with hierarchy
 - **Settings**: Theme, branding, contact, legal pages, email, dashboard
 - **Modules**: Module management, updates, per-module configuration
+- **Maintenance**: Site setting that closes the public site (503) while the panel, `/up` and the queue keep working
+- **Updates**: Deployed core commit compared with its branch; module updates queued from the panel
