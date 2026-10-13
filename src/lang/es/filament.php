@@ -434,6 +434,7 @@ return [
             'label' => 'Etiqueta',
             'page' => 'Página',
             'page_help' => 'Selecciona la página de destino del enlace',
+            'page_unavailable' => 'Página no disponible: :route',
             'route' => 'Ruta',
             'route_help' => 'Nombre de ruta de Laravel (ej: home, events.index)',
             'url' => 'URL externa',
