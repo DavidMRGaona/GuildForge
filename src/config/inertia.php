@@ -33,6 +33,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Initial page
+    |--------------------------------------------------------------------------
+    |
+    | Emit the initial page as a JSON script element, as Inertia 3 does, so
+    | the client bootstrap in resources/js/app.ts reads one format only.
+    |
+    */
+
+    'use_script_element_for_initial_page' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Testing
     |--------------------------------------------------------------------------
     |

@@ -47,6 +47,7 @@ export default [
                 URL: 'readonly',
                 File: 'readonly',
                 HTMLLinkElement: 'readonly',
+                HTMLScriptElement: 'readonly',
             },
         },
         plugins: {
