@@ -25,7 +25,7 @@
         "@fullcalendar/vue3": "^6.1.20",
         "@headlessui/vue": "^1.7.23",
         "@inertiajs/vue3": "^3.9.1",
-        "@unhead/vue": "^2.1.2",
+        "@unhead/vue": "^3.4.3",
         "@vue-leaflet/vue-leaflet": "^0.10.1",
         "@vue/devtools-api": "^8.2.1",
         "leaflet": "^1.9.4",
