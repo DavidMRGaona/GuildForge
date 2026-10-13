@@ -41,7 +41,7 @@ const modulePages = import.meta.glob<DefineComponent>(
 );
 
 /**
- * Initial page data extracted from Inertia's data-page attribute.
+ * Shared props read from the initial page the server embeds in the HTML.
  */
 interface InitialPageData {
     modulePages: Record<string, string>;
@@ -49,20 +49,21 @@ interface InitialPageData {
     cloudinary: CloudinaryConfig | undefined;
 }
 
-const EMPTY_INITIAL_DATA: InitialPageData = { modulePages: {}, moduleTranslations: undefined, cloudinary: undefined };
+const EMPTY_INITIAL_DATA: InitialPageData = {
+    modulePages: {},
+    moduleTranslations: undefined,
+    cloudinary: undefined,
+};
 
 /**
- * Read the raw initial page JSON the server embeds: the script element
- * (Inertia 3, and Inertia 2 with use_script_element_for_initial_page) or,
- * failing that, the data-page attribute of the Inertia 2 root element.
+ * Read the raw initial page JSON from the script element the server embeds.
  */
 function readInitialPageJson(): string | null {
-    const script = document.querySelector<HTMLScriptElement>('script[data-page="app"][type="application/json"]');
-    if (script?.textContent) {
-        return script.textContent;
-    }
+    const script = document.querySelector<HTMLScriptElement>(
+        'script[data-page="app"][type="application/json"]'
+    );
 
-    return document.getElementById('app')?.getAttribute('data-page') ?? null;
+    return script?.textContent || null;
 }
 
 /**
@@ -112,7 +113,7 @@ const pageResolver = createPageResolver({
 
 void createInertiaApp({
     // unhead owns <title> (useServerSeo). An empty default keeps Inertia from
-    // adding a second <title inertia> to the head.
+    // adding a second <title data-inertia> to the head.
     title: (title: string): string => title,
     resolve: pageResolver,
     setup({ el, App, props, plugin }) {
