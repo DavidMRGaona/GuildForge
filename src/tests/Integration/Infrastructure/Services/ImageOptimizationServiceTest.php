@@ -220,9 +220,6 @@ final class ImageOptimizationServiceTest extends TestCase
         $this->assertInstanceOf(ImageOptimizationService::class, $service);
     }
 
-    /**
-     * Create a JPEG image with specified dimensions.
-     */
     public function test_a_valid_optimization_logs_nothing(): void
     {
         $logger = new RecordingLogger;
@@ -234,6 +231,7 @@ final class ImageOptimizationServiceTest extends TestCase
         $this->assertSame([], $logger->records, 'optimize() must not swallow an exception into a warning');
         [$width] = $this->getImageDimensions($result);
         $this->assertLessThanOrEqual(1024, $width);
+        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
     }
 
     public function test_it_optimizes_with_the_gd_driver(): void
@@ -245,6 +243,7 @@ final class ImageOptimizationServiceTest extends TestCase
 
         $this->assertSame([], $logger->records);
         $this->assertLessThanOrEqual(1024, $this->getImageDimensions($result)[0]);
+        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
     }
 
     #[RequiresPhpExtension('imagick')]
@@ -257,8 +256,12 @@ final class ImageOptimizationServiceTest extends TestCase
 
         $this->assertSame([], $logger->records);
         $this->assertLessThanOrEqual(1024, $this->getImageDimensions($result)[0]);
+        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
     }
 
+    /**
+     * Create a JPEG image with specified dimensions.
+     */
     private function createJpegImage(int $width, int $height, int $quality = 90): string
     {
         $image = imagecreatetruecolor($width, $height);
