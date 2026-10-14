@@ -1,6 +1,6 @@
 # Development guide
 
-> Generated: 2026-03-21 | Project: GuildForge v1.0.0
+> Core 3.5.1
 
 Complete guide to set up, develop, and maintain the GuildForge project in a local environment.
 
@@ -28,11 +28,13 @@ Follow these steps to get the project up and running from scratch:
 ### 1. Clone the repository
 
 ```bash
-git clone <url-del-repositorio> runesword
-cd runesword
+git clone https://github.com/DavidMRGaona/GuildForge.git guildforge
+cd guildforge
 ```
 
 ### 2. Start the containers
+
+Optional: to change the ports Docker publishes, copy the root `.env.example` to `.env` and edit `APP_PORT`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `VITE_PORT`, `MAIL_PORT` or `MAIL_SMTP_PORT` (read by `docker-compose.yml`). If you change `DB_DATABASE`, `DB_USERNAME` or `DB_PASSWORD`, set the same values in `src/.env` before the first `make up` (PostgreSQL only reads them when its volume is created). Leave `DB_PORT=5432` in `src/.env`: the root `DB_PORT` only changes the port published on the host.
 
 ```bash
 make up
@@ -44,9 +46,9 @@ This brings up all the services defined in `docker-compose.yml`:
 - **db** - PostgreSQL 17 (port 5432)
 - **node** - Node.js 24 with Vite HMR (port 5173)
 - **queue** - Laravel queue worker
-- **mailpit** - development mail server (port 8025)
-- **redis** - cache and sessions (port 6379)
-- **elasticsearch** - search engine and logging (port 9200)
+- **mailpit** - development mail server (web 8025, SMTP 1025)
+- **redis** - Redis 7.2, unused until `src/.env` points cache, sessions or queues at it (port 6379)
+- **elasticsearch** - log storage (port 9200)
 - **kibana** - log visualization (port 5601)
 
 `make up` does not rebuild existing images. After a change to `docker/php/Dockerfile` (for example a PHP upgrade), rebuild the two containers that use it: `docker compose build app queue && docker compose up -d app queue`. With an older image the application does not start: Composer's platform check stops it with "Composer detected issues in your platform".
@@ -79,6 +81,20 @@ Access the following URLs:
 | Elasticsearch | http://localhost:9200 |
 | Kibana | http://localhost:5601 |
 
+The seeders create three accounts in the `local` and `testing` environments: `admin@example.local`, `editor@example.local` and `member@example.local`, all with the password `password`. Create other administrators with `docker exec -it guildforge_app php artisan make:admin-user`.
+
+### 5. Get the modules (optional)
+
+Modules are not part of the core repository: each one is its own GitHub repository, cloned into `src/modules/<name>` (ignored by the core repository). A fresh clone has none:
+
+```bash
+git clone https://github.com/DavidMRGaona/guildforge-game-tables.git src/modules/game-tables
+docker exec guildforge_app php artisan module:discover
+docker exec guildforge_app php artisan module:enable game-tables
+```
+
+Repositories are named `DavidMRGaona/guildforge-<name>`, except venue-bookings (`guildforge-venue-booking`); see the [documentation index](./index.md#module-documentation).
+
 ---
 
 ## Essential commands
@@ -93,7 +109,7 @@ All commands are executed through `make` and run inside Docker containers.
 | `make down` | Stop all containers |
 | `make build` | Rebuild containers (no cache) |
 | `make restart` | Restart all containers |
-| `make recreate` | Recreate containers (pull new images) |
+| `make recreate` | Recreate containers from the current images (no pull, no rebuild) |
 | `make logs` | View logs from all containers |
 | `make ps` | Show container status |
 
@@ -126,16 +142,16 @@ All commands are executed through `make` and run inside Docker containers.
 | `make test-unit` | Unit tests only |
 | `make test-feature` | Feature tests only |
 | `make test-coverage` | Tests with HTML coverage report |
-| `make test-filter FILTER=NombreTest` | Run a specific test |
+| `make test-filter FILTER=EventTest` | Run a specific test |
 | `make test-serial` | Run tests without parallelization |
 
 ### Code quality
 
 | Command | Description |
 |---------|-------------|
-| `make check` | Run all linters (CS Fixer + PHPStan + ESLint + types) |
-| `make check-q` | Checks with minimal output |
-| `make format` | Format all code (CS Fixer + ESLint + Prettier) |
+| `make check` | Run all linters (Pint + PHPStan + ESLint + types) |
+| `make check-q` | Same checks with one line per tool (always exits 0: read the ✗ marks) |
+| `make format` | Format all code (Pint + ESLint + Prettier) |
 | `make cs` | PHP code style with Pint (check only) |
 | `make cs-fix` | PHP code style with Pint (fix) |
 | `make phpstan` | PHP static analysis |
@@ -147,20 +163,24 @@ All commands are executed through `make` and run inside Docker containers.
 
 | Command | Description |
 |---------|-------------|
-| `make dev` | Vite server with HMR |
-| `make build-assets` | Production asset build |
+| `make dev` | Vite server with HMR (only when the node container's own Vite is not running) |
+| `make build-assets` | Production asset build (`vue-tsc` + `vite build`) |
+
+CI also runs `npm run verify:build` after the build (`src/scripts/verify-build.mjs`, checks the module import map entries); run it with `docker exec guildforge_node npm run verify:build`, since a build can pass locally while CI fails this check.
 
 ### Code generation
 
 | Command | Description |
 |---------|-------------|
-| `make make-model NAME=Evento` | Create model + migration + factory |
-| `make make-migration NAME=create_eventos_table` | Create migration |
-| `make make-controller NAME=EventoController` | Create controller |
-| `make make-resource NAME=EventoResource` | Create API resource |
-| `make make-request NAME=StoreEventoRequest` | Create form request |
-| `make make-test NAME=EventoTest` | Create test |
-| `make make-filament NAME=Evento` | Create Filament resource with auto-generation |
+| `make make-model NAME=Event` | Create model + migration + factory |
+| `make make-migration NAME=create_events_table` | Create migration |
+| `make make-controller NAME=EventController` | Create controller |
+| `make make-resource NAME=EventResource` | Create API resource |
+| `make make-request NAME=StoreEventRequest` | Create form request |
+| `make make-test NAME=EventTest` | Create test |
+| `make make-filament NAME=Event` | Create Filament resource with auto-generation |
+
+These wrap Laravel's generators, which write to their default locations: move generated models to `app/Infrastructure/Persistence/Eloquent/Models/` and make Filament resources extend `App\Filament\Resources\BaseResource`.
 
 ### Laravel
 
@@ -180,6 +200,8 @@ All commands are executed through `make` and run inside Docker containers.
 | `make es-logs` | View recent container logs |
 | `make es-health` | Check cluster health |
 | `make es-indices` | List all indices |
+
+`src/.env.example` ships with Elasticsearch logging off. To send logs to the `elasticsearch` container, set `ELASTICSEARCH_ENABLED=true`, `ELASTICSEARCH_HOST=elasticsearch` and add `elasticsearch` to `LOG_CHANNELS` (e.g. `LOG_CHANNELS=daily,elasticsearch`).
 
 ### Git hooks
 
@@ -236,11 +258,13 @@ The admin panel's theme (`resources/css/filament/admin/theme.css`) is a Vite ent
 
 Keep the Node container running, or run `docker exec guildforge_node npx vite build` once (and again after adding Tailwind classes to panel code if you work without the dev server). `make build-assets` also runs `vue-tsc`, which is not needed for this.
 
-If you need to restart the Vite server manually:
+If you need to restart the Vite server:
 
 ```bash
-make dev
+docker compose restart node
 ```
+
+`make dev` starts a second Vite in the same container; it only works when the container's own Vite is not running (`vite.config.ts` sets `strictPort`, so otherwise it exits with "Port 5173 is already in use").
 
 ### Queue worker
 
@@ -277,15 +301,15 @@ make shell-db      # Opens an interactive psql session
 
 ### Module management
 
-Modules are extensible features located in `src/modules/`. Each module is an independent Git repository (submodule).
+Modules live in `src/modules/`, which the core repository ignores: each module is its own Git repository, cloned there by hand (see [Get the modules](#5-get-the-modules-optional)).
 
 ```bash
 # Inside the PHP container (make shell):
-php artisan module:list         # List all modules
-php artisan module:discover     # Discover new modules
-php artisan module:enable       # Enable a module
-php artisan module:disable      # Disable a module
-php artisan module:build        # Compile module Vue assets
+php artisan module:list             # List all modules
+php artisan module:discover         # Discover new modules
+php artisan module:enable <name>    # Enable a module
+php artisan module:disable <name>   # Disable a module
+php artisan module:build            # Compile module Vue assets
 ```
 
 **Package a module for distribution:**
@@ -298,13 +322,13 @@ The package is generated in the `dist/` directory along with its `.sha256` verif
 
 ### Upgrading an existing checkout
 
-The development stack now uses PostgreSQL 17 and Redis 7.2. After pulling this change, an existing stack crash-loops: PostgreSQL 17 cannot open a data directory created by PostgreSQL 16, and Redis 7.2 cannot read an RDB file written by Redis 8.x. Recreate both volumes, keeping the database:
+If your volumes were created by PostgreSQL 16 or by Redis 8.x (checkouts older than the move to PostgreSQL 17 / Redis 7.2), the stack crash-loops: PostgreSQL 17 cannot open a data directory created by PostgreSQL 16, and Redis 7.2 cannot read an RDB file written by Redis 8.x. Recreate both volumes, keeping the database:
 
 ```bash
 make db-backup     # while the old containers are still running
 make down
 docker volume ls | grep guildforge      # find the real names: <project>_guildforge_db_data, <project>_guildforge_redis_data
-docker volume rm runesword_guildforge_db_data runesword_guildforge_redis_data   # use the names listed above
+docker volume rm <project>_guildforge_db_data <project>_guildforge_redis_data   # use the names listed above
 make up
 make db-restore    # restores the latest backup into the new, empty database
 make migrate       # only if the branch adds migrations newer than the backup
@@ -328,12 +352,14 @@ The project organizes tests into three suites, defined in `src/phpunit.xml`:
 
 ### Test database
 
-Tests use **in-memory SQLite** for maximum speed. The PHPUnit configuration automatically sets:
+Locally, tests use **in-memory SQLite** for maximum speed. The PHPUnit configuration sets:
 
 ```
 DB_CONNECTION=sqlite
 DB_DATABASE=:memory:
 ```
+
+These `<env>` entries are not forced, so a variable already set in the environment wins: CI sets `DB_CONNECTION=pgsql` and runs the suite on PostgreSQL 17.
 
 Other test settings: array cache, synchronous queue, array sessions, array mailer.
 
@@ -353,6 +379,12 @@ make test-filter FILTER=EventTest
 make test-coverage    # Generates HTML report in src/coverage/
 ```
 
+`make test` runs only the core suite (`src/tests`). Module tests live in each module and run with the module's own `phpunit.xml`:
+
+```bash
+docker exec guildforge_app vendor/bin/phpunit -c modules/game-tables/phpunit.xml
+```
+
 ### PHPUnit configuration
 
 The `src/phpunit.xml` file disables external services during tests:
@@ -364,7 +396,7 @@ The `src/phpunit.xml` file disables external services during tests:
 - `BCRYPT_ROUNDS=4` (faster hashing)
 - `memory_limit=512M`
 
-PHPUnit notices and deprecations fail the suite (`failOnPhpunitNotice`, `failOnPhpunitDeprecation`). Use `createStub()` for a test double without expectations and `createMock()` only when the test calls `expects()`; use attributes (`#[DataProvider]`, `#[Group]`) instead of doc-comment annotations, which PHPUnit 12 ignores. With `--compact` the summary only says "PHPUnit Notices: N": run `vendor/bin/phpunit --display-phpunit-notices <file>` to see them. Module `phpunit.xml` files do not set these options.
+PHPUnit notices and deprecations fail the suite (`failOnPhpunitNotice`, `failOnPhpunitDeprecation`). Use `createStub()` for a test double without expectations and `createMock()` only when the test calls `expects()`; use attributes (`#[DataProvider]`, `#[Group]`) instead of doc-comment annotations, which PHPUnit ignores since version 12. With `--compact` the summary only says "PHPUnit Notices: N": run `vendor/bin/phpunit --display-phpunit-notices <file>` to see them. Module `phpunit.xml` files set the same two options.
 
 ---
 
@@ -410,14 +442,14 @@ Formats `.ts` and `.vue` files:
 
 ```bash
 # Included in make format:
-make format   # Runs CS Fixer + ESLint fix + Prettier
+make format   # Runs Pint + ESLint fix + Prettier
 ```
 
 ### Check everything at once
 
 ```bash
-make check     # CS Fixer + PHPStan + ESLint + TypeScript
-make check-q   # Same checks with minimal output (for CI)
+make check     # Pint + PHPStan + ESLint + TypeScript
+make check-q   # One line per tool; always exits 0, so read the ✗ marks
 ```
 
 ### Pre-commit hook
@@ -428,7 +460,7 @@ Installs a Git hook that runs checks before each commit:
 make hooks     # Installs the hook in .git/hooks/pre-commit
 ```
 
-The hook runs: CS Fixer + PHPStan + TypeScript type checking.
+The hook runs: Pint + PHPStan + TypeScript type checking.
 
 ---
 
@@ -446,18 +478,18 @@ Modules are extensible features in `src/modules/`. For the complete development 
 | `php artisan module:disable <name>` | Disable a module |
 | `make module-zip` | Package a module as a production ZIP |
 
-> **Note**: modules are independent Git repositories (submodules). Tags and pushes go to their own remote.
+> **Note**: each module is its own Git repository (not a submodule). Tags and pushes go to its own remote.
 
 ---
 
 ## Development without Docker
 
-The `make` commands are wrappers for the scripts defined in `src/composer.json` and `src/package.json`. For development without Docker:
+The JS `make` targets call the npm scripts in `src/package.json`. Without Docker:
 
 ```bash
-composer dev    # Starts server, worker, Pail, and Vite simultaneously
+composer dev    # Starts server (http://localhost:8000), worker, Pail, and Vite simultaneously
 npm run dev     # Vite server with HMR only
 npm run build   # Type checking + production build
 ```
 
-> **Note**: requires PHP 8.5, Node 24 (22.13+ also works, see `engines` in `src/package.json`), PostgreSQL 17, and Redis installed locally. See `src/composer.json` and `src/package.json` for the full list of scripts.
+> **Note**: requires PHP 8.5, Node 24 (22.13+ also works, see `engines` in `src/package.json`), and PostgreSQL 17 (Redis only if `.env` uses it). See `src/composer.json` and `src/package.json` for the full list of scripts.

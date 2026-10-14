@@ -1,12 +1,16 @@
 # Component inventory
 
-> Generated: 2026-03-21 | Project: GuildForge
+> Updated: 2026-10-13 | Project: GuildForge core 3.5.1
+
+Icons come from `@lucide/vue` (mapped in `utils/icons.ts`).
 
 ---
 
 ## 1. Pages (Inertia)
 
 All pages are located in `src/resources/js/pages/`.
+
+Every page also receives `seo: SeoProps` (`types/seo.ts`), built on the server by `SeoMetadataFactoryInterface`; `useServerSeo()`, called once in `app.ts`, applies it. The tables below omit it.
 
 ### Authentication
 
@@ -67,8 +71,9 @@ All pages are located in `src/resources/js/pages/`.
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Home.vue` | `/` | `heroSlides: HeroSlide[]`, `upcomingEvents: Event[]`, `latestArticles: Article[]`, `featuredGallery: Gallery \| null` | `useLightbox`, `useRoutes` | Home page with hero slider, events section (grid + compact calendar), recent articles, featured gallery in asymmetric mosaic with lightbox |
+| `Home.vue` | `/` | `heroSlides: HeroSlide[]`, `events: Event[]`, `eventsArePast: boolean` (past events are shown when there are no upcoming ones), `latestArticles: Article[]`, `featuredGallery: Gallery \| null` | `useLightbox`, `useRoutes` | Home page with hero slider, events section (grid + compact calendar), recent articles, featured gallery in asymmetric mosaic with lightbox |
 | `About.vue` | `/nosotros` | `guildName: string`, `aboutHistory: string`, `contactEmail/Phone/Address: string`, `aboutHeroImage: string`, `aboutTagline: string`, `activities: Activity[]`, `joinSteps: JoinStep[]`, `social*: string`, `location: object \| null` | -- | "About us" page with hero image, association activities, history (HTML), steps to join (horizontal/vertical timeline), contact (email, phone, address, social media), contact form, Leaflet map |
+| `Maintenance.vue` | (any public URL while maintenance mode is on, status 503) | `message: string \| null` | -- | Rendered by `EnsureSiteIsNotInMaintenance`. Uses `AuthLayout` without the back link; falls back to `maintenance.defaultMessage` when the admin left no message |
 
 ---
 
@@ -92,12 +97,12 @@ Located in `src/resources/js/layouts/`.
 ### AuthLayout
 
 - **File**: `AuthLayout.vue`
-- **Props**: `title: string`, `subtitle?: string`
+- **Props**: `title: string`, `subtitle?: string`, `showBackLink?: boolean` (default: `true`)
 - **Slots**: `default` (form)
 - **Shared functionality**:
   - Same theme and font injection as `DefaultLayout`
   - Vertical centering, link to app logo/name
-  - "Back to home" link
+  - "Back to home" link (hidden with `showBackLink: false`, as on the maintenance page)
   - No header/footer (minimalist auth design)
 
 ---
@@ -246,7 +251,7 @@ Located in `src/resources/js/components/`.
 #### EventsSection
 
 - **File**: `events/EventsSection.vue`
-- **Props**: `events: Event[]`, `maxEvents?: number` (default: 2)
+- **Props**: `events: Event[]`, `maxEvents?: number` (default: 2), `arePast?: boolean` (default: `false`, switches the heading to recent events)
 - **Features**: Home page section. 2-column grid with `EventCard` (compact variant) + `CalendarWidget` in the third column. "View all" link
 
 ### Articles
@@ -302,13 +307,13 @@ Located in `src/resources/js/components/`.
 #### EventDetailPanel
 
 - **File**: `calendar/EventDetailPanel.vue`
-- **Props**: `event: CalendarEvent | null`
+- **Props**: `event: CalendarEntry | null`
 - **Features**: Side panel for event detail. Shows image, title, tags, date, location, truncated description, prices. "View event" button. Empty state when no event is selected
 
 #### EventTooltip
 
 - **File**: `calendar/EventTooltip.vue`
-- **Props**: `event: CalendarEvent | null`, `x: number`, `y: number`, `visible: boolean`
+- **Props**: `event: CalendarEntry | null`, `x: number`, `y: number`, `visible: boolean`
 - **Features**: Floating tooltip that follows the cursor. Shows event title, date and location. `Teleport` to body with opacity transition
 
 ### Hero
@@ -457,7 +462,7 @@ Located in `src/resources/js/composables/`.
 ### useEvents
 
 - **Parameters**: --
-- **Returns**: `{ formatEventDate, formatDateRange, formatPrice, isUpcoming, getExcerpt, upcomingEvents, pastEvents }`
+- **Returns**: `{ formatEventDate, formatDateRange, formatEventTime, formatTimeRange, formatSchedule, formatPrice, isUpcoming, getExcerpt, upcomingEvents, pastEvents }`
 - **Dependencies**: `vue-i18n`, `stripHtml`
 - **Purpose**: Event date formatting (smart range: same day, same month, different month), price formatting in euros, future/past status check, clean text extraction for excerpts, event filtering and sorting
 
@@ -657,7 +662,8 @@ Re-exports `models.ts` and `inertia.d.ts`. Also defines:
 | `EventFilters` | `search?`, `upcoming?`, `tags?`, `page?` |
 | `ArticleFilters` | `search?`, `authorId?`, `tags?`, `page?` |
 | `GalleryFilters` | `search?`, `tags?`, `page?` |
-| `CalendarEvent` | `id`, `title`, `slug`, `description`, `start`, `end`, `location`, `imagePublicId`, `memberPrice`, `nonMemberPrice`, `url`, `tags: Tag[]` |
+| `CalendarEntry` | `id`, `sourceType`, `sourceLabel`, `color: CalendarSourceColor`, `title`, `slug?`, `description`, `start`, `end: string \| null`, `location`, `imagePublicId`, `memberPrice?`, `nonMemberPrice?`, `url`, `tags: Tag[]`. `CalendarEvent` is a deprecated alias |
+| `CalendarSourceColor` | `'primary' \| 'accent' \| 'info' \| 'success' \| 'warning' \| 'neutral'` |
 | `ActivityIcon` | `'dice' \| 'sword' \| 'book' \| 'users' \| 'calendar' \| 'map' \| 'trophy' \| 'puzzle' \| 'sparkles' \| 'heart'` |
 | `Activity` | `icon: ActivityIcon`, `title`, `description` |
 | `JoinStep` | `title`, `description` |
@@ -711,6 +717,9 @@ Extends Inertia `PageProps` with:
 | `flash` | `{ success?, error?, warning?, info? }` |
 | `errors` | `Record<string, string>` |
 | `moduleSlots` | `ModuleSlots` |
+| `seo` | `SeoProps` (site defaults; each page's own `seo` prop overrides them) |
+
+`HandleInertiaRequests::share()` also sends `navigation` (`{ header, footer }`), `socialLinks`, `modulePages`, `moduleTranslations` and `cloudinary` (`{ cloudName, prefix }`), which are not declared in `inertia.d.ts`; `app.ts` reads the last three from the initial page before boot.
 
 Exported types:
 
@@ -719,11 +728,19 @@ Exported types:
 | `ThemeSettings` | `cssVariables`, `darkModeDefault`, `darkModeToggleVisible`, `fontHeading`, `fontBody` |
 | `FaviconSettings` | `light: string \| null`, `dark: string \| null` |
 
+### seo.ts
+
+| Type | Properties |
+|------|------------|
+| `SeoProps` | `scope: 'site' \| 'page'`, `title`, `fullTitle`, `description`, `canonicalUrl`, `type: 'website' \| 'article'`, `siteName`, `locale`, `image: SeoImage \| null`, `robots`, `extraMeta: SeoMetaTag[]`, `structuredData` |
+| `SeoImage` | `url`, `width`, `height`, `alt`, `isLarge` |
+| `SeoMetaTag` | `property`, `content` |
+
 ### env.d.ts
 
 | Type | Properties |
 |------|------------|
-| `ImportMetaEnv` | `VITE_CLOUDINARY_CLOUD_NAME`, `VITE_CLOUDINARY_PREFIX` |
+| `ImportMetaEnv` | `VITE_CLOUDINARY_CLOUD_NAME`, `VITE_CLOUDINARY_PREFIX` (fallback only; the runtime `cloudinary` prop wins) |
 
 ---
 
@@ -735,7 +752,8 @@ Located in `src/resources/js/utils/`.
 
 | Function | Purpose |
 |----------|---------|
-| `buildImageUrl(publicId, transformations)` | Generates Cloudinary URL with transformations (width, height, crop, quality, format, gravity). Auto-prefixes `VITE_CLOUDINARY_PREFIX`, removes extensions |
+| `setCloudinaryConfig(config)` | Stores `{ cloudName, prefix }` from the shared `cloudinary` prop on `globalThis`; `app.ts` calls it before mount, so module bundles read the same values |
+| `buildImageUrl(publicId, transformations)` | Generates Cloudinary URL with transformations (width, height, crop, quality, format, gravity). Uses the runtime config (falls back to `VITE_CLOUDINARY_*`), adds the folder prefix, removes extensions |
 | `buildCardImageUrl(publicId)` | Preset: 600x400, fill |
 | `buildHeroImageUrl(publicId)` | Preset: 1200x600, fill |
 | `buildAvatarUrl(publicId, size)` | Preset: size x size, fill, gravity face |
@@ -753,6 +771,35 @@ Located in `src/resources/js/utils/`.
 | `getContrastTextColor(hex)` | Determines whether text should be dark or light based on background |
 | `hexToRgb(hex)` | Converts hex to `{ r, g, b }` object |
 | `adjustColorBrightness(hex, percent)` | Lightens (positive) or darkens (negative) a hex color |
+
+### calendarEntries.ts
+
+| Function | Purpose |
+|----------|---------|
+| `toFullCalendarEvents(entries)` | Converts `CalendarEntry[]` to FullCalendar events |
+| `expandEntriesPerDay(entries)` | Splits multi-day entries into one entry per day |
+| `collapseEntriesByActivityType(entries)` | On days that mix activity types, keeps only the earliest entry of each type (fewer dots in compact views) |
+| `extractLegend(entries)` | Unique activity types (label and color) for the legend |
+
+### csrf.ts
+
+| Function | Purpose |
+|----------|---------|
+| `csrfHeaders()` | Headers for requests sent with `fetch` outside Inertia: `X-XSRF-TOKEN` from the cookie (the meta tag goes stale after the session is regenerated) |
+| `isCsrfFailure(response)` | Whether a response is a 419 CSRF failure |
+
+### datetime.ts
+
+| Export | Purpose |
+|--------|---------|
+| `VENUE_TIMEZONE` | `'Europe/Madrid'`: dates are always shown in the venue's time zone |
+| `venueDayKey(date)`, `addVenueDays(dayKey, days)` | `YYYY-MM-DD` day keys at the venue, and day arithmetic on them |
+
+### moduleStyles.ts
+
+| Function | Purpose |
+|----------|---------|
+| `attachModuleStylesheet(url)` | Imports a module's compiled stylesheet once, inside the `module-utilities` cascade layer |
 
 ### html.ts
 
@@ -793,6 +840,11 @@ Located in `src/resources/js/utils/`.
 
 Modules extend the GuildForge frontend through several mechanisms:
 
+### Runtime loading
+
+- **Initial page**: Inertia 3 embeds the page object in `<script data-page="app" type="application/json">`. `app.ts` reads it before mounting to set `modulePages`, `moduleTranslations` and the Cloudinary config.
+- **Import map**: module bundles are built in CI with `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` external. `<x-module-import-map>` maps those bare imports to the app's five `vendor-exports/*` entries, so modules share the app's single Vue instance.
+
 ### ModuleSlot component
 
 The `ModuleSlot` component (`components/layout/ModuleSlot.vue`) acts as an insertion point. It accepts a `name` prop of type `SlotPosition` and renders all module components registered for that position.
@@ -831,7 +883,7 @@ Modules can register tabs on the profile page through the `profile-sections` slo
 | Module | Components | Pages | Types |
 |--------|------------|-------|-------|
 | `game-tables` | `StatusBadge`, `FormatBadge`, `RegistrationStatus`, `ContentWarningBadge`, `SafetyToolBadge`, `GameTableCard`, `GameTableCardSkeleton`, `GameTableFilters`, `FormTabs`, `GuestRegistrationModal`, `RegistrationButton`, `EventTablesLink`, `EventCreateTableButton`, `GameMasterSection`, `ProfileGameTablesSection`, `ProfileGameTablesFilters`, `ProfileParticipationCard`, `ProfileCreatedTableCard`, `ProfileCreatedTablesSection`, `ProfileCreatedCampaignCard`, `ProfileCreatedCampaignsSection` | `GameTables/Index`, `GameTables/Show`, `GameTables/Calendar`, `GameTables/Create`, `GameTables/Edit`, `GameTables/CreateNotEligible`, `GameTables/CancelRegistration`, `GameTables/MyTables`, `Campaigns/Index`, `Campaigns/Show`, `Campaigns/Create`, `Campaigns/Edit`, `Campaigns/CreateNotEligible`, `Campaigns/MyCampaigns` | `gametables.ts`, `registration.ts` |
-| `tournaments` | `TournamentCard`, `TournamentList`, `TournamentStatusFilter`, `MyTournamentCard`, `EventTournamentSection`, `ProfileTournamentCard`, `ProfileTournamentsSection` | `Index`, `Tournaments/Show`, `Tournaments/Standings`, `Tournaments/Rounds`, `Tournaments/CheckIn`, `Tournaments/CancelRegistration`, `Tournaments/MyTournaments` | `tournaments.ts` |
+| `tournaments` | `TournamentCard`, `TournamentList`, `TournamentStatusFilter`, `MyTournamentCard`, `EventTournamentSection`, `ProfileTournamentCard`, `ProfileTournamentsSection` | `Tournaments/Index`, `Tournaments/Show`, `Tournaments/Standings`, `Tournaments/Rounds`, `Tournaments/CheckIn`, `Tournaments/CancelRegistration`, `Tournaments/MyTournaments` | `tournaments.ts` |
 | `event-registrations` | `RegistrationStatus`, `RegistrationForm`, `RegistrationButton`, `UserRegistrations` | -- | `registration.ts` |
 | `cookie-consent` | `CookieBanner`, `CookieSettingsModal` | -- | `cookie-consent.ts` |
 | `announcements` | `AnnouncementBanner`, `AnnouncementCard` | -- | `announcement.ts` |
@@ -864,7 +916,9 @@ auth.*          -- Authentication (login, registration, profile, verification, p
 layout.*        -- Layout (branding, copyright, theme selector, menu)
 search.*        -- Search (title, placeholder, results, no results, min. characters)
 tags.*          -- Tags (filter, all)
-legal.*         -- Legal pages (last updated)
+errors.*        -- Error pages (not found, server error, forbidden)
+maintenance.*   -- Maintenance page (title, default message)
+eventRegistrations.* -- Event registration actions and states
 a11y.*          -- Accessibility (skip to content, view event, view article, photo counter)
 buttons.*       -- Buttons (close)
 ```
