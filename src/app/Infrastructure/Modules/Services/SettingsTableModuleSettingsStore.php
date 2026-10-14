@@ -63,12 +63,14 @@ final readonly class SettingsTableModuleSettingsStore implements ModuleSettingsS
 
         $decoded = is_string($value) ? json_decode($value, true) : null;
 
-        if (! is_array($decoded)) {
+        // Settings are a JSON object: a list or a scalar is not something to merge
+        if (! is_array($decoded) || ($decoded !== [] && ! self::isMap($decoded))) {
             Log::warning("Stored settings of module {$moduleName} are not a JSON object; using the defaults");
 
             return [];
         }
 
+        /** @var array<string, mixed> $decoded */
         return $decoded;
     }
 
@@ -106,10 +108,23 @@ final readonly class SettingsTableModuleSettingsStore implements ModuleSettingsS
     }
 
     /**
-     * @phpstan-assert-if-true array<array-key, mixed> $value
+     * A non-empty array whose keys are all strings; integer keys come from lists and from
+     * fields saved by index, which replace the default whole.
+     *
+     * @phpstan-assert-if-true array<string, mixed> $value
      */
     private static function isMap(mixed $value): bool
     {
-        return is_array($value) && $value !== [] && ! array_is_list($value);
+        if (! is_array($value) || $value === []) {
+            return false;
+        }
+
+        foreach (array_keys($value) as $key) {
+            if (! is_string($key)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

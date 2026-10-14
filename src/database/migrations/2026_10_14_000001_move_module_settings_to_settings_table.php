@@ -43,14 +43,17 @@ return new class extends Migration
 
             try {
                 $values = (static fn (string $settingsFile): mixed => require $settingsFile)($file);
+
+                if (! is_array($values)) {
+                    Log::warning("Settings of module {$module->name} are not an array; not copied");
+
+                    continue;
+                }
+
+                // Inside the try: one file that cannot be encoded must not stop the deploy
+                $json = json_encode($values, JSON_THROW_ON_ERROR);
             } catch (Throwable $e) {
-                Log::warning("Settings of module {$module->name} could not be read: {$e->getMessage()}");
-
-                continue;
-            }
-
-            if (! is_array($values)) {
-                Log::warning("Settings of module {$module->name} are not an array; not copied");
+                Log::warning("Settings of module {$module->name} could not be copied: {$e->getMessage()}");
 
                 continue;
             }
@@ -58,7 +61,7 @@ return new class extends Migration
             DB::table('settings')->insertOrIgnore([
                 'id' => (string) Str::uuid(),
                 'key' => $key,
-                'value' => json_encode($values, JSON_THROW_ON_ERROR),
+                'value' => $json,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
