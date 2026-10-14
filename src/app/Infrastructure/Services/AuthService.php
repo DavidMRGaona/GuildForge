@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Services;
 
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\DTOs\CreateUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\DTOs\Response\UserResponseDTO;
@@ -39,6 +40,7 @@ final readonly class AuthService implements AuthServiceInterface
         private ImageOptimizationServiceInterface $imageOptimizer,
         private UserRepositoryInterface $userRepository,
         private UserModelQueryServiceInterface $userModelQuery,
+        private MemberRoleServiceInterface $memberRole,
     ) {}
 
     public function register(CreateUserDTO $dto): UserResponseDTO
@@ -49,6 +51,9 @@ final readonly class AuthService implements AuthServiceInterface
         if ($userModel === null) {
             throw new \RuntimeException('Failed to retrieve user after creation');
         }
+
+        // Before the events: their listeners must see the account with its base role
+        $this->memberRole->assignTo($userModel);
 
         event(new Registered($userModel));
         Event::dispatch(new UserRegistered($user->id()->value, $user->email()));
@@ -125,6 +130,19 @@ final readonly class AuthService implements AuthServiceInterface
     {
         $userModel = $this->getUserModelOrFail($userId);
         $userModel->sendEmailVerificationNotification();
+    }
+
+    public function sendPendingEmailVerificationNotification(string $userId): bool
+    {
+        $userModel = $this->getUserModelOrFail($userId);
+
+        if ($userModel->pending_email === null) {
+            return false;
+        }
+
+        $userModel->notify(new VerifyPendingEmailNotification($userModel->pending_email));
+
+        return true;
     }
 
     public function verifyEmail(string $userId, string $hash): bool
@@ -206,10 +224,13 @@ final readonly class AuthService implements AuthServiceInterface
             return false;
         }
 
-        $userModel->update([
+        // The signed link reached the new address, so it is verified as well. Not mass
+        // assignable on purpose: forceFill, like markEmailAsVerified()
+        $userModel->forceFill([
             'email' => $userModel->pending_email,
             'pending_email' => null,
-        ]);
+            'email_verified_at' => $userModel->email_verified_at ?? now(),
+        ])->save();
 
         return true;
     }

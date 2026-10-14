@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Services;
 
 use App\Application\DTOs\Response\LocationSettingsDTO;
+use DateTimeImmutable;
 
 interface SettingsServiceInterface
 {
@@ -52,6 +53,12 @@ interface SettingsServiceInterface
      * Check if email verification is required.
      */
     public function isEmailVerificationRequired(): bool;
+
+    /**
+     * When the required email verification started to be enforced (recorded once by a
+     * migration): accounts created earlier are exempt. Null when missing or malformed.
+     */
+    public function getEmailVerificationEnforcedSince(): ?DateTimeImmutable;
 
     /**
      * Check if the public site is in maintenance mode.

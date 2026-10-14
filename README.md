@@ -96,7 +96,7 @@ src/app/
 ├── Application/      # DTOs (create/response), factories, query service interfaces
 ├── Infrastructure/   # Eloquent models, repositories, query services, external services
 ├── Modules/          # Module loader and ModuleServiceProvider base
-├── Console/          # Artisan commands (module:*, core:*, content:convert-trix)
+├── Console/          # Artisan commands (module:*, core:*, content:convert-trix, users:assign-member-role)
 ├── Http/             # Controllers, resources, requests, middleware
 ├── Filament/         # Admin resources, pages, widgets
 ├── Mail/             # Mailables

@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Domain\Enums\UserRole;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
+use App\Notifications\Contracts\NamesMailRecipient;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 
 /**
@@ -98,6 +100,20 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->roles()->whereIn('name', ['admin', 'editor'])->exists();
+    }
+
+    /**
+     * Mail goes to the account's address unless the notification implements NamesMailRecipient:
+     * VerifyPendingEmailNotification must reach the new address, or anyone could confirm an
+     * address they do not own from their current inbox.
+     */
+    public function routeNotificationForMail(?Notification $notification = null): string
+    {
+        if ($notification instanceof NamesMailRecipient) {
+            return $notification->mailRecipient();
+        }
+
+        return $this->email;
     }
 
     /**

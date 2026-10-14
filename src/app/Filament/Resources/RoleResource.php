@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
@@ -53,7 +54,10 @@ class RoleResource extends BaseResource
                             ->required()
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
-                            ->disabled(fn (?RoleModel $record): bool => $record !== null && $record->is_protected)
+                            ->disabled(fn (?RoleModel $record): bool => $record !== null && ($record->is_protected || self::isAssociationMemberRole($record)))
+                            ->hint(fn (?RoleModel $record): ?string => self::isAssociationMemberRole($record) ? (string) __('filament.roles.fields.associationMemberRoleHint') : null)
+                            ->hintIcon(fn (?RoleModel $record): ?string => self::isAssociationMemberRole($record) ? 'heroicon-o-lock-closed' : null)
+                            ->hintColor('warning')
                             ->helperText(__('filament.roles.fields.nameHelp')),
                         TextInput::make('display_name')
                             ->label(__('filament.roles.fields.displayName'))
@@ -131,9 +135,19 @@ class RoleResource extends BaseResource
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make()
-                    ->hidden(fn (RoleModel $record): bool => $record->is_protected)
+                    ->hidden(fn (RoleModel $record): bool => $record->is_protected || self::isAssociationMemberRole($record))
                     ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
             ]);
+    }
+
+    /**
+     * Whether the role is the association member role set in the site settings: modules
+     * find association members by its name, so it can be neither renamed nor deleted.
+     */
+    public static function isAssociationMemberRole(?RoleModel $record): bool
+    {
+        return $record !== null
+            && app(AssociationMemberRoleRule::class)->isAssociationMemberRoleName($record->name);
     }
 
     public static function getPages(): array

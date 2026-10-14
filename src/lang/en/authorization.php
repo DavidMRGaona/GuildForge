@@ -112,4 +112,10 @@ return [
         'permissions_assigned' => 'Permissions assigned to default roles.',
         'no_changes' => 'No changes made.',
     ],
+
+    'member_role' => [
+        'assigned' => '{1} :count user updated|[0,*] :count users updated',
+        'would_assign' => '{1} :count user would be updated|[0,*] :count users would be updated',
+        'missing' => 'The "member" role does not exist: create it (or run the seeders) before running this command.',
+    ],
 ];

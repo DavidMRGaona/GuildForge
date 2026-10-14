@@ -548,6 +548,27 @@ The migration runs once: after a rollback to core 2.8 that keeps the database, i
 
 Modules convert their own rich text fields in a migration of their first release for core 3, with the same converter (see [Panel code for core 3](modules/README.md#panel-code-for-core-3-filament-5)).
 
+### Member role and email verification (core 3.8)
+
+Core 3.8 gives every account the base role `member`, adds the association member role setting and enforces the required email verification on the server (see [Base role and association member role](architecture.md#base-role-and-association-member-role) and [Required email verification](architecture.md#required-email-verification)). The entrypoint's `migrate --force` runs three data migrations, each of them once:
+
+- `2026_10_14_100001_create_association_member_role` creates the role `socio` when no role has that name;
+- `2026_10_14_100002_create_member_role` creates `member` when it is missing;
+- `2026_10_14_100003_record_email_verification_cutoff` records the deployment time as `email_verification_enforced_since`.
+
+None of them changes an existing role or user. After deploying 3.8.0, on each site:
+
+1. Give `member` to the accounts created before (new accounts get it on creation). The command never removes a role, skips accounts that already have it, includes soft-deleted accounts and leaves out anonymized ones, so it can be run again safely:
+
+   ```bash
+   php artisan users:assign-member-role --dry-run   # counts only, e.g. "12 usuarios se actualizarían"
+   php artisan users:assign-member-role             # e.g. "12 usuarios actualizados"
+   ```
+
+   `--chunk=<n>` sets how many users are handled per batch (500 by default). The command fails if the `member` role does not exist.
+2. Open *Configuración del sitio → Autenticación* and check *Rol de socio*. It defaults to `socio`; a site that used another role for its association members selects it there. While the saved role is missing, or is `admin`, `editor` or `member`, nobody is an association member and the field shows a warning.
+3. If *Requerir verificación de email* is on, only accounts created from the deployment onwards must verify before using pages that require login; existing accounts keep working. Do not delete the `email_verification_enforced_since` setting: without it, every unverified account would have to verify.
+
 ### Production PHP configuration
 
 The `docker/prod/php.ini` file sets:

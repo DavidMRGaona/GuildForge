@@ -7,6 +7,7 @@ return [
     'verification_failed' => 'The verification link is invalid.',
     'email_verified' => 'Your email has been verified.',
     'verification_link_sent' => 'A new verification link has been sent.',
+    'email_verification_required' => 'Verify your email address to continue.',
     'profile_updated' => 'Profile updated successfully.',
     'password_incorrect' => 'The current password is incorrect.',
     'password_changed' => 'Password updated successfully.',

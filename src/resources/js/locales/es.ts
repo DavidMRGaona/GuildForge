@@ -276,6 +276,12 @@ export default {
             description:
                 'Gracias por registrarte. Antes de continuar, verifica tu dirección de correo electrónico haciendo clic en el enlace que te acabamos de enviar. Si no recibiste el correo, te enviaremos otro.',
             resend: 'Reenviar correo de verificación',
+            sentTo: 'Enviamos el enlace a {email}.',
+            sentToPending:
+                'Enviamos el enlace a {email}, la nueva dirección que indicaste. Al confirmarla, tu cuenta quedará verificada.',
+            wrongEmail: '¿El correo no es correcto?',
+            changeEmail: 'Cámbialo en tu perfil',
+            logout: 'Cerrar sesión',
         },
         profile: {
             title: 'Mi perfil',

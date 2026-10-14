@@ -112,4 +112,10 @@ return [
         'permissions_assigned' => 'Permisos asignados a roles por defecto.',
         'no_changes' => 'No se realizaron cambios.',
     ],
+
+    'member_role' => [
+        'assigned' => '{1} :count usuario actualizado|[0,*] :count usuarios actualizados',
+        'would_assign' => '{1} :count usuario se actualizaría|[0,*] :count usuarios se actualizarían',
+        'missing' => 'No existe el rol «member»: créalo (o ejecuta los seeders) antes de lanzar este comando.',
+    ],
 ];

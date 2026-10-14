@@ -1,6 +1,6 @@
 # Project documentation index
 
-> Core 3.5.1
+> Core 3.8.0
 
 ## Reference
 

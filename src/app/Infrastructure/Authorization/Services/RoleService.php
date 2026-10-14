@@ -7,6 +7,7 @@ namespace App\Infrastructure\Authorization\Services;
 use App\Application\Authorization\DTOs\CreateRoleDTO;
 use App\Application\Authorization\DTOs\RoleResponseDTO;
 use App\Application\Authorization\DTOs\UpdateRoleDTO;
+use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Entities\Role;
@@ -23,6 +24,7 @@ final readonly class RoleService implements RoleServiceInterface
         private RoleRepositoryInterface $roleRepository,
         private PermissionRepositoryInterface $permissionRepository,
         private AuthorizationServiceInterface $authorization,
+        private AssociationMemberRoleRule $associationMemberRole,
     ) {}
 
     /**
@@ -116,6 +118,10 @@ final readonly class RoleService implements RoleServiceInterface
 
         if ($role->isProtected()) {
             throw RoleProtectedException::cannotDelete($role->name()->value);
+        }
+
+        if ($this->associationMemberRole->isAssociationMemberRoleName($role->name()->value)) {
+            throw RoleProtectedException::cannotDeleteAssociationMemberRole($role->name()->value);
         }
 
         $this->roleRepository->delete($role->id());
