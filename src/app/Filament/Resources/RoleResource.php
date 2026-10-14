@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
+use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
@@ -147,7 +147,7 @@ class RoleResource extends BaseResource
     public static function isAssociationMemberRole(?RoleModel $record): bool
     {
         return $record !== null
-            && $record->name === app(AssociationMembershipServiceInterface::class)->roleName();
+            && app(AssociationMemberRoleRule::class)->isAssociationMemberRoleName($record->name);
     }
 
     public static function getPages(): array
