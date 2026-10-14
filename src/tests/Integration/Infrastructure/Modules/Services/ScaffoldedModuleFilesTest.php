@@ -86,7 +86,10 @@ final class ScaffoldedModuleFilesTest extends TestCase
             $content = $file->getContents();
 
             if ($file->getExtension() === 'vue') {
-                // Vue templates use mustaches of their own
+                // Vue templates use mustaches of their own; the old escape attempt must be gone
+                $this->assertStringNotContainsString("{{ '{{' }}", $content, $file->getRelativePathname());
+                $this->assertDoesNotMatchRegularExpression('/\{\{ ?(name|module)[A-Za-z]* ?\}\}/', $content, $file->getRelativePathname());
+
                 continue;
             }
 

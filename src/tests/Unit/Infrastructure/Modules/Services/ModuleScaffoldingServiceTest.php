@@ -450,9 +450,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertTrue($result->isSuccess());
         $this->assertStringContainsString("Vue page 'Dashboard' created for module 'frontend'", $result->message);
-        $this->assertArrayHasKey('resources/js/pages/Dashboard.vue', $result->files);
+        $this->assertArrayHasKey('resources/js/pages/Frontend/Dashboard.vue', $result->files);
         $this->assertArrayHasKey('resources/js/types/Dashboard.ts', $result->files);
-        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['resources/js/pages/Dashboard.vue']);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['resources/js/pages/Frontend/Dashboard.vue']);
         $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['resources/js/types/Dashboard.ts']);
     }
 
@@ -945,6 +945,58 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('$this->actingAsPanelAdmin();', $filament);
         $this->assertStringContainsString('use Modules\BlogPosts\Infrastructure\Persistence\Eloquent\Models\PostModel;', $filament);
         $this->assertStringNotContainsString('App\Domain\User', $filament);
+    }
+
+    public function test_a_page_lives_under_the_module_prefix_inside_the_site_layout(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createVuePage('blog-posts', 'Archive');
+
+        $page = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/pages/BlogPosts/Archive.vue');
+
+        $this->assertStringContainsString("import DefaultLayout from '@/layouts/DefaultLayout.vue';", $page);
+        $this->assertStringContainsString('<DefaultLayout>', $page);
+        $this->assertStringContainsString("{{ \$t('blogPosts.title') }}", $page);
+        $this->assertStringNotContainsString('bg-white', $page);
+        $this->assertStringNotContainsString('text-gray-', $page);
+    }
+
+    public function test_a_component_interpolates_its_title_as_vue_expects(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createVueComponent('blog-posts', 'PostCard');
+
+        $component = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/components/PostCard.vue');
+
+        $this->assertStringContainsString("{{ title ?? \$t('blogPosts.title') }}", $component);
+        $this->assertStringNotContainsString("{{ '{{' }}", $component);
+        $this->assertStringNotContainsString('<style', $component);
+    }
+
+    public function test_page_types_match_the_response_dto_keys(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createVuePage('blog-posts', 'Post');
+
+        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/Post.ts');
+
+        $this->assertStringContainsString('created_at: string;', $types);
+        $this->assertStringContainsString('updated_at: string;', $types);
+        $this->assertStringNotContainsString('createdAt', $types);
+    }
+
+    public function test_a_new_module_has_the_frontend_locales_its_pages_use(): void
+    {
+        $result = $this->service->createModule('blog-posts', displayName: 'Entradas del blog');
+
+        foreach (['es', 'en'] as $locale) {
+            $path = "resources/js/locales/{$locale}.ts";
+            $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$path] ?? null, $path);
+            $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.$path);
+            $this->assertStringContainsString('export default {', $content);
+            $this->assertStringContainsString('blogPosts: {', $content);
+        }
+        $this->assertStringContainsString("title: 'Entradas del blog',", (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts'));
     }
 
     private function generateEveryTranslatedClass(string $module): void

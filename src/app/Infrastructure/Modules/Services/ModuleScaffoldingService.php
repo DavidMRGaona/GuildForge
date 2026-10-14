@@ -56,6 +56,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $variables['coreConstraint'] = $this->coreConstraint();
         $variables['moduleDisplayNamePhp'] = addcslashes($displayName, "'\\");
         $variables['moduleDisplayNameJson'] = $this->jsonString($displayName);
+        $variables['moduleDisplayNameTs'] = addcslashes($displayName, "'\\");
         $variables['moduleDescriptionJson'] = $this->jsonString($description ?? '');
         $variables['moduleAuthorJson'] = $this->jsonString($author ?? '');
         $variables['moduleRepositoryJson'] = $repository !== null
@@ -82,6 +83,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'module/phpunit.xml.stub' => 'phpunit.xml',
             'module/gitignore.stub' => '.gitignore',
             'module/release.yml.stub' => '.github/workflows/release.yml',
+            'module/locale.ts.stub' => 'resources/js/locales/es.ts',
         ];
 
         foreach ($fileMap as $stub => $destination) {
@@ -89,6 +91,9 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             $result = $this->renderStub($stub, $destPath, $variables);
             $files[$destination] = $result;
         }
+
+        // Same keys in English until someone translates them
+        $files['resources/js/locales/en.ts'] = $this->renderStub('module/locale.ts.stub', $modulePath.'/resources/js/locales/en.ts', $variables);
 
         // Create .gitkeep files for empty directories
         $emptyDirs = [
@@ -514,7 +519,8 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
-        $destination = "resources/js/pages/{$variables['nameStudly']}.vue";
+        // Under the module's page prefix (registerPagePrefixes()), rendered as "<ModuleStudly>/<Name>"
+        $destination = "resources/js/pages/{$variables['moduleNameStudly']}/{$variables['nameStudly']}.vue";
         $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub('vue/page.vue.stub', $destPath, $variables);
@@ -529,6 +535,11 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         return ScaffoldResultDTO::success(
             "Vue page '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                "Render it from a controller with Inertia::render('{$variables['moduleNameStudly']}/{$variables['nameStudly']}') (module:make-controller {$module} {$variables['nameStudly']})",
+                "Its texts come from resources/js/locales/es.ts ({$variables['moduleNameCamel']}.*)",
+                "Build the module assets: php artisan module:build {$module}",
+            ],
         );
     }
 
@@ -552,6 +563,9 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         return ScaffoldResultDTO::success(
             "Vue component '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                "Build the module assets: php artisan module:build {$module}",
+            ],
         );
     }
 
