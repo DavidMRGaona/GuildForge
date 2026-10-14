@@ -150,7 +150,7 @@ Core migrations create 27 application tables plus the Laravel framework tables `
 | created_at / updated_at | timestamp | nullable |
 
 - Model: `RoleModel` (`permissions()` and `users()` BelongsToMany). Entity: `App\Domain\Authorization\Entities\Role`.
-- `RolesSeeder` creates `admin` (protected), `editor` and `member`. `member` is the base role of every account and `socio` the default association member role; migrations create both when missing (see [Data migrations](#data-migrations)). The role named by the `association_member_role` setting cannot be deleted or renamed, although `is_protected` stays false.
+- `RolesSeeder` creates `admin` (protected), `editor` and `member`. `member` is the base role of every account and `socio` the default association member role; migrations create both when missing (see [Data migrations](#data-migrations)). Neither `member` nor the role named by the `association_member_role` setting can be deleted or renamed, although `is_protected` stays false for both (see [Base role and association member role](architecture.md#base-role-and-association-member-role)).
 
 #### role_permission, user_role
 

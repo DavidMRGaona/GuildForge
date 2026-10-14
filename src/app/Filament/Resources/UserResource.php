@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
@@ -63,6 +64,8 @@ class UserResource extends BaseResource
 
     public static function form(Schema $schema): Schema
     {
+        $baseRoleId = self::baseRoleId();
+
         return $schema
             ->components([
                 TextInput::make('name')
@@ -125,7 +128,10 @@ class UserResource extends BaseResource
                     ->schema([
                         CheckboxList::make('roles')
                             ->label(__('filament.users.fields.roles'))
-                            ->helperText(__('filament.users.fields.rolesHelp'))
+                            // Only where the base role is ticked: never on an anonymized account
+                            ->helperText(static fn (?UserModel $record): ?string => $baseRoleId !== null && $record?->anonymized_at === null
+                                ? (string) __('filament.users.fields.rolesHelp')
+                                : null)
                             ->relationship(
                                 name: 'roles',
                                 titleAttribute: 'display_name',
@@ -133,6 +139,21 @@ class UserResource extends BaseResource
                             ->columns(2)
                             ->searchable()
                             ->bulkToggleable()
+                            // The base role of every account: always ticked and never unticked
+                            // ("Deselect all" skips disabled options); EditUser and CreateUser
+                            // give it back after saving should a forged state leave it out
+                            ->disableOptionWhen(static fn (string $value): bool => $value === $baseRoleId)
+                            // Filament only accepts enabled options by default, which would reject
+                            // the ticked base role: validate against every role instead
+                            ->in(static fn (CheckboxList $component): array => array_keys($component->getOptions()))
+                            ->afterStateHydrated(static function (CheckboxList $component, ?array $state, ?UserModel $record) use ($baseRoleId): void {
+                                // Anonymized accounts hold no roles on purpose
+                                if ($baseRoleId === null || $record?->anonymized_at !== null) {
+                                    return;
+                                }
+
+                                $component->state(array_values(array_unique([...$state ?? [], $baseRoleId])));
+                            })
                             ->descriptions(
                                 RoleModel::query()
                                     ->pluck('description', 'id')
@@ -392,5 +413,15 @@ class UserResource extends BaseResource
             ]);
 
         return $query;
+    }
+
+    /**
+     * Null when the role does not exist (an install without seeders): nothing is locked then.
+     */
+    private static function baseRoleId(): ?string
+    {
+        $id = RoleModel::query()->where('name', BaseRoleRule::NAME)->value('id');
+
+        return is_string($id) ? $id : null;
     }
 }

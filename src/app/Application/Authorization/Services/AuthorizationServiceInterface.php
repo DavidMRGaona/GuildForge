@@ -59,11 +59,18 @@ interface AuthorizationServiceInterface
 
     /**
      * Remove a role from a user.
+     *
+     * The base role of every account ("member", see BaseRoleRule) is never removed: asking for
+     * it does nothing, without an exception. Anonymizing an account is the only way to strip
+     * it, and that detaches the roles directly.
      */
     public function removeRole(object $user, string $roleName): void;
 
     /**
      * Sync roles for a user (replace all).
+     *
+     * A user who has the base role of every account ("member", see BaseRoleRule) keeps it even
+     * when it is not in $roleNames; a user without it does not get it from here.
      *
      * @param  array<string>  $roleNames
      */

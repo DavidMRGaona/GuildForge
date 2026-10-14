@@ -6,6 +6,7 @@ namespace App\Filament\Resources;
 
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\BaseRoleRule;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
@@ -54,9 +55,9 @@ class RoleResource extends BaseResource
                             ->required()
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
-                            ->disabled(fn (?RoleModel $record): bool => $record !== null && ($record->is_protected || self::isAssociationMemberRole($record)))
-                            ->hint(fn (?RoleModel $record): ?string => self::isAssociationMemberRole($record) ? (string) __('filament.roles.fields.associationMemberRoleHint') : null)
-                            ->hintIcon(fn (?RoleModel $record): ?string => self::isAssociationMemberRole($record) ? 'heroicon-o-lock-closed' : null)
+                            ->disabled(fn (?RoleModel $record): bool => $record !== null && self::isLocked($record))
+                            ->hint(fn (?RoleModel $record): ?string => self::lockedNameHint($record))
+                            ->hintIcon(fn (?RoleModel $record): ?string => self::lockedNameHint($record) !== null ? 'heroicon-o-lock-closed' : null)
                             ->hintColor('warning')
                             ->helperText(__('filament.roles.fields.nameHelp')),
                         TextInput::make('display_name')
@@ -135,9 +136,39 @@ class RoleResource extends BaseResource
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make()
-                    ->hidden(fn (RoleModel $record): bool => $record->is_protected || self::isAssociationMemberRole($record))
+                    ->hidden(fn (RoleModel $record): bool => self::isLocked($record))
                     ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
             ]);
+    }
+
+    /**
+     * Protected roles, the base role of every account and the association member role can
+     * be neither deleted nor renamed.
+     */
+    public static function isLocked(RoleModel $record): bool
+    {
+        return $record->is_protected || self::isBaseRole($record) || self::isAssociationMemberRole($record);
+    }
+
+    /**
+     * Whether the role is "member", the base role of every account: deleting or renaming it
+     * would strip every account of it at once.
+     */
+    public static function isBaseRole(?RoleModel $record): bool
+    {
+        return $record !== null && app(BaseRoleRule::class)->isBaseRoleName($record->name);
+    }
+
+    /**
+     * Why the name of a role that is not protected cannot be changed, if it cannot.
+     */
+    private static function lockedNameHint(?RoleModel $record): ?string
+    {
+        return match (true) {
+            self::isBaseRole($record) => (string) __('filament.roles.fields.baseRoleHint'),
+            self::isAssociationMemberRole($record) => (string) __('filament.roles.fields.associationMemberRoleHint'),
+            default => null,
+        };
     }
 
     /**
