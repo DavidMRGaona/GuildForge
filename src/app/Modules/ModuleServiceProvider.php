@@ -10,6 +10,7 @@ use App\Application\Modules\DTOs\NavigationItemDTO;
 use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
+use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
 use Illuminate\Support\Facades\Gate;
@@ -49,10 +50,11 @@ abstract class ModuleServiceProvider extends ServiceProvider
             $this->forceLoadConfig($configPath, 'modules.'.$this->moduleName());
         }
 
-        // Load module settings into Laravel config
-        $settingsPath = $this->modulePath('config/settings.php');
-        if (file_exists($settingsPath)) {
-            $settings = require $settingsPath;
+        // Release defaults (config/settings.php) with the values saved in the panel on top
+        $settings = $this->app->make(ModuleSettingsStoreInterface::class)
+            ->effective($this->moduleName(), $this->modulePath());
+
+        if ($settings !== []) {
             config()->set("modules.settings.{$this->moduleName()}", $settings);
         }
     }

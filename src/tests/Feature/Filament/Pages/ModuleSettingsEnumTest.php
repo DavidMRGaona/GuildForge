@@ -6,6 +6,7 @@ namespace Tests\Feature\Filament\Pages;
 
 use App\Filament\Pages\ModuleSettingsPage;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Components\Select;
@@ -17,8 +18,8 @@ use Tests\Support\Modules\RegistersBootedModuleProviders;
 use Tests\TestCase;
 
 /**
- * Module settings are written to the module's config/settings.php and read back with
- * config(): a select whose options come from an enum must be stored as its value.
+ * Module settings are stored in the settings table and read back with config(): a select
+ * whose options come from an enum must be stored as its value.
  */
 final class ModuleSettingsEnumTest extends TestCase
 {
@@ -65,7 +66,8 @@ final class ModuleSettingsEnumTest extends TestCase
             ->call('save')
             ->assertHasNoFormErrors();
 
-        $this->assertSame(['theme' => 'dark'], require $this->modulePath.'/config/settings.php');
+        $this->assertSame('{"theme":"dark"}', SettingModel::query()->where('key', 'module_settings:settings-fixture')->value('value'));
         $this->assertSame('dark', config('modules.settings.settings-fixture.theme'));
+        $this->assertFileDoesNotExist($this->modulePath.'/config/settings.php');
     }
 }

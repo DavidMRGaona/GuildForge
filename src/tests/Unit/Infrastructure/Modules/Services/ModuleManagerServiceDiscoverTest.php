@@ -7,6 +7,7 @@ namespace Tests\Unit\Infrastructure\Modules\Services;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleMigrationAnalyzerInterface;
+use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
@@ -73,6 +74,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $events,
             $this->compatibleModules(),
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
+            Mockery::mock(ModuleSettingsStoreInterface::class),
         );
 
         $module = $this->createModule('test-module', '1.0.0', ModuleStatus::Enabled, new \DateTimeImmutable);
@@ -142,6 +144,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $events,
             $this->compatibleModules(),
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
+            Mockery::mock(ModuleSettingsStoreInterface::class),
         );
 
         $module = $this->createModule('test-module', '1.0.0', ModuleStatus::Disabled, null);
@@ -207,6 +210,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $events,
             $this->compatibleModules(),
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
+            Mockery::mock(ModuleSettingsStoreInterface::class),
         );
 
         // Module entity with a path that does NOT exist on disk
