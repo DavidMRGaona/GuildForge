@@ -199,11 +199,21 @@ Runs on every push or pull request to `main`.
 
 #### 2. Deploy (`deploy.yml`)
 
-Runs automatically when the CI workflow completes successfully on the `main` branch.
+Runs automatically when the CI workflow of a push to `main` completes successfully, and on demand from the Actions tab (`workflow_dispatch` on `main`). Runs never overlap (`concurrency: deploy-production`, without cancelling the one in progress): a new run waits for the running one to finish, and only one run can wait; if another arrives meanwhile, it replaces the waiting run, which shows up as cancelled. That is harmless, since each run deploys only its own commit, and only while it is still the head of `main` (see below).
 
-**Strategy:**
-- Runs deployments in parallel to two targets (`WEBHOOK_URL_SERVER_1`, `WEBHOOK_URL_SERVER_2`)
-- Each deployment triggers the deployment platform through its API: a POST to the target's deploy URL with `DEPLOY_API_TOKEN` as bearer token (see `.github/workflows/deploy.yml`)
+**Only the commit that passed CI is deployed.** The deployment platform deploys the head of `main`, not a given commit, so the workflow pins the commit that passed CI (the CI run's commit; for a manual run, the head of `main` when it starts) and checks it three times:
+- Before the canary: if `main` has moved on, the run deploys nothing and ends with a notice; the run for the newer commit deploys it once its CI passes
+- When the canary deployment finishes: the deployed commit reported by the platform must be that commit, or the run fails and the other targets are not deployed
+- Before the rollout: if `main` has moved on during the canary, the rollout deploys nothing and ends with a warning (the run still succeeds); the run for the newer commit deploys it
+
+**Strategy (canary first):**
+- **`canary` job.** Picks the target whose deploy URL has `uuid=<CANARY_RESOURCE_UUID>` (it fails if the repository secrets are missing or do not match exactly one target; it never deploys blindly), triggers its deployment through the platform's API (a POST to the deploy URL with `DEPLOY_API_TOKEN` as bearer token), polls the deployment status every 10 s until it is `finished` (20 min at most; `failed` or cancelled stops the run) and then requires 5 consecutive HTTP 200 responses from `CANARY_HEALTH_URL`, 6 s apart (5 min at most)
+- **`rollout` job.** Runs only once the canary is healthy and triggers the deployment of every other target, without waiting for them
+- Deploy URLs, the platform host and the token are masked in the logs
+
+**If the canary fails,** the other targets keep the previous version; only the canary runs the broken one. Fix the problem and merge to `main` (CI deploys again), or roll the canary back from the deployment platform's history. If the failure was transient (platform hiccup, slow start), rerun the workflow from the Actions tab (`Run workflow` on `main`, `skip_canary` unchecked), which deploys the current `main` canary first again.
+
+**Emergency (`skip_canary`).** Running the workflow by hand with `skip_canary` checked skips the canary and the commit checks, and deploys the head of `main` to every target at once, as before the canary existed. Use it only when the canary itself is the problem (for example, the canary target is down for reasons unrelated to the release, or the token cannot read deployment status).
 
 **Full pipeline:**
 
@@ -214,8 +224,10 @@ CI: test (PHP + PostgreSQL + Redis)    ←── in parallel ──→    CI: li
     ↓                                                              ↓
     +──────────────── Both succeed ────────────────────────────────+
                               ↓
-                    Deploy: deployment platform API
-                    (target 1 + target 2 in parallel)
+                Deploy (canary): deploy, wait for "finished",
+                5 consecutive 200s from CANARY_HEALTH_URL
+                              ↓
+                Deploy (rollout): every other target
 ```
 
 #### 3. Module release (`reusable-module-release.yml`)
@@ -233,7 +245,18 @@ Reusable workflow for publishing modules as ZIP packages in GitHub Releases.
 |--------|-------------|
 | `WEBHOOK_URL_SERVER_1` | Deploy URL (deployment platform API) of the first target |
 | `WEBHOOK_URL_SERVER_2` | Deploy URL (deployment platform API) of the second target |
-| `DEPLOY_API_TOKEN` | Deployment platform API token, sent as bearer token |
+| `DEPLOY_API_TOKEN` | Deployment platform API token, sent as bearer token; it must be allowed to read deployments, since the canary job polls their status |
+
+### Canary secrets
+
+Configure in GitHub → Settings → Secrets and variables → Actions → Secrets, next to the deploy URLs (secrets, so they stay masked in the run logs):
+
+| Secret | Description |
+|----------|-------------|
+| `CANARY_RESOURCE_UUID` | Resource identifier of the canary target, as it appears in its deploy URL (`uuid=` parameter); it must match exactly one of the deploy URLs |
+| `CANARY_HEALTH_URL` | Public health URL of the canary (its `/up` endpoint) |
+
+To add a target, add its secret and a line to `WEBHOOKS` in `deploy.yml`; it is deployed in the rollout.
 
 `GITHUB_TOKEN`, used by `reusable-module-release.yml` in the module repositories, is provided by GitHub Actions; there is nothing to configure.
 
@@ -617,7 +640,7 @@ The automatic deployment flow is:
 
 1. Push to the `main` branch (or merge a pull request)
 2. GitHub Actions runs CI (tests + linting)
-3. If CI passes, `deploy.yml` triggers the deployment through the platform's API for each target (`WEBHOOK_URL_SERVER_1`, `WEBHOOK_URL_SERVER_2`), in parallel; see `.github/workflows/deploy.yml` for the specifics
+3. If CI passes, `deploy.yml` deploys the canary target through the platform's API, waits until its deployment finishes and its health URL answers 200 five times in a row, and only then triggers the other targets; see [Deploy](#2-deploy-deployyml) and `.github/workflows/deploy.yml`
 4. The platform builds `Dockerfile.prod` and starts a new container; the image carries no modules, which stay in the bind mount
 5. The entrypoint records the deployment, runs migrations, discovers modules, syncs permissions and caches configuration (see [Production entrypoint](#production-entrypoint))
 
