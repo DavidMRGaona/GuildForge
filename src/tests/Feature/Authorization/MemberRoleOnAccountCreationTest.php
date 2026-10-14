@@ -44,6 +44,8 @@ final class MemberRoleOnAccountCreationTest extends TestCase
 
     public function test_registration_works_without_the_member_role(): void
     {
+        // A migration creates it: remove it to simulate a database where it was deleted
+        RoleModel::query()->where('name', 'member')->delete();
         Log::spy();
 
         $this->register('nuevo@example.com')->assertRedirect(route('home'));
