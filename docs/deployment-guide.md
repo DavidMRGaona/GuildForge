@@ -199,16 +199,21 @@ Runs on every push or pull request to `main`.
 
 #### 2. Deploy (`deploy.yml`)
 
-Runs automatically when the CI workflow completes successfully on the `main` branch, and on demand from the Actions tab (`workflow_dispatch` on `main`). Runs never overlap: a deployment waits for the previous one to finish (`concurrency: deploy-production`).
+Runs automatically when the CI workflow of a push to `main` completes successfully, and on demand from the Actions tab (`workflow_dispatch` on `main`). Runs never overlap (`concurrency: deploy-production`, without cancelling the one in progress): a new run waits for the running one to finish, and only one run can wait; if another arrives meanwhile, it replaces the waiting run, which shows up as cancelled. That is harmless, since each run deploys only its own commit, and only while it is still the head of `main` (see below).
+
+**Only the commit that passed CI is deployed.** The deployment platform deploys the head of `main`, not a given commit, so the workflow pins the commit that passed CI (the CI run's commit; for a manual run, the head of `main` when it starts) and checks it three times:
+- Before the canary: if `main` has moved on, the run deploys nothing and ends with a notice; the run for the newer commit deploys it once its CI passes
+- When the canary deployment finishes: the deployed commit reported by the platform must be that commit, or the run fails and the other targets are not deployed
+- Before the rollout: if `main` has moved on during the canary, the rollout deploys nothing and ends with a warning (the run still succeeds); the run for the newer commit deploys it
 
 **Strategy (canary first):**
 - **`canary` job.** Picks the target whose deploy URL has `uuid=<CANARY_RESOURCE_UUID>` (it fails if the repository variables are missing or do not match exactly one target; it never deploys blindly), triggers its deployment through the platform's API (a POST to the deploy URL with `DEPLOY_API_TOKEN` as bearer token), polls the deployment status every 10 s until it is `finished` (20 min at most; `failed` or cancelled stops the run) and then requires 5 consecutive HTTP 200 responses from `CANARY_HEALTH_URL`, 6 s apart (5 min at most)
 - **`rollout` job.** Runs only once the canary is healthy and triggers the deployment of every other target, without waiting for them
-- Deploy URLs and the token are masked in the logs
+- Deploy URLs, the platform host and the token are masked in the logs
 
 **If the canary fails,** the other targets keep the previous version; only the canary runs the broken one. Fix the problem and merge to `main` (CI deploys again), or roll the canary back from the deployment platform's history. If the failure was transient (platform hiccup, slow start), rerun the workflow from the Actions tab (`Run workflow` on `main`, `skip_canary` unchecked), which deploys the current `main` canary first again.
 
-**Emergency (`skip_canary`).** Running the workflow by hand with `skip_canary` checked skips the canary and deploys every target at once, as before the canary existed. Use it only when the canary itself is the problem (for example, the canary target is down for reasons unrelated to the release, or the token cannot read deployment status).
+**Emergency (`skip_canary`).** Running the workflow by hand with `skip_canary` checked skips the canary and the commit checks, and deploys the head of `main` to every target at once, as before the canary existed. Use it only when the canary itself is the problem (for example, the canary target is down for reasons unrelated to the release, or the token cannot read deployment status).
 
 **Full pipeline:**
 
