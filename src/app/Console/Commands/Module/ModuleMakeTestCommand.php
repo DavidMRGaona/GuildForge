@@ -20,8 +20,10 @@ final class ModuleMakeTestCommand extends Command
     protected $signature = 'module:make-test
         {module : The name of the module}
         {name : The name of the test}
-        {--unit : Create a unit test (default)}
-        {--feature : Create a feature test}';
+        {--unit : Create an entity unit test (default)}
+        {--dto : Create a DTO unit test}
+        {--feature : Create a controller feature test}
+        {--filament : Create a Filament resource feature test}';
 
     /**
      * The console command description.
@@ -46,7 +48,12 @@ final class ModuleMakeTestCommand extends Command
         /** @var string $name */
         $name = $this->argument('name');
 
-        $type = $this->option('feature') ? 'feature' : 'unit';
+        $type = match (true) {
+            (bool) $this->option('feature') => 'feature',
+            (bool) $this->option('filament') => 'feature-filament',
+            (bool) $this->option('dto') => 'unit-dto',
+            default => 'unit',
+        };
 
         $this->info("Creating {$type} test '{$name}' for module '{$module}'...");
 

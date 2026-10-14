@@ -11,6 +11,7 @@ use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
 use App\Infrastructure\Modules\Services\StubRenderer;
 use Illuminate\Support\Arr;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ModuleScaffoldingServiceTest extends TestCase
@@ -418,8 +419,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertTrue($result->isSuccess());
         $this->assertStringContainsString("Test 'UserService' created for module 'testing'", $result->message);
-        $this->assertArrayHasKey('tests/Unit/UserServiceTest.php', $result->files);
-        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Unit/UserServiceTest.php']);
+        $this->assertArrayHasKey('tests/Unit/Domain/Entities/UserServiceTest.php', $result->files);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Unit/Domain/Entities/UserServiceTest.php']);
     }
 
     public function test_it_creates_feature_test(): void
@@ -429,8 +430,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $result = $this->service->createTest('integration', 'PostController', 'feature');
 
         $this->assertTrue($result->isSuccess());
-        $this->assertArrayHasKey('tests/Feature/PostControllerTest.php', $result->files);
-        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Feature/PostControllerTest.php']);
+        $this->assertArrayHasKey('tests/Feature/Http/Controllers/PostControllerTest.php', $result->files);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Feature/Http/Controllers/PostControllerTest.php']);
     }
 
     public function test_it_validates_module_exists_for_test(): void
@@ -890,6 +891,60 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('public function registerFilamentWidgets(): array', $widget);
         $this->assertStringNotContainsString('auto-discovered', $widget);
         $this->assertStringNotContainsString('Livewire::component', $widget);
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function generatedTestTypes(): array
+    {
+        return [
+            'entity unit test' => ['unit', 'Post', 'tests/Unit/Domain/Entities/PostTest.php'],
+            'DTO unit test' => ['unit-dto', 'PostDTO', 'tests/Unit/Application/DTOs/PostDTOTest.php'],
+            'controller feature test' => ['feature', 'PostController', 'tests/Feature/Http/Controllers/PostControllerTest.php'],
+            'Filament feature test' => ['feature-filament', 'Post', 'tests/Feature/Filament/PostResourceTest.php'],
+        ];
+    }
+
+    #[DataProvider('generatedTestTypes')]
+    public function test_every_generated_test_declares_the_class_its_file_is_named_after(string $type, string $name, string $path): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createTest('blog-posts', $name, $type);
+
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$path] ?? null, implode(', ', array_keys($result->files)));
+        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.$path);
+        $class = basename($path, '.php');
+        $namespace = 'Modules\BlogPosts\\'.str_replace('/', '\\', ucfirst(dirname($path)));
+        $this->assertStringContainsString("final class {$class} extends", $content);
+        $this->assertStringContainsString("namespace {$namespace};", $content);
+    }
+
+    public function test_feature_tests_enable_the_module_on_the_module_test_case(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createTest('blog-posts', 'Post', 'feature');
+        $this->service->createTest('blog-posts', 'Post', 'feature-filament');
+
+        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Http/Controllers/PostControllerTest.php');
+        $filament = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Filament/PostResourceTest.php');
+
+        foreach ([$controller, $filament] as $content) {
+            $this->assertStringContainsString('extends ModuleTestCase', $content);
+            $this->assertStringContainsString("protected ?string \$moduleName = 'blog-posts';", $content);
+            $this->assertStringContainsString('protected bool $autoEnableModule = true;', $content);
+            $this->assertStringNotContainsString('RefreshDatabase', $content);
+        }
+
+        $this->assertStringContainsString("->component('BlogPosts/Post', false)", $controller);
+        $this->assertStringContainsString("route('blog_posts.posts.index')", $controller);
+
+        $this->assertStringContainsString('use InteractsWithModulePanel;', $filament);
+        $this->assertStringContainsString('$this->registerOnAdminPanel([PostResource::class]);', $filament);
+        $this->assertStringContainsString('$this->actingAsPanelAdmin();', $filament);
+        $this->assertStringContainsString('use Modules\BlogPosts\Infrastructure\Persistence\Eloquent\Models\PostModel;', $filament);
+        $this->assertStringNotContainsString('App\Domain\User', $filament);
     }
 
     private function generateEveryTranslatedClass(string $module): void

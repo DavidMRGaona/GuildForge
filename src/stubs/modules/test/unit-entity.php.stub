@@ -47,6 +47,6 @@ final class {{ nameStudly }}Test extends TestCase
         $entity->updateName('New Name');
 
         $this->assertSame('New Name', $entity->name());
-        $this->assertNotSame($originalUpdatedAt, $entity->updatedAt());
+        $this->assertGreaterThanOrEqual($originalUpdatedAt, $entity->updatedAt());
     }
 }

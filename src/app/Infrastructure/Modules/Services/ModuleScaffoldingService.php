@@ -466,27 +466,40 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         }
 
         $modulePath = $this->modulesPath.'/'.$module;
-        $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
-        $stubMap = [
-            'unit' => 'test/unit-entity.php.stub',
-            'unit-dto' => 'test/unit-dto.php.stub',
-            'feature' => 'test/feature-controller.php.stub',
-            'feature-filament' => 'test/feature-filament.php.stub',
+        // Stub, directory and class suffix of each type: the class is named after its file
+        $types = [
+            'unit' => ['test/unit-entity.php.stub', 'Unit/Domain/Entities', ''],
+            'unit-dto' => ['test/unit-dto.php.stub', 'Unit/Application/DTOs', 'DTO'],
+            'feature' => ['test/feature-controller.php.stub', 'Feature/Http/Controllers', 'Controller'],
+            'feature-filament' => ['test/feature-filament.php.stub', 'Feature/Filament', 'Resource'],
         ];
+        $type = isset($types[$type]) ? $type : 'unit';
+        [$stub, $dir, $suffix] = $types[$type];
 
-        $stub = $stubMap[$type] ?? $stubMap['unit'];
-        $dir = str_starts_with($type, 'feature') ? 'Feature' : 'Unit';
-        $destination = "tests/{$dir}/{$variables['nameStudly']}Test.php";
+        // "PostController" and "Post" both name the test of PostController
+        $subject = Str::studly($name);
+        if ($suffix !== '' && $subject !== $suffix && str_ends_with($subject, $suffix)) {
+            $subject = substr($subject, 0, -strlen($suffix));
+        }
+
+        $variables = $this->stubRenderer->getComponentVariables($module, $subject);
+        $destination = "tests/{$dir}/{$variables['nameStudly']}{$suffix}Test.php";
         $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
 
+        $nextSteps = ["Run the module tests with vendor/bin/phpunit -c modules/{$module}/phpunit.xml"];
+        if ($type === 'feature') {
+            $nextSteps[] = "The test requests the route module:make-controller prints: Route::get('{$variables['namePluralKebab']}', [{$variables['nameStudly']}Controller::class, 'index'])->name('{$variables['namePluralSnake']}.index'); in routes/web.php";
+        }
+
         return ScaffoldResultDTO::success(
             "Test '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: $nextSteps,
         );
     }
 

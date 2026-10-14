@@ -4,40 +4,26 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Tests\Feature\Http\Controllers;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
+use Tests\Support\Modules\ModuleTestCase;
 
-final class {{ nameStudly }}ControllerTest extends TestCase
+/**
+ * Expects the route module:make-controller prints, in routes/web.php:
+ *
+ *     Route::get('{{ namePluralKebab }}', [{{ nameStudly }}Controller::class, 'index'])->name('{{ namePluralSnake }}.index');
+ */
+final class {{ nameStudly }}ControllerTest extends ModuleTestCase
 {
-    use RefreshDatabase;
+    protected ?string $moduleName = '{{ moduleName }}';
+
+    protected bool $autoEnableModule = true;
 
     #[Test]
-    public function it_can_list_{{ namePluralSnake }}(): void
+    public function it_renders_the_{{ nameSnake }}_page(): void
     {
-        $response = $this->get(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index'));
-
-        $response->assertOk();
-    }
-
-    #[Test]
-    public function it_can_show_create_form(): void
-    {
-        $response = $this->get(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.create'));
-
-        $response->assertOk();
-    }
-
-    #[Test]
-    public function it_can_store_a_{{ nameSnake }}(): void
-    {
-        $response = $this->post(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.store'), [
-            'name' => 'Test {{ nameStudly }}',
-        ]);
-
-        $response->assertRedirect(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index'));
-        $this->assertDatabaseHas('{{ tableName }}', [
-            'name' => 'Test {{ nameStudly }}',
-        ]);
+        $this->get(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('{{ moduleNameStudly }}/{{ nameStudly }}', false));
     }
 }
