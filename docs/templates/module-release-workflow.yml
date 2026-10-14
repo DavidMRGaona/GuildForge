@@ -1,8 +1,12 @@
 # Template: Release workflow for GuildForge modules
-# Copy this file to .github/workflows/release.yml in your module repository
+# php artisan module:make already writes this file. For a module created otherwise,
+# copy it to .github/workflows/release.yml in your module repository
 # and change MODULE_NAME to your module's name (kebab-case)
 # module.json must declare requires.core (e.g. "core": "^3.0"): the release is rejected
 # without it, and the module.json published with the release tells sites which core it needs
+# A module with a package.json is built with MODULE_STANDALONE_OUTPUT=true: its vite.config.ts
+# must then write to the module's own public/build/ (see docs/modules/README.md)
+# Set the repository variable GUILDFORGE_HOST_REF to test and build against another host ref
 
 name: Module release
 
@@ -15,5 +19,7 @@ jobs:
     uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-release.yml@main
     with:
       module_name: 'MODULE_NAME'  # TODO: Change to your module name (e.g., 'announcements')
+      # Host branch, tag or SHA to test and build against (main when the variable is unset)
+      host_ref: ${{ vars.GUILDFORGE_HOST_REF || 'main' }}
     permissions:
       contents: write
