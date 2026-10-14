@@ -159,8 +159,8 @@ final class AuthorizationService implements AuthorizationServiceInterface
      */
     public function syncRoles(object $user, array $roleNames): void
     {
-        /** @var UserModel $user */
         // Read from the database, not the cache: a user who has the base role of every account keeps it
+        /** @var UserModel $user */
         $hasBaseRole = $user->roles()->where('roles.name', BaseRoleRule::NAME)->exists();
 
         if ($hasBaseRole && ! in_array(BaseRoleRule::NAME, $roleNames, true)) {
