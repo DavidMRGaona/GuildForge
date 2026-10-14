@@ -41,8 +41,10 @@ final readonly class MemberRoleService implements MemberRoleServiceInterface
             throw RoleNotFoundException::withName(UserRole::Member->value);
         }
 
-        // Soft-deleted accounts as well: a restored account must not come back without its base role
+        // Soft-deleted accounts as well: a restored account must not come back without its base role.
+        // Anonymized ones never: anonymizing removes every role on purpose.
         $withoutMember = UserModel::withTrashed()
+            ->whereNull('users.anonymized_at')
             ->whereDoesntHave('roles', static fn (Builder $roles): Builder => $roles->whereKey($memberId));
 
         if ($dryRun) {
