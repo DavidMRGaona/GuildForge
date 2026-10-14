@@ -11,6 +11,7 @@ return [
         'roles' => 'Roles',
         'hero_slides' => 'Slides del hero',
         'tags' => 'Etiquetas',
+        'menu_items' => 'Menú de navegación',
         'settings' => 'Configuración',
         'mail' => 'Correo electrónico',
         'updates' => 'Actualizaciones',
@@ -78,6 +79,13 @@ return [
             'create' => 'Crear etiqueta',
             'update' => 'Editar etiqueta',
             'delete' => 'Eliminar etiqueta',
+        ],
+        'menu_items' => [
+            'view_any' => 'Ver listado de elementos de menú',
+            'view' => 'Ver detalle de elemento de menú',
+            'create' => 'Crear elemento de menú',
+            'update' => 'Editar y ordenar elementos de menú',
+            'delete' => 'Eliminar elemento de menú',
         ],
         'settings' => [
             'manage' => 'Gestionar configuración del sitio',

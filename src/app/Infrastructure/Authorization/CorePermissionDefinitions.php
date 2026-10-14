@@ -251,6 +251,38 @@ final class CorePermissionDefinitions
                 defaultRoles: ['editor'],
             ),
 
+            // Navigation menu: site structure, admin only unless granted in Roles
+            new PermissionDefinitionDTO(
+                key: 'menu_items.view_any',
+                label: __('authorization.permissions.menu_items.view_any'),
+                resource: 'menu_items',
+                action: 'view_any',
+            ),
+            new PermissionDefinitionDTO(
+                key: 'menu_items.view',
+                label: __('authorization.permissions.menu_items.view'),
+                resource: 'menu_items',
+                action: 'view',
+            ),
+            new PermissionDefinitionDTO(
+                key: 'menu_items.create',
+                label: __('authorization.permissions.menu_items.create'),
+                resource: 'menu_items',
+                action: 'create',
+            ),
+            new PermissionDefinitionDTO(
+                key: 'menu_items.update',
+                label: __('authorization.permissions.menu_items.update'),
+                resource: 'menu_items',
+                action: 'update',
+            ),
+            new PermissionDefinitionDTO(
+                key: 'menu_items.delete',
+                label: __('authorization.permissions.menu_items.delete'),
+                resource: 'menu_items',
+                action: 'delete',
+            ),
+
             // Settings
             new PermissionDefinitionDTO(
                 key: 'settings.manage',
