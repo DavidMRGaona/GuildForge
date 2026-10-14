@@ -379,7 +379,7 @@ return [
         'fields' => [
             'emailVerified' => 'Email verificado',
             'roles' => 'Roles',
-            'rolesHelp' => 'Al dar de alta un usuario se le añade siempre el rol «member», el rol base de toda cuenta.',
+            'rolesHelp' => 'Toda cuenta tiene siempre el rol «member», el rol base: por eso aparece marcado y no se puede desmarcar.',
             'status' => 'Estado',
         ],
         'sections' => [
