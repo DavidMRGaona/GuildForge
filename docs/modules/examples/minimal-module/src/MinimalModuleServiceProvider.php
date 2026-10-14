@@ -6,25 +6,14 @@ namespace Modules\MinimalModule;
 
 use App\Modules\ModuleServiceProvider;
 
+/**
+ * The parent loads routes, translations, views, migrations and policies, and
+ * loads config/module.php into "modules.minimal-module".
+ */
 final class MinimalModuleServiceProvider extends ModuleServiceProvider
 {
     public function moduleName(): string
     {
         return 'minimal-module';
-    }
-
-    public function register(): void
-    {
-        parent::register();
-
-        $this->mergeConfigFrom(
-            $this->modulePath('config/module.php'),
-            'minimal_module'
-        );
-    }
-
-    public function boot(): void
-    {
-        parent::boot();
     }
 }
