@@ -8,6 +8,8 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Database\Seeders\RolesSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -92,6 +94,25 @@ final class MemberRoleOnAccountCreationTest extends TestCase
 
         $user = UserModel::query()->where('email', 'nuevo@example.com')->sole();
         $this->assertSame(['member'], $this->authorization()->getRoles($user));
+    }
+
+    public function test_the_panel_explains_that_member_is_always_added(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(CreateUser::class)
+            ->assertSee(__('filament.users.fields.rolesHelp'));
+    }
+
+    public function test_the_seeded_admin_and_editor_get_member(): void
+    {
+        $this->seed([RolesSeeder::class, UserSeeder::class]);
+
+        foreach (['admin@example.local' => 'admin', 'editor@example.local' => 'editor'] as $email => $role) {
+            $user = UserModel::query()->where('email', $email)->sole();
+            $this->assertTrue($this->authorization()->hasRole($user, $role));
+            $this->assertTrue($this->authorization()->hasRole($user, 'member'), "{$email} has no member role");
+        }
     }
 
     public function test_an_admin_created_from_the_console_gets_member(): void

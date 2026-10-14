@@ -379,6 +379,7 @@ return [
         'fields' => [
             'emailVerified' => 'Email verificado',
             'roles' => 'Roles',
+            'rolesHelp' => 'Al dar de alta un usuario se le añade siempre el rol «member», el rol base de toda cuenta.',
             'status' => 'Estado',
         ],
         'sections' => [

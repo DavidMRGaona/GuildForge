@@ -26,6 +26,10 @@ final readonly class EloquentUserRepository implements UserRepositoryInterface
         return $this->toDomain($model);
     }
 
+    /**
+     * Creating a user here does not give it the member role, the base role of every account:
+     * whoever creates accounts through this method must call MemberRoleServiceInterface::assignTo().
+     */
     public function save(User $user): void
     {
         $existingModel = UserModel::query()->find($user->id()->value);

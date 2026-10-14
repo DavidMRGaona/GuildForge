@@ -125,6 +125,7 @@ class UserResource extends BaseResource
                     ->schema([
                         CheckboxList::make('roles')
                             ->label(__('filament.users.fields.roles'))
+                            ->helperText(__('filament.users.fields.rolesHelp'))
                             ->relationship(
                                 name: 'roles',
                                 titleAttribute: 'display_name',
