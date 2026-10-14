@@ -61,7 +61,7 @@ final class MenuItemSeeder extends Seeder
                 [
                     'location' => MenuLocation::Header,
                     'route' => $item['route'],
-                    'module' => 'core',
+                    'module' => MenuItemModel::CORE_MODULE,
                 ],
                 [
                     'label' => $item['label'],
@@ -102,7 +102,7 @@ final class MenuItemSeeder extends Seeder
                 [
                     'location' => MenuLocation::Footer,
                     'route' => $item['route'],
-                    'module' => 'core',
+                    'module' => MenuItemModel::CORE_MODULE,
                 ],
                 [
                     'label' => $item['label'],
@@ -147,7 +147,7 @@ final class MenuItemSeeder extends Seeder
                 [
                     'location' => MenuLocation::Footer,
                     'label' => $item['label'],
-                    'module' => 'core',
+                    'module' => MenuItemModel::CORE_MODULE,
                 ],
                 [
                     'route' => $item['route'],
