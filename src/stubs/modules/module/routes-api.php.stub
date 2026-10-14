@@ -6,12 +6,11 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| {{ moduleNameStudly }} API Routes
+| API routes of the {{ moduleName }} module
 |--------------------------------------------------------------------------
 |
-| API routes for the {{ moduleNameStudly }} module. The module loader already
-| applies the "api" middleware and the "/api" prefix: these routes answer
-| under /api/{{ moduleName }}/...
+| The module loader already applies the "api" middleware and the "/api"
+| prefix: these routes answer under /api/{{ moduleName }}/...
 |
 */
 

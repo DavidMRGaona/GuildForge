@@ -22,6 +22,8 @@ use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Models\{{ nameStud
  * Routes, in routes/api.php (answers under /api/{{ moduleName }}/{{ namePluralKebab }}). The api group has
  * no session, so the write routes answer 401 until the module adds token authentication:
  *
+ *     use {{ moduleNamespace }}\Http\Controllers\Api;
+ *
  *     Route::apiResource('{{ namePluralKebab }}', Api\{{ nameStudly }}Controller::class)->except(['index', 'show'])->middleware('auth');
  *     Route::apiResource('{{ namePluralKebab }}', Api\{{ nameStudly }}Controller::class)->only(['index', 'show']);
  */
