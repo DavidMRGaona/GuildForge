@@ -20,7 +20,8 @@ interface MemberRoleServiceInterface
     public function assignTo(object $user): void;
 
     /**
-     * Give the member role to every user without it, never removing a role, in batches.
+     * Give the member role to every user without it (soft-deleted ones included, anonymized
+     * ones excluded: anonymizing removes every role), never removing a role, in batches.
      * Returns how many users got it (or would get it, on a dry run).
      *
      * @param  positive-int  $chunkSize

@@ -79,7 +79,9 @@ final class AssignMemberRoleCommandTest extends TestCase
     {
         $this->member->delete();
 
-        $this->artisan('users:assign-member-role')->assertFailed();
+        $this->artisan('users:assign-member-role')
+            ->expectsOutputToContain('No existe el rol «member»')
+            ->assertFailed();
 
         $this->assertSame(['admin', 'socio'], $this->roleNames($this->adminAndSocio));
     }
@@ -105,6 +107,28 @@ final class AssignMemberRoleCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertTrue($deleted->roles()->where('name', 'member')->exists());
+    }
+
+    public function test_anonymized_users_do_not_get_it(): void
+    {
+        // Anonymizing an account removes its roles on purpose: it must not get one back
+        $anonymized = UserModel::factory()->create(['anonymized_at' => now()]);
+        $anonymizedAndDeleted = UserModel::factory()->create(['anonymized_at' => now()]);
+        $anonymizedAndDeleted->delete();
+        $deleted = UserModel::factory()->create();
+        $deleted->delete();
+
+        $this->artisan('users:assign-member-role', ['--dry-run' => true])
+            ->expectsOutputToContain('3 usuarios se actualizarían')
+            ->assertSuccessful();
+
+        $this->artisan('users:assign-member-role')
+            ->expectsOutputToContain('3 usuarios actualizados')
+            ->assertSuccessful();
+
+        $this->assertSame([], $this->roleNames($anonymized));
+        $this->assertSame([], $this->roleNames($anonymizedAndDeleted));
+        $this->assertSame(['member'], $this->roleNames($deleted));
     }
 
     public function test_it_processes_users_in_batches(): void
