@@ -9,6 +9,8 @@ use App\Notifications\VerifyPendingEmailNotification;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Mail\Transport\ArrayTransport;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 use Symfony\Component\Mailer\SentMessage;
 use Tests\TestCase;
 
@@ -30,6 +32,38 @@ final class VerifyPendingEmailNotificationTest extends TestCase
         $user = UserModel::factory()->unverified()->create(['email' => 'old@example.com', 'pending_email' => 'new@example.com']);
 
         $user->notify(new VerifyEmail);
+
+        $this->assertSame(['old@example.com'], $this->recipientsOfTheLastMessage());
+    }
+
+    public function test_a_notification_cannot_change_the_recipient_without_the_contract(): void
+    {
+        $user = UserModel::factory()->create(['email' => 'old@example.com']);
+
+        // Same method names as the contract and as Laravel's notifiable hook, but no contract
+        $user->notify(new class extends Notification
+        {
+            /** @return list<string> */
+            public function via(object $notifiable): array
+            {
+                return ['mail'];
+            }
+
+            public function toMail(object $notifiable): MailMessage
+            {
+                return (new MailMessage)->line('Hello');
+            }
+
+            public function mailRecipient(): string
+            {
+                return 'someone-else@example.com';
+            }
+
+            public function routeNotificationForMail(): string
+            {
+                return 'someone-else@example.com';
+            }
+        });
 
         $this->assertSame(['old@example.com'], $this->recipientsOfTheLastMessage());
     }
