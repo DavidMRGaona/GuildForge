@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Models;
 
-use App\Domain\Enums\UserRole;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Str;
@@ -21,7 +20,6 @@ final class UserModelTest extends TestCase
             'display_name' => 'Johnny',
             'email' => 'john@example.com',
             'avatar_public_id' => 'avatars/john.jpg',
-            'role' => UserRole::Member,
         ]);
 
         $this->assertDatabaseHas('users', [
@@ -30,6 +28,7 @@ final class UserModelTest extends TestCase
             'display_name' => 'Johnny',
             'email' => 'john@example.com',
             'avatar_public_id' => 'avatars/john.jpg',
+            // Legacy column, no longer written: the database default fills it
             'role' => 'member',
         ]);
     }
@@ -44,7 +43,6 @@ final class UserModelTest extends TestCase
             'pending_email',
             'password',
             'avatar_public_id',
-            'role',
             'anonymized_at',
         ];
 
@@ -53,35 +51,30 @@ final class UserModelTest extends TestCase
         $this->assertEquals($fillable, $model->getFillable());
     }
 
-    public function test_it_casts_role_to_user_role_enum(): void
+    public function test_it_does_not_cast_the_legacy_role_column(): void
     {
-        $user = UserModel::factory()->create([
-            'role' => UserRole::Admin,
-        ]);
-
-        $this->assertInstanceOf(UserRole::class, $user->role);
-        $this->assertEquals(UserRole::Admin, $user->role);
+        $this->assertArrayNotHasKey('role', (new UserModel)->getCasts());
     }
 
-    public function test_factory_creates_member_by_default(): void
+    public function test_factory_creates_user_without_roles_by_default(): void
     {
         $user = UserModel::factory()->create();
 
-        $this->assertEquals(UserRole::Member, $user->role);
+        $this->assertSame([], $user->roles()->pluck('name')->all());
     }
 
     public function test_factory_admin_state_creates_admin_user(): void
     {
         $user = UserModel::factory()->admin()->create();
 
-        $this->assertEquals(UserRole::Admin, $user->role);
+        $this->assertSame(['admin'], $user->roles()->pluck('name')->all());
     }
 
     public function test_factory_editor_state_creates_editor_user(): void
     {
         $user = UserModel::factory()->editor()->create();
 
-        $this->assertEquals(UserRole::Editor, $user->role);
+        $this->assertSame(['editor'], $user->roles()->pluck('name')->all());
     }
 
     public function test_is_admin_returns_true_for_user_with_admin_role(): void
@@ -139,7 +132,6 @@ final class UserModelTest extends TestCase
             'display_name' => 'Mass Assign',
             'email' => 'MASS.ASSIGN@EXAMPLE.COM',
             'password' => 'password',
-            'role' => UserRole::Member,
         ]);
 
         $this->assertDatabaseHas('users', [

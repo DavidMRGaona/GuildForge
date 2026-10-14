@@ -95,7 +95,6 @@ Listing query parameters (`/eventos`, `/articulos`, `/galeria`): `page` (integer
       displayName: string | null;
       email: string;
       avatarPublicId: string | null;
-      role: string;
       emailVerified: boolean;
       createdAt: string;
       roles: string[];
@@ -174,7 +173,7 @@ While *Requerir verificación de email* is on, `EnsureEmailIsVerifiedWhenRequire
 |------|-------|
 | `Auth/Login`, `Auth/Register`, `Auth/ForgotPassword`, `Auth/VerifyEmail` | only `seo` |
 | `Auth/ResetPassword` | `token`, `email` (from the `email` query parameter) |
-| `Profile/Show` | `user` (`UserResponseDTO`: `id`, `name`, `displayName`, `email`, `pendingEmail`, `avatarPublicId`, `role`, `emailVerified`, `createdAt`) |
+| `Profile/Show` | `user` (`UserResponseDTO`: `id`, `name`, `displayName`, `email`, `pendingEmail`, `avatarPublicId`, `emailVerified`, `createdAt`) |
 
 ---
 

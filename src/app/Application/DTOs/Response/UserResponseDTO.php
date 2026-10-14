@@ -16,7 +16,6 @@ final readonly class UserResponseDTO implements JsonSerializable
         public string $email,
         public ?string $pendingEmail,
         public ?string $avatarPublicId,
-        public string $role,
         public bool $emailVerified,
         public DateTimeImmutable $createdAt,
     ) {}
@@ -33,7 +32,6 @@ final readonly class UserResponseDTO implements JsonSerializable
             'email' => $this->email,
             'pendingEmail' => $this->pendingEmail,
             'avatarPublicId' => $this->avatarPublicId,
-            'role' => $this->role,
             'emailVerified' => $this->emailVerified,
             'createdAt' => $this->createdAt->format('c'),
         ];

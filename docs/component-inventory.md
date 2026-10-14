@@ -505,7 +505,7 @@ Located in `src/resources/js/composables/`.
 - **Parameters**: --
 - **Returns**: `{ user, isAuthenticated, isEmailVerified, isAdmin, isEditor, canManageContent, authSettings, can, canAny, canAll, hasRole, hasAnyRole, logout }`
 - **Dependencies**: Inertia `usePage`, `router`
-- **Purpose**: Access to authenticated user from Inertia props. Role checks (admin, editor) with support for `roles` array and legacy `role` field. Granular permission system (`can`, `canAny`, `canAll`). Auth configuration (registration/login enabled, email verification). Logout via POST
+- **Purpose**: Access to authenticated user from Inertia props. Role checks (admin, editor) from the `roles` array. Granular permission system (`can`, `canAny`, `canAll`). Auth configuration (registration/login enabled, email verification). Logout via POST
 
 ### useNotifications
 
@@ -643,8 +643,7 @@ Re-exports `models.ts` and `inertia.d.ts`. Also defines:
 
 | Type | Main properties |
 |------|-----------------|
-| `User` | `id`, `name`, `displayName`, `email`, `pendingEmail`, `avatarPublicId`, `role` (deprecated), `emailVerified`, `createdAt`, `roles?: string[]`, `permissions?: string[]` |
-| `UserRole` | `'admin' \| 'editor' \| 'member'` (deprecated) |
+| `User` | `id`, `name`, `displayName`, `email`, `pendingEmail`, `avatarPublicId`, `emailVerified`, `createdAt`, `roles?: string[]`, `permissions?: string[]` |
 | `AuthSettings` | `registrationEnabled`, `loginEnabled`, `emailVerificationRequired` |
 | `RegisterFormData` | `name`, `email`, `password`, `password_confirmation` |
 | `LoginFormData` | `email`, `password`, `remember` |
