@@ -161,6 +161,24 @@ export interface GalleryFilters {
 /** Semantic color token for a calendar source, resolved via CSS variables. */
 export type CalendarSourceColor = 'primary' | 'accent' | 'info' | 'success' | 'warning' | 'neutral';
 
+/**
+ * Icons the core knows how to render for a source-provided meta row.
+ * Unknown values fall back to a neutral icon, so a module can be ahead of the core.
+ */
+export type CalendarEntryMetaIcon = 'dice' | 'user' | 'users' | 'monitor' | 'clock' | 'map-pin';
+
+/**
+ * A labelled row a calendar source attaches to an entry, already translated
+ * by the backend. The frontend renders these generically, without knowing the
+ * source (game system, players, format, ...).
+ */
+export interface CalendarEntryMetaItem {
+    /** A `CalendarEntryMetaIcon`, or any name a newer module sends (rendered with the fallback icon). */
+    icon: string;
+    label: string;
+    value: string;
+}
+
 export interface CalendarEntry {
     id: string;
     /** Generic source identifier (e.g. 'event', 'game-table'). Frontend stays agnostic of module types. */
@@ -179,6 +197,8 @@ export interface CalendarEntry {
     nonMemberPrice?: number | null;
     url: string;
     tags: Tag[];
+    /** Source-specific rows (e.g. game system, players); absent on core events. */
+    meta?: CalendarEntryMetaItem[];
 }
 
 /** @deprecated Use CalendarEntry instead */

@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { CalendarEntry } from '@/types/models';
 import { buildCardImageUrl } from '@/utils/cloudinary';
+import { resolveCalendarMetaIcon } from '@/utils/icons';
 import { useEvents } from '@/composables/useEvents';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import TagList from '@/components/ui/TagList.vue';
@@ -51,6 +52,8 @@ const truncatedDescription = computed(() => {
     if (!props.event?.description) return '';
     return getExcerpt(props.event.description, 200);
 });
+
+const metaRows = computed(() => props.event?.meta ?? []);
 </script>
 
 <template>
@@ -90,14 +93,6 @@ const truncatedDescription = computed(() => {
 
             <!-- Event content -->
             <div class="flex-1">
-                <!-- Source badge (non-event activity types, e.g. game tables) -->
-                <span
-                    v-if="!isEventSource"
-                    class="mb-2 inline-block rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-base-secondary"
-                >
-                    {{ event.sourceLabel }}
-                </span>
-
                 <!-- Title -->
                 <h3 class="text-lg font-semibold text-base-primary">
                     {{ event.title }}
@@ -155,6 +150,24 @@ const truncatedDescription = computed(() => {
                         />
                     </svg>
                     {{ event.location }}
+                </div>
+
+                <!-- Source-provided rows (e.g. game system, players), rendered generically -->
+                <div
+                    v-for="row in metaRows"
+                    :key="row.label"
+                    class="mt-2 flex items-center text-sm text-base-secondary"
+                >
+                    <component
+                        :is="resolveCalendarMetaIcon(row.icon)"
+                        class="mr-2 h-4 w-4 shrink-0 text-base-muted"
+                        :stroke-width="2"
+                        aria-hidden="true"
+                    />
+                    <span>
+                        <span class="text-base-muted">{{ row.label }}:</span>
+                        {{ row.value }}
+                    </span>
                 </div>
 
                 <!-- Description -->

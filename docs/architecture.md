@@ -257,7 +257,7 @@ Contracts that define application layer operations:
 **Calendar** (`Application/Calendar/`):
 - `CalendarAggregatorServiceInterface` - Merges the entries of every calendar source
 - `CalendarSourceRegistryInterface` - Registered sources (core events plus module sources)
-- `CalendarEntrySourceInterface` - Contract a source implements to return `CalendarEntryDTO`s
+- `CalendarEntrySourceInterface` - Contract a source implements to return `CalendarEntryDTO`s; `details` is merged into the JSON and the detail panel renders `description`, `location`, `imagePublicId`, `tags` and the translated `meta` rows (`icon`, `label`, `value`) generically
 
 **Content** (`Application/Content/`):
 - `TrixHtmlConverterInterface` - Converts rich text written with the old Trix editor to TipTap HTML

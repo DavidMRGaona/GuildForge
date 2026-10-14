@@ -1840,7 +1840,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerRoutes()` | `ModuleRouteDTO[]` | Public pages offered in the menu editor |
 | `registerPagePrefixes()` | `PagePrefixDTO[]` | Inertia page prefixes of the module |
 | `registerSlots()` | `SlotRegistrationDTO[]` | Slot component registrations |
-| `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Sources of public calendar entries |
+| `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Sources of public calendar entries; fill `details` with `description`, `location`, `imagePublicId` and `meta` rows (`icon`, `label`, `value`, translated) so the detail panel is as complete as an event's |
 | `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |
 | `registerNavigationGroups()` | `array` | Filament navigation groups |
 | `registerFilamentPages()` | `class-string<Page>[]` | Filament pages |
