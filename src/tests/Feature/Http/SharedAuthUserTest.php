@@ -125,6 +125,32 @@ final class SharedAuthUserTest extends TestCase
                 ->has('user.createdAt'));
     }
 
+    public function test_no_user_gets_the_legacy_role_field(): void
+    {
+        foreach ([
+            UserModel::factory()->admin()->create(),
+            UserModel::factory()->editor()->create(),
+            UserModel::factory()->create(),
+        ] as $user) {
+            $this->actingAs($user)
+                ->get('/')
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->has('auth.user.roles')
+                    ->missing('auth.user.role'));
+        }
+    }
+
+    public function test_the_profile_page_does_not_get_the_legacy_role_field(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create())
+            ->get(route('profile.show'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('user.email')
+                ->missing('user.role'));
+    }
+
     /**
      * @return array<string, mixed>
      */
