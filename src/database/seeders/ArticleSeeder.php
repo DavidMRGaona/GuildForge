@@ -17,7 +17,7 @@ final class ArticleSeeder extends Seeder
     public function run(): void
     {
         $editors = UserModel::query()
-            ->whereIn('role', ['admin', 'editor'])
+            ->whereHas('roles', fn ($query) => $query->whereIn('name', ['admin', 'editor']))
             ->get();
 
         if ($editors->isEmpty()) {

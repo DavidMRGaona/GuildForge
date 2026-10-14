@@ -6,7 +6,6 @@ namespace App\Console\Commands;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
-use App\Domain\Enums\UserRole;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Console\Command;
@@ -75,7 +74,6 @@ final class MakeAdminUserCommand extends Command
             'email' => $email,
             'password' => Hash::make($password),
             'email_verified_at' => now(),
-            'role' => UserRole::Admin,
         ]);
 
         // Attach admin role if it exists

@@ -96,7 +96,7 @@ Core migrations create 27 application tables plus the Laravel framework tables `
 | email_verified_at | timestamp | nullable |
 | password | string | |
 | avatar_public_id | string | nullable |
-| role | string | default `member` (`UserRole`) |
+| role | string | default `member`; legacy, not read or written by the code (roles live in `user_role`) |
 | remember_token | string(100) | nullable |
 | created_at / updated_at | timestamp | nullable |
 | deleted_at | timestamp | nullable (soft delete) |
@@ -1249,7 +1249,7 @@ Module enums live in `Modules\<Name>\Domain\Enums`.
 | PhotoResponseDTO | id, imagePublicId, caption, sortOrder |
 | HeroSlideResponseDTO | id, title, subtitle, buttonText, buttonUrl, imagePublicId, isActive, sortOrder |
 | TagResponseDTO | id, name, slug, parentId, parentName, appliesTo, color, sortOrder |
-| UserResponseDTO | id, name, displayName, email, pendingEmail, avatarPublicId, role, emailVerified, createdAt |
+| UserResponseDTO | id, name, displayName, email, pendingEmail, avatarPublicId, emailVerified, createdAt |
 | LegalPageResponseDTO | title, content, lastUpdated |
 | AboutPageResponseDTO | guildName, aboutHistory, contactEmail, contactPhone, contactAddress, aboutHeroImage, aboutTagline, activities, joinSteps, socialLinks, location |
 | PaginatedResponseDTO | data, meta (`currentPage`, `lastPage`, `perPage`, `total`), links (`first`, `last`, `prev`, `next`) |

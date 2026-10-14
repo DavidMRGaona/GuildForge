@@ -53,19 +53,9 @@ export function useAuth(): AuthComposable {
 
     const isEmailVerified = computed<boolean>(() => user.value?.emailVerified ?? false);
 
-    // Check admin via new roles array first, fallback to old role field
-    const isAdmin = computed<boolean>(() => {
-        const roles = user.value?.roles ?? [];
-        if (roles.includes('admin')) return true;
-        return user.value?.role === 'admin';
-    });
+    const isAdmin = computed<boolean>(() => (user.value?.roles ?? []).includes('admin'));
 
-    // Check editor via new roles array first, fallback to old role field
-    const isEditor = computed<boolean>(() => {
-        const roles = user.value?.roles ?? [];
-        if (roles.includes('editor')) return true;
-        return user.value?.role === 'editor';
-    });
+    const isEditor = computed<boolean>(() => (user.value?.roles ?? []).includes('editor'));
 
     const canManageContent = computed<boolean>(() => isAdmin.value || isEditor.value);
 
