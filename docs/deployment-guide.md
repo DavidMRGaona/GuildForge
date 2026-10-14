@@ -1,6 +1,6 @@
 # Deployment guide
 
-> Generated: 2026-03-21 | Last updated: 2026-10-05
+> Core 3.5.1
 
 Complete guide to deploy, operate, and monitor GuildForge in production.
 
@@ -12,19 +12,19 @@ Complete guide to deploy, operate, and monitor GuildForge in production.
 
 The production environment is based on a multi-stage Docker image that includes Nginx, PHP-FPM, a queue worker and the scheduler, all managed by Supervisord within a single container.
 
-The table below is prod-local (`docker-compose.prod.yml`). Production runs on Coolify with a managed PostgreSQL and Redis shared by both tenants: see [Deployment with Coolify](#deployment-with-coolify).
+The table below is prod-local (`docker-compose.prod.yml`). Production runs the same image on a deployment platform, with its own PostgreSQL and Redis: see [Deployment](#deployment).
 
 | Container | Image | Port | Function |
 |-----------|-------|------|----------|
 | `guildforge_app_prod` | Dockerfile.prod (PHP 8.5 FPM Alpine) | 8000 | Application (Nginx + PHP-FPM + queue worker + scheduler) |
 | `guildforge_db_prod` | postgres:17-alpine | - | PostgreSQL database |
-| `guildforge_redis_prod` | redis:7.2-alpine | - | Cache and sessions |
+| `guildforge_redis_prod` | redis:7.2-alpine | - | Redis (available for cache, sessions and queues) |
 
 In the development environment, the following are also included:
 
 | Container | Image | Port | Function |
 |-----------|-------|------|----------|
-| `guildforge_elasticsearch` | elasticsearch:9.2.4 | 9200 | Search engine and logging |
+| `guildforge_elasticsearch` | elasticsearch:9.2.4 | 9200 | Log storage |
 | `guildforge_kibana` | kibana:9.2.4 | 5601 | Log visualization |
 | `guildforge_mailpit` | axllent/mailpit:v1.31 | 8025 | Development mail server |
 
@@ -33,14 +33,11 @@ In the development environment, the following are also included:
 ```
                          Internet
                             |
-                      [Reverse proxy / Coolify]
+              [Reverse proxy :443 (TLS)]
                             |
-                    +-------+-------+
-                    |               |
-             Puerto 8000     Puerto 443 (SSL)
-                    |               |
-            +-------+-------+
-            |  guildforge_app_prod |
+                            v :8000
+            +---------------+-----+
+            | guildforge_app_prod |
             |  +--------------+   |
             |  |    Nginx     |   |
             |  |   :8000      |   |
@@ -54,15 +51,18 @@ In the development environment, the following are also included:
             |  +--------------+   |
             |  | Queue worker |   |
             |  +--------------+   |
+            |  +--------------+   |
+            |  |  Scheduler   |   |
+            |  +--------------+   |
             +----------+----------+
                        |
             +----------+----------+
             |                     |
-    +-------+-------+    +-------+-------+
-    | guildforge_db  |    | guildforge    |
-    |   PostgreSQL   |    |    Redis      |
-    |    :5432       |    |    :6379      |
-    +----------------+    +---------------+
+  +---------+----------+  +-----+-----------------+
+  | guildforge_db_prod |  | guildforge_redis_prod |
+  |     PostgreSQL     |  |         Redis         |
+  |       :5432        |  |         :6379         |
+  +--------------------+  +-----------------------+
 ```
 
 All containers communicate through the `guildforge_prod` Docker network (bridge driver). Only the application container exposes its port to the host.
@@ -85,7 +85,7 @@ The `Dockerfile.prod` file uses a multi-stage build to optimize image size and s
 **Stage 1: `assets` (Node 24 Alpine)**
 - Installs npm dependencies (`npm ci`)
 - Compiles frontend assets and the admin panel theme (`resources/css/filament/admin/theme.css`) with `npx vite build`, using Filament's CSS from the `vendor` stage; types are checked by CI, which every deployment waits for
-- Compiles module assets that have `package.json` and `vite.config.ts` with `npm ci` and `npm run build`; a module that fails to install or build fails the image. Coolify builds carry no modules (they live outside the host repository), so this only does work in prod-local
+- Compiles module assets that have `package.json` and `vite.config.ts` with `npm ci` and `npm run build`; a module that fails to install or build fails the image. Production builds from the repository carry no modules (they live outside the host repository), so this only does work in prod-local
 - Consolidates module build artifacts for copying to the final stage
 
 **Stage 2: `final` (PHP 8.5 FPM Alpine 3.24)**
@@ -110,6 +110,19 @@ make prod-logs     # View logs
 make prod-ps       # Status
 ```
 
+`app-prod` reads `.env.prod.local` at the repository root, which is not versioned and has no template: without it `make prod-up` fails. Start from `src/.env.example` and set at least:
+
+```env
+APP_ENV=production
+APP_KEY=base64:...            # docker exec guildforge_app php artisan key:generate --show
+APP_URL=http://localhost:8000
+DB_HOST=db-prod
+DB_DATABASE=guildforge_prod
+DB_USERNAME=guildforge_prod
+DB_PASSWORD=secret_prod
+REDIS_HOST=redis-prod
+```
+
 **Services:**
 
 | Service | Configuration |
@@ -118,7 +131,7 @@ make prod-ps       # Status
 | `db-prod` | PostgreSQL 17 Alpine, database `guildforge_prod`, healthcheck with `pg_isready` |
 | `redis-prod` | Redis 7.2 Alpine, healthcheck with `redis-cli ping` |
 
-**Persistent volumes:**
+**Persistent volumes** (Docker prefixes them with the Compose project name, by default the checkout directory, e.g. `<project>_guildforge_prod_db_data`):
 - `guildforge_prod_db_data` - PostgreSQL data
 - `guildforge_prod_storage` - Laravel storage (logs, cache, sessions, uploads)
 - `guildforge_prod_redis_data` - Redis data
@@ -148,8 +161,8 @@ Manages four processes inside the production container:
 |---------|---------|---------------|
 | nginx | `nginx -g "daemon off;"` | Auto-start, auto-restart |
 | php-fpm | `php-fpm` | Auto-start, auto-restart |
-| queue-worker | `php artisan queue:work --sleep=3 --tries=3 --max-time=3600` | 1 process, www-data user, stop timeout 3600s, no `--force` (pauses under `artisan down`) |
-| scheduler | `php artisan schedule:work` | www-data user (runs `CheckModuleUpdatesJob` daily at 04:00 and module tasks) |
+| queue-worker | `php /var/www/html/artisan queue:work --sleep=3 --tries=3 --max-time=3600` | 1 process, www-data user, stop timeout 3600s, no `--force` (pauses under `artisan down`) |
+| scheduler | `php /var/www/html/artisan schedule:work` | www-data user (runs `CheckModuleUpdatesJob` daily at 04:00 and module tasks) |
 
 `supervisorctl` talks to supervisord through `/run/supervisord.sock`:
 
@@ -176,9 +189,9 @@ Runs on every push or pull request to `main`.
 
 **Job `test`:**
 - Services: PostgreSQL 17, Redis 7.2
-- Steps: checkout, setup PHP 8.5, composer install, setup Node 24, npm ci, build assets, prepare `.env`, run migrations, run tests
+- Steps: checkout, setup PHP 8.5, composer install, Pint (`vendor/bin/pint --test`), setup Node 24, npm ci, build assets, check the module import map (`npm run verify:build`), prepare `.env`, run migrations, run tests (serially, on PostgreSQL)
 
-> **Note on PostgreSQL versions:** CI, development and prod-local use PostgreSQL 17, the major version production runs. Migrations use Laravel's schema builder, so they also run on SQLite (tests).
+> **Note on PostgreSQL versions:** CI, development and prod-local use PostgreSQL 17, the major version production runs. Migrations use Laravel's schema builder, so they also run on SQLite (local tests); CI runs migrations and tests on PostgreSQL 17.
 
 **Job `lint`:**
 - Runs in parallel with `test`
@@ -189,20 +202,20 @@ Runs on every push or pull request to `main`.
 Runs automatically when the CI workflow completes successfully on the `main` branch.
 
 **Strategy:**
-- Runs deployments in parallel to multiple servers (`WEBHOOK_URL_SERVER_1`, `WEBHOOK_URL_SERVER_2`)
-- Each deployment sends a POST to the Coolify webhook with an authentication token
+- Runs deployments in parallel to two targets (`WEBHOOK_URL_SERVER_1`, `WEBHOOK_URL_SERVER_2`)
+- Each deployment triggers the deployment platform through its API: a POST to the target's deploy URL with `DEPLOY_API_TOKEN` as bearer token (see `.github/workflows/deploy.yml`)
 
 **Full pipeline:**
 
 ```
-Push a main
+Push to main
     ↓
-CI: test (PHP + PostgreSQL + Redis)    ←── en paralelo ──→    CI: lint (TypeScript + ESLint)
+CI: test (PHP + PostgreSQL + Redis)    ←── in parallel ──→    CI: lint (TypeScript + ESLint)
     ↓                                                              ↓
-    +──────────────── Ambos exitosos ──────────────────────────────+
+    +──────────────── Both succeed ────────────────────────────────+
                               ↓
-                    Deploy: webhook a Coolify
-                    (servidor 1 + servidor 2 en paralelo)
+                    Deploy: deployment platform API
+                    (target 1 + target 2 in parallel)
 ```
 
 #### 3. Module release (`reusable-module-release.yml`)
@@ -218,10 +231,11 @@ Reusable workflow for publishing modules as ZIP packages in GitHub Releases.
 
 | Secret | Description |
 |--------|-------------|
-| `WEBHOOK_URL_SERVER_1` | Coolify webhook URL (server 1) |
-| `WEBHOOK_URL_SERVER_2` | Coolify webhook URL (server 2) |
-| `DEPLOY_API_TOKEN` | Authentication token for webhooks |
-| `GITHUB_TOKEN` | Automatic GitHub token (for releases) |
+| `WEBHOOK_URL_SERVER_1` | Deploy URL (deployment platform API) of the first target |
+| `WEBHOOK_URL_SERVER_2` | Deploy URL (deployment platform API) of the second target |
+| `DEPLOY_API_TOKEN` | Deployment platform API token, sent as bearer token |
+
+`GITHUB_TOKEN`, used by `reusable-module-release.yml` in the module repositories, is provided by GitHub Actions; there is nothing to configure.
 
 ---
 
@@ -251,18 +265,16 @@ Reusable workflow for publishing modules as ZIP packages in GitHub Releases.
 | `CACHE_STORE` | Cache driver | `database` |
 | `QUEUE_CONNECTION` | Queue driver | `database` |
 | `SESSION_DRIVER` | Session driver | `database` |
-
-> **Note on Redis vs database:** the default configuration uses `database` for cache, queues, and sessions, which simplifies deployment and does not require Redis to be available. For better performance in production, you can switch to `redis` for all three variables (`CACHE_STORE`, `QUEUE_CONNECTION`, `SESSION_DRIVER`), since Redis is part of the production stack.
-
 | `SESSION_SECURE_COOKIE` | HTTPS-only cookies | `true` |
 | `TRUSTED_PROXIES` | Trusted proxy IPs (do not use `*` in production) | `192.168.1.0/24` |
 | `MAIL_MAILER` | Mail driver | `resend` or `ses` |
 | `MAIL_FROM_ADDRESS` | Sender address | `noreply@guildforge.example.com` |
 | `MAIL_FROM_NAME` | Sender name | `GuildForge` |
 | `CLOUDINARY_URL` | Cloudinary connection URL | `cloudinary://KEY:SECRET@CLOUD` |
-| `VITE_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | `tu-cloud-name` |
+| `VITE_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name sent to the frontend at runtime (optional: defaults to `CLOUDINARY_CLOUD_NAME`, then to the host of `CLOUDINARY_URL`) | `your-cloud-name` |
 | `CLOUDINARY_PREFIX` | Cloudinary file prefix | `guildforge` |
-| `ELASTICSEARCH_ENABLED` | Enable Elasticsearch logging | `true` |
+| `LOG_CHANNELS` | Channels of the `stack` logger; add `elasticsearch` to ship logs | `daily,elasticsearch` |
+| `ELASTICSEARCH_ENABLED` | Enable the `elasticsearch` log channel | `true` |
 | `ELASTICSEARCH_HOST` | Elasticsearch host | `elasticsearch` |
 | `ELASTICSEARCH_PORT` | Elasticsearch port | `9200` |
 | `ELASTICSEARCH_INDEX` | Log index name | `guildforge-logs` |
@@ -270,12 +282,17 @@ Reusable workflow for publishing modules as ZIP packages in GitHub Releases.
 | `BOT_PROTECTION_ENABLED` | Bot protection | `true` |
 | `BCRYPT_ROUNDS` | Hashing rounds (12 recommended for production) | `12` |
 | `MODULES_PATH` | Module path relative to the application | `modules` |
+| `GITHUB_TOKEN` | GitHub token for update checks (`config/updates.php`; 60 requests/hour without it, 5000 with it) | `ghp_…` |
+| `RESEND_API_KEY` | Resend API key when `MAIL_MAILER=resend` | (secret) |
+| `SOURCE_COMMIT` and the branch variable | Injected by the deployment platform; do not set by hand (see `config/updates.php`) | - |
+
+> **Note on Redis vs database:** the default configuration uses `database` for cache, queues, and sessions, which simplifies deployment and does not require Redis to be available. For better performance in production, you can switch to `redis` for all three variables (`CACHE_STORE`, `QUEUE_CONNECTION`, `SESSION_DRIVER`), since Redis is part of the production stack.
 
 ### Secret management
 
 - **Never** commit `.env` files to the repository
-- Use system environment variables or hosting service variables (Coolify)
-- For local production, use `.env.prod.local` (excluded from Git)
+- Use system environment variables or the deployment platform's variables
+- For local production, use `.env.prod.local` at the repository root (excluded from Git, no template; see [docker-compose.prod.yml](#docker-composeprodyml))
 - Use different credentials for each environment (development, staging, production)
 - `APP_DEBUG=false` always in production
 
@@ -294,52 +311,29 @@ The prod-local container uses `postgres:17-alpine` with the following configurat
 
 ### Backup and restore
 
-**Create a backup:**
+**Production:** backups are the responsibility of the hosting infrastructure (database volumes, the `storage` and `modules` bind mounts); the application ships no backup cron. Before a one-off dump, stop `queue-worker` and `scheduler` if you need a quiet database (see [Supervisord](#supervisord)).
 
-```bash
-make db-backup
-```
+**Development:** `make db-backup` writes `./backups/backup_<Ymd_His>.sql` from `guildforge_db`, and `make db-restore` loads the newest file in `./backups/`. They do not touch prod-local or production.
 
-Generates a SQL file with a timestamp in `./backups/` (e.g., `backup_20260321_143022.sql`).
-
-**Restore from a backup:**
-
-```bash
-make db-restore
-```
-
-Automatically restores from the most recent file in `./backups/`.
-
-**Manual backup in production:**
+**Manual backup in prod-local:**
 
 ```bash
 docker exec guildforge_db_prod pg_dump -U guildforge_prod guildforge_prod > backup.sql
 ```
 
-**Manual restore:**
+**Manual restore in prod-local:**
 
 ```bash
 cat backup.sql | docker exec -i guildforge_db_prod psql -U guildforge_prod -d guildforge_prod
 ```
 
-### Backup automation
-
-Currently, backups are run manually. For production, it is recommended to configure a cron job that runs the backup periodically:
-
-```bash
-# Example cron (daily at 3:00 AM)
-0 3 * * * cd /path/to/project && make db-backup >> /var/log/guildforge-backup.log 2>&1
-```
-
-Also consider a retention policy to delete old backups and avoid excessive disk usage.
-
 ### Migration strategy
 
 - Migrations run automatically when the production container starts (in `entrypoint.sh` with `--force`)
-- All migrations must be compatible with PostgreSQL (production) and SQLite (tests)
+- All migrations must be compatible with PostgreSQL (CI and production) and SQLite (local tests)
 - Use Laravel's schema builder, not raw SQL
 - UUID primary keys: `$table->uuid('id')->primary()`
-- Roll back with `make migrate-rollback` if a migration causes issues
+- In development, roll back with `make migrate-rollback`. In production, write migrations the previous release can run against: redeploying an older image does not roll migrations back
 
 ---
 
@@ -354,7 +348,7 @@ Cloudinary handles image storage, transformation, and delivery.
 | Variable | Description |
 |----------|-------------|
 | `CLOUDINARY_URL` | Full connection URL (`cloudinary://API_KEY:API_SECRET@CLOUD_NAME`) |
-| `VITE_CLOUDINARY_CLOUD_NAME` | Cloud name (accessible from the frontend) |
+| `VITE_CLOUDINARY_CLOUD_NAME` | Cloud name sent to the frontend at runtime (optional: defaults to `CLOUDINARY_CLOUD_NAME`, then to the host of `CLOUDINARY_URL`) |
 | `CLOUDINARY_PREFIX` | Prefix for organizing files (`guildforge`) |
 | `VITE_CLOUDINARY_PREFIX` | Same prefix for the frontend |
 
@@ -393,7 +387,7 @@ In development, Mailpit captures all emails at http://localhost:8025.
 
 ### Elasticsearch (logging)
 
-Elasticsearch stores application logs for search and analysis.
+Elasticsearch stores application logs for search and analysis in Kibana (the site's search does not use it).
 
 **Configuration:**
 
@@ -402,9 +396,10 @@ ELASTICSEARCH_ENABLED=true
 ELASTICSEARCH_HOST=elasticsearch
 ELASTICSEARCH_PORT=9200
 ELASTICSEARCH_INDEX=guildforge-logs
-ELASTICSEARCH_SSL=false       # true si usas HTTPS
-ELASTICSEARCH_USER=            # usuario si hay autenticación
-ELASTICSEARCH_PASSWORD=        # contraseña si hay autenticación
+ELASTICSEARCH_SSL=false       # true when using HTTPS
+ELASTICSEARCH_USER=            # user, if authentication is enabled
+ELASTICSEARCH_PASSWORD=        # password, if authentication is enabled
+LOG_CHANNELS=daily,elasticsearch
 ```
 
 **Verify connection:**
@@ -417,22 +412,22 @@ make es-indices    # Index list
 
 ### Redis
 
-Redis is used as cache, session store, and queue broker.
+Redis serves the cache, sessions and queues when `CACHE_STORE`, `SESSION_DRIVER` and `QUEUE_CONNECTION` are set to `redis` (the defaults are `database`).
 
 **Configuration:**
 
 ```env
 REDIS_CLIENT=phpredis
 REDIS_HOST=redis-prod
-REDIS_PASSWORD=null           # configurar en producción si es necesario
+REDIS_PASSWORD=null           # set in production if Redis requires one
 REDIS_PORT=6379
 REDIS_PREFIX=guildforge_
 REDIS_CACHE_DB=1              # one value per tenant when tenants share a Redis
 ```
 
-In production both tenants use the same Redis 7.2 instance managed by Coolify. Each tenant needs its own `REDIS_PREFIX` and its own `REDIS_CACHE_DB` (for example `1` and `2`).
+When several instances (tenants) share one Redis, each needs its own `REDIS_PREFIX` and its own `REDIS_CACHE_DB` (for example `1` and `2`).
 
-**Never run `php artisan cache:clear` or `php artisan optimize:clear` in production.** With the Redis store they run `FLUSHDB` on the cache database, which drops every cache entry and the `queue:restart` signal of every tenant using that database. Cache locks (unique jobs, `withoutOverlapping` tasks) are not there: `lock_connection` is `default`, so they live in database 0, which both tenants share, separated only by `REDIS_PREFIX`. To drop compiled files, run the individual commands (`config:clear`, `route:clear`, `event:clear`, `view:clear`) or `php artisan module:refresh-caches`, which clears and rebuilds them without touching the data cache (`App\Infrastructure\Support\FrameworkCacheCommands`).
+**Never run `php artisan cache:clear` or `php artisan optimize:clear` in production.** With the Redis store they run `FLUSHDB` on the cache database, which drops every cache entry and the `queue:restart` signal of every tenant using that database. Cache locks (unique jobs, `withoutOverlapping` tasks) are not there: `lock_connection` is `default`, so they live in database 0, which every instance sharing that Redis uses, separated only by `REDIS_PREFIX`. To drop compiled files, run the individual commands (`config:clear`, `route:clear`, `event:clear`, `view:clear`) or `php artisan module:refresh-caches` (hidden from `artisan list`), which clears and rebuilds them without touching the data cache (`App\Infrastructure\Support\FrameworkCacheCommands`).
 
 ---
 
@@ -440,7 +435,7 @@ In production both tenants use the same Redis 7.2 instance managed by Coolify. E
 
 ### Logging with Elasticsearch
 
-When `ELASTICSEARCH_ENABLED=true`, Laravel logs are sent to Elasticsearch in addition to the file channel.
+Logs reach Elasticsearch when `ELASTICSEARCH_ENABLED=true` **and** `elasticsearch` is one of the `LOG_CHANNELS` (e.g. `LOG_CHANNELS=daily,elasticsearch`). The default logger is a `stack` of the channels in `LOG_CHANNELS` (`daily` by default); `ELASTICSEARCH_ENABLED` only turns the `elasticsearch` channel from a no-op into a real handler.
 
 **Verify that Elasticsearch is running:**
 
@@ -481,7 +476,7 @@ curl http://localhost:8000/health
 # healthy
 ```
 
-`/health` is answered by Nginx alone and does not boot Laravel. The Coolify healthcheck uses Laravel's `/up` instead (see [Deployment with Coolify](#deployment-with-coolify)).
+`/health` is answered by Nginx alone and does not boot Laravel. The container healthcheck must use Laravel's `/up` instead (see [Deployment](#deployment)).
 
 ---
 
@@ -489,14 +484,14 @@ curl http://localhost:8000/health
 
 ### OPcache, module updates and maintenance mode
 
-`docker/prod/php.ini` sets `opcache.validate_timestamps=1` and `opcache.revalidate_freq=2`: PHP-FPM checks file timestamps at most every two seconds, so a module installed from a ZIP or updated from the admin panel takes effect without restarting the container or reloading PHP-FPM. A Coolify deployment always starts a new container, so its OPcache starts empty.
+`docker/prod/php.ini` sets `opcache.validate_timestamps=1` and `opcache.revalidate_freq=2`: PHP-FPM checks file timestamps at most every two seconds, so a module installed from a ZIP or updated from the admin panel takes effect without restarting the container or reloading PHP-FPM. A deployment always starts a new container, so its OPcache starts empty.
 
 Installing a module from a ZIP and applying module updates require maintenance mode. It is a site setting (*Configuración del sitio → Mantenimiento*, keys `maintenance_enabled` and `maintenance_message`), not `php artisan down`: the queue worker runs without `--force`, so `artisan down` would pause it and queued updates would never run. The setting only closes the public site: `/admin`, Livewire requests, `/up`, `/iniciar-sesion` and users who can access the panel keep working, and the queue worker and scheduler keep writing to the database.
 
 A module update runs as a queued job (`UpdateModuleJob`, one per module at a time):
 
 1. Backs up the installed module, downloads the release ZIP, verifies its `.sha256`, extracts it into `modules/.staging-<name>-*` and swaps it with the installed copy (kept as `modules/.previous-<name>-*`); publishes the module's `public/build`.
-2. Runs `php artisan module:finish-update <name> <version>` in a new PHP process: the health check first, then migrations, new seeders and the recorded version in one database transaction. The commit is the point of no return.
+2. Runs `php artisan module:finish-update <name> <version>` (hidden from `artisan list`) in a new PHP process: the health check first, then migrations, new seeders and the recorded version in one database transaction. The commit is the point of no return.
 3. Runs `php artisan module:refresh-caches`, which clears the framework's compiled files (config, routes, events, views, compiled classes, Blade icons, Filament) without touching the data cache, then rebuilds the config and view caches when the config cache was in use, and the route cache when routes were cached.
 4. On a failure between the swap and the commit, restores the previous files. Finally runs `php artisan queue:restart` so the worker drops the old module classes.
 
@@ -539,12 +534,12 @@ The `docker/prod/php.ini` file sets:
 | `opcache.enable` | `1` | OPcache enabled |
 | `opcache.validate_timestamps` | `1` | Revalidate file timestamps (module updates apply without a restart) |
 | `opcache.revalidate_freq` | `2` | Check timestamps at most every 2 seconds |
-| `opcache.memory_consumption` | `128M` | Memory for cached bytecode |
+| `opcache.memory_consumption` | `128` (MB) | Memory for cached bytecode |
 | `expose_php` | `Off` | Do not expose PHP version |
 | `memory_limit` | `256M` | Memory limit per process |
 | `post_max_size` | `20M` | Maximum POST size |
 | `upload_max_filesize` | `20M` | Maximum upload size |
-| `max_execution_time` | `60s` | Execution timeout |
+| `max_execution_time` | `60` (seconds) | Execution timeout |
 | `display_errors` | `Off` | Do not display errors to users |
 | `date.timezone` | `Europe/Madrid` | Timezone |
 
@@ -561,9 +556,9 @@ Relevant configuration from `docker/prod/nginx.conf`:
 - Hidden files denied (except `.well-known`)
 - `/health` endpoint for health checks
 
-### Modules as Git submodules
+### Modules as separate repositories
 
-Modules in `src/modules/` are independent Git repositories (submodules). Key points:
+Modules in `src/modules/` are independent Git repositories (`DavidMRGaona/guildforge-<name>`; venue-bookings: `guildforge-venue-booking`), ignored by the core repository (not submodules). Key points:
 
 - Tags and releases go to the module's own repository (e.g., `DavidMRGaona/guildforge-game-tables`)
 - The `reusable-module-release.yml` workflow generates automatic releases when a tag is created
@@ -572,7 +567,7 @@ Modules in `src/modules/` are independent Git repositories (submodules). Key poi
 
 ### Volumes and persistence
 
-In prod-local, Docker volumes persist data between restarts (production on Coolify uses bind mounts, see [Deployment with Coolify](#deployment-with-coolify)):
+In prod-local, Docker volumes persist data between restarts (production keeps storage and modules in bind mounts, see [Deployment](#deployment)). Docker prefixes the names with the Compose project name (e.g. `<project>_`):
 
 | Volume | Content | Caution |
 |--------|---------|---------|
@@ -593,26 +588,26 @@ make prod-update     # Rebuilds image + restarts containers (preserves volumes)
 make prod-reset      # Deletes volumes and rebuilds everything
 ```
 
-### Deployment with Coolify
+### Deployment
 
-Production runs as two Coolify applications (two tenants) on the same host. They share a PostgreSQL 17 instance and a Redis 7.2 instance managed by Coolify, and keep storage and modules in bind mounts (`/data/<app>/storage`, `/data/<app>/modules`). `docker-compose.prod.yml` does not describe production; it is only prod-local.
+Production runs `Dockerfile.prod` on a deployment platform, with PostgreSQL 17 and Redis 7.2 provided outside the image, and keeps `storage` and `modules` in bind mounts. `docker-compose.prod.yml` does not describe production; it is only prod-local.
 
 The automatic deployment flow is:
 
 1. Push to the `main` branch (or merge a pull request)
 2. GitHub Actions runs CI (tests + linting)
-3. If CI passes, `deploy.yml` calls the Coolify webhook of each tenant (`WEBHOOK_URL_SERVER_1`, `WEBHOOK_URL_SERVER_2`), in parallel
-4. Coolify builds `Dockerfile.prod` and starts a new container; the image carries no modules, which stay in the bind mount
+3. If CI passes, `deploy.yml` triggers the deployment through the platform's API for each target (`WEBHOOK_URL_SERVER_1`, `WEBHOOK_URL_SERVER_2`), in parallel; see `.github/workflows/deploy.yml` for the specifics
+4. The platform builds `Dockerfile.prod` and starts a new container; the image carries no modules, which stay in the bind mount
 5. The entrypoint records the deployment, runs migrations, discovers modules, syncs permissions and caches configuration (see [Production entrypoint](#production-entrypoint))
 
-Coolify injects `SOURCE_COMMIT` (deployed commit) and `COOLIFY_BRANCH` (branch the application deploys from). `core:record-deployment` and the core updates page (`CoreUpdatesPage`) read them through `config/updates.php`: without `SOURCE_COMMIT` the deployment is not recorded and the page shows an error; the page compares the deployed commit with `COOLIFY_BRANCH` (`CORE_GITHUB_BRANCH` overrides it, `main` by default).
+The deployment platform injects `SOURCE_COMMIT` (deployed commit) and a branch variable (branch the application deploys from) into the container environment; the image does not set them, and the variable names the code reads are in `config/updates.php`. `core:record-deployment` and the core updates page (`CoreUpdatesPage`) read them through that file: without `SOURCE_COMMIT` (or `GIT_COMMIT`) the deployment is not recorded and the page shows an error; the page compares the deployed commit with the deployed branch (`CORE_GITHUB_BRANCH` overrides it, `main` by default).
 
-Required settings for each tenant in Coolify:
+Required settings for each instance on the deployment platform:
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| Healthcheck path | `/up` | With `/`, maintenance mode answers 503, the container turns unhealthy and the proxy takes the whole tenant down, admin panel included |
-| `REDIS_CACHE_DB` | A different value per tenant (`1`, `2`) | Both tenants share Redis; separate cache databases keep each tenant's cache and `queue:restart` signal apart (locks live in database 0, separated by `REDIS_PREFIX`) |
-| `REDIS_PREFIX` | A different value per tenant | Keeps session and queue keys apart in the shared database |
+| Container healthcheck path | `/up` | With `/`, maintenance mode answers 503, the container turns unhealthy and the proxy takes the whole instance down, admin panel included |
+| `REDIS_CACHE_DB` | A different value per instance sharing a Redis (`1`, `2`) | Separate cache databases keep each instance's cache and `queue:restart` signal apart (locks live in database 0, separated by `REDIS_PREFIX`) |
+| `REDIS_PREFIX` | A different value per instance sharing a Redis | Keeps session and queue keys apart in the shared database |
 
-To roll back, redeploy the previous image from the application's deployment history in Coolify. Modules are not part of the image, so rolling back the core does not roll back modules.
+To roll back, redeploy the previous image from the deployment platform's history. Modules are not part of the image, so rolling back the core does not roll back modules. It does not roll migrations back either (see [Migration strategy](#migration-strategy)).
