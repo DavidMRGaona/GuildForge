@@ -34,7 +34,11 @@ return new class extends Migration
         ]);
 
         // SettingsService caches every setting: a stale copy would read as "no cutoff" for an hour
-        Cache::forget('site_settings');
+        // and lock out every unverified account. The migrator runs this inside a transaction on
+        // PostgreSQL, so clear the cache after the commit: cleared earlier, a request in between
+        // would cache the settings without the uncommitted row again. Outside a transaction
+        // afterCommit() runs the callback at once.
+        DB::afterCommit(static fn () => Cache::forget('site_settings'));
     }
 
     public function down(): void
