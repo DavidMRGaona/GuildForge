@@ -20,6 +20,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
      * Random token that is part of every cached lookup key: replacing it invalidates all of
      * them at once, and a lookup computed from the old data lands under a token nobody reads
      * again. A missing or malformed token is replaced by a new one, never read as an old one.
+     * It is read once per request or job (AuthorizationCacheVersion), not once per lookup.
      */
     private const string CACHE_VERSION_KEY = 'authorization_cache_version';
 
@@ -159,7 +160,26 @@ final class AuthorizationService implements AuthorizationServiceInterface
         // After the commit: invalidating earlier lets a request in between cache the old
         // data again under the new version. Runs at once outside a transaction.
         DB::afterCommit(static function (): void {
-            Cache::forever(self::CACHE_VERSION_KEY, self::newCacheVersion());
+            $current = app(AuthorizationCacheVersion::class);
+            $version = self::newCacheVersion();
+
+            try {
+                Cache::forever(self::CACHE_VERSION_KEY, $version);
+                $current->token = $version;
+            } catch (Throwable $e) {
+                $current->token = null;
+                Log::error("Authorization cache could not be invalidated: {$e->getMessage()}");
+
+                // Without a token readers start a new one, so the old entries are never served
+                try {
+                    Cache::forget(self::CACHE_VERSION_KEY);
+                } catch (Throwable) {
+                    // Store unreachable: readers fall back to the database meanwhile
+                }
+
+                // The change is committed: the admin must still see that access may lag
+                throw $e;
+            }
         });
     }
 
@@ -202,17 +222,21 @@ final class AuthorizationService implements AuthorizationServiceInterface
 
     private function cacheVersion(): string
     {
-        $version = Cache::get(self::CACHE_VERSION_KEY);
+        $current = app(AuthorizationCacheVersion::class);
 
-        if (is_string($version) && preg_match(self::CACHE_VERSION_PATTERN, $version) === 1) {
-            return $version;
+        if ($current->token !== null) {
+            return $current->token;
         }
 
-        // Missing (evicted, flushed) or malformed: start a version no cached lookup can match
-        $version = self::newCacheVersion();
-        Cache::forever(self::CACHE_VERSION_KEY, $version);
+        $version = Cache::get(self::CACHE_VERSION_KEY);
 
-        return $version;
+        if (! is_string($version) || preg_match(self::CACHE_VERSION_PATTERN, $version) !== 1) {
+            // Missing (evicted, flushed) or malformed: start a version no cached lookup can match
+            $version = self::newCacheVersion();
+            Cache::forever(self::CACHE_VERSION_KEY, $version);
+        }
+
+        return $current->token = $version;
     }
 
     private static function newCacheVersion(): string
