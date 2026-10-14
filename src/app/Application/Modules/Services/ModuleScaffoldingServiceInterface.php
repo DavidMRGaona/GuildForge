@@ -69,7 +69,7 @@ interface ModuleScaffoldingServiceInterface
     /**
      * Create a new test for a module.
      *
-     * @param  string  $type  Test type: 'unit', 'feature'
+     * @param  string  $type  Test type: 'unit' (entity), 'unit-dto', 'feature' (controller), 'feature-filament' (resource)
      */
     public function createTest(string $module, string $name, string $type = 'unit'): ScaffoldResultDTO;
 

@@ -77,4 +77,15 @@ final class ModuleMakeGeneratorCommandsTest extends TestCase
             ->expectsOutputToContain('Event::listen(PostPublished::class, NotifyAuthor::class)')
             ->assertSuccessful();
     }
+
+    public function test_the_test_command_reaches_the_dto_and_filament_test_types(): void
+    {
+        $this->artisan('module:make-test', ['module' => 'blog-posts', 'name' => 'Post', '--dto' => true])->assertSuccessful();
+        $this->artisan('module:make-test', ['module' => 'blog-posts', 'name' => 'Post', '--filament' => true])->assertSuccessful();
+        $this->artisan('module:make-test', ['module' => 'blog-posts', 'name' => 'Post', '--feature' => true])->assertSuccessful();
+
+        $this->assertFileExists($this->modulesPath.'/blog-posts/tests/Unit/Application/DTOs/PostDTOTest.php');
+        $this->assertFileExists($this->modulesPath.'/blog-posts/tests/Feature/Filament/PostResourceTest.php');
+        $this->assertFileExists($this->modulesPath.'/blog-posts/tests/Feature/Http/Controllers/PostControllerTest.php');
+    }
 }
