@@ -491,6 +491,7 @@ return [
             'isProtected' => 'Protegido',
             'isProtectedHelp' => 'Los roles protegidos no pueden ser eliminados ni renombrados.',
             'associationMemberRoleHint' => 'Es el rol de socio configurado en Configuración del sitio: no se puede renombrar ni eliminar.',
+            'baseRoleHint' => 'Es el rol base de todas las cuentas: no se puede renombrar ni eliminar, pero sí cambiar sus permisos.',
             'permissions' => 'Permisos',
             'permissionsCount' => 'Permisos',
             'usersCount' => 'Usuarios',
