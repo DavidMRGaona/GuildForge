@@ -234,7 +234,7 @@ return [
 
     'users' => [
         'fields' => [
-            'rolesHelp' => 'New users always get the "member" role as well, the base role of every account.',
+            'rolesHelp' => 'Every account always has the "member" role, the base role: that is why it is ticked and cannot be unticked.',
         ],
     ],
 

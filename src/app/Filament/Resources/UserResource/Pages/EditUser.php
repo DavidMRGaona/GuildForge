@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource;
@@ -25,6 +26,16 @@ class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
+        /** @var UserModel $user */
+        $user = $this->record;
+
+        // The roles checkbox list syncs the pivot with the submitted state and does not keep its
+        // disabled base role: give it back if a forged state left it out. Anonymized accounts
+        // hold no roles on purpose.
+        if ($user->anonymized_at === null) {
+            app(MemberRoleServiceInterface::class)->assignTo($user);
+        }
+
         // The roles checkbox list writes the pivot directly: drop the cached roles and permissions
         app(AuthorizationServiceInterface::class)->invalidateCache();
     }
