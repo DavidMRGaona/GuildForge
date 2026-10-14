@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Seeder;
@@ -14,12 +15,11 @@ final class UserSeeder extends Seeder
     /**
      * Seed the users table.
      */
-    public function run(AuthorizationServiceInterface $authorization): void
+    public function run(AuthorizationServiceInterface $authorization, MemberRoleServiceInterface $memberRole): void
     {
         // Get roles
         $adminRole = RoleModel::where('name', 'admin')->first();
         $editorRole = RoleModel::where('name', 'editor')->first();
-        $memberRole = RoleModel::where('name', 'member')->first();
 
         // Create or get admin user
         $adminAttributes = UserModel::factory()->admin()->raw([
@@ -35,10 +35,9 @@ final class UserSeeder extends Seeder
             $authorization->assignRole($adminUser, 'admin');
         }
 
-        // "member" is the base role of every account, admins and editors included
-        if ($memberRole) {
-            $authorization->assignRole($adminUser, 'member');
-        }
+        // "member" is the base role of every account, admins and editors included. Given like
+        // every other way of creating a user (it logs a warning when the role is missing)
+        $memberRole->assignTo($adminUser);
 
         // Create or get editor user
         $editorAttributes = UserModel::factory()->editor()->raw([
@@ -54,9 +53,7 @@ final class UserSeeder extends Seeder
             $authorization->assignRole($editorUser, 'editor');
         }
 
-        if ($memberRole) {
-            $authorization->assignRole($editorUser, 'member');
-        }
+        $memberRole->assignTo($editorUser);
 
         // Create or get member user
         $memberAttributes = UserModel::factory()->raw([
@@ -68,18 +65,14 @@ final class UserSeeder extends Seeder
             ['email' => 'member@example.local'],
             $memberAttributes,
         );
-        if ($memberRole) {
-            $authorization->assignRole($memberUser, 'member');
-        }
+        $memberRole->assignTo($memberUser);
 
         // Create additional random members (only if less than 8 users exist)
         $existingCount = UserModel::count();
         if ($existingCount < 8) {
             $randomUsers = UserModel::factory()->count(8 - $existingCount)->create();
-            if ($memberRole) {
-                foreach ($randomUsers as $user) {
-                    $authorization->assignRole($user, 'member');
-                }
+            foreach ($randomUsers as $user) {
+                $memberRole->assignTo($user);
             }
         }
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Authorization;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -115,6 +116,18 @@ final class MemberRoleOnAccountCreationTest extends TestCase
             $this->assertTrue($this->authorization()->hasRole($user, $role));
             $this->assertTrue($this->authorization()->hasRole($user, 'member'), "{$email} has no member role");
         }
+    }
+
+    public function test_the_seeded_users_get_member_through_the_member_role_service(): void
+    {
+        $this->seed(RolesSeeder::class);
+        $memberRole = $this->spy(MemberRoleServiceInterface::class);
+
+        $this->seed(UserSeeder::class);
+
+        $seeded = UserModel::query()->count();
+        $this->assertGreaterThan(0, $seeded);
+        $memberRole->shouldHaveReceived('assignTo')->times($seeded);
     }
 
     public function test_an_admin_created_from_the_console_gets_member(): void
