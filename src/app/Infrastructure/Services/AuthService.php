@@ -132,6 +132,19 @@ final readonly class AuthService implements AuthServiceInterface
         $userModel->sendEmailVerificationNotification();
     }
 
+    public function sendPendingEmailVerificationNotification(string $userId): bool
+    {
+        $userModel = $this->getUserModelOrFail($userId);
+
+        if ($userModel->pending_email === null) {
+            return false;
+        }
+
+        $userModel->notify(new VerifyPendingEmailNotification($userModel->pending_email));
+
+        return true;
+    }
+
     public function verifyEmail(string $userId, string $hash): bool
     {
         $userModel = $this->getUserModelOrFail($userId);

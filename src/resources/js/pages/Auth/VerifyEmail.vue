@@ -7,18 +7,31 @@ import BaseButton from '@/components/ui/BaseButton.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
 
-interface FlashProps {
-    flash?: { success?: string };
+interface Props {
+    email: string;
+    pendingEmail: string | null;
 }
+
+interface FlashProps {
+    flash?: { success?: string | null; error?: string | null };
+}
+
+const props = defineProps<Props>();
 
 const { t } = useI18n();
 const { logout } = useAuth();
 const routes = useRoutes();
 const page = usePage();
-const props = page.props as FlashProps;
 
 const form = useForm({});
-const successMessage = computed(() => props.flash?.success);
+const flash = computed(() => (page.props as FlashProps).flash);
+const successMessage = computed(() => flash.value?.success);
+const errorMessage = computed(() => flash.value?.error);
+const sentToMessage = computed(() =>
+    props.pendingEmail
+        ? t('auth.verifyEmail.sentToPending', { email: props.pendingEmail })
+        : t('auth.verifyEmail.sentTo', { email: props.email })
+);
 
 const resend = () => {
     form.post('/verificar-email/reenviar');
@@ -31,9 +44,17 @@ const resend = () => {
             <p class="text-sm text-success">{{ successMessage }}</p>
         </div>
 
+        <div v-if="errorMessage" role="alert" class="mb-4 rounded-md bg-error-light p-4">
+            <p class="text-sm text-error">{{ errorMessage }}</p>
+        </div>
+
         <div class="space-y-6">
             <p class="text-sm text-base-secondary">
                 {{ t('auth.verifyEmail.description') }}
+            </p>
+
+            <p class="text-sm font-medium text-base-primary">
+                {{ sentToMessage }}
             </p>
 
             <BaseButton
