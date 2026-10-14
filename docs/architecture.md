@@ -427,7 +427,7 @@ src/modules/
     lang/                    # PHP translations
     config/
       module.php             # Module configuration
-      settings.php           # Settings configuration
+      settings.php           # Release defaults of the module settings (panel values live in the settings table)
       <module>.php           # Module-specific config
     tests/                   # Module tests (own phpunit.xml)
     module.json              # Module manifest
@@ -667,7 +667,7 @@ Authorization is based on a role system with granular permissions:
 
 Modules extend this system with their own permissions using the format `module:resource.action`.
 
-Admins pass every check (fast path in `AuthorizationService`). `MenuItemPolicy` checks `menu_items.*` permissions that `CorePermissionDefinitions` does not define, so only admins manage menus. Several panel pages check `isAdmin()` instead of a permission: `ModulesPage`, `ModuleSettingsPage` and the pages in `Filament/Pages/Settings/`.
+Admins pass every check (fast path in `AuthorizationService`). `MenuItemPolicy` checks the `menu_items.*` permissions defined in `CorePermissionDefinitions` (granted to no role by default; admins grant them in the role editor), and a test fails whenever a policy or panel page checks a permission nobody defines. Cached role and permission lookups carry a version token read once per request; every role or permission change (role edits and deletions, user role changes, `assignRole`/`removeRole`, seeders) replaces the token after the database commit, and the cache fails closed: a missing or malformed token, a malformed entry or a store error falls back to the database. Several panel pages check `isAdmin()` instead of a permission: `ModulesPage` and the pages in `Filament/Pages/Settings/`.
 
 ### AuthorizesWithPermissions trait
 
@@ -804,7 +804,7 @@ Location: `src/app/Filament/Pages/`
 | `Dashboard` | Main panel with configurable widgets |
 | `SiteSettings` | General site configuration |
 | `ModulesPage` | Listing and management of installed modules |
-| `ModuleSettingsPage` | Individual settings for each module |
+| `ModuleSettingsPage` | Individual settings for each module, stored in the `settings` table under `module_settings:<name>` and deep-merged over the module's `config/settings.php` release defaults (stored values win, lists replace defaults whole), so they survive module updates, redeploys and rollbacks |
 | `ModuleUpdatesPage` | Checking module updates and queueing them (`updates.apply`, maintenance mode required) |
 | `CoreUpdatesPage` | Deployed commit and commits pending on the deploy branch (`updates.apply`); deploys run from `deploy.yml`, the page only reports |
 

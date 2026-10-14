@@ -255,7 +255,7 @@ modules/game-tables/
 ├── resources/
 │   ├── js/                             # Module Vue frontend: pages, components, locales, types
 │   └── views/filament/                 # Blade views for the panel
-├── config/                             # module.php, settings.php, game-tables.php
+├── config/                             # module.php, settings.php (release defaults; panel values live in the settings table)
 ├── database/
 │   ├── migrations/                     # 11 migrations
 │   ├── factories/                      # Testing factories
