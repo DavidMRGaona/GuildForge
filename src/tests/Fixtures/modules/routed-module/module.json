@@ -1,0 +1,12 @@
+{
+    "name": "routed-module",
+    "version": "1.0.0",
+    "description": "Test module with named routes",
+    "author": "GuildForge",
+    "namespace": "Modules\\RoutedModule",
+    "provider": "RoutedModuleServiceProvider",
+    "requires": {
+        "core": ">=2.0"
+    },
+    "dependencies": {}
+}
