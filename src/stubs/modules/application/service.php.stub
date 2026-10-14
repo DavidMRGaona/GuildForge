@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace {{ moduleNamespace }}\Infrastructure\Services;
 
 use DateTimeImmutable;
+use Illuminate\Support\Str;
 use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
 use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}ResponseDTO;
 {{ serviceInterfaceImport }}use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
@@ -58,6 +59,10 @@ final readonly class {{ nameStudly }}Service{{ serviceImplements }}
 
     public function findById(string $id): ?{{ nameStudly }}ResponseDTO
     {
+        if (! Str::isUuid($id)) {
+            return null;
+        }
+
         $entity = $this->repository->findById({{ nameStudly }}Id::fromString($id));
 
         if ($entity === null) {

@@ -48,6 +48,13 @@ final class ModuleMakeTestCommand extends Command
         /** @var string $name */
         $name = $this->argument('name');
 
+        $chosen = array_filter([$this->option('dto'), $this->option('feature'), $this->option('filament')]);
+        if (count($chosen) > 1) {
+            $this->error('Choose only one of --dto, --feature and --filament.');
+
+            return self::FAILURE;
+        }
+
         $type = match (true) {
             (bool) $this->option('feature') => 'feature',
             (bool) $this->option('filament') => 'feature-filament',

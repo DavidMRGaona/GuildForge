@@ -10,7 +10,8 @@ final class {{ nameStudly }}Request extends FormRequest
 {
     public function authorize(): bool
     {
-        // Authorization lives in the policy (src/Policies)
+        // Returns true: authorize in the controller (Gate::authorize with the policy)
+        // and protect the route with the auth middleware
         return true;
     }
 

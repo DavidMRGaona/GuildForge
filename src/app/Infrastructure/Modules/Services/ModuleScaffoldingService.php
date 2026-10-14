@@ -20,12 +20,16 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         'laravel', 'vendor', 'public', 'storage',
     ];
 
+    private const TRANSLATE_LABELS = 'Translate the labels written to lang/es/filament.php: they are derived from the class name';
+
     private string $modulesPath;
 
     public function __construct(
         private readonly StubRenderer $stubRenderer,
         ?string $modulesPath = null,
         private readonly ?CoreVersionServiceInterface $coreVersion = null,
+        // Core Inertia pages (resources/js/pages): a module cannot use one as its page prefix
+        private readonly ?string $corePagesPath = null,
     ) {
         $this->modulesPath = $modulesPath ?? base_path('modules');
     }
@@ -56,7 +60,8 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $variables['coreConstraint'] = $this->coreConstraint();
         $variables['moduleDisplayNamePhp'] = addcslashes($displayName, "'\\");
         $variables['moduleDisplayNameJson'] = $this->jsonString($displayName);
-        $variables['moduleDisplayNameTs'] = addcslashes($displayName, "'\\");
+        // vue-i18n reads @ { } | as message syntax: write them as literal interpolations
+        $variables['moduleDisplayNameTs'] = addcslashes((string) preg_replace('/[{}@|]/', "{'\$0'}", $displayName), "'\\");
         $variables['moduleDescriptionJson'] = $this->jsonString($description ?? '');
         $variables['moduleAuthorJson'] = $this->jsonString($author ?? '');
         $variables['moduleRepositoryJson'] = $repository !== null
@@ -390,7 +395,10 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             "Filament resource '{$name}' created for module '{$module}'.",
             $files,
             nextSteps: array_merge(
-                ["It manages {$variables['nameStudly']}Model: run module:make-entity {$module} {$variables['nameStudly']} if it does not exist"],
+                [
+                    "It manages {$variables['nameStudly']}Model: run module:make-entity {$module} {$variables['nameStudly']} if it does not exist",
+                    self::TRANSLATE_LABELS,
+                ],
                 $policyResult->nextSteps,
             ),
         );
@@ -500,7 +508,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
 
         $nextSteps = ["Run the module tests with vendor/bin/phpunit -c modules/{$module}/phpunit.xml"];
         if ($type === 'feature') {
-            $nextSteps[] = "The test requests the route module:make-controller prints: Route::get('{$variables['namePluralKebab']}', [{$variables['nameStudly']}Controller::class, 'index'])->name('{$variables['namePluralSnake']}.index'); in routes/web.php";
+            $nextSteps[] = "It fits controllers made without --resource or --invokable, and requests the route module:make-controller prints: Route::get('{$variables['namePluralKebab']}', [{$variables['nameStudly']}Controller::class, 'index'])->name('{$variables['namePluralSnake']}.index'); in routes/web.php";
         }
 
         return ScaffoldResultDTO::success(
@@ -588,6 +596,16 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             return ScaffoldResultDTO::failure(
                 "Invalid module name '{$name}'.",
                 [$e->getMessage()]
+            );
+        }
+
+        // The module's page prefix (registerPagePrefixes()) is resolved before the core pages
+        $prefix = Str::studly($name);
+        $corePages = $this->corePagesPath;
+        if ($corePages !== null && (is_dir("{$corePages}/{$prefix}") || is_file("{$corePages}/{$prefix}.vue"))) {
+            return ScaffoldResultDTO::failure(
+                "Cannot create module '{$name}': its page prefix is taken.",
+                ["'{$prefix}' is a core page directory or page; the module's pages would replace the core page."]
             );
         }
 
@@ -808,16 +826,19 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $path = $variables['namePluralKebab'];
         $routeName = $variables['namePluralSnake'];
         $stack = "It uses the {$studly} service, DTOs and request: run module:make-entity {$module} {$studly}, module:make-dto {$module} {$studly}, module:make-dto {$module} {$studly} --response, module:make-service {$module} {$studly} --interface and module:make-request {$module} {$studly} if they do not exist";
+        $policy = "Its writes call Gate::authorize() with {$studly}Policy: run module:make-filament-resource {$module} {$studly} (or write the policy) and list it in registerPolicies()";
 
         return match ($type) {
             'resource' => [
                 $stack,
+                $policy,
                 "Create its pages: module:make-vue-page {$module} {$studly}Index (and {$studly}Create, {$studly}Show, {$studly}Edit)",
-                "Add the route to routes/web.php: Route::resource('{$path}', {$studly}Controller::class);",
+                "Add the routes to routes/web.php, writes for signed-in users only: Route::resource('{$path}', {$studly}Controller::class)->only(['index', 'show']); and Route::resource('{$path}', {$studly}Controller::class)->except(['index', 'show'])->middleware('auth');",
             ],
             'api' => [
                 $stack,
-                "Add the route to routes/api.php: Route::apiResource('{$path}', Api\\{$studly}Controller::class);",
+                $policy,
+                "Add the routes to routes/api.php: Route::apiResource('{$path}', Api\\{$studly}Controller::class)->only(['index', 'show']); and Route::apiResource('{$path}', Api\\{$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); (the api group has no session: writes answer 401 until the module adds token authentication)",
             ],
             'invokable' => [
                 "Create its page: module:make-vue-page {$module} {$studly} (rendered as {$page})",
@@ -1060,6 +1081,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
                 "Register the Livewire component in the module service provider's boot(): Livewire::component('modules.{$module}.filament.relation-managers.{$variables['nameKebab']}-relation-manager', {$studly}RelationManager::class);",
                 "Extend the core resource: {$variables['resourceNameStudly']}Resource::extendRelations([{$studly}RelationManager::class]);",
                 "The owner model needs the '{$variables['relationshipName']}' relationship (resolveRelationUsing() in the provider's register())",
+                self::TRANSLATE_LABELS,
             ],
         );
     }
@@ -1107,6 +1129,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             $files,
             nextSteps: [
                 "Add it to the dashboard from the module service provider: return [{$variables['nameStudly']}Widget::class] in registerFilamentWidgets()",
+                self::TRANSLATE_LABELS,
             ],
         );
     }
