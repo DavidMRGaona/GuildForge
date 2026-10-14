@@ -198,10 +198,10 @@ Enabled modules add their own routes.
 
 The project uses GitHub Actions for CI/CD:
 
-| Workflow | Trigger           | Description          |
-|----------|-------------------|----------------------|
-| CI       | Push/PR to main   | Tests and linting    |
-| Deploy   | CI passed on main | Deploy to production |
+| Workflow | Trigger           | Description                                                      |
+|----------|-------------------|------------------------------------------------------------------|
+| CI       | Push/PR to main   | Tests and linting                                                |
+| Deploy   | CI passed on main | Deploy to production: canary first, the rest once it is healthy |
 
 ### CI jobs
 
@@ -217,6 +217,15 @@ Configure in GitHub → Settings → Secrets and variables → Actions:
 | `WEBHOOK_URL_SERVER_1` | Deploy URL (deployment platform API) of the first target  |
 | `WEBHOOK_URL_SERVER_2` | Deploy URL (deployment platform API) of the second target |
 | `DEPLOY_API_TOKEN`     | Deployment platform API token, sent as bearer token       |
+
+Repository secrets used by the canary (same page):
+
+| Secret                 | Description                                                       |
+|------------------------|-------------------------------------------------------------------|
+| `CANARY_RESOURCE_UUID` | `uuid=` value of the canary's deploy URL (must match exactly one) |
+| `CANARY_HEALTH_URL`    | Canary health URL (`/up`)                                         |
+
+If the canary fails, the other targets are not deployed: fix and merge, or rerun Deploy from the Actions tab. `skip_canary` (manual run) deploys every target at once, for emergencies only. See `docs/deployment-guide.md`.
 
 ## License
 
