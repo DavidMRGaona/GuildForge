@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
+use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Infrastructure\Authorization\Policies\AuthorizesWithPermissions;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -59,6 +59,6 @@ class RolePolicy
 
     private function isAssociationMemberRole(RoleModel $role): bool
     {
-        return $role->name === app(AssociationMembershipServiceInterface::class)->roleName();
+        return app(AssociationMemberRoleRule::class)->isAssociationMemberRoleName($role->name);
     }
 }
