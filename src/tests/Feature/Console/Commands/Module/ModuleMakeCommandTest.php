@@ -58,7 +58,7 @@ final class ModuleMakeCommandTest extends TestCase
             ->expectsOutputToContain('module:discover')
             ->expectsOutputToContain('module:enable blog-posts')
             ->expectsOutputToContain('module:set-source blog-posts')
-            ->expectsOutputToContain('module:build blog-posts')
+            ->expectsOutputToContain('guildforge_node')
             ->assertSuccessful();
     }
 

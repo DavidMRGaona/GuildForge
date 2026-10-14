@@ -555,7 +555,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $content = file_get_contents($this->tempModulesPath.'/mailer/src/Infrastructure/Listeners/SendWelcomeEmail.php');
         $this->assertStringContainsString('implements ShouldQueue', $content);
         $this->assertStringContainsString('public function failed(', $content);
-        $this->assertStringContainsString("public string \$queue = 'listeners';", $content);
+        // No worker consumes a "listeners" queue: the listener runs on the default one
+        $this->assertDoesNotMatchRegularExpression('/^\s*public string \$queue/m', $content);
+        $this->assertStringContainsString('default queue', $content);
     }
 
     public function test_it_creates_listener_validates_module_exists(): void
@@ -1131,6 +1133,60 @@ final class ModuleScaffoldingServiceTest extends TestCase
         } finally {
             $this->deleteDirectory($pages);
         }
+    }
+
+    public function test_resource_route_hints_register_the_writes_before_the_reads(): void
+    {
+        $this->service->createModule('blog-posts');
+        $result = $this->service->createController('blog-posts', 'BlogPost', 'resource');
+
+        // Registered first, /blog-posts/create would be taken by the show route /blog-posts/{blog_post}
+        $hint = implode("\n", $result->nextSteps);
+        $writes = "Route::resource('blog-posts', BlogPostController::class)->except(['index', 'show'])->middleware('auth');";
+        $reads = "Route::resource('blog-posts', BlogPostController::class)->only(['index', 'show']);";
+        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/BlogPostController.php');
+
+        foreach ([$hint, $controller] as $text) {
+            $this->assertNotFalse(strpos($text, $writes));
+            $this->assertNotFalse(strpos($text, $reads));
+            $this->assertLessThan(strpos($text, $reads), strpos($text, $writes));
+        }
+    }
+
+    public function test_the_provider_does_not_claim_the_core_calls_enable_hooks(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $provider = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+
+        $this->assertStringNotContainsString('onEnable', $provider);
+        $this->assertStringNotContainsString('onDisable', $provider);
+    }
+
+    public function test_asset_build_steps_point_to_the_node_container_or_the_release_workflow(): void
+    {
+        $results = [
+            $this->service->createModule('blog-posts'),
+            $this->service->createVuePage('blog-posts', 'Archive'),
+            $this->service->createVueComponent('blog-posts', 'PostCard'),
+        ];
+
+        foreach ($results as $result) {
+            $steps = implode("\n", $result->nextSteps);
+            $this->assertStringNotContainsString('module:build', $steps, $result->message);
+            $this->assertStringContainsString('guildforge_node', $steps, $result->message);
+            $this->assertStringContainsString('release workflow', $steps, $result->message);
+        }
+    }
+
+    public function test_the_controller_feature_test_no_longer_says_route_cannot_find_module_routes(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createTest('blog-posts', 'Archive', 'feature');
+
+        $test = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Http/Controllers/ArchiveControllerTest.php');
+
+        $this->assertStringNotContainsString('not looked up', $test);
     }
 
     private function generateEveryTranslatedClass(string $module): void

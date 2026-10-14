@@ -134,22 +134,6 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      */
 
     /**
-     * Called when the module is enabled.
-     */
-    public function onEnable(): void
-    {
-        // Perform setup tasks when module is enabled
-    }
-
-    /**
-     * Called when the module is disabled.
-     */
-    public function onDisable(): void
-    {
-        // Perform cleanup tasks when module is disabled
-    }
-
-    /**
      * Register policies provided by this module.
      *
      * Policies created by module:make-filament-resource stay inactive until listed here:

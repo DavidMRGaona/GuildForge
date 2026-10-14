@@ -22,10 +22,11 @@ use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Models\{{ nameStud
  * (registered in registerPolicies()), and the pages {{ moduleNameStudly }}/{{ nameStudly }}Index,
  * {{ nameStudly }}Create, {{ nameStudly }}Show and {{ nameStudly }}Edit (module:make-vue-page).
  *
- * Routes, in routes/web.php (writes only for signed-in users; the policy decides the rest):
+ * Routes, in routes/web.php (writes only for signed-in users; the policy decides the rest).
+ * Writes first, so /{{ namePluralKebab }}/create is matched before the show route:
  *
- *     Route::resource('{{ namePluralKebab }}', {{ nameStudly }}Controller::class)->only(['index', 'show']);
  *     Route::resource('{{ namePluralKebab }}', {{ nameStudly }}Controller::class)->except(['index', 'show'])->middleware('auth');
+ *     Route::resource('{{ namePluralKebab }}', {{ nameStudly }}Controller::class)->only(['index', 'show']);
  */
 final class {{ nameStudly }}Controller extends Controller
 {

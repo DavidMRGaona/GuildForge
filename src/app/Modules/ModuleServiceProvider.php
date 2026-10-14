@@ -141,8 +141,8 @@ abstract class ModuleServiceProvider extends ServiceProvider
     // ==================
 
     /**
-     * Called when the module is enabled.
-     * Override to add custom enable logic.
+     * Not called by the core: enabling a module runs its migrations and seeders,
+     * not this hook. Kept so existing overrides still compile.
      */
     public function onEnable(): void
     {
@@ -150,8 +150,8 @@ abstract class ModuleServiceProvider extends ServiceProvider
     }
 
     /**
-     * Called when the module is disabled.
-     * Override to add custom disable logic.
+     * Not called by the core: disabling a module does not run this hook.
+     * Kept so existing overrides still compile.
      */
     public function onDisable(): void
     {
