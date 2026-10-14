@@ -187,7 +187,9 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             $files,
             nextSteps: [
                 "Bind the repository in the module service provider's register(): \$this->app->bind({$studly}RepositoryInterface::class, Eloquent{$studly}Repository::class);",
-                "Enabling the module runs its migrations; if it is already enabled, run php artisan module:migrate {$module}",
+                $withMigration
+                    ? "Enabling the module runs its migrations; if it is already enabled, run php artisan module:migrate {$module}"
+                    : "Create its table ({$variables['tableName']}): php artisan module:make-migration {$module} create_{$variables['namePluralSnake']}_table (or rerun this command with --migration)",
             ],
         );
     }
@@ -734,7 +736,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
 
         $existing = include $path;
         $existing = is_array($existing) ? $existing : [];
-        $merged = array_replace_recursive($translations, $existing);
+        $merged = $this->addMissingKeys($existing, $translations);
 
         if ($merged === $existing) {
             return [$relativePath => ScaffoldResultDTO::STATUS_SKIPPED];
@@ -743,6 +745,26 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $this->writeTranslationFile($path, $merged);
 
         return [$relativePath => ScaffoldResultDTO::STATUS_OVERWRITTEN];
+    }
+
+    /**
+     * Add the keys of $translations that $existing lacks, keeping its values and order.
+     *
+     * @param  array<mixed>  $existing
+     * @param  array<mixed>  $translations
+     * @return array<mixed>
+     */
+    private function addMissingKeys(array $existing, array $translations): array
+    {
+        foreach ($translations as $key => $value) {
+            if (! array_key_exists($key, $existing)) {
+                $existing[$key] = $value;
+            } elseif (is_array($existing[$key]) && is_array($value)) {
+                $existing[$key] = $this->addMissingKeys($existing[$key], $value);
+            }
+        }
+
+        return $existing;
     }
 
     /**
