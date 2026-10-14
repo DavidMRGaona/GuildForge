@@ -244,9 +244,14 @@ return [
             'login_enabled' => 'Permitir inicio de sesión',
             'login_enabled_help' => 'Si está desactivado, los usuarios no podrán iniciar sesión (excepto en el panel de administración).',
             'email_verification_required' => 'Requerir verificación de email',
-            'email_verification_required_help' => 'Los usuarios deberán verificar su correo electrónico antes de poder acceder a todas las funciones.',
+            'email_verification_required_help' => 'Las cuentas creadas desde la actualización a la versión 3.8 deberán verificar su correo antes de usar las páginas que requieren iniciar sesión; las anteriores no se ven afectadas.',
             'anonymized_user_name' => 'Nombre de usuario anonimizado',
             'anonymized_user_name_help' => 'Nombre que se mostrará para usuarios que han sido anonimizados (ej: "Anónimo", "Redacción").',
+            'section_association' => 'Socios de la asociación',
+            'section_association_description' => 'Qué rol distingue a los socios de la asociación de cualquier usuario registrado.',
+            'association_member_role' => 'Rol de socio',
+            'association_member_role_help' => 'Los usuarios con este rol son socios de la asociación (no confundir con «member», el rol de cualquier usuario registrado). Los módulos lo usan para el contenido solo para socios, el acceso anticipado y las membresías.',
+            'association_member_role_unavailable' => 'El rol de socio guardado («:role») no existe o no se puede usar: elige otro y guarda.',
         ],
         'maintenance' => [
             'section' => 'Modo mantenimiento',
@@ -374,6 +379,7 @@ return [
         'fields' => [
             'emailVerified' => 'Email verificado',
             'roles' => 'Roles',
+            'rolesHelp' => 'Al dar de alta un usuario se le añade siempre el rol «member», el rol base de toda cuenta.',
             'status' => 'Estado',
         ],
         'sections' => [
@@ -484,6 +490,7 @@ return [
             'description' => 'Descripción',
             'isProtected' => 'Protegido',
             'isProtectedHelp' => 'Los roles protegidos no pueden ser eliminados ni renombrados.',
+            'associationMemberRoleHint' => 'Es el rol de socio configurado en Configuración del sitio: no se puede renombrar ni eliminar.',
             'permissions' => 'Permisos',
             'permissionsCount' => 'Permisos',
             'usersCount' => 'Usuarios',

@@ -24,9 +24,28 @@ class EditRole extends EditRecord
 
         return [
             DeleteAction::make()
-                ->hidden(fn (): bool => $record->is_protected)
+                ->hidden(fn (): bool => $record->is_protected || RoleResource::isAssociationMemberRole($record))
                 ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
         ];
+    }
+
+    /**
+     * The name field is disabled for protected roles and for the association member role;
+     * a forged Livewire state must not rename them either.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        /** @var RoleModel $record */
+        $record = $this->record;
+
+        if ($record->is_protected || RoleResource::isAssociationMemberRole($record)) {
+            unset($data['name']);
+        }
+
+        return $data;
     }
 
     protected function afterSave(): void

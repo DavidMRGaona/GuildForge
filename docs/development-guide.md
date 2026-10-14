@@ -81,7 +81,7 @@ Access the following URLs:
 | Elasticsearch | http://localhost:9200 |
 | Kibana | http://localhost:5601 |
 
-The seeders create three accounts in the `local` and `testing` environments: `admin@example.local`, `editor@example.local` and `member@example.local`, all with the password `password`. Create other administrators with `docker exec -it guildforge_app php artisan make:admin-user`.
+The seeders create three accounts in the `local` and `testing` environments: `admin@example.local`, `editor@example.local` and `member@example.local`, all with the password `password`. Create other administrators with `docker exec -it guildforge_app php artisan make:admin-user`. Every account, these included, holds the base role `member`; on a database that has accounts from before core 3.8, `docker exec guildforge_app php artisan users:assign-member-role` gives it to them (`--dry-run` only counts them).
 
 ### 5. Get the modules (optional)
 

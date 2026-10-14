@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Notifications\Contracts\NamesMailRecipient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 
-final class VerifyPendingEmailNotification extends Notification implements ShouldQueue
+final class VerifyPendingEmailNotification extends Notification implements NamesMailRecipient, ShouldQueue
 {
     use Queueable;
 
@@ -61,10 +62,9 @@ final class VerifyPendingEmailNotification extends Notification implements Shoul
     }
 
     /**
-     * Route notifications for the mail channel.
-     * Send to the pending email, not the current one.
+     * Send to the pending email, not the current one: the link proves the new address.
      */
-    public function routeNotificationForMail(): string
+    public function mailRecipient(): string
     {
         return $this->pendingEmail;
     }

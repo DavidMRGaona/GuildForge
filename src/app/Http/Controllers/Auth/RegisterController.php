@@ -8,6 +8,7 @@ use App\Application\DTOs\CreateUserDTO;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
+use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,7 @@ final class RegisterController extends Controller
     public function __construct(
         private readonly AuthServiceInterface $authService,
         private readonly SeoMetadataFactoryInterface $seo,
+        private readonly EmailVerificationPolicyInterface $emailVerification,
     ) {}
 
     public function create(): Response
@@ -45,6 +47,13 @@ final class RegisterController extends Controller
         );
 
         $request->session()->regenerate();
+
+        // Straight to the notice: any page asked for stays as "intended" until the email is verified
+        $user = $request->user();
+        if ($user !== null && $this->emailVerification->mustVerify($user)) {
+            return redirect()->route('verification.notice')
+                ->with('success', __('auth.registered'));
+        }
 
         return redirect()->intended(route('home'))
             ->with('success', __('auth.registered'));

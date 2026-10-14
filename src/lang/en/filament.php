@@ -213,9 +213,14 @@ return [
             'login_enabled' => 'Allow login',
             'login_enabled_help' => 'If disabled, users will not be able to log in (except in the admin panel).',
             'email_verification_required' => 'Require email verification',
-            'email_verification_required_help' => 'Users will need to verify their email before accessing all features.',
+            'email_verification_required_help' => 'Accounts created since the update to version 3.8 must verify their email before using the pages that require signing in; older accounts are not affected.',
             'anonymized_user_name' => 'Anonymized user name',
             'anonymized_user_name_help' => 'Name that will be displayed for users who have been anonymized (e.g., "Anonymous", "Editorial").',
+            'section_association' => 'Association members',
+            'section_association_description' => 'Which role tells the members of the association apart from any registered user.',
+            'association_member_role' => 'Association member role',
+            'association_member_role_help' => 'Users with this role are members of the association (not to be confused with "member", the role of every registered user). Modules use it for members-only content, early access and memberships.',
+            'association_member_role_unavailable' => 'The saved association member role (":role") does not exist or cannot be used: choose another one and save.',
         ],
         'maintenance' => [
             'section' => 'Maintenance mode',
@@ -224,6 +229,18 @@ return [
             'enabled_help' => 'Visitors will see a maintenance page. Users with panel access keep seeing the site as usual.',
             'message' => 'Message for visitors',
             'message_help' => 'Optional. If empty, a generic message is shown.',
+        ],
+    ],
+
+    'users' => [
+        'fields' => [
+            'rolesHelp' => 'New users always get the "member" role as well, the base role of every account.',
+        ],
+    ],
+
+    'roles' => [
+        'fields' => [
+            'associationMemberRoleHint' => 'This is the association member role set in Site Settings: it cannot be renamed or deleted.',
         ],
     ],
 
