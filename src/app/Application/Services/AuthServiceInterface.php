@@ -47,6 +47,12 @@ interface AuthServiceInterface
     public function sendEmailVerificationNotification(string $userId): void;
 
     /**
+     * Send again the link that confirms the pending email change, to the pending address.
+     * Returns false (and sends nothing) when the user has no pending email.
+     */
+    public function sendPendingEmailVerificationNotification(string $userId): bool;
+
+    /**
      * Verify the user's email address.
      */
     public function verifyEmail(string $userId, string $hash): bool;
