@@ -30,8 +30,9 @@ final class AssignMemberRoleCommandTest extends TestCase
     {
         parent::setUp();
 
-        $this->member = RoleModel::query()->create(['name' => 'member', 'display_name' => 'Member']);
-        $admin = RoleModel::query()->create(['name' => 'admin', 'display_name' => 'Administrator', 'is_protected' => true]);
+        // Created by a migration; firstOrCreate keeps the test independent of that
+        $this->member = RoleModel::query()->firstOrCreate(['name' => 'member'], ['display_name' => 'Member']);
+        $admin = RoleModel::query()->firstOrCreate(['name' => 'admin'], ['display_name' => 'Administrator', 'is_protected' => true]);
         $socio = RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
 
         $this->adminAndSocio = UserModel::factory()->create();
