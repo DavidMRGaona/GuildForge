@@ -85,7 +85,9 @@ final class BaseRoleOnUserFormTest extends TestCase
         $user->delete();
         app(UserServiceInterface::class)->anonymize($user->id);
 
+        // Its form does not tick the base role, so the help text saying it is ticked is not shown
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->assertDontSee(__('filament.users.fields.rolesHelp'))
             ->call('save')
             ->assertHasNoFormErrors();
 

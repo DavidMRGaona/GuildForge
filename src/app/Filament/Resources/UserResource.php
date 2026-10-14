@@ -128,7 +128,10 @@ class UserResource extends BaseResource
                     ->schema([
                         CheckboxList::make('roles')
                             ->label(__('filament.users.fields.roles'))
-                            ->helperText(__('filament.users.fields.rolesHelp'))
+                            // Only where the base role is ticked: never on an anonymized account
+                            ->helperText(static fn (?UserModel $record): ?string => $baseRoleId !== null && $record?->anonymized_at === null
+                                ? (string) __('filament.users.fields.rolesHelp')
+                                : null)
                             ->relationship(
                                 name: 'roles',
                                 titleAttribute: 'display_name',
