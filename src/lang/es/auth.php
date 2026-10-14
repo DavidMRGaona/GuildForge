@@ -7,6 +7,7 @@ return [
     'verification_failed' => 'El enlace de verificación no es válido.',
     'email_verified' => 'Tu correo electrónico ha sido verificado.',
     'verification_link_sent' => 'Se ha enviado un nuevo enlace de verificación.',
+    'email_verification_required' => 'Verifica tu correo electrónico para continuar.',
     'profile_updated' => 'Perfil actualizado correctamente.',
     'password_incorrect' => 'La contraseña actual no es correcta.',
     'password_changed' => 'Contraseña actualizada correctamente.',

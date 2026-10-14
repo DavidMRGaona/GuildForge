@@ -9,6 +9,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use App\Infrastructure\Services\SettingsService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class SettingsServiceTest extends TestCase
@@ -66,7 +67,7 @@ final class SettingsServiceTest extends TestCase
             'key' => 'existing_key',
             'value' => 'updated_value',
         ]);
-        $this->assertDatabaseCount('settings', 1);
+        $this->assertSame(1, SettingModel::query()->where('key', 'existing_key')->count());
     }
 
     public function test_get_location_settings_returns_location_dto(): void
@@ -261,5 +262,49 @@ final class SettingsServiceTest extends TestCase
         $result = $this->settingsService->isEmailVerificationRequired();
 
         $this->assertFalse($result);
+    }
+
+    public function test_email_verification_enforced_since_is_read_as_a_date(): void
+    {
+        SettingModel::query()->updateOrCreate(
+            ['key' => 'email_verification_enforced_since'],
+            ['value' => '2026-10-14T10:30:00+00:00'],
+        );
+
+        $since = $this->settingsService->getEmailVerificationEnforcedSince();
+
+        $this->assertNotNull($since);
+        $this->assertSame('2026-10-14T10:30:00+00:00', $since->format(DATE_ATOM));
+    }
+
+    public function test_email_verification_enforced_since_is_null_when_missing(): void
+    {
+        SettingModel::query()->where('key', 'email_verification_enforced_since')->delete();
+
+        $this->assertNull($this->settingsService->getEmailVerificationEnforcedSince());
+    }
+
+    #[DataProvider('malformedCutoffs')]
+    public function test_email_verification_enforced_since_is_null_when_malformed(string $value): void
+    {
+        SettingModel::query()->updateOrCreate(
+            ['key' => 'email_verification_enforced_since'],
+            ['value' => $value],
+        );
+
+        $this->assertNull($this->settingsService->getEmailVerificationEnforcedSince());
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function malformedCutoffs(): array
+    {
+        return [
+            'empty' => [''],
+            'relative' => ['tomorrow'],
+            'date only' => ['2026-10-14'],
+            'out of range' => ['2026-13-45T10:30:00+00:00'],
+        ];
     }
 }
