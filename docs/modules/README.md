@@ -451,6 +451,46 @@ public function registerPermissions(): array
 - Admins pass every check. Other roles need the permission, granted from the role editor in the panel; `roles` lists the roles the core's roles seeder grants it to.
 - `php artisan permissions:sync` stores the definitions in the database (the production container runs it on every start).
 
+### Registered users and association members
+
+From core 3.8, two roles cover the usual audiences (see [Base role and association member role](../architecture.md#base-role-and-association-member-role)):
+
+- **`member`** is held by every account: the core gives it on registration, in the panel, in `make:admin-user` and in the seeders, and `users:assign-member-role` gives it to older accounts. Grant `member` the permissions any signed-in user needs. Never assign or remove `member` from a module.
+- **The association member role** (`socio` by default) is chosen in the site settings. Ask the core whether a user is an association member, and never check a role name, a constant or a module setting of your own:
+
+```php
+use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
+
+public function __construct(
+    private readonly AssociationMembershipServiceInterface $associationMembership,
+) {}
+
+// false when the configured role is missing or invalid: nobody is an association member then
+$isMember = $this->associationMembership->isAssociationMember($user);
+```
+
+`roleName()` returns the configured role name (for queries such as "users with the role") and `null` when the setting holds a role that cannot be used; handle `null` as "nobody".
+
+**Granting a permission to `member` from a migration.** From core 3.8.0 a core migration creates `member` when it is missing, so the role exists once the core is migrated, also on a new install before the seeders run. Module updates run migrations but not `permissions:sync`, so create the permission row if needed, skip the grant on a site without the role, and invalidate the authorization cache, since the pivot is written directly:
+
+```php
+$permission = PermissionModel::query()->firstOrCreate(
+    ['key' => 'mymodule:games.join'],
+    ['id' => PermissionId::generate()->value, 'label' => $label, 'resource' => 'games', 'action' => 'join', 'module' => 'mymodule'],
+);
+
+RoleModel::query()->where('name', 'member')->first()
+    ?->permissions()->syncWithoutDetaching([$permission->id]);
+
+app(AuthorizationServiceInterface::class)->invalidateCache();
+```
+
+`$label` is the permission's translated label with a literal fallback: a module migrated before it boots has no translations registered. Migrations run in file name order, core and module ones together: date the module migration after the core's `2026_10_14_100002_create_member_role`.
+
+**Email verification.** Module web routes load in the `web` group, so routes with the `auth` middleware get the core's required email verification (`EnsureEmailIsVerifiedWhenRequired`): while the site requires it, accounts that must verify are redirected to `/verificar-email`, or get a `403` on JSON requests. Do not add Laravel's `verified` middleware: it ignores the site setting and the cutoff that exempts accounts created before 3.8.0. Routes without `auth` are not checked; `App\Application\Services\EmailVerificationPolicyInterface::mustVerify($user)` answers the same question elsewhere.
+
+A module that uses any of this declares `"core": "^3.8"` in `requires` (see [Module manifest](#module-manifest-modulejson)).
+
 ### Panel navigation
 
 `registerNavigation()` returns `NavigationItemDTO`s that describe the module's entries in the admin panel sidebar (routes such as `filament.admin.resources.games.index`):

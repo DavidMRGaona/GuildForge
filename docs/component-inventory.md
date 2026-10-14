@@ -20,7 +20,7 @@ Every page also receives `seo: SeoProps` (`types/seo.ts`), built on the server b
 | `Auth/Register.vue` | `/registro` | -- (uses `useForm`) | `useAuth`, `useNotifications`, `useRoutes` | Registration form with name, email, password and confirmation. Conditional link to login (`authSettings.loginEnabled`) |
 | `Auth/ForgotPassword.vue` | `/olvide-contrasena` | -- (flash messages via `usePage`) | -- | Password recovery form by email. Shows success message after submission |
 | `Auth/ResetPassword.vue` | `/restablecer-contrasena` | `token: string`, `email: string` | -- | Password reset form with token, email, new password and confirmation |
-| `Auth/VerifyEmail.vue` | `/verificar-email` | -- (flash messages via `usePage`) | -- | Email verification page with button to resend email |
+| `Auth/VerifyEmail.vue` | `/verificar-email` | -- (flash messages via `usePage`) | `useAuth`, `useRoutes` | Email verification page with button to resend email, link to the profile to correct the address, and sign-out button. Accounts that must verify are sent here by the server (`EnsureEmailIsVerifiedWhenRequired`) |
 
 ### Events
 

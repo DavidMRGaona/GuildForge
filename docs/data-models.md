@@ -150,6 +150,7 @@ Core migrations create 27 application tables plus the Laravel framework tables `
 | created_at / updated_at | timestamp | nullable |
 
 - Model: `RoleModel` (`permissions()` and `users()` BelongsToMany). Entity: `App\Domain\Authorization\Entities\Role`.
+- `RolesSeeder` creates `admin` (protected), `editor` and `member`. `member` is the base role of every account and `socio` the default association member role; migrations create both when missing (see [Data migrations](#data-migrations)). The role named by the `association_member_role` setting cannot be deleted or renamed, although `is_protected` stays false.
 
 #### role_permission, user_role
 
@@ -290,6 +291,7 @@ Same structure: `{resource}_id` uuid + `tag_id` uuid (composite PK, both FK CASC
 | created_at / updated_at | timestamp | nullable |
 
 - Key/value store behind `SettingsServiceInterface` (site, theme, mail, maintenance, dashboard and module settings). Model: `SettingModel`.
+- Authorization and verification keys: `association_member_role` (name of the association member role; `socio` when unset or blank) and `email_verification_enforced_since` (written once by a migration, ISO 8601 in UTC: accounts created earlier are not required to verify their email). `auth_email_verification_required` turns the required verification on.
 
 #### menu_items
 
@@ -449,6 +451,14 @@ Same structure: `{resource}_id` uuid + `tag_id` uuid (composite PK, both FK CASC
 ### Data migrations
 
 `2026_10_08_000001_convert_trix_rich_text` converts rich text written with the old Trix editor into TipTap HTML (`TrixContentMigratorInterface`; also available as `php artisan content:convert-trix`). It changes no schema and writes a JSON backup file, not a table.
+
+Core 3.8 adds three data migrations, written with the query builder (no Eloquent), that never change existing rows and whose `down()` does nothing:
+
+| Migration | Effect |
+|-----------|--------|
+| `2026_10_14_100001_create_association_member_role` | Creates the role `socio` (*Socio*, "Miembro de la asociación") when no role has that name |
+| `2026_10_14_100002_create_member_role` | Creates the role `member` with the values `RolesSeeder` uses, when missing, so it exists right after migrating, before the seeders run |
+| `2026_10_14_100003_record_email_verification_cutoff` | Records `email_verification_enforced_since` in `settings` (current time, UTC) unless it exists, and clears the settings cache |
 
 ---
 
