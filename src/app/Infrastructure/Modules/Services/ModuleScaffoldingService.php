@@ -490,7 +490,12 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'feature' => ['test/feature-controller.php.stub', 'Feature/Http/Controllers', 'Controller'],
             'feature-filament' => ['test/feature-filament.php.stub', 'Feature/Filament', 'Resource'],
         ];
-        $type = isset($types[$type]) ? $type : 'unit';
+        if (! isset($types[$type])) {
+            return ScaffoldResultDTO::failure(
+                "Unknown test type '{$type}'.",
+                ['The test type must be one of: '.implode(', ', array_keys($types)).'.']
+            );
+        }
         [$stub, $dir, $suffix] = $types[$type];
 
         // "PostController" and "Post" both name the test of PostController
@@ -536,17 +541,25 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $result = $this->renderStub('vue/page.vue.stub', $destPath, $variables);
         $files[$destination] = $result;
 
-        // Also create types file
-        $typesDestination = "resources/js/types/{$variables['nameStudly']}.ts";
+        // The pages of a resource controller (<Entity>Index, Create, Show, Edit) share the
+        // types of the entity, named after the props that controller sends
+        $entity = preg_match('/^(.+?)(Index|Create|Show|Edit)$/', $variables['nameStudly'], $matches) === 1 ? $matches[1] : null;
+        $typesVariables = $entity !== null ? $this->stubRenderer->getComponentVariables($module, $entity) : $variables;
+
+        $typesDestination = "resources/js/types/{$typesVariables['nameStudly']}.ts";
         $typesDestPath = $modulePath.'/'.$typesDestination;
-        $typesResult = $this->renderStub('vue/types.ts.stub', $typesDestPath, $variables);
+        $typesResult = $this->renderStub('vue/types.ts.stub', $typesDestPath, $typesVariables);
         $files[$typesDestination] = $typesResult;
+
+        $renderedAs = "Inertia::render('{$variables['moduleNameStudly']}/{$variables['nameStudly']}')";
 
         return ScaffoldResultDTO::success(
             "Vue page '{$name}' created for module '{$module}'.",
             $files,
             nextSteps: [
-                "Render it from a controller with Inertia::render('{$variables['moduleNameStudly']}/{$variables['nameStudly']}') (module:make-controller {$module} {$variables['nameStudly']})",
+                $entity !== null
+                    ? "{$entity}Controller renders it with {$renderedAs} (module:make-controller {$module} {$entity} --resource)"
+                    : "Render it from a controller with {$renderedAs} (module:make-controller {$module} {$variables['nameStudly']})",
                 "Its texts come from resources/js/locales/es.ts ({$variables['moduleNameCamel']}.*)",
                 self::buildAssetsStep($module),
             ],
@@ -835,26 +848,29 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $routeName = $variables['namePluralSnake'];
         $stack = "It uses the {$studly} service, DTOs and request: run module:make-entity {$module} {$studly}, module:make-dto {$module} {$studly}, module:make-dto {$module} {$studly} --response, module:make-service {$module} {$studly} --interface and module:make-request {$module} {$studly} if they do not exist";
         $policy = "Its writes call Gate::authorize() with {$studly}Policy: run module:make-filament-resource {$module} {$studly} (or write the policy) and list it in registerPolicies()";
+        // Route files have no namespace: import the controller, or ::class names a global class
+        $controllers = $variables['moduleNamespace'].'\\Http\\Controllers';
+        $import = "use {$controllers}\\{$studly}Controller;";
 
         return match ($type) {
             'resource' => [
                 $stack,
                 $policy,
                 "Create its pages: module:make-vue-page {$module} {$studly}Index (and {$studly}Create, {$studly}Show, {$studly}Edit)",
-                "Add the routes to routes/web.php, writes for signed-in users only and registered first (so /{$path}/create is not taken by the show route): Route::resource('{$path}', {$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); then Route::resource('{$path}', {$studly}Controller::class)->only(['index', 'show']);",
+                "Add the routes to routes/web.php ({$import}), writes for signed-in users only and registered first (so /{$path}/create is not taken by the show route): Route::resource('{$path}', {$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); then Route::resource('{$path}', {$studly}Controller::class)->only(['index', 'show']);",
             ],
             'api' => [
                 $stack,
                 $policy,
-                "Add the routes to routes/api.php: Route::apiResource('{$path}', Api\\{$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); then Route::apiResource('{$path}', Api\\{$studly}Controller::class)->only(['index', 'show']); (the api group has no session: writes answer 401 until the module adds token authentication)",
+                "Add the routes to routes/api.php (use {$controllers}\\Api;): Route::apiResource('{$path}', Api\\{$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); then Route::apiResource('{$path}', Api\\{$studly}Controller::class)->only(['index', 'show']); (the api group has no session: writes answer 401 until the module adds token authentication)",
             ],
             'invokable' => [
                 "Create its page: module:make-vue-page {$module} {$studly} (rendered as {$page})",
-                "Add the route to routes/web.php: Route::get('{$variables['nameKebab']}', {$studly}Controller::class)->name('{$variables['nameSnake']}');",
+                "Add the route to routes/web.php ({$import}): Route::get('{$variables['nameKebab']}', {$studly}Controller::class)->name('{$variables['nameSnake']}');",
             ],
             default => [
                 "Create its page: module:make-vue-page {$module} {$studly} (rendered as {$page})",
-                "Add the route to routes/web.php: Route::get('{$path}', [{$studly}Controller::class, 'index'])->name('{$routeName}.index');",
+                "Add the route to routes/web.php ({$import}): Route::get('{$path}', [{$studly}Controller::class, 'index'])->name('{$routeName}.index');",
             ],
         };
     }

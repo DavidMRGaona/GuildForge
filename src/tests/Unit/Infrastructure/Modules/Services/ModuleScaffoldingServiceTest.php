@@ -1189,6 +1189,67 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringNotContainsString('not looked up', $test);
     }
 
+    public function test_an_unknown_test_type_is_refused(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createTest('blog-posts', 'Post', 'filament');
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Unknown test type 'filament'", $result->message);
+        $this->assertStringContainsString('feature-filament', implode(' ', $result->errors));
+        $this->assertDirectoryDoesNotExist($this->tempModulesPath.'/blog-posts/tests/Unit/Domain');
+    }
+
+    public function test_resource_pages_share_the_types_of_the_props_their_controller_sends(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $index = $this->service->createVuePage('blog-posts', 'BlogPostIndex');
+        $edit = $this->service->createVuePage('blog-posts', 'BlogPostEdit');
+
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $index->files['resources/js/types/BlogPost.ts'] ?? null);
+        $this->assertSame(ScaffoldResultDTO::STATUS_SKIPPED, $edit->files['resources/js/types/BlogPost.ts'] ?? null);
+        $this->assertFileDoesNotExist($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPostIndex.ts');
+        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPost.ts');
+        $this->assertStringContainsString('blogPosts: BlogPost[];', $types);
+        $this->assertStringContainsString('blogPost: BlogPost;', $types);
+
+        $steps = implode("\n", $index->nextSteps);
+        $this->assertStringNotContainsString('module:make-controller blog-posts BlogPostIndex', $steps);
+        $this->assertStringContainsString('module:make-controller blog-posts BlogPost --resource', $steps);
+    }
+
+    public function test_route_hints_import_the_controllers_they_name(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $resource = implode("\n", $this->service->createController('blog-posts', 'BlogPost', 'resource')->nextSteps);
+        $api = implode("\n", $this->service->createController('blog-posts', 'BlogPost', 'api')->nextSteps);
+        $default = implode("\n", $this->service->createController('blog-posts', 'Archive')->nextSteps);
+
+        // routes/*.php have no namespace: a bare class name would resolve to the global one
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\BlogPostController;', $resource);
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\Api;', $api);
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\ArchiveController;', $default);
+        $apiController = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/Api/BlogPostController.php');
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\Api;', $apiController);
+    }
+
+    public function test_route_file_headers_use_sentence_case(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $web = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/web.php');
+        $api = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/api.php');
+
+        $this->assertStringNotContainsString('Web Routes', $web);
+        $this->assertStringNotContainsString('API Routes', $api);
+        $this->assertStringContainsString('| Web routes of the blog-posts module', $web);
+        $this->assertStringContainsString('| API routes of the blog-posts module', $api);
+        $this->assertStringNotContainsString('Public URLs are in Spanish', $web);
+    }
+
     private function generateEveryTranslatedClass(string $module): void
     {
         $this->service->createModule($module);

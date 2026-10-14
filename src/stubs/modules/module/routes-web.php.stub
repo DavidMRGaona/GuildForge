@@ -6,11 +6,11 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| {{ moduleNameStudly }} Web Routes
+| Web routes of the {{ moduleName }} module
 |--------------------------------------------------------------------------
 |
-| Web routes for the {{ moduleNameStudly }} module. The module loader already
-| applies the "web" middleware. Public URLs are in Spanish (e.g. "mesas").
+| The module loader already applies the "web" middleware. Public URL
+| segments are shown to visitors: translate them to Spanish (e.g. "mesas").
 |
 */
 
