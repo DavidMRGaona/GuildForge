@@ -487,7 +487,19 @@ app(AuthorizationServiceInterface::class)->invalidateCache();
 
 `$label` is the permission's translated label with a literal fallback: a module migrated before it boots has no translations registered. Migrations run in file name order, core and module ones together: date the module migration after the core's `2026_10_14_100002_create_member_role`.
 
-**Email verification.** Module web routes load in the `web` group, so routes with the `auth` middleware get the core's required email verification (`EnsureEmailIsVerifiedWhenRequired`): while the site requires it, accounts that must verify are redirected to `/verificar-email`, or get a `403` on JSON requests. Do not add Laravel's `verified` middleware: it ignores the site setting and the cutoff that exempts accounts created before 3.8.0. Routes without `auth` are not checked; `App\Application\Services\EmailVerificationPolicyInterface::mustVerify($user)` answers the same question elsewhere.
+**Email verification.** Module web routes load in the `web` group, so routes with the `auth` middleware get the core's required email verification (`EnsureEmailIsVerifiedWhenRequired`, see [Required email verification](../architecture.md#required-email-verification)): while the site requires it, accounts that must verify are redirected to `/verificar-email`, or get a `403` on JSON requests. Do not add Laravel's `verified` middleware: it ignores the site setting and the cutoff that exempts accounts created before 3.8.0.
+
+Routes without `auth` are not checked. When such a route also works for guests but acts as the signed-in user when there is one (signing up or checking in, for example), add the `email.verified-if-required` alias: it applies the same rule when someone is signed in and does nothing for guests.
+
+```php
+// routes/web.php: guests can join too, so the route has no auth;
+// a signed-in user joins as themselves, so the verification rule applies to them
+Route::post('/partidas/{gameId}/apuntarse', [GameSignUpController::class, 'store'])
+    ->middleware('email.verified-if-required')
+    ->name('mymodule.games.join');
+```
+
+Elsewhere (a service, a policy, a Livewire component), `App\Application\Services\EmailVerificationPolicyInterface::mustVerify($user)` answers the same question.
 
 A module that uses any of this declares `"core": "^3.8"` in `requires` (see [Module manifest](#module-manifest-modulejson)).
 
