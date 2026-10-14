@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Console\Commands\Module;
 
+use App\Application\Modules\Services\ModuleSettingsStoreInterface;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 final class ModuleSyncFromImageCommandTest extends TestCase
 {
+    use LazilyRefreshDatabase;
+
     private string $imagePath;
 
     private string $volumePath;
@@ -134,6 +138,22 @@ final class ModuleSyncFromImageCommandTest extends TestCase
 
         $manifest = json_decode(File::get($volumeModulePath.'/module.json'), true);
         $this->assertEquals('2.0.0', $manifest['version']);
+    }
+
+    public function test_syncing_a_newer_image_keeps_panel_settings(): void
+    {
+        File::ensureDirectoryExists($this->volumePath.'/settings-module/config');
+        File::put($this->volumePath.'/settings-module/module.json', (string) json_encode(['name' => 'settings-module', 'version' => '1.0.0']));
+        File::put($this->volumePath.'/settings-module/config/settings.php', "<?php\n\nreturn ['a' => 1];\n");
+        File::ensureDirectoryExists($this->imagePath.'/settings-module/config');
+        File::put($this->imagePath.'/settings-module/module.json', (string) json_encode(['name' => 'settings-module', 'version' => '1.1.0']));
+        File::put($this->imagePath.'/settings-module/config/settings.php', "<?php\n\nreturn ['a' => 1, 'b' => true];\n");
+        $store = app(ModuleSettingsStoreInterface::class);
+        $store->store('settings-module', ['a' => 2]);
+
+        $this->artisan('module:sync-from-image', ['path' => $this->imagePath])->assertExitCode(0);
+
+        $this->assertSame(['a' => 2, 'b' => true], $store->effective('settings-module', $this->volumePath.'/settings-module'));
     }
 
     public function test_handles_missing_image_path_gracefully(): void

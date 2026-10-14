@@ -8,6 +8,7 @@ use App\Application\Modules\DTOs\DependencyCheckResultDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
@@ -43,6 +44,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private Dispatcher $events,
         private ModuleCompatibilityServiceInterface $compatibility,
         private EnabledModulesResolverInterface $resolver,
+        private ModuleSettingsStoreInterface $settingsStore,
     ) {}
 
     public function discover(): ModuleCollection
@@ -441,6 +443,9 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
             // The seeded data is gone with the tables: a reinstall must seed again
             $this->seederRunner->forget($name);
+
+            // So are the panel settings; kept otherwise, so a reinstall gets them back
+            $this->settingsStore->forget($name->value);
         }
 
         // Store version for event before deleting
@@ -496,35 +501,19 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             throw ModuleNotFoundException::withName($name->value);
         }
 
-        // Filament 4+ hands enum-backed fields over as enum instances; settings.php keeps scalars
+        // Filament 4+ hands enum-backed fields over as enum instances; the store keeps scalars
         array_walk_recursive($settings, static function (mixed &$value): void {
             if ($value instanceof \BackedEnum) {
                 $value = $value->value;
             }
         });
 
-        $settingsPath = $module->path().'/config/settings.php';
+        // Never written into config/settings.php: that file holds the release defaults and
+        // is replaced with the module directory on every update
+        $this->settingsStore->store($name->value, $settings);
 
-        // Store settings in the module's config directory
-        if (! File::isDirectory(dirname($settingsPath))) {
-            File::makeDirectory(dirname($settingsPath), 0755, true);
-        }
-
-        $content = "<?php\n\nreturn ".var_export($settings, true).";\n";
-        File::put($settingsPath, $content);
-
-        // Update config in memory immediately so changes are visible without restart
-        config()->set("modules.settings.{$name->value}", $settings);
-
-        // Invalidate opcache so the file is reloaded on next request
-        if (function_exists('opcache_invalidate')) {
-            opcache_invalidate($settingsPath, true);
-        }
-
-        // Touch file to ensure mtime changes, forcing OPcache revalidation
-        // across all PHP-FPM workers (when validate_timestamps is enabled)
-        clearstatcache(true, $settingsPath);
-        touch($settingsPath);
+        // The current request sees what the next one will
+        config()->set("modules.settings.{$name->value}", $this->settingsStore->effective($name->value, $module->path()));
     }
 
     public function getDependents(ModuleName $name): ModuleCollection
