@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Middleware;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Http\Middleware\EnsureEmailIsVerifiedWhenRequired;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
-use Livewire\Livewire;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
@@ -26,6 +28,10 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
 
     private const string PUBLIC_URL = '/_test/verification/public';
 
+    private const string OPTIONAL_LOGIN_URL = '/_test/verification/optional-login';
+
+    private const string ADMIN_WEB_URL = '/admin/_test-verification';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -37,6 +43,13 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
                 Route::post(self::PROTECTED_URL, static fn (): string => 'protected');
             });
             Route::get(self::PUBLIC_URL, static fn (): string => 'public');
+            // Works for guests, acts as the signed-in user when there is one
+            Route::middleware(EnsureEmailIsVerifiedWhenRequired::ALIAS)->group(function (): void {
+                Route::get(self::OPTIONAL_LOGIN_URL, static fn (Request $request): string => $request->user() !== null ? 'signed in' : 'guest');
+                Route::post(self::OPTIONAL_LOGIN_URL, static fn (): string => 'done');
+            });
+            // A web route under /admin that is not part of the Filament panel
+            Route::middleware('auth')->get(self::ADMIN_WEB_URL, static fn (): string => 'admin web');
         });
         Route::getRoutes()->refreshNameLookups();
 
@@ -246,24 +259,66 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
         $this->get(self::PROTECTED_URL)->assertOk();
     }
 
-    public function test_an_unverified_admin_is_not_locked_out_of_the_panel(): void
+    public function test_a_web_route_under_admin_that_requires_login_is_stopped(): void
     {
         $this->requireVerification();
         $this->actingAs(UserModel::factory()->admin()->unverified()->create());
 
-        $this->get('/admin')->assertOk();
+        $this->get(self::ADMIN_WEB_URL)->assertRedirect(route('verification.notice'));
     }
 
-    public function test_livewire_endpoints_are_not_stopped(): void
+    public function test_the_filament_panel_works_for_an_unverified_admin(): void
     {
         $this->requireVerification();
-        $this->actingAs(UserModel::factory()->admin()->unverified()->create());
+        $admin = UserModel::factory()->admin()->unverified()->create();
+        $this->actingAs($admin);
 
-        $response = $this->withHeaders(['X-Livewire' => 'true'])
-            ->postJson(Livewire::getUpdateUri(), ['components' => []]);
+        $this->get('/admin')->assertOk();
+        $this->get('/admin/events')->assertOk();
 
-        $this->assertNotSame(403, $response->getStatusCode());
-        $this->assertFalse($response->isRedirect(route('verification.notice')));
+        // The panel has its own middleware stack; were this middleware ever in it, the panel
+        // routes (which require login through Filament's Authenticate) must still go through
+        $request = Request::create('/admin/events');
+        $route = Route::getRoutes()->match($request);
+        $this->assertSame('filament.admin.resources.events.index', $route->getName());
+        $request->setRouteResolver(static fn () => $route);
+        $request->setUserResolver(static fn (): UserModel => $admin);
+
+        $response = app(EnsureEmailIsVerifiedWhenRequired::class)
+            ->handle($request, static fn (): Response => new Response('panel'));
+
+        $this->assertSame('panel', $response->getContent());
+    }
+
+    public function test_the_alias_stops_an_unverified_account_on_a_route_without_auth(): void
+    {
+        $this->requireVerification();
+        $this->actingAs($this->newUnverifiedUser());
+
+        $this->get(self::OPTIONAL_LOGIN_URL)->assertRedirect(route('verification.notice'));
+        $this->post(self::OPTIONAL_LOGIN_URL)->assertRedirect(route('verification.notice'));
+        $this->postJson(self::OPTIONAL_LOGIN_URL)
+            ->assertForbidden()
+            ->assertExactJson(['message' => __('auth.email_verification_required')]);
+    }
+
+    public function test_the_alias_lets_guests_through(): void
+    {
+        $this->requireVerification();
+
+        $this->get(self::OPTIONAL_LOGIN_URL)->assertOk()->assertSee('guest');
+        $this->post(self::OPTIONAL_LOGIN_URL)->assertOk();
+    }
+
+    public function test_the_alias_lets_accounts_that_need_no_verification_through(): void
+    {
+        $this->requireVerification();
+
+        $this->actingAs(UserModel::factory()->create());
+        $this->get(self::OPTIONAL_LOGIN_URL)->assertOk()->assertSee('signed in');
+
+        $this->actingAs(UserModel::factory()->unverified()->create(['created_at' => '2025-06-01 12:00:00']));
+        $this->post(self::OPTIONAL_LOGIN_URL)->assertOk();
     }
 
     public function test_a_new_registration_ends_up_on_the_notice(): void
@@ -276,11 +331,23 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
             'email' => 'new@example.com',
             'password' => 'password-123',
             'password_confirmation' => 'password-123',
-        ])->assertRedirect();
+        ])->assertRedirect(route('verification.notice'));
 
         $this->assertAuthenticated();
         $this->get(self::PROTECTED_URL)->assertRedirect(route('verification.notice'));
         $this->get(route('verification.notice'))->assertOk();
+    }
+
+    public function test_a_new_registration_goes_home_when_verification_is_not_required(): void
+    {
+        Notification::fake();
+
+        $this->post(route('register'), [
+            'name' => 'Nueva cuenta',
+            'email' => 'new@example.com',
+            'password' => 'password-123',
+            'password_confirmation' => 'password-123',
+        ])->assertRedirect(route('home'));
     }
 
     private function requireVerification(): void

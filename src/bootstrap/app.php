@@ -49,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'registration.enabled' => EnsureRegistrationIsEnabled::class,
             'login.enabled' => EnsureLoginIsEnabled::class,
             'bot-protection' => BlockBotsMiddleware::class,
+            EnsureEmailIsVerifiedWhenRequired::ALIAS => EnsureEmailIsVerifiedWhenRequired::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
