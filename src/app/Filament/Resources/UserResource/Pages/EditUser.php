@@ -25,11 +25,8 @@ class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
-        /** @var UserModel $user */
-        $user = $this->record;
-
         // The roles checkbox list writes the pivot directly: drop the cached roles and permissions
-        app(AuthorizationServiceInterface::class)->refreshUser($user);
+        app(AuthorizationServiceInterface::class)->invalidateCache();
     }
 
     /**

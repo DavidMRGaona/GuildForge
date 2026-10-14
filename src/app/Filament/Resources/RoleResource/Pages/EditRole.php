@@ -25,28 +25,14 @@ class EditRole extends EditRecord
         return [
             DeleteAction::make()
                 ->hidden(fn (): bool => $record->is_protected)
-                ->before(function () use ($record): void {
-                    $this->refreshUsersOf($record);
-                }),
+                ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
         ];
     }
 
     protected function afterSave(): void
     {
-        /** @var RoleModel $record */
-        $record = $this->record;
-
         // The permissions checkbox list writes the pivot directly: every holder of the role is affected
-        $this->refreshUsersOf($record);
-    }
-
-    private function refreshUsersOf(RoleModel $role): void
-    {
-        $authorization = app(AuthorizationServiceInterface::class);
-
-        foreach ($role->users()->get() as $user) {
-            $authorization->refreshUser($user);
-        }
+        app(AuthorizationServiceInterface::class)->invalidateCache();
     }
 
     protected function getRedirectUrl(): string
