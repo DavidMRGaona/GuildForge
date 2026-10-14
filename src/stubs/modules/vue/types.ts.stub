@@ -1,12 +1,13 @@
 /**
  * {{ nameStudly }} TypeScript types for the {{ moduleNameStudly }} module.
+ * Keys match {{ nameStudly }}ResponseDTO::toArray().
  */
 
 export interface {{ nameStudly }} {
     id: string;
     name: string;
-    createdAt: string;
-    updatedAt: string;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface {{ nameStudly }}FormData {
