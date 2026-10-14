@@ -7,6 +7,7 @@ namespace App\Infrastructure\Services;
 use App\Application\DTOs\Response\LocationSettingsDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
+use DateTimeImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -111,6 +112,28 @@ final class SettingsService implements SettingsServiceInterface
     public function isEmailVerificationRequired(): bool
     {
         return $this->getBooleanSetting('auth_email_verification_required', false);
+    }
+
+    /**
+     * Read strictly as ISO 8601 (the format the migration writes): anything else is null,
+     * never a guess such as "now", so the caller can fail closed.
+     */
+    public function getEmailVerificationEnforcedSince(): ?DateTimeImmutable
+    {
+        $value = $this->get('email_verification_enforced_since');
+
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        $since = DateTimeImmutable::createFromFormat(DATE_ATOM, $value);
+        $errors = DateTimeImmutable::getLastErrors();
+
+        if ($since === false || ($errors !== false && $errors['warning_count'] > 0)) {
+            return null;
+        }
+
+        return $since;
     }
 
     /**

@@ -134,7 +134,7 @@ final class SettingsServiceEncryptionTest extends TestCase
         $result = $this->settingsService->getEncrypted('overwrite_key');
 
         $this->assertEquals('second-value', $result);
-        $this->assertDatabaseCount('settings', 1);
+        $this->assertSame(1, SettingModel::query()->where('key', 'overwrite_key')->count());
     }
 
     public function test_get_encrypted_does_not_expose_encrypted_value_via_plain_get(): void

@@ -211,10 +211,13 @@ final readonly class AuthService implements AuthServiceInterface
             return false;
         }
 
-        $userModel->update([
+        // The signed link reached the new address, so it is verified as well. Not mass
+        // assignable on purpose: forceFill, like markEmailAsVerified()
+        $userModel->forceFill([
             'email' => $userModel->pending_email,
             'pending_email' => null,
-        ]);
+            'email_verified_at' => $userModel->email_verified_at ?? now(),
+        ])->save();
 
         return true;
     }

@@ -21,8 +21,18 @@ final class EmailVerificationController extends Controller
         private readonly SeoMetadataFactoryInterface $seo,
     ) {}
 
-    public function notice(): Response
+    /**
+     * An account that has already verified has nothing to do here: back to the page it asked for.
+     */
+    public function notice(Request $request): Response|RedirectResponse
     {
+        /** @var UserModel $user */
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->intended(route('home'));
+        }
+
         return Inertia::render('Auth/VerifyEmail', [
             'seo' => $this->seo->forPage(new SeoPageDTO(
                 title: (string) __('seo.titles.verify_email'),
@@ -38,7 +48,8 @@ final class EmailVerificationController extends Controller
                 ->with('error', __('auth.verification_failed'));
         }
 
-        return redirect()->route('home')
+        // Back to the page EnsureEmailIsVerifiedWhenRequired stopped, when there was one
+        return redirect()->intended(route('home'))
             ->with('success', __('auth.email_verified'));
     }
 
