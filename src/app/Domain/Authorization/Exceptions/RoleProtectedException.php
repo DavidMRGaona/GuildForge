@@ -13,6 +13,11 @@ final class RoleProtectedException extends DomainException
         return new self("Cannot delete protected role: {$roleName}");
     }
 
+    public static function cannotDeleteAssociationMemberRole(string $roleName): self
+    {
+        return new self("Cannot delete the association member role: {$roleName}");
+    }
+
     public static function cannotModify(string $roleName): self
     {
         return new self("Cannot modify protected role: {$roleName}");

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -76,6 +78,7 @@ final class SiteSettings extends Page implements HasForms
         'auth_login_enabled',
         'auth_email_verification_required',
         'anonymized_user_name',
+        AssociationMembershipServiceInterface::SETTING_KEY,
     ];
 
     /**
@@ -101,6 +104,13 @@ final class SiteSettings extends Page implements HasForms
      * @var array<string, mixed>
      */
     public ?array $data = [];
+
+    /**
+     * Choosable association member roles, read once per request.
+     *
+     * @var array<string, string>|null
+     */
+    private ?array $associationMemberRoleOptions = null;
 
     public static function getNavigationLabel(): string
     {
@@ -199,6 +209,7 @@ final class SiteSettings extends Page implements HasForms
             'auth_login_enabled' => true,
             'auth_email_verification_required' => false,
             'anonymized_user_name' => 'Anónimo',
+            AssociationMembershipServiceInterface::SETTING_KEY => AssociationMembershipServiceInterface::DEFAULT_ROLE,
             'maintenance_enabled' => false,
             'maintenance_message' => '',
         ];
@@ -206,7 +217,16 @@ final class SiteSettings extends Page implements HasForms
 
     public function mount(SettingsServiceInterface $settingsService): void
     {
-        $this->form->fill($this->loadSettings($settingsService));
+        $data = $this->loadSettings($settingsService);
+
+        if (array_key_exists(AssociationMembershipServiceInterface::SETTING_KEY, $data)) {
+            // A stored role that is missing or forbidden is left blank, so it has to be chosen again
+            $data[AssociationMembershipServiceInterface::SETTING_KEY] = $this->usableAssociationMemberRole(
+                $this->effectiveAssociationMemberRole($data[AssociationMembershipServiceInterface::SETTING_KEY])
+            );
+        }
+
+        $this->form->fill($data);
     }
 
     public function form(Schema $schema): Schema
@@ -479,6 +499,22 @@ final class SiteSettings extends Page implements HasForms
                                             ->default(false),
                                     ]),
 
+                                Section::make(__('filament.settings.auth.section_association'))
+                                    ->description(__('filament.settings.auth.section_association_description'))
+                                    ->schema([
+                                        Select::make(AssociationMembershipServiceInterface::SETTING_KEY)
+                                            ->label(__('filament.settings.auth.association_member_role'))
+                                            ->helperText(__('filament.settings.auth.association_member_role_help'))
+                                            ->options(fn (): array => $this->associationMemberRoleOptions())
+                                            // Server-side guard against a forged Livewire state (base roles, missing roles)
+                                            ->in(fn (): array => array_keys($this->associationMemberRoleOptions()))
+                                            ->hint(fn (): ?string => $this->associationMemberRoleWarning())
+                                            ->hintIcon(fn (): ?string => $this->associationMemberRoleWarning() !== null ? 'heroicon-o-exclamation-triangle' : null)
+                                            ->hintColor('warning')
+                                            ->native(false)
+                                            ->required(),
+                                    ]),
+
                                 Section::make(__('filament.settings.auth.section_gdpr'))
                                     ->description(__('filament.settings.auth.section_gdpr_description'))
                                     ->schema([
@@ -514,6 +550,59 @@ final class SiteSettings extends Page implements HasForms
                     ->columnSpanFull(),
             ])
             ->statePath('data');
+    }
+
+    /**
+     * Existing roles that may be the association member role, as name => display name.
+     *
+     * @return array<string, string>
+     */
+    private function associationMemberRoleOptions(): array
+    {
+        if ($this->associationMemberRoleOptions !== null) {
+            return $this->associationMemberRoleOptions;
+        }
+
+        $options = [];
+
+        foreach (RoleModel::query()->orderBy('display_name')->get(['name', 'display_name']) as $role) {
+            if (! in_array(mb_strtolower($role->name), AssociationMembershipServiceInterface::FORBIDDEN_ROLES, true)) {
+                $options[$role->name] = $role->display_name;
+            }
+        }
+
+        return $this->associationMemberRoleOptions = $options;
+    }
+
+    /**
+     * The role the stored value stands for, as AssociationMembershipService reads it.
+     */
+    private function effectiveAssociationMemberRole(mixed $stored): string
+    {
+        $roleName = is_scalar($stored) ? trim((string) $stored) : '';
+
+        return $roleName === '' ? AssociationMembershipServiceInterface::DEFAULT_ROLE : $roleName;
+    }
+
+    private function usableAssociationMemberRole(string $roleName): ?string
+    {
+        return array_key_exists($roleName, $this->associationMemberRoleOptions()) ? $roleName : null;
+    }
+
+    /**
+     * Warning shown while the saved role is missing or forbidden: nobody is an association member meanwhile.
+     */
+    private function associationMemberRoleWarning(): ?string
+    {
+        $roleName = $this->effectiveAssociationMemberRole(
+            app(SettingsServiceInterface::class)->get(AssociationMembershipServiceInterface::SETTING_KEY)
+        );
+
+        if ($this->usableAssociationMemberRole($roleName) !== null) {
+            return null;
+        }
+
+        return __('filament.settings.auth.association_member_role_unavailable', ['role' => $roleName]);
     }
 
     public function save(SettingsServiceInterface $settingsService): void
