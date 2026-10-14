@@ -14,8 +14,6 @@ const props = defineProps<Props>();
 
 const { formatDateRange } = useEvents();
 
-const isEventSource = computed(() => props.event?.sourceType === 'event');
-
 const formattedDate = computed(() => {
     if (!props.event) return '';
     return formatDateRange(props.event.start, props.event.end ?? props.event.start);
@@ -42,11 +40,6 @@ const tooltipStyle = computed(() => ({
             >
                 <!-- Title -->
                 <p class="font-semibold">{{ event.title }}</p>
-
-                <!-- Source type (non-event activity types, e.g. game tables) -->
-                <p v-if="!isEventSource" class="mt-0.5 text-xs text-tooltip-secondary">
-                    {{ event.sourceLabel }}
-                </p>
 
                 <!-- Date -->
                 <p class="mt-1 text-tooltip-secondary">
