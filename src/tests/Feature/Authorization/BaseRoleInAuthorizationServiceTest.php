@@ -117,6 +117,38 @@ final class BaseRoleInAuthorizationServiceTest extends TestCase
         $this->assertSame([], $this->authorization->getRoles($this->user));
     }
 
+    public function test_removing_the_base_role_keeps_it(): void
+    {
+        // Cached first: a removal would have to invalidate the lookup to be seen
+        $this->assertTrue($this->authorization->hasRole($this->user, 'member'));
+
+        $this->authorization->removeRole($this->user, 'member');
+
+        $this->assertTrue($this->user->roles()->where('name', 'member')->exists());
+        $this->assertTrue($this->authorization->hasRole($this->user, 'member'));
+    }
+
+    public function test_sync_without_the_base_role_keeps_it(): void
+    {
+        $this->authorization->assignRole($this->user, 'admin');
+        $this->assertSame(['admin', 'member'], $this->sorted($this->authorization->getRoles($this->user)));
+
+        $this->authorization->syncRoles($this->user, ['editor']);
+
+        $this->assertEqualsCanonicalizing(['member', 'editor'], $this->databaseRoles($this->user));
+        $this->assertEqualsCanonicalizing(['member', 'editor'], $this->authorization->getRoles($this->user));
+    }
+
+    public function test_sync_with_no_roles_keeps_the_base_role(): void
+    {
+        $this->authorization->assignRole($this->user, 'socio');
+
+        $this->authorization->syncRoles($this->user, []);
+
+        $this->assertSame(['member'], $this->databaseRoles($this->user));
+        $this->assertSame(['member'], $this->authorization->getRoles($this->user));
+    }
+
     /**
      * @return array<string>
      */

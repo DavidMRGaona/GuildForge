@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Authorization\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\BaseRoleRule;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Facades\Cache;
@@ -25,6 +26,10 @@ final class AuthorizationService implements AuthorizationServiceInterface
     private const string CACHE_VERSION_KEY = 'authorization_cache_version';
 
     private const string CACHE_VERSION_PATTERN = '/^[0-9a-f]{32}$/';
+
+    public function __construct(
+        private readonly BaseRoleRule $baseRole = new BaseRoleRule,
+    ) {}
 
     public function can(object $user, string $permissionKey): bool
     {
@@ -136,6 +141,11 @@ final class AuthorizationService implements AuthorizationServiceInterface
 
     public function removeRole(object $user, string $roleName): void
     {
+        // The base role of every account is never taken away: nothing changes, nothing to invalidate
+        if ($this->baseRole->isBaseRoleName($roleName)) {
+            return;
+        }
+
         $role = RoleModel::where('name', $roleName)->first();
         if ($role !== null) {
             /** @var UserModel $user */
@@ -149,8 +159,15 @@ final class AuthorizationService implements AuthorizationServiceInterface
      */
     public function syncRoles(object $user, array $roleNames): void
     {
-        $roleIds = RoleModel::whereIn('name', $roleNames)->pluck('id')->toArray();
         /** @var UserModel $user */
+        // Read from the database, not the cache: a user who has the base role of every account keeps it
+        $hasBaseRole = $user->roles()->where('roles.name', BaseRoleRule::NAME)->exists();
+
+        if ($hasBaseRole && ! in_array(BaseRoleRule::NAME, $roleNames, true)) {
+            $roleNames[] = BaseRoleRule::NAME;
+        }
+
+        $roleIds = RoleModel::whereIn('name', $roleNames)->pluck('id')->toArray();
         $user->roles()->sync($roleIds);
         $this->invalidateCache();
     }
