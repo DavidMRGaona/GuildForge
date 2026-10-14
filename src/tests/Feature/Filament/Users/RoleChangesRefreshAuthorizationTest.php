@@ -13,10 +13,13 @@ use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Actions\DeleteAction;
+use Illuminate\Cache\Events\RetrievingKey;
 use Illuminate\Cache\Repository;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use Mockery;
 use RuntimeException;
@@ -184,6 +187,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $user = $this->userRevokedAfterAnEarlierCachedGrant();
 
         Cache::forget('authorization_cache_version');
+        $this->app->forgetScopedInstances();
 
         $this->assertFalse($this->authorization->can($user, 'events.create'));
     }
@@ -193,6 +197,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $user = $this->userRevokedAfterAnEarlierCachedGrant();
 
         Cache::forever('authorization_cache_version', 'garbage');
+        $this->app->forgetScopedInstances();
 
         $this->assertFalse($this->authorization->can($user, 'events.create'));
     }
@@ -206,6 +211,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         Cache::forever('authorization_cache_version', $version);
         Cache::put("user_permissions_{$version}_{$user->id}", 'events.delete', 3600);
         Cache::put("user_roles_{$version}_{$user->id}", ['admin', 42], 3600);
+        $this->app->forgetScopedInstances();
 
         $this->assertTrue($this->authorization->can($user, 'events.create'));
         $this->assertFalse($this->authorization->can($user, 'events.delete'));
@@ -224,6 +230,65 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $this->assertTrue($this->authorization->can($user, 'events.create'));
         $this->assertFalse($this->authorization->can($user, 'events.delete'));
         $this->assertFalse($this->authorization->hasRole($user, 'admin'));
+    }
+
+    public function test_a_member_check_reads_the_version_token_once_per_request(): void
+    {
+        $role = $this->roleWith('events.create');
+        $user = UserModel::factory()->create();
+        $user->roles()->attach($role->id);
+        $this->app->forgetScopedInstances();
+
+        // Version token, cached roles (admin check) and cached permissions
+        $this->assertSame(['version' => 1, 'total' => 3], $this->cacheReadsDuring(fn () => $this->authorization->can($user, 'events.create')));
+        $this->assertSame(['version' => 0, 'total' => 2], $this->cacheReadsDuring(fn () => $this->authorization->can($user, 'events.delete')));
+        $this->assertSame(['version' => 0, 'total' => 2], $this->cacheReadsDuring(fn () => $this->authorization->canAny($user, ['events.delete', 'events.create'])));
+
+        $this->app->forgetScopedInstances();
+
+        $this->assertSame(['version' => 1, 'total' => 3], $this->cacheReadsDuring(fn () => $this->authorization->canAll($user, ['events.create'])));
+    }
+
+    public function test_an_admin_check_reads_the_version_token_once_per_request(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $this->app->forgetScopedInstances();
+
+        // Version token and cached roles: the admin answer needs no permissions
+        $this->assertSame(['version' => 1, 'total' => 2], $this->cacheReadsDuring(fn () => $this->authorization->can($admin, 'events.create')));
+        $this->assertSame(['version' => 0, 'total' => 1], $this->cacheReadsDuring(fn () => $this->authorization->can($admin, 'users.delete')));
+    }
+
+    public function test_the_request_sees_its_own_invalidation(): void
+    {
+        $role = $this->roleWith('events.create');
+        $user = UserModel::factory()->create();
+        $user->roles()->attach($role->id);
+        $this->assertTrue($this->authorization->can($user, 'events.create'));
+
+        $role->permissions()->detach();
+        $this->authorization->invalidateCache();
+
+        $this->assertFalse($this->authorization->can($user, 'events.create'));
+    }
+
+    public function test_a_failed_token_replacement_forgets_the_old_token_and_is_reported(): void
+    {
+        // Readers find no token and start a new one: the entries of the old token are never served
+        $store = Mockery::mock(Repository::class);
+        $store->shouldReceive('forever')->andThrow(new RuntimeException('cache down'));
+        $store->shouldReceive('forget')->once()->with('authorization_cache_version')->andReturnTrue();
+        Cache::swap($store);
+        Log::spy();
+
+        try {
+            $this->authorization->invalidateCache();
+            $this->fail('The failed invalidation must reach the caller');
+        } catch (RuntimeException $e) {
+            $this->assertSame('cache down', $e->getMessage());
+        }
+
+        Log::shouldHaveReceived('error')->once();
     }
 
     public function test_invalidate_cache_forgets_the_cached_roles_and_permissions(): void
@@ -254,6 +319,25 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $this->assertFalse($this->authorization->can($user, 'events.create'));
 
         return $user;
+    }
+
+    /**
+     * @return array{version: int, total: int}
+     */
+    private function cacheReadsDuring(callable $check): array
+    {
+        $keys = [];
+        Event::listen(RetrievingKey::class, static function (RetrievingKey $event) use (&$keys): void {
+            $keys[] = $event->key;
+        });
+
+        $check();
+        Event::forget(RetrievingKey::class);
+
+        return [
+            'version' => count(array_filter($keys, static fn (string $key): bool => $key === 'authorization_cache_version')),
+            'total' => count($keys),
+        ];
     }
 
     private function roleWith(string $permissionKey): RoleModel
