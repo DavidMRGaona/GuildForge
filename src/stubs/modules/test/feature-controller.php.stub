@@ -9,8 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\Support\Modules\ModuleTestCase;
 
 /**
- * Requests the route module:make-controller prints, in routes/web.php (by URL: route names
- * registered when the test enables the module are not looked up by route()):
+ * Requests the route module:make-controller prints, in routes/web.php:
  *
  *     Route::get('{{ namePluralKebab }}', [{{ nameStudly }}Controller::class, 'index'])->name('{{ namePluralSnake }}.index');
  */

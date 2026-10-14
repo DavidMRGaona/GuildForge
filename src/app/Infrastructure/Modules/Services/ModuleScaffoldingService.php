@@ -142,7 +142,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         if ($repository === null) {
             $nextSteps[] = "Set \"repository\" (owner/repo) in module.json, or run php artisan module:set-source {$name} owner/repo once installed, so updates are found";
         }
-        $nextSteps[] = "Once it has Vue pages or components, run php artisan module:build {$name} (or npm install && npm run build in the module)";
+        $nextSteps[] = self::buildAssetsStep($name);
         $nextSteps[] = "Run its tests with vendor/bin/phpunit -c modules/{$name}/phpunit.xml";
 
         return ScaffoldResultDTO::success(
@@ -548,7 +548,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             nextSteps: [
                 "Render it from a controller with Inertia::render('{$variables['moduleNameStudly']}/{$variables['nameStudly']}') (module:make-controller {$module} {$variables['nameStudly']})",
                 "Its texts come from resources/js/locales/es.ts ({$variables['moduleNameCamel']}.*)",
-                "Build the module assets: php artisan module:build {$module}",
+                self::buildAssetsStep($module),
             ],
         );
     }
@@ -574,7 +574,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             "Vue component '{$name}' created for module '{$module}'.",
             $files,
             nextSteps: [
-                "Build the module assets: php artisan module:build {$module}",
+                self::buildAssetsStep($module),
             ],
         );
     }
@@ -800,6 +800,14 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     }
 
     /**
+     * Module assets are built with Node, which the PHP container does not have.
+     */
+    private static function buildAssetsStep(string $module): string
+    {
+        return "Build its Vue assets in the Node container: docker exec guildforge_node sh -c 'cd modules/{$module} && npm install && npm run build'; releases build them in the release workflow";
+    }
+
+    /**
      * A lowercase label: "BlogPost" becomes "blog post".
      */
     private function label(string $name): string
@@ -833,12 +841,12 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
                 $stack,
                 $policy,
                 "Create its pages: module:make-vue-page {$module} {$studly}Index (and {$studly}Create, {$studly}Show, {$studly}Edit)",
-                "Add the routes to routes/web.php, writes for signed-in users only: Route::resource('{$path}', {$studly}Controller::class)->only(['index', 'show']); and Route::resource('{$path}', {$studly}Controller::class)->except(['index', 'show'])->middleware('auth');",
+                "Add the routes to routes/web.php, writes for signed-in users only and registered first (so /{$path}/create is not taken by the show route): Route::resource('{$path}', {$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); then Route::resource('{$path}', {$studly}Controller::class)->only(['index', 'show']);",
             ],
             'api' => [
                 $stack,
                 $policy,
-                "Add the routes to routes/api.php: Route::apiResource('{$path}', Api\\{$studly}Controller::class)->only(['index', 'show']); and Route::apiResource('{$path}', Api\\{$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); (the api group has no session: writes answer 401 until the module adds token authentication)",
+                "Add the routes to routes/api.php: Route::apiResource('{$path}', Api\\{$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); then Route::apiResource('{$path}', Api\\{$studly}Controller::class)->only(['index', 'show']); (the api group has no session: writes answer 401 until the module adds token authentication)",
             ],
             'invokable' => [
                 "Create its page: module:make-vue-page {$module} {$studly} (rendered as {$page})",

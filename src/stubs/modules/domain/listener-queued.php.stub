@@ -11,11 +11,12 @@ use {{ moduleNamespace }}\Domain\Events\{{ eventNameStudly }};
  * Register it in the module service provider's boot():
  *
  *     Event::listen({{ eventNameStudly }}::class, {{ nameStudly }}::class);
+ *
+ * It runs on the default queue, the one the queue worker consumes. Set
+ * "public string $queue" only for a queue a worker actually listens to.
  */
 final class {{ nameStudly }} implements ShouldQueue
 {
-    public string $queue = 'listeners';
-
     public function __construct(
         // Inject required services via constructor
     ) {}
