@@ -76,7 +76,7 @@ final class EmailVerificationControllerTest extends TestCase
         Notification::assertSentTo(
             $user,
             VerifyPendingEmailNotification::class,
-            static fn (VerifyPendingEmailNotification $notification): bool => $notification->routeNotificationForMail() === 'right@example.com',
+            static fn (VerifyPendingEmailNotification $notification): bool => $notification->mailRecipient() === 'right@example.com',
         );
         Notification::assertNotSentTo($user, VerifyEmail::class);
     }
