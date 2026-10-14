@@ -223,7 +223,7 @@ final class HandleInertiaRequests extends Middleware
                 'avatarPublicId' => $userDTO->avatarPublicId,
                 'emailVerified' => $userDTO->emailVerified,
                 'createdAt' => $userDTO->createdAt->format('c'),
-                // New authorization fields
+                // Roles and permissions come from the user_role pivot
                 'roles' => $roles,
                 'permissions' => $permissions,
             ];
