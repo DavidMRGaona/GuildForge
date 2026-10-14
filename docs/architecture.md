@@ -204,6 +204,7 @@ Contracts that define application layer operations:
 
 **Write/action services**:
 - `AuthServiceInterface` - Authentication (login, registration, logout)
+- `EmailVerificationPolicyInterface` - Whether an account must verify its email before using the authenticated part of the site
 - `UserServiceInterface` - User management
 - `ContactServiceInterface` - Contact form
 - `LegalPageServiceInterface` - Legal pages
@@ -267,6 +268,8 @@ Contracts that define application layer operations:
 - `AuthorizationServiceInterface` - Permission verification
 - `PermissionRegistryInterface` - In-memory permission registry
 - `RoleServiceInterface` - Role management
+- `MemberRoleServiceInterface` - Gives `member`, the base role of every account, to new accounts and to existing ones (`users:assign-member-role`)
+- `AssociationMembershipServiceInterface` - The association member role chosen in the site settings and whether a user holds it
 
 #### Factory
 
@@ -387,6 +390,7 @@ Registered in `bootstrap/app.php`:
 | `HandleInertiaRequests` | `web` group | Shared props (auth, theme, navigation, module slots/pages/translations, `cloudinary`, site `seo` defaults) |
 | `SecurityHeadersMiddleware` | `web` group | Security headers (CSP, X-Frame-Options, HSTS on HTTPS, etc.) |
 | `EnsureSiteIsNotInMaintenance` | `web` group | Maintenance mode (see below) |
+| `EnsureEmailIsVerifiedWhenRequired` | `web` group | Required email verification on routes with `auth` (see [Required email verification](#required-email-verification)) |
 | `EnsureLoginIsEnabled` | Alias `login.enabled`, on the login routes | Verification that login is enabled |
 | `EnsureRegistrationIsEnabled` | Alias `registration.enabled`, on the registration routes | Verification that registration is enabled |
 
@@ -514,7 +518,7 @@ Modules may also define `registerFilamentWidgets()`: it is not declared on `Modu
 
 **Scaffolding**: `module:make` (complete module), `module:make-entity`, `module:make-enum`, `module:make-event`, `module:make-listener`, `module:make-notification`, `module:make-controller`, `module:make-request`, `module:make-service`, `module:make-dto`, `module:make-migration`, `module:make-test`, `module:make-filament-resource`, `module:make-relation-manager`, `module:make-widget`, `module:make-vue-page`, `module:make-vue-component`
 
-**Core**: `core:version`, `core:check-updates`, `core:record-deployment` (run by the container entrypoint), `content:convert-trix`, `permissions:sync`, `make:admin-user`, `elasticsearch:test`
+**Core**: `core:version`, `core:check-updates`, `core:record-deployment` (run by the container entrypoint), `content:convert-trix`, `permissions:sync`, `make:admin-user`, `users:assign-member-role`, `elasticsearch:test`
 
 ### Compatibility and updates
 
@@ -554,7 +558,7 @@ Laravel's service container manages all dependencies. Bindings are defined in th
 
 **Application services** (`singleton`):
 - `SettingsServiceInterface`, `DashboardWidgetConfigServiceInterface`, `ThemeSettingsServiceInterface`
-- `ImageOptimizationServiceInterface`, `AuthServiceInterface`, `UserServiceInterface`
+- `ImageOptimizationServiceInterface`, `AuthServiceInterface`, `EmailVerificationPolicyInterface`, `UserServiceInterface`
 - `UserModelQueryServiceInterface`, `LegalPageServiceInterface`, `ContactServiceInterface`
 - `SlugRedirectServiceInterface`, `ResponseDTOFactoryInterface`, `SiteBrandingServiceInterface`
 - `LogContextProviderInterface` (`bind`, resolves to `HttpLogContextProvider`)
@@ -596,6 +600,9 @@ Laravel's service container manages all dependencies. Bindings are defined in th
 - `AuthorizationServiceInterface` -> `AuthorizationService` (`singleton`)
 - `RoleServiceInterface` -> `RoleService` (`singleton`)
 - `PermissionRegistryInterface` -> `PermissionRegistry` (`singleton`)
+- `AssociationMembershipServiceInterface` -> `AssociationMembershipService` (`singleton`; reads the setting on every call)
+- `MemberRoleServiceInterface` -> `MemberRoleService` (`singleton`)
+- `AuthorizationCacheVersion` and `AssociationMemberRoleWarning` (`scoped`: one instance per request or queue job)
 
 ### ModulesServiceProvider
 
@@ -669,6 +676,42 @@ Modules extend this system with their own permissions using the format `module:r
 
 Admins pass every check (fast path in `AuthorizationService`). `MenuItemPolicy` checks the `menu_items.*` permissions defined in `CorePermissionDefinitions` (granted to no role by default; admins grant them in the role editor), and a test fails whenever a policy or panel page checks a permission nobody defines. Cached role and permission lookups carry a version token read once per request; every role or permission change (role edits and deletions, user role changes, `assignRole`/`removeRole`, seeders) replaces the token after the database commit, and the cache fails closed: a missing or malformed token, a malformed entry or a store error falls back to the database. Several panel pages check `isAdmin()` instead of a permission: `ModulesPage` and the pages in `Filament/Pages/Settings/`.
 
+### Base role and association member role
+
+Two roles mean different things:
+
+| Role | Who holds it | Used for |
+|------|--------------|----------|
+| `member` | Every account (the base role) | Permissions any registered user needs; modules grant them to `member` |
+| Association member role (`socio` by default) | Members of the association | Members-only content, early access, memberships; modules ask `AssociationMembershipServiceInterface` |
+
+**`member`.** `MemberRoleServiceInterface::assignTo()` gives it to every new account, keeping its other roles: registration (`AuthService::register()`, before the `Registered` and `UserRegistered` events), accounts created in the panel (`CreateUser::afterCreate()`, after the roles checkbox list has synced), `make:admin-user` and `UserSeeder` (admin and editor included). If the role does not exist, the account is still created and a warning is logged. The migration `2026_10_14_100002_create_member_role` creates it when missing (same values as `RolesSeeder`), so it exists right after migrating, before any seeder runs. Accounts created before 3.8.0 get it with `users:assign-member-role` (see the [deployment guide](deployment-guide.md#member-role-and-email-verification-core-38)). `EloquentUserRepository::save()` does not assign it: code that creates accounts there must call `assignTo()`.
+
+**Association member role.** Chosen in *Configuración del sitio → Autenticación → Socios de la asociación* (setting `association_member_role`, `settings.manage`). The select lists the existing roles except `admin`, `editor` and `member`, and validates the choice server-side against that list. `AssociationMembershipServiceInterface` (`App\Application\Authorization\Services`) is the only place that decides who is an association member:
+
+- `roleName()` returns the configured name, `socio` when the setting is unset or blank, and `null` when the stored value is `admin`, `editor` or `member` (compared case-insensitively). A forbidden value logs a warning at most once per request or queue job (`AssociationMemberRoleWarning`).
+- `isAssociationMember($user)` is true only when the user holds that role. When `roleName()` is `null` or the configured role does not exist, nobody is an association member. The settings page then shows a warning on the field and leaves it blank, so a valid role has to be chosen and saved.
+
+The migration `2026_10_14_100001_create_association_member_role` creates `socio` (display name *Socio*) when no role has that name, and never changes an existing one.
+
+The configured role can be neither deleted nor renamed: `RolePolicy::delete()` and `forceDelete()` refuse it, `RoleService::delete()` throws `RoleProtectedException::cannotDeleteAssociationMemberRole()`, `RoleResource` hides the delete actions and disables the name field (with a hint), and `EditRole::mutateFormDataBeforeSave()` drops a forged `name`, as it does for protected roles. Its permissions and display name can still be edited. To use another role, choose it in the site settings first; the old one can then be renamed or deleted.
+
+### Required email verification
+
+The setting *Requerir verificación de email* (`auth_email_verification_required`, *Configuración del sitio → Autenticación*, off by default) is enforced on the server by `EnsureEmailIsVerifiedWhenRequired`, appended to the `web` group, so module web routes get it too. It only acts on routes whose middleware includes `auth`: public pages stay open to every account, as they are to guests.
+
+`EmailVerificationPolicyInterface::mustVerify($user)` decides who has to verify. It is true when the setting is on, the email is not verified, the account is not anonymized and the account was created at or after `email_verification_enforced_since`. That setting is the cutoff: the migration `2026_10_14_100003_record_email_verification_cutoff` records it once, in UTC (ISO 8601), when 3.8.0 is deployed, and a later run never moves it. Accounts created before the cutoff keep working without verifying, as they did when the setting was only shown to the frontend. The policy fails closed: without a readable cutoff or without a creation date, every unverified account must verify while the setting is on.
+
+An account that must verify is sent to `/verificar-email` (`verification.notice`), and the page it asked for is remembered: verifying returns to it. JSON requests that are not Inertia visits get a `403` with `auth.email_verification_required`. The notice page (`Auth/VerifyEmail`) offers to resend the link, links to the profile to correct a mistyped email, and signs out; an account that has already verified is sent on from the notice.
+
+Always reachable:
+
+- `verification.*`: the notice, resending the link and the verification links;
+- `logout`;
+- `profile.show` and `profile.update`, to correct the email: the change is confirmed through `verification.pending-email`, which also marks the account as verified;
+- `admin`, `admin/*` and Livewire requests: the panel has its own access control (`canAccessPanel()`);
+- `up`.
+
 ### AuthorizesWithPermissions trait
 
 Shared trait used by all policies to delegate verification to `AuthorizationService`:
@@ -722,7 +765,7 @@ PHP-FPM (Docker container)
     |
 Middleware stack:
     BlockBotsMiddleware (global)
-    -> web group (session, CSRF, ...) -> HandleInertiaRequests -> SecurityHeadersMiddleware -> EnsureSiteIsNotInMaintenance
+    -> web group (session, CSRF, ...) -> HandleInertiaRequests -> SecurityHeadersMiddleware -> EnsureSiteIsNotInMaintenance -> EnsureEmailIsVerifiedWhenRequired
     |
 Router (Laravel)
     |
