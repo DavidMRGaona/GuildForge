@@ -28,13 +28,13 @@ Follow these steps to get the project up and running from scratch:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/DavidMRGaona/GuildForge.git runesword
-cd runesword
+git clone https://github.com/DavidMRGaona/GuildForge.git guildforge
+cd guildforge
 ```
 
 ### 2. Start the containers
 
-Optional: to change the ports Docker publishes, copy the root `.env.example` to `.env` and edit `APP_PORT`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `VITE_PORT`, `MAIL_PORT` or `MAIL_SMTP_PORT` (read by `docker-compose.yml`; the application's settings live in `src/.env`, so keep its `DB_*` values in step).
+Optional: to change the ports Docker publishes, copy the root `.env.example` to `.env` and edit `APP_PORT`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `VITE_PORT`, `MAIL_PORT` or `MAIL_SMTP_PORT` (read by `docker-compose.yml`). If you change `DB_DATABASE`, `DB_USERNAME` or `DB_PASSWORD`, set the same values in `src/.env` before the first `make up` (PostgreSQL only reads them when its volume is created). Leave `DB_PORT=5432` in `src/.env`: the root `DB_PORT` only changes the port published on the host.
 
 ```bash
 make up
@@ -47,7 +47,7 @@ This brings up all the services defined in `docker-compose.yml`:
 - **node** - Node.js 24 with Vite HMR (port 5173)
 - **queue** - Laravel queue worker
 - **mailpit** - development mail server (web 8025, SMTP 1025)
-- **redis** - cache and sessions (port 6379)
+- **redis** - Redis 7.2, unused until `src/.env` points cache, sessions or queues at it (port 6379)
 - **elasticsearch** - log storage (port 9200)
 - **kibana** - log visualization (port 5601)
 
@@ -88,7 +88,7 @@ The seeders create three accounts in the `local` and `testing` environments: `ad
 Modules are not part of the core repository: each one is its own GitHub repository, cloned into `src/modules/<name>` (ignored by the core repository). A fresh clone has none:
 
 ```bash
-git clone git@github.com:DavidMRGaona/guildforge-game-tables.git src/modules/game-tables
+git clone https://github.com/DavidMRGaona/guildforge-game-tables.git src/modules/game-tables
 docker exec guildforge_app php artisan module:discover
 docker exec guildforge_app php artisan module:enable game-tables
 ```
@@ -328,7 +328,7 @@ If your volumes were created by PostgreSQL 16 or by Redis 8.x (checkouts older t
 make db-backup     # while the old containers are still running
 make down
 docker volume ls | grep guildforge      # find the real names: <project>_guildforge_db_data, <project>_guildforge_redis_data
-docker volume rm runesword_guildforge_db_data runesword_guildforge_redis_data   # use the names listed above
+docker volume rm <project>_guildforge_db_data <project>_guildforge_redis_data   # use the names listed above
 make up
 make db-restore    # restores the latest backup into the new, empty database
 make migrate       # only if the branch adds migrations newer than the backup
@@ -396,7 +396,7 @@ The `src/phpunit.xml` file disables external services during tests:
 - `BCRYPT_ROUNDS=4` (faster hashing)
 - `memory_limit=512M`
 
-PHPUnit notices and deprecations fail the suite (`failOnPhpunitNotice`, `failOnPhpunitDeprecation`). Use `createStub()` for a test double without expectations and `createMock()` only when the test calls `expects()`; use attributes (`#[DataProvider]`, `#[Group]`) instead of doc-comment annotations, which PHPUnit ignores since version 12. With `--compact` the summary only says "PHPUnit Notices: N": run `vendor/bin/phpunit --display-phpunit-notices <file>` to see them. Module `phpunit.xml` files do not set these options.
+PHPUnit notices and deprecations fail the suite (`failOnPhpunitNotice`, `failOnPhpunitDeprecation`). Use `createStub()` for a test double without expectations and `createMock()` only when the test calls `expects()`; use attributes (`#[DataProvider]`, `#[Group]`) instead of doc-comment annotations, which PHPUnit ignores since version 12. With `--compact` the summary only says "PHPUnit Notices: N": run `vendor/bin/phpunit --display-phpunit-notices <file>` to see them. Module `phpunit.xml` files set the same two options.
 
 ---
 
@@ -492,4 +492,4 @@ npm run dev     # Vite server with HMR only
 npm run build   # Type checking + production build
 ```
 
-> **Note**: requires PHP 8.5, Node 24 (22.13+ also works, see `engines` in `src/package.json`), PostgreSQL 17, and Redis installed locally. See `src/composer.json` and `src/package.json` for the full list of scripts.
+> **Note**: requires PHP 8.5, Node 24 (22.13+ also works, see `engines` in `src/package.json`), and PostgreSQL 17 (Redis only if `.env` uses it). See `src/composer.json` and `src/package.json` for the full list of scripts.

@@ -76,7 +76,7 @@ For the full annotated directory tree, see [Source tree analysis](./source-tree-
 | **channel-notifications** | Channel notifications (Telegram, Discord, Slack, WhatsApp) | 0 | 0 |
 | **cookie-consent** | Cookie consent management (GDPR) | 4 | 3 |
 | **event-registrations** | Event registrations with waitlist | 2 | 5 |
-| **game-tables** | RPG/wargame table and campaign management | 12 | 25+ |
+| **game-tables** | RPG/wargame table and campaign management | 12 | 24 |
 | **memberships** | Membership system with dues and types | 4 | 0 |
 | **tournaments** | Tournaments with Swiss pairing and rankings | 7 | 12 |
 | **venue-bookings** | Venue and room bookings | 3 | 8 |

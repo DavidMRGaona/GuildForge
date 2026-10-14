@@ -26,7 +26,7 @@ Inner layers never import from outer layers. Dependencies always point inward th
 
 | Principle | Application in GuildForge |
 |-----------|--------------------------|
-| **S** - Single responsibility | Each class has one responsibility: `EventQueryService` only reads, `EventRepository` only persists |
+| **S** - Single responsibility | Each class has one responsibility: `EventQueryService` only reads, `EloquentEventRepository` only persists |
 | **O** - Open/closed | The module system allows extending functionality without modifying the core |
 | **L** - Liskov substitution | Domain interfaces (`EventRepositoryInterface`) are implemented with Eloquent without breaking contracts |
 | **I** - Interface segregation | Separate interfaces for reading (`EventQueryServiceInterface`) and writing (`EventRepositoryInterface`) |
@@ -83,7 +83,7 @@ final class Event
         private readonly DateTimeImmutable $endDate,
         // ...
     ) {
-        $this->validateDates(); // Invariante: endDate >= startDate
+        $this->validateDates(); // Invariant: endDate >= startDate
     }
 
     public function publish(): void
@@ -100,7 +100,7 @@ final class Event
 
 Immutable objects without identity that represent domain concepts:
 
-| Value Object | Purpose |
+| Value object | Purpose |
 |-------------|---------|
 | `EntityId`, `EventId`, `ArticleId`, `GalleryId`, `PhotoId`, `UserId` | Typed identifiers (UUID) |
 | `Slug` | Validated URL slug with pattern `[a-z0-9]+(-[a-z0-9]+)*` |
@@ -620,7 +620,7 @@ class UuidEloquentUserProvider extends EloquentUserProvider
     public function retrieveById($identifier): ?Authenticatable
     {
         if (! $this->isValidUuid($identifier)) {
-            return null; // Fuerza re-autenticación
+            return null; // Forces re-authentication
         }
         return parent::retrieveById($identifier);
     }
@@ -1011,7 +1011,7 @@ Structured log destination for monitoring and analysis. `HttpLogContextProvider`
 
 ## 11. Key patterns
 
-### Query Services (reads) vs Repositories (writes)
+### Query services (reads) vs repositories (writes)
 
 **CQRS-lite separation of concerns**:
 

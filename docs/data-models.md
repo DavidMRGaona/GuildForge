@@ -1,6 +1,6 @@
 # Data models
 
-> Verified on 2026-10-13 against core 3.5.1 and the module repositories (announcements 2.1.0, channel-notifications 2.1.0, cookie-consent 2.1.1, event-registrations 2.1.0, game-tables 2.3.0, memberships 2.1.0, tournaments 2.2.2, venue-bookings 2.2.0). The source of truth is the migrations: core in `src/database/migrations`, modules in `src/modules/<name>/database/migrations`. Columns below are the final state after every migration.
+> Verified on 2026-10-13 against core 3.5.1 and the module repositories (announcements 2.1.1, channel-notifications 2.1.1, cookie-consent 2.1.2, event-registrations 2.2.0, game-tables 2.3.0, memberships 2.2.0, tournaments 2.2.2, venue-bookings 2.3.0). The source of truth is the migrations: core in `src/database/migrations`, modules in `src/modules/<name>/database/migrations`. Columns below are the final state after every migration.
 
 ## 1. Conventions
 
@@ -1093,6 +1093,7 @@ One row per event; `event_id` is the primary key (no `id` column).
 | admin_notes | text | nullable |
 | confirmed_at | dateTime | nullable |
 | cancelled_at | dateTime | nullable |
+| reminder_sent_at | dateTime | nullable (set when the reminder is sent; cleared when the date or start time changes) |
 | created_at / updated_at | timestamp | nullable |
 
 - Indexes `(resource_id, date)`, `(date, start_time, end_time)`. Model: `BookingModel`.
