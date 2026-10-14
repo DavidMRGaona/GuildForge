@@ -232,6 +232,12 @@ return [
         ],
     ],
 
+    'users' => [
+        'fields' => [
+            'rolesHelp' => 'New users always get the "member" role as well, the base role of every account.',
+        ],
+    ],
+
     'roles' => [
         'fields' => [
             'associationMemberRoleHint' => 'This is the association member role set in Site Settings: it cannot be renamed or deleted.',

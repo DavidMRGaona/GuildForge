@@ -35,6 +35,11 @@ final class UserSeeder extends Seeder
             $authorization->assignRole($adminUser, 'admin');
         }
 
+        // "member" is the base role of every account, admins and editors included
+        if ($memberRole) {
+            $authorization->assignRole($adminUser, 'member');
+        }
+
         // Create or get editor user
         $editorAttributes = UserModel::factory()->editor()->raw([
             'name' => 'Editor User',
@@ -47,6 +52,10 @@ final class UserSeeder extends Seeder
         );
         if ($editorRole) {
             $authorization->assignRole($editorUser, 'editor');
+        }
+
+        if ($memberRole) {
+            $authorization->assignRole($editorUser, 'member');
         }
 
         // Create or get member user
