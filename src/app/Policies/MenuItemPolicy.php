@@ -34,8 +34,7 @@ class MenuItemPolicy
 
     public function delete(UserModel $user, MenuItemModel $menuItem): bool
     {
-        // Don't allow deletion of module-contributed items
-        if ($menuItem->module !== null) {
+        if ($this->isSeededByCore($menuItem)) {
             return false;
         }
 
@@ -49,11 +48,21 @@ class MenuItemPolicy
 
     public function forceDelete(UserModel $user, MenuItemModel $menuItem): bool
     {
-        if ($menuItem->module !== null) {
+        if ($this->isSeededByCore($menuItem)) {
             return false;
         }
 
         return $this->authorize($user, 'menu_items.delete');
+    }
+
+    /**
+     * The core's own links come back with the production seeder on every deploy, so
+     * deleting them would only confuse: they can be deactivated instead. A link tagged
+     * with a module is an ordinary link; nothing recreates it on the module's behalf.
+     */
+    private function isSeededByCore(MenuItemModel $menuItem): bool
+    {
+        return $menuItem->module === MenuItemModel::CORE_MODULE;
     }
 
     public function reorder(UserModel $user): bool

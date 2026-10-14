@@ -29,6 +29,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use Throwable;
 
 class MenuItemResource extends BaseResource
@@ -247,9 +248,9 @@ class MenuItemResource extends BaseResource
                 TextColumn::make('module')
                     ->label(__('filament.menu_items.fields.module'))
                     ->badge()
-                    ->color(fn (?string $state): string => $state === 'core' ? 'warning' : 'gray')
+                    ->color(fn (?string $state): string => $state === MenuItemModel::CORE_MODULE ? 'warning' : 'gray')
                     ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'core' => __('filament.menu_items.modules.core'),
+                        MenuItemModel::CORE_MODULE => __('filament.menu_items.modules.core'),
                         null => '-',
                         default => $state,
                     }),
@@ -266,14 +267,13 @@ class MenuItemResource extends BaseResource
             ])
             ->recordActions([
                 EditAction::make(),
-                DeleteAction::make()
-                    ->hidden(fn (MenuItemModel $record): bool => $record->module !== null),
+                DeleteAction::make(),
             ])
             ->toolbarActions([
                 DeleteBulkAction::make()
                     ->using(function (Collection $records): void {
                         $records
-                            ->filter(fn (Model $record): bool => $record->getAttribute('module') === null)
+                            ->filter(fn (Model $record): bool => Gate::allows('delete', $record))
                             ->each(fn (Model $record) => $record->delete());
                     }),
             ])
