@@ -207,7 +207,7 @@ Runs automatically when the CI workflow of a push to `main` completes successful
 - Before the rollout: if `main` has moved on during the canary, the rollout deploys nothing and ends with a warning (the run still succeeds); the run for the newer commit deploys it
 
 **Strategy (canary first):**
-- **`canary` job.** Picks the target whose deploy URL has `uuid=<CANARY_RESOURCE_UUID>` (it fails if the repository variables are missing or do not match exactly one target; it never deploys blindly), triggers its deployment through the platform's API (a POST to the deploy URL with `DEPLOY_API_TOKEN` as bearer token), polls the deployment status every 10 s until it is `finished` (20 min at most; `failed` or cancelled stops the run) and then requires 5 consecutive HTTP 200 responses from `CANARY_HEALTH_URL`, 6 s apart (5 min at most)
+- **`canary` job.** Picks the target whose deploy URL has `uuid=<CANARY_RESOURCE_UUID>` (it fails if the repository secrets are missing or do not match exactly one target; it never deploys blindly), triggers its deployment through the platform's API (a POST to the deploy URL with `DEPLOY_API_TOKEN` as bearer token), polls the deployment status every 10 s until it is `finished` (20 min at most; `failed` or cancelled stops the run) and then requires 5 consecutive HTTP 200 responses from `CANARY_HEALTH_URL`, 6 s apart (5 min at most)
 - **`rollout` job.** Runs only once the canary is healthy and triggers the deployment of every other target, without waiting for them
 - Deploy URLs, the platform host and the token are masked in the logs
 
@@ -247,11 +247,11 @@ Reusable workflow for publishing modules as ZIP packages in GitHub Releases.
 | `WEBHOOK_URL_SERVER_2` | Deploy URL (deployment platform API) of the second target |
 | `DEPLOY_API_TOKEN` | Deployment platform API token, sent as bearer token; it must be allowed to read deployments, since the canary job polls their status |
 
-### Required repository variables
+### Canary secrets
 
-Configure in GitHub → Settings → Secrets and variables → Actions → Variables (they are not secret):
+Configure in GitHub → Settings → Secrets and variables → Actions → Secrets, next to the deploy URLs (secrets, so they stay masked in the run logs):
 
-| Variable | Description |
+| Secret | Description |
 |----------|-------------|
 | `CANARY_RESOURCE_UUID` | Resource identifier of the canary target, as it appears in its deploy URL (`uuid=` parameter); it must match exactly one of the deploy URLs |
 | `CANARY_HEALTH_URL` | Public health URL of the canary (its `/up` endpoint) |

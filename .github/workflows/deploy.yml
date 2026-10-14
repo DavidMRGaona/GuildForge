@@ -44,8 +44,8 @@ jobs:
       superseded: ${{ steps.head.outputs.superseded }}
 
     env:
-      CANARY_RESOURCE_UUID: ${{ vars.CANARY_RESOURCE_UUID }}
-      CANARY_HEALTH_URL: ${{ vars.CANARY_HEALTH_URL }}
+      CANARY_RESOURCE_UUID: ${{ secrets.CANARY_RESOURCE_UUID }}
+      CANARY_HEALTH_URL: ${{ secrets.CANARY_HEALTH_URL }}
       STATUS_POLL_SECONDS: 10
       STATUS_TIMEOUT_SECONDS: 1200
       HEALTH_POLL_SECONDS: 6
@@ -82,7 +82,7 @@ jobs:
           }
 
           if [ -z "${CANARY_RESOURCE_UUID}" ] || [ -z "${CANARY_HEALTH_URL}" ]; then
-            echo "::error::Set the CANARY_RESOURCE_UUID and CANARY_HEALTH_URL repository variables (or run with skip_canary)."
+            echo "::error::Set the CANARY_RESOURCE_UUID and CANARY_HEALTH_URL repository secrets (or run with skip_canary)."
             exit 1
           fi
           echo "::add-mask::${CANARY_RESOURCE_UUID}"

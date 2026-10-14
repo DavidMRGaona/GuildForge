@@ -218,9 +218,9 @@ Configure in GitHub → Settings → Secrets and variables → Actions:
 | `WEBHOOK_URL_SERVER_2` | Deploy URL (deployment platform API) of the second target |
 | `DEPLOY_API_TOKEN`     | Deployment platform API token, sent as bearer token       |
 
-Repository variables (same page, Variables tab), used by the canary:
+Repository secrets used by the canary (same page):
 
-| Variable               | Description                                                       |
+| Secret                 | Description                                                       |
 |------------------------|-------------------------------------------------------------------|
 | `CANARY_RESOURCE_UUID` | `uuid=` value of the canary's deploy URL (must match exactly one) |
 | `CANARY_HEALTH_URL`    | Canary health URL (`/up`)                                         |
