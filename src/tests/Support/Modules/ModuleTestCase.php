@@ -112,6 +112,12 @@ abstract class ModuleTestCase extends TestCase
         $moduleLoader = app(ModuleLoader::class);
         $moduleLoader->bootModule($module);
 
+        // Routes named after being added (Route::get()->name()) only reach the lookups when
+        // they are refreshed, which the framework does once while booting: do it again
+        $routes = app('router')->getRoutes();
+        $routes->refreshNameLookups();
+        $routes->refreshActionLookups();
+
         return $module;
     }
 
