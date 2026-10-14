@@ -213,7 +213,7 @@ return [
             'login_enabled' => 'Allow login',
             'login_enabled_help' => 'If disabled, users will not be able to log in (except in the admin panel).',
             'email_verification_required' => 'Require email verification',
-            'email_verification_required_help' => 'Users will need to verify their email before accessing all features.',
+            'email_verification_required_help' => 'Accounts created since the update to version 3.8 must verify their email before using the pages that require signing in; older accounts are not affected.',
             'anonymized_user_name' => 'Anonymized user name',
             'anonymized_user_name_help' => 'Name that will be displayed for users who have been anonymized (e.g., "Anonymous", "Editorial").',
             'section_association' => 'Association members',
