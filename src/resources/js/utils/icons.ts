@@ -1,5 +1,5 @@
 import type { Component } from 'vue';
-import type { ActivityIcon } from '@/types/models';
+import type { ActivityIcon, CalendarEntryMetaIcon } from '@/types/models';
 import type { ProfileTabIcon as ProfileTabIconType } from '@/types/profile';
 import type { NotificationType } from '@/composables/useNotifications';
 import {
@@ -7,6 +7,7 @@ import {
     Calendar,
     CircleAlert,
     CircleCheck,
+    Clock,
     Dices,
     FileText,
     Heart,
@@ -14,6 +15,8 @@ import {
     Info,
     Lock,
     Map,
+    MapPin,
+    Monitor,
     Puzzle,
     Settings,
     Sparkles,
@@ -64,3 +67,21 @@ export const notificationIconMap: Record<NotificationType, Component> = {
     warning: TriangleAlert,
     info: Info,
 };
+
+export const calendarMetaIconMap: Record<CalendarEntryMetaIcon, Component> = {
+    dice: Dices,
+    user: User,
+    users: Users,
+    monitor: Monitor,
+    clock: Clock,
+    'map-pin': MapPin,
+};
+
+function isCalendarMetaIcon(icon: string): icon is CalendarEntryMetaIcon {
+    return icon in calendarMetaIconMap;
+}
+
+/** Resolve a source-provided icon name, falling back to a neutral icon for names this core does not know. */
+export function resolveCalendarMetaIcon(icon: string): Component {
+    return isCalendarMetaIcon(icon) ? calendarMetaIconMap[icon] : Info;
+}
