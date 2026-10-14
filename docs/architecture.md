@@ -390,7 +390,7 @@ Registered in `bootstrap/app.php`:
 | `HandleInertiaRequests` | `web` group | Shared props (auth, theme, navigation, module slots/pages/translations, `cloudinary`, site `seo` defaults) |
 | `SecurityHeadersMiddleware` | `web` group | Security headers (CSP, X-Frame-Options, HSTS on HTTPS, etc.) |
 | `EnsureSiteIsNotInMaintenance` | `web` group | Maintenance mode (see below) |
-| `EnsureEmailIsVerifiedWhenRequired` | `web` group | Required email verification on routes with `auth` (see [Required email verification](#required-email-verification)) |
+| `EnsureEmailIsVerifiedWhenRequired` | `web` group, and alias `email.verified-if-required` | Required email verification on routes with `auth` or the alias (see [Required email verification](#required-email-verification)) |
 | `EnsureLoginIsEnabled` | Alias `login.enabled`, on the login routes | Verification that login is enabled |
 | `EnsureRegistrationIsEnabled` | Alias `registration.enabled`, on the registration routes | Verification that registration is enabled |
 
@@ -698,19 +698,33 @@ The configured role can be neither deleted nor renamed: `RolePolicy::delete()` a
 
 ### Required email verification
 
-The setting *Requerir verificación de email* (`auth_email_verification_required`, *Configuración del sitio → Autenticación*, off by default) is enforced on the server by `EnsureEmailIsVerifiedWhenRequired`, appended to the `web` group, so module web routes get it too. It only acts on routes whose middleware includes `auth`: public pages stay open to every account, as they are to guests.
+The setting *Requerir verificación de email* (`auth_email_verification_required`, *Configuración del sitio → Autenticación*, off by default) is enforced on the server by `EnsureEmailIsVerifiedWhenRequired`, appended to the `web` group, so module web routes get it too. It only acts when there is a signed-in user and the route acts as that user:
+
+- routes whose middleware includes `auth` (or any subclass of Laravel's `Authenticate`);
+- routes with the alias `email.verified-if-required`, for routes that also work for guests but act as the signed-in user when there is one. Without a signed-in user the alias does nothing.
+
+Public pages stay open to every account, as they are to guests.
 
 `EmailVerificationPolicyInterface::mustVerify($user)` decides who has to verify. It is true when the setting is on, the email is not verified, the account is not anonymized and the account was created at or after `email_verification_enforced_since`. That setting is the cutoff: the migration `2026_10_14_100003_record_email_verification_cutoff` records it once, in UTC (ISO 8601), when 3.8.0 is deployed, and a later run never moves it. Accounts created before the cutoff keep working without verifying, as they did when the setting was only shown to the frontend. The policy fails closed: without a readable cutoff or without a creation date, every unverified account must verify while the setting is on.
 
-An account that must verify is sent to `/verificar-email` (`verification.notice`), and the page it asked for is remembered: verifying returns to it. JSON requests that are not Inertia visits get a `403` with `auth.email_verification_required`. The notice page (`Auth/VerifyEmail`) offers to resend the link, links to the profile to correct a mistyped email, and signs out; an account that has already verified is sent on from the notice.
+An account that must verify is sent to `/verificar-email` (`verification.notice`), and the page it asked for is remembered: verifying returns to it. A new account that must verify goes there right after signing up. JSON requests that are not Inertia visits get a `403` with `auth.email_verification_required`. The notice page (`Auth/VerifyEmail`, props `email` and `pendingEmail`) says which address the link was sent to, shows flashed errors, offers to resend the link, links to the profile to correct a mistyped email, and signs out; an account that has already verified is sent on from the notice.
 
-Always reachable:
+#### Correcting the email
+
+Changing the email in the profile stores it as `pending_email` and mails a signed link (`verification.pending-email`, valid 60 minutes) **to the new address**: `VerifyPendingEmailNotification` implements `App\Notifications\Contracts\NamesMailRecipient`, and `UserModel::routeNotificationForMail()` only lets notifications with that contract choose their recipient. Following the link replaces the email and also marks the account as verified, since it proves the new address belongs to the user.
+
+While an email change is pending, *Reenviar* (`verification.send`) sends that confirmation link again to the pending address instead of the usual link to the current one: the current address is the one being replaced, often a typo. To go back to the current address, save the profile with it, which clears `pending_email`.
+
+Verification and email change links are only accepted for the signed-in account: any other id in the link is treated as an invalid link.
+
+#### Always reachable
 
 - `verification.*`: the notice, resending the link and the verification links;
 - `logout`;
-- `profile.show` and `profile.update`, to correct the email: the change is confirmed through `verification.pending-email`, which also marks the account as verified;
-- `admin`, `admin/*` and Livewire requests: the panel has its own access control (`canAccessPanel()`);
-- `up`.
+- `profile.show` and `profile.update`, to correct the email (`profile.update` is limited to 6 requests a minute, counted apart from `verification.send`);
+- `filament.*`: the admin panel has its own middleware stack and access control (`canAccessPanel()`); the exemption keeps an unverified admin out of trouble should the middleware ever reach it.
+
+Livewire requests, `/up` and static assets have no `auth`, so they are never stopped.
 
 ### AuthorizesWithPermissions trait
 

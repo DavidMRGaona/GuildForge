@@ -143,7 +143,7 @@ Listing query parameters (`/eventos`, `/articulos`, `/galeria`): `page` (integer
 | Method | URL | Controller | Extra middleware | Response | Name |
 |--------|-----|------------|------------------|----------|------|
 | `GET` | `/registro` | `RegisterController@create` | `registration.enabled` | Inertia `Auth/Register` | `register` |
-| `POST` | `/registro` | `RegisterController@store` | `registration.enabled`, `throttle:5,1` | Redirect to the intended URL or `/` with `success` | -- |
+| `POST` | `/registro` | `RegisterController@store` | `registration.enabled`, `throttle:5,1` | Redirect with `success` to `/verificar-email` when the new account must verify its email, otherwise to the intended URL or `/` | -- |
 | `GET` | `/iniciar-sesion` | `LoginController@create` | `login.enabled` | Inertia `Auth/Login` | `login` |
 | `POST` | `/iniciar-sesion` | `LoginController@store` | `login.enabled`, `throttle:login` | Redirect to the intended URL or `/`; wrong credentials return an `email` validation error | -- |
 | `GET` | `/olvide-contrasena` | `ForgotPasswordController@create` | -- | Inertia `Auth/ForgotPassword` | `password.request` |
@@ -159,14 +159,14 @@ Listing query parameters (`/eventos`, `/articulos`, `/galeria`): `page` (integer
 |--------|-----|------------|------------------|----------|------|
 | `POST` | `/cerrar-sesion` | `LoginController@destroy` | -- | Redirect to `/` | `logout` |
 | `GET` | `/verificar-email` | `EmailVerificationController@notice` | -- | Inertia `Auth/VerifyEmail`; an account already verified is redirected to the intended URL or `/` | `verification.notice` |
-| `GET` | `/verificar-email/{id}/{hash}` | `EmailVerificationController@verify` | `signed` | Redirect to the intended URL or `/` (`success`), or to `/verificar-email` (`error`) | `verification.verify` |
-| `POST` | `/verificar-email/reenviar` | `EmailVerificationController@resend` | `throttle:6,1` | Redirect back with `success` (to `/` when the email is already verified) | `verification.send` |
-| `GET` | `/verificar-email-pendiente/{id}/{hash}` | `EmailVerificationController@verifyPendingEmail` | `signed` | Redirect to `/perfil` with `success` or `error`; on success the new address replaces the old one and the account counts as verified | `verification.pending-email` |
+| `GET` | `/verificar-email/{id}/{hash}` | `EmailVerificationController@verify` | `signed` | Redirect to the intended URL or `/` (`success`), or to `/verificar-email` (`error`, also when `{id}` is not the signed-in account) | `verification.verify` |
+| `POST` | `/verificar-email/reenviar` | `EmailVerificationController@resend` | `throttle:6,1` | Redirect back with `success` (to `/` when the email is already verified). With an email change pending, sends the confirmation link to the pending address instead | `verification.send` |
+| `GET` | `/verificar-email-pendiente/{id}/{hash}` | `EmailVerificationController@verifyPendingEmail` | `signed` | Redirect to `/perfil` with `success` or `error` (`error` also when `{id}` is not the signed-in account); on success the new address replaces the old one and the account counts as verified | `verification.pending-email` |
 | `GET` | `/perfil` | `ProfileController@show` | -- | Inertia `Profile/Show` | `profile.show` |
-| `POST` | `/perfil` | `ProfileController@update` | -- | Redirect back with `success` | `profile.update` |
+| `POST` | `/perfil` | `ProfileController@update` | `throttle:6,1,profile` | Redirect back with `success`; a new email is stored as pending and its confirmation link is mailed to the new address | `profile.update` |
 | `PUT` | `/perfil/contrasena` | `ProfileController@changePassword` | -- | Redirect back with `success`, or `error` when the current password is wrong | `profile.password` |
 
-While *Requerir verificación de email* is on, `EnsureEmailIsVerifiedWhenRequired` (§9) closes every route with `auth`, module routes included, to accounts that must verify (`EmailVerificationPolicyInterface`: unverified, not anonymized and created from `email_verification_enforced_since` on): browser and Inertia visits are redirected to `/verificar-email`, remembering the intended URL, and other JSON requests get a `403` whose `message` is `auth.email_verification_required`. `logout`, `verification.*`, `profile.show` and `profile.update` stay open.
+While *Requerir verificación de email* is on, `EnsureEmailIsVerifiedWhenRequired` (§9) closes every route with `auth` or the alias `email.verified-if-required`, module routes included, to accounts that must verify (`EmailVerificationPolicyInterface`: unverified, not anonymized and created from `email_verification_enforced_since` on): browser and Inertia visits are redirected to `/verificar-email`, remembering the intended URL, and other JSON requests get a `403` whose `message` is `auth.email_verification_required`. `logout`, `verification.*`, `profile.show` and `profile.update` stay open.
 
 ### Page props
 
@@ -843,7 +843,7 @@ Configured in `src/bootstrap/app.php`.
 | `HandleInertiaRequests` | appended to the `web` group | Inertia root view, asset version and shared props (§2). Skipped for `admin/*` and Livewire requests |
 | `SecurityHeadersMiddleware` | appended to the `web` group | Sets `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `Content-Security-Policy`, and `Strict-Transport-Security` on HTTPS requests |
 | `EnsureSiteIsNotInMaintenance` | appended to the `web` group | While the `maintenance_enabled` setting is on, renders the Inertia page `Maintenance` (`message`, `seo`) with status `503` and `Retry-After: 600`. Lets through `admin`, `admin/*`, `up`, `iniciar-sesion`, Livewire requests and users who can access the admin panel |
-| `EnsureEmailIsVerifiedWhenRequired` | appended to the `web` group | On routes with `auth` only: when `EmailVerificationPolicyInterface::mustVerify()` holds for the signed-in user, redirects to `verification.notice` (`redirect()->guest()`), or answers `403` (`message`: `auth.email_verification_required`) to JSON requests that are not Inertia visits. Lets through `verification.*`, `logout`, `profile.show`, `profile.update`, `admin`, `admin/*`, `up` and Livewire requests |
+| `EnsureEmailIsVerifiedWhenRequired` | appended to the `web` group; alias `email.verified-if-required` | On routes with `auth`: when `EmailVerificationPolicyInterface::mustVerify()` holds for the signed-in user, redirects to `verification.notice` (`redirect()->guest()`), or answers `403` (`message`: `auth.email_verification_required`) to JSON requests that are not Inertia visits. Also applies on routes with the alias `email.verified-if-required` (without `auth`), only when someone is signed in. Lets through `verification.*`, `logout`, `profile.show`, `profile.update` and `filament.*` |
 | `BlockBotsMiddleware` | global (`$middleware->append`), alias `bot-protection` | Answers `403` (`Access denied`, or `{"message": "Access denied"}` for JSON) to user agents in `config('bot-protection.blocked_bots')`, unless they match `allowed_bots`; disabled with `bot-protection.enabled` |
 | `EnsureRegistrationIsEnabled` | alias `registration.enabled` | Redirects to `/` when registration is disabled in the site settings |
 | `EnsureLoginIsEnabled` | alias `login.enabled` | Redirects to `/` when login is disabled in the site settings |
@@ -860,6 +860,7 @@ Because the first four are in the `web` group, `/api/*` responses get no Inertia
 | `guest` | Only for visitors without a session |
 | `signed` | Valid signed URL (email verification links) |
 | `throttle:X,Y` | At most X requests every Y minutes |
+| `throttle:X,Y,prefix` | The same, with its own counter: without a prefix, every `throttle:X,Y` route shares one counter per user (or IP for guests) |
 | `throttle:contact`, `throttle:login` | Named rate limiters (below) |
 
 ### Rate limiting
@@ -870,6 +871,7 @@ Because the first four are in the `web` group, `/api/*` responses get no Inertia
 | `contact` | 3 per minute | IP | `POST /contacto` |
 | `throttle:5,1` | 5 per minute | IP | `POST /registro`, `POST /olvide-contrasena` |
 | `throttle:6,1` | 6 per minute | user | `POST /verificar-email/reenviar` |
+| `throttle:6,1,profile` | 6 per minute | user | `POST /perfil` |
 
 The `login` and `contact` limiters are defined in `AppServiceProvider` (`RateLimiter::for()`). Exceeding a limit answers `429`.
 
