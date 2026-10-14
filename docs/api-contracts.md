@@ -23,7 +23,7 @@ GuildForge is an Inertia application: most public URLs return an Inertia page (H
 
 ## 1. Conventions
 
-- **Middleware**: every route in `routes/web.php` and in the modules' `routes/web.php` runs in the `web` group (session, CSRF, Inertia, security headers, maintenance check); a module's `routes/api.php` is mounted under `/api` with the `api` group (none defines routes today). `routes/api.php` is mounted under `/api` with the `api` group: stateless, no session and no CSRF.
+- **Middleware**: every route in `routes/web.php` and in the modules' `routes/web.php` runs in the `web` group (session, CSRF, Inertia, security headers, maintenance check); a module's `routes/api.php` is mounted under `/api` with the `api` group (none defines routes today). The core `routes/api.php` is mounted under `/api` with the `api` group: stateless, no session and no CSRF.
 - **`seo` prop**: every Inertia page rendered by a core or module controller receives `seo` (`SeoMetadata::toArray()`, TypeScript `SeoProps`: `scope`, `title`, `fullTitle`, `description`, `canonicalUrl`, `type`, `siteName`, `locale`, `image`, `robots`, `extraMeta`, `structuredData`). It overrides the site-wide `seo` shared prop. The page tables below list the other props only.
 - **Flash messages**: form endpoints redirect back (or to a named route) with `success`, `error`, `warning` or `info` in the session, exposed as the shared `flash` prop. Validation errors come back as Inertia `errors`.
 - **Authentication**: routes marked "Yes" use the `auth` middleware. A browser request without a session is redirected to `/iniciar-sesion`; a request that expects JSON gets `401 {"message": "Unauthenticated."}`.
@@ -371,7 +371,7 @@ Module routes exist only while the module is enabled. All of them are in `routes
 | `GET` | `/reservas/api/eligibility` | `BookingApiController@eligibility` | Yes | JSON | `bookings.api.eligibility` |
 | `POST` | `/reservas` | `BookingController@store` | Yes | Redirect to `/reservas/mis-reservas`, or back with `error` | `bookings.store` |
 | `GET` | `/reservas/mis-reservas` | `BookingController@myBookings` | Yes | Inertia `VenueBookings/MyBookings` | `bookings.my-bookings` |
-| `DELETE` | `/reservas/{booking}` | `BookingController@cancel` | Yes | Redirect back with flash | `bookings.cancel` |
+| `DELETE` | `/reservas/{booking}` | `BookingController@cancel` | Yes | Redirect back with flash; `403` when the booking is not the user's (unknown ids answer the same) | `bookings.cancel` |
 
 | Endpoint | Query | JSON response |
 |----------|-------|---------------|
@@ -906,7 +906,7 @@ Listings built with the `BuildsPaginatedResponse` trait (events, articles, galle
 | `302` | Form submissions (redirect with flash or validation errors) and `auth` routes visited without a session |
 | `400` | SES webhook without `Type`; tournament registration not open, full, already registered or cannot withdraw (JSON) |
 | `401` | `auth` routes and guest-only tournament registration requested as JSON |
-| `403` | Invalid SNS signature, blocked bots, failed game-table policies, tournament registration not allowed (JSON), members-only event registration |
+| `403` | Invalid SNS signature, blocked bots, failed game-table policies, tournament registration not allowed (JSON), members-only event registration, cancelling another user's venue booking |
 | `404` | Unknown slug or id |
 | `422` | Validation errors on JSON requests; event registration closed, full, already registered or not cancellable; invalid cookie consent |
 | `429` | Rate limit exceeded |
