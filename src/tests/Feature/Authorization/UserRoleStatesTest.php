@@ -9,6 +9,8 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Database\Seeders\RolesSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
@@ -74,6 +76,26 @@ final class UserRoleStatesTest extends TestCase
         $this->assertTrue($admin->isAdmin());
         $this->assertTrue($admin->can('viewAny', UserModel::class));
         $this->assertTrue($admin->canAccessPanel(Filament::getPanel('admin')));
+    }
+
+    public function test_a_leftover_admin_value_in_the_legacy_role_column_grants_nothing(): void
+    {
+        $user = UserModel::factory()->create();
+        DB::table('users')->where('id', $user->id)->update(['role' => 'admin']);
+        $user->refresh();
+
+        $this->assertFalse($user->isAdmin());
+        $this->assertFalse($user->can('viewAny', UserModel::class));
+        $this->assertFalse($user->canAccessPanel(Filament::getPanel('admin')));
+        $this->actingAs($user)->get('/admin')->assertForbidden();
+
+        $this->actingAs($user)
+            ->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('auth.user.roles', [])
+                ->where('auth.user.permissions', [])
+                ->missing('auth.user.role'));
     }
 
     public function test_the_users_table_keeps_its_role_column_default_for_rows_written_without_it(): void
