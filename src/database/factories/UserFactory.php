@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Enums\UserRole;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -44,7 +43,6 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'avatar_public_id' => null,
-            'role' => UserRole::Member,
             'remember_token' => Str::random(10),
         ];
     }
@@ -64,9 +62,7 @@ class UserFactory extends Factory
      */
     public function admin(): static
     {
-        return $this->state(fn (array $attributes): array => [
-            'role' => UserRole::Admin,
-        ])->afterCreating(function (UserModel $user): void {
+        return $this->afterCreating(function (UserModel $user): void {
             $role = RoleModel::firstOrCreate(
                 ['name' => 'admin'],
                 ['display_name' => 'Administrator']
@@ -80,9 +76,7 @@ class UserFactory extends Factory
      */
     public function editor(): static
     {
-        return $this->state(fn (array $attributes): array => [
-            'role' => UserRole::Editor,
-        ])->afterCreating(function (UserModel $user): void {
+        return $this->afterCreating(function (UserModel $user): void {
             $role = RoleModel::firstOrCreate(
                 ['name' => 'editor'],
                 ['display_name' => 'Editor']

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
-use App\Domain\Enums\UserRole;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Notifications\Contracts\NamesMailRecipient;
 use Database\Factories\UserFactory;
@@ -29,7 +28,6 @@ use Illuminate\Support\Carbon;
  * @property string|null $pending_email
  * @property string $password
  * @property string|null $avatar_public_id
- * @property UserRole|null $role
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $deleted_at
  * @property Carbon|null $anonymized_at
@@ -68,7 +66,6 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
         'pending_email',
         'password',
         'avatar_public_id',
-        'role',
         'anonymized_at',
     ];
 
@@ -92,7 +89,6 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => UserRole::class,
             'anonymized_at' => 'datetime',
         ];
     }
