@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Services;
 
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\DTOs\CreateUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\DTOs\Response\UserResponseDTO;
@@ -39,6 +40,7 @@ final readonly class AuthService implements AuthServiceInterface
         private ImageOptimizationServiceInterface $imageOptimizer,
         private UserRepositoryInterface $userRepository,
         private UserModelQueryServiceInterface $userModelQuery,
+        private MemberRoleServiceInterface $memberRole,
     ) {}
 
     public function register(CreateUserDTO $dto): UserResponseDTO
@@ -49,6 +51,9 @@ final readonly class AuthService implements AuthServiceInterface
         if ($userModel === null) {
             throw new \RuntimeException('Failed to retrieve user after creation');
         }
+
+        // Before the events: their listeners must see the account with its base role
+        $this->memberRole->assignTo($userModel);
 
         event(new Registered($userModel));
         Event::dispatch(new UserRegistered($user->id()->value, $user->email()));

@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
@@ -17,6 +18,7 @@ use App\Infrastructure\Authorization\Services\AssociationMemberRoleWarning;
 use App\Infrastructure\Authorization\Services\AssociationMembershipService;
 use App\Infrastructure\Authorization\Services\AuthorizationCacheVersion;
 use App\Infrastructure\Authorization\Services\AuthorizationService;
+use App\Infrastructure\Authorization\Services\MemberRoleService;
 use App\Infrastructure\Authorization\Services\PermissionRegistry;
 use App\Infrastructure\Authorization\Services\RoleService;
 use Illuminate\Support\ServiceProvider;
@@ -38,6 +40,7 @@ class AuthorizationServiceProvider extends ServiceProvider
         $this->app->singleton(AssociationMembershipServiceInterface::class, AssociationMembershipService::class);
         // Per request or job, so a forbidden association member role is logged once per lifecycle
         $this->app->scoped(AssociationMemberRoleWarning::class);
+        $this->app->singleton(MemberRoleServiceInterface::class, MemberRoleService::class);
     }
 
     public function boot(): void
