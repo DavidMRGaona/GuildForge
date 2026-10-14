@@ -113,6 +113,27 @@ final class SettingsTableModuleSettingsStoreTest extends TestCase
         $this->assertSame(['a' => 1], $this->store()->effective('fixture', $this->modulePath));
     }
 
+    public function test_a_stored_json_list_is_not_merged_as_settings(): void
+    {
+        $this->defaults(['a' => 1]);
+        SettingModel::query()->create(['key' => 'module_settings:fixture', 'value' => '[1,2]']);
+
+        $this->assertSame([], $this->store()->stored('fixture'));
+        $this->assertSame(['a' => 1], $this->store()->effective('fixture', $this->modulePath));
+    }
+
+    public function test_only_maps_with_string_keys_are_merged(): void
+    {
+        // Integer keys come from lists (or repeaters saved by index): they replace the default whole
+        $this->defaults(['slots' => [1 => 'morning', 2 => 'evening'], 'labels' => ['a' => 'A', 'b' => 'B']]);
+        $this->store()->store('fixture', ['slots' => [1 => 'night'], 'labels' => ['b' => 'Bee']]);
+
+        $this->assertSame(
+            ['slots' => [1 => 'night'], 'labels' => ['a' => 'A', 'b' => 'Bee']],
+            $this->store()->effective('fixture', $this->modulePath),
+        );
+    }
+
     public function test_effective_falls_back_to_defaults_when_the_settings_store_throws(): void
     {
         $this->defaults(['a' => 1]);

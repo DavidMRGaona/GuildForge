@@ -78,6 +78,18 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
         $this->assertSame(0, SettingModel::query()->where('key', 'like', 'module_settings:%')->count());
     }
 
+    public function test_a_file_whose_values_cannot_be_encoded_is_skipped_without_stopping_the_others(): void
+    {
+        // A failure here would stop migrate --force and with it the whole deploy
+        $this->module('announcements', "<?php\n\nreturn array (\n  'rotate_interval' => INF,\n);\n");
+        $this->module('tournaments', "<?php\n\nreturn ".var_export(['default_check_in_starts_before' => 30], true).";\n");
+
+        $this->migration()->up();
+
+        $this->assertNull($this->stored('announcements'));
+        $this->assertSame(['default_check_in_starts_before' => 30], $this->stored('tournaments'));
+    }
+
     public function test_it_can_run_twice(): void
     {
         $this->module('tournaments', "<?php\n\nreturn ".var_export(['default_check_in_starts_before' => 30], true).";\n");
