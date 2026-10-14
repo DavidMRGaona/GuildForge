@@ -27,7 +27,10 @@ final class CreateAssociationMemberRoleMigrationTest extends TestCase
         $this->assertSame('Socio', $socio->display_name);
         $this->assertNotEmpty($socio->description);
         $this->assertFalse($socio->is_protected);
-        $this->assertTrue(str_contains($socio->id, '-'), 'The id is a UUID');
+        // Same kind of id as RoleModel's HasUuids: a UUIDv7
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $socio->id);
+        $this->assertNotNull($socio->created_at);
+        $this->assertNotNull($socio->updated_at);
     }
 
     public function test_it_leaves_an_existing_socio_role_untouched(): void
