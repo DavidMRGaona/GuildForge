@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 
 /**
@@ -98,6 +99,20 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->roles()->whereIn('name', ['admin', 'editor'])->exists();
+    }
+
+    /**
+     * Mail goes to the account's address unless the notification names its own recipient:
+     * VerifyPendingEmailNotification must reach the new address, or anyone could confirm an
+     * address they do not own from their current inbox.
+     */
+    public function routeNotificationForMail(?Notification $notification = null): string
+    {
+        if ($notification !== null && method_exists($notification, 'routeNotificationForMail')) {
+            return (string) $notification->routeNotificationForMail();
+        }
+
+        return $this->email;
     }
 
     /**
