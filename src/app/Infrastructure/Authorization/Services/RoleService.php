@@ -7,6 +7,7 @@ namespace App\Infrastructure\Authorization\Services;
 use App\Application\Authorization\DTOs\CreateRoleDTO;
 use App\Application\Authorization\DTOs\RoleResponseDTO;
 use App\Application\Authorization\DTOs\UpdateRoleDTO;
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Entities\Role;
 use App\Domain\Authorization\Exceptions\RoleNotFoundException;
@@ -21,6 +22,7 @@ final readonly class RoleService implements RoleServiceInterface
     public function __construct(
         private RoleRepositoryInterface $roleRepository,
         private PermissionRepositoryInterface $permissionRepository,
+        private AuthorizationServiceInterface $authorization,
     ) {}
 
     /**
@@ -117,6 +119,7 @@ final readonly class RoleService implements RoleServiceInterface
         }
 
         $this->roleRepository->delete($role->id());
+        $this->authorization->invalidateCache();
     }
 
     /**
@@ -126,6 +129,7 @@ final readonly class RoleService implements RoleServiceInterface
     {
         $permissionIds = $this->permissionRepository->findIdsByKeys($permissionKeys);
         $this->roleRepository->attachPermissions(RoleId::fromString($roleId), $permissionIds);
+        $this->authorization->invalidateCache();
     }
 
     /**
@@ -135,6 +139,7 @@ final readonly class RoleService implements RoleServiceInterface
     {
         $permissionIds = $this->permissionRepository->findIdsByKeys($permissionKeys);
         $this->roleRepository->syncPermissions(RoleId::fromString($roleId), $permissionIds);
+        $this->authorization->invalidateCache();
     }
 
     private function toResponseDTO(Role $role): RoleResponseDTO

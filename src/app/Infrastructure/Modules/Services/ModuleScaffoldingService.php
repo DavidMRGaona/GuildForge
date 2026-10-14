@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Modules\Services;
 
+use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Application\Modules\DTOs\ScaffoldResultDTO;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
@@ -19,27 +20,53 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         'laravel', 'vendor', 'public', 'storage',
     ];
 
+    private const TRANSLATE_LABELS = 'Translate the labels written to lang/es/filament.php: they are derived from the class name';
+
     private string $modulesPath;
 
     public function __construct(
         private readonly StubRenderer $stubRenderer,
         ?string $modulesPath = null,
         private readonly ?CoreVersionServiceInterface $coreVersion = null,
+        // Core Inertia pages (resources/js/pages): a module cannot use one as its page prefix
+        private readonly ?string $corePagesPath = null,
     ) {
         $this->modulesPath = $modulesPath ?? base_path('modules');
     }
 
-    public function createModule(string $name, ?string $description = null, ?string $author = null): ScaffoldResultDTO
-    {
+    public function createModule(
+        string $name,
+        ?string $description = null,
+        ?string $author = null,
+        ?string $displayName = null,
+        ?string $repository = null,
+    ): ScaffoldResultDTO {
         // Validate module name
         $validation = $this->validateModuleName($name);
         if ($validation !== null) {
             return $validation;
         }
 
+        if ($repository !== null && ! ModuleManifestDTO::isValidRepository($repository)) {
+            return ScaffoldResultDTO::failure(
+                "Invalid repository '{$repository}'.",
+                ["The repository must be a GitHub repository in 'owner/repo' form."]
+            );
+        }
+
         $modulePath = $this->modulesPath.'/'.$name;
+        $displayName ??= Str::ucfirst(str_replace('-', ' ', $name));
         $variables = $this->stubRenderer->getModuleVariables($name, $description, $author);
         $variables['coreConstraint'] = $this->coreConstraint();
+        $variables['moduleDisplayNamePhp'] = addcslashes($displayName, "'\\");
+        $variables['moduleDisplayNameJson'] = $this->jsonString($displayName);
+        // vue-i18n reads @ { } | as message syntax: write them as literal interpolations
+        $variables['moduleDisplayNameTs'] = addcslashes((string) preg_replace('/[{}@|]/', "{'\$0'}", $displayName), "'\\");
+        $variables['moduleDescriptionJson'] = $this->jsonString($description ?? '');
+        $variables['moduleAuthorJson'] = $this->jsonString($author ?? '');
+        $variables['moduleRepositoryJson'] = $repository !== null
+            ? "\n    \"repository\": \"{$repository}\","
+            : '';
         $files = [];
         $warnings = [];
 
@@ -57,6 +84,11 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'module/vite.config.ts.stub' => 'vite.config.ts',
             'module/package.json.stub' => 'package.json',
             'module/tsconfig.json.stub' => 'tsconfig.json',
+            'module/module.css.stub' => 'resources/css/module.css',
+            'module/phpunit.xml.stub' => 'phpunit.xml',
+            'module/gitignore.stub' => '.gitignore',
+            'module/release.yml.stub' => '.github/workflows/release.yml',
+            'module/locale.ts.stub' => 'resources/js/locales/es.ts',
         ];
 
         foreach ($fileMap as $stub => $destination) {
@@ -64,6 +96,9 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             $result = $this->renderStub($stub, $destPath, $variables);
             $files[$destination] = $result;
         }
+
+        // Same keys in English until someone translates them
+        $files['resources/js/locales/en.ts'] = $this->renderStub('module/locale.ts.stub', $modulePath.'/resources/js/locales/en.ts', $variables);
 
         // Create .gitkeep files for empty directories
         $emptyDirs = [
@@ -74,7 +109,8 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'src/Domain/Repositories',
             'src/Application/DTOs',
             'src/Application/Services',
-            'src/Infrastructure/Persistence/Eloquent',
+            'src/Infrastructure/Persistence/Eloquent/Models',
+            'src/Infrastructure/Persistence/Eloquent/Repositories',
             'src/Infrastructure/Services',
             'src/Http/Controllers',
             'src/Http/Requests',
@@ -84,6 +120,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'resources/js/components',
             'resources/js/types',
             'tests/Unit',
+            'tests/Integration',
             'tests/Feature',
         ];
 
@@ -97,10 +134,22 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
 
         $createdCount = count(array_filter($files, fn (string $s): bool => $s === ScaffoldResultDTO::STATUS_CREATED));
 
+        $nextSteps = [
+            'Check "displayName" in module.json and "title" in lang/es/messages.php: both are shown in the admin panel',
+            'Run php artisan module:discover to register the module',
+            "Run php artisan module:enable {$name} to enable it",
+        ];
+        if ($repository === null) {
+            $nextSteps[] = "Set \"repository\" (owner/repo) in module.json, or run php artisan module:set-source {$name} owner/repo once installed, so updates are found";
+        }
+        $nextSteps[] = self::buildAssetsStep($name);
+        $nextSteps[] = "Run its tests with vendor/bin/phpunit -c modules/{$name}/phpunit.xml";
+
         return ScaffoldResultDTO::success(
             "Module '{$name}' created successfully with {$createdCount} files.",
             $files,
             $warnings,
+            $nextSteps,
         );
     }
 
@@ -120,8 +169,8 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'domain/entity.php.stub' => "src/Domain/Entities/{$variables['nameStudly']}.php",
             'domain/entity-id.php.stub' => "src/Domain/ValueObjects/{$variables['nameStudly']}Id.php",
             'domain/repository-interface.php.stub' => "src/Domain/Repositories/{$variables['nameStudly']}RepositoryInterface.php",
-            'infrastructure/eloquent-model.php.stub' => "src/Infrastructure/Persistence/Eloquent/{$variables['nameStudly']}Model.php",
-            'infrastructure/eloquent-repository.php.stub' => "src/Infrastructure/Persistence/Eloquent/Eloquent{$variables['nameStudly']}Repository.php",
+            'infrastructure/eloquent-model.php.stub' => "src/Infrastructure/Persistence/Eloquent/Models/{$variables['nameStudly']}Model.php",
+            'infrastructure/eloquent-repository.php.stub' => "src/Infrastructure/Persistence/Eloquent/Repositories/Eloquent{$variables['nameStudly']}Repository.php",
         ];
 
         foreach ($fileMap as $stub => $destination) {
@@ -136,9 +185,17 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             $files = array_merge($files, $migrationResult->files);
         }
 
+        $studly = $variables['nameStudly'];
+
         return ScaffoldResultDTO::success(
             "Entity '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                "Bind the repository in the module service provider's register(): \$this->app->bind({$studly}RepositoryInterface::class, Eloquent{$studly}Repository::class);",
+                $withMigration
+                    ? "Enabling the module runs its migrations; if it is already enabled, run php artisan module:migrate {$module}"
+                    : "Create its table ({$variables['tableName']}): php artisan module:make-migration {$module} create_{$variables['namePluralSnake']}_table (or rerun this command with --migration)",
+            ],
         );
     }
 
@@ -174,9 +231,20 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
 
+        if ($type === 'resource') {
+            $files = array_merge($files, $this->mergeTranslations($modulePath, 'messages', [
+                $variables['nameSnake'] => [
+                    'created' => 'Registro creado.',
+                    'updated' => 'Registro actualizado.',
+                    'deleted' => 'Registro eliminado.',
+                ],
+            ]));
+        }
+
         return ScaffoldResultDTO::success(
             "Controller '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: $this->controllerNextSteps($module, $type, $variables),
         );
     }
 
@@ -214,6 +282,11 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
+        $variables['serviceImplements'] = $withInterface ? " implements {$variables['nameStudly']}ServiceInterface" : '';
+        $variables['serviceInterfaceImport'] = $withInterface
+            ? "use {$variables['moduleNamespace']}\\Application\\Services\\{$variables['nameStudly']}ServiceInterface;\n"
+            : '';
+
         // Create service implementation
         $destination = "src/Infrastructure/Services/{$variables['nameStudly']}Service.php";
         $destPath = $modulePath.'/'.$destination;
@@ -228,9 +301,18 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             $files[$interfaceDestination] = $result;
         }
 
+        $studly = $variables['nameStudly'];
+        $nextSteps = [
+            "The service works on the {$studly} entity and its DTOs: run module:make-entity {$module} {$studly}, module:make-dto {$module} {$studly} and module:make-dto {$module} {$studly} --response if they do not exist",
+        ];
+        if ($withInterface) {
+            $nextSteps[] = "Bind it in the module service provider's register(): \$this->app->bind({$studly}ServiceInterface::class, {$studly}Service::class);";
+        }
+
         return ScaffoldResultDTO::success(
             "Service '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: $nextSteps,
         );
     }
 
@@ -290,9 +372,18 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             $files[$destination] = $result;
         }
 
-        // Create or update Filament translations
-        $translationsResult = $this->createOrUpdateFilamentTranslations($modulePath, $variables);
-        $files = array_merge($files, $translationsResult);
+        $files = array_merge($files, $this->mergeTranslations($modulePath, 'filament', [
+            'navigation_group' => $this->moduleDisplayName($modulePath, $module),
+            $variables['nameSnake'] => [
+                'label' => $this->label($name),
+                'plural_label' => $this->sentence(Str::plural($name)),
+                'fields' => [
+                    'name' => 'Nombre',
+                    'created_at' => 'Creado',
+                    'updated_at' => 'Actualizado',
+                ],
+            ],
+        ]));
 
         // Create policy for the resource
         $policyResult = $this->createPolicy($module, $name);
@@ -303,6 +394,13 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         return ScaffoldResultDTO::success(
             "Filament resource '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: array_merge(
+                [
+                    "It manages {$variables['nameStudly']}Model: run module:make-entity {$module} {$variables['nameStudly']} if it does not exist",
+                    self::TRANSLATE_LABELS,
+                ],
+                $policyResult->nextSteps,
+            ),
         );
     }
 
@@ -329,13 +427,20 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $result = $this->renderStub('policy/policy.php.stub', $destPath, $variables);
         $files[$destination] = $result;
 
+        $studly = $variables['nameStudly'];
+        $permissions = $variables['namePluralSnake'];
+
         return ScaffoldResultDTO::success(
             "Policy '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                "Activate the policy in the module service provider's registerPolicies(): {$studly}Model::class => {$studly}Policy::class",
+                "Declare its permissions in registerPermissions() with module: '{$module}' and the names {$permissions}.view_any, {$permissions}.view, {$permissions}.create, {$permissions}.update and {$permissions}.delete (admins pass every check; other roles need them)",
+            ],
         );
     }
 
-    public function createMigration(string $module, string $name, ?string $table = null): ScaffoldResultDTO
+    public function createMigration(string $module, string $name, ?string $table = null, bool $modify = false): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
         if ($validation !== null) {
@@ -358,7 +463,8 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $destination = "database/migrations/{$timestamp}_{$migrationName}.php";
         $destPath = $modulePath.'/'.$destination;
 
-        $result = $this->renderStub('infrastructure/migration.php.stub', $destPath, $variables);
+        $stub = $modify ? 'infrastructure/migration-update.php.stub' : 'infrastructure/migration.php.stub';
+        $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
 
         return ScaffoldResultDTO::success(
@@ -375,27 +481,45 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         }
 
         $modulePath = $this->modulesPath.'/'.$module;
-        $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
-        $stubMap = [
-            'unit' => 'test/unit-entity.php.stub',
-            'unit-dto' => 'test/unit-dto.php.stub',
-            'feature' => 'test/feature-controller.php.stub',
-            'feature-filament' => 'test/feature-filament.php.stub',
+        // Stub, directory and class suffix of each type: the class is named after its file
+        $types = [
+            'unit' => ['test/unit-entity.php.stub', 'Unit/Domain/Entities', ''],
+            'unit-dto' => ['test/unit-dto.php.stub', 'Unit/Application/DTOs', 'DTO'],
+            'feature' => ['test/feature-controller.php.stub', 'Feature/Http/Controllers', 'Controller'],
+            'feature-filament' => ['test/feature-filament.php.stub', 'Feature/Filament', 'Resource'],
         ];
+        if (! isset($types[$type])) {
+            return ScaffoldResultDTO::failure(
+                "Unknown test type '{$type}'.",
+                ['The test type must be one of: '.implode(', ', array_keys($types)).'.']
+            );
+        }
+        [$stub, $dir, $suffix] = $types[$type];
 
-        $stub = $stubMap[$type] ?? $stubMap['unit'];
-        $dir = str_starts_with($type, 'feature') ? 'Feature' : 'Unit';
-        $destination = "tests/{$dir}/{$variables['nameStudly']}Test.php";
+        // "PostController" and "Post" both name the test of PostController
+        $subject = Str::studly($name);
+        if ($suffix !== '' && $subject !== $suffix && str_ends_with($subject, $suffix)) {
+            $subject = substr($subject, 0, -strlen($suffix));
+        }
+
+        $variables = $this->stubRenderer->getComponentVariables($module, $subject);
+        $destination = "tests/{$dir}/{$variables['nameStudly']}{$suffix}Test.php";
         $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
 
+        $nextSteps = ["Run the module tests with vendor/bin/phpunit -c modules/{$module}/phpunit.xml"];
+        if ($type === 'feature') {
+            $nextSteps[] = "It fits controllers made without --resource or --invokable, and requests the route module:make-controller prints: Route::get('{$variables['namePluralKebab']}', [{$variables['nameStudly']}Controller::class, 'index'])->name('{$variables['namePluralSnake']}.index'); in routes/web.php";
+        }
+
         return ScaffoldResultDTO::success(
             "Test '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: $nextSteps,
         );
     }
 
@@ -410,21 +534,35 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $files = [];
 
-        $destination = "resources/js/pages/{$variables['nameStudly']}.vue";
+        // Under the module's page prefix (registerPagePrefixes()), rendered as "<ModuleStudly>/<Name>"
+        $destination = "resources/js/pages/{$variables['moduleNameStudly']}/{$variables['nameStudly']}.vue";
         $destPath = $modulePath.'/'.$destination;
 
         $result = $this->renderStub('vue/page.vue.stub', $destPath, $variables);
         $files[$destination] = $result;
 
-        // Also create types file
-        $typesDestination = "resources/js/types/{$variables['nameStudly']}.ts";
+        // The pages of a resource controller (<Entity>Index, Create, Show, Edit) share the
+        // types of the entity, named after the props that controller sends
+        $entity = preg_match('/^(.+?)(Index|Create|Show|Edit)$/', $variables['nameStudly'], $matches) === 1 ? $matches[1] : null;
+        $typesVariables = $entity !== null ? $this->stubRenderer->getComponentVariables($module, $entity) : $variables;
+
+        $typesDestination = "resources/js/types/{$typesVariables['nameStudly']}.ts";
         $typesDestPath = $modulePath.'/'.$typesDestination;
-        $typesResult = $this->renderStub('vue/types.ts.stub', $typesDestPath, $variables);
+        $typesResult = $this->renderStub('vue/types.ts.stub', $typesDestPath, $typesVariables);
         $files[$typesDestination] = $typesResult;
+
+        $renderedAs = "Inertia::render('{$variables['moduleNameStudly']}/{$variables['nameStudly']}')";
 
         return ScaffoldResultDTO::success(
             "Vue page '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                $entity !== null
+                    ? "{$entity}Controller renders it with {$renderedAs} (module:make-controller {$module} {$entity} --resource)"
+                    : "Render it from a controller with {$renderedAs} (module:make-controller {$module} {$variables['nameStudly']})",
+                "Its texts come from resources/js/locales/es.ts ({$variables['moduleNameCamel']}.*)",
+                self::buildAssetsStep($module),
+            ],
         );
     }
 
@@ -448,6 +586,9 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         return ScaffoldResultDTO::success(
             "Vue component '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                self::buildAssetsStep($module),
+            ],
         );
     }
 
@@ -471,6 +612,16 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             );
         }
 
+        // The module's page prefix (registerPagePrefixes()) is resolved before the core pages
+        $prefix = Str::studly($name);
+        $corePages = $this->corePagesPath;
+        if ($corePages !== null && (is_dir("{$corePages}/{$prefix}") || is_file("{$corePages}/{$prefix}.vue"))) {
+            return ScaffoldResultDTO::failure(
+                "Cannot create module '{$name}': its page prefix is taken.",
+                ["'{$prefix}' is a core page directory or page; the module's pages would replace the core page."]
+            );
+        }
+
         // Check if module already exists
         $modulePath = $this->modulesPath.'/'.$name;
         if (is_dir($modulePath)) {
@@ -481,6 +632,14 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         }
 
         return null;
+    }
+
+    /**
+     * The inside of a JSON string literal holding the given text.
+     */
+    private function jsonString(string $value): string
+    {
+        return substr(json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), 1, -1);
     }
 
     /**
@@ -526,7 +685,8 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'src/Application/DTOs',
             'src/Application/Services',
             'src/Infrastructure/Listeners',
-            'src/Infrastructure/Persistence/Eloquent',
+            'src/Infrastructure/Persistence/Eloquent/Models',
+            'src/Infrastructure/Persistence/Eloquent/Repositories',
             'src/Infrastructure/Services',
             'src/Notifications',
             'src/Http/Controllers',
@@ -535,6 +695,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             'src/Filament/Resources',
             'src/Policies',
             'tests/Unit',
+            'tests/Integration',
             'tests/Feature',
         ];
 
@@ -585,58 +746,133 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     }
 
     /**
-     * Create or update Filament translations for a resource.
+     * Add translations to lang/es/{file}.php, keeping every key already there.
      *
-     * @param  array<string, string>  $variables
+     * @param  array<string, mixed>  $translations
      * @return array<string, string>
      */
-    private function createOrUpdateFilamentTranslations(string $modulePath, array $variables): array
+    private function mergeTranslations(string $modulePath, string $file, array $translations): array
     {
-        $files = [];
-        $translationFile = $modulePath.'/lang/es/filament.php';
-        $nameSnake = $variables['nameSnake'];
+        $relativePath = "lang/es/{$file}.php";
+        $path = $modulePath.'/'.$relativePath;
 
-        // Ensure lang/es directory exists
-        $langDir = dirname($translationFile);
-        if (! is_dir($langDir)) {
-            mkdir($langDir, 0755, true);
+        if (! file_exists($path)) {
+            if (! is_dir(dirname($path))) {
+                mkdir(dirname($path), 0755, true);
+            }
+            $this->writeTranslationFile($path, $translations);
+
+            return [$relativePath => ScaffoldResultDTO::STATUS_CREATED];
         }
 
-        // New resource translations
-        $newTranslations = [
-            $nameSnake => [
-                'label' => $variables['nameStudly'],
-                'plural_label' => $variables['namePluralStudly'],
-                'fields' => [
-                    'name' => 'Nombre',
-                    'created_at' => 'Creado',
-                    'updated_at' => 'Actualizado',
-                ],
+        $existing = include $path;
+        $existing = is_array($existing) ? $existing : [];
+        $merged = $this->addMissingKeys($existing, $translations);
+
+        if ($merged === $existing) {
+            return [$relativePath => ScaffoldResultDTO::STATUS_SKIPPED];
+        }
+
+        $this->writeTranslationFile($path, $merged);
+
+        return [$relativePath => ScaffoldResultDTO::STATUS_OVERWRITTEN];
+    }
+
+    /**
+     * Add the keys of $translations that $existing lacks, keeping its values and order.
+     *
+     * @param  array<mixed>  $existing
+     * @param  array<mixed>  $translations
+     * @return array<mixed>
+     */
+    private function addMissingKeys(array $existing, array $translations): array
+    {
+        foreach ($translations as $key => $value) {
+            if (! array_key_exists($key, $existing)) {
+                $existing[$key] = $value;
+            } elseif (is_array($existing[$key]) && is_array($value)) {
+                $existing[$key] = $this->addMissingKeys($existing[$key], $value);
+            }
+        }
+
+        return $existing;
+    }
+
+    /**
+     * The module name shown in the admin panel ("displayName" in module.json).
+     */
+    private function moduleDisplayName(string $modulePath, string $module): string
+    {
+        $manifest = file_exists($modulePath.'/module.json')
+            ? json_decode((string) file_get_contents($modulePath.'/module.json'), true)
+            : null;
+
+        $displayName = is_array($manifest) ? ($manifest['displayName'] ?? null) : null;
+
+        return is_string($displayName) && $displayName !== '' ? $displayName : $this->sentence($module);
+    }
+
+    /**
+     * Module assets are built with Node, which the PHP container does not have.
+     */
+    private static function buildAssetsStep(string $module): string
+    {
+        return "Build its Vue assets in the Node container: docker exec guildforge_node sh -c 'cd modules/{$module} && npm install && npm run build'; releases build them in the release workflow";
+    }
+
+    /**
+     * A lowercase label: "BlogPost" becomes "blog post".
+     */
+    private function label(string $name): string
+    {
+        return Str::lower(Str::headline($name));
+    }
+
+    /**
+     * A Spanish-style title: "BlogPosts" or "blog-posts" becomes "Blog posts".
+     */
+    private function sentence(string $name): string
+    {
+        return Str::ucfirst($this->label($name));
+    }
+
+    /**
+     * @param  array<string, string>  $variables
+     * @return list<string>
+     */
+    private function controllerNextSteps(string $module, string $type, array $variables): array
+    {
+        $studly = $variables['nameStudly'];
+        $page = $variables['moduleNameStudly'].'/'.$studly;
+        $path = $variables['namePluralKebab'];
+        $routeName = $variables['namePluralSnake'];
+        $stack = "It uses the {$studly} service, DTOs and request: run module:make-entity {$module} {$studly}, module:make-dto {$module} {$studly}, module:make-dto {$module} {$studly} --response, module:make-service {$module} {$studly} --interface and module:make-request {$module} {$studly} if they do not exist";
+        $policy = "Its writes call Gate::authorize() with {$studly}Policy: run module:make-filament-resource {$module} {$studly} (or write the policy) and list it in registerPolicies()";
+        // Route files have no namespace: import the controller, or ::class names a global class
+        $controllers = $variables['moduleNamespace'].'\\Http\\Controllers';
+        $import = "use {$controllers}\\{$studly}Controller;";
+
+        return match ($type) {
+            'resource' => [
+                $stack,
+                $policy,
+                "Create its pages: module:make-vue-page {$module} {$studly}Index (and {$studly}Create, {$studly}Show, {$studly}Edit)",
+                "Add the routes to routes/web.php ({$import}), writes for signed-in users only and registered first (so /{$path}/create is not taken by the show route): Route::resource('{$path}', {$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); then Route::resource('{$path}', {$studly}Controller::class)->only(['index', 'show']);",
             ],
-        ];
-
-        if (file_exists($translationFile)) {
-            // Load existing translations and merge
-            $existing = include $translationFile;
-            if (! is_array($existing)) {
-                $existing = [];
-            }
-
-            // Only add if resource doesn't already exist
-            if (! isset($existing[$nameSnake])) {
-                $translations = array_merge($existing, $newTranslations);
-                $this->writeTranslationFile($translationFile, $translations);
-                $files['lang/es/filament.php'] = ScaffoldResultDTO::STATUS_OVERWRITTEN;
-            } else {
-                $files['lang/es/filament.php'] = ScaffoldResultDTO::STATUS_SKIPPED;
-            }
-        } else {
-            // Create new file
-            $this->writeTranslationFile($translationFile, $newTranslations);
-            $files['lang/es/filament.php'] = ScaffoldResultDTO::STATUS_CREATED;
-        }
-
-        return $files;
+            'api' => [
+                $stack,
+                $policy,
+                "Add the routes to routes/api.php (use {$controllers}\\Api;): Route::apiResource('{$path}', Api\\{$studly}Controller::class)->except(['index', 'show'])->middleware('auth'); then Route::apiResource('{$path}', Api\\{$studly}Controller::class)->only(['index', 'show']); (the api group has no session: writes answer 401 until the module adds token authentication)",
+            ],
+            'invokable' => [
+                "Create its page: module:make-vue-page {$module} {$studly} (rendered as {$page})",
+                "Add the route to routes/web.php ({$import}): Route::get('{$variables['nameKebab']}', {$studly}Controller::class)->name('{$variables['nameSnake']}');",
+            ],
+            default => [
+                "Create its page: module:make-vue-page {$module} {$studly} (rendered as {$page})",
+                "Add the route to routes/web.php ({$import}): Route::get('{$path}', [{$studly}Controller::class, 'index'])->name('{$routeName}.index');",
+            ],
+        };
     }
 
     /**
@@ -662,12 +898,12 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $output = "[\n";
 
         foreach ($array as $key => $value) {
-            $output .= $innerSpaces."'".addslashes((string) $key)."' => ";
+            $output .= $innerSpaces.$this->phpString((string) $key).' => ';
 
             if (is_array($value)) {
                 $output .= $this->varExport($value, $indent + 1);
             } else {
-                $output .= "'".addslashes((string) $value)."'";
+                $output .= $this->phpString((string) $value);
             }
 
             $output .= ",\n";
@@ -676,6 +912,14 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $output .= $spaces.']';
 
         return $output;
+    }
+
+    /**
+     * A single-quoted PHP string literal.
+     */
+    private function phpString(string $value): string
+    {
+        return "'".addcslashes($value, "'\\")."'";
     }
 
     public function createEnum(string $module, string $name): ScaffoldResultDTO
@@ -700,6 +944,15 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
 
         $result = $this->renderStub('domain/enum.php.stub', $destPath, $variables);
         $files[$destination] = $result;
+
+        $files = array_merge($files, $this->mergeTranslations($modulePath, 'messages', [
+            'states' => [
+                'pending' => 'Pendiente',
+                'active' => 'Activo',
+                'completed' => 'Completado',
+                'cancelled' => 'Cancelado',
+            ],
+        ]));
 
         return ScaffoldResultDTO::success(
             "Enum '{$name}' created for module '{$module}'.",
@@ -764,6 +1017,9 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         return ScaffoldResultDTO::success(
             "Listener '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                "Register it in the module service provider's boot(): Event::listen({$variables['eventNameStudly']}::class, {$variables['nameStudly']}::class);",
+            ],
         );
     }
 
@@ -790,6 +1046,14 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $result = $this->renderStub('domain/notification.php.stub', $destPath, $variables);
         $files[$destination] = $result;
 
+        $files = array_merge($files, $this->mergeTranslations($modulePath, 'emails', [
+            $variables['nameSnake'] => [
+                'subject' => $this->sentence($name),
+                'greeting' => '¡Hola!',
+                'intro' => 'Tienes una nueva notificación.',
+            ],
+        ]));
+
         return ScaffoldResultDTO::success(
             "Notification '{$name}' created for module '{$module}'.",
             $files,
@@ -806,7 +1070,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $modulePath = $this->modulesPath.'/'.$module;
         $variables = $this->stubRenderer->getComponentVariables($module, $name);
         $variables['relationshipName'] = Str::camel(Str::plural($name));
-        $variables['resourceNameStudly'] = $resource !== null ? Str::studly($resource) : 'Parent';
+        $variables['resourceNameStudly'] = $resource !== null ? Str::studly($resource) : 'Event';
         $variables['nameKebab'] = Str::kebab($name);
         $files = [];
 
@@ -822,9 +1086,27 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $result = $this->renderStub('filament/relation-manager.php.stub', $destPath, $variables);
         $files[$destination] = $result;
 
+        $files = array_merge($files, $this->mergeTranslations($modulePath, 'filament', [
+            $variables['nameSnake'] => [
+                'title' => $this->sentence($name),
+                'fields' => [
+                    'name' => 'Nombre',
+                    'created_at' => 'Creado',
+                ],
+            ],
+        ]));
+
+        $studly = $variables['nameStudly'];
+
         return ScaffoldResultDTO::success(
             "RelationManager '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                "Register the Livewire component in the module service provider's boot(): Livewire::component('modules.{$module}.filament.relation-managers.{$variables['nameKebab']}-relation-manager', {$studly}RelationManager::class);",
+                "Extend the core resource: {$variables['resourceNameStudly']}Resource::extendRelations([{$studly}RelationManager::class]);",
+                "The owner model needs the '{$variables['relationshipName']}' relationship (resolveRelationUsing() in the provider's register())",
+                self::TRANSLATE_LABELS,
+            ],
         );
     }
 
@@ -852,9 +1134,27 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $result = $this->renderStub('filament/widget.php.stub', $destPath, $variables);
         $files[$destination] = $result;
 
+        $files = array_merge($files, $this->mergeTranslations($modulePath, 'filament', [
+            'widgets' => [
+                $variables['nameSnake'] => [
+                    'heading' => $this->sentence($name),
+                    'total' => 'Total',
+                    'total_description' => 'Registros en total',
+                    'pending' => 'Pendientes',
+                    'pending_description' => 'A la espera de revisión',
+                    'active' => 'Activos',
+                    'active_description' => 'En curso',
+                ],
+            ],
+        ]));
+
         return ScaffoldResultDTO::success(
             "Widget '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                "Add it to the dashboard from the module service provider: return [{$variables['nameStudly']}Widget::class] in registerFilamentWidgets()",
+                self::TRANSLATE_LABELS,
+            ],
         );
     }
 }

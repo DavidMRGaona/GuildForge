@@ -1,6 +1,8 @@
 # Module development guide
 
-This guide covers how to create and develop modules for GuildForge using the Module SDK.
+This guide covers how to create and develop modules for GuildForge using the Module SDK. Releasing a module is covered in [CI/CD for module distribution](../module-ci-cd.md).
+
+Commands run in the development containers: `php artisan` and PHPUnit in `guildforge_app`, npm in `guildforge_node`. Both work in `src/`, so paths such as `modules/my-module` are relative to it (`src/modules/my-module` on the host).
 
 ## Table of contents
 
@@ -12,17 +14,19 @@ This guide covers how to create and develop modules for GuildForge using the Mod
 6. [Module settings](#module-settings)
    - [Panel code for core 3 (Filament 5)](#panel-code-for-core-3-filament-5)
 7. [Filament integration](#filament-integration)
-8. [Slot registration](#slot-registration)
-9. [SEO of public pages](#seo-of-public-pages)
-10. [Building module assets](#building-module-assets)
-11. [Tailwind CSS in modules](#tailwind-css-in-modules)
-12. [Module installation](#module-installation)
-13. [Extending core functionality](#extending-core-functionality)
-14. [Domain events and listeners](#domain-events-and-listeners)
-15. [State machine pattern](#state-machine-pattern)
-16. [Testing modules](#testing-modules)
-17. [Best practices](#best-practices)
-18. [Quick reference](#quick-reference)
+8. [Public pages and frontend translations](#public-pages-and-frontend-translations)
+9. [Slot registration](#slot-registration)
+10. [SEO of public pages](#seo-of-public-pages)
+11. [Building module assets](#building-module-assets)
+12. [Tailwind CSS in modules](#tailwind-css-in-modules)
+13. [Module installation](#module-installation)
+14. [Testing modules](#testing-modules)
+15. [Best practices](#best-practices)
+16. [Extending core functionality](#extending-core-functionality)
+17. [Domain events and listeners](#domain-events-and-listeners)
+18. [State machine pattern](#state-machine-pattern)
+19. [Releasing a module](#releasing-a-module)
+20. [Quick reference](#quick-reference)
 
 ---
 
@@ -30,100 +34,105 @@ This guide covers how to create and develop modules for GuildForge using the Mod
 
 ### Creating a new module
 
-Use the `module:make` command to create a new module with the standard directory structure:
+Use `module:make` to create a module with the standard directory structure:
 
 ```bash
-php artisan module:make my-module --description="My awesome module" --author="Developer"
+docker exec guildforge_app php artisan module:make my-module --display-name="Mi módulo" --description="Gestión de partidas" --author="GuildForge" --repository=owner/guildforge-my-module
 ```
 
-This creates a complete module skeleton at `modules/my-module/` with:
-- Service provider
-- Configuration
-- Routes (web and API)
-- Language files
-- Directory structure for all layers
+The name must be kebab-case, must not exist yet under `modules/` and must not be a reserved name (`core`, `app`, `admin`, `system`, `modules`, `api`, `web`, `auth`, `user`, `filament`, `laravel`, `vendor`, `public`, `storage`). `--display-name` is the name shown in the panel, in Spanish (default: the name in sentence case); `--repository` (`owner/repo`) is where the updater looks for releases.
+
+The command creates `modules/my-module/` with:
+- `module.json`, the service provider and `config/module.php`
+- `routes/web.php` and `routes/api.php`
+- `lang/es/messages.php` and `resources/js/locales/{es,en}.ts`
+- `package.json`, `vite.config.ts`, `tsconfig.json` and `resources/css/module.css`, the same build setup the shipped modules use
+- `phpunit.xml`, `.gitignore` and `.github/workflows/release.yml`
+- the directory structure for all layers
+
+It ends by printing the next steps. Every `module:make-*` generator does the same: it lists what is left to wire by hand (bindings, routes, policies, widgets…).
 
 ### Discovering and enabling
 
-After creating a module, you must discover and enable it:
+After creating a module, discover and enable it:
 
 ```bash
 # Register the module in the database
-php artisan module:discover
+docker exec guildforge_app php artisan module:discover
 
-# Enable the module (runs migrations and seeders automatically on first install)
-php artisan module:enable my-module
+# Enable it (runs its migrations and seeders the first time it is enabled)
+docker exec guildforge_app php artisan module:enable my-module
 
-# Manually run migrations (if needed)
-php artisan module:migrate my-module
+# Run new migrations of an enabled module
+docker exec guildforge_app php artisan module:migrate my-module
 
-# Manually run seeders (if needed)
-php artisan module:seed my-module
+# Run the seeders that have not run yet
+docker exec guildforge_app php artisan module:seed my-module
 ```
+
+Enabling checks the module's requirements first (see [Module manifest](#module-manifest-modulejson)): an incompatible module cannot be enabled.
 
 ### Listing modules
 
-View all discovered modules:
-
 ```bash
-php artisan module:list
+docker exec guildforge_app php artisan module:list
 ```
 
 ---
 
 ## Module structure
 
-A typical module follows this structure:
+> **Note:** Modules live in `base_path('modules')`, which `MODULES_PATH` can override (`config/modules.php`). In the Docker setup that is `src/modules/` on the host. Each module is its own Git repository.
 
-> **Note:** Modules are stored in the `modules/` directory relative to the Laravel application root (`base_path('modules')`). In this project's Docker setup, that corresponds to `src/modules/` on the host.
+Entries marked `*` are created by `module:make`; the rest come from the generators, the build or by hand.
 
 ```
 modules/my-module/
-├── module.json              # Module manifest
-├── package.json             # NPM dependencies (for Vue components)
-├── vite.config.ts           # Vite build configuration
-├── tsconfig.json            # TypeScript configuration
+├── module.json              * Module manifest
+├── package.json             * npm dependencies for the Vue build
+├── package-lock.json          Created by npm install; commit it
+├── vite.config.ts           * Vite build configuration
+├── tsconfig.json            * TypeScript configuration
+├── phpunit.xml              * Test configuration
+├── .gitignore               * Ignores node_modules, public/build, PHPUnit caches
+├── .github/workflows/
+│   └── release.yml          * Release workflow
 ├── config/
-│   └── module.php           # Module configuration
+│   ├── module.php           * Module configuration
+│   └── settings.php           Default values of the panel settings (optional)
 ├── database/
-│   ├── migrations/          # Database migrations
-│   └── seeders/             # Database seeders
+│   ├── migrations/          * Migrations
+│   └── seeders/               Seeders (by hand)
 ├── lang/
 │   └── es/
-│       └── messages.php     # Translations
+│       ├── messages.php     * PHP translations
+│       ├── filament.php       Written by the Filament generators
+│       └── emails.php         Written by module:make-notification
+├── public/build/              Compiled assets (release build only, ignored by Git)
 ├── resources/
+│   ├── css/module.css       * Tailwind utilities for the module's components
 │   ├── js/
-│   │   ├── pages/           # Vue pages
-│   │   ├── components/      # Vue components
-│   │   └── types/           # TypeScript types
-│   └── views/               # Blade views
+│   │   ├── locales/         * es.ts, en.ts (frontend translations)
+│   │   ├── pages/           * Inertia pages (pages/MyModule/*.vue)
+│   │   ├── components/      * Vue components (slots)
+│   │   └── types/           * TypeScript types
+│   └── views/               * Blade views
 ├── routes/
-│   ├── web.php              # Web routes
-│   └── api.php              # API routes
+│   ├── web.php              *
+│   └── api.php              *
 ├── src/
-│   ├── MyModuleServiceProvider.php
-│   ├── Domain/
-│   │   ├── Entities/
-│   │   ├── Enums/
-│   │   ├── Events/
-│   │   ├── ValueObjects/
-│   │   └── Repositories/
-│   ├── Application/
-│   │   ├── DTOs/
-│   │   └── Services/
-│   ├── Infrastructure/
-│   │   ├── Listeners/
-│   │   ├── Persistence/Eloquent/
-│   │   └── Services/
-│   ├── Notifications/
-│   ├── Http/
-│   │   ├── Controllers/
-│   │   └── Requests/
-│   └── Filament/
-│       └── Resources/
+│   ├── MyModuleServiceProvider.php   *
+│   ├── Domain/              * Entities/, ValueObjects/, Repositories/ (+ Enums/, Events/)
+│   ├── Application/         * DTOs/, Services/
+│   ├── Infrastructure/      * Listeners/, Persistence/Eloquent/{Models,Repositories}/, Services/
+│   ├── Notifications/       *
+│   ├── Http/                * Controllers/ (+ Api/), Requests/
+│   ├── Filament/            * Resources/ (+ RelationManagers/, Widgets/, Pages/)
+│   └── Policies/            *
 └── tests/
-    ├── Unit/
-    └── Feature/
+    ├── Unit/                *
+    ├── Integration/         *
+    └── Feature/             *
 ```
 
 ### Module manifest (module.json)
@@ -131,16 +140,18 @@ modules/my-module/
 ```json
 {
     "name": "my-module",
+    "displayName": "Mi módulo",
     "version": "1.0.0",
+    "repository": "owner/guildforge-my-module",
     "namespace": "Modules\\MyModule",
     "provider": "MyModuleServiceProvider",
-    "description": "My awesome module",
-    "author": "Developer",
+    "description": "Gestión de partidas",
+    "author": "GuildForge",
     "requires": {
-        "core": "^3.0",
-        "filament": "^5.0",
+        "core": "^3.6",
         "php": ">=8.5",
         "laravel": ">=13.0",
+        "filament": "^5.0",
         "modules": ["another-module:^1.0"],
         "extensions": ["json"]
     },
@@ -148,7 +159,13 @@ modules/my-module/
 }
 ```
 
-`requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). Declare the lowest core minor you tested against, e.g. `^3.0`.
+- `name`, `version`, `namespace` and `provider` are required. `name` is the directory name. `namespace` must be `Modules\<StudlyName>` and `provider` `<StudlyName>ServiceProvider`: the panel and the autoloader derive both from the directory name.
+- `displayName` is the name shown in the panel.
+- `repository` (`owner/repo`) is where updates come from; `module:discover` copies it to the module's record. A module installed without it needs `php artisan module:set-source <name> <owner/repo>` once.
+- `requires.modules` and `requires.extensions`, when present, must be lists of strings.
+- Other keys (some shipped modules carry a `provides` block) are ignored by the core.
+
+`requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). `module:make` writes the running core's `^major.minor` (`^3.6` on core 3.6.x): lower it to the oldest core minor you tested against.
 
 The core may also declare a minimum version for a module (`App\Domain\Modules\CoreModuleMinimumVersions`) when older releases of it would break on that core; releases below it are rejected the same way, pre-releases of the minimum included (`2.2.0-rc.1` is older than `2.2.0`). Extend core models from the module (`EventModel::resolveRelationUsing()` in the service provider), never by asking the core to reference module classes: the core must not import anything from `Modules\`.
 
@@ -156,99 +173,119 @@ The core may also declare a minimum version for a module (`App\Domain\Modules\Co
 
 ## Scaffolding commands
 
-The Module SDK provides commands to scaffold all components:
+Every generator takes the module name and a class name, writes PHP that follows the module's namespace and kebab-case translation namespace (`my-module::`), merges the translation keys it uses into `lang/es/messages.php`, `filament.php` or `emails.php` (existing keys are kept) and prints the steps left. Labels derived from class names may stay in English: translate them in `lang/es`.
 
 ### Domain layer
 
 ```bash
-# Create entity, value object, repository interface, model, and repository
-php artisan module:make-entity my-module Game --migration
+# Entity, <Name>Id value object, repository interface, Eloquent model and repository
+# (--migration also writes the create_<table>_table migration)
+docker exec guildforge_app php artisan module:make-entity my-module Game --migration
 ```
+
+Files: `src/Domain/Entities/Game.php`, `src/Domain/ValueObjects/GameId.php`, `src/Domain/Repositories/GameRepositoryInterface.php`, `src/Infrastructure/Persistence/Eloquent/Models/GameModel.php` and `src/Infrastructure/Persistence/Eloquent/Repositories/EloquentGameRepository.php`. Bind the repository in the provider's `register()`.
 
 ### Application layer
 
 ```bash
-# Create DTO
-php artisan module:make-dto my-module Game
+# DTO (src/Application/DTOs/GameDTO.php)
+docker exec guildforge_app php artisan module:make-dto my-module Game
 
-# Create response DTO
-php artisan module:make-dto my-module Game --response
+# Response DTO
+docker exec guildforge_app php artisan module:make-dto my-module Game --response
 
-# Create service with interface
-php artisan module:make-service my-module Game --interface
+# Service (src/Infrastructure/Services/GameService.php); --interface adds
+# src/Application/Services/GameServiceInterface.php and implements it
+docker exec guildforge_app php artisan module:make-service my-module Game --interface
 ```
 
 ### HTTP layer
 
+Controllers go to `src/Http/Controllers/` (`Api/` for `--api`) and render Inertia pages named `MyModule/<Page>` (see [Public pages](#public-pages-and-frontend-translations)). The command prints the route to add to `routes/web.php` or `routes/api.php`.
+
 ```bash
-# Create controller (default)
-php artisan module:make-controller my-module Game
+# Controller with an index() page
+docker exec guildforge_app php artisan module:make-controller my-module Game
 
-# Create resource controller
-php artisan module:make-controller my-module Game --resource
+# Resource controller
+docker exec guildforge_app php artisan module:make-controller my-module Game --resource
 
-# Create API controller
-php artisan module:make-controller my-module Game --api
+# API controller
+docker exec guildforge_app php artisan module:make-controller my-module Game --api
 
-# Create invokable controller
-php artisan module:make-controller my-module ShowDashboard --invokable
+# Invokable controller
+docker exec guildforge_app php artisan module:make-controller my-module ShowDashboard --invokable
 
-# Create form request
-php artisan module:make-request my-module StoreGame
+# Form request (src/Http/Requests/GameRequest.php)
+docker exec guildforge_app php artisan module:make-request my-module Game
 ```
 
 ### Filament
 
 ```bash
-# Create Filament resource with List, Create, Edit pages
-php artisan module:make-filament-resource my-module Game
+# Resource with List, Create and Edit pages (src/Filament/Resources/), plus its policy
+# (src/Policies/GamePolicy.php) and its keys in lang/es/filament.php
+docker exec guildforge_app php artisan module:make-filament-resource my-module Game
 
-# Create Filament RelationManager
-php artisan module:make-relation-manager my-module Registrations --resource=Event
+# RelationManager for a core resource (src/Filament/RelationManagers/)
+docker exec guildforge_app php artisan module:make-relation-manager my-module Registrations --resource=Event
 
-# Create Filament Widget
-php artisan module:make-widget my-module RegistrationStats
+# Dashboard widget (src/Filament/Widgets/RegistrationStatsWidget.php)
+docker exec guildforge_app php artisan module:make-widget my-module RegistrationStats
 ```
 
-### Domain events, enums, and notifications
+A generated policy stays inactive until `registerPolicies()` lists it, and a widget until `registerFilamentWidgets()` does (see [Filament integration](#filament-integration)).
+
+### Domain events, enums and notifications
 
 ```bash
-# Create enum
-php artisan module:make-enum my-module RegistrationStatus
+# Enum (src/Domain/Enums/)
+docker exec guildforge_app php artisan module:make-enum my-module RegistrationStatus
 
-# Create domain event
-php artisan module:make-event my-module RegistrationCreated
+# Domain event (src/Domain/Events/)
+docker exec guildforge_app php artisan module:make-event my-module RegistrationCreated
 
-# Create event listener (synchronous by default)
-php artisan module:make-listener my-module SendRegistrationConfirmation --event=RegistrationCreated
+# Event listener, synchronous by default (src/Infrastructure/Listeners/)
+docker exec guildforge_app php artisan module:make-listener my-module SendRegistrationConfirmation --event=RegistrationCreated
 
-# Create queued (async) event listener
-php artisan module:make-listener my-module ProcessHeavyTask --event=RegistrationCreated --queued
+# Queued (async) event listener
+docker exec guildforge_app php artisan module:make-listener my-module ProcessHeavyTask --event=RegistrationCreated --queued
 
-# Create notification
-php artisan module:make-notification my-module RegistrationConfirmation
+# Notification (src/Notifications/) and its keys in lang/es/emails.php
+docker exec guildforge_app php artisan module:make-notification my-module RegistrationConfirmation
 ```
 
 ### Frontend
 
 ```bash
-# Create Vue page with TypeScript types
-php artisan module:make-vue-page my-module GameList
+# Page (resources/js/pages/MyModule/GameList.vue) and its types (resources/js/types/GameList.ts)
+docker exec guildforge_app php artisan module:make-vue-page my-module GameList
 
-# Create Vue component
-php artisan module:make-vue-component my-module GameCard
+# Component (resources/js/components/GameCard.vue)
+docker exec guildforge_app php artisan module:make-vue-component my-module GameCard
 ```
 
 ### Database
 
 ```bash
-# Create migration
-php artisan module:make-migration my-module create_games_table --create=my_module_games
+# Migration that creates a table
+docker exec guildforge_app php artisan module:make-migration my-module create_games_table --create=my_module_games
+
+# Migration that modifies a table
+docker exec guildforge_app php artisan module:make-migration my-module add_slug_to_games_table --table=my_module_games
 ```
+
+Module tables must start with the module name followed by `_`, with the hyphens either removed or replaced by underscores (`mymodule_` or `my_module_` for `my-module`). Before running a module's migrations and seeders, the core reads them and refuses:
+
+- `Schema::create/table/drop/dropIfExists/rename` on a core table or on a table without the module's prefix, or with a table name held in a variable;
+- `DB::statement()` with DDL on a core table, or with a query held in a variable;
+- in seeders: any `Schema::` call, and `delete()`/`truncate()` (or raw `DELETE`/`TRUNCATE`) on a core table.
+
+The same rules apply while the migrations run. Never add foreign keys from module tables to core tables: reference core rows by their UUID.
 
 ### Seeders
 
-Create seeders manually in `database/seeders/`:
+Create seeders by hand in `database/seeders/`. The core runs the `*Seeder.php` files there, in the namespace `<module namespace>\Database\Seeders`:
 
 ```php
 <?php
@@ -266,8 +303,8 @@ final class CategoriesSeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            ['name' => 'Strategy', 'slug' => 'strategy'],
-            ['name' => 'RPG', 'slug' => 'rpg'],
+            ['name' => 'Estrategia', 'slug' => 'estrategia'],
+            ['name' => 'Rol', 'slug' => 'rol'],
         ];
 
         foreach ($categories as $category) {
@@ -280,35 +317,35 @@ final class CategoriesSeeder extends Seeder
 }
 ```
 
-**Running seeders:**
+The first `module:enable` runs the migrations and then the seeders. After that, `module:seed` (or `module:enable --seed`) only runs the seeders that have not run yet; an update runs the seeders it adds.
 
 ```bash
-# Run seeders for a specific module
-php artisan module:seed my-module
-
-# Run seeders when enabling (forced)
-php artisan module:enable my-module --seed
+docker exec guildforge_app php artisan module:seed my-module
 ```
-
-**Automatic seeding:**
-
-When a module is enabled for the first time (`module:enable`), seeders are automatically run after migrations. This happens only on first install, not on subsequent enables.
 
 ### Testing
 
 ```bash
-# Create unit test
-php artisan module:make-test my-module Game --unit
+# Entity unit test, the default (tests/Unit/Domain/Entities/GameTest.php)
+docker exec guildforge_app php artisan module:make-test my-module Game --unit
 
-# Create feature test
-php artisan module:make-test my-module GameController --feature
+# DTO unit test (tests/Unit/Application/DTOs/)
+docker exec guildforge_app php artisan module:make-test my-module Game --dto
+
+# Feature test for a controller made without --resource or --invokable (tests/Feature/Http/Controllers/)
+docker exec guildforge_app php artisan module:make-test my-module Game --feature
+
+# Filament resource test (tests/Feature/Filament/)
+docker exec guildforge_app php artisan module:make-test my-module Game --filament
 ```
+
+See [Testing modules](#testing-modules) to run them.
 
 ---
 
 ## Service provider
 
-The service provider is the entry point for your module. It extends `ModuleServiceProvider`:
+The service provider is the entry point of the module. It extends `App\Modules\ModuleServiceProvider`:
 
 ```php
 <?php
@@ -317,22 +354,24 @@ declare(strict_types=1);
 
 namespace Modules\MyModule;
 
-use App\Modules\ModuleServiceProvider;
 use App\Application\Modules\DTOs\PermissionDTO;
-use App\Application\Modules\DTOs\NavigationItemDTO;
+use App\Modules\ModuleServiceProvider;
+use Modules\MyModule\Domain\Repositories\GameRepositoryInterface;
+use Modules\MyModule\Infrastructure\Persistence\Eloquent\Models\GameModel;
+use Modules\MyModule\Infrastructure\Persistence\Eloquent\Repositories\EloquentGameRepository;
+use Modules\MyModule\Policies\GamePolicy;
 
 final class MyModuleServiceProvider extends ModuleServiceProvider
 {
+    public function moduleName(): string
+    {
+        return 'my-module';
+    }
+
     public function register(): void
     {
         parent::register();
 
-        $this->mergeConfigFrom(
-            $this->modulePath('config/module.php'),
-            'my_module'
-        );
-
-        // Register service bindings
         $this->app->bind(GameRepositoryInterface::class, EloquentGameRepository::class);
     }
 
@@ -340,53 +379,49 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
     {
         parent::boot();
 
-        // Additional boot logic
+        // Livewire components, Filament extensions, event listeners…
     }
 
-    public function onEnable(): void
+    public function registerPolicies(): array
     {
-        // Called when module is enabled
-    }
-
-    public function onDisable(): void
-    {
-        // Called when module is disabled
+        return [
+            GameModel::class => GamePolicy::class,
+        ];
     }
 
     public function registerPermissions(): array
     {
         return [
             new PermissionDTO(
-                name: 'view',
-                label: 'View Games',
-                group: 'Game Library',
+                name: 'games.view_any',
+                label: __('my-module::messages.permissions.games.view_any'),
+                group: __('my-module::messages.title'),
                 module: 'my-module',
+                roles: ['editor'],
             ),
-            new PermissionDTO(
-                name: 'manage',
-                label: 'Manage Games',
-                group: 'Game Library',
-                module: 'my-module',
-            ),
-        ];
-    }
-
-    public function registerNavigation(): array
-    {
-        return [
-            new NavigationItemDTO(
-                label: 'Games',
-                route: 'my_module.games.index',
-                icon: 'heroicon-o-puzzle-piece',
-                group: 'Game Library',
-                sort: 10,
-                module: 'my-module',
-                permissions: ['my-module.view'],
-            ),
+            // games.view, games.create, games.update, games.delete…
         ];
     }
 }
 ```
+
+`moduleName()` is the only abstract method: it returns the kebab-case name, which sets the module path, the translation and view namespaces (`my-module::`) and the settings key.
+
+`parent::register()`:
+- loads `config/module.php` into `config('modules.my-module')`, also when the configuration is cached. Do not call `mergeConfigFrom()`: it does nothing under `config:cache`, so the values would be missing in production;
+- publishes the module settings into `config('modules.settings.my-module')` (see [Module settings](#module-settings)).
+
+`parent::boot()`:
+- loads `routes/web.php` with the `web` middleware and `routes/api.php` with the `api` middleware under the `/api` prefix;
+- registers `resources/views` and `lang` under the `my-module` namespace;
+- registers `database/migrations`;
+- registers the policies returned by `registerPolicies()`.
+
+Register dynamic relationships on core models in `register()`, not `boot()` (see [Extending core functionality](#extending-core-functionality)).
+
+The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()` and `registerNavigation()`. The panel reads `registerNavigationGroups()`, `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
+
+`onEnable()` and `onDisable()` are declared on the base class, but the core never calls them: set up data in migrations and seeders, which run when the module is first enabled.
 
 ---
 
@@ -394,82 +429,88 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
 
 ### Registering permissions
 
-Permissions are registered via the service provider's `registerPermissions()` method. They are automatically added to the permission registry when the module is booted.
+`registerPermissions()` returns `PermissionDTO`s. Each one is stored with the key `<module>:<name>`, and `name` is `<resource>.<action>`:
 
 ```php
 public function registerPermissions(): array
 {
     return [
         new PermissionDTO(
-            name: 'view',
-            label: __('my_module::permissions.view'),
-            group: 'My Module',
-            description: 'Can view resources',
+            name: 'games.view_any',                                   // key: my-module:games.view_any
+            label: __('my-module::messages.permissions.games.view_any'),
+            group: __('my-module::messages.title'),
+            description: null,
             module: 'my-module',
-            roles: ['admin', 'editor'],
+            roles: ['editor'],
         ),
     ];
 }
 ```
 
-### Registering navigation
+- Policies check the full key: `$this->authorize($user, 'my-module:games.view_any')` with the `AuthorizesWithPermissions` trait. The policies made by `module:make-filament-resource` check `<module>:<plural>.view_any|view|create|update|delete`; declare those five names.
+- Admins pass every check. Other roles need the permission, granted from the role editor in the panel; `roles` lists the roles the core's roles seeder grants it to.
+- `php artisan permissions:sync` stores the definitions in the database (the production container runs it on every start).
 
-Navigation items can be registered with permission requirements:
+### Panel navigation
+
+`registerNavigation()` returns `NavigationItemDTO`s that describe the module's entries in the admin panel sidebar (routes such as `filament.admin.resources.games.index`):
 
 ```php
 public function registerNavigation(): array
 {
     return [
         new NavigationItemDTO(
-            label: __('my_module::nav.games'),
-            route: 'my_module.games.index',
-            icon: 'heroicon-o-cube',
-            group: 'Content',
-            sort: 20,
+            label: __('my-module::messages.navigation.games'),
+            route: 'filament.admin.resources.games.index',
+            icon: 'heroicon-o-puzzle-piece',
+            group: __('my-module::messages.navigation_group'),
+            sort: 1,
+            permissions: ['my-module:games.view_any'],
             module: 'my-module',
-            permissions: ['my-module.view'],
-            children: [
-                new NavigationItemDTO(
-                    label: 'All Games',
-                    route: 'my_module.games.index',
-                    module: 'my-module',
-                ),
-            ],
         ),
     ];
 }
 ```
 
-### How navigation sync works
+The core keeps these items in `ModuleNavigationRegistryInterface` and never copies them into the public menu. The sidebar itself is built by Filament from the module's resources and pages (their navigation group, label, icon and sort) and the groups from `registerNavigationGroups()`.
 
-When a module is enabled, `MenuService.syncModuleNavigation()` creates `MenuItem` records in the `menu_items` table:
+### Public menu links
 
-1. Module registers navigation via `registerNavigation()`
-2. Items are stored in `ModuleNavigationRegistry`
-3. On module enable, `syncModuleNavigation()` is called within a transaction
-4. For each registered item, a `MenuItem` entity is created if it doesn't exist
-5. Items are linked to the module via the `module` column
+Modules offer their public pages through `registerRoutes()`. Each `ModuleRouteDTO` appears in the page select of the menu editor (*Administración → Navegación*), where admins, or roles with the `menu_items.*` permissions, decide which pages go in the header or footer menu:
 
-**Key points:**
-- Navigation items are persisted as `MenuItem` entities (not just config)
-- Admins can edit module-created menu items in Filament
-- When a module is disabled, its menu items remain but can be manually deleted
-- The `module` column tracks which module created each item
+```php
+use App\Application\Modules\DTOs\ModuleRouteDTO;
+
+public function registerRoutes(): array
+{
+    return [
+        new ModuleRouteDTO(
+            routeName: 'my_module.games.index',
+            label: __('my-module::messages.routes.games'),
+            module: $this->moduleName(),
+        ),
+    ];
+}
+```
+
+- While the module is not loaded (disabled or incompatible), links to its routes are left out of the public menu; they come back when it loads again.
+- Menu items whose `module` column holds the module name are deactivated when it is disabled, reactivated when it is enabled and deleted when it is uninstalled. Links created in the menu editor carry no module and are kept.
+- A link whose route is no longer available is shown in the editor as *Página no disponible: …*, so it can be deactivated or pointed at another page.
 
 ---
 
 ## Module settings
 
-Modules can define configurable settings that appear in the Filament admin panel.
+Modules can define settings that admins edit in the panel.
 
-### Defining default settings
+### Default values
 
-Create `config/settings.php` in your module:
+`config/settings.php` holds the release defaults:
 
 ```php
 // modules/my-module/config/settings.php
 return [
-    'api_key' => env('MY_MODULE_API_KEY', ''),
+    'api_key' => '',
     'max_items' => 10,
     'features' => [
         'feature_a' => true,
@@ -478,9 +519,20 @@ return [
 ];
 ```
 
+Use plain values. The file is read on every boot, outside the configuration cache, and once the configuration is cached Laravel no longer loads `.env`, so `env()` there would only see variables of the process environment.
+
+### Where saved settings live
+
+The values saved from the panel are stored in the core's `settings` table under the key `module_settings:<name>` (for example `module_settings:my-module`), as JSON. `config/settings.php` is never written:
+
+- `config('modules.settings.my-module')` holds the defaults with the saved values on top. Nested arrays whose keys are all strings are merged key by key; anything else (lists, arrays with numeric keys, scalars, `null`) replaces the default whole. Keys a new release adds to `config/settings.php` appear with their default value.
+- Updates, image syncs and rollbacks replace the module directory but not the saved values, so settings survive them.
+- Uninstalling the module with its data deleted removes the row; a plain uninstall keeps it, so a reinstall gets the settings back.
+- Core 3.6.0 moved, once, the values that older cores had written into `config/settings.php` from the panel into the table.
+
 ### Settings form schema
 
-Override `getSettingsSchema()` in your ServiceProvider to define Filament form components:
+Override `getSettingsSchema()` in the provider. The core's module settings page renders it, reached from *Administración → Módulos* (admins only):
 
 ```php
 use Filament\Forms\Components\TextInput;
@@ -490,28 +542,30 @@ use Filament\Schemas\Components\Section;
 public function getSettingsSchema(): array
 {
     return [
-        Section::make(__('my_module::settings.api'))
+        Section::make(__('my-module::settings.api'))
             ->schema([
                 TextInput::make('api_key')
-                    ->label(__('my_module::settings.api_key'))
+                    ->label(__('my-module::settings.api_key'))
                     ->password()
                     ->required(),
                 TextInput::make('max_items')
-                    ->label(__('my_module::settings.max_items'))
+                    ->label(__('my-module::settings.max_items'))
                     ->numeric()
                     ->minValue(1)
                     ->maxValue(100),
             ]),
-        Section::make(__('my_module::settings.features'))
+        Section::make(__('my-module::settings.features'))
             ->schema([
                 Toggle::make('features.feature_a')
-                    ->label(__('my_module::settings.feature_a')),
+                    ->label(__('my-module::settings.feature_a')),
                 Toggle::make('features.feature_b')
-                    ->label(__('my_module::settings.feature_b')),
+                    ->label(__('my-module::settings.feature_b')),
             ]),
     ];
 }
 ```
+
+A module without a settings schema has no generic settings page; it can still ship its own settings page (see below).
 
 ### Panel code for core 3 (Filament 5)
 
@@ -519,14 +573,14 @@ Core 3.0 runs Filament 5 on Livewire 4. A module that adds panel code declares `
 
 - **Namespaces.** Forms and infolists are schemas: `form(Schema $schema): Schema` and `infolist(Schema $schema): Schema` with `Filament\Schemas\Schema`. Layout components (`Section`, `Grid`, `Fieldset`, `Tabs`, `Group`, `Wizard`) live in `Filament\Schemas\Components`, and `Get`/`Set` in `Filament\Schemas\Components\Utilities`. Every action (row, bulk, header, form) is a `Filament\Actions\*` class; tables use `->recordActions()` and `->toolbarActions()`. `Filament\Support\Enums\Width` replaces `MaxWidth`.
 - **Resources** extend `App\Filament\Resources\BaseResource` and type their static properties as Filament 5 does: `protected static string|\BackedEnum|null $navigationIcon`, `protected static string|\UnitEnum|null $navigationGroup`. `php artisan module:make-filament-resource` (and `module:make-relation-manager` and `module:make-widget`) generate this shape.
-- **Registering panel code.** The panel only looks at enabled, compatible modules. Resources are discovered from `src/Filament/Resources/*Resource.php`; pages come from `registerFilamentPages()` (declared on `ModuleServiceProvider`, returns page classes); widgets come from a `registerFilamentWidgets()` method that the module adds to its provider (not declared on `ModuleServiceProvider`: the panel calls it only when it exists). There is no `registerFilamentResources()`.
-- **Settings.** `getSettingsSchema()` returns schema components (`Filament\Schemas\Components\*` for layout, `Filament\Forms\Components\*` for fields), rendered by the core's module settings page. Enum-backed fields save their value (`$enum->value`) to the module's `config/settings.php`; inside the form, `$get()` returns the enum instance (compare with `=== MyEnum::Case`).
-- **Settings pages of your own** that render the core's `filament.pages.simple-settings` view set `protected string $view` (no longer static) and define `form(Schema $schema): Schema` (state path `data`), `getFormActions(): array` and `save(): void`. The view renders `<form wire:submit="save">` with the form and `<x-filament::actions :actions="$this->getFormActions()" />`.
+- **Registering panel code.** The panel only looks at enabled, compatible modules. Resources are discovered from `src/Filament/Resources/*Resource.php`; pages come from `registerFilamentPages()` (declared on `ModuleServiceProvider`, returns page classes); widgets come from a `registerFilamentWidgets()` method on the module's provider (not declared on `ModuleServiceProvider`: the panel calls it only when it exists; `module:make` adds it). There is no `registerFilamentResources()`.
+- **Settings.** `getSettingsSchema()` returns schema components (`Filament\Schemas\Components\*` for layout, `Filament\Forms\Components\*` for fields), rendered by the core's module settings page. Enum-backed fields are stored as their value (`$enum->value`); inside the form, `$get()` returns the enum instance (compare with `=== MyEnum::Case`).
+- **Settings pages of your own** that render the core's `filament.pages.simple-settings` view set `protected string $view` (no longer static) and define `form(Schema $schema): Schema` (state path `data`), `getFormActions(): array` and `save(): void`. The view renders `<form wire:submit="save">` with the form and `<x-filament::actions :actions="$this->getFormActions()" />`. Read the values with `ModuleManagerServiceInterface::getSettings()` and save them with `updateSettings()`, so they land in the same `module_settings:<name>` row as the generic page's.
 - **Defaults kept from core 2.** The core sets them globally with `configureUsing()`, so the panel behaves as it did on core 2 and module code inherits them too: table filters apply on change (`deferFilters(false)`), no implicit key sort (`defaultKeySort(false)`), page sizes `5, 10, 25, 50, all`; `Section`, `Grid` and `Fieldset` span the full width; `FileUpload`, `ImageColumn` and `ImageEntry` use public visibility. Override them per component when you need otherwise.
 - **No panel CSS.** The panel theme (`resources/css/filament/admin/theme.css`, built with Vite) only scans the core's `app/Filament` and `resources/views/filament`: module views and classes are not compiled into it, and modules cannot add a stylesheet to the panel. Style module panel code with Filament components and their props (`badge()`, `color()`, `icon()`, `->extraAttributes()` with existing classes), never with Tailwind classes of your own.
 - **Rich text.** `RichEditor` is TipTap. HTML stored with the Trix editor (core 2) loses paragraphs and image captions on its first save: convert it in a migration of the release that moves to core 3, with `app(App\Application\Content\Services\TrixHtmlConverterInterface::class)->convert($html)` (idempotent: converted HTML comes back unchanged). Write the rows with `DB::table()` so `updated_at` and model events stay untouched, and keep a copy of the originals if you want to be able to restore them: the core's conversion (`content:convert-trix`) only covers core tables.
 - **Livewire 4.** Its endpoints live under `/livewire-{hash}/`, with a hash that differs per site: never match `livewire/*` by path; use `app(\Livewire\LivewireManager::class)->getUriPrefix()`.
-- **Tests.** `ModuleTestCase` enables the module through the same compatibility check as a site, so the module's real `module.json` must accept core 3 (`"core": "^3.0"`), or every test fails in `setUp()` with `ModuleIncompatibleException`.
+- **Tests.** `ModuleTestCase` enables the module through the same compatibility check as a site, so the module's real `module.json` must accept the core it runs against (`"core": "^3.0"`), or every test fails in `setUp()` with `ModuleIncompatibleException`.
 
 ### Accessing settings
 
@@ -536,18 +590,20 @@ use App\Domain\Modules\ValueObjects\ModuleName;
 
 $moduleManager = app(ModuleManagerServiceInterface::class);
 
-// Get all settings for a module
+// Defaults with the saved values on top
 $settings = $moduleManager->getSettings(new ModuleName('my-module'));
 
-// Update settings
+// Save the whole form state (stored in the settings table, never in config/settings.php)
 $moduleManager->updateSettings(new ModuleName('my-module'), [
     'api_key' => 'new-key',
     'max_items' => 20,
 ]);
 
-// Access via config helper (after boot)
+// Read one value
 $apiKey = config('modules.settings.my-module.api_key');
 ```
+
+`updateSettings()` replaces the stored values with the array it receives, so pass the whole form state, not a single key.
 
 ---
 
@@ -555,36 +611,34 @@ $apiKey = config('modules.settings.my-module.api_key');
 
 ### Navigation groups
 
-Modules can register custom Filament navigation groups:
+Modules can register Filament navigation groups:
 
 ```php
 public function registerNavigationGroups(): array
 {
     return [
-        'Game Library' => [
+        __('my-module::messages.navigation_group') => [
             'icon' => 'heroicon-o-puzzle-piece',
             'sort' => 20,
-        ],
-        'Statistics' => [
-            'icon' => 'heroicon-o-chart-bar',
-            'sort' => 30,
         ],
     ];
 }
 ```
 
-Groups are only added if they don't already exist in core Filament configuration.
+Groups are only added if the core does not define them already.
 
 ### Policy registration
 
-Register model policies for Filament authorization:
+Map the Eloquent models the resources use to their policies:
 
 ```php
+use Modules\MyModule\Infrastructure\Persistence\Eloquent\Models\GameModel;
+use Modules\MyModule\Policies\GamePolicy;
+
 public function registerPolicies(): array
 {
     return [
-        \Modules\MyModule\Domain\Entities\Game::class => \Modules\MyModule\Policies\GamePolicy::class,
-        \Modules\MyModule\Domain\Entities\Session::class => \Modules\MyModule\Policies\SessionPolicy::class,
+        GameModel::class => GamePolicy::class,
     ];
 }
 ```
@@ -594,28 +648,109 @@ public function registerPolicies(): array
 The panel collects Filament code from enabled, compatible modules:
 - **Resources**: discovered from `modules/{name}/src/Filament/Resources/*Resource.php`
 - **Pages**: the classes returned by `registerFilamentPages()`
-- **Widgets**: the classes returned by `registerFilamentWidgets()`, an optional method the module adds to its provider (it is not declared on `ModuleServiceProvider`)
+- **Widgets**: the classes returned by `registerFilamentWidgets()`, an optional method on the module's provider (it is not declared on `ModuleServiceProvider`)
+
+### Dashboard widgets
+
+```php
+use Modules\MyModule\Filament\Widgets\RegistrationStatsWidget;
+
+public function registerFilamentWidgets(): array
+{
+    return [
+        RegistrationStatsWidget::class,
+    ];
+}
+```
+
+Admins toggle and order dashboard widgets on the dashboard settings page. A table widget reads its row limit with `app(App\Application\Services\DashboardWidgetConfigServiceInterface::class)->getLimit(static::class, 5)`.
+
+---
+
+## Public pages and frontend translations
+
+### Routes and controllers
+
+`module:make` writes `routes/web.php` with the prefix `/my-module` and the route name prefix `my_module.`; `routes/api.php` answers under `/api/my-module/` with names prefixed `my_module.api.`. Public URLs are in Spanish. Put write routes behind the `auth` middleware and authorize in the controller (`Gate::authorize()`): a form request's `authorize()` does not call the policy.
+
+Controllers render Inertia pages by name:
+
+```php
+return Inertia::render('MyModule/GameList', [
+    'games' => $games,
+]);
+```
+
+### Page prefixes
+
+The first segment of the page name is the module's page prefix, which `registerPagePrefixes()` maps to the module (`module:make` registers `<StudlyName>`):
+
+```php
+use App\Application\Modules\DTOs\PagePrefixDTO;
+
+public function registerPagePrefixes(): array
+{
+    return [
+        new PagePrefixDTO(prefix: 'MyModule', module: $this->moduleName()),
+    ];
+}
+```
+
+`MyModule/GameList` resolves to `resources/js/pages/MyModule/GameList.vue` (or `resources/js/pages/GameList.vue`). Module prefixes are checked before the core pages, so never use a prefix that matches a core page directory (`Events`, `Articles`, `Profile`…). Pages wrap their content in the core layout (`import DefaultLayout from '@/layouts/DefaultLayout.vue'`), as `module:make-vue-page` does.
+
+### Shared packages
+
+The site shares `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` with modules through an import map: the module build keeps them external, so a module uses the site's instances. Any other package must be bundled. Imports from `@/` (core components, composables, layouts, types) resolve to the core's `resources/js` and are bundled into the module's build.
+
+### Frontend translations
+
+Texts for pages and components live in `resources/js/locales/es.ts` and `en.ts`, under one top-level key (`module:make` writes `myModule: { title }`):
+
+```typescript
+export default {
+    myModule: {
+        title: 'Mi módulo',
+        games: {
+            empty: 'No hay partidas',
+        },
+    },
+};
+```
+
+Use them as `$t('myModule.games.empty')`. They are merged into the core's messages when the core is built with the module present; for a module installed afterwards, the server parses the files on each request and sends them to the page. That parser only understands a plain object literal: no imports, variables, spreads or computed keys. vue-i18n gives `@`, `{`, `}` and `|` a meaning: write them as literal interpolations (`'info{\'@\'}example.org'`).
 
 ---
 
 ## Slot registration
 
-Slots allow modules to inject Vue components into predefined layout positions on the frontend.
+Slots let modules put Vue components into predefined positions of the public site.
+
+### Slot positions
+
+| Slot | Where |
+|------|-------|
+| `before-header`, `after-header` | Around the site header (`DefaultLayout`) |
+| `before-content`, `after-content` | Around the page content (`DefaultLayout`) |
+| `before-footer`, `after-footer` | Around the site footer (`DefaultLayout`) |
+| `event-detail-actions` | Event detail page |
+| `game-table-registration`, `campaign-detail-actions` | Game table and campaign pages of the game-tables module |
+| `profile-sections` | Tabs of the user profile (uses `profileTab`) |
+
+The core layouts and pages already render these slots: modules only register components.
 
 ### SlotRegistrationDTO fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `slot` | string | Target slot identifier (e.g., `home.sidebar`) |
-| `component` | string | Vue component name |
+| `slot` | string | Slot position (see above) |
+| `component` | string | Path of the component relative to the module's `resources/js`, e.g. `components/UpcomingGames.vue` |
 | `module` | string | Module name (kebab-case) |
 | `order` | int | Sort order (lower = rendered first) |
-| `props` | array | Props passed to the Vue component |
-| `dataKeys` | array | Required Inertia shared data keys |
+| `props` | array | Static props passed to the component |
+| `dataKeys` | array | Inertia page props passed to the component as props of the same name |
+| `profileTab` | array\|null | Tab metadata for the `profile-sections` slot (`tabId`, `icon`, `labelKey`, `badgeKey`, `parentId`) |
 
 ### Registering slot components
-
-Override `registerSlots()` in your ServiceProvider:
 
 ```php
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
@@ -624,55 +759,53 @@ public function registerSlots(): array
 {
     return [
         new SlotRegistrationDTO(
-            slot: 'home.sidebar',
-            component: 'UpcomingGames',
-            module: 'my-module',
+            slot: 'after-header',
+            component: 'components/UpcomingGames.vue',
+            module: $this->moduleName(),
             order: 10,
             props: ['limit' => 5],
             dataKeys: ['upcomingGames'],
-        ),
-        new SlotRegistrationDTO(
-            slot: 'home.featured',
-            component: 'FeaturedGame',
-            module: 'my-module',
-            order: 20,
-            props: [],
-            dataKeys: ['featuredGame'],
         ),
     ];
 }
 ```
 
-### Frontend usage
+### Rendering a slot in a module page
 
-Use the `useModuleSlots` composable in Vue:
-
-```typescript
-import { useModuleSlots } from '@/composables/useModuleSlots';
-
-const { getComponents, hasComponents } = useModuleSlots();
-
-// Get components for a slot
-const sidebarWidgets = getComponents('home.sidebar');
-
-// Check if slot has components
-if (hasComponents('home.sidebar')) {
-  // Render widgets
-}
-```
+A module page can offer a slot of its own with the core's `ModuleSlot` component, as the game-tables pages do:
 
 ```vue
+<script setup lang="ts">
+import ModuleSlot from '@/components/layout/ModuleSlot.vue';
+</script>
+
 <template>
-  <aside v-if="hasComponents('home.sidebar')">
-    <component
-      v-for="widget in getComponents('home.sidebar')"
-      :key="`${widget.module}-${widget.component}`"
-      :is="resolveComponent(widget.component)"
-      v-bind="widget.props"
-    />
-  </aside>
+    <ModuleSlot name="game-table-registration" />
 </template>
 ```
+
+For custom rendering, `useModuleSlots()` returns `moduleSlots`, `getSlotComponents(slot)` and `hasSlotComponents(slot)`. Each item is already resolved: `{ key, component, props, registration }`, with the `dataKeys` merged into `props`.
+
+```vue
+<script setup lang="ts">
+import { useModuleSlots } from '@/composables/useModuleSlots';
+
+const { getSlotComponents, hasSlotComponents } = useModuleSlots();
+</script>
+
+<template>
+    <aside v-if="hasSlotComponents('after-content')">
+        <component
+            :is="item.component"
+            v-for="item in getSlotComponents('after-content')"
+            :key="item.key"
+            v-bind="item.props"
+        />
+    </aside>
+</template>
+```
+
+New slot positions are added to the core (`SlotPosition` in `resources/js/types/slots.ts`).
 
 ---
 
@@ -706,192 +839,97 @@ return Inertia::render('GameTables/Show', [
 
 ## Building module assets
 
-Modules with Vue components need their assets built so they can be loaded at runtime. The build system uses Vite to compile Vue components into optimized bundles.
+Modules with Vue pages or components ship them compiled. Assets are built in CI (or in the node container), never on the site: the PHP containers of the development and production images have no Node.
 
-### Why module builds are needed
+### Build configuration
 
-The main application uses Vite's `import.meta.glob` to discover module components at build time. However, modules installed after the main app build (via Filament admin or manual upload) won't be included in that glob.
+`module:make` writes the same `package.json`, `vite.config.ts` and `tsconfig.json` the shipped modules use. Keep `vite.config.ts` as generated; what the core and the release workflow rely on:
 
-The solution is a **hybrid loading strategy**:
-1. **Build-time glob**: Loads modules present during `npm run build`
-2. **Runtime fallback**: Loads module bundles dynamically from `/build/modules/{moduleName}/`
+- **Entries**: every `.vue` file under `resources/js/components` and `resources/js/pages`, keyed by its path (`resources/js/components/GameCard.vue`), plus `resources/css/module.css` as the `module-styles` entry.
+- **Manifest**: `manifest: 'manifest.json'`, at the root of the output directory (not `.vite/manifest.json`): the site looks for `/build/modules/<name>/manifest.json`.
+- **Output**: inside the host (`modules/<name>` next to the host's `public/`) the build writes to the host's `public/build/modules/<name>/` with `base: '/build/modules/<name>/'`. With `MODULE_STANDALONE_OUTPUT=true`, or outside a host, it writes to the module's own `public/build/` with `base: '/'`; the release workflow builds this way and fails without `public/build/manifest.json`.
+- **Externals**: `vue`, `vue-i18n`, `pinia`, `@inertiajs/vue3` and `@unhead/vue` (the import map, see [Shared packages](#shared-packages)). `@/` imports are bundled from the host's `resources/js`, and only left external in a standalone build.
+- **Plugins**: `@vitejs/plugin-vue` and `@tailwindcss/vite`.
 
-### Module build configuration
+`package.json` declares `@tailwindcss/vite`, `@vitejs/plugin-vue`, `typescript`, `vite` and `vue` as dev dependencies, with the `build` (`vite build`) and `build:watch` scripts. Run `npm install` in the node container and commit `package-lock.json`: building the production image with modules runs `npm ci` in each of them.
 
-Each module with Vue components needs three files:
-
-**package.json** - Dependencies for building:
-
-```json
-{
-    "name": "@guildforge/module-my-module",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "build": "vite build"
-    },
-    "devDependencies": {
-        "@vitejs/plugin-vue": "^5.2.0",
-        "vite": "^6.0.0",
-        "vue": "^3.5.0"
-    }
-}
-```
-
-**vite.config.ts** - Build configuration:
-
-```typescript
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import { resolve } from 'path';
-import { readdirSync, statSync, existsSync } from 'fs';
-
-const MODULE_NAME = 'my-module';
-
-function discoverComponents(dir: string): Record<string, string> {
-    if (!existsSync(dir)) {
-        return {};
-    }
-
-    const entries: Record<string, string> = {};
-
-    function scanDir(currentDir: string, prefix = ''): void {
-        const files = readdirSync(currentDir);
-
-        for (const file of files) {
-            const filePath = resolve(currentDir, file);
-            const stat = statSync(filePath);
-
-            if (stat.isDirectory()) {
-                scanDir(filePath, prefix ? `${prefix}/${file}` : file);
-            } else if (file.endsWith('.vue')) {
-                const relativePath = prefix ? `${prefix}/${file}` : file;
-                entries[`resources/js/components/${relativePath}`] = filePath;
-            }
-        }
-    }
-
-    scanDir(dir);
-    return entries;
-}
-
-const componentsDir = resolve(__dirname, 'resources/js/components');
-const componentEntries = discoverComponents(componentsDir);
-
-export default defineConfig({
-    plugins: [vue()],
-    build: {
-        outDir: `../../public/build/modules/${MODULE_NAME}`,
-        emptyOutDir: true,
-        manifest: true,
-        rollupOptions: {
-            input: componentEntries,
-            output: {
-                entryFileNames: 'assets/[name]-[hash].js',
-                chunkFileNames: 'assets/[name]-[hash].js',
-                assetFileNames: 'assets/[name]-[hash].[ext]',
-            },
-            external: ['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3'],
-        },
-    },
-    resolve: {
-        alias: {
-            '@': resolve(__dirname, 'resources/js'),
-        },
-    },
-});
-```
-
-**tsconfig.json** - TypeScript configuration:
-
-```json
-{
-    "compilerOptions": {
-        "target": "ESNext",
-        "module": "ESNext",
-        "moduleResolution": "bundler",
-        "strict": true,
-        "jsx": "preserve",
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "esModuleInterop": true,
-        "skipLibCheck": true,
-        "paths": {
-            "@/*": ["./resources/js/*"]
-        },
-        "types": ["vite/client"]
-    },
-    "include": ["resources/js/**/*"],
-    "exclude": ["node_modules"]
-}
-```
-
-### Building module assets
-
-**Using artisan command:**
+### Building in development
 
 ```bash
-# Build a specific module
-php artisan module:build my-module
-
-# Build all modules with Vue components
-php artisan module:build --all
-
-# Force rebuild even if assets exist
-php artisan module:build my-module --force
+docker exec guildforge_node sh -c 'cd modules/my-module && npm install && npm run build'
 ```
 
-**Manual build:**
+The assets land in `public/build/modules/my-module/`. With the Vite dev server running (`make up` starts it), the site loads module pages and slot components from their sources with hot reload, so a build is only needed to try the built output.
+
+To reproduce the release output (the module's own `public/build/`):
 
 ```bash
-cd modules/my-module
-npm install
-npm run build
+docker exec -e MODULE_STANDALONE_OUTPUT=true guildforge_node sh -c 'cd modules/my-module && npm run build'
 ```
 
-### Automatic builds
+`make module-zip` builds that output and packages the module as the release workflow does (see [Releasing a module](#releasing-a-module)).
 
-When a module is enabled via `php artisan module:enable` or the Filament admin panel, its assets are automatically built if:
-- The module has a `package.json` file
-- The module has Vue components in `resources/js/components/`
-- The build output doesn't already exist (or `--force` is used)
+`php artisan module:build` and the listener that builds a module when it is enabled run npm inside the PHP process. Neither PHP image has npm, so in both they only log a failure.
 
-The build listener is queued, so asset compilation happens asynchronously.
+### How assets reach a site
 
-### Build output structure
-
-After building, assets are placed in:
+The release ZIP carries the compiled assets in `public/build/`. Installing the ZIP, updating the module and `php artisan module:publish-build-assets` (run on every start of the production container) copy them to `public/build/modules/<name>/`:
 
 ```
 public/build/modules/my-module/
-├── .vite/
-│   └── manifest.json    # Maps component paths to built assets
+├── manifest.json        # Maps source paths to built files
 └── assets/
-    ├── ComponentName-[hash].js
-    └── ComponentName-[hash].css
+    ├── GameCard-[hash].js
+    ├── module-styles-[hash].css
+    └── …
 ```
 
-The `manifest.json` is used by `useModuleSlots` composable to resolve component paths at runtime.
+### Loading flow
 
-### Component loading flow
-
-1. **Page loads** → `useModuleSlots` checks registered slots
-2. **For each slot component**:
-   - Try build-time glob first (fastest)
-   - If not found, fetch `/build/modules/{module}/.vite/manifest.json`
-   - Resolve component path from manifest
-   - Load component dynamically via `import()`
-3. **Component renders** with props from slot registration
+1. A page or slot names a module component (`components/GameCard.vue`) or page (`MyModule/GameList`).
+2. On a built site, the browser fetches `/build/modules/<module>/manifest.json`, finds `resources/js/<path>` in it and imports the built file. Under the dev server, slot components and pages come from the sources instead; pages also come from the core bundle when the core was built with the module present.
+3. The module's CSS (the `module-styles` entry and any CSS attached to the loaded chunk) is added to the document once.
+4. The component renders with the props of its registration.
 
 ---
 
 ## Tailwind CSS in modules
 
-Modules have two options for styling: using the core safelist utilities (recommended) or adding custom module CSS. This section is about the public frontend: panel code cannot bring its own CSS (see [Panel code for core 3](#panel-code-for-core-3-filament-5)).
+This section is about the public site: panel code cannot bring its own CSS (see [Panel code for core 3](#panel-code-for-core-3-filament-5)).
 
-### Using core safelist utilities (recommended)
+The core stylesheet never sees module sources: `src/modules/*` is ignored by Git, so Tailwind skips it, and modules are absent when CI builds the core. A class a module uses only exists on a built site if the core's own sources or its safelist already produce it, or if the module compiles it. The dev server hides the problem, because it generates classes on the fly.
 
-The core CSS includes an expanded safelist of common Tailwind utilities. Modules can use these classes in dynamic bindings without any additional configuration.
+### Module stylesheet
+
+Every module with a frontend ships `resources/css/module.css` (written by `module:make`) as the `module-styles` build entry:
+
+```css
+@import 'tailwindcss/theme' theme(reference);
+@import 'tailwindcss/utilities';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme reference {
+    /* Mirror of the core's colour tokens (page, surface, primary-*, accent-*,
+       neutral-*, success, error…), each pointing at the variable the core defines */
+    --color-surface: var(--color-bg-surface);
+    /* … */
+}
+
+@source '../js/**/*.vue';
+@source '../js/**/*.ts';
+```
+
+- `theme(reference)` and `@theme reference` reference the core's palette without re-emitting it, so the file only holds the utilities the module's own sources use, pointing at the core's variables.
+- `@custom-variant dark` makes `dark:` follow the core's `.dark` class.
+- Do not `@import 'tailwindcss'`: it would emit preflight and the default theme again.
+- Keep the token list in sync with the core's `resources/css/app.css` (the generated file mirrors it).
+
+The site adds the stylesheet when it loads a module page or slot component (see [Loading flow](#loading-flow)).
+
+### Core safelist
+
+The core also safelists common utilities and the semantic design tokens, at a cost of +15-25KB gzipped CSS shared by all modules. These classes exist without the module stylesheet, including in dynamic bindings.
 
 **Available utility categories:**
 
@@ -967,104 +1005,15 @@ const gridClasses = computed(() => [
 </template>
 ```
 
-### Custom module CSS (optional)
-
-For utilities not in the safelist, modules can include custom CSS that gets auto-injected when the module loads.
-
-**How it works:**
-
-1. CSS files referenced in the module's Vite manifest are automatically injected
-2. The `useModuleSlots` composable handles injection when loading module components
-3. CSS is loaded once and cached (no duplicate injections)
-
-**Setup:**
-
-1. Create `resources/css/module.css` in your module
-2. Add Tailwind plugin to `vite.config.ts`
-3. Add CSS as an entry point in the build config
-
-**vite.config.ts with CSS:**
-
-```typescript
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import tailwindcss from '@tailwindcss/vite';
-
-export default defineConfig({
-    plugins: [vue(), tailwindcss()],
-    build: {
-        outDir: `../../public/build/modules/${MODULE_NAME}`,
-        emptyOutDir: true,
-        manifest: true,
-        rollupOptions: {
-            input: {
-                // Components
-                'components/MyWidget': 'resources/js/components/MyWidget.vue',
-                // CSS entry (will be auto-injected)
-                'styles': 'resources/css/module.css',
-            },
-            external: ['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3'],
-        },
-    },
-});
-```
-
-**resources/css/module.css:**
-
-```css
-@import 'tailwindcss';
-
-/* Only include utilities NOT in core safelist */
-@source '../js/components/**/*.vue';
-
-/* Module-specific custom styles */
-.my-module-special-effect {
-    /* Custom animation or complex styling */
-}
-```
-
-### When to use custom CSS
-
-| Use case | Recommendation |
-|----------|----------------|
-| Standard layouts, spacing, typography | Use core safelist ✓ |
-| Status colors (success, error, warning) | Use core safelist ✓ |
-| Semantic backgrounds (surface, page) | Use core safelist ✓ |
-| Common responsive patterns | Use core safelist ✓ |
-| Uncommon utilities (e.g., `skew-12`, `blur-3xl`) | Add custom CSS |
-| Module-specific design tokens | Add custom CSS |
-| Complex animations | Add custom CSS |
-| Utilities with arbitrary values | Add custom CSS |
-
-**Note:** The core safelist adds ~25KB gzipped CSS as a one-time cost shared by all modules. Custom module CSS adds to the per-module bundle size, so prefer the safelist when possible.
-
-### CSS injection flow
-
-```
-Module component requested
-        ↓
-useModuleSlots.resolveComponent()
-        ↓
-injectModuleStyles() called (non-blocking)
-        ↓
-Fetch module manifest if not cached
-        ↓
-For each CSS path in manifest:
-    - Check if already injected (Set lookup)
-    - If not, create <link> element
-    - Append to document.head
-    - Mark as injected
-        ↓
-Component loads and renders
-```
+Anything outside the safelist (arbitrary values, uncommon utilities, variants not listed above) relies on the module stylesheet.
 
 ---
 
 ## Module installation
 
-### Installing from Filament admin
+### Installing from the admin panel
 
-Navigate to **Settings > Modules** in the Filament admin panel. Use the "Install module" button to upload a ZIP file.
+In *Administración → Módulos* (admins only), with maintenance mode on, use *Instalar / actualizar* to upload the release ZIP. A ZIP of a module that is already installed updates it. Updates from GitHub releases are covered in [Updating installed modules](../module-ci-cd.md#updating-installed-modules).
 
 ### Programmatic installation
 
@@ -1074,87 +1023,122 @@ use App\Application\Modules\Services\ModuleInstallerInterface;
 $moduleInstaller = app(ModuleInstallerInterface::class);
 $manifest = $moduleInstaller->installFromZip($uploadedFile);
 
-// $manifest contains the parsed module.json data
+// $manifest is the parsed module.json
 echo "Installed: {$manifest->name} v{$manifest->version}";
 ```
 
-### Uninstallation process
+### Uninstallation
 
 ```php
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 
 $moduleManager = app(ModuleManagerServiceInterface::class);
-$moduleManager->uninstall(new ModuleName('my-module'));
+$moduleManager->uninstall(new ModuleName('my-module'), deleteData: false);
 ```
 
-**Uninstallation steps:**
-1. Verify no dependent modules are enabled (fails otherwise)
-2. Revert all module migrations
-3. Delete the module directory
-4. Remove database record
-5. Dispatch `ModuleUninstalled` event
+Steps:
+1. Fail if an enabled module depends on it.
+2. Disable it.
+3. Only with `deleteData: true`: roll back its migrations, forget which seeders ran and delete its saved settings.
+4. Delete the module directory.
+5. Delete its database record.
+6. Dispatch `ModuleUninstalled`; the menu items that carry the module's name are deleted.
 
-### Installation events
+### Module events
 
-| Event | Fields | Description |
-|-------|--------|-------------|
-| `ModuleInstalled` | moduleName, moduleVersion, modulePath | Dispatched after successful installation |
-| `ModuleUninstalled` | moduleName | Dispatched after successful uninstallation |
+| Event | Fields | Dispatched |
+|-------|--------|------------|
+| `ModuleInstalled` | moduleName, moduleVersion, modulePath | After a ZIP installation |
+| `ModuleUpdated` | moduleName, previousVersion, newVersion, modulePath | After an update from a ZIP (updates from GitHub releases do not dispatch it) |
+| `ModuleEnabled` | moduleId, moduleName | After enabling |
+| `ModuleDisabled` | moduleId, moduleName | After disabling |
+| `ModuleUninstalled` | moduleName, moduleVersion | After uninstalling |
+
+All live in `App\Domain\Modules\Events`.
 
 ---
 
 ## Testing modules
 
+### Running module tests
+
+Module tests run inside the host application with the module's own `phpunit.xml`; `php artisan test` only runs the host's suites and never the modules'.
+
+```bash
+docker exec guildforge_app vendor/bin/phpunit -c modules/my-module/phpunit.xml
+```
+
+`module:make` writes `phpunit.xml` as the shipped modules have it: it boots `../../vendor/autoload.php`, runs the `tests/Unit`, `tests/Integration` and `tests/Feature` suites on SQLite in memory, and its `APP_CONFIG_CACHE`/`APP_ROUTES_CACHE`/`APP_EVENTS_CACHE` block keeps tests away from the bootstrap caches of the container. Keep that block. The release workflow runs the same file (see [Releasing a module](#releasing-a-module)).
+
 ### Using ModuleTestCase
 
-Extend `ModuleTestCase` for module-specific tests:
+Feature tests extend `Tests\Support\Modules\ModuleTestCase`. With `$autoEnableModule`, every test discovers the modules and enables this one (through the same compatibility check as a site) and boots its provider:
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Modules\MyModule\Tests\Feature;
+namespace Modules\MyModule\Tests\Feature\Http\Controllers;
 
+use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\Support\Modules\ModuleTestCase;
 
-final class GameTest extends ModuleTestCase
+final class GameControllerTest extends ModuleTestCase
 {
     protected ?string $moduleName = 'my-module';
+
     protected bool $autoEnableModule = true;
 
-    public function test_it_can_list_games(): void
+    #[Test]
+    public function it_lists_the_games(): void
     {
-        $this->assertModuleEnabled('my-module');
-
-        $response = $this->get(route('my_module.games.index'));
-
-        $response->assertOk();
+        $this->get(route('my_module.games.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('MyModule/GameList', false));
     }
 }
 ```
 
-### Using InteractsWithModules trait
+- Since core 3.6.0, `enableModule()` refreshes the router's name lookups, so `route()` finds the module's routes. Against an older core, request the URL (`$this->get('/my-module/games')`).
+- Pass `false` as the second argument of `component()`: module pages are not in the host's pages directory.
+- The module's `module.json` must accept the core the tests run on, or `setUp()` fails with `ModuleIncompatibleException`.
 
-For more control, use the trait directly:
+### Testing panel code
+
+The panel is built before a test enables the module, so its resources and pages are not registered. `Tests\Support\Modules\InteractsWithModulePanel` puts them on the panel:
 
 ```php
-use Tests\Support\Modules\InteractsWithModules;
+use Livewire\Livewire;
+use Tests\Support\Modules\InteractsWithModulePanel;
+use Tests\Support\Modules\ModuleTestCase;
 
-final class MyTest extends TestCase
+final class GameResourceTest extends ModuleTestCase
 {
-    use InteractsWithModules;
+    use InteractsWithModulePanel;
 
-    public function test_scaffolding(): void
+    protected ?string $moduleName = 'my-module';
+
+    protected bool $autoEnableModule = true;
+
+    protected function setUp(): void
     {
-        $result = $this->createTestModule('test-module');
+        parent::setUp();
 
-        $this->assertScaffoldSuccess($result);
-        $this->assertModuleFileExists('test-module', 'module.json');
+        $this->registerOnAdminPanel([GameResource::class]);
+        $this->actingAsPanelAdmin();
+    }
+
+    public function test_the_list_page_renders(): void
+    {
+        Livewire::test(ListGames::class)->assertOk();
     }
 }
 ```
+
+`module:make-test my-module Game --filament` generates a test of this shape.
 
 ---
 
@@ -1169,19 +1153,24 @@ final class MyTest extends TestCase
 ### 2. Use translations
 
 ```php
-// In PHP
-__('my_module::messages.created')
+// In PHP: the kebab-case module namespace
+__('my-module::messages.created')
+```
 
-// In Vue
-$t('my_module.messages.created')
+```vue
+<!-- In Vue: the top-level key of resources/js/locales/es.ts -->
+{{ $t('myModule.messages.created') }}
 ```
 
 ### 3. Prefix database tables
 
-Use module name as prefix:
+Name tables `my_module_*` (or `mymodule_*`): migrations that touch any other table are refused (see [Database](#database)).
 
 ```php
-$table->uuid('id')->primary();  // Table: my_module_games
+Schema::create('my_module_games', function (Blueprint $table): void {
+    $table->uuid('id')->primary();
+    // …
+});
 ```
 
 ### 4. Register Filament resources
@@ -1201,54 +1190,47 @@ Declare dependencies in `module.json`:
 }
 ```
 
-### 6. Use helper functions
+### 6. Read configuration and translations directly
 
 ```php
-// Get module path
-module_path('my-module', 'config/module.php');
+// config/module.php, loaded by parent::register()
+config('modules.my-module.setting_key');
 
-// Get module config
-module_config('my-module', 'setting_key');
+// Panel settings (defaults with the saved values on top)
+config('modules.settings.my-module.max_items');
 
-// Check if module is enabled
-module_enabled('my-module');
-
-// Get module translation
-module_trans('my-module', 'messages.success');
+// Translations
+__('my-module::messages.success');
 ```
 
-### 7. Use the Module facade
+The helpers in `app/Modules/helpers.php`:
 
-```php
-use App\Modules\Facades\Module;
+| Helper | What it does |
+|--------|--------------|
+| `module_path('my-module', 'config')` | Absolute path inside the module |
+| `module_enabled('my-module')` | Whether the module is enabled |
+| `module_route('my-module', 'games.index')` | URL of the route `my_module.games.index` (snake_case module prefix, as `module:make` names routes) |
+| `module_asset('my-module', 'img/logo.png')` | URL of `public/modules/my-module/img/logo.png`, which `module:publish-assets` copies from the module's `resources/assets` |
+| `module_config()`, `module_trans()` | Read `config('modules.<name>.<key>')` and the `<name>::` translation namespace the base provider registers, falling back to the snake_case `<snake_name>` key and namespace for modules written against earlier versions. `config()` and `__()` as above do the same without the helper |
+| `module()` | Without an argument, the module context service; `module('my-module')` makes that module the current one. `App\Modules\Facades\Module` is the same service (`Module::config()` behaves like `module_config()`) |
 
-// Set current context
-Module::setCurrent('my-module');
-
-// Get config for current module
-$value = Module::config('key');
-
-// Get path for current module
-$path = Module::path('src');
-```
-
-### 8. Use domain events for side effects
+### 7. Use domain events for side effects
 
 Don't put email sending or cascading updates in services. Use events and listeners instead:
 
 ```php
-// Bad: Side effects in service
+// Bad: side effects in the service
 public function createRegistration(CreateRegistrationDTO $dto): Registration
 {
     $registration = $this->repository->save($registration);
 
-    // Don't do this - couples registration logic to email
+    // Couples registration logic to email
     Mail::to($user)->send(new RegistrationConfirmation($registration));
 
     return $registration;
 }
 
-// Good: Dispatch event, let listeners handle side effects
+// Good: dispatch an event, let listeners handle side effects
 public function createRegistration(CreateRegistrationDTO $dto): Registration
 {
     $registration = $this->repository->save($registration);
@@ -1263,21 +1245,21 @@ public function createRegistration(CreateRegistrationDTO $dto): Registration
 }
 ```
 
-### 9. Validate state transitions in entities
+### 8. Validate state transitions in entities
 
 Don't allow invalid state changes. Use enums with `canTransitionTo()`:
 
 ```php
-// Bad: No validation
+// Bad: no validation
 public function cancel(): void
 {
     $this->status = RegistrationStatus::Cancelled; // What if already attended?
 }
 
-// Good: Validate transition
+// Good: validate the transition
 public function cancel(): void
 {
-    if (!$this->status->canTransitionTo(RegistrationStatus::Cancelled)) {
+    if (! $this->status->canTransitionTo(RegistrationStatus::Cancelled)) {
         throw InvalidStateTransitionException::fromTo(
             $this->status->value,
             RegistrationStatus::Cancelled->value,
@@ -1289,14 +1271,14 @@ public function cancel(): void
 }
 ```
 
-### 10. Register Livewire components for RelationManagers
+### 9. Register Livewire components for RelationManagers
 
-Without this, RelationManagers won't work:
+Without this, RelationManagers don't work:
 
 ```php
 private function registerLivewireComponents(): void
 {
-    if (!class_exists(Livewire::class)) {
+    if (! class_exists(Livewire::class)) {
         return;
     }
 
@@ -1307,12 +1289,12 @@ private function registerLivewireComponents(): void
 }
 ```
 
-### 11. Use `register()` for model extensions
+### 10. Use `register()` for model extensions
 
 Dynamic relationships must be registered before Filament boots:
 
 ```php
-// Bad: In boot() - too late, Filament already initialized
+// Bad: in boot(), too late, Filament is already initialized
 public function boot(): void
 {
     EventModel::resolveRelationUsing('registrations', function ($model) {
@@ -1320,7 +1302,7 @@ public function boot(): void
     });
 }
 
-// Good: In register() - before Filament boots
+// Good: in register(), before Filament boots
 public function register(): void
 {
     parent::register();
@@ -1332,7 +1314,6 @@ public function register(): void
 ```
 
 ---
-
 ## Extending core functionality
 
 Modules can extend core entities, Filament resources, and add new relationships without modifying core code.
@@ -1374,7 +1355,7 @@ Add RelationManagers to existing core Resources using the `HasExtendableRelation
 ```php
 use App\Filament\Resources\EventResource;
 use Livewire\Livewire;
-use Modules\MyModule\Filament\Resources\EventResource\RelationManagers\RegistrationsRelationManager;
+use Modules\MyModule\Filament\RelationManagers\RegistrationsRelationManager;
 
 public function boot(): void
 {
@@ -1396,7 +1377,7 @@ private function registerFilamentExtensions(): void
 
 private function registerLivewireComponents(): void
 {
-    if (!class_exists(Livewire::class)) {
+    if (! class_exists(Livewire::class)) {
         return;
     }
 
@@ -1421,27 +1402,32 @@ The `HasExtendableRelations` trait automatically filters out RelationManagers wh
 
 ### Extending Filament form sections
 
-Add form sections to existing Resources using the `HasExtendableFormSections` trait:
+Add form sections to a core resource with the `HasExtendableFormSections` trait:
 
 ```php
-use App\Filament\Resources\EventResource\Pages\EditEvent;
+use App\Filament\Resources\EventResource;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
 
 private function registerFilamentExtensions(): void
 {
-    if (class_exists(EditEvent::class)) {
-        EditEvent::extendFormSections([
-            Section::make(__('my_module::labels.registration_settings'))
+    if (class_exists(EventResource::class)) {
+        EventResource::extendFormSections([
+            Section::make(__('my-module::labels.registration_settings'))
                 ->schema([
                     Toggle::make('registration_enabled')
-                        ->label(__('my_module::labels.allow_registration')),
+                        ->label(__('my-module::labels.allow_registration')),
                     TextInput::make('max_registrations')
                         ->numeric()
-                        ->label(__('my_module::labels.capacity')),
-                ])
+                        ->label(__('my-module::labels.capacity')),
+                ]),
         ]);
     }
 }
 ```
+
+`EventResource` is the only core resource that uses `HasExtendableRelations` and `HasExtendableFormSections`.
 
 ---
 
@@ -1478,7 +1464,7 @@ final class RegistrationCreated
 
 **Scaffolding command:**
 ```bash
-php artisan module:make-event my-module RegistrationCreated
+docker exec guildforge_app php artisan module:make-event my-module RegistrationCreated
 ```
 
 ### Creating event listeners
@@ -1528,8 +1514,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 
 final class ProcessHeavyTask implements ShouldQueue
 {
-    public string $queue = 'listeners';
-
     public function handle(RegistrationCreated $event): void
     {
         // Heavy processing logic
@@ -1542,13 +1526,15 @@ final class ProcessHeavyTask implements ShouldQueue
 }
 ```
 
+The queue workers of the development and production images only consume the default queue: leave `$queue` unset. A listener sent to another queue (`public string $queue = 'listeners';`) is never run.
+
 **Scaffolding commands:**
 ```bash
 # Synchronous (default)
-php artisan module:make-listener my-module SendRegistrationConfirmation --event=RegistrationCreated
+docker exec guildforge_app php artisan module:make-listener my-module SendRegistrationConfirmation --event=RegistrationCreated
 
 # Queued (async)
-php artisan module:make-listener my-module ProcessHeavyTask --event=RegistrationCreated --queued
+docker exec guildforge_app php artisan module:make-listener my-module ProcessHeavyTask --event=RegistrationCreated --queued
 ```
 
 ### Creating notifications
@@ -1584,16 +1570,16 @@ final class RegistrationConfirmation extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage())
-            ->subject(__('my_module::emails.registration_confirmation.subject'))
-            ->greeting(__('my_module::emails.registration_confirmation.greeting'))
-            ->line(__('my_module::emails.registration_confirmation.intro'));
+            ->subject(__('my-module::emails.registration_confirmation.subject'))
+            ->greeting(__('my-module::emails.registration_confirmation.greeting'))
+            ->line(__('my-module::emails.registration_confirmation.intro'));
     }
 }
 ```
 
 **Scaffolding command:**
 ```bash
-php artisan module:make-notification my-module RegistrationConfirmation
+docker exec guildforge_app php artisan module:make-notification my-module RegistrationConfirmation
 ```
 
 ### Registering event listeners
@@ -1688,11 +1674,11 @@ enum RegistrationStatus: string
     public function label(): string
     {
         return match($this) {
-            self::Pending => __('my_module::states.pending'),
-            self::Confirmed => __('my_module::states.confirmed'),
-            self::Cancelled => __('my_module::states.cancelled'),
-            self::Attended => __('my_module::states.attended'),
-            self::NoShow => __('my_module::states.no_show'),
+            self::Pending => __('my-module::states.pending'),
+            self::Confirmed => __('my-module::states.confirmed'),
+            self::Cancelled => __('my-module::states.cancelled'),
+            self::Attended => __('my-module::states.attended'),
+            self::NoShow => __('my-module::states.no_show'),
         };
     }
 
@@ -1714,7 +1700,7 @@ enum RegistrationStatus: string
 
 **Scaffolding command:**
 ```bash
-php artisan module:make-enum my-module RegistrationStatus
+docker exec guildforge_app php artisan module:make-enum my-module RegistrationStatus
 ```
 
 ### Using state machines in entities
@@ -1736,7 +1722,7 @@ final class Registration
     {
         $newStatus = RegistrationStatus::Confirmed;
 
-        if (!$this->status->canTransitionTo($newStatus)) {
+        if (! $this->status->canTransitionTo($newStatus)) {
             throw InvalidStateTransitionException::fromTo(
                 $this->status->value,
                 $newStatus->value,
@@ -1751,7 +1737,7 @@ final class Registration
     {
         $newStatus = RegistrationStatus::Cancelled;
 
-        if (!$this->status->canTransitionTo($newStatus)) {
+        if (! $this->status->canTransitionTo($newStatus)) {
             throw InvalidStateTransitionException::fromTo(
                 $this->status->value,
                 $newStatus->value,
@@ -1766,7 +1752,7 @@ final class Registration
     {
         $newStatus = RegistrationStatus::Attended;
 
-        if (!$this->status->canTransitionTo($newStatus)) {
+        if (! $this->status->canTransitionTo($newStatus)) {
             throw InvalidStateTransitionException::fromTo(
                 $this->status->value,
                 $newStatus->value,
@@ -1792,6 +1778,14 @@ final class Registration
 
 ---
 
+## Releasing a module
+
+Releases are built by the reusable workflow in the host repository, which `.github/workflows/release.yml` (written by `module:make`) calls when a `v*.*.*` tag is pushed. It validates `module.json`, runs the module's tests inside the host, builds the assets with `MODULE_STANDALONE_OUTPUT=true` and publishes the ZIP, its checksum and `module.json`. See [CI/CD for module distribution](../module-ci-cd.md).
+
+To build the same ZIP locally, run `make module-zip` on the host and pick the module: it writes `dist/<name>-<version>.zip` and its `.sha256`.
+
+---
+
 ## Quick reference
 
 ### Management commands
@@ -1799,48 +1793,57 @@ final class Registration
 | Command | Description |
 |---------|-------------|
 | `module:list` | List all modules |
-| `module:discover` | Scan for new modules |
-| `module:enable {module}` | Enable a module (runs migrations and seeders on first install) |
-| `module:enable {module} --seed` | Enable and force run seeders |
+| `module:discover` | Register the modules found on disk |
+| `module:enable {module}` | Enable a module (runs migrations and seeders the first time) |
+| `module:enable {module} --migrate --seed` | Enable and run pending migrations and seeders |
 | `module:disable {module}` | Disable a module |
 | `module:migrate {module}` | Run module migrations |
-| `module:seed {module}` | Run module seeders |
-| `module:build {module}` | Build module Vue assets |
-| `module:build --all` | Build all modules with Vue components |
-| `module:publish-assets` | Publish module assets |
+| `module:migrate {module} --rollback [--step=N]` | Roll back module migrations |
+| `module:seed {module}` | Run the seeders that have not run yet |
+| `module:publish-assets [module] [--all]` | Copy `resources/assets` to `public/modules/<name>` |
+| `module:publish-build-assets` | Copy every module's `public/build` to `public/build/modules/<name>` |
+| `module:build {module} [--all] [--force]` | Build Vue assets with npm in the PHP process (needs npm there) |
+| `module:check-updates [--force]` | Check GitHub for module updates (`--force` ignores the cache) |
+| `module:update [name] [--all] [--dry-run] [--force]` | Update a module or all modules |
+| `module:set-source {name} {owner/repo}` | Set the repository a module is updated from |
+| `module:sync-from-image {path}` | Sync modules from the Docker image, keeping modules updated from a ZIP |
 
 ### Scaffolding commands
 
 | Command | Description |
 |---------|-------------|
-| `module:make {name}` | Create new module |
-| `module:make-entity {module} {name}` | Create entity |
-| `module:make-controller {module} {name}` | Create controller |
-| `module:make-request {module} {name}` | Create form request |
-| `module:make-service {module} {name}` | Create service |
-| `module:make-dto {module} {name}` | Create DTO |
-| `module:make-migration {module} {name}` | Create migration |
-| `module:make-test {module} {name}` | Create test |
-| `module:make-filament-resource {module} {name}` | Create Filament resource |
-| `module:make-relation-manager {module} {name}` | Create Filament RelationManager |
-| `module:make-widget {module} {name}` | Create Filament Widget |
-| `module:make-enum {module} {name}` | Create enum |
-| `module:make-event {module} {name}` | Create domain event |
-| `module:make-listener {module} {name}` | Create event listener (`--queued` for async) |
-| `module:make-notification {module} {name}` | Create notification |
-| `module:make-vue-page {module} {name}` | Create Vue page |
-| `module:make-vue-component {module} {name}` | Create Vue component |
+| `module:make {name} [--display-name=] [--description=] [--author=] [--repository=]` | Create a module |
+| `module:make-entity {module} {name} [--migration]` | Entity, ID value object, repository interface, model and repository |
+| `module:make-controller {module} {name} [--resource\|--api\|--invokable]` | Controller |
+| `module:make-request {module} {name}` | Form request |
+| `module:make-service {module} {name} [--interface]` | Service |
+| `module:make-dto {module} {name} [--response]` | DTO |
+| `module:make-migration {module} {name} [--create=] [--table=]` | Migration |
+| `module:make-test {module} {name} [--unit\|--dto\|--feature\|--filament]` | Test (`--unit` is the default) |
+| `module:make-filament-resource {module} {name}` | Filament resource and policy |
+| `module:make-relation-manager {module} {name} [--resource=]` | Filament RelationManager for a core resource |
+| `module:make-widget {module} {name}` | Filament widget |
+| `module:make-enum {module} {name}` | Enum |
+| `module:make-event {module} {name}` | Domain event |
+| `module:make-listener {module} {name} [--event=] [--queued]` | Event listener |
+| `module:make-notification {module} {name}` | Notification |
+| `module:make-vue-page {module} {name}` | Vue page and its types |
+| `module:make-vue-component {module} {name}` | Vue component |
 
 ### ServiceProvider methods
 
 | Method | Returns | Description |
 |--------|---------|-------------|
+| `moduleName()` | `string` | Kebab-case module name (abstract, required) |
 | `registerPermissions()` | `PermissionDTO[]` | Module permissions |
-| `registerNavigation()` | `NavigationItemDTO[]` | Navigation items |
-| `registerNavigationGroups()` | `array` | Filament navigation groups |
-| `registerPolicies()` | `array` | Model to policy mappings |
+| `registerNavigation()` | `NavigationItemDTO[]` | Panel navigation items (never copied into the public menu) |
+| `registerRoutes()` | `ModuleRouteDTO[]` | Public pages offered in the menu editor |
+| `registerPagePrefixes()` | `PagePrefixDTO[]` | Inertia page prefixes of the module |
 | `registerSlots()` | `SlotRegistrationDTO[]` | Slot component registrations |
-| `registerFilamentPages()` | `Page[]` (class names) | Filament pages |
-| `getSettingsSchema()` | `Component[]` | Filament form schema for settings |
-| `onEnable()` | `void` | Called when module is enabled |
-| `onDisable()` | `void` | Called when module is disabled |
+| `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Sources of public calendar entries |
+| `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |
+| `registerNavigationGroups()` | `array` | Filament navigation groups |
+| `registerFilamentPages()` | `class-string<Page>[]` | Filament pages |
+| `registerFilamentWidgets()` | `class-string<Widget>[]` | Dashboard widgets (optional method, not declared on the base class) |
+| `getSettingsSchema()` | `Filament\Schemas\Components\Component[]` | Form schema of the module settings page |
+| `onEnable()`, `onDisable()` | `void` | Declared, but never called by the core |

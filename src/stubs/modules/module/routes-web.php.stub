@@ -6,15 +6,16 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| {{ moduleNameStudly }} Web Routes
+| Web routes of the {{ moduleName }} module
 |--------------------------------------------------------------------------
 |
-| Web routes for the {{ moduleNameStudly }} module.
+| The module loader already applies the "web" middleware. Public URL
+| segments are shown to visitors: translate them to Spanish (e.g. "mesas").
 |
 */
 
 Route::prefix('{{ moduleName }}')
     ->name('{{ moduleNameSnake }}.')
     ->group(function (): void {
-        // Define your web routes here
+        // Route::get('items', [ItemController::class, 'index'])->name('items.index');
     });

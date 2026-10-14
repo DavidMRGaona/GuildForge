@@ -101,7 +101,7 @@ jobs:
           RE="^ *${AND}( *[|][|] *${AND})* *\$"
 
           if ! jq -e '.requires | type == "object" and has("core")' module.json > /dev/null; then
-            echo "::error::requires.core is required in module.json (e.g. \"^2.6\")"
+            echo "::error::requires.core is required in module.json (e.g. \"^3.6\")"
             exit 1
           fi
 
@@ -323,7 +323,7 @@ jobs:
             ## Instalación
 
             1. Descarga `${{ inputs.module_name }}-${{ needs.validate.outputs.version }}.zip`
-            2. Ve al panel de administración → Módulos → Instalar desde ZIP
+            2. Ve al panel de administración → Módulos → Instalar / actualizar
             3. Sube el archivo ZIP
 
             ## Verificación

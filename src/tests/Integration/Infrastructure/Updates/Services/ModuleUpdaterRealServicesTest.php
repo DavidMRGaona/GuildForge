@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Updates\DTOs\HealthCheckResultDTO;
 use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
@@ -62,6 +63,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $this->tempDir = sys_get_temp_dir().'/gf-real-update-'.bin2hex(random_bytes(8));
         $this->modulesPath = $this->tempDir.'/modules';
         File::ensureDirectoryExists("{$this->modulesPath}/real-mod/src");
+        File::ensureDirectoryExists("{$this->modulesPath}/real-mod/config");
         File::put("{$this->modulesPath}/real-mod/module.json", (string) json_encode(['name' => 'real-mod', 'version' => '1.0.0-beta', 'requires' => ['core' => '>=2.0']]));
 
         config([
@@ -117,11 +119,42 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         );
     }
 
-    private function updater(bool $healthy): ModuleUpdater
+    public function test_panel_settings_survive_an_update(): void
+    {
+        File::put("{$this->modulesPath}/real-mod/config/settings.php", "<?php\n\nreturn ['a' => 1];\n");
+        app(ModuleManagerServiceInterface::class)->updateSettings(ModuleName::fromString('real-mod'), ['a' => 2]);
+        $release = "<?php\n\nreturn ['a' => 1, 'b' => true];\n";
+
+        $result = $this->updater(healthy: true, releaseFiles: ['config/settings.php' => $release])->update(ModuleName::fromString('real-mod'));
+
+        $this->assertSame(UpdateStatus::Completed, $result->status, (string) $result->errorMessage);
+        $this->assertSame($release, File::get("{$this->modulesPath}/real-mod/config/settings.php"));
+        $this->assertSame(['a' => 2], app(ModuleSettingsStoreInterface::class)->stored('real-mod'));
+        $this->assertSame(['a' => 2, 'b' => true], app(ModuleSettingsStoreInterface::class)->effective('real-mod', "{$this->modulesPath}/real-mod"));
+    }
+
+    public function test_panel_settings_survive_a_rolled_back_update(): void
+    {
+        File::put("{$this->modulesPath}/real-mod/config/settings.php", "<?php\n\nreturn ['a' => 1];\n");
+        app(ModuleManagerServiceInterface::class)->updateSettings(ModuleName::fromString('real-mod'), ['a' => 2]);
+
+        $result = $this->updater(healthy: false, releaseFiles: ['config/settings.php' => "<?php\n\nreturn ['a' => 3];\n"])->update(ModuleName::fromString('real-mod'));
+
+        $this->assertSame(UpdateStatus::RolledBack, $result->status);
+        $this->assertSame(['a' => 2], app(ModuleSettingsStoreInterface::class)->effective('real-mod', "{$this->modulesPath}/real-mod"));
+    }
+
+    /**
+     * @param  array<string, string>  $releaseFiles  extra files of the release, by path inside the module
+     */
+    private function updater(bool $healthy, array $releaseFiles = []): ModuleUpdater
     {
         $zip = $this->tempDir.'/release.zip';
         $archive = new ZipArchive;
         $archive->open($zip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        foreach ($releaseFiles as $path => $content) {
+            $archive->addFromString('real-mod-1.0.1-beta/'.$path, $content);
+        }
         $archive->addFromString('real-mod-1.0.1-beta/module.json', (string) json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta', 'namespace' => 'Modules\\RealMod', 'provider' => 'RealModServiceProvider', 'requires' => ['core' => '>=2.0']]));
         $archive->close();
 

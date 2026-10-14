@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
@@ -130,7 +131,8 @@ class RoleResource extends BaseResource
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make()
-                    ->hidden(fn (RoleModel $record): bool => $record->is_protected),
+                    ->hidden(fn (RoleModel $record): bool => $record->is_protected)
+                    ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
             ]);
     }
 

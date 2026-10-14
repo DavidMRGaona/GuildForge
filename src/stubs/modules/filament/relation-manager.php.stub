@@ -40,7 +40,7 @@ final class {{ nameStudly }}RelationManager extends RelationManager
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
-        return __('{{ moduleNameSnake }}::filament.{{ nameSnake }}.title');
+        return __('{{ moduleName }}::filament.{{ nameSnake }}.title');
     }
 
     /**
@@ -58,7 +58,7 @@ final class {{ nameStudly }}RelationManager extends RelationManager
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label(__('{{ moduleNameSnake }}::filament.{{ nameSnake }}.fields.name'))
+                    ->label(__('{{ moduleName }}::filament.{{ nameSnake }}.fields.name'))
                     ->required()
                     ->maxLength(255),
             ]);
@@ -70,11 +70,11 @@ final class {{ nameStudly }}RelationManager extends RelationManager
             ->recordTitleAttribute('name')
             ->columns([
                 TextColumn::make('name')
-                    ->label(__('{{ moduleNameSnake }}::filament.{{ nameSnake }}.fields.name'))
+                    ->label(__('{{ moduleName }}::filament.{{ nameSnake }}.fields.name'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('created_at')
-                    ->label(__('{{ moduleNameSnake }}::filament.{{ nameSnake }}.fields.created_at'))
+                    ->label(__('{{ moduleName }}::filament.{{ nameSnake }}.fields.created_at'))
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

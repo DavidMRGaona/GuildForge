@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Seeder;
@@ -13,7 +14,7 @@ final class UserSeeder extends Seeder
     /**
      * Seed the users table.
      */
-    public function run(): void
+    public function run(AuthorizationServiceInterface $authorization): void
     {
         // Get roles
         $adminRole = RoleModel::where('name', 'admin')->first();
@@ -31,7 +32,7 @@ final class UserSeeder extends Seeder
             $adminAttributes,
         );
         if ($adminRole) {
-            $adminUser->roles()->syncWithoutDetaching([$adminRole->id]);
+            $authorization->assignRole($adminUser, 'admin');
         }
 
         // Create or get editor user
@@ -45,7 +46,7 @@ final class UserSeeder extends Seeder
             $editorAttributes,
         );
         if ($editorRole) {
-            $editorUser->roles()->syncWithoutDetaching([$editorRole->id]);
+            $authorization->assignRole($editorUser, 'editor');
         }
 
         // Create or get member user
@@ -59,7 +60,7 @@ final class UserSeeder extends Seeder
             $memberAttributes,
         );
         if ($memberRole) {
-            $memberUser->roles()->syncWithoutDetaching([$memberRole->id]);
+            $authorization->assignRole($memberUser, 'member');
         }
 
         // Create additional random members (only if less than 8 users exist)
@@ -68,7 +69,7 @@ final class UserSeeder extends Seeder
             $randomUsers = UserModel::factory()->count(8 - $existingCount)->create();
             if ($memberRole) {
                 foreach ($randomUsers as $user) {
-                    $user->roles()->syncWithoutDetaching([$memberRole->id]);
+                    $authorization->assignRole($user, 'member');
                 }
             }
         }

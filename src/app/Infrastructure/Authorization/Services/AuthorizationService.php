@@ -8,10 +8,23 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class AuthorizationService implements AuthorizationServiceInterface
 {
     private const int CACHE_TTL = 3600; // 1 hour
+
+    /**
+     * Random token that is part of every cached lookup key: replacing it invalidates all of
+     * them at once, and a lookup computed from the old data lands under a token nobody reads
+     * again. A missing or malformed token is replaced by a new one, never read as an old one.
+     * It is read once per request or job (AuthorizationCacheVersion), not once per lookup.
+     */
+    private const string CACHE_VERSION_KEY = 'authorization_cache_version';
+
+    private const string CACHE_VERSION_PATTERN = '/^[0-9a-f]{32}$/';
 
     public function can(object $user, string $permissionKey): bool
     {
@@ -90,11 +103,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
      */
     public function getPermissions(object $user): array
     {
-        $userId = $this->getUserId($user);
-        $cacheKey = "user_permissions_{$userId}";
-
-        /** @var array<string> */
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user): array {
+        return $this->cachedLookup('permissions', $user, static function () use ($user): array {
             /** @var UserModel $user */
             return $user->roles()
                 ->with('permissions')
@@ -111,11 +120,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
      */
     public function getRoles(object $user): array
     {
-        $userId = $this->getUserId($user);
-        $cacheKey = "user_roles_{$userId}";
-
-        /** @var array<string> */
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($user): array {
+        return $this->cachedLookup('roles', $user, static function () use ($user): array {
             /** @var UserModel $user */
             return $user->roles()->pluck('name')->toArray();
         });
@@ -126,7 +131,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
         $role = RoleModel::where('name', $roleName)->firstOrFail();
         /** @var UserModel $user */
         $user->roles()->syncWithoutDetaching([$role->id]);
-        $this->clearUserCache($user);
+        $this->invalidateCache();
     }
 
     public function removeRole(object $user, string $roleName): void
@@ -135,7 +140,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
         if ($role !== null) {
             /** @var UserModel $user */
             $user->roles()->detach($role->id);
-            $this->clearUserCache($user);
+            $this->invalidateCache();
         }
     }
 
@@ -147,7 +152,114 @@ final class AuthorizationService implements AuthorizationServiceInterface
         $roleIds = RoleModel::whereIn('name', $roleNames)->pluck('id')->toArray();
         /** @var UserModel $user */
         $user->roles()->sync($roleIds);
-        $this->clearUserCache($user);
+        $this->invalidateCache();
+    }
+
+    public function invalidateCache(): void
+    {
+        // After the commit: invalidating earlier lets a request in between cache the old
+        // data again under the new version. Runs at once outside a transaction.
+        DB::afterCommit(static function (): void {
+            $current = app(AuthorizationCacheVersion::class);
+            $version = self::newCacheVersion();
+
+            try {
+                Cache::forever(self::CACHE_VERSION_KEY, $version);
+                $current->token = $version;
+            } catch (Throwable $e) {
+                $current->token = null;
+                Log::error("Authorization cache could not be invalidated: {$e->getMessage()}");
+
+                // Without a token readers start a new one, so the old entries are never served
+                try {
+                    Cache::forget(self::CACHE_VERSION_KEY);
+                } catch (Throwable) {
+                    // Store unreachable: readers fall back to the database meanwhile
+                }
+
+                // The change is committed: the admin must still see that access may lag
+                throw $e;
+            }
+        });
+    }
+
+    /**
+     * The cache only saves queries: when it is unreachable or holds anything but a list of
+     * names, the answer comes from the database, so a cache problem can never grant access.
+     *
+     * @param  callable(): array<string>  $query
+     * @return array<string>
+     */
+    private function cachedLookup(string $kind, object $user, callable $query): array
+    {
+        $key = null;
+
+        try {
+            // Fixed prefix, server-side version token and the user's primary key: nothing user supplied
+            $key = "user_{$kind}_{$this->cacheVersion()}_{$this->getUserId($user)}";
+            $cached = Cache::get($key);
+
+            if (self::isListOfNames($cached)) {
+                return $cached;
+            }
+        } catch (Throwable $e) {
+            Log::warning("Authorization cache unavailable, reading {$kind} from the database: {$e->getMessage()}");
+            $key = null;
+        }
+
+        $fresh = array_values(array_map(strval(...), $query()));
+
+        if ($key !== null) {
+            try {
+                Cache::put($key, $fresh, self::CACHE_TTL);
+            } catch (Throwable) {
+                // Answered from the database; the next lookup tries the cache again
+            }
+        }
+
+        return $fresh;
+    }
+
+    private function cacheVersion(): string
+    {
+        $current = app(AuthorizationCacheVersion::class);
+
+        if ($current->token !== null) {
+            return $current->token;
+        }
+
+        $version = Cache::get(self::CACHE_VERSION_KEY);
+
+        if (! is_string($version) || preg_match(self::CACHE_VERSION_PATTERN, $version) !== 1) {
+            // Missing (evicted, flushed) or malformed: start a version no cached lookup can match
+            $version = self::newCacheVersion();
+            Cache::forever(self::CACHE_VERSION_KEY, $version);
+        }
+
+        return $current->token = $version;
+    }
+
+    private static function newCacheVersion(): string
+    {
+        return bin2hex(random_bytes(16));
+    }
+
+    /**
+     * @phpstan-assert-if-true array<int, string> $value
+     */
+    private static function isListOfNames(mixed $value): bool
+    {
+        if (! is_array($value) || ! array_is_list($value)) {
+            return false;
+        }
+
+        foreach ($value as $name) {
+            if (! is_string($name)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function isAdmin(object $user): bool
@@ -160,12 +272,5 @@ final class AuthorizationService implements AuthorizationServiceInterface
         /** @var UserModel $user */
         /** @var int|string */
         return $user->id ?? $user->getKey();
-    }
-
-    private function clearUserCache(object $user): void
-    {
-        $userId = $this->getUserId($user);
-        Cache::forget("user_permissions_{$userId}");
-        Cache::forget("user_roles_{$userId}");
     }
 }

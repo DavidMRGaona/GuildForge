@@ -13,8 +13,7 @@ final readonly class {{ nameStudly }}ResponseDTO
         public string $name,
         public string $createdAt,
         public string $updatedAt,
-    ) {
-    }
+    ) {}
 
     public static function fromEntity({{ nameStudly }} $entity): self
     {
@@ -27,7 +26,7 @@ final readonly class {{ nameStudly }}ResponseDTO
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
     {

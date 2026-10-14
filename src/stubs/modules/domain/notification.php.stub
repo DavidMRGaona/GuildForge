@@ -24,9 +24,9 @@ final class {{ nameStudly }} extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage())
-            ->subject(__('{{ moduleNameSnake }}::emails.{{ nameSnake }}.subject'))
-            ->greeting(__('{{ moduleNameSnake }}::emails.{{ nameSnake }}.greeting'))
-            ->line(__('{{ moduleNameSnake }}::emails.{{ nameSnake }}.intro'));
+        return (new MailMessage)
+            ->subject(__('{{ moduleName }}::emails.{{ nameSnake }}.subject'))
+            ->greeting(__('{{ moduleName }}::emails.{{ nameSnake }}.greeting'))
+            ->line(__('{{ moduleName }}::emails.{{ nameSnake }}.intro'));
     }
 }

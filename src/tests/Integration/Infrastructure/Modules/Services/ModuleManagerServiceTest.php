@@ -17,6 +17,7 @@ use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -561,6 +562,62 @@ final class ModuleManagerServiceTest extends TestCase
         $this->service->uninstall(ModuleName::fromString('test-module'), false);
 
         $this->assertCount(1, ModuleSeederHistoryModel::getExecutedSeeders('test-module'));
+    }
+
+    public function test_update_settings_stores_them_in_the_settings_table_and_leaves_the_module_file_untouched(): void
+    {
+        $this->createTestModule('test-module');
+        $settingsFile = "{$this->testModulesPath}/test-module/config/settings.php";
+        mkdir(dirname($settingsFile), 0755, true);
+        file_put_contents($settingsFile, "<?php\n\nreturn ['notifications' => ['on_registration' => true, 'on_cancellation' => true], 'limit' => 5];\n");
+        $original = (string) file_get_contents($settingsFile);
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module"]);
+
+        $this->service->updateSettings(ModuleName::fromString('test-module'), ['notifications' => ['on_registration' => false], 'limit' => 8]);
+
+        $this->assertSame($original, file_get_contents($settingsFile));
+        $this->assertSame(
+            '{"notifications":{"on_registration":false},"limit":8}',
+            SettingModel::query()->where('key', 'module_settings:test-module')->value('value'),
+        );
+        $this->assertSame(
+            ['notifications' => ['on_registration' => false, 'on_cancellation' => true], 'limit' => 8],
+            config('modules.settings.test-module'),
+        );
+    }
+
+    public function test_update_settings_does_not_create_a_settings_file(): void
+    {
+        $this->createTestModule('test-module');
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module"]);
+
+        $this->service->updateSettings(ModuleName::fromString('test-module'), ['limit' => 8]);
+
+        $this->assertFileDoesNotExist("{$this->testModulesPath}/test-module/config/settings.php");
+        $this->assertSame(['limit' => 8], $this->service->getSettings(ModuleName::fromString('test-module')));
+    }
+
+    public function test_uninstall_with_delete_data_forgets_the_stored_settings(): void
+    {
+        $this->createTestModule('test-module');
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'installed_at' => now()]);
+        $this->service->updateSettings(ModuleName::fromString('test-module'), ['limit' => 8]);
+
+        $this->service->uninstall(ModuleName::fromString('test-module'), true);
+
+        $this->assertFalse(SettingModel::query()->where('key', 'module_settings:test-module')->exists());
+    }
+
+    public function test_uninstall_keeping_data_keeps_the_stored_settings(): void
+    {
+        // A reinstall gets the previous panel values back, as it gets the tables back
+        $this->createTestModule('test-module');
+        ModuleModel::factory()->disabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'installed_at' => now()]);
+        $this->service->updateSettings(ModuleName::fromString('test-module'), ['limit' => 8]);
+
+        $this->service->uninstall(ModuleName::fromString('test-module'), false);
+
+        $this->assertSame('{"limit":8}', SettingModel::query()->where('key', 'module_settings:test-module')->value('value'));
     }
 
     public function test_disable_then_enable_does_not_run_migrations_again(): void

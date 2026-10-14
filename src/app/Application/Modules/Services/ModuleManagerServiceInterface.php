@@ -84,14 +84,18 @@ interface ModuleManagerServiceInterface
     public function uninstall(ModuleName $name, bool $deleteData = false): void;
 
     /**
-     * Get settings for a module.
+     * Get the effective settings of an enabled module: its release defaults
+     * (config/settings.php) with the values saved in the panel on top.
      *
      * @return array<string, mixed>
      */
     public function getSettings(ModuleName $name): array;
 
     /**
-     * Update settings for a module.
+     * Store the values saved in the panel for a module (the whole form state).
+     *
+     * They are kept apart from the module directory, so module updates keep them;
+     * config/settings.php is never written.
      *
      * @param  array<string, mixed>  $settings
      */

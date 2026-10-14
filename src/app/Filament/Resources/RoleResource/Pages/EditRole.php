@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\RoleResource\Pages;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Filament\Resources\RoleResource;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Actions\DeleteAction;
@@ -23,8 +24,15 @@ class EditRole extends EditRecord
 
         return [
             DeleteAction::make()
-                ->hidden(fn (): bool => $record->is_protected),
+                ->hidden(fn (): bool => $record->is_protected)
+                ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
         ];
+    }
+
+    protected function afterSave(): void
+    {
+        // The permissions checkbox list writes the pivot directly: every holder of the role is affected
+        app(AuthorizationServiceInterface::class)->invalidateCache();
     }
 
     protected function getRedirectUrl(): string

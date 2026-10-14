@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Domain\Entities;
 
-use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
 use DateTimeImmutable;
+use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
 
 final class {{ nameStudly }}
 {
@@ -14,8 +14,7 @@ final class {{ nameStudly }}
         private string $name,
         private readonly DateTimeImmutable $createdAt,
         private DateTimeImmutable $updatedAt,
-    ) {
-    }
+    ) {}
 
     public function id(): {{ nameStudly }}Id
     {
@@ -30,7 +29,7 @@ final class {{ nameStudly }}
     public function updateName(string $name): void
     {
         $this->name = $name;
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = new DateTimeImmutable;
     }
 
     public function createdAt(): DateTimeImmutable

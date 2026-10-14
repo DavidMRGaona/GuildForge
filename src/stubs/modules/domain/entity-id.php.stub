@@ -6,6 +6,4 @@ namespace {{ moduleNamespace }}\Domain\ValueObjects;
 
 use App\Domain\ValueObjects\EntityId;
 
-final readonly class {{ nameStudly }}Id extends EntityId
-{
-}
+final readonly class {{ nameStudly }}Id extends EntityId {}
