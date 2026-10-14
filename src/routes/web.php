@@ -85,9 +85,10 @@ Route::middleware('auth')->group(function (): void {
 
     // Profile
     Route::get('/perfil', [ProfileController::class, 'show'])->name('profile.show');
-    // Throttled: it stays open to unverified accounts and an email change sends a mail
+    // Throttled: it stays open to unverified accounts and an email change sends a mail.
+    // Own prefix: without it, it would share the per-user counter of verification.send
     Route::post('/perfil', [ProfileController::class, 'update'])
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:6,1,profile')
         ->name('profile.update');
     Route::put('/perfil/contrasena', [ProfileController::class, 'changePassword'])->name('profile.password');
 });

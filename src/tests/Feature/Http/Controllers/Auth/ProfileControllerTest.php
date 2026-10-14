@@ -31,4 +31,21 @@ final class ProfileControllerTest extends TestCase
             'email' => 'new7@example.com',
         ])->assertTooManyRequests();
     }
+
+    public function test_the_profile_has_its_own_limit_apart_from_resending_the_verification_link(): void
+    {
+        Notification::fake();
+        $user = UserModel::factory()->unverified()->create();
+        $this->actingAs($user);
+
+        for ($attempt = 1; $attempt <= 6; $attempt++) {
+            $this->post(route('verification.send'))->assertRedirect();
+        }
+        $this->post(route('verification.send'))->assertTooManyRequests();
+
+        $this->post(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'corrected@example.com',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+    }
 }
