@@ -9,7 +9,8 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\Support\Modules\ModuleTestCase;
 
 /**
- * Expects the route module:make-controller prints, in routes/web.php:
+ * Requests the route module:make-controller prints, in routes/web.php (by URL: route names
+ * registered when the test enables the module are not looked up by route()):
  *
  *     Route::get('{{ namePluralKebab }}', [{{ nameStudly }}Controller::class, 'index'])->name('{{ namePluralSnake }}.index');
  */
@@ -22,7 +23,7 @@ final class {{ nameStudly }}ControllerTest extends ModuleTestCase
     #[Test]
     public function it_renders_the_{{ nameSnake }}_page(): void
     {
-        $this->get(route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index'))
+        $this->get('/{{ moduleName }}/{{ namePluralKebab }}')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('{{ moduleNameStudly }}/{{ nameStudly }}', false));
     }

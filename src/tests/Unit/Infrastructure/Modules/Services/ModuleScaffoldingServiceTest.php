@@ -768,6 +768,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createWidget('blog-posts', 'Stats');
 
         $updated = include $file;
+        $this->assertSame(['navigation_group', 'post', 'widgets'], array_keys($updated));
         $this->assertSame('entrada', $updated['post']['label']);
         $this->assertSame('Stats', $updated['widgets']['stats']['heading']);
     }
@@ -938,7 +939,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         }
 
         $this->assertStringContainsString("->component('BlogPosts/Post', false)", $controller);
-        $this->assertStringContainsString("route('blog_posts.posts.index')", $controller);
+        // A URL, not route(): route names registered after the application booted are not looked up
+        $this->assertStringContainsString("\$this->get('/blog-posts/posts')", $controller);
 
         $this->assertStringContainsString('use InteractsWithModulePanel;', $filament);
         $this->assertStringContainsString('$this->registerOnAdminPanel([PostResource::class]);', $filament);
@@ -997,6 +999,17 @@ final class ModuleScaffoldingServiceTest extends TestCase
             $this->assertStringContainsString('blogPosts: {', $content);
         }
         $this->assertStringContainsString("title: 'Entradas del blog',", (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts'));
+    }
+
+    public function test_an_entity_without_migration_says_how_to_create_its_table(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $without = $this->service->createEntity('blog-posts', 'Post', false);
+        $with = $this->service->createEntity('blog-posts', 'Comment', true);
+
+        $this->assertStringContainsString('module:make-migration blog-posts create_posts_table', implode("\n", $without->nextSteps));
+        $this->assertStringNotContainsString('module:make-migration', implode("\n", $with->nextSteps));
     }
 
     private function generateEveryTranslatedClass(string $module): void
