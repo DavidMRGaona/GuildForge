@@ -38,6 +38,9 @@ use Illuminate\Support\Carbon;
  */
 final class MenuItemModel extends Model
 {
+    /** Value of `module` on the links the core seeds itself. */
+    public const string CORE_MODULE = 'core';
+
     /** @use HasFactory<MenuItemModelFactory> */
     use HasFactory;
 
