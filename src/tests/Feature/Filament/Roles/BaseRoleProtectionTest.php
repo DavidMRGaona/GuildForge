@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Roles;
 
+use App\Application\Authorization\Services\RoleServiceInterface;
+use App\Domain\Authorization\Exceptions\RoleProtectedException;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
@@ -12,6 +14,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Actions\DeleteAction;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
+use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -79,6 +82,98 @@ final class BaseRoleProtectionTest extends TestCase
 
         $this->assertSame([], $page->getTable()->getFlatBulkActions());
         $this->assertFalse($page->getTable()->isSelectionEnabled());
+    }
+
+    // The base role
+
+    public function test_the_policy_refuses_to_delete_the_base_role(): void
+    {
+        $member = $this->member();
+
+        $this->assertFalse($member->is_protected);
+        $this->assertFalse($this->admin->can('delete', $member));
+        $this->assertFalse($this->admin->can('forceDelete', $member));
+    }
+
+    public function test_the_base_role_has_no_delete_action_in_the_table(): void
+    {
+        Livewire::test(ListRoles::class)->assertTableActionHidden(DeleteAction::class, $this->member());
+    }
+
+    public function test_the_base_role_has_no_delete_action_in_the_edit_page(): void
+    {
+        Livewire::test(EditRole::class, ['record' => $this->member()->getRouteKey()])
+            ->assertActionHidden(DeleteAction::class);
+    }
+
+    public function test_a_forced_delete_from_the_table_keeps_the_base_role(): void
+    {
+        $member = $this->member();
+
+        Livewire::test(ListRoles::class)
+            ->call('mountAction', 'delete', [], ['table' => true, 'recordKey' => $member->getKey()])
+            ->call('callMountedAction');
+
+        $this->assertTrue(RoleModel::query()->whereKey($member->id)->exists());
+    }
+
+    public function test_a_forced_delete_from_the_edit_page_keeps_the_base_role(): void
+    {
+        $member = $this->member();
+
+        Livewire::test(EditRole::class, ['record' => $member->getKey()])
+            ->call('mountAction', 'delete')
+            ->call('callMountedAction');
+
+        $this->assertTrue(RoleModel::query()->whereKey($member->id)->exists());
+    }
+
+    public function test_the_base_role_cannot_be_deleted_through_the_role_service(): void
+    {
+        $member = $this->member();
+
+        try {
+            app(RoleServiceInterface::class)->delete($member->id);
+            $this->fail('The base role was deleted');
+        } catch (RoleProtectedException $e) {
+            $this->assertSame(__('authorization.errors.cannot_delete_base_role', ['role' => 'member']), $e->getMessage());
+            $this->assertTrue(RoleModel::query()->whereKey($member->id)->exists());
+        }
+    }
+
+    public function test_the_name_of_the_base_role_is_disabled_and_explained(): void
+    {
+        Livewire::test(EditRole::class, ['record' => $this->member()->getRouteKey()])
+            ->assertFormFieldIsDisabled('name')
+            ->assertSee(__('filament.roles.fields.baseRoleHint'));
+    }
+
+    public function test_a_forged_rename_of_the_base_role_is_not_saved(): void
+    {
+        $member = $this->member();
+
+        Livewire::test(EditRole::class, ['record' => $member->getRouteKey()])
+            ->set('data.name', 'registrado')
+            ->set('data.display_name', 'Registrado')
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $member->refresh();
+        $this->assertSame('member', $member->name);
+        $this->assertSame('Registrado', $member->display_name);
+    }
+
+    public function test_the_save_guard_drops_the_name_of_the_base_role_on_its_own(): void
+    {
+        $page = Livewire::test(EditRole::class, ['record' => $this->member()->getRouteKey()])->instance();
+        $this->assertInstanceOf(EditRole::class, $page);
+
+        // Called directly: the guard must hold even if the name field were enabled
+        /** @var array<string, mixed> $data */
+        $data = (new ReflectionMethod($page, 'mutateFormDataBeforeSave'))
+            ->invoke($page, ['name' => 'registrado', 'display_name' => 'Registrado']);
+
+        $this->assertSame(['display_name' => 'Registrado'], $data);
     }
 
     private function member(): RoleModel

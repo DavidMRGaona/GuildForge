@@ -41,7 +41,8 @@ interface RoleServiceInterface
     /**
      * Delete a role by ID.
      *
-     * @throws RoleProtectedException When the role is protected or is the association member role
+     * @throws RoleProtectedException When the role is protected, is the base role of every account
+     *                                ("member") or is the association member role
      */
     public function delete(string $id): void;
 

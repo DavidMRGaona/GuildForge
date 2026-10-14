@@ -241,6 +241,7 @@ return [
     'roles' => [
         'fields' => [
             'associationMemberRoleHint' => 'This is the association member role set in Site Settings: it cannot be renamed or deleted.',
+            'baseRoleHint' => 'This is the base role of every account: it cannot be renamed or deleted, but its permissions can be changed.',
         ],
     ],
 
