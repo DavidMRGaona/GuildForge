@@ -18,6 +18,14 @@ final class RoleProtectedException extends DomainException
         return new self("Cannot delete the association member role: {$roleName}");
     }
 
+    /**
+     * The base role of every account ("member"): deleting it would strip every account of it.
+     */
+    public static function cannotDeleteBaseRole(string $roleName): self
+    {
+        return new self(__('authorization.errors.cannot_delete_base_role', ['role' => $roleName]));
+    }
+
     public static function cannotModify(string $roleName): self
     {
         return new self("Cannot modify protected role: {$roleName}");

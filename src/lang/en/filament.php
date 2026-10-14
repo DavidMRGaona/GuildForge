@@ -234,13 +234,14 @@ return [
 
     'users' => [
         'fields' => [
-            'rolesHelp' => 'New users always get the "member" role as well, the base role of every account.',
+            'rolesHelp' => 'Every account always has the "member" role, the base role: that is why it is ticked and cannot be unticked.',
         ],
     ],
 
     'roles' => [
         'fields' => [
             'associationMemberRoleHint' => 'This is the association member role set in Site Settings: it cannot be renamed or deleted.',
+            'baseRoleHint' => 'This is the base role of every account: it cannot be renamed or deleted, but its permissions can be changed.',
         ],
     ],
 

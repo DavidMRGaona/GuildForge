@@ -113,6 +113,10 @@ return [
         'no_changes' => 'No se realizaron cambios.',
     ],
 
+    'errors' => [
+        'cannot_delete_base_role' => 'No se puede eliminar «:role»: es el rol base de todas las cuentas.',
+    ],
+
     'member_role' => [
         'assigned' => '{1} :count usuario actualizado|[0,*] :count usuarios actualizados',
         'would_assign' => '{1} :count usuario se actualizaría|[0,*] :count usuarios se actualizarían',

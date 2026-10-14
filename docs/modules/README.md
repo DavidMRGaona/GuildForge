@@ -455,7 +455,7 @@ public function registerPermissions(): array
 
 From core 3.8, two roles cover the usual audiences (see [Base role and association member role](../architecture.md#base-role-and-association-member-role)):
 
-- **`member`** is held by every account: the core gives it on registration, in the panel, in `make:admin-user` and in the seeders, and `users:assign-member-role` gives it to older accounts. Grant `member` the permissions any signed-in user needs. Never assign or remove `member` from a module.
+- **`member`** is held by every account: the core gives it on registration, in the panel, in `make:admin-user` and in the seeders, and `users:assign-member-role` gives it to older accounts. Grant `member` the permissions any signed-in user needs. Never assign or remove `member` from a module. From core 3.8.1 the core keeps it anyway: `AuthorizationServiceInterface::removeRole()` ignores `member`, `syncRoles()` keeps it for a user who holds it, and the role cannot be deleted or renamed in the panel.
 - **The association member role** (`socio` by default) is chosen in the site settings. Ask the core whether a user is an association member, and never check a role name, a constant or a module setting of your own:
 
 ```php

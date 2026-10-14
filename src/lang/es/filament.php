@@ -379,7 +379,7 @@ return [
         'fields' => [
             'emailVerified' => 'Email verificado',
             'roles' => 'Roles',
-            'rolesHelp' => 'Al dar de alta un usuario se le añade siempre el rol «member», el rol base de toda cuenta.',
+            'rolesHelp' => 'Toda cuenta tiene siempre el rol «member», el rol base: por eso aparece marcado y no se puede desmarcar.',
             'status' => 'Estado',
         ],
         'sections' => [
@@ -491,6 +491,7 @@ return [
             'isProtected' => 'Protegido',
             'isProtectedHelp' => 'Los roles protegidos no pueden ser eliminados ni renombrados.',
             'associationMemberRoleHint' => 'Es el rol de socio configurado en Configuración del sitio: no se puede renombrar ni eliminar.',
+            'baseRoleHint' => 'Es el rol base de todas las cuentas: no se puede renombrar ni eliminar, pero sí cambiar sus permisos.',
             'permissions' => 'Permisos',
             'permissionsCount' => 'Permisos',
             'usersCount' => 'Usuarios',
