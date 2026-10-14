@@ -1211,7 +1211,7 @@ The helpers in `app/Modules/helpers.php`:
 | `module_enabled('my-module')` | Whether the module is enabled |
 | `module_route('my-module', 'games.index')` | URL of the route `my_module.games.index` (snake_case module prefix, as `module:make` names routes) |
 | `module_asset('my-module', 'img/logo.png')` | URL of `public/modules/my-module/img/logo.png`, which `module:publish-assets` copies from the module's `resources/assets` |
-| `module_config()`, `module_trans()` | Read `config('<snake_name>.<key>')` and the `<snake_name>::` translation namespace. Neither is what the base provider registers (`modules.<name>` and `<name>::`), so prefer `config()` and `__()` as above |
+| `module_config()`, `module_trans()` | Read `config('modules.<name>.<key>')` and the `<name>::` translation namespace the base provider registers, falling back to the snake_case `<snake_name>` key and namespace for modules written against earlier versions. `config()` and `__()` as above do the same without the helper |
 | `module()` | Without an argument, the module context service; `module('my-module')` makes that module the current one. `App\Modules\Facades\Module` is the same service (`Module::config()` behaves like `module_config()`) |
 
 ### 7. Use domain events for side effects
