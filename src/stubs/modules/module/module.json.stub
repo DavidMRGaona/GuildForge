@@ -1,10 +1,11 @@
 {
     "name": "{{ moduleName }}",
-    "version": "1.0.0",
+    "displayName": "{{ moduleDisplayNameJson }}",
+    "version": "1.0.0",{{ moduleRepositoryJson }}
     "namespace": "{{ moduleNamespaceJson }}",
     "provider": "{{ moduleNameStudly }}ServiceProvider",
-    "description": "{{ moduleDescription }}",
-    "author": "{{ moduleAuthor }}",
+    "description": "{{ moduleDescriptionJson }}",
+    "author": "{{ moduleAuthorJson }}",
     "requires": {
         "core": "{{ coreConstraint }}",
         "php": ">=8.5",

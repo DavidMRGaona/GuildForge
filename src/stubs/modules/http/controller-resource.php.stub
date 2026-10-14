@@ -5,86 +5,115 @@ declare(strict_types=1);
 namespace {{ moduleNamespace }}\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
-use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
-use {{ moduleNamespace }}\Http\Requests\Store{{ nameStudly }}Request;
-use {{ moduleNamespace }}\Http\Requests\Update{{ nameStudly }}Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}ResponseDTO;
+use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
+use {{ moduleNamespace }}\Http\Requests\{{ nameStudly }}Request;
+use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Models\{{ nameStudly }}Model;
 
+/**
+ * Needs module:make-entity, module:make-dto (plain and --response), module:make-service --interface
+ * and module:make-request for {{ nameStudly }}, the policy module:make-filament-resource writes
+ * (registered in registerPolicies()), and the pages {{ moduleNameStudly }}/{{ nameStudly }}Index,
+ * {{ nameStudly }}Create, {{ nameStudly }}Show and {{ nameStudly }}Edit (module:make-vue-page).
+ *
+ * Routes, in routes/web.php (writes only for signed-in users; the policy decides the rest).
+ * Writes first, so /{{ namePluralKebab }}/create is matched before the show route:
+ *
+ *     use {{ moduleNamespace }}\Http\Controllers\{{ nameStudly }}Controller;
+ *
+ *     Route::resource('{{ namePluralKebab }}', {{ nameStudly }}Controller::class)->except(['index', 'show'])->middleware('auth');
+ *     Route::resource('{{ namePluralKebab }}', {{ nameStudly }}Controller::class)->only(['index', 'show']);
+ */
 final class {{ nameStudly }}Controller extends Controller
 {
     public function __construct(
         private readonly {{ nameStudly }}ServiceInterface $service,
-    ) {
-    }
+    ) {}
 
     public function index(): Response
     {
-        $items = $this->service->all();
-
-        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}.index', [
-            '{{ namePluralSnake }}' => $items,
+        return Inertia::render('{{ moduleNameStudly }}/{{ nameStudly }}Index', [
+            '{{ namePluralCamel }}' => array_map(
+                fn ({{ nameStudly }}ResponseDTO $item): array => $item->toArray(),
+                $this->service->all(),
+            ),
         ]);
     }
 
     public function create(): Response
     {
-        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}.create');
+        Gate::authorize('create', {{ nameStudly }}Model::class);
+
+        return Inertia::render('{{ moduleNameStudly }}/{{ nameStudly }}Create');
     }
 
-    public function store(Store{{ nameStudly }}Request $request): RedirectResponse
+    public function store({{ nameStudly }}Request $request): RedirectResponse
     {
-        $dto = {{ nameStudly }}DTO::fromArray($request->validated());
-        $this->service->create($dto);
+        Gate::authorize('create', {{ nameStudly }}Model::class);
+
+        $this->service->create({{ nameStudly }}DTO::fromArray($request->validated()));
 
         return redirect()
-            ->route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index')
-            ->with('success', __('{{ moduleNameSnake }}::messages.{{ nameSnake }}.created'));
+            ->route('{{ moduleNameSnake }}.{{ namePluralKebab }}.index')
+            ->with('success', __('{{ moduleName }}::messages.{{ nameSnake }}.created'));
     }
 
     public function show(string $id): Response
     {
-        $item = $this->service->findById($id);
+        $item = $this->service->findById($id) ?? abort(404);
 
-        if ($item === null) {
-            abort(404);
-        }
-
-        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}.show', [
-            '{{ nameSnake }}' => $item,
+        return Inertia::render('{{ moduleNameStudly }}/{{ nameStudly }}Show', [
+            '{{ nameCamel }}' => $item->toArray(),
         ]);
     }
 
     public function edit(string $id): Response
     {
-        $item = $this->service->findById($id);
+        $this->authorizeRecord('update', $id);
+        $item = $this->service->findById($id) ?? abort(404);
 
-        if ($item === null) {
-            abort(404);
-        }
-
-        return response()->view('{{ moduleNameSnake }}::{{ nameSnake }}.edit', [
-            '{{ nameSnake }}' => $item,
+        return Inertia::render('{{ moduleNameStudly }}/{{ nameStudly }}Edit', [
+            '{{ nameCamel }}' => $item->toArray(),
         ]);
     }
 
-    public function update(Update{{ nameStudly }}Request $request, string $id): RedirectResponse
+    public function update({{ nameStudly }}Request $request, string $id): RedirectResponse
     {
-        $dto = {{ nameStudly }}DTO::fromArray($request->validated());
-        $this->service->update($id, $dto);
+        $this->authorizeRecord('update', $id);
+
+        $this->service->update($id, {{ nameStudly }}DTO::fromArray($request->validated()));
 
         return redirect()
-            ->route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index')
-            ->with('success', __('{{ moduleNameSnake }}::messages.{{ nameSnake }}.updated'));
+            ->route('{{ moduleNameSnake }}.{{ namePluralKebab }}.index')
+            ->with('success', __('{{ moduleName }}::messages.{{ nameSnake }}.updated'));
     }
 
     public function destroy(string $id): RedirectResponse
     {
+        $this->authorizeRecord('delete', $id);
+
         $this->service->delete($id);
 
         return redirect()
-            ->route('{{ moduleNameSnake }}.{{ namePluralSnake }}.index')
-            ->with('success', __('{{ moduleNameSnake }}::messages.{{ nameSnake }}.deleted'));
+            ->route('{{ moduleNameSnake }}.{{ namePluralKebab }}.index')
+            ->with('success', __('{{ moduleName }}::messages.{{ nameSnake }}.deleted'));
+    }
+
+    /**
+     * 404 for an id that is not a UUID or has no record, 403 when the policy refuses.
+     */
+    private function authorizeRecord(string $ability, string $id): void
+    {
+        if (! Str::isUuid($id)) {
+            abort(404);
+        }
+
+        Gate::authorize($ability, {{ nameStudly }}Model::query()->findOrFail($id));
     }
 }

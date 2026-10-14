@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Module;
 
-use App\Application\Modules\DTOs\ScaffoldResultDTO;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
+use App\Console\Commands\Module\Concerns\OutputsScaffoldResult;
 use Illuminate\Console\Command;
 
 final class ModuleMakeCommand extends Command
 {
+    use OutputsScaffoldResult;
+
     /**
      * The name and signature of the console command.
      *
@@ -19,7 +21,8 @@ final class ModuleMakeCommand extends Command
         {name : The name of the module (kebab-case)}
         {--description= : A description for the module}
         {--author= : The author of the module}
-        {--force : Overwrite existing files}';
+        {--display-name= : The name shown in the admin panel, in Spanish (e.g. "Mesas de rol")}
+        {--repository= : The GitHub repository (owner/repo) the updater reads releases from}';
 
     /**
      * The console command description.
@@ -45,48 +48,15 @@ final class ModuleMakeCommand extends Command
         $description = $this->option('description');
         /** @var string|null $author */
         $author = $this->option('author');
+        /** @var string|null $displayName */
+        $displayName = $this->option('display-name');
+        /** @var string|null $repository */
+        $repository = $this->option('repository');
 
         $this->info("Creating module '{$name}'...");
 
-        $result = $this->scaffoldingService->createModule($name, $description, $author);
+        $result = $this->scaffoldingService->createModule($name, $description, $author, $displayName, $repository);
 
         return $this->outputResult($result);
-    }
-
-    private function outputResult(ScaffoldResultDTO $result): int
-    {
-        if ($result->isFailure()) {
-            $this->error($result->message);
-            foreach ($result->errors as $error) {
-                $this->line("  - {$error}");
-            }
-
-            return self::FAILURE;
-        }
-
-        foreach ($result->files as $file => $status) {
-            $statusLabel = match ($status) {
-                ScaffoldResultDTO::STATUS_CREATED => '<fg=green>[CREATED]</>',
-                ScaffoldResultDTO::STATUS_SKIPPED => '<fg=yellow>[SKIPPED]</>',
-                ScaffoldResultDTO::STATUS_OVERWRITTEN => '<fg=blue>[OVERWRITTEN]</>',
-                ScaffoldResultDTO::STATUS_FAILED => '<fg=red>[FAILED]</>',
-                default => "<fg=gray>[{$status}]</>",
-            };
-
-            $this->line("  {$statusLabel} {$file}");
-        }
-
-        foreach ($result->warnings as $warning) {
-            $this->warn("  Warning: {$warning}");
-        }
-
-        $this->newLine();
-        $this->info($result->message);
-        $this->newLine();
-        $this->line('Next steps:');
-        $this->line('  1. Run <fg=cyan>php artisan module:discover</> to register the module');
-        $this->line('  2. Run <fg=cyan>php artisan module:enable '.$this->argument('name').'</> to enable it');
-
-        return self::SUCCESS;
     }
 }

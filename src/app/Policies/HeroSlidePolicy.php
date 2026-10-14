@@ -19,7 +19,8 @@ class HeroSlidePolicy
 
     public function view(UserModel $user, HeroSlideModel $heroSlide): bool
     {
-        return $this->authorize($user, 'hero_slides.view');
+        // No separate detail permission: whoever lists the slides may see one
+        return $this->authorize($user, 'hero_slides.view_any');
     }
 
     public function create(UserModel $user): bool

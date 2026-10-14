@@ -5,32 +5,48 @@ declare(strict_types=1);
 namespace {{ moduleNamespace }}\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
-use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
-use {{ moduleNamespace }}\Http\Requests\Store{{ nameStudly }}Request;
-use {{ moduleNamespace }}\Http\Requests\Update{{ nameStudly }}Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
+use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}ResponseDTO;
+use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
+use {{ moduleNamespace }}\Http\Requests\{{ nameStudly }}Request;
+use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Models\{{ nameStudly }}Model;
 
+/**
+ * Needs module:make-entity, module:make-dto (plain and --response), module:make-service --interface
+ * and module:make-request for {{ nameStudly }}, and the policy module:make-filament-resource writes
+ * (registered in registerPolicies()).
+ *
+ * Routes, in routes/api.php (answers under /api/{{ moduleName }}/{{ namePluralKebab }}). The api group has
+ * no session, so the write routes answer 401 until the module adds token authentication:
+ *
+ *     use {{ moduleNamespace }}\Http\Controllers\Api;
+ *
+ *     Route::apiResource('{{ namePluralKebab }}', Api\{{ nameStudly }}Controller::class)->except(['index', 'show'])->middleware('auth');
+ *     Route::apiResource('{{ namePluralKebab }}', Api\{{ nameStudly }}Controller::class)->only(['index', 'show']);
+ */
 final class {{ nameStudly }}Controller extends Controller
 {
     public function __construct(
         private readonly {{ nameStudly }}ServiceInterface $service,
-    ) {
-    }
+    ) {}
 
     public function index(): JsonResponse
     {
         $items = $this->service->all();
 
         return response()->json([
-            'data' => array_map(fn ($item) => $item->toArray(), $items),
+            'data' => array_map(fn ({{ nameStudly }}ResponseDTO $item): array => $item->toArray(), $items),
         ]);
     }
 
-    public function store(Store{{ nameStudly }}Request $request): JsonResponse
+    public function store({{ nameStudly }}Request $request): JsonResponse
     {
-        $dto = {{ nameStudly }}DTO::fromArray($request->validated());
-        $item = $this->service->create($dto);
+        Gate::authorize('create', {{ nameStudly }}Model::class);
+
+        $item = $this->service->create({{ nameStudly }}DTO::fromArray($request->validated()));
 
         return response()->json([
             'data' => $item->toArray(),
@@ -39,21 +55,18 @@ final class {{ nameStudly }}Controller extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $item = $this->service->findById($id);
-
-        if ($item === null) {
-            return response()->json(['message' => 'Not found'], 404);
-        }
+        $item = $this->service->findById($id) ?? abort(404);
 
         return response()->json([
             'data' => $item->toArray(),
         ]);
     }
 
-    public function update(Update{{ nameStudly }}Request $request, string $id): JsonResponse
+    public function update({{ nameStudly }}Request $request, string $id): JsonResponse
     {
-        $dto = {{ nameStudly }}DTO::fromArray($request->validated());
-        $item = $this->service->update($id, $dto);
+        $this->authorizeRecord('update', $id);
+
+        $item = $this->service->update($id, {{ nameStudly }}DTO::fromArray($request->validated()));
 
         return response()->json([
             'data' => $item->toArray(),
@@ -62,8 +75,22 @@ final class {{ nameStudly }}Controller extends Controller
 
     public function destroy(string $id): JsonResponse
     {
+        $this->authorizeRecord('delete', $id);
+
         $this->service->delete($id);
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * 404 for an id that is not a UUID or has no record, 403 when the policy refuses.
+     */
+    private function authorizeRecord(string $ability, string $id): void
+    {
+        if (! Str::isUuid($id)) {
+            abort(404);
+        }
+
+        Gate::authorize($ability, {{ nameStudly }}Model::query()->findOrFail($id));
     }
 }

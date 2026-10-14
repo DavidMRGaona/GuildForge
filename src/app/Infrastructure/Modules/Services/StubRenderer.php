@@ -119,6 +119,8 @@ final class StubRenderer
             'namePlural' => Str::plural($name),
             'namePluralStudly' => Str::studly(Str::plural($name)),
             'namePluralSnake' => Str::snake(Str::plural($name)),
+            'namePluralCamel' => Str::camel(Str::plural($name)),
+            'namePluralKebab' => Str::kebab(Str::plural($name)),
             'nameKebab' => Str::kebab($name),
             'tableName' => Str::snake(Str::studly($moduleName)).'_'.Str::snake(Str::plural($name)),
         ]);

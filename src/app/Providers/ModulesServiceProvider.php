@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
+use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Console\Commands\Module\ModuleDisableCommand;
 use App\Console\Commands\Module\ModuleDiscoverCommand;
 use App\Console\Commands\Module\ModuleEnableCommand;
@@ -25,6 +26,7 @@ use App\Console\Commands\Module\ModuleMigrateCommand;
 use App\Console\Commands\Module\ModulePublishAssetsCommand;
 use App\Console\Commands\Module\ModuleSyncFromImageCommand;
 use App\Infrastructure\Modules\Services\ModuleInstaller;
+use App\Infrastructure\Modules\Services\SettingsTableModuleSettingsStore;
 use App\Modules\ModuleLoader;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -40,6 +42,8 @@ final class ModulesServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(ModuleInstallerInterface::class, ModuleInstaller::class);
+        // Bound before any module provider registers: they read their settings through it
+        $this->app->bind(ModuleSettingsStoreInterface::class, SettingsTableModuleSettingsStore::class);
     }
 
     public function boot(): void

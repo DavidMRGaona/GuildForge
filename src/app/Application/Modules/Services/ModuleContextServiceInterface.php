@@ -72,7 +72,8 @@ interface ModuleContextServiceInterface
     public function getEnabled(): array;
 
     /**
-     * Get configuration value for a specific module.
+     * Get configuration value for a specific module: a key of its config/module.php,
+     * which the module service provider loads into "modules.<name>".
      */
     public function moduleConfig(string $moduleName, string $key, mixed $default = null): mixed;
 

@@ -10,8 +10,17 @@ interface ModuleScaffoldingServiceInterface
 {
     /**
      * Create a new module with the complete directory structure.
+     *
+     * @param  string|null  $displayName  Name shown in the admin panel (defaults to the module name in sentence case)
+     * @param  string|null  $repository  GitHub repository in "owner/repo" form the updater reads releases from
      */
-    public function createModule(string $name, ?string $description = null, ?string $author = null): ScaffoldResultDTO;
+    public function createModule(
+        string $name,
+        ?string $description = null,
+        ?string $author = null,
+        ?string $displayName = null,
+        ?string $repository = null,
+    ): ScaffoldResultDTO;
 
     /**
      * Create a new domain entity for a module.
@@ -52,13 +61,15 @@ interface ModuleScaffoldingServiceInterface
 
     /**
      * Create a new migration for a module.
+     *
+     * @param  bool  $modify  Alter the existing $table (Schema::table) instead of creating it
      */
-    public function createMigration(string $module, string $name, ?string $table = null): ScaffoldResultDTO;
+    public function createMigration(string $module, string $name, ?string $table = null, bool $modify = false): ScaffoldResultDTO;
 
     /**
      * Create a new test for a module.
      *
-     * @param  string  $type  Test type: 'unit', 'feature'
+     * @param  string  $type  Test type: 'unit' (entity), 'unit-dto', 'feature' (controller), 'feature-filament' (resource)
      */
     public function createTest(string $module, string $name, string $type = 'unit'): ScaffoldResultDTO;
 

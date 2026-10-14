@@ -41,12 +41,12 @@ final class ScaffoldedFilamentClassesTest extends TestCase
         $coreVersion->method('getCurrentVersion')->willReturn(ModuleVersion::fromString('3.0.0'));
         $service = new ModuleScaffoldingService(new StubRenderer(base_path('stubs/modules')), $this->modulesPath, $coreVersion);
 
-        $service->createModule('blog');
-        $service->createFilamentResource('blog', 'Post');
-        $service->createRelationManager('blog', 'Comments', 'Event');
-        $service->createWidget('blog', 'Stats');
+        $service->createModule('blog-posts');
+        $service->createFilamentResource('blog-posts', 'Post');
+        $service->createRelationManager('blog-posts', 'Comments', 'Event');
+        $service->createWidget('blog-posts', 'Stats');
 
-        $files = File::allFiles($this->modulesPath.'/blog/src/Filament');
+        $files = File::allFiles($this->modulesPath.'/blog-posts/src/Filament');
         $this->assertCount(6, $files);
 
         foreach ($files as $file) {

@@ -8,42 +8,49 @@ use App\Infrastructure\Authorization\Policies\AuthorizesWithPermissions;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use {{ moduleNamespace }}\Infrastructure\Persistence\Eloquent\Models\{{ nameStudly }}Model;
 
+/**
+ * Inactive until the module service provider lists it in registerPolicies().
+ *
+ * The keys are "{module}:{name}", the form registerPermissions() stores them in:
+ * declare "{{ namePluralSnake }}.view_any", "{{ namePluralSnake }}.view", "{{ namePluralSnake }}.create",
+ * "{{ namePluralSnake }}.update" and "{{ namePluralSnake }}.delete" there with module '{{ moduleName }}'.
+ */
 final class {{ nameStudly }}Policy
 {
     use AuthorizesWithPermissions;
 
     public function viewAny(UserModel $user): bool
     {
-        return $this->authorize($user, '{{ nameSnake }}.view_any');
+        return $this->authorize($user, '{{ moduleName }}:{{ namePluralSnake }}.view_any');
     }
 
     public function view(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $this->authorize($user, '{{ nameSnake }}.view');
+        return $this->authorize($user, '{{ moduleName }}:{{ namePluralSnake }}.view');
     }
 
     public function create(UserModel $user): bool
     {
-        return $this->authorize($user, '{{ nameSnake }}.create');
+        return $this->authorize($user, '{{ moduleName }}:{{ namePluralSnake }}.create');
     }
 
     public function update(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $this->authorize($user, '{{ nameSnake }}.update');
+        return $this->authorize($user, '{{ moduleName }}:{{ namePluralSnake }}.update');
     }
 
     public function delete(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $this->authorize($user, '{{ nameSnake }}.delete');
+        return $this->authorize($user, '{{ moduleName }}:{{ namePluralSnake }}.delete');
     }
 
     public function restore(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $this->authorize($user, '{{ nameSnake }}.update');
+        return $this->authorize($user, '{{ moduleName }}:{{ namePluralSnake }}.update');
     }
 
     public function forceDelete(UserModel $user, {{ nameStudly }}Model $model): bool
     {
-        return $this->authorize($user, '{{ nameSnake }}.delete');
+        return $this->authorize($user, '{{ moduleName }}:{{ namePluralSnake }}.delete');
     }
 }

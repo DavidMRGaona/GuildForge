@@ -10,14 +10,14 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 /**
  * Dashboard widget for {{ nameStudly }}.
  *
- * To use this widget, register it in your ServiceProvider:
+ * Add it to the dashboard by returning it from the module service provider:
  *
- * Livewire::component(
- *     'modules.{{ moduleName }}.filament.widgets.{{ nameKebab }}-widget',
- *     {{ nameStudly }}Widget::class
- * );
+ *     public function registerFilamentWidgets(): array
+ *     {
+ *         return [{{ nameStudly }}Widget::class];
+ *     }
  *
- * The widget will be auto-discovered by Filament if placed in Filament/Widgets/.
+ * Admins can then toggle and order it on the dashboard settings page.
  */
 final class {{ nameStudly }}Widget extends StatsOverviewWidget
 {
@@ -25,35 +25,35 @@ final class {{ nameStudly }}Widget extends StatsOverviewWidget
 
     protected static ?int $sort = 10;
 
-    protected function getHeading(): ?string
+    protected function getHeading(): string
     {
-        return __('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.heading');
+        return __('{{ moduleName }}::filament.widgets.{{ nameSnake }}.heading');
     }
 
     protected function getStats(): array
     {
         return [
             Stat::make(
-                label: __('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.total'),
+                label: __('{{ moduleName }}::filament.widgets.{{ nameSnake }}.total'),
                 value: $this->getTotalCount(),
             )
-                ->description(__('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.total_description'))
+                ->description(__('{{ moduleName }}::filament.widgets.{{ nameSnake }}.total_description'))
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success'),
 
             Stat::make(
-                label: __('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.pending'),
+                label: __('{{ moduleName }}::filament.widgets.{{ nameSnake }}.pending'),
                 value: $this->getPendingCount(),
             )
-                ->description(__('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.pending_description'))
+                ->description(__('{{ moduleName }}::filament.widgets.{{ nameSnake }}.pending_description'))
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('warning'),
 
             Stat::make(
-                label: __('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.active'),
+                label: __('{{ moduleName }}::filament.widgets.{{ nameSnake }}.active'),
                 value: $this->getActiveCount(),
             )
-                ->description(__('{{ moduleNameSnake }}::filament.widgets.{{ nameSnake }}.active_description'))
+                ->description(__('{{ moduleName }}::filament.widgets.{{ nameSnake }}.active_description'))
                 ->descriptionIcon('heroicon-m-check-circle')
                 ->color('info'),
         ];

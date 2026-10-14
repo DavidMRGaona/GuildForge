@@ -6,15 +6,13 @@ namespace {{ moduleNamespace }}\Infrastructure\Listeners;
 
 use {{ moduleNamespace }}\Domain\Events\{{ eventNameStudly }};
 
-// To make this listener asynchronous, implement ShouldQueue:
-// use Illuminate\Contracts\Queue\ShouldQueue;
-//
-// final readonly class {{ nameStudly }} implements ShouldQueue
-// {
-//     public string $queue = 'listeners';
-//     ...
-// }
-
+/**
+ * Register it in the module service provider's boot():
+ *
+ *     Event::listen({{ eventNameStudly }}::class, {{ nameStudly }}::class);
+ *
+ * For an asynchronous listener, generate it with --queued.
+ */
 final readonly class {{ nameStudly }}
 {
     public function __construct(

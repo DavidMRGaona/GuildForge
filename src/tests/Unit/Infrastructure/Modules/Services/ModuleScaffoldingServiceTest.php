@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
+use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Application\Modules\DTOs\ScaffoldResultDTO;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\ModuleScaffoldingService;
 use App\Infrastructure\Modules\Services\StubRenderer;
+use Illuminate\Support\Arr;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ModuleScaffoldingServiceTest extends TestCase
@@ -91,7 +94,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertArrayHasKey('database/migrations/.gitkeep', $result->files);
         $this->assertArrayHasKey('src/Domain/Entities/.gitkeep', $result->files);
         $this->assertArrayHasKey('src/Application/DTOs/.gitkeep', $result->files);
-        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/.gitkeep', $result->files);
+        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/Models/.gitkeep', $result->files);
+        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/Repositories/.gitkeep', $result->files);
     }
 
     public function test_it_creates_module_with_correct_namespace_in_files(): void
@@ -159,8 +163,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertArrayHasKey('src/Domain/Entities/Product.php', $result->files);
         $this->assertArrayHasKey('src/Domain/ValueObjects/ProductId.php', $result->files);
         $this->assertArrayHasKey('src/Domain/Repositories/ProductRepositoryInterface.php', $result->files);
-        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/ProductModel.php', $result->files);
-        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/EloquentProductRepository.php', $result->files);
+        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/Models/ProductModel.php', $result->files);
+        $this->assertArrayHasKey('src/Infrastructure/Persistence/Eloquent/Repositories/EloquentProductRepository.php', $result->files);
 
         // Check migration file exists
         $migrationFiles = array_filter(array_keys($result->files), fn ($key) => str_contains($key, 'database/migrations/'));
@@ -415,8 +419,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertTrue($result->isSuccess());
         $this->assertStringContainsString("Test 'UserService' created for module 'testing'", $result->message);
-        $this->assertArrayHasKey('tests/Unit/UserServiceTest.php', $result->files);
-        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Unit/UserServiceTest.php']);
+        $this->assertArrayHasKey('tests/Unit/Domain/Entities/UserServiceTest.php', $result->files);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Unit/Domain/Entities/UserServiceTest.php']);
     }
 
     public function test_it_creates_feature_test(): void
@@ -426,8 +430,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $result = $this->service->createTest('integration', 'PostController', 'feature');
 
         $this->assertTrue($result->isSuccess());
-        $this->assertArrayHasKey('tests/Feature/PostControllerTest.php', $result->files);
-        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Feature/PostControllerTest.php']);
+        $this->assertArrayHasKey('tests/Feature/Http/Controllers/PostControllerTest.php', $result->files);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Feature/Http/Controllers/PostControllerTest.php']);
     }
 
     public function test_it_validates_module_exists_for_test(): void
@@ -446,9 +450,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertTrue($result->isSuccess());
         $this->assertStringContainsString("Vue page 'Dashboard' created for module 'frontend'", $result->message);
-        $this->assertArrayHasKey('resources/js/pages/Dashboard.vue', $result->files);
+        $this->assertArrayHasKey('resources/js/pages/Frontend/Dashboard.vue', $result->files);
         $this->assertArrayHasKey('resources/js/types/Dashboard.ts', $result->files);
-        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['resources/js/pages/Dashboard.vue']);
+        $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['resources/js/pages/Frontend/Dashboard.vue']);
         $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['resources/js/types/Dashboard.ts']);
     }
 
@@ -551,7 +555,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $content = file_get_contents($this->tempModulesPath.'/mailer/src/Infrastructure/Listeners/SendWelcomeEmail.php');
         $this->assertStringContainsString('implements ShouldQueue', $content);
         $this->assertStringContainsString('public function failed(', $content);
-        $this->assertStringContainsString("public string \$queue = 'listeners';", $content);
+        // No worker consumes a "listeners" queue: the listener runs on the default one
+        $this->assertDoesNotMatchRegularExpression('/^\s*public string \$queue/m', $content);
+        $this->assertStringContainsString('default queue', $content);
     }
 
     public function test_it_creates_listener_validates_module_exists(): void
@@ -586,6 +592,693 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertTrue($result->isFailure());
         $this->assertStringContainsString("Module 'nonexistent' does not exist", $result->message);
+    }
+
+    public function test_a_new_module_has_the_files_its_tests_and_release_need(): void
+    {
+        $result = $this->service->createModule('blog-posts');
+
+        foreach (['phpunit.xml', '.gitignore', 'resources/css/module.css', '.github/workflows/release.yml'] as $file) {
+            $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$file] ?? null, $file);
+            $this->assertFileExists($this->tempModulesPath.'/blog-posts/'.$file);
+        }
+
+        $phpunit = simplexml_load_file($this->tempModulesPath.'/blog-posts/phpunit.xml');
+        $this->assertNotFalse($phpunit);
+        $this->assertSame('../../vendor/autoload.php', (string) $phpunit['bootstrap']);
+        $suites = [];
+        foreach ($phpunit->testsuites->testsuite as $suite) {
+            $suites[(string) $suite['name']] = (string) $suite->directory;
+        }
+        $this->assertSame(['Unit' => './tests/Unit', 'Integration' => './tests/Integration', 'Feature' => './tests/Feature'], $suites);
+        $this->assertStringContainsString('<env name="DB_CONNECTION" value="sqlite"/>', (string) file_get_contents($this->tempModulesPath.'/blog-posts/phpunit.xml'));
+
+        $gitignore = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.gitignore');
+        foreach (['/vendor', '/node_modules', '/public/build', '/.phpunit.cache'] as $entry) {
+            $this->assertStringContainsString($entry, $gitignore);
+        }
+
+        $workflow = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.github/workflows/release.yml');
+        $this->assertStringContainsString('reusable-module-release.yml@main', $workflow);
+        $this->assertStringContainsString("module_name: 'blog-posts'", $workflow);
+    }
+
+    public function test_the_vite_config_builds_like_the_release_workflow_expects(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $config = (string) file_get_contents($this->tempModulesPath.'/blog-posts/vite.config.ts');
+
+        $this->assertStringContainsString("const MODULE_NAME = 'blog-posts';", $config);
+        $this->assertStringContainsString("process.env.MODULE_STANDALONE_OUTPUT === 'true'", $config);
+        $this->assertStringContainsString("resolve(__dirname, '../public')", $config);
+        $this->assertStringContainsString('base: (isStandalone || forceStandaloneOutput)', $config);
+        $this->assertStringContainsString("discoverEntries(pagesDir, 'resources/js/pages')", $config);
+        $this->assertStringContainsString("discoverEntries(componentsDir, 'resources/js/components')", $config);
+        $this->assertStringContainsString("['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3', '@unhead/vue']", $config);
+        $this->assertStringContainsString("isStandalone && id.startsWith('@/')", $config);
+        $this->assertStringContainsString("'module-styles': resolve(__dirname, 'resources/css/module.css')", $config);
+        $this->assertStringContainsString('plugins: [vue(), tailwindcss()]', $config);
+    }
+
+    public function test_package_json_pins_the_module_toolchain(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        /** @var array<string, mixed> $package */
+        $package = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/package.json'), true);
+
+        $this->assertSame('@guildforge/module-blog-posts', $package['name']);
+        $this->assertSame('vite build', $package['scripts']['build']);
+        $this->assertSame('^7.3.1', $package['devDependencies']['vite']);
+        $this->assertSame('^6.0.3', $package['devDependencies']['@vitejs/plugin-vue']);
+        $this->assertSame('^4.1.18', $package['devDependencies']['@tailwindcss/vite']);
+    }
+
+    public function test_the_manifest_has_a_display_name_and_no_repository_by_default(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true);
+
+        $this->assertSame('Blog posts', $manifest['displayName']);
+        $this->assertArrayNotHasKey('repository', $manifest);
+        $this->assertSame('Blog posts', ModuleManifestDTO::fromArray($manifest)->displayName);
+    }
+
+    public function test_the_manifest_takes_the_given_display_name_repository_and_escaped_texts(): void
+    {
+        $result = $this->service->createModule(
+            'blog-posts',
+            'Entradas "destacadas" del blog',
+            'Gremio \\ Norte',
+            'Entradas del blog',
+            'acme/guildforge-blog-posts',
+        );
+
+        $this->assertTrue($result->isSuccess());
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame('Entradas del blog', $manifest['displayName']);
+        $this->assertSame('acme/guildforge-blog-posts', $manifest['repository']);
+        $this->assertSame('Entradas "destacadas" del blog', $manifest['description']);
+        $this->assertSame('Gremio \\ Norte', $manifest['author']);
+
+        $messages = include $this->tempModulesPath.'/blog-posts/lang/es/messages.php';
+        $this->assertSame('Entradas del blog', $messages['title']);
+    }
+
+    public function test_an_invalid_repository_is_refused_before_anything_is_written(): void
+    {
+        $result = $this->service->createModule('blog-posts', repository: 'not a repository');
+
+        $this->assertTrue($result->isFailure());
+        $this->assertDirectoryDoesNotExist($this->tempModulesPath.'/blog-posts');
+    }
+
+    public function test_the_service_provider_leaves_config_to_the_parent_and_shows_every_hook(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $provider = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+
+        $this->assertStringNotContainsString('mergeConfigFrom', $provider);
+        $this->assertStringContainsString("new PagePrefixDTO(prefix: 'BlogPosts', module: \$this->moduleName())", $provider);
+        foreach (['registerPolicies', 'registerPermissions', 'registerFilamentWidgets', 'registerFilamentPages', 'registerCalendarSources', 'registerPagePrefixes'] as $hook) {
+            $this->assertStringContainsString("public function {$hook}(): array", $provider);
+        }
+        $this->assertStringContainsString('RepositoryInterface::class', $provider);
+    }
+
+    public function test_the_module_title_is_a_spanish_style_label(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $messages = include $this->tempModulesPath.'/blog-posts/lang/es/messages.php';
+
+        $this->assertSame('Blog posts', $messages['title']);
+    }
+
+    public function test_hyphenated_modules_use_the_kebab_case_translation_namespace(): void
+    {
+        $this->generateEveryTranslatedClass('blog-posts');
+
+        foreach ($this->phpFiles($this->tempModulesPath.'/blog-posts') as $path => $content) {
+            $this->assertStringNotContainsString('blog_posts::', $content, $path);
+        }
+
+        $resource = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php');
+        $this->assertStringContainsString("__('blog-posts::filament.post.label')", $resource);
+        $this->assertStringContainsString("__('blog-posts::filament.navigation_group')", $resource);
+    }
+
+    public function test_generators_write_the_translation_keys_their_stubs_use(): void
+    {
+        $this->generateEveryTranslatedClass('blog-posts');
+        $langPath = $this->tempModulesPath.'/blog-posts/lang/es';
+        $checked = 0;
+
+        foreach ($this->phpFiles($this->tempModulesPath.'/blog-posts/src') as $path => $content) {
+            // Commented examples (provider docblocks) are not code
+            $code = (string) preg_replace('#^\s*(\*|//).*$#m', '', $content);
+            preg_match_all("#__\('blog-posts::([a-z_]+)\.([a-z0-9_.]+)'\)#", $code, $matches, PREG_SET_ORDER);
+
+            foreach ($matches as [, $file, $key]) {
+                $this->assertFileExists("{$langPath}/{$file}.php", $path);
+                $translations = include "{$langPath}/{$file}.php";
+                $this->assertTrue(Arr::has($translations, $key), "{$path}: blog-posts::{$file}.{$key} is not in lang/es/{$file}.php");
+                $this->assertIsString(Arr::get($translations, $key), "{$path}: blog-posts::{$file}.{$key}");
+                $checked++;
+            }
+        }
+
+        $this->assertGreaterThan(20, $checked);
+    }
+
+    public function test_translations_already_written_are_kept(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createFilamentResource('blog-posts', 'Post');
+        $file = $this->tempModulesPath.'/blog-posts/lang/es/filament.php';
+        $translations = include $file;
+        $translations['post']['label'] = 'entrada';
+        file_put_contents($file, '<?php return '.var_export($translations, true).';');
+
+        $this->service->createWidget('blog-posts', 'Stats');
+
+        $updated = include $file;
+        $this->assertSame(['navigation_group', 'post', 'widgets'], array_keys($updated));
+        $this->assertSame('entrada', $updated['post']['label']);
+        $this->assertSame('Stats', $updated['widgets']['stats']['heading']);
+    }
+
+    public function test_resource_labels_follow_spanish_capitalization(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createFilamentResource('blog-posts', 'BlogPost');
+
+        $translations = include $this->tempModulesPath.'/blog-posts/lang/es/filament.php';
+
+        $this->assertSame('blog post', $translations['blog_post']['label']);
+        $this->assertSame('Blog posts', $translations['blog_post']['plural_label']);
+        $this->assertSame('Blog posts', $translations['navigation_group']);
+    }
+
+    public function test_api_routes_are_not_prefixed_twice(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $routes = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/api.php');
+
+        $this->assertStringNotContainsString("prefix('api/", $routes);
+        $this->assertStringNotContainsString("middleware('api')", $routes);
+        $this->assertStringContainsString("Route::prefix('blog-posts')", $routes);
+    }
+
+    public function test_a_service_without_interface_implements_nothing(): void
+    {
+        $this->service->createModule('utils');
+        $this->service->createService('utils', 'Logger', false);
+        $this->service->createService('utils', 'Mailer', true);
+
+        $logger = (string) file_get_contents($this->tempModulesPath.'/utils/src/Infrastructure/Services/LoggerService.php');
+        $mailer = (string) file_get_contents($this->tempModulesPath.'/utils/src/Infrastructure/Services/MailerService.php');
+
+        $this->assertStringNotContainsString('implements', $logger);
+        $this->assertStringNotContainsString('ServiceInterface', $logger);
+        $this->assertStringContainsString('final readonly class MailerService implements MailerServiceInterface', $mailer);
+        $this->assertStringContainsString('use Modules\Utils\Application\Services\MailerServiceInterface;', $mailer);
+    }
+
+    public function test_the_policy_guards_the_model_the_entity_scaffold_writes_with_module_permission_keys(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createEntity('blog-posts', 'Post');
+        $this->service->createFilamentResource('blog-posts', 'Post');
+
+        $model = 'use Modules\BlogPosts\Infrastructure\Persistence\Eloquent\Models\PostModel;';
+        $this->assertFileExists($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php');
+        $this->assertStringContainsString(
+            'namespace Modules\BlogPosts\Infrastructure\Persistence\Eloquent\Models;',
+            (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php'),
+        );
+        $this->assertStringContainsString($model, (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Repositories/EloquentPostRepository.php'));
+        $this->assertStringContainsString($model, (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php'));
+
+        $policy = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Policies/PostPolicy.php');
+        $this->assertStringContainsString($model, $policy);
+        foreach (['view_any', 'view', 'create', 'update', 'delete'] as $action) {
+            $this->assertStringContainsString("'blog-posts:posts.{$action}'", $policy);
+        }
+        $this->assertDoesNotMatchRegularExpression("#authorize\(\\\$user, '[^':]+'\)#", $policy);
+    }
+
+    public function test_a_migration_for_an_existing_table_modifies_it(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createMigration('blog-posts', 'add_slug_to_posts_table', 'blog_posts_posts', modify: true);
+
+        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.array_key_first($result->files));
+        $this->assertStringContainsString("Schema::table('blog_posts_posts', function (Blueprint \$table): void {", $content);
+        $this->assertStringNotContainsString('Schema::create', $content);
+        $this->assertStringNotContainsString('dropIfExists', $content);
+    }
+
+    public function test_a_migration_for_a_new_table_creates_it(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createMigration('blog-posts', 'create_posts_table');
+
+        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.array_key_first($result->files));
+        $this->assertStringContainsString("Schema::create('blog_posts_posts'", $content);
+        $this->assertStringContainsString("Schema::dropIfExists('blog_posts_posts')", $content);
+    }
+
+    public function test_controllers_render_inertia_pages_of_the_module(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createController('blog-posts', 'Post');
+        $this->service->createController('blog-posts', 'Archive', 'invokable');
+        $this->service->createController('blog-posts', 'Entry', 'resource');
+
+        $controllers = $this->tempModulesPath.'/blog-posts/src/Http/Controllers';
+        $default = (string) file_get_contents($controllers.'/PostController.php');
+        $invokable = (string) file_get_contents($controllers.'/ArchiveController.php');
+        $resource = (string) file_get_contents($controllers.'/EntryController.php');
+
+        $this->assertStringContainsString("Inertia::render('BlogPosts/Post')", $default);
+        $this->assertStringContainsString("Inertia::render('BlogPosts/Archive')", $invokable);
+        foreach (['EntryIndex', 'EntryCreate', 'EntryShow', 'EntryEdit'] as $page) {
+            $this->assertStringContainsString("Inertia::render('BlogPosts/{$page}'", $resource);
+        }
+        foreach ([$default, $invokable, $resource] as $content) {
+            $this->assertStringNotContainsString('response()->view(', $content);
+        }
+        // The single request module:make-request generates for the same name
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Requests\EntryRequest;', $resource);
+        $this->assertStringNotContainsString('StoreEntryRequest', $resource);
+    }
+
+    public function test_the_widget_explains_how_it_reaches_the_dashboard(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createWidget('blog-posts', 'Stats');
+
+        $widget = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Widgets/StatsWidget.php');
+
+        $this->assertStringContainsString('public function registerFilamentWidgets(): array', $widget);
+        $this->assertStringNotContainsString('auto-discovered', $widget);
+        $this->assertStringNotContainsString('Livewire::component', $widget);
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function generatedTestTypes(): array
+    {
+        return [
+            'entity unit test' => ['unit', 'Post', 'tests/Unit/Domain/Entities/PostTest.php'],
+            'DTO unit test' => ['unit-dto', 'PostDTO', 'tests/Unit/Application/DTOs/PostDTOTest.php'],
+            'controller feature test' => ['feature', 'PostController', 'tests/Feature/Http/Controllers/PostControllerTest.php'],
+            'Filament feature test' => ['feature-filament', 'Post', 'tests/Feature/Filament/PostResourceTest.php'],
+        ];
+    }
+
+    #[DataProvider('generatedTestTypes')]
+    public function test_every_generated_test_declares_the_class_its_file_is_named_after(string $type, string $name, string $path): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createTest('blog-posts', $name, $type);
+
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$path] ?? null, implode(', ', array_keys($result->files)));
+        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.$path);
+        $class = basename($path, '.php');
+        $namespace = 'Modules\BlogPosts\\'.str_replace('/', '\\', ucfirst(dirname($path)));
+        $this->assertStringContainsString("final class {$class} extends", $content);
+        $this->assertStringContainsString("namespace {$namespace};", $content);
+    }
+
+    public function test_feature_tests_enable_the_module_on_the_module_test_case(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createTest('blog-posts', 'Post', 'feature');
+        $this->service->createTest('blog-posts', 'Post', 'feature-filament');
+
+        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Http/Controllers/PostControllerTest.php');
+        $filament = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Filament/PostResourceTest.php');
+
+        foreach ([$controller, $filament] as $content) {
+            $this->assertStringContainsString('extends ModuleTestCase', $content);
+            $this->assertStringContainsString("protected ?string \$moduleName = 'blog-posts';", $content);
+            $this->assertStringContainsString('protected bool $autoEnableModule = true;', $content);
+            $this->assertStringNotContainsString('RefreshDatabase', $content);
+        }
+
+        $this->assertStringContainsString("->component('BlogPosts/Post', false)", $controller);
+        // A URL, not route(): route names registered after the application booted are not looked up
+        $this->assertStringContainsString("\$this->get('/blog-posts/posts')", $controller);
+
+        $this->assertStringContainsString('use InteractsWithModulePanel;', $filament);
+        $this->assertStringContainsString('$this->registerOnAdminPanel([PostResource::class]);', $filament);
+        $this->assertStringContainsString('$this->actingAsPanelAdmin();', $filament);
+        $this->assertStringContainsString('use Modules\BlogPosts\Infrastructure\Persistence\Eloquent\Models\PostModel;', $filament);
+        $this->assertStringNotContainsString('App\Domain\User', $filament);
+    }
+
+    public function test_a_page_lives_under_the_module_prefix_inside_the_site_layout(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createVuePage('blog-posts', 'Archive');
+
+        $page = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/pages/BlogPosts/Archive.vue');
+
+        $this->assertStringContainsString("import DefaultLayout from '@/layouts/DefaultLayout.vue';", $page);
+        $this->assertStringContainsString('<DefaultLayout>', $page);
+        $this->assertStringContainsString("{{ \$t('blogPosts.title') }}", $page);
+        $this->assertStringNotContainsString('bg-white', $page);
+        $this->assertStringNotContainsString('text-gray-', $page);
+    }
+
+    public function test_a_component_interpolates_its_title_as_vue_expects(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createVueComponent('blog-posts', 'PostCard');
+
+        $component = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/components/PostCard.vue');
+
+        $this->assertStringContainsString("{{ title ?? \$t('blogPosts.title') }}", $component);
+        $this->assertStringNotContainsString("{{ '{{' }}", $component);
+        $this->assertStringNotContainsString('<style', $component);
+    }
+
+    public function test_page_types_match_the_response_dto_keys(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createVuePage('blog-posts', 'Post');
+
+        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/Post.ts');
+
+        $this->assertStringContainsString('created_at: string;', $types);
+        $this->assertStringContainsString('updated_at: string;', $types);
+        $this->assertStringNotContainsString('createdAt', $types);
+    }
+
+    public function test_a_new_module_has_the_frontend_locales_its_pages_use(): void
+    {
+        $result = $this->service->createModule('blog-posts', displayName: 'Entradas del blog');
+
+        foreach (['es', 'en'] as $locale) {
+            $path = "resources/js/locales/{$locale}.ts";
+            $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$path] ?? null, $path);
+            $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.$path);
+            $this->assertStringContainsString('export default {', $content);
+            $this->assertStringContainsString('blogPosts: {', $content);
+        }
+        $this->assertStringContainsString("title: 'Entradas del blog',", (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts'));
+    }
+
+    public function test_an_entity_without_migration_says_how_to_create_its_table(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $without = $this->service->createEntity('blog-posts', 'Post', false);
+        $with = $this->service->createEntity('blog-posts', 'Comment', true);
+
+        $this->assertStringContainsString('module:make-migration blog-posts create_posts_table', implode("\n", $without->nextSteps));
+        $this->assertStringNotContainsString('module:make-migration', implode("\n", $with->nextSteps));
+    }
+
+    public function test_a_multi_word_resource_controller_redirects_to_the_routes_its_hint_registers(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createController('blog-posts', 'BlogPost', 'resource');
+
+        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/BlogPostController.php');
+        // Route::resource('blog-posts', ...) names its routes after the URI: "blog-posts.index"
+        $this->assertSame(3, substr_count($controller, "->route('blog_posts.blog-posts.index')"));
+        $this->assertStringNotContainsString('blog_posts.blog_posts.', $controller);
+        $this->assertStringContainsString("Route::resource('blog-posts', BlogPostController::class)", implode("\n", $result->nextSteps));
+    }
+
+    public function test_generated_write_endpoints_authorize_and_hint_authenticated_routes(): void
+    {
+        $this->service->createModule('blog-posts');
+        $resource = $this->service->createController('blog-posts', 'BlogPost', 'resource');
+        $api = $this->service->createController('blog-posts', 'BlogPost', 'api');
+        $this->service->createRequest('blog-posts', 'BlogPost');
+        $this->service->createService('blog-posts', 'BlogPost');
+
+        $controllers = $this->tempModulesPath.'/blog-posts/src/Http/Controllers';
+        foreach ([$controllers.'/BlogPostController.php', $controllers.'/Api/BlogPostController.php'] as $path) {
+            $content = (string) file_get_contents($path);
+            $this->assertStringContainsString("Gate::authorize('create', BlogPostModel::class);", $content, $path);
+            $this->assertStringContainsString("\$this->authorizeRecord('update', \$id);", $content, $path);
+            $this->assertStringContainsString("\$this->authorizeRecord('delete', \$id);", $content, $path);
+            // An id that is not a UUID, or no record, is a 404 rather than a 500
+            $this->assertStringContainsString('Str::isUuid($id)', $content, $path);
+        }
+
+        $this->assertStringContainsString("->except(['index', 'show'])->middleware('auth');", implode("\n", $resource->nextSteps));
+        $this->assertStringContainsString("->except(['index', 'show'])->middleware('auth');", implode("\n", $api->nextSteps));
+
+        $request = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Requests/BlogPostRequest.php');
+        $this->assertStringNotContainsString('Authorization lives in the policy', $request);
+        $this->assertStringContainsString('Gate::authorize', $request);
+
+        $service = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Services/BlogPostService.php');
+        $this->assertStringContainsString('if (! Str::isUuid($id)) {', $service);
+    }
+
+    public function test_the_display_name_is_escaped_for_vue_i18n_in_the_locales(): void
+    {
+        $displayName = "Reservas @ sala | {norte} d'Or";
+
+        $this->service->createModule('blog-posts', displayName: $displayName);
+
+        $locale = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts');
+        $this->assertStringContainsString("title: 'Reservas {\\'@\\'} sala {\\'|\\'} {\\'{\\'}norte{\\'}\\'} d\\'Or',", $locale);
+
+        // Only the vue-i18n message is escaped
+        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true);
+        $this->assertSame($displayName, $manifest['displayName']);
+        $messages = include $this->tempModulesPath.'/blog-posts/lang/es/messages.php';
+        $this->assertSame($displayName, $messages['title']);
+    }
+
+    public function test_page_prop_types_match_the_props_the_resource_controller_sends(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createVuePage('blog-posts', 'BlogPost');
+
+        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPost.ts');
+
+        $this->assertStringContainsString("export interface BlogPostListProps {\n    blogPosts: BlogPost[];\n}", $types);
+        $this->assertStringContainsString("export interface BlogPostShowProps {\n    blogPost: BlogPost;\n}", $types);
+    }
+
+    public function test_the_generated_messages_file_has_nothing_a_merge_would_drop(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $messages = (string) file_get_contents($this->tempModulesPath.'/blog-posts/lang/es/messages.php');
+
+        $this->assertStringNotContainsString('/*', $messages);
+        $this->assertStringNotContainsString('//', $messages);
+    }
+
+    public function test_generators_ask_for_the_labels_they_derive_from_class_names_to_be_translated(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        foreach ([
+            $this->service->createFilamentResource('blog-posts', 'BlogPost'),
+            $this->service->createWidget('blog-posts', 'Stats'),
+            $this->service->createRelationManager('blog-posts', 'Comments', 'Event'),
+        ] as $result) {
+            $this->assertStringContainsString('Translate the labels written to lang/es/filament.php', implode("\n", $result->nextSteps), $result->message);
+        }
+    }
+
+    public function test_the_controller_test_says_which_controllers_it_fits(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createTest('blog-posts', 'Archive', 'feature');
+
+        $this->assertStringContainsString('made without --resource or --invokable', implode("\n", $result->nextSteps));
+    }
+
+    public function test_a_module_cannot_take_over_a_core_page_prefix(): void
+    {
+        $pages = $this->tempModulesPath.'-pages';
+        mkdir($pages.'/Events', 0755, true);
+        touch($pages.'/Home.vue');
+        $service = new ModuleScaffoldingService($this->stubRenderer, $this->tempModulesPath, $this->createStub(CoreVersionServiceInterface::class), $pages);
+
+        try {
+            foreach (['events', 'home'] as $name) {
+                $result = $service->createModule($name);
+
+                $this->assertTrue($result->isFailure(), $name);
+                $this->assertStringContainsString('core page', implode(' ', $result->errors), $name);
+                $this->assertDirectoryDoesNotExist($this->tempModulesPath.'/'.$name);
+            }
+        } finally {
+            $this->deleteDirectory($pages);
+        }
+    }
+
+    public function test_resource_route_hints_register_the_writes_before_the_reads(): void
+    {
+        $this->service->createModule('blog-posts');
+        $result = $this->service->createController('blog-posts', 'BlogPost', 'resource');
+
+        // Registered first, /blog-posts/create would be taken by the show route /blog-posts/{blog_post}
+        $hint = implode("\n", $result->nextSteps);
+        $writes = "Route::resource('blog-posts', BlogPostController::class)->except(['index', 'show'])->middleware('auth');";
+        $reads = "Route::resource('blog-posts', BlogPostController::class)->only(['index', 'show']);";
+        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/BlogPostController.php');
+
+        foreach ([$hint, $controller] as $text) {
+            $this->assertNotFalse(strpos($text, $writes));
+            $this->assertNotFalse(strpos($text, $reads));
+            $this->assertLessThan(strpos($text, $reads), strpos($text, $writes));
+        }
+    }
+
+    public function test_the_provider_does_not_claim_the_core_calls_enable_hooks(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $provider = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+
+        $this->assertStringNotContainsString('onEnable', $provider);
+        $this->assertStringNotContainsString('onDisable', $provider);
+    }
+
+    public function test_asset_build_steps_point_to_the_node_container_or_the_release_workflow(): void
+    {
+        $results = [
+            $this->service->createModule('blog-posts'),
+            $this->service->createVuePage('blog-posts', 'Archive'),
+            $this->service->createVueComponent('blog-posts', 'PostCard'),
+        ];
+
+        foreach ($results as $result) {
+            $steps = implode("\n", $result->nextSteps);
+            $this->assertStringNotContainsString('module:build', $steps, $result->message);
+            $this->assertStringContainsString('guildforge_node', $steps, $result->message);
+            $this->assertStringContainsString('release workflow', $steps, $result->message);
+        }
+    }
+
+    public function test_the_controller_feature_test_no_longer_says_route_cannot_find_module_routes(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createTest('blog-posts', 'Archive', 'feature');
+
+        $test = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Http/Controllers/ArchiveControllerTest.php');
+
+        $this->assertStringNotContainsString('not looked up', $test);
+    }
+
+    public function test_an_unknown_test_type_is_refused(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createTest('blog-posts', 'Post', 'filament');
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Unknown test type 'filament'", $result->message);
+        $this->assertStringContainsString('feature-filament', implode(' ', $result->errors));
+        $this->assertDirectoryDoesNotExist($this->tempModulesPath.'/blog-posts/tests/Unit/Domain');
+    }
+
+    public function test_resource_pages_share_the_types_of_the_props_their_controller_sends(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $index = $this->service->createVuePage('blog-posts', 'BlogPostIndex');
+        $edit = $this->service->createVuePage('blog-posts', 'BlogPostEdit');
+
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $index->files['resources/js/types/BlogPost.ts'] ?? null);
+        $this->assertSame(ScaffoldResultDTO::STATUS_SKIPPED, $edit->files['resources/js/types/BlogPost.ts'] ?? null);
+        $this->assertFileDoesNotExist($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPostIndex.ts');
+        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPost.ts');
+        $this->assertStringContainsString('blogPosts: BlogPost[];', $types);
+        $this->assertStringContainsString('blogPost: BlogPost;', $types);
+
+        $steps = implode("\n", $index->nextSteps);
+        $this->assertStringNotContainsString('module:make-controller blog-posts BlogPostIndex', $steps);
+        $this->assertStringContainsString('module:make-controller blog-posts BlogPost --resource', $steps);
+    }
+
+    public function test_route_hints_import_the_controllers_they_name(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $resource = implode("\n", $this->service->createController('blog-posts', 'BlogPost', 'resource')->nextSteps);
+        $api = implode("\n", $this->service->createController('blog-posts', 'BlogPost', 'api')->nextSteps);
+        $default = implode("\n", $this->service->createController('blog-posts', 'Archive')->nextSteps);
+
+        // routes/*.php have no namespace: a bare class name would resolve to the global one
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\BlogPostController;', $resource);
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\Api;', $api);
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\ArchiveController;', $default);
+        $apiController = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/Api/BlogPostController.php');
+        $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\Api;', $apiController);
+    }
+
+    public function test_route_file_headers_use_sentence_case(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $web = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/web.php');
+        $api = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/api.php');
+
+        $this->assertStringNotContainsString('Web Routes', $web);
+        $this->assertStringNotContainsString('API Routes', $api);
+        $this->assertStringContainsString('| Web routes of the blog-posts module', $web);
+        $this->assertStringContainsString('| API routes of the blog-posts module', $api);
+        $this->assertStringNotContainsString('Public URLs are in Spanish', $web);
+    }
+
+    private function generateEveryTranslatedClass(string $module): void
+    {
+        $this->service->createModule($module);
+        $this->service->createFilamentResource($module, 'Post');
+        $this->service->createRelationManager($module, 'Comments', 'Event');
+        $this->service->createWidget($module, 'Stats');
+        $this->service->createEnum($module, 'PostStatus');
+        $this->service->createNotification($module, 'PostPublished');
+        $this->service->createController($module, 'Post');
+        $this->service->createController($module, 'Entry', 'resource');
+        $this->service->createController($module, 'Archive', 'invokable');
+        $this->service->createRequest($module, 'Entry');
+    }
+
+    /**
+     * @return array<string, string> Contents of every PHP file under the directory, by path
+     */
+    private function phpFiles(string $directory): array
+    {
+        $files = [];
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS));
+
+        foreach ($iterator as $file) {
+            if ($file instanceof \SplFileInfo && $file->getExtension() === 'php') {
+                $files[$file->getPathname()] = (string) file_get_contents($file->getPathname());
+            }
+        }
+
+        return $files;
     }
 
     private function deleteDirectory(string $dir): void

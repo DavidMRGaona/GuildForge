@@ -28,30 +28,32 @@ The system uses a **centralized reusable workflow** in the host repository (`Dav
 
 To create a new module release:
 
-```bash
-# 1. Update the version in module.json
-{
-  "name": "announcements",
-  "version": "1.0.0",  # ← Increment following semver
-  ...
-}
+1. Raise `version` in `module.json`, following semver:
 
-# 2. Commit the changes
-git add module.json
-git commit -m "chore: bump version to 1.0.0"
+   ```json
+   {
+     "name": "announcements",
+     "version": "1.0.0"
+   }
+   ```
 
-# 3. Create and push the tag
-git tag v1.0.0
-git push origin main --tags
-```
+2. Commit it, then create and push the tag:
+
+   ```bash
+   git add module.json
+   git commit -m "chore: bump version to 1.0.0"
+   git tag v1.0.0
+   git push origin main --tags
+   ```
 
 The workflow automatically:
-1. Validates that `module.json` exists and has the correct format, including its compatibility requirements (`requires.core` is mandatory)
+1. Validates that `module.json` exists and has the correct format: its `name` matches `module_name`, its `version` is semver, and its compatibility requirements are valid (`requires.core` is mandatory; `requires.modules` and `requires.extensions`, when present, must be lists of strings)
 2. Verifies that the tag matches the version in `module.json`
 3. Runs the module's PHPUnit suite inside the host application: it checks out `DavidMRGaona/GuildForge` at `host_ref`, installs its Composer dependencies, places the module in `src/modules/<module_name>` and runs `vendor/bin/phpunit -c modules/<module_name>/phpunit.xml` (`.github/scripts/run-module-tests.sh`). Modules without `phpunit.xml` or tests are skipped with a notice; a failing test blocks the release
-4. Generates a ZIP with the correct structure
-5. Calculates a SHA256 checksum
-6. Creates a GitHub Release with the ZIP, its checksum and `module.json` as assets
+4. If the module has a `package.json`, builds its assets: it checks out the host's `src/resources/js` and `src/public` at `host_ref`, runs `npm ci` there, copies the module to `src/modules/<module_name>`, and runs `npm install` and `MODULE_STANDALONE_OUTPUT=true npm run build` in it. The module's `vite.config.ts` must then write to the module's own `public/build/` (the configuration `module:make` writes does); the step fails without `public/build/manifest.json`
+5. Generates a ZIP with the correct structure, compiled assets included
+6. Calculates a SHA256 checksum
+7. Creates a GitHub Release with the ZIP, its checksum and `module.json` as assets
 
 ## Setting up a new module
 
@@ -63,7 +65,7 @@ Add the module's GitHub repository to its `module.json` so the updater can find 
 
 ### 1. Create the workflow in the module
 
-Create `.github/workflows/release.yml` in the module repository:
+`php artisan module:make` writes `.github/workflows/release.yml`. For a module created otherwise, copy [the template](templates/module-release-workflow.yml) there and set `module_name`:
 
 ```yaml
 name: Module release
@@ -77,9 +79,13 @@ jobs:
     uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-release.yml@main
     with:
       module_name: 'MODULE_NAME'  # ← Change this
+      # Host branch, tag or SHA to test and build against (main when the variable is unset)
+      host_ref: ${{ vars.GUILDFORGE_HOST_REF || 'main' }}
     permissions:
       contents: write
 ```
+
+To test and build a release against a host branch, tag or SHA other than `main` (for example while a core change the module needs is not merged yet), set the repository variable `GUILDFORGE_HOST_REF` in the module repository (*Settings → Secrets and variables → Actions → Variables*). Remove it once the change is on `main`.
 
 ### 2. Ensure module.json is valid
 
@@ -88,6 +94,7 @@ The `module.json` must have:
 ```json
 {
   "name": "module-name",
+  "displayName": "Nombre del módulo",
   "version": "1.0.0",
   "namespace": "Modules\\ModuleName",
   "provider": "ModuleNameServiceProvider",
@@ -123,31 +130,24 @@ Each release also publishes its `module.json` as an asset, so sites can read the
 ```
 announcements-1.0.0/
 ├── module.json
-├── src/
-├── database/
-├── resources/
-├── routes/
-├── lang/
-├── config/
-└── README.md
-
-❌ Automatically excluded:
-- tests/
-- .git/
-- .github/
-- node_modules/
-- .env*
-- *.log
-- .phpunit*
-- phpunit.xml
+├── config/  database/  lang/  resources/  routes/  src/
+├── package.json        # if the module has a frontend
+├── public/build/       # compiled Vue and CSS assets, manifest.json at its root
+└── README.md           # if the repository has one
 ```
+
+Everything in the repository is copied except `.git/`, `.github/`, `tests/`, `node_modules/`, `.env*`, `*.log`, `.phpunit*`, `phpunit.xml`, `.gitignore`, `.gitattributes`, `vite.config.ts`, `tsconfig.json` and `package-lock.json`. Installing or updating the module copies `public/build/` to the site's `public/build/modules/<name>/`, so the site never compiles anything.
+
+## Building a ZIP locally
+
+`make module-zip`, run on the host, lists the modules in `src/modules/` and asks which one to package. If it has a `package.json`, it builds the assets in the `guildforge_node` container with `MODULE_STANDALONE_OUTPUT=true` (and fails without `public/build/manifest.json`). It then writes `dist/<name>-<version>.zip`, with the same exclusions as the release workflow, and `dist/<name>-<version>.zip.sha256`. Tests are not run.
 
 ## Installing a module
 
 1. Go to the module's Releases page on GitHub
 2. Download the `{module_name}-{version}.zip` file
-3. In the GuildForge admin panel → Modules → Install from ZIP
-4. Upload the ZIP file
+3. In the admin panel, turn maintenance mode on and go to *Administración → Módulos* (admins only)
+4. Use *Instalar / actualizar* to upload the ZIP; a ZIP of an installed module updates it
 
 ### Verify integrity (optional)
 
@@ -161,8 +161,24 @@ sha256sum -c announcements-1.0.0.zip.sha256
 The admin page *Sistema → Actualizaciones de módulos* detects and applies new releases:
 
 1. Each module declares its repository in `module.json` (`"repository": "owner/repo"`). Discovery (`module:discover`, run on every container start) copies it to `modules.source_owner`/`source_repo`. Modules installed before the field existed need it once: `php artisan module:set-source <name> <owner/repo>`.
-2. Detection lists the repository's releases (not `/releases/latest`, which ignores prereleases), skips drafts and releases not newer than the installed version, and reads each candidate's `module.json` asset (releases without it are evaluated with `requires.core: "^2.0"`). It offers the highest release this site can run. When a newer release needs a different host, it records the highest such release with the reason (with no compatible release, the highest one newer than the installed version); the page shows it under *Versiones no compatibles*, without an update button. A module installed on a prerelease (`1.0.8-beta`) receives newer prereleases; stable installs only when `UPDATE_ALLOW_PRERELEASES=true`. It runs daily at 04:00 (`CheckModuleUpdatesJob` via `schedule:work`), from `php artisan module:check-updates [--force]` and from the page's *Comprobar* button, which bypasses the one-hour cache. A `module.json` asset that cannot be downloaded is reported as an error for that module, never as "up to date".
-3. *Actualizar* (only with maintenance mode on) queues an `UpdateModuleJob` (one per module at a time) and the page follows its progress. The job downloads the ZIP, verifies the `.sha256` (an update without checksum is rejected), extracts it into `modules/.staging-<name>-*`, checks that it holds exactly this module and that this site satisfies its `module.json` (the last line of defence: an incompatible package is discarded before the swap), swaps it with the installed copy (kept as `modules/.previous-<name>-*`) and publishes `public/build`. Then `module:finish-update` runs in a new PHP process: it health-checks the module first and only then runs migrations, new seeders and the version bump in one database transaction. Finally `module:refresh-caches` rebuilds the framework caches without clearing the data cache. Any failure between the swap and the commit renames the previous version back. Temporary files are always removed and the queue worker restarts afterwards; production OPcache revalidates file timestamps, so no container restart is needed.
+2. Detection lists the repository's releases (not `/releases/latest`, which ignores prereleases), skips drafts and releases not newer than the installed version, and reads each candidate's `module.json` asset (releases without it are evaluated with `requires.core: "^2.0"`). It offers the highest release this site can run. When a newer release needs a different host, it records the highest such release with the reason (with no compatible release, the highest one newer than the installed version); the page shows it under *Versiones no compatibles*, without an update button. A module installed on a prerelease (`1.0.8-beta`) receives newer prereleases; stable installs only when `UPDATE_ALLOW_PRERELEASES=true`. It runs daily at 04:00 (`CheckModuleUpdatesJob` via `schedule:work`), from `php artisan module:check-updates [--force]` and from the page's *Comprobar* button, which bypasses the cache of GitHub answers (one hour, `UPDATE_CACHE_TTL`). A `module.json` asset that cannot be downloaded is reported as an error for that module, never as "up to date".
+3. *Actualizar* (only with maintenance mode on) queues an `UpdateModuleJob` (one per module at a time) and the page follows its progress. The job makes a backup of the installed module, downloads the ZIP, verifies the `.sha256` (an update without checksum is rejected unless `UPDATE_VERIFY_CHECKSUM=false`), extracts it into `modules/.staging-<name>-*`, checks that it holds exactly this module and that this site satisfies its `module.json` (the last line of defence: an incompatible package is discarded before the swap), swaps it with the installed copy (kept as `modules/.previous-<name>-*`) and publishes `public/build`. Then `module:finish-update` runs in a new PHP process: it health-checks the module first and only then runs migrations, new seeders and the version bump in one database transaction. Finally `module:refresh-caches` rebuilds the framework caches without clearing the data cache. Any failure between the swap and the commit renames the previous version back (unless `UPDATE_AUTO_ROLLBACK=false`). Temporary files are always removed and the queue worker restarts afterwards; production OPcache revalidates file timestamps, so no container restart is needed.
+
+Settings saved from the panel live in the database (`module_settings:<name>` in the `settings` table), not in the module directory: updates, rollbacks and container rebuilds keep them, and keys a new release adds to its `config/settings.php` show up with their defaults.
+
+### Update configuration
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `GITHUB_TOKEN` | (none) | Token for the GitHub API, used to list releases and download their assets. Needed for private module repositories and to avoid the anonymous limit of 60 requests per hour; read-only access to the module repositories (contents: read) is enough |
+| `GITHUB_API_URL` | `https://api.github.com` | GitHub API base URL |
+| `GITHUB_TIMEOUT` | `30` | Request timeout, in seconds |
+| `UPDATES_ENABLED` | `true` | `false` skips the scheduled check |
+| `UPDATE_CACHE_TTL` | `3600` | Seconds GitHub answers are cached |
+| `UPDATE_ALLOW_PRERELEASES` | `false` | Offer prereleases to stable installs |
+| `UPDATE_VERIFY_CHECKSUM` | `true` | Reject an update whose `.sha256` is missing or does not match |
+| `UPDATE_HEALTH_CHECK` | `true` | Health-check the module before its migrations run |
+| `UPDATE_AUTO_ROLLBACK` | `true` | Restore the previous version when an update fails after the swap |
 
 ## Prereleases
 
@@ -180,6 +196,8 @@ The reusable workflow accepts these parameters:
 | `host_ref` | string | `main` | Branch, tag or SHA of `DavidMRGaona/GuildForge` the module is tested and built against |
 | `run_tests` | boolean | `true` | Run tests before the release |
 
+It returns `version` (the released version) and `release_url` (the GitHub Release URL) as outputs.
+
 Example with options:
 
 ```yaml
@@ -188,7 +206,7 @@ jobs:
     uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-release.yml@main
     with:
       module_name: 'my-module'
-      host_ref: 'main'
+      host_ref: ${{ vars.GUILDFORGE_HOST_REF || 'main' }}
       run_tests: false
     permissions:
       contents: write
@@ -199,11 +217,13 @@ jobs:
 | Module | Status |
 |--------|--------|
 | guildforge-announcements | ✅ Configured |
+| guildforge-channel-notifications | ✅ Configured |
 | guildforge-cookie-consent | ✅ Configured |
 | guildforge-event-registrations | ✅ Configured |
 | guildforge-game-tables | ✅ Configured |
 | guildforge-memberships | ✅ Configured |
 | guildforge-tournaments | ✅ Configured |
+| guildforge-venue-booking | ✅ Configured |
 
 ## Troubleshooting
 
@@ -231,6 +251,12 @@ jobs:
 - CI uses a fresh clone: files that are not committed (and empty test directories) do not exist there
 - The module's `phpunit.xml` must keep the `APP_*_CACHE` environment block so tests never read the bootstrap caches
 - To release while a fix is pending, pass `run_tests: false` in the module's `release.yml` and revert it afterwards
+
+### The asset build fails
+
+**Error:** `Build completed but manifest.json not found`
+- The module's `vite.config.ts` must write to its own `public/build/` with `manifest: 'manifest.json'` when `MODULE_STANDALONE_OUTPUT=true`; use the configuration `module:make` writes (see [Building module assets](modules/README.md#building-module-assets))
+- Reproduce it locally with `make module-zip`
 
 ### The release has no assets
 

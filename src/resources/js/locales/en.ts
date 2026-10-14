@@ -155,6 +155,9 @@ export default {
         title: "We're under maintenance",
         defaultMessage: "We're making improvements to the site. Please try again in a few minutes.",
     },
+    legal: {
+        last_updated: 'Last updated',
+    },
     layout: {
         brand: '{appName}',
         copyright: '© {year} {appName}. All rights reserved.',

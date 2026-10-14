@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Infrastructure\Authorization\CorePermissionDefinitions;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
@@ -48,6 +49,9 @@ final class RolesSeeder extends Seeder
         // Admin gets all permissions implicitly via isAdmin() check,
         // but we can also assign them explicitly for clarity
         $this->assignAllPermissions($adminRole);
+
+        // Role permissions were written directly: users cached before the seed must not keep the old set
+        app(AuthorizationServiceInterface::class)->invalidateCache();
     }
 
     private function syncPermissions(): void

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource\Pages;
 
-use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use {{ moduleNamespace }}\Filament\Resources\{{ nameStudly }}Resource;
 
 final class List{{ namePluralStudly }} extends ListRecords
 {

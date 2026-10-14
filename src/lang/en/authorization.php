@@ -11,7 +11,9 @@ return [
         'roles' => 'Roles',
         'hero_slides' => 'Hero slides',
         'tags' => 'Tags',
+        'menu_items' => 'Navigation menu',
         'settings' => 'Settings',
+        'mail' => 'Email',
         'updates' => 'Updates',
         'admin' => 'Administration',
     ],
@@ -23,6 +25,8 @@ return [
         'update' => 'Edit',
         'delete' => 'Delete',
         'manage' => 'Manage',
+        'configure' => 'Configure',
+        'view_stats' => 'View statistics',
         'access' => 'Access',
         'maintenance' => 'Maintenance mode',
         'apply' => 'Apply',
@@ -76,12 +80,23 @@ return [
             'update' => 'Edit tag',
             'delete' => 'Delete tag',
         ],
+        'menu_items' => [
+            'view_any' => 'View menu items list',
+            'view' => 'View menu item details',
+            'create' => 'Create menu item',
+            'update' => 'Edit and reorder menu items',
+            'delete' => 'Delete menu item',
+        ],
         'settings' => [
             'manage' => 'Manage site settings',
             'maintenance' => 'Turn maintenance mode on or off',
         ],
         'updates' => [
             'apply' => 'Apply updates',
+        ],
+        'mail' => [
+            'configure' => 'Configure email',
+            'view_stats' => 'View email statistics',
         ],
         'admin' => [
             'access' => 'Access admin panel',

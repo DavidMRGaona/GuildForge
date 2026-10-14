@@ -156,6 +156,9 @@ export default {
         title: 'Estamos en mantenimiento',
         defaultMessage: 'Estamos haciendo mejoras en la web. Vuelve a intentarlo en unos minutos.',
     },
+    legal: {
+        last_updated: 'Última actualización',
+    },
     layout: {
         brand: '{appName}',
         copyright: '© {year} {appName}. Todos los derechos reservados.',

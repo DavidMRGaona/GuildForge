@@ -10,6 +10,8 @@ final class {{ nameStudly }}Request extends FormRequest
 {
     public function authorize(): bool
     {
+        // Returns true: authorize in the controller (Gate::authorize with the policy)
+        // and protect the route with the auth middleware
         return true;
     }
 
@@ -20,17 +22,6 @@ final class {{ nameStudly }}Request extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function messages(): array
-    {
-        return [
-            'name.required' => __('{{ moduleNameSnake }}::validation.{{ nameSnake }}.name.required'),
-            'name.max' => __('{{ moduleNameSnake }}::validation.{{ nameSnake }}.name.max'),
         ];
     }
 }

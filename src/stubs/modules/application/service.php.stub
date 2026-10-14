@@ -4,28 +4,27 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }}\Infrastructure\Services;
 
+use DateTimeImmutable;
+use Illuminate\Support\Str;
 use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}DTO;
 use {{ moduleNamespace }}\Application\DTOs\{{ nameStudly }}ResponseDTO;
-use {{ moduleNamespace }}\Application\Services\{{ nameStudly }}ServiceInterface;
-use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
+{{ serviceInterfaceImport }}use {{ moduleNamespace }}\Domain\Entities\{{ nameStudly }};
 use {{ moduleNamespace }}\Domain\Repositories\{{ nameStudly }}RepositoryInterface;
 use {{ moduleNamespace }}\Domain\ValueObjects\{{ nameStudly }}Id;
-use DateTimeImmutable;
 
-final readonly class {{ nameStudly }}Service implements {{ nameStudly }}ServiceInterface
+final readonly class {{ nameStudly }}Service{{ serviceImplements }}
 {
     public function __construct(
         private {{ nameStudly }}RepositoryInterface $repository,
-    ) {
-    }
+    ) {}
 
     public function create({{ nameStudly }}DTO $dto): {{ nameStudly }}ResponseDTO
     {
         $entity = new {{ nameStudly }}(
             id: {{ nameStudly }}Id::generate(),
             name: $dto->name,
-            createdAt: new DateTimeImmutable(),
-            updatedAt: new DateTimeImmutable(),
+            createdAt: new DateTimeImmutable,
+            updatedAt: new DateTimeImmutable,
         );
 
         $this->repository->save($entity);
@@ -35,10 +34,10 @@ final readonly class {{ nameStudly }}Service implements {{ nameStudly }}ServiceI
 
     public function update(string $id, {{ nameStudly }}DTO $dto): {{ nameStudly }}ResponseDTO
     {
-        $entity = $this->repository->findById(new {{ nameStudly }}Id($id));
+        $entity = $this->repository->findById({{ nameStudly }}Id::fromString($id));
 
         if ($entity === null) {
-            throw new \RuntimeException('{{ nameStudly }} not found');
+            throw new \DomainException("{{ nameStudly }} {$id} not found");
         }
 
         $entity->updateName($dto->name);
@@ -49,10 +48,10 @@ final readonly class {{ nameStudly }}Service implements {{ nameStudly }}ServiceI
 
     public function delete(string $id): void
     {
-        $entity = $this->repository->findById(new {{ nameStudly }}Id($id));
+        $entity = $this->repository->findById({{ nameStudly }}Id::fromString($id));
 
         if ($entity === null) {
-            throw new \RuntimeException('{{ nameStudly }} not found');
+            throw new \DomainException("{{ nameStudly }} {$id} not found");
         }
 
         $this->repository->delete($entity);
@@ -60,7 +59,11 @@ final readonly class {{ nameStudly }}Service implements {{ nameStudly }}ServiceI
 
     public function findById(string $id): ?{{ nameStudly }}ResponseDTO
     {
-        $entity = $this->repository->findById(new {{ nameStudly }}Id($id));
+        if (! Str::isUuid($id)) {
+            return null;
+        }
+
+        $entity = $this->repository->findById({{ nameStudly }}Id::fromString($id));
 
         if ($entity === null) {
             return null;
@@ -69,6 +72,9 @@ final readonly class {{ nameStudly }}Service implements {{ nameStudly }}ServiceI
         return {{ nameStudly }}ResponseDTO::fromEntity($entity);
     }
 
+    /**
+     * @return array<{{ nameStudly }}ResponseDTO>
+     */
     public function all(): array
     {
         return array_map(
