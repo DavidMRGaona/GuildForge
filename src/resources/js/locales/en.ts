@@ -275,6 +275,9 @@ export default {
             description:
                 "Thanks for signing up! Before getting started, please verify your email address by clicking on the link we just sent you. If you didn't receive the email, we'll gladly send you another.",
             resend: 'Resend verification email',
+            wrongEmail: 'Wrong email address?',
+            changeEmail: 'Change it in your profile',
+            logout: 'Sign out',
         },
         profile: {
             title: 'My profile',
