@@ -23,7 +23,7 @@ GuildForge is an Inertia application: most public URLs return an Inertia page (H
 
 ## 1. Conventions
 
-- **Middleware**: every route in `routes/web.php` and in the modules' route files runs in the `web` group (session, CSRF, Inertia, security headers, maintenance check). `routes/api.php` is mounted under `/api` with the `api` group: stateless, no session and no CSRF.
+- **Middleware**: every route in `routes/web.php` and in the modules' `routes/web.php` runs in the `web` group (session, CSRF, Inertia, security headers, maintenance check); a module's `routes/api.php` is mounted under `/api` with the `api` group (none defines routes today). `routes/api.php` is mounted under `/api` with the `api` group: stateless, no session and no CSRF.
 - **`seo` prop**: every Inertia page rendered by a core or module controller receives `seo` (`SeoMetadata::toArray()`, TypeScript `SeoProps`: `scope`, `title`, `fullTitle`, `description`, `canonicalUrl`, `type`, `siteName`, `locale`, `image`, `robots`, `extraMeta`, `structuredData`). It overrides the site-wide `seo` shared prop. The page tables below list the other props only.
 - **Flash messages**: form endpoints redirect back (or to a named route) with `success`, `error`, `warning` or `info` in the session, exposed as the shared `flash` prop. Validation errors come back as Inertia `errors`.
 - **Authentication**: routes marked "Yes" use the `auth` middleware. A browser request without a session is redirected to `/iniciar-sesion`; a request that expects JSON gets `401 {"message": "Unauthenticated."}`.
@@ -216,7 +216,7 @@ Errors: `400 {"error": "Invalid payload"}` when the body has no `Type`; `403 {"e
 
 ## 6. Module routes
 
-Module routes exist only while the module is enabled. All of them run in the `web` group. Modules without public routes: **channel-notifications** (its `routes/web.php` and `routes/api.php` define empty groups) and **memberships** (admin panel only).
+Module routes exist only while the module is enabled. All of them are in `routes/web.php` and run in the `web` group. Modules without public routes: **channel-notifications** (its `routes/web.php` and `routes/api.php` define empty groups) and **memberships** (admin panel only).
 
 ### 6.1. announcements
 
@@ -227,7 +227,7 @@ Module routes exist only while the module is enabled. All of them run in the `we
 
 - `{id}` must be a UUID.
 - `index` returns `{"data": Announcement[]}` with the active announcements inside their `starts_at`/`ends_at` window that the visitor may see (`visibility`), highest `priority` first.
-- `show` returns `{"data": Announcement}` or `404 {"message": ...}`.
+- `show` returns `{"data": Announcement}`, or `404 {"message": ...}` when it does not exist or the visitor may not see it.
 - `Announcement` (`AnnouncementResponseDTO::toArray()`, snake_case): `id`, `title`, `content`, `visibility`, `position`, `priority`, `background_color`, `text_color`, `starts_at`, `ends_at`, `is_active`, `is_dismissible`, `created_at`, `updated_at`.
 
 ### 6.2. cookie-consent
@@ -239,7 +239,7 @@ Module routes exist only while the module is enabled. All of them run in the `we
 | `POST` | `/consentimiento-cookies/consentir` | `ConsentApiController@store` | No | JSON (`201`) | `cookie-consent.store` |
 
 - `categories`: `{"data": Category[]}`, `Category` = `id`, `name`, `slug`, `description`, `isRequired`, `sortOrder`, `consentModeKeys`, `cookies` (`{id, name, provider, domain, purpose, type, duration}[]`).
-- `config`: `{"data": BannerConfig}`, `BannerConfig` = `position`, `layout`, `theme`, `colors`, `showRejectAll`, `showSettingsButton`, `showLogo`, `blockPageUntilConsent`, `validityDays`, `reconsentOnChange`, `configVersion`, `texts`, `gtmEnabled`, `gtmContainerId`, `consentModeEnabled`.
+- `config`: `{"data": BannerConfig}`, `BannerConfig` = `position`, `layout`, `theme`, `colors`, `showRejectAll`, `showSettingsButton`, `validityDays`, `reconsentOnChange`, `configVersion`, `texts`, `gtmEnabled`, `gtmContainerId`, `consentModeEnabled`.
 - `store`: `201 {"data": Consent, "message": "Consent saved successfully"}`, `Consent` = `id`, `visitorId`, `userId`, `preferences`, `consentedCategories`, `configVersion`, `consentMethod`, `consentedAt`, `expiresAt`, `isValid`. An invalid consent answers `422 {"error": ...}`. The IP is stored hashed; the user id is recorded when signed in.
 - The module also appends `InjectCookieScripts` to the `web` group, which injects into HTML responses the scripts of the categories accepted in the visitor's consent cookie.
 
@@ -256,7 +256,7 @@ Module routes exist only while the module is enabled. All of them run in the `we
 - `{eventId}` must be a UUID. All responses use snake_case keys.
 - `status`: `{"data": {...}}` with the event configuration (`event_id`, `registration_enabled`, `max_participants`, `waiting_list_enabled`, `max_waiting_list`, `registration_opens_at`, `registration_closes_at`, `cancellation_deadline`, `requires_confirmation`, `requires_payment`, `members_only`, `custom_fields`, `confirmation_message`) plus `current_participants`, `current_waiting_list`, `available_spots`, `is_open`, `is_full`.
 - `show`: `{"data": Registration | null}` for the current user.
-- `store`: `201 {"data": Registration, "message": ...}`. Errors: `422 {"message", "error"}` when registration is closed, the event is full or the user is already registered.
+- `store`: `201 {"data": Registration, "message": ...}`. Errors: `422 {"message", "error"}` when registration is closed, the event is full or the user is already registered; `403 {"message", "error"}` when the event is for members only and the user is not a member.
 - `destroy`: `{"message": ...}`; `404` when there is no registration, `422` when it can no longer be cancelled.
 - `my-registrations`: `{"data": Registration[]}`.
 - `Registration` (`EventRegistrationResponseDTO`): `id`, `event_id`, `user_id`, `state`, `state_label`, `state_color`, `position`, `form_data`, `notes`, `admin_notes`, `confirmed_at`, `cancelled_at`, `created_at`, `updated_at`.
@@ -906,7 +906,7 @@ Listings built with the `BuildsPaginatedResponse` trait (events, articles, galle
 | `302` | Form submissions (redirect with flash or validation errors) and `auth` routes visited without a session |
 | `400` | SES webhook without `Type`; tournament registration not open, full, already registered or cannot withdraw (JSON) |
 | `401` | `auth` routes and guest-only tournament registration requested as JSON |
-| `403` | Invalid SNS signature, blocked bots, failed game-table policies, tournament registration not allowed (JSON) |
+| `403` | Invalid SNS signature, blocked bots, failed game-table policies, tournament registration not allowed (JSON), members-only event registration |
 | `404` | Unknown slug or id |
 | `422` | Validation errors on JSON requests; event registration closed, full, already registered or not cancellable; invalid cookie consent |
 | `429` | Rate limit exceeded |

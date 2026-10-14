@@ -18,7 +18,7 @@ The table below is prod-local (`docker-compose.prod.yml`). Production runs the s
 |-----------|-------|------|----------|
 | `guildforge_app_prod` | Dockerfile.prod (PHP 8.5 FPM Alpine) | 8000 | Application (Nginx + PHP-FPM + queue worker + scheduler) |
 | `guildforge_db_prod` | postgres:17-alpine | - | PostgreSQL database |
-| `guildforge_redis_prod` | redis:7.2-alpine | - | Cache and sessions |
+| `guildforge_redis_prod` | redis:7.2-alpine | - | Redis (available for cache, sessions and queues) |
 
 In the development environment, the following are also included:
 
@@ -33,13 +33,10 @@ In the development environment, the following are also included:
 ```
                          Internet
                             |
-                      [Reverse proxy]
+              [Reverse proxy :443 (TLS)]
                             |
-                    +-------+-------+
-                    |               |
-              Port 8000      Port 443 (SSL)
-                    |               |
-            +-------+-------------+
+                            v :8000
+            +---------------+-----+
             | guildforge_app_prod |
             |  +--------------+   |
             |  |    Nginx     |   |
@@ -134,7 +131,7 @@ REDIS_HOST=redis-prod
 | `db-prod` | PostgreSQL 17 Alpine, database `guildforge_prod`, healthcheck with `pg_isready` |
 | `redis-prod` | Redis 7.2 Alpine, healthcheck with `redis-cli ping` |
 
-**Persistent volumes** (Docker prefixes them with the Compose project name, by default the checkout directory, e.g. `runesword_guildforge_prod_db_data`):
+**Persistent volumes** (Docker prefixes them with the Compose project name, by default the checkout directory, e.g. `<project>_guildforge_prod_db_data`):
 - `guildforge_prod_db_data` - PostgreSQL data
 - `guildforge_prod_storage` - Laravel storage (logs, cache, sessions, uploads)
 - `guildforge_prod_redis_data` - Redis data
@@ -415,7 +412,7 @@ make es-indices    # Index list
 
 ### Redis
 
-Redis is used as cache, session store, and queue broker.
+Redis serves the cache, sessions and queues when `CACHE_STORE`, `SESSION_DRIVER` and `QUEUE_CONNECTION` are set to `redis` (the defaults are `database`).
 
 **Configuration:**
 
@@ -430,7 +427,7 @@ REDIS_CACHE_DB=1              # one value per tenant when tenants share a Redis
 
 When several instances (tenants) share one Redis, each needs its own `REDIS_PREFIX` and its own `REDIS_CACHE_DB` (for example `1` and `2`).
 
-**Never run `php artisan cache:clear` or `php artisan optimize:clear` in production.** With the Redis store they run `FLUSHDB` on the cache database, which drops every cache entry and the `queue:restart` signal of every tenant using that database. Cache locks (unique jobs, `withoutOverlapping` tasks) are not there: `lock_connection` is `default`, so they live in database 0, which both tenants share, separated only by `REDIS_PREFIX`. To drop compiled files, run the individual commands (`config:clear`, `route:clear`, `event:clear`, `view:clear`) or `php artisan module:refresh-caches` (hidden from `artisan list`), which clears and rebuilds them without touching the data cache (`App\Infrastructure\Support\FrameworkCacheCommands`).
+**Never run `php artisan cache:clear` or `php artisan optimize:clear` in production.** With the Redis store they run `FLUSHDB` on the cache database, which drops every cache entry and the `queue:restart` signal of every tenant using that database. Cache locks (unique jobs, `withoutOverlapping` tasks) are not there: `lock_connection` is `default`, so they live in database 0, which every instance sharing that Redis uses, separated only by `REDIS_PREFIX`. To drop compiled files, run the individual commands (`config:clear`, `route:clear`, `event:clear`, `view:clear`) or `php artisan module:refresh-caches` (hidden from `artisan list`), which clears and rebuilds them without touching the data cache (`App\Infrastructure\Support\FrameworkCacheCommands`).
 
 ---
 
@@ -561,7 +558,7 @@ Relevant configuration from `docker/prod/nginx.conf`:
 
 ### Modules as separate repositories
 
-Modules in `src/modules/` are independent Git repositories (`DavidMRGaona/guildforge-<name>`), ignored by the core repository (not submodules). Key points:
+Modules in `src/modules/` are independent Git repositories (`DavidMRGaona/guildforge-<name>`; venue-bookings: `guildforge-venue-booking`), ignored by the core repository (not submodules). Key points:
 
 - Tags and releases go to the module's own repository (e.g., `DavidMRGaona/guildforge-game-tables`)
 - The `reusable-module-release.yml` workflow generates automatic releases when a tag is created
@@ -570,7 +567,7 @@ Modules in `src/modules/` are independent Git repositories (`DavidMRGaona/guildf
 
 ### Volumes and persistence
 
-In prod-local, Docker volumes persist data between restarts (production keeps storage and modules in bind mounts, see [Deployment](#deployment)). Docker prefixes the names with the Compose project name (e.g. `runesword_`):
+In prod-local, Docker volumes persist data between restarts (production keeps storage and modules in bind mounts, see [Deployment](#deployment)). Docker prefixes the names with the Compose project name (e.g. `<project>_`):
 
 | Volume | Content | Caution |
 |--------|---------|---------|
@@ -603,7 +600,7 @@ The automatic deployment flow is:
 4. The platform builds `Dockerfile.prod` and starts a new container; the image carries no modules, which stay in the bind mount
 5. The entrypoint records the deployment, runs migrations, discovers modules, syncs permissions and caches configuration (see [Production entrypoint](#production-entrypoint))
 
-The deployment platform injects `SOURCE_COMMIT` (deployed commit) and a branch variable (branch the application deploys from) into the container environment; the image does not set them, and the variable names the code reads are in `config/updates.php`. `core:record-deployment` and the core updates page (`CoreUpdatesPage`) read them through that file: without `SOURCE_COMMIT` the deployment is not recorded and the page shows an error; the page compares the deployed commit with the deployed branch (`CORE_GITHUB_BRANCH` overrides it, `main` by default).
+The deployment platform injects `SOURCE_COMMIT` (deployed commit) and a branch variable (branch the application deploys from) into the container environment; the image does not set them, and the variable names the code reads are in `config/updates.php`. `core:record-deployment` and the core updates page (`CoreUpdatesPage`) read them through that file: without `SOURCE_COMMIT` (or `GIT_COMMIT`) the deployment is not recorded and the page shows an error; the page compares the deployed commit with the deployed branch (`CORE_GITHUB_BRANCH` overrides it, `main` by default).
 
 Required settings for each instance on the deployment platform:
 

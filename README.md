@@ -32,8 +32,8 @@ Platform for wargames and role-playing games guilds with:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/DavidMRGaona/GuildForge.git runesword
-   cd runesword
+   git clone https://github.com/DavidMRGaona/GuildForge.git guildforge
+   cd guildforge
    ```
 
 2. Copy the environment file and configure:
@@ -131,11 +131,11 @@ tests/
 
 The project includes an extensible module system for adding functionality without modifying core code.
 
-Modules are not part of this repository: each one is its own GitHub repository (`DavidMRGaona/guildforge-<name>`), cloned into `src/modules/<name>`, which the core repository ignores. A fresh clone has no modules.
+Modules are not part of this repository: each one is its own GitHub repository (`DavidMRGaona/guildforge-<name>`; venue-bookings: `guildforge-venue-booking`), cloned into `src/modules/<name>`, which the core repository ignores. A fresh clone has no modules.
 
 ```bash
 # Get an existing module
-git clone git@github.com:DavidMRGaona/guildforge-game-tables.git src/modules/game-tables
+git clone https://github.com/DavidMRGaona/guildforge-game-tables.git src/modules/game-tables
 
 # Inside the PHP container (make shell):
 # create a new module

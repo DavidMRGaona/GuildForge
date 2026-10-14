@@ -5,7 +5,7 @@
 ## General structure
 
 ```
-runesword/                              # Repository root
+guildforge/                             # Repository root
 ├── .github/
 │   └── workflows/                      # ci.yml, deploy.yml, reusable-module-release.yml
 ├── docker/                             # Container configuration
@@ -143,7 +143,7 @@ src/
 │
 ├── lang/                               # PHP translations
 │   ├── es/                             # Spanish (primary language)
-│   └── en/                             # English (fallback)
+│   └── en/                             # English
 │
 ├── modules/                            # ★ EXTENSIBLE MODULES (not tracked: src/modules/* is gitignored)
 │   └── <module>/                       # Each one cloned from its own repository or installed from a release ZIP
