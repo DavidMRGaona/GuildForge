@@ -93,11 +93,20 @@ final class ModuleContextService implements ModuleContextServiceInterface
         return $this->loader->loadedModules();
     }
 
+    /**
+     * Read config/module.php, which ModuleServiceProvider::register() loads into
+     * "modules.<name>"; falls back to the former "<snake_name>" key that modules
+     * merged their config into with mergeConfigFrom().
+     */
     public function moduleConfig(string $moduleName, string $key, mixed $default = null): mixed
     {
-        $configKey = Str::snake(Str::studly($moduleName)).'.'.$key;
+        $configKey = "modules.{$moduleName}.{$key}";
 
-        return $this->config->get($configKey, $default);
+        if ($this->config->has($configKey)) {
+            return $this->config->get($configKey);
+        }
+
+        return $this->config->get($this->legacyNamespace($moduleName).'.'.$key, $default);
     }
 
     public function modulePath(string $moduleName, string $path = ''): string
@@ -137,10 +146,17 @@ final class ModuleContextService implements ModuleContextServiceInterface
      */
     private function moduleTrans(string $moduleName, string $key, array $replace = []): string
     {
-        $moduleKey = Str::snake(Str::studly($moduleName));
-        $transKey = $moduleKey.'::'.$key;
+        // ModuleServiceProvider::loadTranslations() registers the kebab-case module name
+        $transKey = $moduleName.'::'.$key;
+        $legacyKey = $this->legacyNamespace($moduleName).'::'.$key;
 
-        return $this->translator->get($transKey, $replace);
+        if ($legacyKey !== $transKey && ! $this->translator->has($transKey) && $this->translator->has($legacyKey)) {
+            $transKey = $legacyKey;
+        }
+
+        $translation = $this->translator->get($transKey, $replace);
+
+        return is_string($translation) ? $translation : $transKey;
     }
 
     /**
@@ -150,8 +166,14 @@ final class ModuleContextService implements ModuleContextServiceInterface
      */
     private function moduleView(string $moduleName, string $name, array $data = []): View
     {
-        $moduleKey = Str::snake(Str::studly($moduleName));
-        $viewName = $moduleKey.'::'.$name;
+        // ModuleServiceProvider::loadViews() registers the kebab-case module name
+        $viewName = $moduleName.'::'.$name;
+        $legacyName = $this->legacyNamespace($moduleName).'::'.$name;
+
+        if (! $this->viewFactory->exists($viewName) && $this->viewFactory->exists($legacyName)) {
+            $viewName = $legacyName;
+        }
+
         $this->ensureViewExists($viewName);
 
         return $this->viewFactory->make($viewName, $data);
@@ -169,6 +191,14 @@ final class ModuleContextService implements ModuleContextServiceInterface
         if (! $this->viewFactory->exists($viewName)) {
             throw new InvalidArgumentException("View [{$viewName}] not found.");
         }
+    }
+
+    /**
+     * The snake_case namespace these helpers used before they followed the provider.
+     */
+    private function legacyNamespace(string $moduleName): string
+    {
+        return Str::snake(Str::studly($moduleName));
     }
 
     /**
