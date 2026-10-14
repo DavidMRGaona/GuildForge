@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UserResource\Pages;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource;
@@ -21,6 +22,15 @@ use Illuminate\Support\Facades\Auth;
 class EditUser extends EditRecord
 {
     protected static string $resource = UserResource::class;
+
+    protected function afterSave(): void
+    {
+        /** @var UserModel $user */
+        $user = $this->record;
+
+        // The roles checkbox list writes the pivot directly: drop the cached roles and permissions
+        app(AuthorizationServiceInterface::class)->refreshUser($user);
+    }
 
     /**
      * @return array<Action|ActionGroup>

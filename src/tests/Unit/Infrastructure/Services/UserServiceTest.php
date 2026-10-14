@@ -133,6 +133,8 @@ final class UserServiceTest extends TestCase
         $rolesRelation = Mockery::mock(BelongsToMany::class);
         $rolesRelation->shouldReceive('detach')->once();
         $userModel->shouldReceive('roles')->once()->andReturn($rolesRelation);
+        // Without its roles the user must lose access at once, not when the cache expires
+        $this->authService->shouldReceive('refreshUser')->once()->with($userModel);
 
         $this->service->anonymize($userId->value());
 

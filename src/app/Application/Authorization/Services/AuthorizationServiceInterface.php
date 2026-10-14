@@ -68,4 +68,12 @@ interface AuthorizationServiceInterface
      * @param  array<string>  $roleNames
      */
     public function syncRoles(object $user, array $roleNames): void;
+
+    /**
+     * Forget the cached roles and permissions of a user, so the next check reads them again.
+     *
+     * Call it after changing a user's roles (or the permissions of one of their roles)
+     * without assignRole(), removeRole() or syncRoles(), e.g. through a panel form.
+     */
+    public function refreshUser(object $user): void;
 }

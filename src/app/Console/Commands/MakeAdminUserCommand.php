@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Domain\Enums\UserRole;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -33,7 +34,7 @@ final class MakeAdminUserCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(AuthorizationServiceInterface $authorization): int
     {
         $name = text(
             label: 'What is the username?',
@@ -77,9 +78,8 @@ final class MakeAdminUserCommand extends Command
         ]);
 
         // Attach admin role if it exists
-        $adminRole = RoleModel::where('name', 'admin')->first();
-        if ($adminRole) {
-            $user->roles()->attach($adminRole->id);
+        if (RoleModel::where('name', 'admin')->exists()) {
+            $authorization->assignRole($user, 'admin');
         }
 
         $this->components->info("Admin user [{$email}] created successfully.");

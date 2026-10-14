@@ -126,7 +126,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
         $role = RoleModel::where('name', $roleName)->firstOrFail();
         /** @var UserModel $user */
         $user->roles()->syncWithoutDetaching([$role->id]);
-        $this->clearUserCache($user);
+        $this->refreshUser($user);
     }
 
     public function removeRole(object $user, string $roleName): void
@@ -135,7 +135,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
         if ($role !== null) {
             /** @var UserModel $user */
             $user->roles()->detach($role->id);
-            $this->clearUserCache($user);
+            $this->refreshUser($user);
         }
     }
 
@@ -147,7 +147,14 @@ final class AuthorizationService implements AuthorizationServiceInterface
         $roleIds = RoleModel::whereIn('name', $roleNames)->pluck('id')->toArray();
         /** @var UserModel $user */
         $user->roles()->sync($roleIds);
-        $this->clearUserCache($user);
+        $this->refreshUser($user);
+    }
+
+    public function refreshUser(object $user): void
+    {
+        $userId = $this->getUserId($user);
+        Cache::forget("user_permissions_{$userId}");
+        Cache::forget("user_roles_{$userId}");
     }
 
     private function isAdmin(object $user): bool
@@ -160,12 +167,5 @@ final class AuthorizationService implements AuthorizationServiceInterface
         /** @var UserModel $user */
         /** @var int|string */
         return $user->id ?? $user->getKey();
-    }
-
-    private function clearUserCache(object $user): void
-    {
-        $userId = $this->getUserId($user);
-        Cache::forget("user_permissions_{$userId}");
-        Cache::forget("user_roles_{$userId}");
     }
 }
