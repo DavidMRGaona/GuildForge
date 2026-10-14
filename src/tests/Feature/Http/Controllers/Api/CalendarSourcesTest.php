@@ -118,6 +118,45 @@ final class CalendarSourcesTest extends TestCase
         app(CalendarSourceRegistryInterface::class)->register(FakeCalendarSource::class);
     }
 
+    public function test_source_details_are_exposed_verbatim_including_meta_rows(): void
+    {
+        $this->registerFakeSource([
+            new CalendarEntryDTO(
+                id: 'fake-meta',
+                sourceType: 'fake',
+                sourceLabel: 'Fake source',
+                color: CalendarSourceColor::Accent,
+                title: 'Entry with meta',
+                start: new DateTimeImmutable('2025-01-10 09:00:00'),
+                end: null,
+                url: '/fake/fake-meta',
+                details: [
+                    'description' => 'Short synopsis',
+                    'location' => 'Club house',
+                    'imagePublicId' => 'fake/cover',
+                    'meta' => [
+                        ['icon' => 'dice', 'label' => 'System', 'value' => 'Pathfinder'],
+                        ['icon' => 'users', 'label' => 'Players', 'value' => '3/6'],
+                    ],
+                ],
+            ),
+        ]);
+
+        $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
+
+        $response->assertStatus(200);
+        $response->assertJsonFragment([
+            'id' => 'fake-meta',
+            'description' => 'Short synopsis',
+            'location' => 'Club house',
+            'imagePublicId' => 'fake/cover',
+            'meta' => [
+                ['icon' => 'dice', 'label' => 'System', 'value' => 'Pathfinder'],
+                ['icon' => 'users', 'label' => 'Players', 'value' => '3/6'],
+            ],
+        ]);
+    }
+
     private function makeFakeEntry(string $id, string $title, string $start): CalendarEntryDTO
     {
         return new CalendarEntryDTO(
