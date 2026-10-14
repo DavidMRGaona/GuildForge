@@ -70,10 +70,11 @@ interface AuthorizationServiceInterface
     public function syncRoles(object $user, array $roleNames): void;
 
     /**
-     * Forget the cached roles and permissions of a user, so the next check reads them again.
+     * Invalidate every cached role and permission lookup, so the next checks read them again.
      *
-     * Call it after changing a user's roles (or the permissions of one of their roles)
-     * without assignRole(), removeRole() or syncRoles(), e.g. through a panel form.
+     * Call it after any change to a user's roles or to a role (its permissions, its name,
+     * its deletion) made without assignRole(), removeRole() or syncRoles(). Inside a
+     * database transaction it takes effect once the transaction commits.
      */
-    public function refreshUser(object $user): void;
+    public function invalidateCache(): void;
 }
