@@ -35,11 +35,12 @@ final class MenuItemAccessTest extends TestCase
         $this->get(MenuItemResource::getUrl('edit', ['record' => $item]))->assertOk();
     }
 
-    public function test_a_module_contributed_item_cannot_be_deleted_even_with_delete_permission(): void
+    public function test_a_core_seeded_item_cannot_be_deleted_even_with_delete_permission(): void
     {
         $user = $this->editorWithPermissions(['menu_items.view_any', 'menu_items.delete']);
 
-        $this->assertFalse($user->can('delete', MenuItemModel::factory()->forModule('announcements')->create()));
+        $this->assertFalse($user->can('delete', MenuItemModel::factory()->forModule(MenuItemModel::CORE_MODULE)->create()));
+        $this->assertTrue($user->can('delete', MenuItemModel::factory()->forModule('announcements')->create()));
         $this->assertTrue($user->can('delete', MenuItemModel::factory()->create()));
     }
 
