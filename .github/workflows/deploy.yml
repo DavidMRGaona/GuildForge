@@ -16,25 +16,32 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
-# One deploy URL per line; add a line here for each new target.
+permissions:
+  contents: read
+
 env:
+  # One deploy URL per line; add a line here for each new target.
   WEBHOOKS: |
     ${{ secrets.WEBHOOK_URL_SERVER_1 }}
     ${{ secrets.WEBHOOK_URL_SERVER_2 }}
   DEPLOY_API_TOKEN: ${{ secrets.DEPLOY_API_TOKEN }}
+  # The commit that passed CI; the targets deploy the head of main, so it must still be the head.
+  EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   canary:
     runs-on: ubuntu-latest
     if: >-
       ${{
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') ||
         (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.skip_canary)
       }}
     timeout-minutes: 30
 
     outputs:
       index: ${{ steps.select.outputs.index }}
+      superseded: ${{ steps.head.outputs.superseded }}
 
     env:
       CANARY_RESOURCE_UUID: ${{ vars.CANARY_RESOURCE_UUID }}
@@ -46,10 +53,33 @@ jobs:
       HEALTH_REQUIRED_STREAK: 5
 
     steps:
-      - name: Select the canary target
-        id: select
+      - name: Check that main is still the commit that passed CI
+        id: head
         run: |
           set -euo pipefail
+
+          head="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          if [ "${head}" != "${EXPECTED_SHA}" ]; then
+            echo "::notice::main moved from ${EXPECTED_SHA} to ${head}; nothing is deployed here, the run for the newer commit deploys it once its CI passes."
+            echo "superseded=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Deploying ${EXPECTED_SHA}"
+            echo "superseded=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Select the canary target
+        id: select
+        if: ${{ steps.head.outputs.superseded != 'true' }}
+        run: |
+          set -euo pipefail
+          mask_url() {
+            echo "::add-mask::$1"
+            local host base
+            host="$(printf '%s' "$1" | sed -nE 's#^https?://([^/?#:]+).*#\1#p')"
+            base="$(printf '%s' "$1" | sed -nE 's#^(https?://[^/?#]+).*#\1#p')"
+            if [ -n "${host}" ]; then echo "::add-mask::${host}"; fi
+            if [ -n "${base}" ]; then echo "::add-mask::${base}"; fi
+          }
 
           if [ -z "${CANARY_RESOURCE_UUID}" ] || [ -z "${CANARY_HEALTH_URL}" ]; then
             echo "::error::Set the CANARY_RESOURCE_UUID and CANARY_HEALTH_URL repository variables (or run with skip_canary)."
@@ -65,7 +95,7 @@ jobs:
               echo "::error::Deploy URL #$((i + 1)) is empty; check the deploy URL secrets."
               exit 1
             fi
-            echo "::add-mask::${webhooks[$i]}"
+            mask_url "${webhooks[$i]}"
             uuid="$(printf '%s' "${webhooks[$i]}" | sed -nE 's/.*[?&]uuid=([^&#]*).*/\1/p')"
             if [ "${uuid}" = "${CANARY_RESOURCE_UUID}" ]; then
               matches+=("${i}")
@@ -81,14 +111,23 @@ jobs:
 
       - name: Deploy the canary
         id: trigger
+        if: ${{ steps.head.outputs.superseded != 'true' }}
         env:
           INDEX: ${{ steps.select.outputs.index }}
         run: |
           set -euo pipefail
+          mask_url() {
+            echo "::add-mask::$1"
+            local host base
+            host="$(printf '%s' "$1" | sed -nE 's#^https?://([^/?#:]+).*#\1#p')"
+            base="$(printf '%s' "$1" | sed -nE 's#^(https?://[^/?#]+).*#\1#p')"
+            if [ -n "${host}" ]; then echo "::add-mask::${host}"; fi
+            if [ -n "${base}" ]; then echo "::add-mask::${base}"; fi
+          }
 
           mapfile -t webhooks < <(printf '%s' "${WEBHOOKS}")
           webhook="${webhooks[$INDEX]}"
-          echo "::add-mask::${webhook}"
+          mask_url "${webhook}"
 
           if ! response="$(curl -X POST "${webhook}" \
             -H "Authorization: Bearer ${DEPLOY_API_TOKEN}" \
@@ -107,21 +146,29 @@ jobs:
           echo "deployment_uuid=${deployment_uuid}" >> "${GITHUB_OUTPUT}"
 
       - name: Wait for the canary deployment
+        if: ${{ steps.head.outputs.superseded != 'true' }}
         env:
           INDEX: ${{ steps.select.outputs.index }}
           DEPLOYMENT_UUID: ${{ steps.trigger.outputs.deployment_uuid }}
         run: |
           set -euo pipefail
+          mask_url() {
+            echo "::add-mask::$1"
+            local host base
+            host="$(printf '%s' "$1" | sed -nE 's#^https?://([^/?#:]+).*#\1#p')"
+            base="$(printf '%s' "$1" | sed -nE 's#^(https?://[^/?#]+).*#\1#p')"
+            if [ -n "${host}" ]; then echo "::add-mask::${host}"; fi
+            if [ -n "${base}" ]; then echo "::add-mask::${base}"; fi
+          }
 
           mapfile -t webhooks < <(printf '%s' "${WEBHOOKS}")
           webhook="${webhooks[$INDEX]}"
-          echo "::add-mask::${webhook}"
+          mask_url "${webhook}"
           base="$(printf '%s' "${webhook}" | sed -nE 's#^(https?://[^/?#]+).*#\1#p')"
           if [ -z "${base}" ]; then
             echo "::error::Cannot derive the deployment platform URL from the canary deploy URL."
             exit 1
           fi
-          echo "::add-mask::${base}"
 
           body="$(mktemp)"
           deadline=$((SECONDS + STATUS_TIMEOUT_SECONDS))
@@ -140,7 +187,12 @@ jobs:
                 fi
                 case "${status}" in
                   finished)
-                    echo "Canary deployed commit $(jq -r '.commit // "unknown"' "${body}")"
+                    commit="$(jq -r '.commit // "unknown"' "${body}")"
+                    if [ "${commit}" != "${EXPECTED_SHA}" ]; then
+                      echo "::error::The canary deployed ${commit}, not ${EXPECTED_SHA} (the commit that passed CI); the other targets were not deployed."
+                      exit 1
+                    fi
+                    echo "Canary deployed ${commit}"
                     exit 0
                     ;;
                   failed | cancelled*)
@@ -166,6 +218,7 @@ jobs:
           done
 
       - name: Check the canary health
+        if: ${{ steps.head.outputs.superseded != 'true' }}
         run: |
           set -euo pipefail
 
@@ -196,7 +249,7 @@ jobs:
     needs: canary
     if: >-
       ${{
-        !failure() && !cancelled() && (
+        !failure() && !cancelled() && needs.canary.outputs.superseded != 'true' && (
           needs.canary.result == 'success' ||
           (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.skip_canary)
         )
@@ -209,6 +262,14 @@ jobs:
           CANARY_INDEX: ${{ needs.canary.outputs.index }}
         run: |
           set -euo pipefail
+          mask_url() {
+            echo "::add-mask::$1"
+            local host base
+            host="$(printf '%s' "$1" | sed -nE 's#^https?://([^/?#:]+).*#\1#p')"
+            base="$(printf '%s' "$1" | sed -nE 's#^(https?://[^/?#]+).*#\1#p')"
+            if [ -n "${host}" ]; then echo "::add-mask::${host}"; fi
+            if [ -n "${base}" ]; then echo "::add-mask::${base}"; fi
+          }
 
           mapfile -t webhooks < <(printf '%s' "${WEBHOOKS}")
           if [ "${SKIP_CANARY}" = "true" ]; then
@@ -216,6 +277,12 @@ jobs:
           elif [ -z "${CANARY_INDEX}" ]; then
             echo "::error::The canary job did not report which target it deployed."
             exit 1
+          else
+            head="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+            if [ "${head}" != "${EXPECTED_SHA}" ]; then
+              echo "::warning::main moved from ${EXPECTED_SHA} to ${head} during the canary; the other targets were not deployed, the run for the newer commit deploys them."
+              exit 0
+            fi
           fi
 
           deployed=0
@@ -229,7 +296,7 @@ jobs:
               failed=$((failed + 1))
               continue
             fi
-            echo "::add-mask::${webhooks[$i]}"
+            mask_url "${webhooks[$i]}"
             echo "Deploying target #$((i + 1))"
             if curl -X POST "${webhooks[$i]}" \
               -H "Authorization: Bearer ${DEPLOY_API_TOKEN}" \
