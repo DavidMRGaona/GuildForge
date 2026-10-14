@@ -1012,6 +1012,127 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringNotContainsString('module:make-migration', implode("\n", $with->nextSteps));
     }
 
+    public function test_a_multi_word_resource_controller_redirects_to_the_routes_its_hint_registers(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createController('blog-posts', 'BlogPost', 'resource');
+
+        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/BlogPostController.php');
+        // Route::resource('blog-posts', ...) names its routes after the URI: "blog-posts.index"
+        $this->assertSame(3, substr_count($controller, "->route('blog_posts.blog-posts.index')"));
+        $this->assertStringNotContainsString('blog_posts.blog_posts.', $controller);
+        $this->assertStringContainsString("Route::resource('blog-posts', BlogPostController::class)", implode("\n", $result->nextSteps));
+    }
+
+    public function test_generated_write_endpoints_authorize_and_hint_authenticated_routes(): void
+    {
+        $this->service->createModule('blog-posts');
+        $resource = $this->service->createController('blog-posts', 'BlogPost', 'resource');
+        $api = $this->service->createController('blog-posts', 'BlogPost', 'api');
+        $this->service->createRequest('blog-posts', 'BlogPost');
+        $this->service->createService('blog-posts', 'BlogPost');
+
+        $controllers = $this->tempModulesPath.'/blog-posts/src/Http/Controllers';
+        foreach ([$controllers.'/BlogPostController.php', $controllers.'/Api/BlogPostController.php'] as $path) {
+            $content = (string) file_get_contents($path);
+            $this->assertStringContainsString("Gate::authorize('create', BlogPostModel::class);", $content, $path);
+            $this->assertStringContainsString("\$this->authorizeRecord('update', \$id);", $content, $path);
+            $this->assertStringContainsString("\$this->authorizeRecord('delete', \$id);", $content, $path);
+            // An id that is not a UUID, or no record, is a 404 rather than a 500
+            $this->assertStringContainsString('Str::isUuid($id)', $content, $path);
+        }
+
+        $this->assertStringContainsString("->except(['index', 'show'])->middleware('auth');", implode("\n", $resource->nextSteps));
+        $this->assertStringContainsString("->except(['index', 'show'])->middleware('auth');", implode("\n", $api->nextSteps));
+
+        $request = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Requests/BlogPostRequest.php');
+        $this->assertStringNotContainsString('Authorization lives in the policy', $request);
+        $this->assertStringContainsString('Gate::authorize', $request);
+
+        $service = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Services/BlogPostService.php');
+        $this->assertStringContainsString('if (! Str::isUuid($id)) {', $service);
+    }
+
+    public function test_the_display_name_is_escaped_for_vue_i18n_in_the_locales(): void
+    {
+        $displayName = "Reservas @ sala | {norte} d'Or";
+
+        $this->service->createModule('blog-posts', displayName: $displayName);
+
+        $locale = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts');
+        $this->assertStringContainsString("title: 'Reservas {\\'@\\'} sala {\\'|\\'} {\\'{\\'}norte{\\'}\\'} d\\'Or',", $locale);
+
+        // Only the vue-i18n message is escaped
+        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true);
+        $this->assertSame($displayName, $manifest['displayName']);
+        $messages = include $this->tempModulesPath.'/blog-posts/lang/es/messages.php';
+        $this->assertSame($displayName, $messages['title']);
+    }
+
+    public function test_page_prop_types_match_the_props_the_resource_controller_sends(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createVuePage('blog-posts', 'BlogPost');
+
+        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPost.ts');
+
+        $this->assertStringContainsString("export interface BlogPostListProps {\n    blogPosts: BlogPost[];\n}", $types);
+        $this->assertStringContainsString("export interface BlogPostShowProps {\n    blogPost: BlogPost;\n}", $types);
+    }
+
+    public function test_the_generated_messages_file_has_nothing_a_merge_would_drop(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $messages = (string) file_get_contents($this->tempModulesPath.'/blog-posts/lang/es/messages.php');
+
+        $this->assertStringNotContainsString('/*', $messages);
+        $this->assertStringNotContainsString('//', $messages);
+    }
+
+    public function test_generators_ask_for_the_labels_they_derive_from_class_names_to_be_translated(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        foreach ([
+            $this->service->createFilamentResource('blog-posts', 'BlogPost'),
+            $this->service->createWidget('blog-posts', 'Stats'),
+            $this->service->createRelationManager('blog-posts', 'Comments', 'Event'),
+        ] as $result) {
+            $this->assertStringContainsString('Translate the labels written to lang/es/filament.php', implode("\n", $result->nextSteps), $result->message);
+        }
+    }
+
+    public function test_the_controller_test_says_which_controllers_it_fits(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createTest('blog-posts', 'Archive', 'feature');
+
+        $this->assertStringContainsString('made without --resource or --invokable', implode("\n", $result->nextSteps));
+    }
+
+    public function test_a_module_cannot_take_over_a_core_page_prefix(): void
+    {
+        $pages = $this->tempModulesPath.'-pages';
+        mkdir($pages.'/Events', 0755, true);
+        touch($pages.'/Home.vue');
+        $service = new ModuleScaffoldingService($this->stubRenderer, $this->tempModulesPath, $this->createStub(CoreVersionServiceInterface::class), $pages);
+
+        try {
+            foreach (['events', 'home'] as $name) {
+                $result = $service->createModule($name);
+
+                $this->assertTrue($result->isFailure(), $name);
+                $this->assertStringContainsString('core page', implode(' ', $result->errors), $name);
+                $this->assertDirectoryDoesNotExist($this->tempModulesPath.'/'.$name);
+            }
+        } finally {
+            $this->deleteDirectory($pages);
+        }
+    }
+
     private function generateEveryTranslatedClass(string $module): void
     {
         $this->service->createModule($module);

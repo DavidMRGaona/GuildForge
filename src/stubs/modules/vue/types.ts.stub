@@ -14,10 +14,11 @@ export interface {{ nameStudly }}FormData {
     name: string;
 }
 
+// Props {{ nameStudly }}Controller (module:make-controller --resource) sends
 export interface {{ nameStudly }}ListProps {
-    items: {{ nameStudly }}[];
+    {{ namePluralCamel }}: {{ nameStudly }}[];
 }
 
 export interface {{ nameStudly }}ShowProps {
-    item: {{ nameStudly }};
+    {{ nameCamel }}: {{ nameStudly }};
 }

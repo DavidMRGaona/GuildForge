@@ -326,6 +326,7 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(StubRenderer::class),
                 config('modules.path'),
                 $app->make(CoreVersionServiceInterface::class),
+                resource_path('js/pages'),
             );
         });
 

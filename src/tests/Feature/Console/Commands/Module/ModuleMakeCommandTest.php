@@ -61,4 +61,13 @@ final class ModuleMakeCommandTest extends TestCase
             ->expectsOutputToContain('module:build blog-posts')
             ->assertSuccessful();
     }
+
+    public function test_it_refuses_a_name_whose_page_prefix_is_a_core_page(): void
+    {
+        $this->artisan('module:make', ['name' => 'events'])
+            ->expectsOutputToContain('page prefix is taken')
+            ->assertFailed();
+
+        $this->assertDirectoryDoesNotExist($this->modulesPath.'/events');
+    }
 }

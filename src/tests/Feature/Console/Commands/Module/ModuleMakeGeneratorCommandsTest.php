@@ -88,4 +88,13 @@ final class ModuleMakeGeneratorCommandsTest extends TestCase
         $this->assertFileExists($this->modulesPath.'/blog-posts/tests/Feature/Filament/PostResourceTest.php');
         $this->assertFileExists($this->modulesPath.'/blog-posts/tests/Feature/Http/Controllers/PostControllerTest.php');
     }
+
+    public function test_the_test_command_refuses_more_than_one_type(): void
+    {
+        $this->artisan('module:make-test', ['module' => 'blog-posts', 'name' => 'Post', '--feature' => true, '--filament' => true])
+            ->expectsOutputToContain('Choose only one of --dto, --feature and --filament')
+            ->assertFailed();
+
+        $this->assertDirectoryDoesNotExist($this->modulesPath.'/blog-posts/tests/Feature/Http');
+    }
 }
