@@ -24,7 +24,8 @@ class TagPolicy
 
     public function view(UserModel $user, TagModel $tag): bool
     {
-        return $this->authorize($user, 'tags.view');
+        // No separate detail permission: whoever lists the tags may see one
+        return $this->authorize($user, 'tags.view_any');
     }
 
     public function create(UserModel $user): bool
