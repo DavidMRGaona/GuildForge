@@ -244,7 +244,7 @@ return [
             'login_enabled' => 'Permitir inicio de sesión',
             'login_enabled_help' => 'Si está desactivado, los usuarios no podrán iniciar sesión (excepto en el panel de administración).',
             'email_verification_required' => 'Requerir verificación de email',
-            'email_verification_required_help' => 'Los usuarios deberán verificar su correo electrónico antes de poder acceder a todas las funciones.',
+            'email_verification_required_help' => 'Las cuentas creadas desde la actualización a la versión 3.8 deberán verificar su correo antes de usar las páginas que requieren iniciar sesión; las anteriores no se ven afectadas.',
             'anonymized_user_name' => 'Nombre de usuario anonimizado',
             'anonymized_user_name_help' => 'Nombre que se mostrará para usuarios que han sido anonimizados (ej: "Anónimo", "Redacción").',
             'section_association' => 'Socios de la asociación',
