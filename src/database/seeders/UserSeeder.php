@@ -21,8 +21,9 @@ final class UserSeeder extends Seeder
         $adminRole = RoleModel::where('name', 'admin')->first();
         $editorRole = RoleModel::where('name', 'editor')->first();
 
-        // Create or get admin user
-        $adminAttributes = UserModel::factory()->admin()->raw([
+        // Create or get admin user. Roles live in the user_role pivot, given below: raw() only
+        // returns column values, so a factory role state would have no effect here
+        $adminAttributes = UserModel::factory()->raw([
             'name' => 'Admin User',
             'display_name' => 'Administrator',
         ]);
@@ -40,7 +41,7 @@ final class UserSeeder extends Seeder
         $memberRole->assignTo($adminUser);
 
         // Create or get editor user
-        $editorAttributes = UserModel::factory()->editor()->raw([
+        $editorAttributes = UserModel::factory()->raw([
             'name' => 'Editor User',
             'display_name' => 'Editor',
         ]);
