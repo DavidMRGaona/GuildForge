@@ -363,7 +363,7 @@ Located in `src/resources/js/components/`.
 
 - **File**: `profile/ProfileAccountTab.vue`
 - **Props**: `user: User`
-- **Features**: Account tab with two forms: profile information (name, display name, email) and password change. Uses `BaseCard` for visual grouping. Success/error notifications via `useNotifications`
+- **Features**: Account tab with two forms: profile information (name, display name, email) and password change. Uses `BaseCard` for visual grouping. Success/error notifications via `useNotifications`. While the account must verify its email (`useVerificationGate().blocked`), the password form is disabled (`fieldset`) with the reason «Para cambiar la contraseña, verifica tu email.» and the «Ver cómo» link to the notice, linked by `aria-describedby`; if the server redirects a change to the notice anyway, no success message is shown
 
 ### Forms
 
@@ -519,7 +519,7 @@ Located in `src/resources/js/composables/`.
 - **Parameters**: --
 - **Returns**: `{ blocked, message, noticeUrl, linkLabel, reason, isVerificationRequired, goToNotice }`
 - **Dependencies**: `useAuth`, `useRoutes`, vue-i18n, Inertia `router`
-- **Purpose**: For forms and buttons that send to routes closed to accounts that must verify (core 3.10 or later). `blocked` follows `mustVerifyEmail`; `reason(action)` gives the translated reason for a `VerificationGateAction` (`register`, `cancelRegistration`, `book`, `cancelBooking`, `createTable`, `createCampaign`, `checkIn`, `withdraw`, `form`); `linkLabel` («Ver cómo») and `noticeUrl` build the link to the notice; `isVerificationRequired(error)` recognises the verification 403 (fetch `Response`, parsed body, axios-like error, Inertia `onHttpException` response) and `goToNotice()` visits the notice. Usage example in the file's docblock
+- **Purpose**: For forms and buttons that send to routes closed to accounts that must verify (core 3.10 or later). `blocked` follows `mustVerifyEmail`; `reason(action)` gives the translated reason for a `VerificationGateAction` (`register`, `cancelRegistration`, `book`, `cancelBooking`, `createTable`, `createCampaign`, `checkIn`, `withdraw`, `changePassword`, `form`); `linkLabel` («Ver cómo») and `noticeUrl` build the link to the notice; `isVerificationRequired(error)` recognises the verification 403 (fetch `Response`, parsed body, axios-like error, Inertia `onHttpException` response, or the notice page an Inertia form was redirected to) and `goToNotice()` visits the notice. Usage example in the file's docblock
 
 ### useNotifications
 
