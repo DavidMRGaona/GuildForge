@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Drops the legacy users.role column. Roles live in the user_role pivot and the code has
- * stopped reading and writing the column, so nothing is lost: it only held the default.
+ * stopped reading and writing the column, so dropping it changes nothing. Values it still
+ * held are discarded: they granted nothing, and down() recreates the column with the
+ * default for every row.
  */
 return new class extends Migration
 {
