@@ -134,14 +134,22 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
         $this->requireVerification();
         $this->actingAs($this->newUnverifiedUser());
 
+        $messages = [];
+
         foreach (['es', 'en'] as $locale) {
             app()->setLocale($locale);
 
-            $this->postJson(self::OPTIONAL_LOGIN_URL)
+            $response = $this->postJson(self::OPTIONAL_LOGIN_URL)
                 ->assertForbidden()
                 ->assertJsonPath('error', EnsureEmailIsVerifiedWhenRequired::JSON_ERROR_CODE)
                 ->assertJsonPath('error', 'email_verification_required');
+            $messages[$locale] = $response->json('message');
         }
+
+        // The message is translated, the code is not
+        $this->assertIsString($messages['es']);
+        $this->assertIsString($messages['en']);
+        $this->assertNotSame($messages['es'], $messages['en']);
     }
 
     /**
