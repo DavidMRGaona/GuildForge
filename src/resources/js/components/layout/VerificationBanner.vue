@@ -44,6 +44,9 @@ function resend(): void {
     form.post(routes.auth.resendVerification, {
         preserveScroll: true,
         preserveState: true,
+        // Partial reload: the page does not get the resend flash (the banner shows its own
+        // feedback); the reload consumes it. Leaving `auth` keeps mustVerifyEmail current.
+        only: ['auth'],
         onSuccess: () => {
             state.value = 'sent';
         },
