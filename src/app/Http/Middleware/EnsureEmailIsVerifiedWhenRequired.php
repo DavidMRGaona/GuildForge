@@ -22,7 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
  *   guests but act as the signed-in user when there is one (e.g. signing up for a tournament).
  *   Without a signed-in user the alias does nothing.
  * Browser and Inertia visits are sent to `verification.notice` (remembering the page asked for);
- * JSON requests get a 403.
+ * JSON requests get a 403 with a translated `message` and `error` = JSON_ERROR_CODE.
  *
  * Always reachable:
  * - `verification.*`: the notice, resending the link and the verification links themselves;
@@ -40,6 +40,12 @@ final readonly class EnsureEmailIsVerifiedWhenRequired
      * the second pass reaches the same decision, so it is harmless.
      */
     public const string ALIAS = 'email.verified-if-required';
+
+    /**
+     * Machine-readable code of the JSON 403 (`error` field), stable across locales unlike the
+     * translated `message`; the frontend's useVerificationGate() recognises the response by it.
+     */
+    public const string JSON_ERROR_CODE = 'email_verification_required';
 
     /** @var array<string> */
     private const array EXCLUDED_ROUTE_NAMES = [
@@ -67,7 +73,10 @@ final readonly class EnsureEmailIsVerifiedWhenRequired
 
         if ($request->expectsJson() && ! $request->hasHeader('X-Inertia')) {
             return response()->json(
-                ['message' => __('auth.email_verification_required')],
+                [
+                    'message' => __('auth.email_verification_required'),
+                    'error' => self::JSON_ERROR_CODE,
+                ],
                 Response::HTTP_FORBIDDEN,
             );
         }
