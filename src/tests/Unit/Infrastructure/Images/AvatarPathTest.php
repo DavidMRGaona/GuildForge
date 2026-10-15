@@ -71,6 +71,13 @@ final class AvatarPathTest extends TestCase
         $this->assertSame('users/abc/0d1c2b3a-animated.gif', $path);
     }
 
+    public function test_only_a_trailing_marker_is_dropped_from_the_stored_name(): void
+    {
+        $path = (new AvatarPath)->forStored('users/abc/x-animated-y.jpg', ImageFixtures::gif(2));
+
+        $this->assertSame('users/abc/x-animated-y-animated.gif', $path);
+    }
+
     public function test_a_stored_avatar_without_directory_keeps_none(): void
     {
         $this->assertSame('0d1c2b3a-animated.webp', (new AvatarPath)->forStored('0d1c2b3a.jpg', ImageFixtures::webp(2)));

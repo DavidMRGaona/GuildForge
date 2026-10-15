@@ -21,8 +21,9 @@ use Illuminate\Support\Str;
  * normalizePublicId() only drop the extension) and has no dot on purpose: a dot left in
  * the public id would be read as a format by a delivery URL.
  *
- * Avatars stored before 3.10.1 are "users/<user id>/<uuid>.jpg" whatever their bytes; the
- * animated ones are renamed by "php artisan users:mark-animated-avatars".
+ * Before 3.10.1 the profile stored "users/<user id>/<uuid>.jpg" and the panel
+ * "avatars/<Y>/<m>/<uuid>.<extension sent by the browser>", whatever the bytes; only the
+ * animated ones are renamed, by "php artisan users:mark-animated-avatars".
  */
 final readonly class AvatarPath
 {
@@ -60,7 +61,7 @@ final readonly class AvatarPath
     {
         $info = pathinfo($path);
         $directory = $info['dirname'] ?? '.';
-        $name = Str::beforeLast($info['filename'], self::ANIMATED_SUFFIX);
+        $name = Str::chopEnd($info['filename'], self::ANIMATED_SUFFIX);
         $fileName = $this->fileName($name, $contents);
 
         return $directory !== '.' ? $directory.'/'.$fileName : $fileName;
