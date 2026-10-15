@@ -12,6 +12,7 @@ use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Infrastructure\Images\AvatarPath;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Actions\Action;
@@ -38,7 +39,6 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use RuntimeException;
 
@@ -114,9 +114,8 @@ class UserResource extends BaseResource
                             $avatarSettings
                         );
 
-                        $directory = 'avatars/'.now()->format('Y/m');
-                        $filename = Str::uuid()->toString().'.'.$file->getClientOriginalExtension();
-                        $path = $directory.'/'.$filename;
+                        // Named after the stored bytes; animated avatars are marked for animated delivery
+                        $path = app(AvatarPath::class)->forUpload('avatars/'.now()->format('Y/m'), $optimizedContents);
 
                         Storage::disk('images')->put($path, $optimizedContents);
 
