@@ -27,7 +27,8 @@ return [
         // Output format (null = keep original, or 'jpg', 'png', 'webp', 'gif')
         'format' => env('IMAGE_OPTIMIZATION_FORMAT'),
 
-        // Skip animated GIF files (preserves animation)
+        // Skip animated images (GIF, APNG, animated WebP): their original bytes are
+        // stored so no frame is lost. The key keeps its historical GIF-only name
         'skip_animated_gif' => true,
 
         // Minimum file size in bytes before optimization is applied

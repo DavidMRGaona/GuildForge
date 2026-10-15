@@ -9,6 +9,9 @@ namespace App\Application\DTOs;
  */
 final readonly class ImageOptimizationSettingsDTO
 {
+    /**
+     * @param  bool  $skipAnimatedGif  Keep the original bytes of every animated image (GIF, APNG, animated WebP); the name predates APNG and WebP support
+     */
     public function __construct(
         public int $maxWidth = 2048,
         public int $maxHeight = 2048,
