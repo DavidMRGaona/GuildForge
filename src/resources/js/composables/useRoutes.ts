@@ -32,6 +32,7 @@ export interface RouteDefinitions {
         forgotPassword: string;
         resetPassword: string;
         verifyEmail: string;
+        resendVerification: string;
     };
 
     // User
@@ -73,6 +74,7 @@ const routes: RouteDefinitions = {
         forgotPassword: '/olvide-contrasena',
         resetPassword: '/restablecer-contrasena',
         verifyEmail: '/verificar-email',
+        resendVerification: '/verificar-email/reenviar',
     },
 
     // User

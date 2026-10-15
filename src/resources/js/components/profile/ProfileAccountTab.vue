@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import BaseCard from '@/components/ui/BaseCard.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useNotifications } from '@/composables/useNotifications';
+import { useVerificationGate } from '@/composables/useVerificationGate';
 import type { User, UpdateProfileFormData, ChangePasswordFormData } from '@/types/models';
 
 interface Props {
@@ -14,6 +15,9 @@ const props = defineProps<Props>();
 
 const { t } = useI18n();
 const notifications = useNotifications();
+// PUT /perfil/contrasena is closed to accounts that must verify their email (profile.update is not)
+const gate = useVerificationGate();
+const passwordBlockedId = 'password-verification-required';
 
 // Profile form
 const profileForm = useForm<Omit<UpdateProfileFormData, 'avatar'>>({
@@ -40,9 +44,17 @@ const passwordForm = useForm<ChangePasswordFormData>({
 });
 
 const changePassword = () => {
+    if (gate.blocked.value) {
+        return;
+    }
+
     passwordForm.put('/perfil/contrasena', {
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: (page) => {
+            // Must verify after all (e.g. changed in another tab): the server sent us to the notice
+            if (gate.isVerificationRequired(page)) {
+                return;
+            }
             passwordForm.reset();
             notifications.success(t('auth.profile.passwordUpdated'));
         },
@@ -192,79 +204,103 @@ const changePassword = () => {
                 </template>
 
                 <form class="space-y-4" @submit.prevent="changePassword">
-                    <div>
-                        <label
-                            for="current_password"
-                            class="block text-sm font-medium text-base-secondary"
+                    <p
+                        v-if="gate.blocked.value"
+                        :id="passwordBlockedId"
+                        class="rounded-md bg-warning-light p-3 text-sm text-base-primary"
+                    >
+                        {{ gate.reason('changePassword') }}
+                        <Link
+                            :href="gate.noticeUrl"
+                            class="font-semibold underline underline-offset-2 hover:no-underline"
                         >
-                            {{ t('auth.profile.currentPassword') }}
-                        </label>
-                        <input
-                            id="current_password"
-                            v-model="passwordForm.current_password"
-                            type="password"
-                            required
-                            autocomplete="current-password"
-                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                        />
-                        <p
-                            v-if="passwordForm.errors.current_password"
-                            class="mt-1 text-sm text-error"
-                        >
-                            {{ passwordForm.errors.current_password }}
-                        </p>
-                    </div>
+                            {{ gate.linkLabel.value }}
+                            <span aria-hidden="true">→</span>
+                        </Link>
+                    </p>
 
-                    <div>
-                        <label
-                            for="new_password"
-                            class="block text-sm font-medium text-base-secondary"
-                        >
-                            {{ t('auth.profile.newPassword') }}
-                        </label>
-                        <input
-                            id="new_password"
-                            v-model="passwordForm.password"
-                            type="password"
-                            required
-                            autocomplete="new-password"
-                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                        />
-                        <p v-if="passwordForm.errors.password" class="mt-1 text-sm text-error">
-                            {{ passwordForm.errors.password }}
-                        </p>
-                    </div>
+                    <fieldset
+                        class="min-w-0 space-y-4"
+                        :disabled="gate.blocked.value"
+                        :aria-describedby="gate.blocked.value ? passwordBlockedId : undefined"
+                    >
+                        <div>
+                            <label
+                                for="current_password"
+                                class="block text-sm font-medium text-base-secondary"
+                            >
+                                {{ t('auth.profile.currentPassword') }}
+                            </label>
+                            <input
+                                id="current_password"
+                                v-model="passwordForm.current_password"
+                                type="password"
+                                required
+                                autocomplete="current-password"
+                                class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            />
+                            <p
+                                v-if="passwordForm.errors.current_password"
+                                class="mt-1 text-sm text-error"
+                            >
+                                {{ passwordForm.errors.current_password }}
+                            </p>
+                        </div>
 
-                    <div>
-                        <label
-                            for="password_confirmation"
-                            class="block text-sm font-medium text-base-secondary"
-                        >
-                            {{ t('auth.profile.confirmPassword') }}
-                        </label>
-                        <input
-                            id="password_confirmation"
-                            v-model="passwordForm.password_confirmation"
-                            type="password"
-                            required
-                            autocomplete="new-password"
-                            class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                        />
-                    </div>
+                        <div>
+                            <label
+                                for="new_password"
+                                class="block text-sm font-medium text-base-secondary"
+                            >
+                                {{ t('auth.profile.newPassword') }}
+                            </label>
+                            <input
+                                id="new_password"
+                                v-model="passwordForm.password"
+                                type="password"
+                                required
+                                autocomplete="new-password"
+                                class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            />
+                            <p v-if="passwordForm.errors.password" class="mt-1 text-sm text-error">
+                                {{ passwordForm.errors.password }}
+                            </p>
+                        </div>
 
-                    <div class="flex justify-end pt-2">
-                        <BaseButton
-                            type="submit"
-                            variant="primary"
-                            :disabled="passwordForm.processing"
-                        >
-                            {{
-                                passwordForm.processing
-                                    ? t('common.loading')
-                                    : t('auth.profile.updatePassword')
-                            }}
-                        </BaseButton>
-                    </div>
+                        <div>
+                            <label
+                                for="password_confirmation"
+                                class="block text-sm font-medium text-base-secondary"
+                            >
+                                {{ t('auth.profile.confirmPassword') }}
+                            </label>
+                            <input
+                                id="password_confirmation"
+                                v-model="passwordForm.password_confirmation"
+                                type="password"
+                                required
+                                autocomplete="new-password"
+                                class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            />
+                        </div>
+
+                        <div class="flex justify-end pt-2">
+                            <BaseButton
+                                type="submit"
+                                variant="primary"
+                                :disabled="passwordForm.processing || gate.blocked.value"
+                                :aria-describedby="
+                                    gate.blocked.value ? passwordBlockedId : undefined
+                                "
+                            >
+                                {{
+                                    passwordForm.processing
+                                        ? t('common.loading')
+                                        : t('auth.profile.updatePassword')
+                                }}
+                            </BaseButton>
+                        </div>
+                    </fieldset>
                 </form>
             </BaseCard>
         </div>

@@ -11,6 +11,17 @@ export interface User {
     roles?: string[];
     /** Array of permission keys the user has */
     permissions?: string[];
+    /**
+     * Shared `auth.user` only: true while the account must verify its email before using the
+     * authenticated part of the site (the server's EmailVerificationPolicy decision). Absent
+     * from cores older than 3.10: read it through useAuth().mustVerifyEmail, which defaults to false.
+     */
+    mustVerifyEmail?: boolean;
+    /**
+     * Shared `auth.user` only: the address a verification link goes to, the pending new
+     * address when one awaits confirmation, otherwise `email`.
+     */
+    verificationEmail?: string;
 }
 
 export interface AuthSettings {

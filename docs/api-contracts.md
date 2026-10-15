@@ -96,6 +96,8 @@ Listing query parameters (`/eventos`, `/articulos`, `/galeria`): `page` (integer
       email: string;
       avatarPublicId: string | null;
       emailVerified: boolean;
+      mustVerifyEmail: boolean;            // EmailVerificationPolicyInterface::mustVerify() for this account
+      verificationEmail: string;           // where a verification link goes: pending email if any, else email
       createdAt: string;
       roles: string[];
       permissions: string[];
@@ -165,7 +167,7 @@ Listing query parameters (`/eventos`, `/articulos`, `/galeria`): `page` (integer
 | `POST` | `/perfil` | `ProfileController@update` | `throttle:6,1,profile` | Redirect back with `success`; a new email is stored as pending and its confirmation link is mailed to the new address | `profile.update` |
 | `PUT` | `/perfil/contrasena` | `ProfileController@changePassword` | -- | Redirect back with `success`, or `error` when the current password is wrong | `profile.password` |
 
-While *Requerir verificación de email* is on, `EnsureEmailIsVerifiedWhenRequired` (§9) closes every route with `auth` or the alias `email.verified-if-required`, module routes included, to accounts that must verify (`EmailVerificationPolicyInterface`: unverified, not anonymized and created from `email_verification_enforced_since` on): browser and Inertia visits are redirected to `/verificar-email`, remembering the intended URL, and other JSON requests get a `403` whose `message` is `auth.email_verification_required`. `logout`, `verification.*`, `profile.show` and `profile.update` stay open.
+While *Requerir verificación de email* is on, `EnsureEmailIsVerifiedWhenRequired` (§9) closes every route with `auth` or the alias `email.verified-if-required`, module routes included, to accounts that must verify (`EmailVerificationPolicyInterface`: unverified, not anonymized and created from `email_verification_enforced_since` on): browser and Inertia visits are redirected to `/verificar-email`, remembering the intended URL, and other JSON requests get a `403` whose `message` is `auth.email_verification_required`, with `error: "email_verification_required"` and the header `X-Email-Verification-Required: 1`. `logout`, `verification.*`, `profile.show` and `profile.update` stay open.
 
 ### Page props
 
@@ -842,7 +844,7 @@ Configured in `src/bootstrap/app.php`.
 | `HandleInertiaRequests` | appended to the `web` group | Inertia root view, asset version and shared props (§2). Skipped for `admin/*` and Livewire requests |
 | `SecurityHeadersMiddleware` | appended to the `web` group | Sets `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `Content-Security-Policy`, and `Strict-Transport-Security` on HTTPS requests |
 | `EnsureSiteIsNotInMaintenance` | appended to the `web` group | While the `maintenance_enabled` setting is on, renders the Inertia page `Maintenance` (`message`, `seo`) with status `503` and `Retry-After: 600`. Lets through `admin`, `admin/*`, `up`, `iniciar-sesion`, Livewire requests and users who can access the admin panel |
-| `EnsureEmailIsVerifiedWhenRequired` | appended to the `web` group; alias `email.verified-if-required` | On routes with `auth`: when `EmailVerificationPolicyInterface::mustVerify()` holds for the signed-in user, redirects to `verification.notice` (`redirect()->guest()`), or answers `403` (`message`: `auth.email_verification_required`) to JSON requests that are not Inertia visits. Also applies on routes with the alias `email.verified-if-required` (without `auth`), only when someone is signed in. Lets through `verification.*`, `logout`, `profile.show`, `profile.update` and `filament.*` |
+| `EnsureEmailIsVerifiedWhenRequired` | appended to the `web` group; alias `email.verified-if-required` | On routes with `auth`: when `EmailVerificationPolicyInterface::mustVerify()` holds for the signed-in user, redirects to `verification.notice` (`redirect()->guest()`), or answers `403` (`message`: `auth.email_verification_required`, `error`: `email_verification_required`, header `X-Email-Verification-Required: 1`) to JSON requests that are not Inertia visits. Also applies on routes with the alias `email.verified-if-required` (without `auth`), only when someone is signed in. Lets through `verification.*`, `logout`, `profile.show`, `profile.update` and `filament.*` |
 | `BlockBotsMiddleware` | global (`$middleware->append`), alias `bot-protection` | Answers `403` (`Access denied`, or `{"message": "Access denied"}` for JSON) to user agents in `config('bot-protection.blocked_bots')`, unless they match `allowed_bots`; disabled with `bot-protection.enabled` |
 | `EnsureRegistrationIsEnabled` | alias `registration.enabled` | Redirects to `/` when registration is disabled in the site settings |
 | `EnsureLoginIsEnabled` | alias `login.enabled` | Redirects to `/` when login is disabled in the site settings |
@@ -910,7 +912,7 @@ Listings built with the `BuildsPaginatedResponse` trait (events, articles, galle
 | `302` | Form submissions (redirect with flash or validation errors) and `auth` routes visited without a session |
 | `400` | SES webhook without `Type`; tournament registration not open, full, already registered or cannot withdraw (JSON) |
 | `401` | `auth` routes and guest-only tournament registration requested as JSON |
-| `403` | Invalid SNS signature, blocked bots, failed game-table policies, tournament registration not allowed (JSON), members-only event registration, cancelling another user's venue booking |
+| `403` | Invalid SNS signature, blocked bots, failed game-table policies, tournament registration not allowed (JSON), members-only event registration, cancelling another user's venue booking, JSON requests from an account that must verify its email (§3) |
 | `404` | Unknown slug or id |
 | `422` | Validation errors on JSON requests; event registration closed, full, already registered or not cancellable; invalid cookie consent |
 | `429` | Rate limit exceeded |

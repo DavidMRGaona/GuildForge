@@ -715,7 +715,18 @@ Public pages stay open to every account, as they are to guests.
 
 `EmailVerificationPolicyInterface::mustVerify($user)` decides who has to verify. It is true when the setting is on, the email is not verified, the account is not anonymized and the account was created at or after `email_verification_enforced_since`. That setting is the cutoff: the migration `2026_10_14_100003_record_email_verification_cutoff` records it once, in UTC (ISO 8601), when 3.8.0 is deployed, and a later run never moves it. Accounts created before the cutoff keep working without verifying, as they did when the setting was only shown to the frontend. The policy fails closed: without a readable cutoff or without a creation date, every unverified account must verify while the setting is on.
 
-An account that must verify is sent to `/verificar-email` (`verification.notice`), and the page it asked for is remembered: verifying returns to it. A new account that must verify goes there right after signing up. JSON requests that are not Inertia visits get a `403` with `auth.email_verification_required`. The notice page (`Auth/VerifyEmail`, props `email` and `pendingEmail`) says which address the link was sent to, shows flashed errors, offers to resend the link, links to the profile to correct a mistyped email, and signs out; an account that has already verified is sent on from the notice.
+An account that must verify is sent to `/verificar-email` (`verification.notice`), and the page it asked for is remembered: verifying returns to it. A new account that must verify goes there right after signing up. JSON requests that are not Inertia visits get a `403` whose `message` is `auth.email_verification_required` (translated), with the locale-independent code `error: "email_verification_required"` (`EnsureEmailIsVerifiedWhenRequired::JSON_ERROR_CODE`) and the header `X-Email-Verification-Required: 1` (`JSON_ERROR_HEADER`), so callers can recognise it without comparing texts. The notice page (`Auth/VerifyEmail`, props `email` and `pendingEmail`) says which address the link was sent to, shows flashed errors, offers to resend the link, links to the profile to correct a mistyped email, and signs out; an account that has already verified is sent on from the notice.
+
+#### What the interface knows
+
+The shared `auth.user` prop (see `HandleInertiaRequests::getAuthUser()`) tells the frontend whether *this* account must verify, which `authSettings.emailVerificationRequired` cannot, since the cutoff depends on the account:
+
+- `mustVerifyEmail: boolean`, from the same `EmailVerificationPolicyInterface::mustVerify()` the middleware applies. Guests get `auth.user = null`, which the frontend reads as false. If the policy throws, the error is logged as a warning and the prop falls back to "not verified": an unverified account is told to verify and a verified one never is; the server still enforces the rule on its own.
+- `verificationEmail: string`, the address a verification link goes to: `pending_email` when an email change awaits confirmation, otherwise `email` (see *Correcting the email*).
+
+On the frontend, `useAuth().mustVerifyEmail` exposes the flag (false without user or on older cores). While it is true, `DefaultLayout` shows `components/layout/VerificationBanner.vue` under the header: it says where the link was sent, offers *Reenviar enlace* (POST `verification.send`, with sending, sent, too-many-requests and error feedback; the banner stays after a resend) and *Más información* (link to the notice). It is never shown in `AuthLayout`, so not on the notice page itself.
+
+Modules use `useVerificationGate()` (`composables/useVerificationGate.ts`, core 3.10 or later) to disable the forms the server would reject: `blocked`, `reason(action)` (translated sentence per `VerificationGateAction`: `register`, `cancelRegistration`, `book`, `cancelBooking`, `createTable`, `createCampaign`, `checkIn`, `withdraw`, `changePassword`, `form`), `message` (= `reason('form')`), `linkLabel`, `noticeUrl`, `goToNotice()` and `isVerificationRequired(error)`, which recognises the 403 from a `fetch` `Response` (by the header, or a redirect to the notice), its parsed body, an axios-like error, the response Inertia passes to `onHttpException` and the notice page an Inertia form reaches `onSuccess` with after the server redirected it. The core uses it for the only core form the middleware blocks, the password change in the profile (`PUT /perfil/contrasena`, `ProfileAccountTab`): disabled with the reason and the link to the notice; the rest of the profile (`profile.update`) stays open. This is interface only: the server's rules and exemptions are the same.
 
 #### Correcting the email
 
@@ -991,7 +1002,8 @@ Reusable functions that encapsulate reactive logic:
 | `useHeroSlider` | Hero carousel with autoplay |
 | `useSeo` | Deprecated (modules built for core 3.0). Pages send a `seo` prop from the server; `useServerSeo()` in `app.ts` applies it on every navigation |
 | `usePagination` | Reusable pagination |
-| `useAuth` | Authentication state |
+| `useAuth` | Authentication state (`mustVerifyEmail` included) |
+| `useVerificationGate` | Blocked state, reasons and 403 detection for forms an account that must verify its email cannot send |
 | `useNotifications` | Toast notification system |
 | `useTags` | Tag filtering |
 | `useRoutes` | Named route helper |
