@@ -306,6 +306,7 @@ export default {
                 createCampaign: 'Para crear una campaña, verifica tu email.',
                 checkIn: 'Para hacer el check-in, verifica tu email.',
                 withdraw: 'Para retirarte, verifica tu email.',
+                changePassword: 'Para cambiar la contraseña, verifica tu email.',
                 form: 'Para enviar este formulario, verifica tu email.',
             },
         },
