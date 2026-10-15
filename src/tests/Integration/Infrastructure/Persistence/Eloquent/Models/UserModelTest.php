@@ -28,8 +28,6 @@ final class UserModelTest extends TestCase
             'display_name' => 'Johnny',
             'email' => 'john@example.com',
             'avatar_public_id' => 'avatars/john.jpg',
-            // Legacy column, no longer written: the database default fills it
-            'role' => 'member',
         ]);
     }
 
@@ -51,9 +49,15 @@ final class UserModelTest extends TestCase
         $this->assertEquals($fillable, $model->getFillable());
     }
 
-    public function test_it_does_not_cast_the_legacy_role_column(): void
+    public function test_it_has_no_role_attribute(): void
     {
-        $this->assertArrayNotHasKey('role', (new UserModel)->getCasts());
+        $user = UserModel::factory()->admin()->create()->fresh();
+
+        $this->assertNotNull($user);
+        $this->assertArrayNotHasKey('role', $user->getAttributes());
+        $this->assertArrayNotHasKey('role', $user->toArray());
+        $this->assertArrayNotHasKey('role', $user->getCasts());
+        $this->assertNotContains('role', $user->getFillable());
     }
 
     public function test_factory_creates_user_without_roles_by_default(): void

@@ -96,14 +96,13 @@ Core migrations create 27 application tables plus the Laravel framework tables `
 | email_verified_at | timestamp | nullable |
 | password | string | |
 | avatar_public_id | string | nullable |
-| role | string | default `member`; legacy, not read or written by the code (roles live in `user_role`) |
 | remember_token | string(100) | nullable |
 | created_at / updated_at | timestamp | nullable |
 | deleted_at | timestamp | nullable (soft delete) |
 | anonymized_at | timestamp | nullable |
 
 - Model: `UserModel` (`SoftDeletes`, `DeletesCloudinaryImages` on `avatar_public_id`). Entity: `App\Domain\Entities\User`.
-- Relations: `roles()` BelongsToMany `RoleModel` through `user_role`. Permissions are resolved from the roles, not from the `role` column.
+- Relations: `roles()` BelongsToMany `RoleModel` through `user_role`. There is no role column: roles live only in `user_role` (the legacy `role` column was dropped by `2026_10_15_100001_drop_role_from_users_table`) and permissions are resolved from them.
 
 #### password_reset_tokens
 
