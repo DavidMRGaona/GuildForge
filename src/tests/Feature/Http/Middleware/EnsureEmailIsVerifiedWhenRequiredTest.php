@@ -144,6 +144,30 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
         }
     }
 
+    /**
+     * A fetch() caller can recognise the 403 from the Response itself, before reading its body.
+     */
+    public function test_the_json_403_is_flagged_by_a_header(): void
+    {
+        $this->requireVerification();
+        $this->actingAs($this->newUnverifiedUser());
+
+        $this->getJson(self::PROTECTED_URL)
+            ->assertForbidden()
+            ->assertHeader(EnsureEmailIsVerifiedWhenRequired::JSON_ERROR_HEADER, '1')
+            ->assertHeader('X-Email-Verification-Required', '1');
+    }
+
+    public function test_responses_that_are_not_stopped_carry_no_verification_header(): void
+    {
+        $this->requireVerification();
+        $this->actingAs(UserModel::factory()->create());
+
+        $this->getJson(self::PROTECTED_URL)
+            ->assertOk()
+            ->assertHeaderMissing('X-Email-Verification-Required');
+    }
+
     public function test_an_unverified_account_created_before_the_cutoff_keeps_working(): void
     {
         $this->requireVerification();
