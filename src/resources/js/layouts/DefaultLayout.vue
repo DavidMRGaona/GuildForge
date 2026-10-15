@@ -9,6 +9,7 @@ import TheHeader from '@/components/layout/TheHeader.vue';
 import TheFooter from '@/components/layout/TheFooter.vue';
 import NotificationToast from '@/components/ui/NotificationToast.vue';
 import ModuleSlot from '@/components/layout/ModuleSlot.vue';
+import VerificationBanner from '@/components/layout/VerificationBanner.vue';
 
 const { t } = useI18n();
 const page = usePage();
@@ -72,6 +73,7 @@ watch(theme, (newTheme) => {
         </a>
         <ModuleSlot name="before-header" />
         <TheHeader />
+        <VerificationBanner />
         <ModuleSlot name="after-header" />
         <main id="main-content" class="flex-1">
             <ModuleSlot name="before-content" />

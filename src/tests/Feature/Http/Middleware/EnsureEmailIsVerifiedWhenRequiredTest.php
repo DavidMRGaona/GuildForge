@@ -116,10 +116,64 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
 
         $this->getJson(self::PROTECTED_URL)
             ->assertForbidden()
-            ->assertExactJson(['message' => __('auth.email_verification_required')]);
+            ->assertExactJson([
+                'message' => __('auth.email_verification_required'),
+                'error' => 'email_verification_required',
+            ]);
         $this->putJson(route('profile.password'), [])
             ->assertForbidden()
             ->assertJson(['message' => __('auth.email_verification_required')]);
+    }
+
+    /**
+     * useVerificationGate().isVerificationRequired() recognises the 403 by this code, which does
+     * not depend on the locale the message was translated to.
+     */
+    public function test_the_json_403_carries_a_stable_error_code_whatever_the_locale(): void
+    {
+        $this->requireVerification();
+        $this->actingAs($this->newUnverifiedUser());
+
+        $messages = [];
+
+        foreach (['es', 'en'] as $locale) {
+            app()->setLocale($locale);
+
+            $response = $this->postJson(self::OPTIONAL_LOGIN_URL)
+                ->assertForbidden()
+                ->assertJsonPath('error', EnsureEmailIsVerifiedWhenRequired::JSON_ERROR_CODE)
+                ->assertJsonPath('error', 'email_verification_required');
+            $messages[$locale] = $response->json('message');
+        }
+
+        // The message is translated, the code is not
+        $this->assertIsString($messages['es']);
+        $this->assertIsString($messages['en']);
+        $this->assertNotSame($messages['es'], $messages['en']);
+    }
+
+    /**
+     * A fetch() caller can recognise the 403 from the Response itself, before reading its body.
+     */
+    public function test_the_json_403_is_flagged_by_a_header(): void
+    {
+        $this->requireVerification();
+        $this->actingAs($this->newUnverifiedUser());
+
+        $this->getJson(self::PROTECTED_URL)
+            ->assertForbidden()
+            ->assertHeader(EnsureEmailIsVerifiedWhenRequired::JSON_ERROR_HEADER, '1')
+            ->assertHeader('X-Email-Verification-Required', '1');
+    }
+
+    public function test_responses_that_are_not_stopped_carry_no_verification_header(): void
+    {
+        $this->requireVerification();
+        $this->actingAs(UserModel::factory()->create());
+
+        $this->getJson(self::PROTECTED_URL)
+            ->assertOk()
+            ->assertHeaderMissing('X-Email-Verification-Required');
     }
 
     public function test_an_unverified_account_created_before_the_cutoff_keeps_working(): void
@@ -299,7 +353,10 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
         $this->post(self::OPTIONAL_LOGIN_URL)->assertRedirect(route('verification.notice'));
         $this->postJson(self::OPTIONAL_LOGIN_URL)
             ->assertForbidden()
-            ->assertExactJson(['message' => __('auth.email_verification_required')]);
+            ->assertExactJson([
+                'message' => __('auth.email_verification_required'),
+                'error' => EnsureEmailIsVerifiedWhenRequired::JSON_ERROR_CODE,
+            ]);
     }
 
     public function test_the_alias_lets_guests_through(): void

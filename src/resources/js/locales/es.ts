@@ -283,6 +283,33 @@ export default {
             changeEmail: 'Cámbialo en tu perfil',
             logout: 'Cerrar sesión',
         },
+        verificationBanner: {
+            label: 'Verificación de email',
+            message:
+                'Verifica tu email para inscribirte y usar los formularios. Te enviamos un enlace a {email}.',
+            resend: 'Reenviar enlace',
+            sending: 'Enviando…',
+            sent: 'Te hemos enviado un nuevo enlace. Revisa tu bandeja de entrada.',
+            throttled:
+                'Has pedido varios enlaces seguidos. Espera un minuto antes de volver a intentarlo.',
+            error: 'No se pudo enviar el enlace. Inténtalo de nuevo más tarde.',
+            moreInfo: 'Más información',
+        },
+        verificationGate: {
+            linkLabel: 'Ver cómo',
+            reasons: {
+                register: 'Para inscribirte, verifica tu email.',
+                cancelRegistration: 'Para cancelar tu inscripción, verifica tu email.',
+                book: 'Para reservar, verifica tu email.',
+                cancelBooking: 'Para cancelar tu reserva, verifica tu email.',
+                createTable: 'Para crear una mesa, verifica tu email.',
+                createCampaign: 'Para crear una campaña, verifica tu email.',
+                checkIn: 'Para hacer el check-in, verifica tu email.',
+                withdraw: 'Para retirarte, verifica tu email.',
+                changePassword: 'Para cambiar la contraseña, verifica tu email.',
+                form: 'Para enviar este formulario, verifica tu email.',
+            },
+        },
         profile: {
             title: 'Mi perfil',
             information: 'Información personal',

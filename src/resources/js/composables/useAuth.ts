@@ -6,6 +6,11 @@ interface AuthComposable {
     user: ComputedRef<User | null>;
     isAuthenticated: ComputedRef<boolean>;
     isEmailVerified: ComputedRef<boolean>;
+    /**
+     * True while the signed-in account must verify its email: the server will reject what it
+     * sends to routes that need a signed-in user. False for guests and on older cores.
+     */
+    mustVerifyEmail: ComputedRef<boolean>;
     isAdmin: ComputedRef<boolean>;
     isEditor: ComputedRef<boolean>;
     canManageContent: ComputedRef<boolean>;
@@ -45,13 +50,17 @@ interface AuthProps {
 
 export function useAuth(): AuthComposable {
     const page = usePage();
-    const props = page.props as AuthProps;
+    // Read page.props inside each computed: the object is replaced on every visit, so a copy
+    // taken here would go stale in components that survive a visit (preserveState)
+    const props = (): AuthProps => page.props as AuthProps;
 
-    const user = computed<User | null>(() => props.auth?.user ?? null);
+    const user = computed<User | null>(() => props().auth?.user ?? null);
 
     const isAuthenticated = computed<boolean>(() => user.value !== null);
 
     const isEmailVerified = computed<boolean>(() => user.value?.emailVerified ?? false);
+
+    const mustVerifyEmail = computed<boolean>(() => user.value?.mustVerifyEmail === true);
 
     const isAdmin = computed<boolean>(() => (user.value?.roles ?? []).includes('admin'));
 
@@ -60,9 +69,9 @@ export function useAuth(): AuthComposable {
     const canManageContent = computed<boolean>(() => isAdmin.value || isEditor.value);
 
     const authSettings = computed<AuthSettings>(() => ({
-        registrationEnabled: props.authSettings?.registrationEnabled ?? true,
-        loginEnabled: props.authSettings?.loginEnabled ?? true,
-        emailVerificationRequired: props.authSettings?.emailVerificationRequired ?? false,
+        registrationEnabled: props().authSettings?.registrationEnabled ?? true,
+        loginEnabled: props().authSettings?.loginEnabled ?? true,
+        emailVerificationRequired: props().authSettings?.emailVerificationRequired ?? false,
     }));
 
     /**
@@ -120,6 +129,7 @@ export function useAuth(): AuthComposable {
         user,
         isAuthenticated,
         isEmailVerified,
+        mustVerifyEmail,
         isAdmin,
         isEditor,
         canManageContent,

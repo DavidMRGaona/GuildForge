@@ -92,7 +92,7 @@ Located in `src/resources/js/layouts/`.
   - Initializes and observes theme changes (`useAppStore`)
   - Manages dynamic favicons (`useFavicons`)
   - Module slots: `before-header`, `after-header`, `before-content`, `after-content`, `before-footer`, `after-footer`
-  - Includes `TheHeader`, `TheFooter`, `NotificationToast`
+  - Includes `TheHeader`, `VerificationBanner` (under the header), `TheFooter`, `NotificationToast`
 
 ### AuthLayout
 
@@ -154,6 +154,13 @@ Located in `src/resources/js/components/`.
 - **Props**: --
 - **Emits**: `navigate`
 - **Features**: Authenticated user dropdown with avatar, name, links to profile, admin panel (if authorized), logout
+
+#### VerificationBanner
+
+- **File**: `layout/VerificationBanner.vue`
+- **Props**: --
+- **Emits**: --
+- **Features**: Rendered by `DefaultLayout` under the header only while `useAuth().mustVerifyEmail` is true (never on `Auth/VerifyEmail`). Says the account must verify its email and where the link was sent (`auth.user.verificationEmail`), *Reenviar enlace* (POST `/verificar-email/reenviar`, states sending / sent / too many requests / error, handled without Inertia's error dialog; a partial reload `only: ['auth']`, so the page does not also show the resend flash, which the reload consumes) and *Más información* (link to `/verificar-email`). Warning colours (`bg-warning-light`, `border-warning`) with `text-base-primary` for contrast in light and dark mode; text inside a `role="status"` region
 
 #### ModuleSlot
 
@@ -356,7 +363,7 @@ Located in `src/resources/js/components/`.
 
 - **File**: `profile/ProfileAccountTab.vue`
 - **Props**: `user: User`
-- **Features**: Account tab with two forms: profile information (name, display name, email) and password change. Uses `BaseCard` for visual grouping. Success/error notifications via `useNotifications`
+- **Features**: Account tab with two forms: profile information (name, display name, email) and password change. Uses `BaseCard` for visual grouping. Success/error notifications via `useNotifications`. While the account must verify its email (`useVerificationGate().blocked`), the password form is disabled (`fieldset`) with the reason «Para cambiar la contraseña, verifica tu email.» and the «Ver cómo» link to the notice, linked by `aria-describedby`; if the server redirects a change to the notice anyway, no success message is shown
 
 ### Forms
 
@@ -503,9 +510,16 @@ Located in `src/resources/js/composables/`.
 ### useAuth
 
 - **Parameters**: --
-- **Returns**: `{ user, isAuthenticated, isEmailVerified, isAdmin, isEditor, canManageContent, authSettings, can, canAny, canAll, hasRole, hasAnyRole, logout }`
+- **Returns**: `{ user, isAuthenticated, isEmailVerified, mustVerifyEmail, isAdmin, isEditor, canManageContent, authSettings, can, canAny, canAll, hasRole, hasAnyRole, logout }`
 - **Dependencies**: Inertia `usePage`, `router`
-- **Purpose**: Access to authenticated user from Inertia props. Role checks (admin, editor) from the `roles` array. Granular permission system (`can`, `canAny`, `canAll`). Auth configuration (registration/login enabled, email verification). Logout via POST
+- **Purpose**: Access to authenticated user from Inertia props (read on every access, so it follows visits). Role checks (admin, editor) from the `roles` array. Granular permission system (`can`, `canAny`, `canAll`). Auth configuration (registration/login enabled, email verification). `mustVerifyEmail`: whether this account must verify its email (false for guests). Logout via POST
+
+### useVerificationGate
+
+- **Parameters**: --
+- **Returns**: `{ blocked, message, noticeUrl, linkLabel, reason, isVerificationRequired, goToNotice }`
+- **Dependencies**: `useAuth`, `useRoutes`, vue-i18n, Inertia `router`
+- **Purpose**: For forms and buttons that send to routes closed to accounts that must verify (core 3.10 or later). `blocked` follows `mustVerifyEmail`; `reason(action)` gives the translated reason for a `VerificationGateAction` (`register`, `cancelRegistration`, `book`, `cancelBooking`, `createTable`, `createCampaign`, `checkIn`, `withdraw`, `changePassword`, `form`); `linkLabel` («Ver cómo») and `noticeUrl` build the link to the notice; `isVerificationRequired(error)` recognises the verification 403 (fetch `Response`, parsed body, axios-like error, Inertia `onHttpException` response, or the notice page an Inertia form was redirected to) and `goToNotice()` visits the notice. Usage example in the file's docblock
 
 ### useNotifications
 

@@ -282,6 +282,32 @@ export default {
             changeEmail: 'Change it in your profile',
             logout: 'Sign out',
         },
+        verificationBanner: {
+            label: 'Email verification',
+            message: 'Verify your email to sign up and use the forms. We sent a link to {email}.',
+            resend: 'Resend link',
+            sending: 'Sending…',
+            sent: 'We have sent you a new link. Check your inbox.',
+            throttled:
+                'You have asked for several links in a row. Wait a minute before trying again.',
+            error: 'The link could not be sent. Try again later.',
+            moreInfo: 'More information',
+        },
+        verificationGate: {
+            linkLabel: 'See how',
+            reasons: {
+                register: 'To sign up, verify your email.',
+                cancelRegistration: 'To cancel your registration, verify your email.',
+                book: 'To book, verify your email.',
+                cancelBooking: 'To cancel your booking, verify your email.',
+                createTable: 'To create a table, verify your email.',
+                createCampaign: 'To create a campaign, verify your email.',
+                checkIn: 'To check in, verify your email.',
+                withdraw: 'To withdraw, verify your email.',
+                changePassword: 'To change your password, verify your email.',
+                form: 'To send this form, verify your email.',
+            },
+        },
         profile: {
             title: 'My profile',
             information: 'Personal information',

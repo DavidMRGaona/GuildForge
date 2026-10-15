@@ -10,6 +10,7 @@ use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
+use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
@@ -222,6 +223,10 @@ final class HandleInertiaRequests extends Middleware
                 'email' => $userDTO->email,
                 'avatarPublicId' => $userDTO->avatarPublicId,
                 'emailVerified' => $userDTO->emailVerified,
+                // The same decision EnsureEmailIsVerifiedWhenRequired applies on the server
+                'mustVerifyEmail' => $this->mustVerifyEmail($user, $userDTO->emailVerified),
+                // Where a verification link goes: a pending address replaces the current one
+                'verificationEmail' => $userDTO->pendingEmail ?? $userDTO->email,
                 'createdAt' => $userDTO->createdAt->format('c'),
                 // Roles and permissions come from the user_role pivot
                 'roles' => $roles,
@@ -231,6 +236,27 @@ final class HandleInertiaRequests extends Middleware
             $this->logDebugError('getAuthUser', $e);
 
             return null;
+        }
+    }
+
+    /**
+     * Whether the interface must treat the account as blocked until it verifies its email
+     * (banner in DefaultLayout, disabled forms in modules).
+     *
+     * Only the interface depends on this: the server enforces the rule on its own. If the policy
+     * fails, an unverified account is told to verify (its forms would most likely be rejected)
+     * and a verified one never is, since the policy can never require it to verify.
+     */
+    private function mustVerifyEmail(object $user, bool $emailVerified): bool
+    {
+        try {
+            return app(EmailVerificationPolicyInterface::class)->mustVerify($user);
+        } catch (\Throwable $e) {
+            logger()->warning('[HandleInertiaRequests::mustVerifyEmail] '.$e->getMessage(), [
+                'exception' => $e::class,
+            ]);
+
+            return ! $emailVerified;
         }
     }
 
