@@ -160,7 +160,7 @@ Located in `src/resources/js/components/`.
 - **File**: `layout/VerificationBanner.vue`
 - **Props**: --
 - **Emits**: --
-- **Features**: Rendered by `DefaultLayout` under the header only while `useAuth().mustVerifyEmail` is true (never on `Auth/VerifyEmail`). Says the account must verify its email and where the link was sent (`auth.user.verificationEmail`), *Reenviar enlace* (POST `/verificar-email/reenviar`, states sending / sent / too many requests / error, handled without Inertia's error dialog) and *Más información* (link to `/verificar-email`). Warning colours (`bg-warning-light`, `border-warning`) with `text-base-primary` for contrast in light and dark mode; text inside a `role="status"` region
+- **Features**: Rendered by `DefaultLayout` under the header only while `useAuth().mustVerifyEmail` is true (never on `Auth/VerifyEmail`). Says the account must verify its email and where the link was sent (`auth.user.verificationEmail`), *Reenviar enlace* (POST `/verificar-email/reenviar`, states sending / sent / too many requests / error, handled without Inertia's error dialog; a partial reload `only: ['auth']`, so the page does not also show the resend flash, which the reload consumes) and *Más información* (link to `/verificar-email`). Warning colours (`bg-warning-light`, `border-warning`) with `text-base-primary` for contrast in light and dark mode; text inside a `role="status"` region
 
 #### ModuleSlot
 
