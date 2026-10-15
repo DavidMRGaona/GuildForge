@@ -571,14 +571,18 @@ None of them changes an existing role or user. After deploying 3.8.0, on each si
 
 ### Animated avatars (core 3.10.1)
 
-From core 3.10.1 avatars are stored with the extension of their bytes, and animated ones (GIF, APNG, animated WebP) keep every frame and are named `<uuid>-animated.<ext>`, so the frontend asks for animated delivery (see [Cloudinary](architecture.md#cloudinary-images)). Avatars uploaded before were stored as `users/<id>/<uuid>.jpg` whatever their bytes, so an animated one is shown still in some browsers. After deploying, on each site:
+From core 3.10.1 avatars are stored with the extension of their bytes, and animated ones (GIF, APNG, animated WebP) keep every frame and are named `<uuid>-animated.<ext>`, so the frontend asks for animated delivery (see [Cloudinary](architecture.md#cloudinary-images)). Before, the profile stored `users/<id>/<uuid>.jpg` and the panel `avatars/<Y>/<m>/<uuid>.<extension sent by the browser>`, whatever the bytes, so an animated avatar is shown still in some browsers. Once after deploying, on each site:
 
 ```bash
 php artisan users:mark-animated-avatars --dry-run   # lists "<user id>: <old path> -> <new path>", changes nothing
 php artisan users:mark-animated-avatars
 ```
 
-The command reads every avatar that is not marked yet from the `images` disk. For each animated one it stores a copy of the original bytes under the marked name (the marker is part of the public id), points the user at it and then deletes the old file; static avatars are left untouched and soft-deleted users skipped. It is idempotent: marked avatars are skipped without being read. It exits with an error when an avatar cannot be read or copied; those users keep their avatar as it was.
+The command checks every user with an avatar and renames only the animated ones. For each it stores a copy of the original bytes under the marked name (the marker is part of the public id), points the user at it and then deletes the old file; static avatars are left untouched and soft-deleted users skipped. It is idempotent: marked avatars are skipped without being read.
+
+- Run it once per site, never two at a time. It is isolated by default: a second run started while one is going stops at once with an error. A copy is only removed when the user does not point at it, so even overlapping runs never delete an avatar.
+- It downloads every avatar that is not marked yet (one Admin API call and one download each), `--dry-run` included and on every run, since static avatars are never marked. On a site with many avatars, mind the Admin API rate limit of the image service plan.
+- It exits with an error when an avatar cannot be read or copied (those users keep their avatar as it was) or when an old file cannot be deleted (the user already has the copy; the old file is listed and left unused).
 
 ### Production PHP configuration
 
