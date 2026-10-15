@@ -17,6 +17,7 @@ export type VerificationGateAction =
     | 'createCampaign'
     | 'checkIn'
     | 'withdraw'
+    | 'changePassword'
     | 'form';
 
 /** `error` field of the JSON 403 sent by EnsureEmailIsVerifiedWhenRequired. */
@@ -24,6 +25,9 @@ export const VERIFICATION_REQUIRED_ERROR = 'email_verification_required';
 
 /** Header the same 403 carries (value `1`), readable before parsing the body. */
 export const VERIFICATION_REQUIRED_HEADER = 'X-Email-Verification-Required';
+
+/** Inertia component of the verification notice page. */
+const NOTICE_COMPONENT = 'Auth/VerifyEmail';
 
 export interface VerificationGate {
     /** True while the signed-in account must verify its email; false for guests and older cores. */
@@ -39,7 +43,10 @@ export interface VerificationGate {
     /**
      * True when a failed request was rejected because the account must verify its email. Accepts a
      * fetch() Response, its parsed JSON body, an axios-like error (`{ response: { status, data } }`)
-     * and the response Inertia hands to `onHttpException` (`{ status, data }`).
+     * and the response Inertia hands to `onHttpException` (`{ status, data }`). An Inertia form that
+     * the server redirected to the notice reaches `onSuccess` with the notice page: passing that
+     * page (`{ component: 'Auth/VerifyEmail', ... }`) also returns true, so the form can skip its
+     * success message.
      */
     isVerificationRequired: (error: unknown) => boolean;
     /** Inertia visit to the verification notice. */
@@ -92,6 +99,11 @@ function matches(error: unknown, depth: number): boolean {
     // Parsed JSON body
     if (error.error === VERIFICATION_REQUIRED_ERROR) {
         return true;
+    }
+
+    // Inertia page: an Inertia visit to a blocked route is redirected to the notice
+    if (typeof error.component === 'string' && 'props' in error) {
+        return error.component === NOTICE_COMPONENT;
     }
 
     // Response-like object: axios `error.response` or the response of Inertia's onHttpException
