@@ -131,9 +131,15 @@ function matches(error: unknown, depth: number): boolean {
  * @example
  * ```vue
  * <script setup lang="ts">
+ * import { useId } from 'vue';
+ * import { useI18n } from 'vue-i18n';
+ * import { Link } from '@inertiajs/vue3';
  * import { useVerificationGate } from '@/composables/useVerificationGate';
  *
+ * const { t } = useI18n();
  * const gate = useVerificationGate();
+ * // Unique per instance: a page may render many of these buttons
+ * const blockedId = useId();
  *
  * async function register(): Promise<void> {
  *     if (gate.blocked.value) return;
@@ -148,10 +154,10 @@ function matches(error: unknown, depth: number): boolean {
  *
  * <template>
  *     <button type="button" :disabled="gate.blocked.value"
- *         :aria-describedby="gate.blocked.value ? 'register-blocked' : undefined" @click="register">
+ *         :aria-describedby="gate.blocked.value ? blockedId : undefined" @click="register">
  *         {{ t('register') }}
  *     </button>
- *     <p v-if="gate.blocked.value" id="register-blocked">
+ *     <p v-if="gate.blocked.value" :id="blockedId">
  *         {{ gate.reason('register') }}
  *         <Link :href="gate.noticeUrl">{{ gate.linkLabel.value }} <span aria-hidden="true">→</span></Link>
  *     </p>
@@ -166,7 +172,7 @@ export function useVerificationGate(): VerificationGate {
         t(`auth.verificationGate.reasons.${action}`);
 
     return {
-        blocked: computed<boolean>(() => mustVerifyEmail.value),
+        blocked: mustVerifyEmail,
         message: computed<string>(() => reason('form')),
         noticeUrl: routes.auth.verifyEmail,
         linkLabel: computed<string>(() => t('auth.verificationGate.linkLabel')),
