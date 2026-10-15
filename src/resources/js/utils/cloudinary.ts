@@ -42,6 +42,28 @@ interface CloudinaryTransformations {
     quality?: 'auto' | number;
     format?: 'auto' | 'webp' | 'jpg' | 'png';
     gravity?: 'auto' | 'face' | 'center';
+    /** Keep every frame of an animated image (`fl_animated`), whatever format `f_auto` picks. */
+    animated?: boolean;
+}
+
+/** Marker the backend adds before the extension of animated avatars (`AvatarPath::ANIMATED_SUFFIX`). */
+const ANIMATED_AVATAR_SUFFIX = '-animated';
+
+/**
+ * Whether a stored avatar path is marked as animated: "users/<id>/<uuid>-animated.gif".
+ *
+ * Static avatars are delivered with plain `f_auto`; animated ones also need `fl_animated`,
+ * because `f_auto` alone serves a still JPEG XL to browsers that accept it. The flag is never
+ * added to static avatars: with it, `f_auto` may turn a still image into a video.
+ */
+export function isAnimatedAvatar(publicId: string | null | undefined): boolean {
+    if (!publicId) return false;
+
+    const fileName = publicId.substring(publicId.lastIndexOf('/') + 1);
+    const lastDotIndex = fileName.lastIndexOf('.');
+    const baseName = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+
+    return baseName.endsWith(ANIMATED_AVATAR_SUFFIX);
 }
 
 /**
@@ -87,6 +109,7 @@ export function buildImageUrl(
     // Always add auto quality and format for optimization
     if (!transformations.quality) parts.push('q_auto');
     if (!transformations.format) parts.push('f_auto');
+    if (transformations.animated) parts.push('fl_animated');
 
     const transformationString = parts.join(',');
     return `https://res.cloudinary.com/${cloudName}/image/upload/${transformationString}/${normalizedId}`;
@@ -100,7 +123,13 @@ export const buildHeroImageUrl = (publicId: string | null | undefined): string |
     buildImageUrl(publicId, { width: 1200, height: 600, crop: 'fill' });
 
 export const buildAvatarUrl = (publicId: string | null | undefined, size = 100): string | null =>
-    buildImageUrl(publicId, { width: size, height: size, crop: 'fill', gravity: 'face' });
+    buildImageUrl(publicId, {
+        width: size,
+        height: size,
+        crop: 'fill',
+        gravity: 'face',
+        animated: isAnimatedAvatar(publicId),
+    });
 
 export const buildGalleryImageUrl = (publicId: string | null | undefined): string | null =>
     buildImageUrl(publicId, { width: 800, height: 600, crop: 'fit' });
