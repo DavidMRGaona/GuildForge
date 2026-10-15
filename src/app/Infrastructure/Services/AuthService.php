@@ -21,6 +21,7 @@ use App\Domain\Events\UserRegistered;
 use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\Repositories\UserRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
+use App\Infrastructure\Images\AvatarPath;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\VerifyPendingEmailNotification;
 use App\Notifications\WelcomeNotification;
@@ -31,7 +32,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 final readonly class AuthService implements AuthServiceInterface
 {
@@ -41,6 +41,7 @@ final readonly class AuthService implements AuthServiceInterface
         private UserRepositoryInterface $userRepository,
         private UserModelQueryServiceInterface $userModelQuery,
         private MemberRoleServiceInterface $memberRole,
+        private AvatarPath $avatarPaths = new AvatarPath,
     ) {}
 
     public function register(CreateUserDTO $dto): UserResponseDTO
@@ -250,9 +251,8 @@ final readonly class AuthService implements AuthServiceInterface
             $avatarSettings
         );
 
-        $path = 'users/'.$userId;
-        $filename = Str::uuid()->toString().'.jpg';
-        $fullPath = $path.'/'.$filename;
+        // Named after the stored bytes; animated avatars are marked for animated delivery
+        $fullPath = $this->avatarPaths->forUpload('users/'.$userId, $optimizedContents);
 
         $stored = Storage::disk('images')->put($fullPath, $optimizedContents);
 

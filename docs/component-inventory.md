@@ -766,10 +766,11 @@ Located in `src/resources/js/utils/`.
 | Function | Purpose |
 |----------|---------|
 | `setCloudinaryConfig(config)` | Stores `{ cloudName, prefix }` from the shared `cloudinary` prop on `globalThis`; `app.ts` calls it before mount, so module bundles read the same values |
-| `buildImageUrl(publicId, transformations)` | Generates Cloudinary URL with transformations (width, height, crop, quality, format, gravity). Uses the runtime config (falls back to `VITE_CLOUDINARY_*`), adds the folder prefix, removes extensions |
+| `buildImageUrl(publicId, transformations)` | Generates Cloudinary URL with transformations (width, height, crop, quality, format, gravity, `animated` for `fl_animated`). Uses the runtime config (falls back to `VITE_CLOUDINARY_*`), adds the folder prefix, removes extensions |
 | `buildCardImageUrl(publicId)` | Preset: 600x400, fill |
 | `buildHeroImageUrl(publicId)` | Preset: 1200x600, fill |
-| `buildAvatarUrl(publicId, size)` | Preset: size x size, fill, gravity face |
+| `buildAvatarUrl(publicId, size)` | Preset: size x size, fill, gravity face; adds `fl_animated` when `isAnimatedAvatar(publicId)` |
+| `isAnimatedAvatar(publicId)` | Whether the stored avatar name ends with `-animated` (before the extension), the marker the backend adds to animated avatars |
 | `buildGalleryImageUrl(publicId)` | Preset: 800x600, fit |
 | `buildMosaicLargeUrl(publicId)` | Preset: 800x600, fill |
 | `buildMosaicSmallUrl(publicId)` | Preset: 400x300, fill |

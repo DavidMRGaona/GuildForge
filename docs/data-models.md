@@ -95,7 +95,7 @@ Core migrations create 27 application tables plus the Laravel framework tables `
 | pending_email | string | nullable (new address waiting for verification) |
 | email_verified_at | timestamp | nullable |
 | password | string | |
-| avatar_public_id | string | nullable |
+| avatar_public_id | string | nullable; storage path, `<uuid>-animated.<ext>` for animated avatars (`AvatarPath`) |
 | remember_token | string(100) | nullable |
 | created_at / updated_at | timestamp | nullable |
 | deleted_at | timestamp | nullable (soft delete) |
@@ -1234,7 +1234,7 @@ Module enums live in `Modules\<Name>\Domain\Enums`.
 | CreateGalleryDTO | title, description, coverImagePublicId |
 | CreatePhotoDTO | galleryId, imagePublicId, caption, sortOrder |
 | ThemeSettingsDTO | fontHeading, fontBody, fontSizeBase, borderRadius, shadowIntensity, buttonStyle, darkModeDefault, darkModeToggleVisible |
-| ImageOptimizationSettingsDTO | maxWidth, maxHeight, quality, format, skipAnimatedGif, minSizeBytes |
+| ImageOptimizationSettingsDTO | maxWidth, maxHeight, quality, format, skipAnimatedGif (every animated image: GIF, APNG, WebP), minSizeBytes |
 
 ### Response DTOs (`App\Application\DTOs\Response` unless noted)
 
