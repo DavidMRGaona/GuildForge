@@ -9,8 +9,10 @@ use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Infrastructure\Services\ImageOptimizationService;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use Psr\Log\LoggerInterface;
+use Tests\Support\Images\ImageFixtures;
 use Tests\Support\Logging\RecordingLogger;
 use Tests\TestCase;
 
@@ -146,6 +148,52 @@ final class ImageOptimizationServiceTest extends TestCase
 
         // Should return original unchanged
         $this->assertSame($contents, $result);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function animatedImages(): array
+    {
+        return [
+            'GIF with two frames' => [ImageFixtures::gif(2), 'image/gif'],
+            'GIF without loop block whose first control block follows a non-zero byte' => [ImageFixtures::gif(2, loop: false), 'image/gif'],
+            'GIF frames without control blocks' => [ImageFixtures::gif(2, graphicControl: false), 'image/gif'],
+            'APNG' => [ImageFixtures::png(2), 'image/png'],
+            'animated WebP' => [ImageFixtures::webp(2), 'image/webp'],
+            // The images disk passes the MIME type of the path, not of the bytes
+            'animated GIF stored under a .jpg name' => [ImageFixtures::gif(2), 'image/jpeg'],
+        ];
+    }
+
+    #[DataProvider('animatedImages')]
+    #[RequiresPhpExtension('imagick')]
+    public function test_an_animated_image_keeps_its_original_bytes(string $contents, string $mimeType): void
+    {
+        $service = new ImageOptimizationService(new RecordingLogger, new ImagickDriver);
+
+        $result = $service->optimize($contents, $mimeType, new ImageOptimizationSettingsDTO(maxWidth: 512, maxHeight: 512, minSizeBytes: 0));
+
+        $this->assertSame($contents, $result);
+    }
+
+    #[DataProvider('animatedImages')]
+    public function test_an_animated_image_keeps_its_original_bytes_with_the_gd_driver(string $contents, string $mimeType): void
+    {
+        $service = new ImageOptimizationService(new RecordingLogger, new GdDriver);
+
+        $result = $service->optimize($contents, $mimeType, new ImageOptimizationSettingsDTO(maxWidth: 512, maxHeight: 512, minSizeBytes: 0));
+
+        $this->assertSame($contents, $result);
+    }
+
+    public function test_a_single_frame_png_is_still_optimized(): void
+    {
+        $contents = ImageFixtures::png(1);
+
+        $result = $this->service->optimize($contents, 'image/png', new ImageOptimizationSettingsDTO(minSizeBytes: 0));
+
+        $this->assertNotSame($contents, $result);
     }
 
     public function test_static_gif_is_processed(): void
@@ -321,19 +369,11 @@ final class ImageOptimizationServiceTest extends TestCase
     }
 
     /**
-     * Create a minimal animated GIF (2 frames).
-     *
-     * This creates a proper animated GIF with multiple graphic control extension blocks.
+     * A real 2-frame GIF whose Graphic Control Extensions both follow a 0x00 byte.
      */
     private function createAnimatedGif(): string
     {
-        // Minimal animated GIF with 2 frames (hand-crafted binary)
-        // This is a 2x2 pixel animated GIF with 2 frames
-        return base64_decode(
-            'R0lGODlhAgACAIAAAP///wAAACH5BAkKAAAAIf8LTkVUU0NBUEUyLjADAQAAACwA'.
-            'AAAAAgACAAACAoRRADs=R0lGODlhAgACAIAAAAAAAP///yH5BAkKAAIALAAAAAAC'.
-            'AAIAAAIDRAJRADs='
-        )."\x00\x21\xF9\x04\x00\x00\x00\x00\x00"."\x00\x21\xF9\x04\x00\x00\x00\x00\x00";
+        return ImageFixtures::gif(2, colorTable: "\xFF\xFF\xFF\x00\x00\x00");
     }
 
     /**
