@@ -518,7 +518,7 @@ Modules may also define `registerFilamentWidgets()`: it is not declared on `Modu
 
 **Scaffolding**: `module:make` (complete module), `module:make-entity`, `module:make-enum`, `module:make-event`, `module:make-listener`, `module:make-notification`, `module:make-controller`, `module:make-request`, `module:make-service`, `module:make-dto`, `module:make-migration`, `module:make-test`, `module:make-filament-resource`, `module:make-relation-manager`, `module:make-widget`, `module:make-vue-page`, `module:make-vue-component`
 
-**Core**: `core:version`, `core:check-updates`, `core:record-deployment` (run by the container entrypoint), `content:convert-trix`, `permissions:sync`, `make:admin-user`, `users:assign-member-role`, `elasticsearch:test`
+**Core**: `core:version`, `core:check-updates`, `core:record-deployment` (run by the container entrypoint), `content:convert-trix`, `permissions:sync`, `make:admin-user`, `users:assign-member-role`, `users:mark-animated-avatars`, `elasticsearch:test`
 
 ### Compatibility and updates
 
@@ -1059,7 +1059,8 @@ Cloud image storage and transformation service.
 
 - **Adapter**: `App\Infrastructure\Storage\Cloudinary\CloudinaryStorageAdapter`, registered as the `cloudinary` driver in `AppServiceProvider`
 - **Disk**: Configured as `images` in `filesystems.php`
-- **Optimization**: `ImageOptimizationService` resizes and compresses images before upload
+- **Optimization**: `ImageOptimizationService` resizes and compresses images before upload. Animated images (GIF, APNG, animated WebP: more than one frame, detected from the bytes by `App\Infrastructure\Images\AnimatedImageDetector`, whatever MIME type is claimed) are stored with their original bytes
+- **Avatars**: stored by `App\Infrastructure\Images\AvatarPath` (profile: `users/<user id>/`, panel: `avatars/<Y>/<m>/`) as `<uuid>.<ext>`, or `<uuid>-animated.<ext>` when animated, with the extension of the stored bytes. The marker is part of the public id and has no dot, which a delivery URL would read as a format. `buildAvatarUrl()` adds `fl_animated` only to marked avatars: `f_auto` alone serves a still JPEG XL to browsers that accept it, and with the flag `f_auto` may turn a still image into a video. Avatars stored before 3.10.1 (`users/<id>/<uuid>.jpg` whatever their bytes) are renamed by `users:mark-animated-avatars`
 - **Cleanup**: `DeletesCloudinaryImages` trait automatically deletes images when models are deleted/updated
 - **URLs**: Direct URL generation without Cloudinary Admin API calls
 
