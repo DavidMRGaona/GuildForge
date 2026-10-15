@@ -6,6 +6,7 @@ namespace App\Infrastructure\Services;
 
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
+use App\Infrastructure\Images\AnimatedImageDetector;
 use finfo;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
@@ -27,7 +28,8 @@ use Throwable;
  * - Resizes images that exceed maximum dimensions (preserves aspect ratio)
  * - Compresses images with configurable quality
  * - Optional format conversion
- * - Skips animated GIFs to preserve animation
+ * - Skips animated images (GIF, APNG, animated WebP; detected from their bytes, whatever
+ *   MIME type is claimed) and returns their original bytes, so no frame is lost
  * - Graceful fallback to original image on any error
  * - Prefers Imagick driver, falls back to GD
  */
@@ -46,6 +48,7 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
     public function __construct(
         private readonly LoggerInterface $logger,
         ?DriverInterface $driver = null,
+        private readonly AnimatedImageDetector $animation = new AnimatedImageDetector,
     ) {
         $this->imageManager = new ImageManager($driver ?? $this->defaultDriver());
     }
@@ -73,8 +76,8 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
             return $contents;
         }
 
-        // Skip animated GIFs if configured
-        if ($settings->skipAnimatedGif && $this->isAnimatedGif($contents, $mimeType)) {
+        // Skip animated images if configured (the setting keeps its historical GIF-only name)
+        if ($settings->skipAnimatedGif && $this->animation->isAnimated($contents)) {
             return $contents;
         }
 
@@ -172,22 +175,6 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
         $mimeType = $finfo->buffer($contents);
 
         return $mimeType !== false ? $mimeType : null;
-    }
-
-    /**
-     * Check if the content is an animated GIF.
-     */
-    private function isAnimatedGif(string $contents, ?string $mimeType): bool
-    {
-        if ($mimeType !== 'image/gif') {
-            return false;
-        }
-
-        // Check for multiple frame markers in GIF
-        // Animated GIFs have multiple image separators (0x00 0x2C)
-        $frameCount = preg_match_all('/\x00\x21\xF9\x04/', $contents);
-
-        return $frameCount > 1;
     }
 
     /**
