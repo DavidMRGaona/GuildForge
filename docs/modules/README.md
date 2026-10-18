@@ -1155,6 +1155,7 @@ final class GameControllerTest extends ModuleTestCase
 ```
 
 - Since core 3.6.0, `enableModule()` refreshes the router's name lookups, so `route()` finds the module's routes. Against an older core, request the URL (`$this->get('/my-module/games')`).
+- `enableModule()` also drops the translations loaded before the module booted. The first test of a PHPUnit process runs `migrate:fresh`, and a module migration that calls `__()` on the module's own keys used to leave that group cached empty, so the first test saw raw keys. On core 3.10.1 or older, call `app('translator')->setLoaded([])` after enabling the module.
 - Pass `false` as the second argument of `component()`: module pages are not in the host's pages directory.
 - The module's `module.json` must accept the core the tests run on, or `setUp()` fails with `ModuleIncompatibleException`.
 

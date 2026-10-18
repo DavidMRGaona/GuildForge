@@ -12,6 +12,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Modules\ModuleLoader;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Translation\Translator;
 use Tests\TestCase;
 
 /**
@@ -103,6 +104,8 @@ abstract class ModuleTestCase extends TestCase
      *
      * This method enables the module in the database AND boots its service provider,
      * which is necessary for tests since module boot happens before test setUp().
+     * Translations loaded before the provider registered the module's namespace are
+     * dropped, so the module's texts resolve from the first test of a process on.
      */
     protected function enableModule(string $moduleName): Module
     {
@@ -111,6 +114,11 @@ abstract class ModuleTestCase extends TestCase
         // Boot the module's service provider since app boot already happened
         $moduleLoader = app(ModuleLoader::class);
         $moduleLoader->bootModule($module);
+
+        // The first test of a process runs migrate:fresh, and a module migration (or a seeder run
+        // by enable()) may translate a module key before the namespace exists: the translator then
+        // caches that group as empty. Drop every loaded group; each one is read again on next use
+        $this->app->make(Translator::class)->setLoaded([]);
 
         // Routes named after being added (Route::get()->name()) only reach the lookups when
         // they are refreshed, which the framework does once while booting: do it again
