@@ -1,0 +1,12 @@
+{
+    "name": "translated-module",
+    "version": "1.0.0",
+    "description": "Test module with its own translations",
+    "author": "GuildForge",
+    "namespace": "Modules\\TranslatedModule",
+    "provider": "TranslatedModuleServiceProvider",
+    "requires": {
+        "core": ">=2.0"
+    },
+    "dependencies": {}
+}
