@@ -111,9 +111,9 @@ final readonly class AuthService implements AuthServiceInterface
         Password::sendResetLink(['email' => $email]);
     }
 
-    public function resetPassword(string $token, string $email, string $password): void
+    public function resetPassword(string $token, string $email, string $password): bool
     {
-        Password::reset(
+        $status = Password::reset(
             [
                 'email' => $email,
                 'password' => $password,
@@ -125,6 +125,8 @@ final readonly class AuthService implements AuthServiceInterface
                 ]);
             }
         );
+
+        return $status === Password::PASSWORD_RESET;
     }
 
     public function sendEmailVerificationNotification(string $userId): void

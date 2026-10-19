@@ -37,11 +37,17 @@ final class ResetPasswordController extends Controller
     {
         $validated = $request->validated();
 
-        $this->authService->resetPassword(
+        $reset = $this->authService->resetPassword(
             $validated['token'],
             $validated['email'],
             $validated['password'],
         );
+
+        if (! $reset) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => __('passwords.token')]);
+        }
 
         return redirect()->route('login')
             ->with('success', __('passwords.reset'));

@@ -117,4 +117,22 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Markdown mail settings
+    |--------------------------------------------------------------------------
+    |
+    | The "site" theme (resources/views/vendor/mail/html/themes) takes the
+    | colors, fonts and border radius from the site settings.
+    |
+    */
+
+    'markdown' => [
+        'theme' => env('MAIL_MARKDOWN_THEME', 'site'),
+
+        'paths' => [
+            resource_path('views/vendor/mail'),
+        ],
+    ],
+
 ];
