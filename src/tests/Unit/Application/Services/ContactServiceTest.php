@@ -63,8 +63,8 @@ final class ContactServiceTest extends TestCase
             ->willReturn('admin@example.com');
 
         $dto = new ContactMessageDTO(
-            senderName: 'Juan García',
-            senderEmail: 'juan@example.com',
+            senderName: 'Richard Roe',
+            senderEmail: 'richard@example.com',
             messageBody: 'Hola, quiero información.',
         );
 
@@ -72,8 +72,8 @@ final class ContactServiceTest extends TestCase
 
         $this->assertTrue($result);
         Mail::assertSent(ContactFormMail::class, function (ContactFormMail $mail) {
-            return $mail->senderName === 'Juan García'
-                && $mail->senderEmail === 'juan@example.com'
+            return $mail->senderName === 'Richard Roe'
+                && $mail->senderEmail === 'richard@example.com'
                 && $mail->messageBody === 'Hola, quiero información.'
                 && $mail->hasTo('admin@example.com');
         });
@@ -90,8 +90,8 @@ final class ContactServiceTest extends TestCase
             ->willReturn('');
 
         $dto = new ContactMessageDTO(
-            senderName: 'Juan García',
-            senderEmail: 'juan@example.com',
+            senderName: 'Richard Roe',
+            senderEmail: 'richard@example.com',
             messageBody: 'Hola, quiero información.',
         );
 

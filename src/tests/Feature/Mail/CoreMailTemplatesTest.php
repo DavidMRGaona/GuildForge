@@ -26,7 +26,7 @@ final class CoreMailTemplatesTest extends TestCase
         parent::setUp();
 
         app()->setLocale('es');
-        config(['app.name' => 'Asociación Tolerol']);
+        config(['app.name' => 'Asociación de ejemplo']);
         Storage::fake('images');
     }
 
@@ -37,7 +37,7 @@ final class CoreMailTemplatesTest extends TestCase
         $html = (string) (new MailMessage)->line('Contenido.')->render();
 
         $this->assertStringContainsString('<img src="'.Storage::disk('images')->url('settings/email-logo.png').'"', $html);
-        $this->assertStringContainsString('alt="Asociación Tolerol"', $html);
+        $this->assertStringContainsString('alt="Asociación de ejemplo"', $html);
     }
 
     public function test_mail_header_falls_back_to_the_light_logo(): void
@@ -54,7 +54,7 @@ final class CoreMailTemplatesTest extends TestCase
         $html = (string) (new MailMessage)->line('Contenido.')->render();
 
         $this->assertStringNotContainsString('<img', $html);
-        $this->assertStringContainsString('Asociación Tolerol', $html);
+        $this->assertStringContainsString('Asociación de ejemplo', $html);
         $this->assertStringNotContainsString('laravel.com', $html);
     }
 
@@ -74,11 +74,11 @@ final class CoreMailTemplatesTest extends TestCase
 
     public function test_mail_footer_links_to_the_site(): void
     {
-        config(['app.url' => 'https://tolerol.example']);
+        config(['app.url' => 'https://asociacion.example']);
 
         $html = (string) (new MailMessage)->line('Contenido.')->render();
 
-        $this->assertMatchesRegularExpression('/© '.date('Y').' <a href="https:\/\/tolerol\.example"[^>]*>Asociación Tolerol<\/a>/', $html);
+        $this->assertMatchesRegularExpression('/© '.date('Y').' <a href="https:\/\/asociacion\.example"[^>]*>Asociación de ejemplo<\/a>/', $html);
         $this->assertStringNotContainsString('laravel', strtolower($html));
     }
 
@@ -124,25 +124,25 @@ final class CoreMailTemplatesTest extends TestCase
 
     public function test_welcome_email_greets_with_a_comma(): void
     {
-        $user = UserModel::factory()->create(['name' => 'Ana']);
+        $user = UserModel::factory()->create(['name' => 'John']);
 
-        $html = (string) (new WelcomeNotification('Asociación Tolerol'))->toMail($user)->render();
+        $html = (string) (new WelcomeNotification('Asociación de ejemplo'))->toMail($user)->render();
 
-        $this->assertStringContainsString('¡Hola, Ana!', $html);
+        $this->assertStringContainsString('¡Hola, John!', $html);
     }
 
     public function test_contact_form_email_uses_translations_and_the_site_name(): void
     {
-        $mail = new ContactFormMail('Ana López', 'ana@example.com', 'Quiero apuntarme a la próxima partida.');
+        $mail = new ContactFormMail('John Doe', 'john@example.com', 'Quiero apuntarme a la próxima partida.');
 
         $html = $mail->render();
 
         $this->assertStringContainsString('Nombre', $html);
         $this->assertStringContainsString('Mensaje', $html);
-        $this->assertStringContainsString('Ana López', $html);
-        $this->assertStringContainsString('mailto:ana@example.com', $html);
+        $this->assertStringContainsString('John Doe', $html);
+        $this->assertStringContainsString('mailto:john@example.com', $html);
         $this->assertStringContainsString('Quiero apuntarme a la próxima partida.', $html);
-        $this->assertStringContainsString('Este mensaje se ha enviado desde el formulario de contacto de Asociación Tolerol.', $html);
+        $this->assertStringContainsString('Este mensaje se ha enviado desde el formulario de contacto de Asociación de ejemplo.', $html);
         $this->assertStringNotContainsString('GuildForge', $html);
     }
 
@@ -150,33 +150,33 @@ final class CoreMailTemplatesTest extends TestCase
     {
         app(SettingsServiceInterface::class)->set('site_logo_email', 'settings/email-logo.png');
 
-        $html = (new ContactFormMail('Ana', 'ana@example.com', 'Hola'))->render();
+        $html = (new ContactFormMail('John', 'john@example.com', 'Hola'))->render();
 
         $this->assertStringContainsString('<img src="'.Storage::disk('images')->url('settings/email-logo.png').'"', $html);
-        $this->assertStringContainsString('alt="Asociación Tolerol"', $html);
+        $this->assertStringContainsString('alt="Asociación de ejemplo"', $html);
     }
 
     public function test_contact_form_email_shows_the_site_name_without_a_logo(): void
     {
-        $html = (new ContactFormMail('Ana', 'ana@example.com', 'Hola'))->render();
+        $html = (new ContactFormMail('John', 'john@example.com', 'Hola'))->render();
 
         $this->assertStringNotContainsString('<img', $html);
-        $this->assertMatchesRegularExpression('/<a [^>]*href="'.preg_quote((string) config('app.url'), '/').'"[^>]*>\s*Asociación Tolerol\s*<\/a>/', $html);
+        $this->assertMatchesRegularExpression('/<a [^>]*href="'.preg_quote((string) config('app.url'), '/').'"[^>]*>\s*Asociación de ejemplo\s*<\/a>/', $html);
     }
 
     public function test_contact_form_email_escapes_the_message(): void
     {
-        $mail = new ContactFormMail('<b>Ana</b>', 'ana@example.com', '<script>alert(1)</script>');
+        $mail = new ContactFormMail('<b>John</b>', 'john@example.com', '<script>alert(1)</script>');
 
         $html = $mail->render();
 
         $this->assertStringNotContainsString('<script>', $html);
-        $this->assertStringNotContainsString('<b>Ana</b>', $html);
+        $this->assertStringNotContainsString('<b>John</b>', $html);
     }
 
     public function test_contact_form_email_uses_the_shared_mail_layout(): void
     {
-        $html = (new ContactFormMail('Ana', 'ana@example.com', 'Hola'))->render();
+        $html = (new ContactFormMail('John', 'john@example.com', 'Hola'))->render();
 
         $this->assertStringContainsString('class="inner-body"', $html);
         $this->assertStringContainsString('© '.date('Y'), $html);
@@ -186,7 +186,7 @@ final class CoreMailTemplatesTest extends TestCase
     {
         $mail = new ContactFormMail(
             '[Pulsa aquí](https://malicioso.example)',
-            'ana@example.com',
+            'john@example.com',
             "# Título falso\n\n[enlace](https://malicioso.example)\n\n    bloque de código\n**negrita**",
         );
 
@@ -202,7 +202,7 @@ final class CoreMailTemplatesTest extends TestCase
 
     public function test_contact_form_email_name_with_line_breaks_cannot_inject_markdown(): void
     {
-        $mail = new ContactFormMail("Ana\n\n[Verifica tu cuenta](https://malicioso.example)\n\n", 'ana@example.com', 'Hola');
+        $mail = new ContactFormMail("John\n\n[Verifica tu cuenta](https://malicioso.example)\n\n", 'john@example.com', 'Hola');
 
         $html = $mail->render();
 
@@ -216,7 +216,7 @@ final class CoreMailTemplatesTest extends TestCase
 
         $html = $mail->render();
 
-        $this->assertSame('Asociación Tolerol: email de prueba', $mail->envelope()->subject);
+        $this->assertSame('Asociación de ejemplo: email de prueba', $mail->envelope()->subject);
         $this->assertStringContainsString('Si has recibido este correo, la configuración de correo funciona correctamente.', $html);
         $this->assertStringContainsString('smtp', $html);
         $this->assertStringContainsString('19/10/2026 18:00', $html);
