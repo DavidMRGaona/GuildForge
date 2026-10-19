@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mail;
 
+use App\Application\Mail\Services\MailBrandingServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Mail\ContactFormMail;
@@ -55,6 +56,40 @@ final class CoreMailTemplatesTest extends TestCase
         $this->assertStringNotContainsString('<img', $html);
         $this->assertStringContainsString('Asociación Tolerol', $html);
         $this->assertStringNotContainsString('laravel.com', $html);
+    }
+
+    public function test_mail_button_uses_the_site_primary_color(): void
+    {
+        app(SettingsServiceInterface::class)->set('theme_primary_base_color', '#7C3AED');
+        $branding = app(MailBrandingServiceInterface::class)->branding();
+
+        $html = (string) (new MailMessage)->action('Ver mesa', 'https://example.test/mesa')->render();
+
+        $this->assertMatchesRegularExpression(
+            '/<a href="https:\/\/example\.test\/mesa" class="button[^"]*"[^>]*style="[^"]*background-color: '.preg_quote($branding->primaryColor, '/').'/i',
+            $html,
+        );
+        $this->assertStringContainsString('color: '.$branding->onPrimaryColor, $html);
+    }
+
+    public function test_mail_footer_links_to_the_site(): void
+    {
+        config(['app.url' => 'https://tolerol.example']);
+
+        $html = (string) (new MailMessage)->line('Contenido.')->render();
+
+        $this->assertMatchesRegularExpression('/© '.date('Y').' <a href="https:\/\/tolerol\.example"[^>]*>Asociación Tolerol<\/a>/', $html);
+        $this->assertStringNotContainsString('laravel', strtolower($html));
+    }
+
+    public function test_mail_loads_the_site_font(): void
+    {
+        app(SettingsServiceInterface::class)->set('theme_font_body', 'Poppins');
+
+        $html = (string) (new MailMessage)->line('Contenido.')->render();
+
+        $this->assertStringContainsString('https://fonts.bunny.net/css?family=', $html);
+        $this->assertStringContainsString("font-family: 'Poppins',", $html);
     }
 
     public function test_password_reset_email_is_in_spanish(): void
@@ -137,6 +172,32 @@ final class CoreMailTemplatesTest extends TestCase
 
         $this->assertStringNotContainsString('<script>', $html);
         $this->assertStringNotContainsString('<b>Ana</b>', $html);
+    }
+
+    public function test_contact_form_email_uses_the_shared_mail_layout(): void
+    {
+        $html = (new ContactFormMail('Ana', 'ana@example.com', 'Hola'))->render();
+
+        $this->assertStringContainsString('class="inner-body"', $html);
+        $this->assertStringContainsString('© '.date('Y'), $html);
+    }
+
+    public function test_contact_form_email_does_not_interpret_markdown_from_the_visitor(): void
+    {
+        $mail = new ContactFormMail(
+            '[Pulsa aquí](https://malicioso.example)',
+            'ana@example.com',
+            "# Título falso\n\n[enlace](https://malicioso.example)\n\n    bloque de código\n**negrita**",
+        );
+
+        $html = $mail->render();
+
+        $this->assertStringNotContainsString('href="https://malicioso.example"', $html);
+        $this->assertStringNotContainsString('<h1>Título falso', $html);
+        $this->assertStringNotContainsString('<strong>negrita', $html);
+        $this->assertStringNotContainsString('<code>', $html);
+        $this->assertStringContainsString('# Título falso', $html);
+        $this->assertStringContainsString('[Pulsa aquí](https://malicioso.example)', $html);
     }
 
     public function test_test_email_uses_translations_and_the_site_name(): void

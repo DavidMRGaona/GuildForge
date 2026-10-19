@@ -1,15 +1,11 @@
-@props(["url"])
+@props(['url'])
 <tr>
 <td class="header">
-@php
-    $logoUrl = app(\App\Application\Services\SettingsServiceInterface::class)->getEmailLogoUrl();
-    $siteName = config("app.name");
-@endphp
 <a href="{{ $url }}" style="display: inline-block;">
-@if($logoUrl)
-    <img src="{{ $logoUrl }}" alt="{{ $siteName }}" style="max-height: 60px; width: auto;">
+@if($mailBranding->logoUrl)
+<img src="{{ $mailBranding->logoUrl }}" alt="{{ $mailBranding->siteName }}" style="max-height: 64px; width: auto;">
 @else
-    {{ $siteName }}
+{{ $mailBranding->siteName }}
 @endif
 </a>
 </td>

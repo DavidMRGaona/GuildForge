@@ -10,6 +10,7 @@ use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
+use App\Application\Mail\Services\MailBrandingServiceInterface;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
 use App\Application\Mail\Services\MailStatisticsServiceInterface;
 use App\Application\Mail\Services\MailTestServiceInterface;
@@ -86,6 +87,7 @@ use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Mail\Listeners\CheckQuotaBeforeSending;
 use App\Infrastructure\Mail\Listeners\LogSentEmail;
 use App\Infrastructure\Mail\Services\EmailQuotaService;
+use App\Infrastructure\Mail\Services\MailBrandingService;
 use App\Infrastructure\Mail\Services\MailConfigurationService;
 use App\Infrastructure\Mail\Services\MailStatisticsService;
 use App\Infrastructure\Mail\Services\MailTestService;
@@ -191,6 +193,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Table;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
 use Illuminate\Mail\Events\MessageSending;
@@ -200,6 +203,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use League\Flysystem\Filesystem;
 use Psr\Log\LoggerInterface;
@@ -237,6 +241,7 @@ class AppServiceProvider extends ServiceProvider
         // Mail system bindings
         $this->app->singleton(MailConfigurationServiceInterface::class, MailConfigurationService::class);
         $this->app->singleton(MailTestServiceInterface::class, MailTestService::class);
+        $this->app->scoped(MailBrandingServiceInterface::class, MailBrandingService::class);
         $this->app->bind(EmailLogRepositoryInterface::class, EloquentEmailLogRepository::class);
         $this->app->singleton(EmailQuotaServiceInterface::class, EmailQuotaService::class);
         $this->app->singleton(MailStatisticsServiceInterface::class, MailStatisticsService::class);
@@ -457,6 +462,11 @@ class AppServiceProvider extends ServiceProvider
 
         // Email logging: log every sent email to the database
         Event::listen(MessageSent::class, LogSentEmail::class);
+
+        // Email theme: site name, logo, colors and fonts for every mail view
+        View::composer(['mail::*', 'emails.*'], static function (ViewContract $view): void {
+            $view->with('mailBranding', app(MailBrandingServiceInterface::class)->branding());
+        });
 
         // Calendars start on Monday (European convention)
         DateTimePicker::configureUsing(function (DateTimePicker $component): void {
