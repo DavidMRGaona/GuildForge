@@ -26,9 +26,9 @@ final class PasswordResetControllerTest extends TestCase
     public function test_requesting_a_reset_link_confirms_in_spanish(): void
     {
         Notification::fake();
-        $user = UserModel::factory()->create(['email' => 'ana@example.com']);
+        $user = UserModel::factory()->create(['email' => 'john@example.com']);
 
-        $response = $this->post('/olvide-contrasena', ['email' => 'ana@example.com']);
+        $response = $this->post('/olvide-contrasena', ['email' => 'john@example.com']);
 
         $response->assertSessionHas('success', 'Si existe una cuenta con ese email, te hemos enviado un enlace para restablecer la contraseña.');
         Notification::assertSentTo($user, ResetPassword::class);
@@ -46,12 +46,12 @@ final class PasswordResetControllerTest extends TestCase
 
     public function test_valid_token_resets_the_password(): void
     {
-        $user = UserModel::factory()->create(['email' => 'ana@example.com']);
+        $user = UserModel::factory()->create(['email' => 'john@example.com']);
         $token = Password::createToken($user);
 
         $response = $this->post('/restablecer-contrasena', [
             'token' => $token,
-            'email' => 'ana@example.com',
+            'email' => 'john@example.com',
             'password' => 'nueva-clave-segura',
             'password_confirmation' => 'nueva-clave-segura',
         ]);
@@ -63,12 +63,12 @@ final class PasswordResetControllerTest extends TestCase
 
     public function test_invalid_token_does_not_claim_success(): void
     {
-        $user = UserModel::factory()->create(['email' => 'ana@example.com']);
+        $user = UserModel::factory()->create(['email' => 'john@example.com']);
         $oldHash = (string) $user->password;
 
         $response = $this->from('/restablecer-contrasena/caducado')->post('/restablecer-contrasena', [
             'token' => 'caducado',
-            'email' => 'ana@example.com',
+            'email' => 'john@example.com',
             'password' => 'nueva-clave-segura',
             'password_confirmation' => 'nueva-clave-segura',
         ]);
@@ -93,10 +93,10 @@ final class PasswordResetControllerTest extends TestCase
 
     public function test_wrong_login_password_error_is_in_spanish(): void
     {
-        UserModel::factory()->create(['email' => 'ana@example.com']);
+        UserModel::factory()->create(['email' => 'john@example.com']);
 
         $response = $this->post('/iniciar-sesion', [
-            'email' => 'ana@example.com',
+            'email' => 'john@example.com',
             'password' => 'incorrecta',
         ]);
 
