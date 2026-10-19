@@ -200,6 +200,16 @@ final class CoreMailTemplatesTest extends TestCase
         $this->assertStringContainsString('[Pulsa aquí](https://malicioso.example)', $html);
     }
 
+    public function test_contact_form_email_name_with_line_breaks_cannot_inject_markdown(): void
+    {
+        $mail = new ContactFormMail("Ana\n\n[Verifica tu cuenta](https://malicioso.example)\n\n", 'ana@example.com', 'Hola');
+
+        $html = $mail->render();
+
+        $this->assertStringNotContainsString('href="https://malicioso.example"', $html);
+        $this->assertStringContainsString('[Verifica tu cuenta](https://malicioso.example)', $html);
+    }
+
     public function test_test_email_uses_translations_and_the_site_name(): void
     {
         $mail = new TestMail('smtp', '19/10/2026 18:00');
