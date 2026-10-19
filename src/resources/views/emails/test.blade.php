@@ -1,13 +1,13 @@
 <x-mail::message>
-# Email de prueba
+# {{ __('mail.test.heading') }}
 
-Este es un correo de prueba enviado desde GuildForge para verificar la configuración del correo electrónico.
+{{ __('mail.test.intro', ['app' => config('app.name')]) }}
 
-**Driver**: {{ $driver }}
-**Fecha**: {{ $timestamp }}
+**{{ __('mail.test.driver') }}**: {{ $driver }}<br>
+**{{ __('mail.test.date') }}**: {{ $timestamp }}
 
-Si has recibido este correo, la configuración de correo funciona correctamente.
+{{ __('mail.test.outro') }}
 
-Saludos,<br>
+{{ __('Regards,') }}<br>
 {{ config('app.name') }}
 </x-mail::message>

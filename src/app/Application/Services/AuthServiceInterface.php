@@ -38,8 +38,10 @@ interface AuthServiceInterface
 
     /**
      * Reset the user's password.
+     *
+     * Returns false when the token is invalid or expired, or no account has that email.
      */
-    public function resetPassword(string $token, string $email, string $password): void;
+    public function resetPassword(string $token, string $email, string $password): bool;
 
     /**
      * Send email verification notification.

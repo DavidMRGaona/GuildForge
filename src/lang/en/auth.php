@@ -23,7 +23,7 @@ return [
 
     // Welcome email notification
     'welcome_subject' => 'Welcome to :app!',
-    'welcome_greeting' => 'Hello :name!',
+    'welcome_greeting' => 'Hello, :name!',
     'welcome_line1' => 'Thank you for registering at :app. We are delighted to have you with us.',
     'welcome_line2' => 'You can now access your account and enjoy all the features of our community.',
     'welcome_action' => 'Sign in',

@@ -23,7 +23,7 @@ final class TestMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'GuildForge - Email de prueba',
+            subject: __('mail.test.subject', ['app' => config('app.name')]),
         );
     }
 

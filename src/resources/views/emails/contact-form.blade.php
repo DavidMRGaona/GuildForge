@@ -27,7 +27,7 @@
                                 <tr>
                                     <td style="padding-bottom: 8px;">
                                         <strong style="color: #374151; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                            Nombre:
+                                            {{ __('contact.email_name_label') }}:
                                         </strong>
                                     </td>
                                 </tr>
@@ -45,7 +45,7 @@
                                 <tr>
                                     <td style="padding-bottom: 8px;">
                                         <strong style="color: #374151; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                            Email:
+                                            {{ __('contact.email_email_label') }}:
                                         </strong>
                                     </td>
                                 </tr>
@@ -63,7 +63,7 @@
                                 <tr>
                                     <td style="padding-bottom: 8px;">
                                         <strong style="color: #374151; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                            Mensaje:
+                                            {{ __('contact.email_message_label') }}:
                                         </strong>
                                     </td>
                                 </tr>
@@ -80,7 +80,7 @@
                     <tr>
                         <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
                             <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                                Este mensaje fue enviado desde el formulario de contacto de GuildForge
+                                {{ __('contact.email_footer', ['app' => config('app.name')]) }}
                             </p>
                         </td>
                     </tr>

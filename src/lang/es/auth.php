@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'failed' => 'Estas credenciales no coinciden con nuestros registros.',
+    'password' => 'La contraseña no es correcta.',
+    'throttle' => 'Demasiados intentos de inicio de sesión. Vuelve a intentarlo en :seconds segundos.',
     'registered' => 'Te has registrado correctamente.',
     'verification_failed' => 'El enlace de verificación no es válido.',
     'email_verified' => 'Tu correo electrónico ha sido verificado.',
@@ -23,7 +26,7 @@ return [
 
     // Welcome email notification
     'welcome_subject' => '¡Bienvenido a :app!',
-    'welcome_greeting' => '¡Hola :name!',
+    'welcome_greeting' => '¡Hola, :name!',
     'welcome_line1' => 'Gracias por registrarte en :app. Estamos encantados de tenerte con nosotros.',
     'welcome_line2' => 'Ya puedes acceder a tu cuenta y disfrutar de todas las funcionalidades de nuestra comunidad.',
     'welcome_action' => 'Iniciar sesión',

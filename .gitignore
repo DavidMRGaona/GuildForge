@@ -29,6 +29,8 @@ src/coverage/
 src/_ide_helper.php
 src/_ide_helper_models.php
 src/.phpstorm.meta.php
+# Published framework views we override (a global "vendor" ignore must not hide them)
+!src/resources/views/vendor/
 
 # =============================================================================
 # MACOS
