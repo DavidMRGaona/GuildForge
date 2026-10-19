@@ -111,6 +111,24 @@ final class CoreMailTemplatesTest extends TestCase
         $this->assertStringNotContainsString('GuildForge', $html);
     }
 
+    public function test_contact_form_email_shows_the_email_logo(): void
+    {
+        app(SettingsServiceInterface::class)->set('site_logo_email', 'settings/email-logo.png');
+
+        $html = (new ContactFormMail('Ana', 'ana@example.com', 'Hola'))->render();
+
+        $this->assertStringContainsString('<img src="'.Storage::disk('images')->url('settings/email-logo.png').'"', $html);
+        $this->assertStringContainsString('alt="Asociación Tolerol"', $html);
+    }
+
+    public function test_contact_form_email_shows_the_site_name_without_a_logo(): void
+    {
+        $html = (new ContactFormMail('Ana', 'ana@example.com', 'Hola'))->render();
+
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertMatchesRegularExpression('/<a [^>]*href="'.preg_quote((string) config('app.url'), '/').'"[^>]*>\s*Asociación Tolerol\s*<\/a>/', $html);
+    }
+
     public function test_contact_form_email_escapes_the_message(): void
     {
         $mail = new ContactFormMail('<b>Ana</b>', 'ana@example.com', '<script>alert(1)</script>');

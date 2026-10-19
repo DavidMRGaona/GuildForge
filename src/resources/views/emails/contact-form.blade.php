@@ -9,6 +9,24 @@
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
             <td style="padding: 40px 0; text-align: center;">
+                @php
+                    $logoUrl = app(\App\Application\Services\SettingsServiceInterface::class)->getEmailLogoUrl();
+                    $siteName = config('app.name');
+                @endphp
+                <!-- Brand -->
+                <table role="presentation" style="width: 100%; max-width: 600px; margin: 0 auto 24px auto;">
+                    <tr>
+                        <td style="text-align: center;">
+                            <a href="{{ config('app.url') }}" style="display: inline-block; color: #1f2937; font-size: 19px; font-weight: bold; text-decoration: none;">
+                                @if($logoUrl)
+                                    <img src="{{ $logoUrl }}" alt="{{ $siteName }}" style="max-height: 60px; width: auto;">
+                                @else
+                                    {{ $siteName }}
+                                @endif
+                            </a>
+                        </td>
+                    </tr>
+                </table>
                 <table role="presentation" style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
                     <!-- Header -->
                     <tr>
@@ -21,7 +39,7 @@
 
                     <!-- Content -->
                     <tr>
-                        <td style="padding: 40px;">
+                        <td style="padding: 40px; text-align: left;">
                             <!-- Sender Name -->
                             <table role="presentation" style="width: 100%; margin-bottom: 20px;">
                                 <tr>
