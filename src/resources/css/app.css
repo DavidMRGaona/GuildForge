@@ -561,6 +561,15 @@ button[data-headlessui-state]:hover {
     --tw-ring-color: var(--color-primary);
 }
 
+/* The rules above sit outside Tailwind's layers, so they beat any border utility: a field
+   marked invalid has to get its error colour back here, focused or not */
+.dark input:not([type='checkbox']):not([type='radio'])[aria-invalid='true'],
+.dark textarea[aria-invalid='true'],
+.dark select[aria-invalid='true'] {
+    border-color: var(--color-error);
+    --tw-ring-color: var(--color-error);
+}
+
 .dark input:not([type='checkbox']):not([type='radio']):disabled,
 .dark textarea:disabled,
 .dark select:disabled {
