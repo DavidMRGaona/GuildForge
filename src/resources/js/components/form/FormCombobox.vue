@@ -87,6 +87,7 @@ watch(
                         ? 'border-error focus:ring-error focus:border-error'
                         : 'border-default hover:border-strong',
                 ]"
+                :aria-invalid="error ? 'true' : undefined"
                 :display-value="() => displayValue"
                 :placeholder="placeholder"
                 autocomplete="off"
