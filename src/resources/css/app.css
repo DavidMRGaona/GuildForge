@@ -397,69 +397,130 @@
    Components use these instead of hardcoded colors like bg-white dark:bg-gray-800
    ========================================================================== */
 
-/* Background utilities */
-.bg-page {
-    background-color: var(--color-bg-page);
-}
-.bg-surface {
-    background-color: var(--color-bg-surface);
-}
-.bg-elevated {
-    background-color: var(--color-bg-elevated);
-}
-.bg-muted {
-    background-color: var(--color-bg-muted);
-}
-.bg-primary {
-    background-color: var(--color-primary);
-}
-.bg-primary-light {
-    background-color: var(--color-primary-light);
-}
-.bg-tooltip {
-    background-color: var(--color-bg-tooltip);
-}
+/* In the utilities layer, after Tailwind's own: an interactive variant (hover:, focus:,
+   group-hover:) carries a pseudo-class, so it now wins over these on the same element, while
+   dark: and breakpoint variants, as specific as these and earlier, still lose as they did when
+   these rules were unlayered. Unlayered, they beat every hover (bg-primary hover:bg-primary-700
+   never changed colour) */
+@layer utilities {
+    /* Background utilities */
+    .bg-page {
+        background-color: var(--color-bg-page);
+    }
+    .bg-surface {
+        background-color: var(--color-bg-surface);
+    }
+    .bg-elevated {
+        background-color: var(--color-bg-elevated);
+    }
+    .bg-muted {
+        background-color: var(--color-bg-muted);
+    }
+    .bg-primary {
+        background-color: var(--color-primary);
+    }
+    .bg-primary-light {
+        background-color: var(--color-primary-light);
+    }
+    .bg-tooltip {
+        background-color: var(--color-bg-tooltip);
+    }
 
-/* Text utilities */
-.text-base-primary {
-    color: var(--color-text-primary);
-}
-.text-base-secondary {
-    color: var(--color-text-secondary);
-}
-.text-base-muted {
-    color: var(--color-text-muted);
-}
-.text-base-inverted {
-    color: var(--color-text-inverted);
-}
-.text-primary {
-    /* Not --color-primary: that one is also the button background, too dark to read as text
-       in dark mode and too light in light mode for some site colours */
-    color: var(--color-primary-link, var(--color-primary));
-}
-.text-tooltip {
-    color: var(--color-text-tooltip);
-}
-.text-tooltip-secondary {
-    color: var(--color-text-tooltip-secondary);
-}
-.ring-tooltip {
-    --tw-ring-color: var(--color-ring-tooltip);
-}
+    /* Text utilities */
+    .text-base-primary {
+        color: var(--color-text-primary);
+    }
+    .text-base-secondary {
+        color: var(--color-text-secondary);
+    }
+    .text-base-muted {
+        color: var(--color-text-muted);
+    }
+    .text-base-inverted {
+        color: var(--color-text-inverted);
+    }
+    .text-primary {
+        /* Not --color-primary: that one is also the button background, too dark to read as text
+           in dark mode and too light in light mode for some site colours */
+        color: var(--color-primary-link, var(--color-primary));
+    }
+    .text-tooltip {
+        color: var(--color-text-tooltip);
+    }
+    .text-tooltip-secondary {
+        color: var(--color-text-tooltip-secondary);
+    }
+    .ring-tooltip {
+        --tw-ring-color: var(--color-ring-tooltip);
+    }
 
-/* Border utilities */
-.border-default {
-    border-color: var(--color-border);
-}
-.border-strong {
-    border-color: var(--color-border-strong);
-}
-.hover\:border-strong:hover {
-    border-color: var(--color-border-strong);
-}
-.border-primary {
-    border-color: var(--color-primary);
+    /* Border utilities */
+    .border-default {
+        border-color: var(--color-border);
+    }
+    .border-strong {
+        border-color: var(--color-border-strong);
+    }
+    .border-primary {
+        border-color: var(--color-primary);
+    }
+
+    /* Status text utilities */
+    .text-success {
+        color: var(--color-success);
+    }
+    .text-error {
+        color: var(--color-error);
+    }
+    .text-warning {
+        color: var(--color-warning);
+    }
+    .text-info {
+        color: var(--color-info);
+    }
+
+    /* Status background utilities (light) */
+    .bg-success-light {
+        background-color: var(--color-success-bg);
+    }
+    .bg-error-light {
+        background-color: var(--color-error-bg);
+    }
+    .bg-warning-light {
+        background-color: var(--color-warning-bg);
+    }
+    .bg-info-light {
+        background-color: var(--color-info-bg);
+    }
+
+    /* Status border utilities */
+    .border-success {
+        border-color: var(--color-success);
+    }
+    .border-error {
+        border-color: var(--color-error);
+    }
+    .border-warning {
+        border-color: var(--color-warning);
+    }
+    .border-info {
+        border-color: var(--color-info);
+    }
+
+    /* Variants Tailwind cannot generate: neither --color-primary nor --color-border-strong
+       is a theme token */
+    .hover\:border-strong:hover {
+        border-color: var(--color-border-strong);
+    }
+    @media (hover: hover) {
+        .hover\:text-primary:hover,
+        .group:hover .group-hover\:text-primary {
+            color: var(--color-primary-link, var(--color-primary));
+        }
+    }
+    .focus\:text-primary:focus {
+        color: var(--color-primary-link, var(--color-primary));
+    }
 }
 
 /* Fix for Chrome hover on HeadlessUI Listbox buttons
@@ -467,48 +528,6 @@
    targeting data-headlessui-state forces recalculation */
 button[data-headlessui-state]:hover {
     border-color: var(--color-border-strong);
-}
-
-/* Status text utilities */
-.text-success {
-    color: var(--color-success);
-}
-.text-error {
-    color: var(--color-error);
-}
-.text-warning {
-    color: var(--color-warning);
-}
-.text-info {
-    color: var(--color-info);
-}
-
-/* Status background utilities (light) */
-.bg-success-light {
-    background-color: var(--color-success-bg);
-}
-.bg-error-light {
-    background-color: var(--color-error-bg);
-}
-.bg-warning-light {
-    background-color: var(--color-warning-bg);
-}
-.bg-info-light {
-    background-color: var(--color-info-bg);
-}
-
-/* Status border utilities */
-.border-success {
-    border-color: var(--color-success);
-}
-.border-error {
-    border-color: var(--color-error);
-}
-.border-warning {
-    border-color: var(--color-warning);
-}
-.border-info {
-    border-color: var(--color-info);
 }
 
 /* ==========================================================================
