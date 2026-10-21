@@ -86,10 +86,13 @@ const hasSocialLinks = computed(() => {
                     <p class="text-sm text-neutral-300 dark:text-neutral-400">
                         {{ t('layout.copyright', { year: currentYear }) }}
                     </p>
-                    <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-600">
+                    <p class="mt-1 text-xs text-neutral-400">
                         {{ t('layout.madeWith') }}
                     </p>
-                    <div v-if="hasSocialLinks && socialLinks" class="mt-3 flex justify-center md:justify-end">
+                    <div
+                        v-if="hasSocialLinks && socialLinks"
+                        class="mt-3 flex justify-center md:justify-end"
+                    >
                         <SocialLinks :links="socialLinks" size="sm" variant="dark" />
                     </div>
                 </div>

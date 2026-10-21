@@ -628,12 +628,13 @@ button[data-headlessui-state]:hover {
 /* ===== LIGHT MODE ===== */
 .event-calendar .fc {
     --fc-border-color: var(--color-border);
-    --fc-button-bg-color: var(--color-primary-500);
-    --fc-button-border-color: var(--color-primary-500);
-    --fc-button-hover-bg-color: var(--color-primary-600);
-    --fc-button-hover-border-color: var(--color-primary-600);
-    --fc-button-active-bg-color: var(--color-primary-700);
-    --fc-button-active-border-color: var(--color-primary-700);
+    /* White text on the buttons: --color-primary is computed to carry it at 4.5:1 */
+    --fc-button-bg-color: var(--color-primary);
+    --fc-button-border-color: var(--color-primary);
+    --fc-button-hover-bg-color: var(--color-primary-700);
+    --fc-button-hover-border-color: var(--color-primary-700);
+    --fc-button-active-bg-color: var(--color-primary-800);
+    --fc-button-active-border-color: var(--color-primary-800);
     --fc-event-bg-color: var(--color-primary-500);
     --fc-event-border-color: var(--color-primary-500);
     --fc-today-bg-color: var(--color-primary-100);
@@ -749,7 +750,8 @@ button[data-headlessui-state]:hover {
     --fc-today-bg-color: var(--color-primary-950);
     --fc-page-bg-color: var(--color-bg-surface);
     --fc-neutral-bg-color: var(--color-bg-page);
-    --fc-button-text-color: var(--color-text-primary);
+    /* --color-primary is computed for white text, in dark mode too */
+    --fc-button-text-color: #ffffff;
 }
 
 .dark .event-calendar .fc-view-harness,
@@ -853,12 +855,13 @@ button[data-headlessui-state]:hover {
 .event-calendar--compact .fc-col-header-cell-cushion {
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--color-text-muted);
+    /* The header row sits on the primary tint, where the muted and secondary greys fall short */
+    color: var(--color-text-primary);
     text-transform: uppercase;
 }
 
 .dark .event-calendar--compact .fc-col-header-cell-cushion {
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
 }
 
 .event-calendar--compact .fc-daygrid-day {
@@ -905,8 +908,8 @@ button[data-headlessui-state]:hover {
 }
 
 .event-calendar--compact .fc-day-today .fc-daygrid-day-number {
-    background-color: var(--color-primary-action);
-    color: var(--color-text-inverted);
+    background-color: var(--color-primary);
+    color: #ffffff;
     font-weight: 600;
 }
 
@@ -915,7 +918,7 @@ button[data-headlessui-state]:hover {
 }
 
 .dark .event-calendar--compact .fc-day-other .fc-daygrid-day-number {
-    color: var(--color-neutral-600);
+    color: var(--color-text-muted);
 }
 
 .event-calendar--compact .fc-day-other .fc-daygrid-event-dot {
