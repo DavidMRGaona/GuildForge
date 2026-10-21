@@ -251,6 +251,21 @@ final class ThemeSettingsServicePaletteTest extends TestCase
         $this->assertSame('#DC2626', $this->hexVariable($this->extractRootSection($this->service->getCssVariables()), '--color-primary')->value);
     }
 
+    #[DataProvider('themeColours')]
+    public function test_primary_text_reaches_aa_on_the_primary_tint_in_both_themes(string $primary, string $accent): void
+    {
+        $this->useColours($primary, $accent);
+        $palette = $this->service->getPrimaryPalette();
+        $css = $this->service->getCssVariables();
+
+        // bg-primary-light is primary-100 in light mode and primary-950 in dark mode
+        foreach ([[$this->extractRootSection($css), 100], [$this->extractDarkSection($css), 950]] as [$section, $shade]) {
+            $tint = $palette->shade($shade);
+            $this->assertNotNull($tint);
+            $this->assertGreaterThanOrEqual(4.5, $this->hexVariable($section, '--color-primary-link')->contrastRatio($tint), "primary text on primary-{$shade}");
+        }
+    }
+
     public function test_muted_text_stays_lighter_than_secondary_text_in_light_mode(): void
     {
         $this->useColours('#DC2626', '#F59E0B');
