@@ -1,4 +1,4 @@
-import type { EventInput } from '@fullcalendar/core';
+import type { EventInput } from '@fullcalendar/vue3';
 import type { CalendarEntry, CalendarSourceColor } from '@/types/models';
 import { VENUE_TIMEZONE, addVenueDays, venueDayKey } from '@/utils/datetime';
 
@@ -48,7 +48,7 @@ function isExactVenueMidnight(date: Date): boolean {
     return date.getMilliseconds() === 0 && venueTimeFormatter.format(date) === '00:00:00';
 }
 
-function expandEntry(entry: CalendarEntry): CalendarEntry[] {
+function expandEntry(entry: CalendarEntry, fromDayKey: string | undefined): CalendarEntry[] {
     if (entry.end === null) {
         return [entry];
     }
@@ -73,7 +73,9 @@ function expandEntry(entry: CalendarEntry): CalendarEntry[] {
     }
 
     const pieces: CalendarEntry[] = [];
-    let dayKey = startDayKey;
+    // Days before the visible range need no marker, and skipping them keeps a long
+    // entry that started months ago from spending the whole cap before reaching it.
+    let dayKey = fromDayKey !== undefined && fromDayKey > startDayKey ? fromDayKey : startDayKey;
     let dayIndex = 0;
 
     // 'YYYY-MM-DD' keys compare lexicographically in chronological order, so the
@@ -85,7 +87,7 @@ function expandEntry(entry: CalendarEntry): CalendarEntry[] {
             // Continuation days are markers, not real instants. Anchoring them at
             // UTC midnight keeps them inside the same venue day (Madrid is UTC+1/+2)
             // and sorts them ahead of that day's timed entries, as before.
-            start: dayIndex === 0 ? entry.start : `${dayKey}T00:00:00Z`,
+            start: dayKey === startDayKey ? entry.start : `${dayKey}T00:00:00Z`,
             end: null,
         });
 
@@ -100,12 +102,11 @@ function expandEntry(entry: CalendarEntry): CalendarEntry[] {
  * Expand multi-day calendar entries into one synthetic, single-day marker
  * per covered venue day.
  *
- * FullCalendar's compact `eventDisplay: 'list-item'` mode only ever renders
- * a segment on the entry's *start* day; continuation days get no harness at
- * all (verified in-browser), so a multi-day entry would otherwise show a
- * single dot instead of one dot per day it spans. This works around that by
- * pre-slicing multi-day entries into day-sized pieces before they reach
- * FullCalendar. Intended for compact (widget) mode only -- the block view
+ * The compact widget draws one dot per entry on the day the entry starts
+ * (see `toCompactDayEvents`), so a multi-day entry would otherwise show a
+ * single dot instead of one dot per day it spans. Pre-slicing multi-day
+ * entries into day-sized pieces gives every covered day its own dot.
+ * Intended for compact (widget) mode only -- the block view
  * on `/calendario` already renders multi-day spans correctly and must not
  * be expanded.
  *
@@ -129,11 +130,18 @@ function expandEntry(entry: CalendarEntry): CalendarEntry[] {
  *   entry, not the synthetic piece (see EventCalendar.vue's eventsCache,
  *   which maps every synthetic id back to the original entry).
  *
+ * `fromDayKey` (a venue day, `YYYY-MM-DD`) is the first day on screen: no
+ * pieces are emitted before it, so an entry that started long before the
+ * visible range still gets its dots there.
+ *
  * A single entry is capped at `MAX_EXPANDED_DAYS` synthetic pieces as a
  * defensive guard against corrupt/unbounded date ranges.
  */
-export function expandEntriesPerDay(entries: CalendarEntry[]): CalendarEntry[] {
-    return entries.flatMap((entry) => expandEntry(entry));
+export function expandEntriesPerDay(
+    entries: CalendarEntry[],
+    fromDayKey?: string
+): CalendarEntry[] {
+    return entries.flatMap((entry) => expandEntry(entry, fromDayKey));
 }
 
 /**
@@ -186,8 +194,10 @@ export function collapseEntriesByActivityType(entries: CalendarEntry[]): Calenda
 /**
  * Map calendar entries to FullCalendar's EventInput shape.
  *
- * The color token travels as a class name (`fc-entry--{color}`) so the
- * styling is resolved by CSS variables instead of inline colors.
+ * The colours are CSS variable references, not values: FullCalendar copies
+ * them into each event's `--fc-event-color` / `--fc-event-contrast-color`, and
+ * the browser resolves them against `--calendar-entry-*` (resources/css/app.css),
+ * which follow the site's configured colours and dark mode.
  */
 export function toFullCalendarEvents(entries: CalendarEntry[]): EventInput[] {
     return entries.map((entry) => {
@@ -196,11 +206,43 @@ export function toFullCalendarEvents(entries: CalendarEntry[]): EventInput[] {
             title: entry.title,
             start: entry.start,
             url: entry.url,
-            classNames: ['fc-entry', `fc-entry--${entry.color}`],
+            color: `var(--calendar-entry-${entry.color})`,
+            contrastColor: `var(--calendar-entry-${entry.color}-text)`,
         };
 
         return entry.end !== null ? { ...baseEvent, end: entry.end } : baseEvent;
     });
+}
+
+/**
+ * Group compact (widget) entries into one FullCalendar event per venue day.
+ *
+ * FullCalendar 7 stacks a day's events in rows, one below the other, and
+ * re-measures them whenever their layout is overridden. The widget therefore
+ * hands it a single event per day and draws the dots of all that day's entries
+ * side by side inside it (EventCalendar's `eventContent` slot). The uids of the
+ * day's entries travel in `extendedProps.entryUids`, in the order given.
+ */
+export function toCompactDayEvents(entries: CalendarEntry[]): EventInput[] {
+    const uidsByDay = new Map<string, string[]>();
+
+    for (const entry of entries) {
+        const dayKey = entryDayKey(entry.start);
+        const uids = uidsByDay.get(dayKey);
+
+        if (uids) {
+            uids.push(entryUid(entry));
+        } else {
+            uidsByDay.set(dayKey, [entryUid(entry)]);
+        }
+    }
+
+    return Array.from(uidsByDay, ([dayKey, entryUids]) => ({
+        id: `day:${dayKey}`,
+        start: dayKey,
+        allDay: true,
+        extendedProps: { entryUids },
+    }));
 }
 
 /**

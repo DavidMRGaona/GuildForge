@@ -3,24 +3,27 @@ import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import FullCalendar from '@fullcalendar/vue3';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import luxonPlugin from '@fullcalendar/luxon3';
+import dayGridPlugin from '@fullcalendar/vue3/daygrid';
+import interactionPlugin from '@fullcalendar/vue3/interaction';
 import { useCalendarLocale } from '@/composables/useCalendarLocale';
 import { VENUE_TIMEZONE } from '@/utils/datetime';
+import { calendarClassOptions, calendarThemePlugin } from '@/utils/calendarTheme';
 import type {
     CalendarOptions,
-    EventClickArg,
+    EventClickInfo,
+    EventDisplayInfo,
     EventInput,
-    EventSourceFuncArg,
-    EventHoveringArg,
-    EventMountArg,
-} from '@fullcalendar/core';
+    EventSourceFuncInfo,
+    EventHoveringInfo,
+    MountInfo,
+} from '@fullcalendar/vue3';
 import type { CalendarEntry } from '@/types/models';
 import {
     collapseEntriesByActivityType,
+    entryDayKey,
     entryUid,
     expandEntriesPerDay,
+    toCompactDayEvents,
     toFullCalendarEvents,
 } from '@/utils/calendarEntries';
 import EventTooltip from './EventTooltip.vue';
@@ -56,7 +59,7 @@ const tooltipY = ref(0);
 const tooltipVisible = ref(false);
 
 const fetchEvents = async (
-    info: EventSourceFuncArg,
+    info: EventSourceFuncInfo,
     successCallback: (events: EventInput[]) => void,
     failureCallback: (error: Error) => void
 ): Promise<void> => {
@@ -82,10 +85,13 @@ const fetchEvents = async (
         // synthetic ids must still resolve back to the ORIGINAL entry (real start/end),
         // not the single-day placeholder, so the tooltip/click/aria-label always reflect
         // the entry's real duration.
+        // First venue day on screen, so long entries that started earlier still get dots
+        const firstDayKey = entryDayKey(info.startStr);
+
         eventsCache.value.clear();
         if (props.compact) {
             data.forEach((entry) => {
-                expandEntriesPerDay([entry]).forEach((piece) => {
+                expandEntriesPerDay([entry], firstDayKey).forEach((piece) => {
                     eventsCache.value.set(entryUid(piece), entry);
                 });
             });
@@ -101,10 +107,14 @@ const fetchEvents = async (
         // Compact (widget) view: expand multi-day entries into one marker per covered
         // day, then collapse same-day, multi-type entries down to one dot per type
         const displayedEntries = props.compact
-            ? collapseEntriesByActivityType(expandEntriesPerDay(data))
+            ? collapseEntriesByActivityType(expandEntriesPerDay(data, firstDayKey))
             : data;
 
-        successCallback(toFullCalendarEvents(displayedEntries));
+        successCallback(
+            props.compact
+                ? toCompactDayEvents(displayedEntries)
+                : toFullCalendarEvents(displayedEntries)
+        );
     } catch (e) {
         error.value = t('calendar.error');
         console.error('Error fetching calendar events:', e);
@@ -114,10 +124,31 @@ const fetchEvents = async (
     }
 };
 
-const handleEventClick = (info: EventClickArg): void => {
+/**
+ * Uids of the entries a rendered event stands for: the entries of the whole day
+ * for a compact day event (see toCompactDayEvents), or the event itself.
+ */
+const eventEntryUids = (event: {
+    id: string;
+    extendedProps: Record<string, unknown>;
+}): string[] => {
+    const uids = event.extendedProps.entryUids;
+
+    return Array.isArray(uids)
+        ? uids.filter((uid): uid is string => typeof uid === 'string')
+        : [event.id];
+};
+
+const entryLabel = (entry: CalendarEntry): string =>
+    entry.sourceType === 'event'
+        ? entry.title
+        : t('calendar.entryAriaLabel', { source: entry.sourceLabel, title: entry.title });
+
+const handleEventClick = (info: EventClickInfo): void => {
     info.jsEvent.preventDefault();
 
-    const cachedEvent = eventsCache.value.get(info.event.id);
+    const [firstUid] = eventEntryUids(info.event);
+    const cachedEvent = firstUid !== undefined ? eventsCache.value.get(firstUid) : undefined;
     if (cachedEvent) {
         emit('eventSelect', cachedEvent);
     }
@@ -133,16 +164,21 @@ const handleDateClick = (): void => {
     }
 };
 
-const handleMouseEnter = (info: EventHoveringArg): void => {
+const showTooltip = (uid: string, jsEvent: MouseEvent): void => {
     if (!props.showTooltips) return;
 
-    const event = eventsCache.value.get(info.event.id);
+    const event = eventsCache.value.get(uid);
     if (event) {
         tooltipEvent.value = event;
-        tooltipX.value = info.jsEvent.clientX;
-        tooltipY.value = info.jsEvent.clientY;
+        tooltipX.value = jsEvent.clientX;
+        tooltipY.value = jsEvent.clientY;
         tooltipVisible.value = true;
     }
+};
+
+// A compact day event holds several dots, each with its own tooltip (see the template)
+const handleMouseEnter = (info: EventHoveringInfo): void => {
+    showTooltip(info.event.id, info.jsEvent);
 };
 
 const handleMouseLeave = (): void => {
@@ -152,31 +188,31 @@ const handleMouseLeave = (): void => {
 /**
  * Give every rendered event a real accessible name.
  *
- * Compact (widget) mode hides the visible title/time via CSS to keep the
- * dot-only layout, which also removes them from the accessibility tree.
+ * Compact (widget) mode draws one event per day holding only dots, with no
+ * visible title or time, so it is named after all the day's entries.
  * Non-event activity types (e.g. game tables) are only distinguished from
  * core events by color, so keyboard/screen-reader users need a text
- * alternative independent of both the hidden title and the hover-only
+ * alternative independent of both the missing title and the hover-only
  * tooltip.
  */
-const handleEventDidMount = (info: EventMountArg): void => {
-    const entry = eventsCache.value.get(info.event.id);
-    if (!entry) return;
+const handleEventDidMount = (info: MountInfo<EventDisplayInfo>): void => {
+    const labels = eventEntryUids(info.event)
+        .map((uid) => eventsCache.value.get(uid))
+        .filter((entry): entry is CalendarEntry => entry !== undefined)
+        .map(entryLabel);
 
-    const label =
-        entry.sourceType === 'event'
-            ? entry.title
-            : t('calendar.entryAriaLabel', { source: entry.sourceLabel, title: entry.title });
-
-    info.el.setAttribute('aria-label', label);
+    if (labels.length > 0) {
+        info.el.setAttribute('aria-label', labels.join('; '));
+    }
 };
 
 const calendarOptions = computed<CalendarOptions>(() => {
     const baseOptions: CalendarOptions = {
-        plugins: [dayGridPlugin, interactionPlugin, luxonPlugin],
+        ...calendarClassOptions,
+        plugins: [calendarThemePlugin, dayGridPlugin, interactionPlugin],
         initialView: 'dayGridMonth',
-        // Named timezone support comes from luxonPlugin; without it FullCalendar
-        // would place entries on the visitor's local day instead of the venue's.
+        // Without a named timezone FullCalendar would place entries on the
+        // visitor's local day instead of the venue's.
         timeZone: VENUE_TIMEZONE,
         locale: calendarLocale.value,
         events: fetchEvents,
@@ -194,10 +230,10 @@ const calendarOptions = computed<CalendarOptions>(() => {
                   center: 'title',
                   right: '',
               },
-        buttonText: {
-            today: t('calendar.today'),
+        buttons: {
+            today: { text: t('calendar.today') },
         },
-        height: props.compact ? 'auto' : 'auto',
+        height: 'auto',
         fixedWeekCount: !props.compact,
         eventDisplay: props.compact ? 'list-item' : 'block',
         loading: (isLoadingArg: boolean) => {
@@ -205,7 +241,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
         },
     };
 
-    if (props.showTooltips) {
+    if (props.showTooltips && !props.compact) {
         baseOptions.eventMouseEnter = handleMouseEnter;
         baseOptions.eventMouseLeave = handleMouseLeave;
     }
@@ -253,7 +289,21 @@ watch(tooltipVisible, (visible) => {
                 </div>
             </div>
 
-            <FullCalendar :options="calendarOptions" />
+            <FullCalendar :options="calendarOptions">
+                <template v-if="compact" #eventContent="arg">
+                    <span
+                        v-for="uid in eventEntryUids(arg.event)"
+                        :key="uid"
+                        class="calendar-dot"
+                        :style="{
+                            '--calendar-dot-color': `var(--calendar-entry-${eventsCache.get(uid)?.color ?? 'primary'})`,
+                        }"
+                        aria-hidden="true"
+                        @mouseenter="showTooltip(uid, $event)"
+                        @mouseleave="handleMouseLeave"
+                    ></span>
+                </template>
+            </FullCalendar>
         </div>
 
         <!-- Tooltip -->

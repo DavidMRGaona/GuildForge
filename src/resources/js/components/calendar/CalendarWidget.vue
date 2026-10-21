@@ -37,7 +37,7 @@ const navigateToCalendar = (): void => {
     margin: 0;
 }
 
-.calendar-widget :deep(.fc-toolbar-title) {
+.calendar-widget :deep(.calendar-title) {
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 </style>
