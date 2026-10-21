@@ -60,7 +60,9 @@ async function getModuleManifest(module: string): Promise<Record<string, Manifes
 
     const manifestUrl = `/build/modules/${module}/manifest.json`;
 
-    const promise = fetch(manifestUrl)
+    // Same as resolveModulePage: the manifest keeps its URL across module updates, and
+    // browsers that cached it as immutable would keep loading the old slot components
+    const promise = fetch(manifestUrl, { cache: 'no-cache' })
         .then((response) => {
             if (!response.ok) {
                 return null;
