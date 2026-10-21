@@ -22,11 +22,12 @@ Commands run in the development containers: `php artisan` and PHPUnit in `guildf
 13. [Module installation](#module-installation)
 14. [Testing modules](#testing-modules)
 15. [Best practices](#best-practices)
-16. [Extending core functionality](#extending-core-functionality)
-17. [Domain events and listeners](#domain-events-and-listeners)
-18. [State machine pattern](#state-machine-pattern)
-19. [Releasing a module](#releasing-a-module)
-20. [Quick reference](#quick-reference)
+16. [Legal notices in emails](#legal-notices-in-emails)
+17. [Extending core functionality](#extending-core-functionality)
+18. [Domain events and listeners](#domain-events-and-listeners)
+19. [State machine pattern](#state-machine-pattern)
+20. [Releasing a module](#releasing-a-module)
+21. [Quick reference](#quick-reference)
 
 ---
 
@@ -1375,7 +1376,8 @@ A module that puts a legal notice (data protection text, for example) in an emai
 ```php
 use App\Application\Legal\DTOs\LegalMailNoticeDTO;
 use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
-use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
+use Illuminate\Notifications\AnonymousNotifiable;
+use Modules\MyModule\Notifications\InvitationNotification;
 
 if (interface_exists(LegalMailNoticeRegistryInterface::class)) {
     $this->app->make(LegalMailNoticeRegistryInterface::class)->register(new LegalMailNoticeDTO(
@@ -1385,8 +1387,39 @@ if (interface_exists(LegalMailNoticeRegistryInterface::class)) {
         help: __('my-module::admin.notice.help'),
         defaultContent: "First paragraph.\n\nSecond paragraph, with :site.",
         placeholders: [':site', ':inviter'],    // listed under the field
-        preview: fn (string $content): string => $renderer->previewHtml($content), // whole email as HTML, sample data
+        // The whole email as HTML: the module's own notification with sample data and the form's text
+        preview: fn (string $content): string => (string) (new InvitationNotification(
+            inviterName: 'John Doe',
+            eventTitle: 'Sample event',
+            legalText: $content,
+        ))->toMail(new AnonymousNotifiable)->render(),
     ));
+}
+```
+
+The notification takes the text to show as an optional argument (`legalText`, `null` when it is really sent):
+
+```php
+use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\HtmlString;
+
+public function toMail(object $notifiable): MailMessage
+{
+    $message = (new MailMessage)->line(__('my-module::emails.invitation.intro', ['inviter' => $this->inviterName]));
+    $replacements = [':site' => (string) config('app.name'), ':inviter' => $this->inviterName];
+
+    // The saved text (or the default one) when sent; the form's text in the preview
+    $paragraphs = $this->legalText === null
+        ? app(LegalMailNoticeServiceInterface::class)->paragraphs('my-module.invitation', $replacements)
+        : array_map(fn (string $paragraph): string => strtr(trim($paragraph), $replacements), preg_split('/\n\s*\n/', $this->legalText) ?: []);
+
+    // Escaped, on one line and wrapped in <p>: the Markdown mail template never formats it
+    foreach ($paragraphs as $paragraph) {
+        $message->line(new HtmlString('<p>'.str_replace(["\r\n", "\r", "\n"], ' ', e($paragraph)).'</p>'));
+    }
+
+    return $message;
 }
 ```
 
