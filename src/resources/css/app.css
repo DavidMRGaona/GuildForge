@@ -621,8 +621,288 @@ button[data-headlessui-state]:hover {
 }
 
 /* ==========================================================================
-   FullCalendar Component Styling
-   Third-party library - requires global CSS (scoped styles don't work)
+   FullCalendar
+   FullCalendar 7 renders hashed class names and ships no colours of its own:
+   resources/js/utils/calendarTheme.ts loads the classic theme and adds the
+   stable `calendar-*` classes styled here. Every colour is a site token, so
+   the colours chosen in the site settings and dark mode reach the calendar.
+   ========================================================================== */
+
+.event-calendar {
+    /* Entry colours, referenced by name from calendarEntries.ts */
+    --calendar-entry-primary: var(--color-calendar-primary, var(--color-primary));
+    --calendar-entry-primary-text: #ffffff;
+    --calendar-entry-accent: var(--color-calendar-accent, var(--color-accent-400));
+    --calendar-entry-accent-text: var(--color-calendar-accent-text, var(--color-text-primary));
+    --calendar-entry-info: var(--color-calendar-info, var(--color-info));
+    --calendar-entry-info-text: #ffffff;
+    /* --color-success, --color-warning and the neutral are mid-brightness in
+       both modes: white text fails 4.5:1 on them, so they take the dark text */
+    --calendar-entry-success: var(--color-calendar-success, var(--color-success));
+    --calendar-entry-success-text: var(--calendar-entry-accent-text);
+    --calendar-entry-warning: var(--color-calendar-warning, var(--color-warning));
+    --calendar-entry-warning-text: var(--calendar-entry-accent-text);
+    --calendar-entry-neutral: var(--color-calendar-neutral, var(--color-neutral-400));
+    --calendar-entry-neutral-text: var(--calendar-entry-accent-text);
+
+    /* Classic theme palette (its own palette.css is not loaded) */
+    --fc-classic-button: var(--color-primary);
+    --fc-classic-button-border: var(--color-primary);
+    --fc-classic-button-strong: var(--color-primary-700);
+    --fc-classic-button-strong-border: var(--color-primary-800);
+    --fc-classic-button-outline: color-mix(in oklab, var(--color-primary-action) 50%, transparent);
+    /* --color-primary is computed to carry white text at 4.5:1, in dark mode too */
+    --fc-classic-button-foreground: #ffffff;
+    --fc-classic-primary: var(--color-primary);
+    --fc-classic-primary-foreground: #ffffff;
+    --fc-classic-event: var(--calendar-entry-primary);
+    --fc-classic-event-contrast: var(--calendar-entry-primary-text);
+    --fc-classic-background-event: var(--color-success);
+    --fc-classic-background-event-opacity: 15%;
+    --fc-classic-background-event-foreground-opacity: 50%;
+    --fc-classic-highlight: color-mix(in oklab, var(--color-primary-action) 20%, transparent);
+    --fc-classic-today: var(--color-primary-light);
+    --fc-classic-now: var(--color-error);
+    --fc-classic-small-dot-width: 8px;
+    --fc-classic-large-dot-width: 10px;
+    --fc-classic-background: var(--color-bg-surface);
+    --fc-classic-faint: color-mix(in oklab, var(--color-text-primary) 4%, transparent);
+    --fc-classic-muted: color-mix(in oklab, var(--color-text-primary) 8%, transparent);
+    --fc-classic-strong: color-mix(in oklab, var(--color-text-primary) 14%, transparent);
+    --fc-classic-foreground: var(--color-text-primary);
+    --fc-classic-faint-foreground: var(--color-text-muted);
+    --fc-classic-muted-foreground: var(--color-text-secondary);
+    --fc-classic-border: var(--color-border);
+    --fc-classic-strong-border: var(--color-border-strong);
+}
+
+/* --color-info flips from a dark blue (light mode) to a light blue (dark mode):
+   white text only keeps 4.5:1 in light mode */
+.dark .event-calendar {
+    --calendar-entry-info-text: var(--calendar-entry-accent-text);
+}
+
+.event-calendar .calendar-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.event-calendar .calendar-button {
+    text-transform: capitalize;
+    font-weight: 500;
+}
+
+.event-calendar .calendar-day-header {
+    background-color: var(--color-primary-light);
+}
+
+.dark .event-calendar .calendar-day-header {
+    background-color: var(--color-neutral-700);
+    color: var(--color-text-secondary);
+}
+
+.event-calendar .calendar-day-number {
+    color: var(--color-text-primary);
+}
+
+.event-calendar .calendar-day--other .calendar-day-number {
+    color: var(--color-text-muted);
+}
+
+.dark .event-calendar .calendar-day--other {
+    background-color: var(--color-bg-page);
+}
+
+.event-calendar .calendar-event {
+    cursor: pointer;
+    transition: transform 0.15s ease-in-out;
+}
+
+.event-calendar .calendar-event:hover,
+.event-calendar .calendar-event:focus-visible {
+    transform: scale(1.05);
+}
+
+.event-calendar .calendar-event:focus-visible {
+    outline: 2px solid var(--color-primary-action);
+    outline-offset: 2px;
+}
+
+.event-calendar .calendar-event-title {
+    font-weight: 500;
+}
+
+/* Long titles wrap instead of being cut off */
+.event-calendar:not(.event-calendar--compact) .calendar-event-title {
+    white-space: normal;
+}
+
+.dark .event-calendar .calendar-more-link {
+    color: var(--color-primary-action);
+}
+
+/* ===== COMPACT MODE ===== */
+/* The home page widget: a borderless month of day numbers with one dot per entry */
+.event-calendar--compact {
+    /* Today is marked on the day number, not on the whole cell */
+    --fc-classic-today: transparent;
+}
+
+.event-calendar--compact .calendar-table,
+.event-calendar--compact .calendar-header-divider,
+.event-calendar--compact .calendar-row,
+.event-calendar--compact .calendar-day,
+.event-calendar--compact .calendar-day-header {
+    border-color: transparent;
+}
+
+.event-calendar--compact .calendar-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.event-calendar--compact .calendar-button {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    box-shadow: none;
+}
+
+.event-calendar--compact .calendar-button:hover {
+    color: var(--color-primary-action);
+    background: none;
+}
+
+.dark .event-calendar--compact .calendar-button:hover {
+    color: var(--color-primary-action-hover);
+}
+
+.event-calendar--compact .calendar-day-header {
+    background: transparent;
+    padding: 0.5rem 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.dark .event-calendar--compact .calendar-day-header {
+    background: transparent;
+}
+
+.event-calendar--compact .calendar-day {
+    cursor: pointer;
+}
+
+.event-calendar--compact .calendar-day-top {
+    justify-content: center;
+    padding-top: 4px;
+}
+
+.event-calendar--compact .calendar-day-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    transition: background-color 0.15s ease;
+}
+
+.dark .event-calendar--compact .calendar-day-number {
+    color: var(--color-text-secondary);
+}
+
+.event-calendar--compact .calendar-day:not(.calendar-day--today):hover .calendar-day-number {
+    background-color: var(--color-neutral-100);
+}
+
+.dark .event-calendar--compact .calendar-day:not(.calendar-day--today):hover .calendar-day-number {
+    background-color: var(--color-neutral-700);
+}
+
+.event-calendar--compact .calendar-day--today .calendar-day-number,
+.dark .event-calendar--compact .calendar-day--today .calendar-day-number {
+    background-color: var(--color-primary);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.event-calendar--compact .calendar-day--other .calendar-day-number,
+.dark .event-calendar--compact .calendar-day--other .calendar-day-number {
+    color: var(--color-text-muted);
+}
+
+.dark .event-calendar--compact .calendar-day--other {
+    background-color: transparent;
+}
+
+/* Each day is a single event holding the dots of all its entries
+   (toCompactDayEvents), centred under the day number */
+.event-calendar--compact .calendar-event {
+    justify-content: center;
+    margin: 2px 0 0;
+    padding: 0;
+    background: none;
+}
+
+.event-calendar--compact .calendar-event:hover,
+.event-calendar--compact .calendar-event:focus-visible {
+    transform: none;
+}
+
+.event-calendar--compact .calendar-event-dot {
+    display: none;
+}
+
+/* The 4px gap keeps ~2px between the 1px rings of two neighbouring dots */
+.event-calendar--compact .calendar-event-inner {
+    justify-content: center;
+    gap: 4px;
+}
+
+.calendar-dot {
+    position: relative;
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background-color: var(--calendar-dot-color);
+    /* Neutral ring so the dot stays perceivable (WCAG 1.4.11) even when a
+       configured colour is close to the surface; the colour is never the only
+       channel (see EventCalendar's eventDidMount aria-label and the legend) */
+    box-shadow: 0 0 0 1px var(--color-border-strong);
+}
+
+/* Invisible hit area around the 6px dot, so it is easier to tap */
+.calendar-dot::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+}
+
+.event-calendar--compact .calendar-day--other .calendar-dot {
+    opacity: 0.35;
+}
+
+/* ===== TIME GRID ===== */
+.event-calendar .calendar-slot-header {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.dark .event-calendar .calendar-slot-header {
+    color: var(--color-text-muted);
+}
+
+/* ==========================================================================
+   FullCalendar 6 (legacy)
+   venue-bookings 2.8.x and earlier bundle FullCalendar 6 and are styled by
+   these `fc-*` rules. FullCalendar 7 never renders those classes, so they do
+   not touch the calendars above. Delete this block once every site runs a
+   venue-bookings release built on FullCalendar 7.
    ========================================================================== */
 
 /* ===== LIGHT MODE ===== */
@@ -681,63 +961,6 @@ button[data-headlessui-state]:hover {
 .event-calendar .fc-daygrid-event {
     white-space: normal;
     align-items: flex-start;
-}
-
-/* Block view: per-source-color event backgrounds (token-driven, see ThemeSettingsService). The
-   title is drawn by a child FullCalendar colours with --fc-event-text-color, so each colour sets it */
-.event-calendar .fc-daygrid-event.fc-entry--primary {
-    background-color: var(--color-calendar-primary, var(--color-primary));
-    border-color: var(--color-calendar-primary, var(--color-primary));
-    --fc-event-text-color: #ffffff;
-}
-
-.event-calendar .fc-daygrid-event.fc-entry--accent {
-    background-color: var(--color-calendar-accent, var(--color-accent-400));
-    border-color: var(--color-calendar-accent, var(--color-accent-400));
-    color: var(--color-calendar-accent-text, var(--color-text-primary));
-    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
-}
-
-.event-calendar .fc-daygrid-event.fc-entry--info {
-    background-color: var(--color-calendar-info, var(--color-info));
-    border-color: var(--color-calendar-info, var(--color-info));
-    --fc-event-text-color: #ffffff;
-}
-
-/* --color-info flips from a dark blue (light mode) to a light blue (dark
-   mode); the default white event text only keeps 4.5:1 contrast in light
-   mode, so dark mode needs the same dark-text token used for --accent. */
-.dark .event-calendar .fc-daygrid-event.fc-entry--info {
-    color: var(--color-calendar-accent-text, var(--color-text-primary));
-    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
-}
-
-/* --color-success and --color-warning are mid-brightness in both modes:
-   the default white event text fails 4.5:1 contrast against them, so both
-   need a dark text color regardless of light/dark mode. */
-.event-calendar .fc-daygrid-event.fc-entry--success {
-    background-color: var(--color-calendar-success, var(--color-success));
-    border-color: var(--color-calendar-success, var(--color-success));
-    color: var(--color-calendar-accent-text, var(--color-text-primary));
-    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
-}
-
-.event-calendar .fc-daygrid-event.fc-entry--warning {
-    background-color: var(--color-calendar-warning, var(--color-warning));
-    border-color: var(--color-calendar-warning, var(--color-warning));
-    color: var(--color-calendar-accent-text, var(--color-text-primary));
-    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
-}
-
-/* --color-calendar-neutral resolves to the theme's admin-configurable
-   neutral-500 shade; there is no dedicated "neutral text" token, so this
-   reuses the accent dark-text token as a best-effort default (same
-   uncertainty already accepted for --accent, see ThemeSettingsService). */
-.event-calendar .fc-daygrid-event.fc-entry--neutral {
-    background-color: var(--color-calendar-neutral, var(--color-neutral-400));
-    border-color: var(--color-calendar-neutral, var(--color-neutral-400));
-    color: var(--color-calendar-accent-text, var(--color-text-primary));
-    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
 }
 
 .event-calendar .fc-event-title {
@@ -810,227 +1033,6 @@ button[data-headlessui-state]:hover {
 
 .dark .event-calendar .fc-daygrid-more-link {
     color: var(--color-primary-action);
-}
-
-/* ===== COMPACT MODE ===== */
-.event-calendar--compact .fc-theme-standard th,
-.event-calendar--compact .fc-theme-standard td,
-.event-calendar--compact .fc-theme-standard .fc-scrollgrid,
-.event-calendar--compact .fc-scrollgrid-sync-table {
-    border: none;
-}
-
-.event-calendar--compact .fc-toolbar-title {
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.event-calendar--compact .fc-button {
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    padding: 0.25rem 0.5rem;
-    box-shadow: none;
-}
-
-.event-calendar--compact .fc-button:hover {
-    color: var(--color-primary-action);
-    background: none;
-}
-
-.event-calendar--compact .fc-button:focus {
-    box-shadow: none;
-}
-
-.dark .event-calendar--compact .fc-button {
-    color: var(--color-text-muted);
-}
-
-.dark .event-calendar--compact .fc-button:hover {
-    color: var(--color-primary-action-hover);
-}
-
-.event-calendar--compact .fc-col-header-cell {
-    background: transparent;
-    padding: 0.5rem 0;
-}
-
-.event-calendar--compact .fc-col-header-cell-cushion {
-    font-size: 0.75rem;
-    font-weight: 500;
-    /* The header row sits on the primary tint, where the muted and secondary greys fall short */
-    color: var(--color-text-primary);
-    text-transform: uppercase;
-}
-
-.dark .event-calendar--compact .fc-col-header-cell-cushion {
-    color: var(--color-text-secondary);
-}
-
-.event-calendar--compact .fc-daygrid-day {
-    cursor: pointer;
-}
-
-.event-calendar--compact .fc-daygrid-day-frame {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: auto;
-    padding: 4px 0;
-}
-
-.event-calendar--compact .fc-daygrid-day-top {
-    flex-direction: row;
-    justify-content: center;
-}
-
-.event-calendar--compact .fc-daygrid-day-number {
-    font-size: 0.875rem;
-    padding: 0;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.15s ease;
-    color: var(--color-text-primary);
-}
-
-.dark .event-calendar--compact .fc-daygrid-day-number {
-    color: var(--color-text-secondary);
-}
-
-.event-calendar--compact .fc-daygrid-day:not(.fc-day-today):hover .fc-daygrid-day-number {
-    background-color: var(--color-neutral-100);
-}
-
-.dark .event-calendar--compact .fc-daygrid-day:not(.fc-day-today):hover .fc-daygrid-day-number {
-    background-color: var(--color-neutral-700);
-}
-
-.event-calendar--compact .fc-day-today .fc-daygrid-day-number {
-    background-color: var(--color-primary);
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.event-calendar--compact .fc-day-other .fc-daygrid-day-number {
-    color: var(--color-text-muted);
-}
-
-.dark .event-calendar--compact .fc-day-other .fc-daygrid-day-number {
-    color: var(--color-text-muted);
-}
-
-.event-calendar--compact .fc-day-other .fc-daygrid-event-dot {
-    opacity: 0.35;
-}
-
-.event-calendar--compact .fc-daygrid-day-events,
-.event-calendar--compact .fc .fc-daygrid-body-unbalanced .fc-daygrid-day-events {
-    display: flex;
-    justify-content: center;
-    /* Each dot carries a 1px box-shadow ring (see .fc-daygrid-event-dot below)
-       that doesn't take up layout space. A 2px gap left the rings of two
-       adjacent, differently-colored dots touching (visually 0px apart), so
-       they read as a single blob; 4px keeps a ~2px visible gap between rings. */
-    gap: 4px;
-    min-height: 0;
-    margin-top: 2px;
-}
-
-.event-calendar--compact .fc-daygrid-day-bottom {
-    display: none;
-}
-
-.event-calendar--compact .fc-daygrid-event-harness {
-    margin: 0;
-}
-
-/* The compact widget root carries both `event-calendar` and
-   `event-calendar--compact`, and every entry always carries the base
-   `fc-entry` class (see calendarEntries.ts). The block-view color rules
-   above (`.event-calendar .fc-daygrid-event.fc-entry--{color}`) have
-   specificity (0,3,0) and would otherwise beat this reset's (0,2,0),
-   leaving a colored background/border chip behind each dot. The second
-   selector matches at (0,3,0) too, so it ties with those rules and wins by
-   appearing later in the file. The plain `.fc-daygrid-event` selector is
-   kept as a defensive fallback for any entry that might ever render
-   without the `fc-entry` class. */
-.event-calendar--compact .fc-daygrid-event,
-.event-calendar--compact .fc-daygrid-event.fc-entry {
-    position: relative;
-    margin: 0;
-    padding: 0;
-    background: none;
-    border: none;
-}
-
-/* Invisible hit-area extension: the visible dot stays 6px, but the tap/click
-   target is enlarged (without affecting layout, since it's an absolutely
-   positioned pseudo-element) to make the tiny dots easier to hit on touch
-   devices. */
-.event-calendar--compact .fc-daygrid-event::before {
-    content: '';
-    position: absolute;
-    inset: -6px;
-}
-
-.event-calendar--compact .fc-daygrid-event-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--color-calendar-primary, var(--color-primary-action));
-    /* Neutral ring so the dot stays perceivable (WCAG 1.4.11) even when an
-       admin-configured accent/primary color is close in luminance to
-       --color-bg-surface; the fill color itself still conveys the source
-       (never the sole channel: see EventCalendar's eventDidMount aria-label
-       and the /calendario legend). */
-    box-shadow: 0 0 0 1px var(--color-border-strong);
-    border: none;
-    margin: 0;
-}
-
-/* Per-source-color dot overrides (token-driven, see ThemeSettingsService) */
-.event-calendar--compact .fc-entry--accent .fc-daygrid-event-dot {
-    background-color: var(--color-calendar-accent, var(--color-accent-400));
-}
-
-.event-calendar--compact .fc-entry--info .fc-daygrid-event-dot {
-    background-color: var(--color-calendar-info, var(--color-info));
-}
-
-.event-calendar--compact .fc-entry--success .fc-daygrid-event-dot {
-    background-color: var(--color-calendar-success, var(--color-success));
-}
-
-.event-calendar--compact .fc-entry--warning .fc-daygrid-event-dot {
-    background-color: var(--color-calendar-warning, var(--color-warning));
-}
-
-.event-calendar--compact .fc-entry--neutral .fc-daygrid-event-dot {
-    background-color: var(--color-calendar-neutral, var(--color-neutral-400));
-}
-
-.event-calendar--compact .fc-event-title,
-.event-calendar--compact .fc-event-time {
-    display: none;
-}
-
-/* NOTE (unverified, no browser/Docker available to confirm): the compact
-   widget forces `eventDisplay: 'list-item'` (EventCalendar.vue), which makes
-   FullCalendar render every entry -- including multi-day ones -- as a dot in
-   normal flow (`.fc-daygrid-event-harness`), not as an absolutely positioned
-   spanning bar (`.fc-daygrid-event-harness-abs`, used for block/bar display
-   across day cells). This rule may therefore never match any real element in
-   compact mode. Left in place defensively rather than removed, since we
-   can't verify FullCalendar's harness selection at runtime here; if a future
-   visual QA pass confirms `-abs` harnesses never appear under `list-item`
-   display, this rule can be deleted. */
-.event-calendar--compact .fc-daygrid-event-harness-abs {
-    position: relative;
 }
 
 /* ===== TIMEGRID VIEWS ===== */
