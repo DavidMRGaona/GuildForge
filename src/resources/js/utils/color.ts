@@ -17,6 +17,16 @@ export function getLuminance(hex: string): number {
 }
 
 /**
+ * WCAG contrast ratio between two hex colours (1 to 21).
+ */
+export function getContrastRatio(a: string, b: string): number {
+    const la = getLuminance(a);
+    const lb = getLuminance(b);
+
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/**
  * Determine if text should be dark or light based on background color.
  *
  * @returns '#111827' (dark) for light backgrounds, '#ffffff' for dark backgrounds
