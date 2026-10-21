@@ -16,3 +16,8 @@ Schedule::job(new CheckModuleUpdatesJob)
     ->dailyAt('04:00')
     ->name(CheckModuleUpdatesJob::class)
     ->withoutOverlapping();
+
+// A failed queued notification keeps its payload (recipient, links with tokens): drop it after 14 days
+Schedule::command('queue:prune-failed --hours=336')
+    ->daily()
+    ->withoutOverlapping();
