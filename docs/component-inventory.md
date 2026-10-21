@@ -801,8 +801,8 @@ Located in `src/resources/js/utils/`.
 | Export | Purpose |
 |--------|---------|
 | `calendarThemePlugin` | FullCalendar classic theme plugin; also imports `skeleton.css` and the theme stylesheet (its palette is replaced by the `--fc-classic-*` mapping in `app.css`) |
-| `calendarClassOptions` | Stable `calendar-*` class hooks (title, buttons, day cells, events, ...) styled in `app.css`; shared with module calendars through `@/`. Events carry `calendar-event--block` (month view), `calendar-event--column` (time grid) and `calendar-event--multiday` (start and end on different venue days) |
-| `eventTimeRange(event, locale)` | Time range of a single-day timed event in the venue's time zone (`18:00–21:00`), empty for all-day and multi-day events; used for accessible names |
+| `calendarClassOptions` | Stable `calendar-*` class hooks (title, buttons, day cells, events, ...) styled in `app.css`; shared with module calendars through `@/`. Events carry `calendar-event--block` (month view), `calendar-event--column` (time grid) and `calendar-event--multiday` (start and end on different venue days); `calendar-event--no-time` hides the month-view time of a multi-day event that starts and ends at the same hour (`06:03 – 06:03`) and of every piece of a multi-day event but the one where it starts |
+| `eventTimeRange(event, locale)` | Time range of a timed event in the venue's time zone (`18:00–21:00`, `20:00–01:00` across midnight), empty for all-day events and for multi-day events that start and end at the same hour; used for accessible names |
 
 ### csrf.ts
 
