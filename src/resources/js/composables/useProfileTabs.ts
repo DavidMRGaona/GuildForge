@@ -1,4 +1,5 @@
 import { ref, computed, type Ref, type ComputedRef } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { useModuleSlots } from './useModuleSlots';
 import type { ProfileTab, ProfileTabIcon } from '@/types/profile';
@@ -11,11 +12,38 @@ interface UseProfileTabsReturn {
     isActiveTab: (id: string) => boolean;
 }
 
+const DEFAULT_TAB = 'account';
+
+function tabFromUrl(url: string): string | null {
+    return new URL(url, 'http://localhost').searchParams.get('tab');
+}
+
+function urlWithTab(url: string, id: string): string {
+    const target = new URL(url, 'http://localhost');
+    if (id === DEFAULT_TAB) {
+        target.searchParams.delete('tab');
+    } else {
+        target.searchParams.set('tab', id);
+    }
+    return `${target.pathname}${target.search}${target.hash}`;
+}
+
 export function useProfileTabs(): UseProfileTabsReturn {
     const { t } = useI18n();
-    const { getSlotComponents } = useModuleSlots();
+    const { getSlotComponents, moduleSlots } = useModuleSlots();
 
-    const activeTabId = ref('account');
+    const page = usePage();
+
+    // The active tab lives in the URL (`/perfil?tab=…`), so going back to the profile or a link
+    // from a module page opens the same tab. The registrations arrive with the page (the tab
+    // components may still be loading): a tab no module registers falls back to the account tab
+    const registeredTabIds = (moduleSlots.value['profile-sections'] ?? [])
+        .filter((registration) => registration.profileTab)
+        .map((registration) => registration.profileTab?.tabId ?? registration.module);
+    const requestedTab = tabFromUrl(page.url);
+    const activeTabId = ref(
+        requestedTab !== null && registeredTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB,
+    );
 
     const tabs = computed<ProfileTab[]>(() => {
         const baseTabs: ProfileTab[] = [
@@ -65,6 +93,7 @@ export function useProfileTabs(): UseProfileTabsReturn {
 
     function setActiveTab(id: string): void {
         activeTabId.value = id;
+        router.replace({ url: urlWithTab(page.url, id), preserveScroll: true, preserveState: true });
     }
 
     function isActiveTab(id: string): boolean {

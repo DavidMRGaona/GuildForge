@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ProfileTabIcon } from '@/types/profile';
-import { profileTabIconMap } from '@/utils/icons';
+import { resolveProfileTabIcon } from '@/utils/icons';
 
 interface Props {
     icon: ProfileTabIcon;
@@ -9,7 +9,8 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const iconComponent = computed(() => profileTabIconMap[props.icon]);
+// Modules send the icon name as a string: an unknown one shows a neutral icon instead of nothing
+const iconComponent = computed(() => resolveProfileTabIcon(props.icon));
 </script>
 
 <template>
