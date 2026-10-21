@@ -33,14 +33,25 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
         zip \
         intl
 
-# Install Redis extension
-RUN pecl install redis-6.3.0 && docker-php-ext-enable redis
-
-# Install Imagick extension (better quality than GD for image processing)
-RUN pecl install imagick-3.8.1 && docker-php-ext-enable imagick
-
-# Install Xdebug
-RUN pecl install xdebug-3.5.3 && docker-php-ext-enable xdebug
+# Install Redis, Imagick (better quality than GD for image processing) and Xdebug
+# from their GitHub release tags, checked by hash, as in Dockerfile.prod:
+# pecl.php.net is a single point of failure for every build
+RUN docker-php-source extract \
+    && mkdir -p /usr/src/php/ext/redis /usr/src/php/ext/imagick /usr/src/php/ext/xdebug \
+    && curl -fsSL -o /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/refs/tags/6.3.0.tar.gz \
+    && curl -fsSL -o /tmp/imagick.tar.gz https://github.com/Imagick/imagick/archive/refs/tags/3.8.1.tar.gz \
+    && curl -fsSL -o /tmp/xdebug.tar.gz https://github.com/xdebug/xdebug/archive/refs/tags/3.5.3.tar.gz \
+    && echo "cb8f81df1a275599e4f8ddcfec7e1f65ed1953e6f5673649149fd680ebff4cad  /tmp/redis.tar.gz" | sha256sum -c - \
+    && echo "b0e9279ddf6e75a8c6b4068e16daec0475427dbca7ce2e144e30a51a88aa5ddc  /tmp/imagick.tar.gz" | sha256sum -c - \
+    && echo "954e56021668121ecc50b92d2ad1ce945f22ecf81ffc5bb5835219485b12ef5f  /tmp/xdebug.tar.gz" | sha256sum -c - \
+    && tar -xzf /tmp/redis.tar.gz -C /usr/src/php/ext/redis --strip-components=1 \
+    && tar -xzf /tmp/imagick.tar.gz -C /usr/src/php/ext/imagick --strip-components=1 \
+    && tar -xzf /tmp/xdebug.tar.gz -C /usr/src/php/ext/xdebug --strip-components=1 \
+    # Only PECL packaging fills in the imagick version; the tag leaves a placeholder
+    && sed -i 's/@PACKAGE_VERSION@/3.8.1/' /usr/src/php/ext/imagick/php_imagick.h \
+    && rm /tmp/redis.tar.gz /tmp/imagick.tar.gz /tmp/xdebug.tar.gz \
+    && docker-php-ext-install -j$(nproc) redis imagick xdebug \
+    && docker-php-source delete
 
 # Configure Xdebug
 RUN echo "xdebug.mode=develop,debug,coverage" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
