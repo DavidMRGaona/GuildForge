@@ -52,6 +52,10 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         $primaryLinkDark = $this->shade($primaryPalette, 500)->readableOn($darkBackgrounds, lighten: true)->value;
         $mutedLight = $this->shade($neutralPalette, 400)->readableOn($lightBackgrounds, lighten: false)->value;
         $mutedDark = $this->shade($neutralPalette, 500)->readableOn($darkBackgrounds, lighten: true)->value;
+        // Buttons and other primary backgrounds carry white text in both themes
+        $white = [new HexColor('#FFFFFF')];
+        $primaryLight = $this->shade($primaryPalette, 600)->readableOn($white, lighten: false)->value;
+        $primaryDark = $this->shade($primaryPalette, 500)->readableOn($white, lighten: false)->value;
 
         return <<<CSS
         :root {
@@ -65,7 +69,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           {$neutralCss}
 
           /* Semantic aliases (override app.css hardcoded values) */
-          --color-primary: var(--color-primary-600);
+          --color-primary: {$primaryLight};
           --color-primary-hover: var(--color-primary-700);
           --color-primary-light: var(--color-primary-100);
           --color-primary-light-hover: var(--color-primary-200);
@@ -131,7 +135,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
 
         .dark {
           /* Semantic aliases (override app.css hardcoded values) */
-          --color-primary: var(--color-primary-500);
+          --color-primary: {$primaryDark};
           --color-primary-hover: var(--color-primary-400);
           --color-primary-light: var(--color-primary-950);
           --color-primary-light-hover: var(--color-primary-900);

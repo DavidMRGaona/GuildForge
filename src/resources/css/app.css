@@ -281,7 +281,7 @@
    ========================================================================== */
 :root {
     /* Primary Colors */
-    --color-primary: #d97706; /* amber-600 - richer amber for light mode */
+    --color-primary: #bb5b00; /* amber-600 darkened until white text reaches 4.5:1 */
     --color-primary-hover: #b45309; /* amber-700 */
     --color-primary-light: #fef3c7; /* amber-100 - subtle backgrounds */
     --color-primary-light-hover: #fde68a; /* amber-200 - hover for light backgrounds */
@@ -343,7 +343,7 @@
    ========================================================================== */
 .dark {
     /* Primary Colors - Glowing amber for dark backgrounds */
-    --color-primary: #f59e0b; /* amber-500 - brighter, glowing */
+    --color-primary: #b36100; /* amber-500 darkened until white text reaches 4.5:1 */
     --color-primary-hover: #fbbf24; /* amber-400 - lighter on hover */
     --color-primary-light: #451a03; /* amber-950 - muted background */
     --color-primary-light-hover: #78350f; /* amber-900 - hover for light backgrounds in dark mode */
@@ -1143,7 +1143,7 @@ button[data-headlessui-state]:hover {
 }
 
 .prose :where(a):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
-    color: var(--color-primary);
+    color: var(--color-primary-link, var(--color-primary));
     text-decoration: underline;
 }
 
