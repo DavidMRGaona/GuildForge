@@ -800,7 +800,7 @@ The core layouts and pages already render these slots: modules only register com
 | `order` | int | Sort order (lower = rendered first) |
 | `props` | array | Static props passed to the component |
 | `dataKeys` | array | Inertia page props passed to the component as props of the same name |
-| `profileTab` | array\|null | Tab metadata for the `profile-sections` slot (`tabId`, `icon`, `labelKey`, `badgeKey`, `parentId`) |
+| `profileTab` | array\|null | Tab metadata for the `profile-sections` slot (`tabId`, `icon`, `labelKey`, `badgeKey`, `parentId`, `visibleKey`). `visibleKey` names a boolean page prop (listed in `dataKeys`) that the module shares per request: when it is `false` the tab is hidden and a `?tab=` pointing at it opens the account tab; a missing key or any other value keeps the tab visible |
 
 ### Registering slot components
 

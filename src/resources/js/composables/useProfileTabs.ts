@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { useModuleSlots } from './useModuleSlots';
 import type { ProfileTab, ProfileTabIcon } from '@/types/profile';
+import type { ProfileTabMeta } from '@/types/slots';
 
 interface UseProfileTabsReturn {
     tabs: ComputedRef<ProfileTab[]>;
@@ -28,6 +29,11 @@ function urlWithTab(url: string, id: string): string {
     return `${target.pathname}${target.search}${target.hash}`;
 }
 
+// A module hides its tab per request by sharing `false` under `visibleKey`
+function isTabVisible(meta: ProfileTabMeta, props: Record<string, unknown>): boolean {
+    return meta.visibleKey === undefined || props[meta.visibleKey] !== false;
+}
+
 export function useProfileTabs(): UseProfileTabsReturn {
     const { t } = useI18n();
     const { getSlotComponents, moduleSlots } = useModuleSlots();
@@ -37,12 +43,25 @@ export function useProfileTabs(): UseProfileTabsReturn {
     // The active tab lives in the URL (`/perfil?tab=…`), so going back to the profile or a link
     // from a module page opens the same tab. The registrations arrive with the page (the tab
     // components may still be loading): a tab no module registers falls back to the account tab
-    const registeredTabIds = (moduleSlots.value['profile-sections'] ?? [])
-        .filter((registration) => registration.profileTab)
+    // (unresolved components are not in getSlotComponents yet, so read the registrations and
+    // look the visibility prop up the same way the slot does: static props, then page props)
+    const visibleTabIds = (moduleSlots.value['profile-sections'] ?? [])
+        .filter(
+            (registration) =>
+                registration.profileTab &&
+                isTabVisible(registration.profileTab, {
+                    ...registration.props,
+                    ...Object.fromEntries(
+                        registration.dataKeys
+                            .filter((key) => key in page.props)
+                            .map((key) => [key, page.props[key]]),
+                    ),
+                }),
+        )
         .map((registration) => registration.profileTab?.tabId ?? registration.module);
     const requestedTab = tabFromUrl(page.url);
     const activeTabId = ref(
-        requestedTab !== null && registeredTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB,
+        requestedTab !== null && visibleTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB,
     );
 
     const tabs = computed<ProfileTab[]>(() => {
@@ -59,6 +78,9 @@ export function useProfileTabs(): UseProfileTabsReturn {
         for (const slot of moduleSlots) {
             if (slot.registration.profileTab) {
                 const meta = slot.registration.profileTab;
+                if (!isTabVisible(meta, slot.props)) {
+                    continue;
+                }
                 const badge = meta.badgeKey
                     ? (slot.props[meta.badgeKey] as number | undefined)
                     : undefined;
