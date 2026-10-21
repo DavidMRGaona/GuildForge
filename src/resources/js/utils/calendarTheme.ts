@@ -30,9 +30,29 @@ function spansSeveralDays(start: Date | null, end: Date | null): boolean {
     return venueDayKey(start) !== venueDayKey(new Date(end.getTime() - 1));
 }
 
+const venueClock = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: VENUE_TIMEZONE,
+});
+
 /**
- * Time range of a single-day timed event in the venue's time zone
- * ("18:00–21:00"), or an empty string for all-day and multi-day events.
+ * Whether an event's time range would mislead: across several days, a start
+ * and an end at the same hour ("06:03 – 06:03") read as an empty slot of one
+ * day. Any other multi-day event shows its hours ("20:00 – 01:00").
+ */
+function hasMisleadingTimeRange(start: Date | null, end: Date | null): boolean {
+    if (start === null || end === null || !spansSeveralDays(start, end)) {
+        return false;
+    }
+
+    return venueClock.format(start) === venueClock.format(end);
+}
+
+/**
+ * Time range of a timed event in the venue's time zone ("18:00–21:00"), or an
+ * empty string for all-day events and for those whose range would mislead.
  *
  * Used for accessible names: FullCalendar drops the visible time in day cells
  * narrower than 60 px (phones), and an `aria-label` replaces the visible text.
@@ -41,7 +61,7 @@ export function eventTimeRange(
     event: { allDay: boolean; start: Date | null; end: Date | null },
     locale: string
 ): string {
-    if (event.allDay || event.start === null || spansSeveralDays(event.start, event.end)) {
+    if (event.allDay || event.start === null || hasMisleadingTimeRange(event.start, event.end)) {
         return '';
     }
 
@@ -52,8 +72,13 @@ export function eventTimeRange(
         timeZone: VENUE_TIMEZONE,
     });
 
-    return event.end === null
-        ? formatter.format(event.start)
+    if (event.end === null) {
+        return formatter.format(event.start);
+    }
+
+    // Across midnight formatRange() adds both dates ("22/10/2026, 20:00 – 23/10/2026, 1:00")
+    return spansSeveralDays(event.start, event.end)
+        ? `${formatter.format(event.start)}–${formatter.format(event.end)}`
         : formatter.formatRange(event.start, event.end);
 }
 
@@ -81,12 +106,19 @@ export const calendarClassOptions: CalendarOptions = {
     dayCellTopClass: 'calendar-day-top',
     dayCellTopInnerClass: 'calendar-day-number',
     dayCellInnerClass: 'calendar-day-body',
-    // A multi-day event shows no time: its range ("06:03 – 06:03") reads as one day
-    eventClass: (info) =>
-        joinClassNames(
+    // A multi-day event shows its hours only on the piece where it starts: elsewhere
+    // FullCalendar puts the whole range on a later week ("00:03 – 20:00" on its last day)
+    eventClass: (info) => {
+        const multiday = spansSeveralDays(info.event.start, info.event.end);
+        const misleadingTime =
+            hasMisleadingTimeRange(info.event.start, info.event.end) || (multiday && !info.isStart);
+
+        return joinClassNames(
             'calendar-event',
-            spansSeveralDays(info.event.start, info.event.end) && 'calendar-event--multiday'
-        ),
+            multiday && 'calendar-event--multiday',
+            misleadingTime && 'calendar-event--no-time'
+        );
+    },
     blockEventClass: 'calendar-event--block',
     columnEventClass: 'calendar-event--column',
     eventInnerClass: 'calendar-event-inner',
