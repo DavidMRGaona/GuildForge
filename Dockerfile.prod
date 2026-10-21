@@ -66,7 +66,9 @@ RUN mkdir -p /module-builds && \
     done
 
 # Stage 2: Production image
-FROM php:8.5-fpm-alpine3.24 AS final
+# Pinned to the patch release: a floating tag can reuse an older base cached on
+# the build host
+FROM php:8.5.12-fpm-alpine3.24 AS final
 
 # Install system dependencies (runtime)
 RUN apk add --no-cache \
@@ -95,6 +97,19 @@ RUN --mount=type=cache,target=/var/cache/apk \
         icu-dev \
         oniguruma-dev \
         imagemagick-dev \
+    && docker-php-source extract \
+    # redis and imagick come from their release tags on GitHub, checked by hash:
+    # pecl.php.net is a single point of failure for every build
+    && mkdir -p /usr/src/php/ext/redis /usr/src/php/ext/imagick \
+    && curl -fsSL -o /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/refs/tags/6.3.0.tar.gz \
+    && curl -fsSL -o /tmp/imagick.tar.gz https://github.com/Imagick/imagick/archive/refs/tags/3.8.1.tar.gz \
+    && echo "cb8f81df1a275599e4f8ddcfec7e1f65ed1953e6f5673649149fd680ebff4cad  /tmp/redis.tar.gz" | sha256sum -c - \
+    && echo "b0e9279ddf6e75a8c6b4068e16daec0475427dbca7ce2e144e30a51a88aa5ddc  /tmp/imagick.tar.gz" | sha256sum -c - \
+    && tar -xzf /tmp/redis.tar.gz -C /usr/src/php/ext/redis --strip-components=1 \
+    && tar -xzf /tmp/imagick.tar.gz -C /usr/src/php/ext/imagick --strip-components=1 \
+    # Only PECL packaging fills in the imagick version; the tag leaves a placeholder
+    && sed -i 's/@PACKAGE_VERSION@/3.8.1/' /usr/src/php/ext/imagick/php_imagick.h \
+    && rm /tmp/redis.tar.gz /tmp/imagick.tar.gz \
     && docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
     && docker-php-ext-install -j$(nproc) \
         pdo_pgsql \
@@ -106,8 +121,9 @@ RUN --mount=type=cache,target=/var/cache/apk \
         mbstring \
         exif \
         pcntl \
-    && pecl install redis-6.3.0 imagick-3.8.1 \
-    && docker-php-ext-enable redis imagick \
+        redis \
+        imagick \
+    && docker-php-source delete \
     && apk del .build-deps
 
 # OPcache is compiled into PHP 8.5: it is not installed above and must not be loaded

@@ -89,8 +89,9 @@ The `Dockerfile.prod` file uses a multi-stage build to optimize image size and s
 - Consolidates module build artifacts for copying to the final stage
 
 **Stage 2: `final` (PHP 8.5 FPM Alpine 3.24)**
+- The base image is pinned to the patch release (`php:8.5.12-fpm-alpine3.24`): a floating tag such as `8.5-fpm-alpine3.24` lets the build host reuse an older base from its cache. Bump it by hand for each PHP security release
 - Installs system dependencies (Nginx, Supervisor, image libraries)
-- Installs PHP extensions: `pdo_pgsql`, `pgsql`, `gd`, `zip`, `bcmath`, `intl`, `mbstring`, `exif`, `pcntl`, plus `redis` 6.3.0 and `imagick` 3.8.1 from PECL (pinned versions)
+- Installs PHP extensions: `pdo_pgsql`, `pgsql`, `gd`, `zip`, `bcmath`, `intl`, `mbstring`, `exif`, `pcntl`, plus `redis` 6.3.0 and `imagick` 3.8.1 built from their GitHub release tags, checked against a pinned sha256 (not PECL: pecl.php.net going down would break every build). A version bump changes the URL, the hash and, for imagick, the version written into `php_imagick.h`
 - OPcache is compiled into PHP 8.5, so it is not in that list. Do not add `zend_extension=opcache`: PHP would print "Failed loading Zend extension" on every start. The build fails if `php -m` or `php-fpm -m` does not list `Zend OPcache`
 - Copies the PHP dependencies from the `vendor` stage and runs `composer check-platform-reqs --no-dev` against this PHP build; after copying the source, `composer dump-autoload --optimize` publishes Filament's assets
 - Copies source code and compiled assets from stage 1
@@ -595,8 +596,8 @@ The `docker/prod/php.ini` file sets:
 | `opcache.revalidate_freq` | `2` | Check timestamps at most every 2 seconds |
 | `opcache.memory_consumption` | `128` (MB) | Memory for cached bytecode |
 | `expose_php` | `Off` | Do not expose PHP version |
-| `session.upload_progress.enabled` | `0` | Mitigates CVE-2026-109619; the app uses Laravel sessions, not PHP's |
-| `fatal_error_backtraces` | `0` | Mitigates CVE-2026-109619 on PHP 8.5 |
+| `session.upload_progress.enabled` | `0` | No upload progress tracking; the app uses Laravel sessions, not PHP's |
+| `fatal_error_backtraces` | `0` | No backtraces attached to fatal errors |
 | `memory_limit` | `256M` | Memory limit per process |
 | `post_max_size` | `20M` | Maximum POST size |
 | `upload_max_filesize` | `20M` | Maximum upload size |
