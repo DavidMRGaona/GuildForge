@@ -745,8 +745,9 @@ button[data-headlessui-state]:hover {
     white-space: normal;
 }
 
-/* No time on multi-day events: their range ("06:03 – 06:03") reads as one day */
-.event-calendar .calendar-event.calendar-event--multiday .calendar-event-time {
+/* No time on multi-day events in the month view: their range ("06:03 – 06:03")
+   reads as one day. The time grid keeps it, as each segment sits at its hours */
+.event-calendar .calendar-event--multiday:not(.calendar-event--column) .calendar-event-time {
     display: none;
 }
 
