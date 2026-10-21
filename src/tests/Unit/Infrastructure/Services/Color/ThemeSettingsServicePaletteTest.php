@@ -231,6 +231,26 @@ final class ThemeSettingsServicePaletteTest extends TestCase
         }
     }
 
+    #[DataProvider('themeColours')]
+    public function test_white_text_reaches_aa_on_the_primary_background_in_both_themes(string $primary, string $accent): void
+    {
+        $this->useColours($primary, $accent);
+        $css = $this->service->getCssVariables();
+
+        foreach (['light' => $this->extractRootSection($css), 'dark' => $this->extractDarkSection($css)] as $theme => $section) {
+            $background = $this->hexVariable($section, '--color-primary');
+
+            $this->assertGreaterThanOrEqual(4.5, (new HexColor('#FFFFFF'))->contrastRatio($background), "{$theme}: white on {$background->value}");
+        }
+    }
+
+    public function test_a_primary_colour_that_already_carries_white_text_is_kept(): void
+    {
+        $this->useColours('#DC2626', '#F59E0B');
+
+        $this->assertSame('#DC2626', $this->hexVariable($this->extractRootSection($this->service->getCssVariables()), '--color-primary')->value);
+    }
+
     public function test_muted_text_stays_lighter_than_secondary_text_in_light_mode(): void
     {
         $this->useColours('#DC2626', '#F59E0B');
