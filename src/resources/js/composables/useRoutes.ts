@@ -48,7 +48,7 @@ export interface RouteDefinitions {
 const routes: RouteDefinitions = {
     // Public pages
     home: '/',
-    about: '/sobre-nosotros',
+    about: '/nosotros',
     search: '/buscar',
 
     // Content sections
