@@ -23,6 +23,7 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 
 /**
  * @property Schema $form
@@ -42,6 +43,17 @@ final class LegalPagesSettings extends Page implements HasForms
      * @var array<string, mixed>
      */
     public ?array $data = [];
+
+    /**
+     * The email shown by the open preview, rendered when it opens, never while the modal is drawn:
+     * inside Livewire's render Blade adds morph markers that break the email's Markdown (the
+     * greeting shows as «# …», lines run together), and rendering it once keeps the frame from
+     * reloading with new sample data on every later request.
+     *
+     * @var array<string, string>
+     */
+    #[Locked]
+    public array $mailNoticePreviews = [];
 
     public static function getNavigationLabel(): string
     {
@@ -139,15 +151,17 @@ final class LegalPagesSettings extends Page implements HasForms
                         ->modalSubmitAction(false)
                         ->modalCancelActionLabel(__('common.close'))
                         ->modalWidth('5xl')
-                        ->modalContent(function (Get $get) use ($notice, $field): View {
+                        ->mountUsing(function (Get $get) use ($notice, $field): void {
                             $text = trim((string) $get($field));
-                            $text = $text !== '' ? $text : $notice->defaultContent;
 
-                            return view('filament.pages.settings.legal-mail-notice-preview', [
-                                'html' => ($notice->preview)($text),
-                                'title' => $notice->label,
-                            ]);
-                        }),
+                            $this->mailNoticePreviews = [
+                                $notice->key => ($notice->preview)($text !== '' ? $text : $notice->defaultContent),
+                            ];
+                        })
+                        ->modalContent(fn (): View => view('filament.pages.settings.legal-mail-notice-preview', [
+                            'html' => $this->mailNoticePreviews[$notice->key] ?? '',
+                            'title' => $notice->label,
+                        ])),
                 ]);
         }
 

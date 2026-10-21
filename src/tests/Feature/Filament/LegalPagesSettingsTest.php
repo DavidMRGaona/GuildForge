@@ -9,8 +9,10 @@ use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Pages\Settings\LegalPagesSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Closure;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Notifications\Messages\MailMessage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -97,13 +99,71 @@ final class LegalPagesSettingsTest extends TestCase
         $this->assertStringContainsString('Texto por defecto', $content);
     }
 
+    public function test_the_preview_renders_the_email_as_it_is_sent(): void
+    {
+        $this->registerNotice(static fn (string $content): string => (string) (new MailMessage)
+            ->greeting('¡Hola!')
+            ->line('Primer párrafo.')
+            ->line($content)
+            ->render());
+
+        $sent = (string) (new MailMessage)->greeting('¡Hola!')->line('Primer párrafo.')->line('Texto por defecto')->render();
+
+        // The modal is drawn inside a Livewire render, where Blade adds morph markers
+        $html = Livewire::test(LegalPagesSettings::class)
+            ->mountAction($this->previewAction())
+            ->getMountedActionModalHtml();
+
+        $this->assertSame(1, preg_match('/srcdoc="([^"]*)"/', $html, $match));
+        $srcdoc = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5);
+        $this->assertSame($sent, $srcdoc);
+        $this->assertMatchesRegularExpression('/<h1[^>]*>¡Hola!<\/h1>/u', $srcdoc);
+        $this->assertStringNotContainsString('# ¡Hola!', $srcdoc);
+        $this->assertStringNotContainsString('[if BLOCK]', $srcdoc);
+        $this->assertMatchesRegularExpression('/<p[^>]*>Primer párrafo\.<\/p>\s*<p[^>]*>Texto por defecto<\/p>/u', $srcdoc);
+    }
+
+    public function test_the_preview_keeps_the_same_email_on_later_renders(): void
+    {
+        $calls = 0;
+        $this->registerNotice(static function (string $content) use (&$calls): string {
+            $calls++;
+
+            return '<p class="preview">'.$content.' '.$calls.'</p>';
+        });
+
+        $page = Livewire::test(LegalPagesSettings::class)
+            ->mountAction($this->previewAction())
+            ->assertMountedActionModalSeeHtml('srcdoc="&lt;p class=&quot;preview&quot;&gt;Texto por defecto 1&lt;/p&gt;"');
+
+        // A later request while the modal is open must not reload the frame with a new email
+        $page->call('$refresh');
+        $content = (string) $page->instance()->getMountedAction()?->getModalContent();
+        $this->assertStringContainsString('srcdoc="&lt;p class=&quot;preview&quot;&gt;Texto por defecto 1&lt;/p&gt;"', $content);
+        $this->assertSame(1, $calls);
+    }
+
+    public function test_the_preview_frame_has_a_usable_height(): void
+    {
+        $this->registerNotice();
+
+        $content = (string) Livewire::test(LegalPagesSettings::class)
+            ->mountAction($this->previewAction())
+            ->instance()->getMountedAction()?->getModalContent();
+
+        $this->assertMatchesRegularExpression('/<iframe[^>]*style="[^"]*min-height: \d+rem[^"]*"/', $content);
+    }
+
     private function previewAction(): TestAction
     {
         return TestAction::make(LegalPagesSettings::noticePreviewActionName(self::KEY))
             ->schemaComponent(LegalPagesSettings::noticeSectionKey(self::KEY));
     }
 
-    private function registerNotice(): void
+    /**
+     * @param  (Closure(string): string)|null  $preview
+     */
+    private function registerNotice(?Closure $preview = null): void
     {
         app(LegalMailNoticeRegistryInterface::class)->register(new LegalMailNoticeDTO(
             key: self::KEY,
@@ -112,7 +172,7 @@ final class LegalPagesSettingsTest extends TestCase
             help: 'Ayuda',
             defaultContent: 'Texto por defecto',
             placeholders: [':site', ':days'],
-            preview: static fn (string $content): string => '<p class="preview">'.$content.'</p>',
+            preview: $preview ?? static fn (string $content): string => '<p class="preview">'.$content.'</p>',
         ));
     }
 }
