@@ -733,27 +733,41 @@ button[data-headlessui-state]:hover {
     font-weight: 500;
 }
 
-/* Time and title flow as one run of text, as in FullCalendar 6: long titles
-   wrap, and a title that does not fit after the time moves to the next line */
-.event-calendar:not(.event-calendar--compact) .calendar-event-inner {
+/* Month view (time grid events are block events too, hence the :not): the
+   time range on the first line, the title below it */
+.event-calendar .calendar-event--block:not(.calendar-event--column) .calendar-event-inner {
     display: block;
 }
 
-.event-calendar:not(.event-calendar--compact) .calendar-event-time,
-.event-calendar:not(.event-calendar--compact) .calendar-event-title {
-    display: inline;
+.event-calendar .calendar-event--block:not(.calendar-event--column) .calendar-event-time,
+.event-calendar .calendar-event--block:not(.calendar-event--column) .calendar-event-title {
+    display: block;
     white-space: normal;
 }
 
-.event-calendar:not(.event-calendar--compact) .calendar-event-time {
-    margin-inline-end: 0.25em;
-    /* A time range never breaks at its dash */
-    white-space: nowrap;
+/* No time on multi-day events: their range ("06:03 – 06:03") reads as one day */
+.event-calendar .calendar-event.calendar-event--multiday .calendar-event-time {
+    display: none;
 }
 
-/* The two elements touch, with no space between them to break the line at */
-.event-calendar:not(.event-calendar--compact) .calendar-event-title::before {
-    content: '\200B';
+/* Day columns are a few dozen pixels wide on phones. Long words hyphenate by
+   syllable (the page language is set), with at least three letters on each
+   side, and break anyway if they still do not fit */
+.event-calendar:not(.event-calendar--compact) .calendar-event-title {
+    hyphens: auto;
+    hyphenate-limit-chars: 6 3 3;
+    overflow-wrap: anywhere;
+}
+
+/* In the time grid the time range and the title wrap too, rather than spill
+   into the next day or be cut off */
+.event-calendar .calendar-event--column .calendar-event-time,
+.event-calendar .calendar-event--column .calendar-event-title {
+    white-space: normal;
+}
+
+.event-calendar:not(.event-calendar--compact) .calendar-event {
+    overflow: hidden;
 }
 
 .dark .event-calendar .calendar-more-link {
