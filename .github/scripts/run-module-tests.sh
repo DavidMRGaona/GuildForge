@@ -31,4 +31,8 @@ fi
 # would warn about the missing ones
 mkdir -p "$DIR/tests/Unit" "$DIR/tests/Integration" "$DIR/tests/Feature"
 
-exec vendor/bin/phpunit -c "$DIR/phpunit.xml"
+# One process per CPU core. Module suites use an in-memory SQLite database, so each
+# process already has its own; going through artisan rather than calling paratest
+# directly also gives each process its own compiled-view directory, without which
+# two processes rendering the same mail view occasionally break each other
+exec php artisan test --parallel --configuration="$DIR/phpunit.xml"
