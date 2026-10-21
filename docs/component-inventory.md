@@ -309,7 +309,7 @@ Located in `src/resources/js/components/`.
 - **File**: `calendar/EventCalendar.vue`
 - **Props**: `compact?: boolean`, `showTooltips?: boolean`, `navigateOnClick?: boolean`
 - **Emits**: `eventSelect`, `calendarClick`, `eventsLoaded`
-- **Features**: FullCalendar calendar with `dayGrid` and `interaction` plugins. Loads events via API (`/eventos/calendario`). Event cache for quick access. Dynamic locale support (`useCalendarLocale`). Tooltips on hover (`EventTooltip`). Loading indicator. Configurable toolbar (compact vs full)
+- **Features**: FullCalendar 7 calendar with the `daygrid` and `interaction` plugins and the shared look from `calendarTheme.ts`. Loads events via API (`/eventos/calendario`). Event cache for quick access. Dynamic locale support (`useCalendarLocale`). Tooltips on hover (`EventTooltip`). Loading indicator. Configurable toolbar (compact vs full). Compact mode renders one event per day and draws its entries as dots in the `eventContent` slot
 
 #### EventDetailPanel
 
@@ -581,7 +581,7 @@ Located in `src/resources/js/composables/`.
 
 - **Parameters**: --
 - **Returns**: `ComputedRef<LocaleInput | string>`
-- **Dependencies**: `vue-i18n`, `@fullcalendar/core/locales/es`
+- **Dependencies**: `vue-i18n`, `@fullcalendar/vue3/locales/es`
 - **Purpose**: Dynamic locale resolution for FullCalendar based on the active i18n language
 
 ### useGridLayout
@@ -790,10 +790,18 @@ Located in `src/resources/js/utils/`.
 
 | Function | Purpose |
 |----------|---------|
-| `toFullCalendarEvents(entries)` | Converts `CalendarEntry[]` to FullCalendar events |
+| `toFullCalendarEvents(entries)` | Converts `CalendarEntry[]` to FullCalendar events; colours are `var(--calendar-entry-*)` references resolved from the site tokens |
+| `toCompactDayEvents(entries)` | One FullCalendar event per venue day carrying the uids of that day's entries (compact widget dots) |
 | `expandEntriesPerDay(entries)` | Splits multi-day entries into one entry per day |
 | `collapseEntriesByActivityType(entries)` | On days that mix activity types, keeps only the earliest entry of each type (fewer dots in compact views) |
 | `extractLegend(entries)` | Unique activity types (label and color) for the legend |
+
+### calendarTheme.ts
+
+| Export | Purpose |
+|--------|---------|
+| `calendarThemePlugin` | FullCalendar classic theme plugin; also imports `skeleton.css` and the theme stylesheet (its palette is replaced by the `--fc-classic-*` mapping in `app.css`) |
+| `calendarClassOptions` | Stable `calendar-*` class hooks (title, buttons, day cells, events, ...) styled in `app.css`; shared with module calendars through `@/` |
 
 ### csrf.ts
 
