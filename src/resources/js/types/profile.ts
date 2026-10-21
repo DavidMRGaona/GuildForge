@@ -14,7 +14,8 @@ export type ProfileTabIcon =
     | 'trophy'
     | 'calendar'
     | 'cog'
-    | 'pencil-square';
+    | 'pencil-square'
+    | 'book-open';
 
 export interface ProfileTabMetadata {
     icon: ProfileTabIcon;

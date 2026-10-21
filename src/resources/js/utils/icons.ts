@@ -59,7 +59,13 @@ export const profileTabIconMap: Record<ProfileTabIconType, Component> = {
     calendar: Calendar,
     cog: Settings,
     'pencil-square': SquarePen,
+    'book-open': BookOpen,
 };
+
+/** Resolve a module-provided tab icon, falling back to a neutral icon for names this core does not know. */
+export function resolveProfileTabIcon(icon: string): Component {
+    return icon in profileTabIconMap ? profileTabIconMap[icon as ProfileTabIconType] : Puzzle;
+}
 
 export const notificationIconMap: Record<NotificationType, Component> = {
     success: CircleCheck,

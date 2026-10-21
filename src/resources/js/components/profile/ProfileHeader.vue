@@ -87,11 +87,12 @@ function uploadAvatar(): void {
                         :alt="displayName"
                         class="h-full w-full object-cover"
                     />
+                    <!-- The silhouette spans y 5-24 of its 24-unit box: the shifted viewBox centres it -->
                     <svg
                         v-else
                         class="h-12 w-12 text-neutral-400 sm:h-16 sm:w-16"
                         fill="currentColor"
-                        viewBox="0 0 24 24"
+                        viewBox="0 2.5 24 24"
                         aria-hidden="true"
                     >
                         <path
