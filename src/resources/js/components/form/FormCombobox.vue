@@ -146,17 +146,13 @@ watch(
                     >
                         <span
                             class="block truncate"
-                            :class="[
-                                selected
-                                    ? 'font-semibold text-primary-700 dark:text-primary-300'
-                                    : 'text-base-primary',
-                            ]"
+                            :class="[selected ? 'font-semibold text-primary' : 'text-base-primary']"
                         >
                             {{ option[optionLabel] }}
                         </span>
                         <span
                             v-if="selected"
-                            class="absolute inset-y-0 right-0 flex items-center pr-4 text-primary-600 dark:text-primary-400"
+                            class="absolute inset-y-0 right-0 flex items-center pr-4 text-primary"
                         >
                             <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path

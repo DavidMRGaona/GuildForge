@@ -30,7 +30,7 @@ function handleTabClick(tabId: string): void {
             :class="[
                 'relative flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
                 activeTabId === tab.id
-                    ? 'text-primary-600 dark:text-primary-400'
+                    ? 'text-primary'
                     : 'text-base-muted hover:text-base-secondary',
             ]"
             :aria-current="activeTabId === tab.id ? 'page' : undefined"

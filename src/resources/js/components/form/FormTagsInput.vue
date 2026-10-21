@@ -97,7 +97,7 @@ function focusInput(): void {
                 <button
                     v-if="!disabled"
                     type="button"
-                    class="ml-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-primary-600 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-800 hover:text-primary-800 dark:hover:text-primary-100 focus:outline-none focus:bg-primary-500 focus:text-white transition-colors duration-150"
+                    class="ml-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-primary hover:bg-primary-200 dark:hover:bg-primary-800 hover:text-primary-800 dark:hover:text-primary-100 focus:outline-none focus:bg-primary-500 focus:text-white transition-colors duration-150"
                     :aria-label="`Eliminar ${tag}`"
                     @click.stop="removeTag(index)"
                 >

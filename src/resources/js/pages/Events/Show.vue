@@ -122,7 +122,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                         <div class="flex items-center">
                             <span class="sr-only">{{ t('events.date') }}:</span>
                             <svg
-                                class="mr-2 h-5 w-5 text-primary-600"
+                                class="mr-2 h-5 w-5 text-primary"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -143,7 +143,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                         <div class="flex items-center">
                             <span class="sr-only">{{ t('events.schedule') }}:</span>
                             <svg
-                                class="mr-2 h-5 w-5 text-primary-600"
+                                class="mr-2 h-5 w-5 text-primary"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -164,7 +164,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                         <div v-if="props.event.location" class="flex items-center">
                             <span class="sr-only">{{ t('events.location') }}:</span>
                             <svg
-                                class="mr-2 h-5 w-5 text-primary-600"
+                                class="mr-2 h-5 w-5 text-primary"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -231,7 +231,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                                     class="group flex items-start gap-3"
                                 >
                                     <svg
-                                        class="mt-0.5 h-5 w-5 shrink-0 text-primary-600 group-hover:text-primary-700"
+                                        class="mt-0.5 h-5 w-5 shrink-0 text-primary group-hover:text-primary-700"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -246,7 +246,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                                     </svg>
                                     <div>
                                         <span
-                                            class="font-medium text-primary-600 group-hover:text-primary-700 group-hover:underline"
+                                            class="font-medium text-primary group-hover:text-primary-700 group-hover:underline"
                                         >
                                             {{ link.label }}
                                         </span>

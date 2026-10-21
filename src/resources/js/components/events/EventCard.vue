@@ -61,7 +61,7 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 120));
                 v-if="isCompact"
                 class="absolute left-3 top-3 flex flex-col items-center rounded bg-surface px-2 py-1 shadow-md"
             >
-                <span class="text-xl font-bold leading-none text-primary-600 dark:text-primary-500">
+                <span class="text-xl font-bold leading-none text-primary">
                     {{ dateBadge.day }}
                 </span>
                 <span class="text-xs uppercase tracking-wide text-base-secondary">
@@ -121,7 +121,7 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 120));
             />
 
             <!-- Default: Date as text -->
-            <p v-if="!isCompact" class="mb-2 text-sm text-primary-600 dark:text-primary-500">
+            <p v-if="!isCompact" class="mb-2 text-sm text-primary">
                 <span class="sr-only">{{ t('events.date') }}:</span>
                 {{ formatDateRange(props.event.startDate, props.event.endDate) }}
                 <span aria-hidden="true">·</span>

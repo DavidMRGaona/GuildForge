@@ -72,7 +72,7 @@ const changePassword = () => {
                 <template #header>
                     <div class="flex items-center gap-3">
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary dark:bg-primary-900/30"
                         >
                             <svg
                                 class="h-5 w-5"
@@ -149,10 +149,7 @@ const changePassword = () => {
                         <p v-if="profileForm.errors.email" class="mt-1 text-sm text-error">
                             {{ profileForm.errors.email }}
                         </p>
-                        <p
-                            v-if="props.user.pendingEmail"
-                            class="mt-2 text-sm text-primary-600 dark:text-primary-400"
-                        >
+                        <p v-if="props.user.pendingEmail" class="mt-2 text-sm text-primary">
                             {{
                                 t('auth.profile.pendingEmailNotice', {
                                     email: props.user.pendingEmail,
@@ -178,7 +175,7 @@ const changePassword = () => {
                 <template #header>
                     <div class="flex items-center gap-3">
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary dark:bg-primary-900/30"
                         >
                             <svg
                                 class="h-5 w-5"
