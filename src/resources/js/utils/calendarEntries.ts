@@ -48,7 +48,7 @@ function isExactVenueMidnight(date: Date): boolean {
     return date.getMilliseconds() === 0 && venueTimeFormatter.format(date) === '00:00:00';
 }
 
-function expandEntry(entry: CalendarEntry): CalendarEntry[] {
+function expandEntry(entry: CalendarEntry, fromDayKey: string | undefined): CalendarEntry[] {
     if (entry.end === null) {
         return [entry];
     }
@@ -73,7 +73,9 @@ function expandEntry(entry: CalendarEntry): CalendarEntry[] {
     }
 
     const pieces: CalendarEntry[] = [];
-    let dayKey = startDayKey;
+    // Days before the visible range need no marker, and skipping them keeps a long
+    // entry that started months ago from spending the whole cap before reaching it.
+    let dayKey = fromDayKey !== undefined && fromDayKey > startDayKey ? fromDayKey : startDayKey;
     let dayIndex = 0;
 
     // 'YYYY-MM-DD' keys compare lexicographically in chronological order, so the
@@ -85,7 +87,7 @@ function expandEntry(entry: CalendarEntry): CalendarEntry[] {
             // Continuation days are markers, not real instants. Anchoring them at
             // UTC midnight keeps them inside the same venue day (Madrid is UTC+1/+2)
             // and sorts them ahead of that day's timed entries, as before.
-            start: dayIndex === 0 ? entry.start : `${dayKey}T00:00:00Z`,
+            start: dayKey === startDayKey ? entry.start : `${dayKey}T00:00:00Z`,
             end: null,
         });
 
@@ -128,11 +130,18 @@ function expandEntry(entry: CalendarEntry): CalendarEntry[] {
  *   entry, not the synthetic piece (see EventCalendar.vue's eventsCache,
  *   which maps every synthetic id back to the original entry).
  *
+ * `fromDayKey` (a venue day, `YYYY-MM-DD`) is the first day on screen: no
+ * pieces are emitted before it, so an entry that started long before the
+ * visible range still gets its dots there.
+ *
  * A single entry is capped at `MAX_EXPANDED_DAYS` synthetic pieces as a
  * defensive guard against corrupt/unbounded date ranges.
  */
-export function expandEntriesPerDay(entries: CalendarEntry[]): CalendarEntry[] {
-    return entries.flatMap((entry) => expandEntry(entry));
+export function expandEntriesPerDay(
+    entries: CalendarEntry[],
+    fromDayKey?: string
+): CalendarEntry[] {
+    return entries.flatMap((entry) => expandEntry(entry, fromDayKey));
 }
 
 /**

@@ -20,6 +20,7 @@ import type {
 import type { CalendarEntry } from '@/types/models';
 import {
     collapseEntriesByActivityType,
+    entryDayKey,
     entryUid,
     expandEntriesPerDay,
     toCompactDayEvents,
@@ -84,10 +85,13 @@ const fetchEvents = async (
         // synthetic ids must still resolve back to the ORIGINAL entry (real start/end),
         // not the single-day placeholder, so the tooltip/click/aria-label always reflect
         // the entry's real duration.
+        // First venue day on screen, so long entries that started earlier still get dots
+        const firstDayKey = entryDayKey(info.startStr);
+
         eventsCache.value.clear();
         if (props.compact) {
             data.forEach((entry) => {
-                expandEntriesPerDay([entry]).forEach((piece) => {
+                expandEntriesPerDay([entry], firstDayKey).forEach((piece) => {
                     eventsCache.value.set(entryUid(piece), entry);
                 });
             });
@@ -103,7 +107,7 @@ const fetchEvents = async (
         // Compact (widget) view: expand multi-day entries into one marker per covered
         // day, then collapse same-day, multi-type entries down to one dot per type
         const displayedEntries = props.compact
-            ? collapseEntriesByActivityType(expandEntriesPerDay(data))
+            ? collapseEntriesByActivityType(expandEntriesPerDay(data, firstDayKey))
             : data;
 
         successCallback(
