@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import type { Tag } from '@/types/models';
-import { getLuminance, hexToRgb, adjustColorBrightness } from '@/utils/color';
+import { getContrastRatio, getLuminance, hexToRgb, adjustColorBrightness } from '@/utils/color';
 import { useAppStore } from '@/stores/useAppStore';
 
 interface Props {
@@ -53,13 +53,22 @@ const solidTextColor = computed(() => {
 const badgeStyles = computed(() => {
     if (props.badgeStyle === 'subtle') {
         const rgb = hexToRgb(props.tag.color);
-        // In dark mode: higher opacity background, much lighter text
-        // In light mode: lower opacity background, darker text
         const isDark = appStore.isDarkMode;
-        const textColor = isDark
-            ? adjustColorBrightness(props.tag.color, 80)
-            : adjustColorBrightness(props.tag.color, -35);
         const bgOpacity = isDark ? 0.4 : 0.2;
+        // In dark mode a lightened tag colour stays near 3:1 on its own tint, so the text follows
+        // the theme. In light mode the darkened tag colour is kept while it reaches 4.5:1 on the
+        // tint over white, which pale colours such as yellow do not
+        const blend = (channel: number): string =>
+            Math.round(channel * bgOpacity + 255 * (1 - bgOpacity))
+                .toString(16)
+                .padStart(2, '0');
+        const lightTint = `#${blend(rgb.r)}${blend(rgb.g)}${blend(rgb.b)}`;
+        const darkened = adjustColorBrightness(props.tag.color, -35);
+        const textColor = isDark
+            ? 'var(--color-text-primary)'
+            : getContrastRatio(darkened, lightTint) >= 4.5
+              ? darkened
+              : 'var(--color-text-primary)';
         return {
             backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${bgOpacity})`,
             color: textColor,

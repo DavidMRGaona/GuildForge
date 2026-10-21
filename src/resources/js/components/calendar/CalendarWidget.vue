@@ -23,7 +23,7 @@ const navigateToCalendar = (): void => {
         <div class="mt-3 text-center">
             <button
                 type="button"
-                class="text-sm font-medium text-primary-600 transition-colors hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
+                class="text-sm font-medium text-primary transition-colors hover:text-primary-700 dark:hover:text-primary-400"
                 @click="navigateToCalendar"
             >
                 {{ t('calendar.viewFullCalendar') }} &rarr;

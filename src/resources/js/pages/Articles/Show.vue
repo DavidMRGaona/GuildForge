@@ -97,7 +97,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ar
                         />
                         <div
                             v-else
-                            class="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
+                            class="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary dark:bg-primary-900/30"
                         >
                             <span class="text-sm font-medium">
                                 {{ getAuthorDisplayName(props.article).charAt(0).toUpperCase() }}
@@ -107,7 +107,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ar
                             <p class="font-medium text-base-primary">
                                 {{ getAuthorDisplayName(props.article) }}
                             </p>
-                            <p v-if="props.article.publishedAt" class="text-sm text-primary-600">
+                            <p v-if="props.article.publishedAt" class="text-sm text-primary">
                                 {{ t('articles.publishedAt') }}
                                 {{ formatPublishedDate(props.article.publishedAt) }}
                             </p>

@@ -30,7 +30,7 @@ function handleTabClick(tabId: string): void {
             :class="[
                 'relative flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
                 activeTabId === tab.id
-                    ? 'text-primary-600 dark:text-primary-400'
+                    ? 'text-primary'
                     : 'text-base-muted hover:text-base-secondary',
             ]"
             :aria-current="activeTabId === tab.id ? 'page' : undefined"
@@ -40,7 +40,7 @@ function handleTabClick(tabId: string): void {
             <span>{{ tab.label }}</span>
             <span
                 v-if="tab.badge !== undefined && tab.badge > 0"
-                class="inline-flex items-center justify-center rounded-full bg-primary-500 px-1.5 py-0.5 text-xs font-semibold text-white"
+                class="inline-flex items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-white"
             >
                 {{ tab.badge }}
             </span>

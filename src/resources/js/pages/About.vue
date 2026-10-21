@@ -114,7 +114,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                     >
                         <div class="flex items-start gap-4">
                             <div
-                                class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary-600 dark:text-primary-400"
+                                class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary"
                             >
                                 <component
                                     :is="activityIconMap[activity.icon]"
@@ -176,7 +176,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                             >
                                 <!-- Number circle -->
                                 <div
-                                    class="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-primary-500 text-xl font-bold text-white shadow-lg"
+                                    class="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-lg"
                                 >
                                     {{ index + 1 }}
                                 </div>
@@ -215,7 +215,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                             >
                                 <!-- Number circle -->
                                 <div
-                                    class="relative z-10 -ml-6 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-500 text-xl font-bold text-white shadow-lg"
+                                    class="relative z-10 -ml-6 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-lg"
                                 >
                                     {{ index + 1 }}
                                 </div>
@@ -250,7 +250,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                             <!-- Email -->
                             <div v-if="contactEmail" class="flex items-start gap-4">
                                 <div
-                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary-600 dark:text-primary-400"
+                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary"
                                 >
                                     <Mail class="h-6 w-6" />
                                 </div>
@@ -260,7 +260,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                                     </h3>
                                     <a
                                         :href="'mailto:' + contactEmail"
-                                        class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 underline"
+                                        class="text-primary hover:text-primary-500 dark:hover:text-primary-300 underline"
                                     >
                                         {{ contactEmail }}
                                     </a>
@@ -270,7 +270,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                             <!-- Phone -->
                             <div v-if="contactPhone" class="flex items-start gap-4">
                                 <div
-                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary-600 dark:text-primary-400"
+                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary"
                                 >
                                     <Phone class="h-6 w-6" />
                                 </div>
@@ -280,7 +280,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                                     </h3>
                                     <a
                                         :href="'tel:' + contactPhone"
-                                        class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 underline"
+                                        class="text-primary hover:text-primary-500 dark:hover:text-primary-300 underline"
                                     >
                                         {{ contactPhone }}
                                     </a>
@@ -290,7 +290,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                             <!-- Address -->
                             <div v-if="contactAddress" class="flex items-start gap-4">
                                 <div
-                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary-600 dark:text-primary-400"
+                                    class="flex-shrink-0 rounded-lg bg-primary-100 dark:bg-primary-900/40 p-3 text-primary"
                                 >
                                     <MapPin class="h-6 w-6" />
                                 </div>
@@ -341,7 +341,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                         :href="openStreetMapUrl"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+                        class="text-primary hover:text-primary-500 dark:hover:text-primary-300"
                     >
                         {{ t('about.location.viewOnMap') }} →
                     </a>

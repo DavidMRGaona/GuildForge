@@ -115,7 +115,7 @@ const hasSlides = computed(() => props.slides.length > 0);
                         <div v-if="currentSlide.buttonText && currentSlide.buttonUrl" class="mt-8">
                             <Link
                                 :href="currentSlide.buttonUrl"
-                                class="inline-flex items-center rounded-lg bg-primary-500 px-6 py-3 text-lg font-semibold text-white transition-colors hover:bg-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-neutral-900"
+                                class="inline-flex items-center rounded-lg bg-primary px-6 py-3 text-lg font-semibold text-white transition-colors hover:bg-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-neutral-900"
                             >
                                 {{ currentSlide.buttonText }}
                             </Link>

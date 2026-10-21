@@ -61,7 +61,7 @@ function handleKeydown(event: KeyboardEvent): void {
                 'flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-page',
                 mobile ? 'w-full justify-between' : '',
                 isParentActive()
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                    ? 'bg-primary-100 text-primary dark:bg-primary-900/30'
                     : 'text-base-secondary hover:bg-muted hover:text-base-primary',
             ]"
             :aria-expanded="isOpen"
@@ -69,10 +69,7 @@ function handleKeydown(event: KeyboardEvent): void {
             @click="toggleDropdown"
         >
             <span>{{ item.label }}</span>
-            <ChevronDown
-                class="h-4 w-4 transition-transform"
-                :class="{ 'rotate-180': isOpen }"
-            />
+            <ChevronDown class="h-4 w-4 transition-transform" :class="{ 'rotate-180': isOpen }" />
         </button>
 
         <!-- Dropdown menu (desktop) -->
@@ -98,7 +95,7 @@ function handleKeydown(event: KeyboardEvent): void {
                         :class="[
                             'block px-4 py-2 text-sm transition-colors',
                             isActive(child.href)
-                                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                                ? 'bg-primary-100 text-primary dark:bg-primary-900/30'
                                 : 'text-base-primary hover:bg-muted',
                         ]"
                         @click="handleNavigate"
@@ -128,7 +125,7 @@ function handleKeydown(event: KeyboardEvent): void {
                     :class="[
                         'block rounded-md px-3 py-2 text-sm font-medium transition-colors',
                         isActive(child.href)
-                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                            ? 'bg-primary-100 text-primary dark:bg-primary-900/30'
                             : 'text-base-secondary hover:bg-muted hover:text-base-primary',
                     ]"
                     @click="handleNavigate"

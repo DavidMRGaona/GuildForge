@@ -24,7 +24,7 @@ const routes = useRoutes();
 const displayEvents = computed(() => props.events.slice(0, props.maxEvents));
 const hasEvents = computed(() => props.events.length > 0);
 const sectionTitle = computed(() =>
-    props.arePast ? t('home.recentEvents') : t('home.upcomingEvents'),
+    props.arePast ? t('home.recentEvents') : t('home.upcomingEvents')
 );
 </script>
 
@@ -38,7 +38,7 @@ const sectionTitle = computed(() =>
             <Link
                 v-if="hasEvents"
                 :href="routes.events.index"
-                class="text-sm font-medium text-primary-600 transition-colors hover:text-primary-700 dark:text-primary-500 dark:hover:text-primary-400"
+                class="text-sm font-medium text-primary transition-colors hover:text-primary-700 dark:hover:text-primary-400"
             >
                 {{ t('common.viewAll') }} &rarr;
             </Link>

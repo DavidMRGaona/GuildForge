@@ -32,7 +32,7 @@ function isChildItem(tab: ProfileTab): boolean {
                 'flex w-full items-center gap-3 rounded-lg text-left transition-colors',
                 isChildItem(tab) ? 'py-2.5 pl-10 pr-4 text-sm' : 'px-4 py-3 text-sm font-medium',
                 activeTabId === tab.id
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                    ? 'bg-primary-100 text-primary dark:bg-primary-900/30'
                     : 'text-base-secondary hover:bg-neutral-100 hover:text-base-primary dark:hover:bg-neutral-800',
             ]"
             :aria-current="activeTabId === tab.id ? 'page' : undefined"
@@ -45,7 +45,7 @@ function isChildItem(tab: ProfileTab): boolean {
             <span class="flex-1">{{ tab.label }}</span>
             <span
                 v-if="tab.badge !== undefined && tab.badge > 0"
-                class="inline-flex items-center justify-center rounded-full bg-primary-500 px-2 py-0.5 text-xs font-semibold text-white"
+                class="inline-flex items-center justify-center rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white"
             >
                 {{ tab.badge }}
             </span>

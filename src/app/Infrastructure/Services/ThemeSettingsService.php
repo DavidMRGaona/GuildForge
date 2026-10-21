@@ -48,8 +48,9 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         // base colours (amber, green, sky…) on the page and muted backgrounds
         $lightBackgrounds = [new HexColor('#FFFFFF'), $this->shade($neutralPalette, 50), $this->shade($neutralPalette, 100)];
         $darkBackgrounds = [$this->shade($neutralPalette, 800), $this->shade($neutralPalette, 900), $this->shade($neutralPalette, 950)];
-        $primaryLinkLight = $this->shade($primaryPalette, 600)->readableOn($lightBackgrounds, lighten: false)->value;
-        $primaryLinkDark = $this->shade($primaryPalette, 500)->readableOn($darkBackgrounds, lighten: true)->value;
+        // Primary text also sits on the primary tint (bg-primary-light: shade 100 light, 950 dark)
+        $primaryLinkLight = $this->shade($primaryPalette, 600)->readableOn([...$lightBackgrounds, $this->shade($primaryPalette, 100)], lighten: false)->value;
+        $primaryLinkDark = $this->shade($primaryPalette, 500)->readableOn([...$darkBackgrounds, $this->shade($primaryPalette, 950)], lighten: true)->value;
         $mutedLight = $this->shade($neutralPalette, 400)->readableOn($lightBackgrounds, lighten: false)->value;
         $mutedDark = $this->shade($neutralPalette, 500)->readableOn($darkBackgrounds, lighten: true)->value;
         // Buttons and other primary backgrounds carry white text in both themes
