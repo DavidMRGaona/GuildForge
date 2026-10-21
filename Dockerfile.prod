@@ -67,7 +67,7 @@ RUN mkdir -p /module-builds && \
 
 # Stage 2: Production image
 # Pinned to the patch release: a floating tag can reuse an older base cached on
-# the build host. 8.5.12 fixes CVE-2026-109618 and CVE-2026-109619
+# the build host
 FROM php:8.5.12-fpm-alpine3.24 AS final
 
 # Install system dependencies (runtime)

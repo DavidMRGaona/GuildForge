@@ -596,8 +596,8 @@ The `docker/prod/php.ini` file sets:
 | `opcache.revalidate_freq` | `2` | Check timestamps at most every 2 seconds |
 | `opcache.memory_consumption` | `128` (MB) | Memory for cached bytecode |
 | `expose_php` | `Off` | Do not expose PHP version |
-| `session.upload_progress.enabled` | `0` | Hardening (paths of CVE-2026-109619, fixed in 8.5.12); the app uses Laravel sessions, not PHP's |
-| `fatal_error_backtraces` | `0` | Hardening (paths of CVE-2026-109619, fixed in 8.5.12) |
+| `session.upload_progress.enabled` | `0` | No upload progress tracking; the app uses Laravel sessions, not PHP's |
+| `fatal_error_backtraces` | `0` | No backtraces attached to fatal errors |
 | `memory_limit` | `256M` | Memory limit per process |
 | `post_max_size` | `20M` | Maximum POST size |
 | `upload_max_filesize` | `20M` | Maximum upload size |
