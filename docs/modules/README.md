@@ -1367,6 +1367,36 @@ public function register(): void
 ```
 
 ---
+
+## Legal notices in emails
+
+A module that puts a legal notice (data protection text, for example) in an email can let the administrators edit it from *Páginas legales → Avisos en correos* (core ^3.14). Register the notice while booting, only when the core offers the registry, so the module keeps working with an older core:
+
+```php
+use App\Application\Legal\DTOs\LegalMailNoticeDTO;
+use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
+use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
+
+if (interface_exists(LegalMailNoticeRegistryInterface::class)) {
+    $this->app->make(LegalMailNoticeRegistryInterface::class)->register(new LegalMailNoticeDTO(
+        key: 'my-module.invitation',            // unique; the text is saved as `legal_mail_notice:<key>`
+        module: 'my-module',
+        label: __('my-module::admin.notice.label'),
+        help: __('my-module::admin.notice.help'),
+        defaultContent: "First paragraph.\n\nSecond paragraph, with :site.",
+        placeholders: [':site', ':inviter'],    // listed under the field
+        preview: fn (string $content): string => $renderer->previewHtml($content), // whole email as HTML, sample data
+    ));
+}
+```
+
+- The text is plain text: blank lines separate paragraphs. Empty means the default text.
+- When building the email, call `LegalMailNoticeServiceInterface::paragraphs($key, [':site' => $site, …])` and escape each paragraph when rendering it.
+- `LegalMailNoticeServiceInterface::entity()` returns the data controller (`name`, `email`, `dpoEmail`) from the *Datos de la asociación* tab; the name falls back to the site name.
+- The preview shows the whole email with the text in the form, even if it is not saved yet. Use sample data, never real people.
+
+---
+
 ## Extending core functionality
 
 Modules can extend core entities, Filament resources, and add new relationships without modifying core code.
