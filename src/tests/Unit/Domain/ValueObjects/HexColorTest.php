@@ -231,6 +231,57 @@ final class HexColorTest extends TestCase
         $this->assertEquals('#D97706', (string) $color);
     }
 
+    public function test_readable_on_keeps_a_colour_that_already_meets_the_minimum(): void
+    {
+        $color = new HexColor('#910000');
+
+        $this->assertTrue($color->readableOn([new HexColor('#FFFFFF')], lighten: false)->equals($color));
+    }
+
+    public function test_readable_on_darkens_until_every_background_reaches_aa(): void
+    {
+        $color = new HexColor('#DC2626');
+        $backgrounds = [new HexColor('#FFFFFF'), new HexColor('#F9F6F2'), new HexColor('#EEEAE6')];
+
+        $readable = $color->readableOn($backgrounds, lighten: false);
+
+        foreach ($backgrounds as $background) {
+            $this->assertGreaterThanOrEqual(4.5, $readable->contrastRatio($background));
+        }
+        $this->assertLessThan($color->toOklch()['l'], $readable->toOklch()['l']);
+        $this->assertEqualsWithDelta($color->toOklch()['h'], $readable->toOklch()['h'], 3.0);
+    }
+
+    public function test_readable_on_lightens_for_dark_backgrounds(): void
+    {
+        $color = new HexColor('#E4312E');
+        $backgrounds = [new HexColor('#23211F'), new HexColor('#131110'), new HexColor('#35322F')];
+
+        $readable = $color->readableOn($backgrounds, lighten: true);
+
+        foreach ($backgrounds as $background) {
+            $this->assertGreaterThanOrEqual(4.5, $readable->contrastRatio($background));
+        }
+        $this->assertGreaterThan($color->toOklch()['l'], $readable->toOklch()['l']);
+    }
+
+    public function test_readable_on_stays_close_to_the_original_colour(): void
+    {
+        $background = new HexColor('#EEEAE6');
+
+        $readable = (new HexColor('#DC2626'))->readableOn([$background], lighten: false);
+
+        // Just past the threshold, not pushed all the way to a dark maroon
+        $this->assertLessThan(5.0, $readable->contrastRatio($background));
+    }
+
+    public function test_readable_on_returns_the_end_of_the_range_when_the_minimum_is_unreachable(): void
+    {
+        $readable = (new HexColor('#FFFF00'))->readableOn([new HexColor('#FFFFFF')], lighten: true);
+
+        $this->assertSame('#FFFFFF', $readable->value);
+    }
+
     public function test_from_oklch_creates_hex_color(): void
     {
         $color = HexColor::fromOklch(0.66, 0.15, 60);

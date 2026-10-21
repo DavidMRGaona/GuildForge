@@ -44,6 +44,15 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         $accentCss = $this->generatePaletteCss($accentPalette);
         $neutralCss = $this->generatePaletteCss($neutralPalette);
 
+        // Text colours computed per site: the palette shades alone fall below WCAG AA for some
+        // base colours (amber, green, sky…) on the page and muted backgrounds
+        $lightBackgrounds = [new HexColor('#FFFFFF'), $this->shade($neutralPalette, 50), $this->shade($neutralPalette, 100)];
+        $darkBackgrounds = [$this->shade($neutralPalette, 800), $this->shade($neutralPalette, 900), $this->shade($neutralPalette, 950)];
+        $primaryLinkLight = $this->shade($primaryPalette, 600)->readableOn($lightBackgrounds, lighten: false)->value;
+        $primaryLinkDark = $this->shade($primaryPalette, 500)->readableOn($darkBackgrounds, lighten: true)->value;
+        $mutedLight = $this->shade($neutralPalette, 400)->readableOn($lightBackgrounds, lighten: false)->value;
+        $mutedDark = $this->shade($neutralPalette, 500)->readableOn($darkBackgrounds, lighten: true)->value;
+
         return <<<CSS
         :root {
           /* Primary palette */
@@ -65,7 +74,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           /* Contextual variables (Light mode) */
           --color-primary-action: var(--color-primary-600);
           --color-primary-action-hover: var(--color-primary-700);
-          --color-primary-link: var(--color-primary-700);
+          --color-primary-link: {$primaryLinkLight};
           --color-primary-subtle: var(--color-primary-100);
           --color-primary-badge: var(--color-primary-200);
           --color-primary-glow: var(--color-primary-500);
@@ -79,7 +88,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           /* Text variables (Light mode) */
           --color-text-primary: var(--color-neutral-900);
           --color-text-secondary: var(--color-neutral-600);
-          --color-text-muted: var(--color-neutral-400);
+          --color-text-muted: {$mutedLight};
 
           /* Border variables (Light mode) */
           --color-border: var(--color-neutral-200);
@@ -131,7 +140,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           /* Contextual variables (Dark mode) */
           --color-primary-action: var(--color-primary-500);
           --color-primary-action-hover: var(--color-primary-400);
-          --color-primary-link: var(--color-primary-400);
+          --color-primary-link: {$primaryLinkDark};
           --color-primary-subtle: var(--color-primary-950);
           --color-primary-badge: var(--color-primary-900);
           --color-primary-glow: var(--color-primary-400);
@@ -145,7 +154,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           /* Text variables (Dark mode) */
           --color-text-primary: var(--color-neutral-50);
           --color-text-secondary: var(--color-neutral-300);
-          --color-text-muted: var(--color-neutral-500);
+          --color-text-muted: {$mutedDark};
 
           /* Border variables (Dark mode) */
           --color-border: var(--color-neutral-700);
@@ -221,6 +230,11 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         $color = $this->settingsService->get('theme_accent_base_color', self::DEFAULT_ACCENT_COLOR);
 
         return new HexColor((string) $color ?: self::DEFAULT_ACCENT_COLOR);
+    }
+
+    private function shade(ColorPalette $palette, int $shade): HexColor
+    {
+        return $palette->shade($shade) ?? $palette->baseColor();
     }
 
     private function generatePaletteCss(ColorPalette $palette): string
