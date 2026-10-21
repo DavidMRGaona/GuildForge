@@ -22,11 +22,12 @@ Commands run in the development containers: `php artisan` and PHPUnit in `guildf
 13. [Module installation](#module-installation)
 14. [Testing modules](#testing-modules)
 15. [Best practices](#best-practices)
-16. [Extending core functionality](#extending-core-functionality)
-17. [Domain events and listeners](#domain-events-and-listeners)
-18. [State machine pattern](#state-machine-pattern)
-19. [Releasing a module](#releasing-a-module)
-20. [Quick reference](#quick-reference)
+16. [Legal notices in emails](#legal-notices-in-emails)
+17. [Extending core functionality](#extending-core-functionality)
+18. [Domain events and listeners](#domain-events-and-listeners)
+19. [State machine pattern](#state-machine-pattern)
+20. [Releasing a module](#releasing-a-module)
+21. [Quick reference](#quick-reference)
 
 ---
 
@@ -800,7 +801,7 @@ The core layouts and pages already render these slots: modules only register com
 | `order` | int | Sort order (lower = rendered first) |
 | `props` | array | Static props passed to the component |
 | `dataKeys` | array | Inertia page props passed to the component as props of the same name |
-| `profileTab` | array\|null | Tab metadata for the `profile-sections` slot (`tabId`, `icon`, `labelKey`, `badgeKey`, `parentId`) |
+| `profileTab` | array\|null | Tab metadata for the `profile-sections` slot (`tabId`, `icon`, `labelKey`, `badgeKey`, `parentId`, `visibleKey`). `visibleKey` names a boolean page prop (listed in `dataKeys`) that the module shares per request: when it is `false` the tab is hidden and a `?tab=` pointing at it opens the account tab; a missing key or any other value keeps the tab visible |
 
 ### Registering slot components
 
@@ -1367,6 +1368,68 @@ public function register(): void
 ```
 
 ---
+
+## Legal notices in emails
+
+A module that puts a legal notice (data protection text, for example) in an email can let the administrators edit it from *Páginas legales → Avisos en correos* (core ^3.14). Register the notice while booting, only when the core offers the registry, so the module keeps working with an older core:
+
+```php
+use App\Application\Legal\DTOs\LegalMailNoticeDTO;
+use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
+use Illuminate\Notifications\AnonymousNotifiable;
+use Modules\MyModule\Notifications\InvitationNotification;
+
+if (interface_exists(LegalMailNoticeRegistryInterface::class)) {
+    $this->app->make(LegalMailNoticeRegistryInterface::class)->register(new LegalMailNoticeDTO(
+        key: 'my-module.invitation',            // unique; the text is saved as `legal_mail_notice:<key>`
+        module: 'my-module',
+        label: __('my-module::admin.notice.label'),
+        help: __('my-module::admin.notice.help'),
+        defaultContent: "First paragraph.\n\nSecond paragraph, with :site.",
+        placeholders: [':site', ':inviter'],    // listed under the field
+        // The whole email as HTML: the module's own notification with sample data and the form's text
+        preview: fn (string $content): string => (string) (new InvitationNotification(
+            inviterName: 'John Doe',
+            eventTitle: 'Sample event',
+            legalText: $content,
+        ))->toMail(new AnonymousNotifiable)->render(),
+    ));
+}
+```
+
+The notification takes the text to show as an optional argument (`legalText`, `null` when it is really sent):
+
+```php
+use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\HtmlString;
+
+public function toMail(object $notifiable): MailMessage
+{
+    $message = (new MailMessage)->line(__('my-module::emails.invitation.intro', ['inviter' => $this->inviterName]));
+    $replacements = [':site' => (string) config('app.name'), ':inviter' => $this->inviterName];
+
+    // The saved text (or the default one) when sent; the form's text in the preview
+    $paragraphs = $this->legalText === null
+        ? app(LegalMailNoticeServiceInterface::class)->paragraphs('my-module.invitation', $replacements)
+        : array_map(fn (string $paragraph): string => strtr(trim($paragraph), $replacements), preg_split('/\n\s*\n/', $this->legalText) ?: []);
+
+    // Escaped, on one line and wrapped in <p>: the Markdown mail template never formats it
+    foreach ($paragraphs as $paragraph) {
+        $message->line(new HtmlString('<p>'.str_replace(["\r\n", "\r", "\n"], ' ', e($paragraph)).'</p>'));
+    }
+
+    return $message;
+}
+```
+
+- The text is plain text: blank lines separate paragraphs. Empty means the default text.
+- When building the email, call `LegalMailNoticeServiceInterface::paragraphs($key, [':site' => $site, …])` and escape each paragraph when rendering it.
+- `LegalMailNoticeServiceInterface::entity()` returns the data controller (`name`, `email`, `dpoEmail`) from the *Datos de la asociación* tab; the name falls back to the site name.
+- The preview shows the whole email with the text in the form, even if it is not saved yet. Use sample data, never real people.
+
+---
+
 ## Extending core functionality
 
 Modules can extend core entities, Filament resources, and add new relationships without modifying core code.

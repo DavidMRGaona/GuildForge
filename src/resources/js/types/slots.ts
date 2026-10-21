@@ -19,6 +19,8 @@ export interface ProfileTabMeta {
     labelKey: string;
     badgeKey?: string;
     parentId?: string;
+    // Name of a boolean page prop shared by the module; when it is false the tab is hidden
+    visibleKey?: string;
 }
 
 export interface SlotRegistration {

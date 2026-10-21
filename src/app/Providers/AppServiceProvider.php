@@ -9,6 +9,8 @@ use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
+use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Mail\Services\MailBrandingServiceInterface;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
@@ -84,6 +86,8 @@ use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
 use App\Infrastructure\Content\Services\TrixContentMigrator;
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
+use App\Infrastructure\Legal\LegalMailNoticeRegistry;
+use App\Infrastructure\Legal\LegalMailNoticeService;
 use App\Infrastructure\Mail\Listeners\CheckQuotaBeforeSending;
 use App\Infrastructure\Mail\Listeners\LogSentEmail;
 use App\Infrastructure\Mail\Services\EmailQuotaService;
@@ -228,6 +232,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
+        $this->app->singleton(LegalMailNoticeRegistryInterface::class, LegalMailNoticeRegistry::class);
+        $this->app->singleton(LegalMailNoticeServiceInterface::class, LegalMailNoticeService::class);
         $this->app->singleton(DashboardWidgetConfigServiceInterface::class, DashboardWidgetConfigService::class);
         $this->app->singleton(ThemeSettingsServiceInterface::class, ThemeSettingsService::class);
         $this->app->singleton(ImageOptimizationServiceInterface::class, ImageOptimizationService::class);

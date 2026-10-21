@@ -13,6 +13,16 @@ return [
         'visit_site' => 'Visit site',
     ],
     'pages' => [
+        'legal' => [
+            'tabs' => [
+                'mail_notices' => 'Email notices',
+            ],
+            'mail_notices' => [
+                'placeholders_help' => 'Available placeholders: :lista. Leave it empty to use the default text.',
+                'preview' => 'Preview email',
+                'preview_title' => 'Preview: :label',
+            ],
+        ],
         'about' => [
             'title' => 'About',
             'saved' => 'Page settings saved successfully',

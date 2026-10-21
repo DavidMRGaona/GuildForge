@@ -1,8 +1,9 @@
-import { ref, computed, type Ref, type ComputedRef } from 'vue';
+import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { useModuleSlots } from './useModuleSlots';
 import type { ProfileTab, ProfileTabIcon } from '@/types/profile';
+import type { ProfileTabMeta, SlotRegistration } from '@/types/slots';
 
 interface UseProfileTabsReturn {
     tabs: ComputedRef<ProfileTab[]>;
@@ -28,6 +29,11 @@ function urlWithTab(url: string, id: string): string {
     return `${target.pathname}${target.search}${target.hash}`;
 }
 
+// A module hides its tab per request by sharing `false` under `visibleKey`
+function isTabVisible(meta: ProfileTabMeta, props: Record<string, unknown>): boolean {
+    return meta.visibleKey === undefined || props[meta.visibleKey] !== false;
+}
+
 export function useProfileTabs(): UseProfileTabsReturn {
     const { t } = useI18n();
     const { getSlotComponents, moduleSlots } = useModuleSlots();
@@ -37,12 +43,34 @@ export function useProfileTabs(): UseProfileTabsReturn {
     // The active tab lives in the URL (`/perfil?tab=…`), so going back to the profile or a link
     // from a module page opens the same tab. The registrations arrive with the page (the tab
     // components may still be loading): a tab no module registers falls back to the account tab
-    const registeredTabIds = (moduleSlots.value['profile-sections'] ?? [])
-        .filter((registration) => registration.profileTab)
-        .map((registration) => registration.profileTab?.tabId ?? registration.module);
+    // Unresolved components are not in getSlotComponents yet, so read the registrations and
+    // look the visibility prop up the same way the slot does: static props, then page props
+    function registeredTabId(registration: SlotRegistration): string {
+        return registration.profileTab?.tabId ?? registration.module;
+    }
+
+    function isRegistrationVisible(registration: SlotRegistration): boolean {
+        if (!registration.profileTab) {
+            return false;
+        }
+        const props: Record<string, unknown> = { ...registration.props };
+        for (const key of registration.dataKeys) {
+            if (key in page.props) {
+                props[key] = page.props[key];
+            }
+        }
+        return isTabVisible(registration.profileTab, props);
+    }
+
+    const profileRegistrations = computed(() =>
+        (moduleSlots.value['profile-sections'] ?? []).filter((registration) => registration.profileTab),
+    );
+    const visibleTabIds = profileRegistrations.value
+        .filter(isRegistrationVisible)
+        .map(registeredTabId);
     const requestedTab = tabFromUrl(page.url);
     const activeTabId = ref(
-        requestedTab !== null && registeredTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB,
+        requestedTab !== null && visibleTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB,
     );
 
     const tabs = computed<ProfileTab[]>(() => {
@@ -59,6 +87,9 @@ export function useProfileTabs(): UseProfileTabsReturn {
         for (const slot of moduleSlots) {
             if (slot.registration.profileTab) {
                 const meta = slot.registration.profileTab;
+                if (!isTabVisible(meta, slot.props)) {
+                    continue;
+                }
                 const badge = meta.badgeKey
                     ? (slot.props[meta.badgeKey] as number | undefined)
                     : undefined;
@@ -90,6 +121,20 @@ export function useProfileTabs(): UseProfileTabsReturn {
     });
 
     const activeTab = computed(() => tabs.value.find((tab) => tab.id === activeTabId.value));
+
+    // A visit or partial reload can hide the tab that is open (e.g. the last pending item was
+    // handled): go back to the account tab, only for registered tabs, never for ones still loading
+    watch(
+        () =>
+            profileRegistrations.value
+                .filter((registration) => !isRegistrationVisible(registration))
+                .map(registeredTabId),
+        (hiddenIds) => {
+            if (hiddenIds.includes(activeTabId.value)) {
+                setActiveTab(DEFAULT_TAB);
+            }
+        },
+    );
 
     function setActiveTab(id: string): void {
         activeTabId.value = id;

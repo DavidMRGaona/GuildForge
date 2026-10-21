@@ -4,18 +4,26 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Settings;
 
+use App\Application\Legal\DTOs\LegalMailNoticeDTO;
+use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ManagesPageSettings;
+use Filament\Actions\Action;
 use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Locked;
 
 /**
  * @property Schema $form
@@ -35,6 +43,17 @@ final class LegalPagesSettings extends Page implements HasForms
      * @var array<string, mixed>
      */
     public ?array $data = [];
+
+    /**
+     * The email shown by the open preview, rendered when it opens, never while the modal is drawn:
+     * inside Livewire's render Blade adds morph markers that break the email's Markdown (the
+     * greeting shows as «# …», lines run together), and rendering it once keeps the frame from
+     * reloading with new sample data on every later request.
+     *
+     * @var array<string, string>
+     */
+    #[Locked]
+    public array $mailNoticePreviews = [];
 
     public static function getNavigationLabel(): string
     {
@@ -58,7 +77,95 @@ final class LegalPagesSettings extends Page implements HasForms
 
     public function mount(SettingsServiceInterface $settingsService): void
     {
-        $this->form->fill($this->loadSettings($settingsService));
+        $data = $this->loadSettings($settingsService);
+
+        foreach ($this->mailNotices() as $notice) {
+            $data[self::noticeFieldName($notice->key)] = (string) $settingsService->get(self::noticeSettingKey($notice->key), '');
+        }
+
+        $this->form->fill($data);
+    }
+
+    /**
+     * Form field name of a mail notice: setting keys contain characters the form state cannot hold.
+     */
+    public static function noticeFieldName(string $noticeKey): string
+    {
+        return 'legal_mail_notice__'.sha1($noticeKey);
+    }
+
+    public static function noticePreviewActionName(string $noticeKey): string
+    {
+        return 'preview_mail_notice_'.sha1($noticeKey);
+    }
+
+    public static function noticeSectionKey(string $noticeKey): string
+    {
+        return 'legal_mail_notice_section_'.sha1($noticeKey);
+    }
+
+    private static function noticeSettingKey(string $noticeKey): string
+    {
+        return 'legal_mail_notice:'.$noticeKey;
+    }
+
+    /**
+     * @return list<LegalMailNoticeDTO>
+     */
+    private function mailNotices(): array
+    {
+        return app(LegalMailNoticeRegistryInterface::class)->all();
+    }
+
+    private function mailNoticesTab(): ?Tab
+    {
+        $notices = $this->mailNotices();
+
+        if ($notices === []) {
+            return null;
+        }
+
+        $sections = [];
+
+        foreach ($notices as $notice) {
+            $field = self::noticeFieldName($notice->key);
+
+            $sections[] = Section::make($notice->label)
+                ->key(self::noticeSectionKey($notice->key))
+                ->description($notice->help)
+                ->schema([
+                    Textarea::make($field)
+                        ->label($notice->label)
+                        ->rows(8)
+                        ->helperText(__('filament.pages.legal.mail_notices.placeholders_help', [
+                            'lista' => implode(', ', $notice->placeholders),
+                        ]))
+                        ->columnSpanFull(),
+                ])
+                ->footerActions([
+                    Action::make(self::noticePreviewActionName($notice->key))
+                        ->label(__('filament.pages.legal.mail_notices.preview'))
+                        ->icon('heroicon-o-eye')
+                        ->color('gray')
+                        ->modalHeading(__('filament.pages.legal.mail_notices.preview_title', ['label' => $notice->label]))
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel(__('common.close'))
+                        ->modalWidth('5xl')
+                        ->mountUsing(function (Get $get) use ($notice, $field): void {
+                            $text = trim((string) $get($field));
+
+                            $this->mailNoticePreviews = [
+                                $notice->key => ($notice->preview)($text !== '' ? $text : $notice->defaultContent),
+                            ];
+                        })
+                        ->modalContent(fn (): View => view('filament.pages.settings.legal-mail-notice-preview', [
+                            'html' => $this->mailNoticePreviews[$notice->key] ?? '',
+                            'title' => $notice->label,
+                        ])),
+                ]);
+        }
+
+        return Tab::make(__('filament.pages.legal.tabs.mail_notices'))->schema($sections);
     }
 
     public function form(Schema $schema): Schema
@@ -66,7 +173,7 @@ final class LegalPagesSettings extends Page implements HasForms
         return $schema
             ->components([
                 Tabs::make('Tabs')
-                    ->tabs([
+                    ->tabs(array_values(array_filter([
                         Tab::make(__('filament.pages.legal.tabs.entity'))
                             ->schema([
                                 TextInput::make('legal_entity_name')
@@ -139,7 +246,9 @@ final class LegalPagesSettings extends Page implements HasForms
                                     ->helperText(__('filament.pages.legal.fields.content_help'))
                                     ->columnSpanFull(),
                             ]),
-                    ])
+
+                        $this->mailNoticesTab(),
+                    ])))
                     ->columnSpanFull(),
             ])
             ->statePath('data');
@@ -149,6 +258,13 @@ final class LegalPagesSettings extends Page implements HasForms
     {
         $formData = $this->form->getState();
         $this->saveSettings($settingsService, $formData);
+
+        foreach ($this->mailNotices() as $notice) {
+            $settingsService->set(
+                self::noticeSettingKey($notice->key),
+                trim((string) ($formData[self::noticeFieldName($notice->key)] ?? '')),
+            );
+        }
 
         Notification::make()
             ->title(__('filament.pages.legal.saved'))

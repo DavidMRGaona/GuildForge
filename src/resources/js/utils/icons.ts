@@ -14,6 +14,7 @@ import {
     Image,
     Info,
     Lock,
+    Mail,
     Map,
     MapPin,
     Monitor,
@@ -60,6 +61,7 @@ export const profileTabIconMap: Record<ProfileTabIconType, Component> = {
     cog: Settings,
     'pencil-square': SquarePen,
     'book-open': BookOpen,
+    envelope: Mail,
 };
 
 /** Resolve a module-provided tab icon, falling back to a neutral icon for names this core does not know. */

@@ -37,6 +37,12 @@ return [
                 'notice' => 'Aviso legal',
                 'cookies' => 'Política de cookies',
                 'terms' => 'Términos y condiciones',
+                'mail_notices' => 'Avisos en correos',
+            ],
+            'mail_notices' => [
+                'placeholders_help' => 'Huecos disponibles: :lista. Déjalo vacío para usar el texto por defecto.',
+                'preview' => 'Vista previa del correo',
+                'preview_title' => 'Vista previa: :label',
             ],
             'fields' => [
                 'entity_name' => 'Nombre de la asociación',
