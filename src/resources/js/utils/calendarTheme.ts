@@ -26,6 +26,8 @@ export const calendarClassOptions: CalendarOptions = {
     buttonClass: (info) =>
         joinClassNames('calendar-button', info.isSelected && 'calendar-button--selected'),
     tableClass: 'calendar-table',
+    // The row carries the header colours: FullCalendar skips dayHeaderClass on disabled days
+    dayHeaderRowClass: 'calendar-day-header-row',
     dayHeaderClass: 'calendar-day-header',
     dayHeaderDividerClass: 'calendar-header-divider',
     dayRowClass: 'calendar-row',
@@ -40,10 +42,10 @@ export const calendarClassOptions: CalendarOptions = {
     dayCellTopInnerClass: 'calendar-day-number',
     dayCellInnerClass: 'calendar-day-body',
     eventClass: 'calendar-event',
+    eventInnerClass: 'calendar-event-inner',
     eventTitleClass: 'calendar-event-title',
     eventTimeClass: 'calendar-event-time',
     listItemEventBeforeClass: 'calendar-event-dot',
-    listItemEventInnerClass: 'calendar-event-inner',
     moreLinkClass: 'calendar-more-link',
     slotHeaderClass: 'calendar-slot-header',
 };

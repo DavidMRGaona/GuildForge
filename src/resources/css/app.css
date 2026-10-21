@@ -693,11 +693,11 @@ button[data-headlessui-state]:hover {
     font-weight: 500;
 }
 
-.event-calendar .calendar-day-header {
+.event-calendar .calendar-day-header-row {
     background-color: var(--color-primary-light);
 }
 
-.dark .event-calendar .calendar-day-header {
+.dark .event-calendar .calendar-day-header-row {
     background-color: var(--color-neutral-700);
     color: var(--color-text-secondary);
 }
@@ -733,9 +733,27 @@ button[data-headlessui-state]:hover {
     font-weight: 500;
 }
 
-/* Long titles wrap instead of being cut off */
+/* Time and title flow as one run of text, as in FullCalendar 6: long titles
+   wrap, and a title that does not fit after the time moves to the next line */
+.event-calendar:not(.event-calendar--compact) .calendar-event-inner {
+    display: block;
+}
+
+.event-calendar:not(.event-calendar--compact) .calendar-event-time,
 .event-calendar:not(.event-calendar--compact) .calendar-event-title {
+    display: inline;
     white-space: normal;
+}
+
+.event-calendar:not(.event-calendar--compact) .calendar-event-time {
+    margin-inline-end: 0.25em;
+    /* A time range never breaks at its dash */
+    white-space: nowrap;
+}
+
+/* The two elements touch, with no space between them to break the line at */
+.event-calendar:not(.event-calendar--compact) .calendar-event-title::before {
+    content: '\200B';
 }
 
 .dark .event-calendar .calendar-more-link {
@@ -786,7 +804,8 @@ button[data-headlessui-state]:hover {
     text-transform: uppercase;
 }
 
-.dark .event-calendar--compact .calendar-day-header {
+.event-calendar--compact .calendar-day-header-row,
+.dark .event-calendar--compact .calendar-day-header-row {
     background: transparent;
 }
 
