@@ -176,7 +176,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                             >
                                 <!-- Number circle -->
                                 <div
-                                    class="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-primary-500 text-xl font-bold text-white shadow-lg"
+                                    class="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-lg"
                                 >
                                     {{ index + 1 }}
                                 </div>
@@ -215,7 +215,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                             >
                                 <!-- Number circle -->
                                 <div
-                                    class="relative z-10 -ml-6 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-500 text-xl font-bold text-white shadow-lg"
+                                    class="relative z-10 -ml-6 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-lg"
                                 >
                                     {{ index + 1 }}
                                 </div>

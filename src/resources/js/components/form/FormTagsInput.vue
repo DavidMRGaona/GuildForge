@@ -135,7 +135,7 @@ function focusInput(): void {
             <button
                 v-if="canAddMore && !disabled && inputValue.trim()"
                 type="button"
-                class="inline-flex items-center justify-center rounded-md bg-primary-500 hover:bg-primary-600 px-2 py-1 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors duration-150"
+                class="inline-flex items-center justify-center rounded-md bg-primary hover:bg-primary-600 px-2 py-1 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors duration-150"
                 @click="addTag"
             >
                 <svg

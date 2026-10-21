@@ -40,7 +40,7 @@ function handleTabClick(tabId: string): void {
             <span>{{ tab.label }}</span>
             <span
                 v-if="tab.badge !== undefined && tab.badge > 0"
-                class="inline-flex items-center justify-center rounded-full bg-primary-500 px-1.5 py-0.5 text-xs font-semibold text-white"
+                class="inline-flex items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-white"
             >
                 {{ tab.badge }}
             </span>
