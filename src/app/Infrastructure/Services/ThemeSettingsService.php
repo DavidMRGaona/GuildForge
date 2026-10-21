@@ -116,13 +116,13 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           --color-info-bg: #DBEAFE;
 
           /* Calendar source colors (Light mode) */
-          --color-calendar-primary: var(--color-primary-action);
+          --color-calendar-primary: var(--color-primary);
           --color-calendar-accent: var(--color-accent-400);
           --color-calendar-accent-text: var(--color-neutral-900);
           --color-calendar-info: var(--color-info);
           --color-calendar-success: var(--color-success);
           --color-calendar-warning: var(--color-warning);
-          --color-calendar-neutral: var(--color-neutral-500);
+          --color-calendar-neutral: var(--color-neutral-400);
 
           /* Typography */
           --font-heading: '{$theme->fontHeading}', system-ui, sans-serif;
@@ -182,13 +182,13 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           --color-info-bg: #1E3A8A;
 
           /* Calendar source colors (Dark mode) */
-          --color-calendar-primary: var(--color-primary-action);
+          --color-calendar-primary: var(--color-primary);
           --color-calendar-accent: var(--color-accent-300);
           --color-calendar-accent-text: var(--color-neutral-950);
           --color-calendar-info: var(--color-info);
           --color-calendar-success: var(--color-success);
           --color-calendar-warning: var(--color-warning);
-          --color-calendar-neutral: var(--color-neutral-500);
+          --color-calendar-neutral: var(--color-neutral-400);
         }
         CSS;
     }

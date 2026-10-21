@@ -266,6 +266,19 @@ final class ThemeSettingsServicePaletteTest extends TestCase
         }
     }
 
+    public function test_calendar_events_use_backgrounds_their_text_can_be_read_on(): void
+    {
+        $this->useColours('#DC2626', '#F59E0B');
+        $css = $this->service->getCssVariables();
+
+        foreach ([$this->extractRootSection($css), $this->extractDarkSection($css)] as $section) {
+            // White event text: the primary colour computed to carry it
+            $this->assertStringContainsString('--color-calendar-primary: var(--color-primary);', $section);
+            // Dark event text: neutral-500 left it near 4:1 in light mode
+            $this->assertStringContainsString('--color-calendar-neutral: var(--color-neutral-400);', $section);
+        }
+    }
+
     public function test_muted_text_stays_lighter_than_secondary_text_in_light_mode(): void
     {
         $this->useColours('#DC2626', '#F59E0B');

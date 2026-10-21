@@ -683,21 +683,25 @@ button[data-headlessui-state]:hover {
     align-items: flex-start;
 }
 
-/* Block view: per-source-color event backgrounds (token-driven, see ThemeSettingsService) */
+/* Block view: per-source-color event backgrounds (token-driven, see ThemeSettingsService). The
+   title is drawn by a child FullCalendar colours with --fc-event-text-color, so each colour sets it */
 .event-calendar .fc-daygrid-event.fc-entry--primary {
-    background-color: var(--color-calendar-primary, var(--color-primary-action));
-    border-color: var(--color-calendar-primary, var(--color-primary-action));
+    background-color: var(--color-calendar-primary, var(--color-primary));
+    border-color: var(--color-calendar-primary, var(--color-primary));
+    --fc-event-text-color: #ffffff;
 }
 
 .event-calendar .fc-daygrid-event.fc-entry--accent {
     background-color: var(--color-calendar-accent, var(--color-accent-400));
     border-color: var(--color-calendar-accent, var(--color-accent-400));
     color: var(--color-calendar-accent-text, var(--color-text-primary));
+    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
 }
 
 .event-calendar .fc-daygrid-event.fc-entry--info {
     background-color: var(--color-calendar-info, var(--color-info));
     border-color: var(--color-calendar-info, var(--color-info));
+    --fc-event-text-color: #ffffff;
 }
 
 /* --color-info flips from a dark blue (light mode) to a light blue (dark
@@ -705,6 +709,7 @@ button[data-headlessui-state]:hover {
    mode, so dark mode needs the same dark-text token used for --accent. */
 .dark .event-calendar .fc-daygrid-event.fc-entry--info {
     color: var(--color-calendar-accent-text, var(--color-text-primary));
+    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
 }
 
 /* --color-success and --color-warning are mid-brightness in both modes:
@@ -714,12 +719,14 @@ button[data-headlessui-state]:hover {
     background-color: var(--color-calendar-success, var(--color-success));
     border-color: var(--color-calendar-success, var(--color-success));
     color: var(--color-calendar-accent-text, var(--color-text-primary));
+    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
 }
 
 .event-calendar .fc-daygrid-event.fc-entry--warning {
     background-color: var(--color-calendar-warning, var(--color-warning));
     border-color: var(--color-calendar-warning, var(--color-warning));
     color: var(--color-calendar-accent-text, var(--color-text-primary));
+    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
 }
 
 /* --color-calendar-neutral resolves to the theme's admin-configurable
@@ -730,6 +737,7 @@ button[data-headlessui-state]:hover {
     background-color: var(--color-calendar-neutral, var(--color-neutral-400));
     border-color: var(--color-calendar-neutral, var(--color-neutral-400));
     color: var(--color-calendar-accent-text, var(--color-text-primary));
+    --fc-event-text-color: var(--color-calendar-accent-text, var(--color-text-primary));
 }
 
 .event-calendar .fc-event-title {
@@ -798,11 +806,6 @@ button[data-headlessui-state]:hover {
 
 .dark .event-calendar .fc-col-header-cell-cushion {
     color: var(--color-text-secondary);
-}
-
-.dark .event-calendar .fc-event-title,
-.dark .event-calendar .fc-event-time {
-    color: var(--color-text-inverted);
 }
 
 .dark .event-calendar .fc-daygrid-more-link {
