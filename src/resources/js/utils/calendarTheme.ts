@@ -3,6 +3,7 @@ import { joinClassNames } from '@fullcalendar/vue3';
 import classicThemePlugin from '@fullcalendar/vue3/themes/classic';
 import '@fullcalendar/vue3/skeleton.css';
 import '@fullcalendar/vue3/themes/classic/theme.css';
+import { venueDayKey } from '@/utils/datetime';
 
 /**
  * Look shared by every FullCalendar on the site, the core calendars and the
@@ -16,6 +17,18 @@ import '@fullcalendar/vue3/themes/classic/theme.css';
  * deliberately not imported.
  */
 export const calendarThemePlugin = classicThemePlugin;
+
+/**
+ * Whether an event starts and ends on different venue days. An end exactly at
+ * midnight closes the previous day, so it does not count as another day.
+ */
+function spansSeveralDays(start: Date | null, end: Date | null): boolean {
+    if (start === null || end === null) {
+        return false;
+    }
+
+    return venueDayKey(start) !== venueDayKey(new Date(end.getTime() - 1));
+}
 
 /**
  * Stable class names for the rest of the styling in app.css. FullCalendar
@@ -41,7 +54,14 @@ export const calendarClassOptions: CalendarOptions = {
     dayCellTopClass: 'calendar-day-top',
     dayCellTopInnerClass: 'calendar-day-number',
     dayCellInnerClass: 'calendar-day-body',
-    eventClass: 'calendar-event',
+    // A multi-day event shows no time: its range ("06:03 – 06:03") reads as one day
+    eventClass: (info) =>
+        joinClassNames(
+            'calendar-event',
+            spansSeveralDays(info.event.start, info.event.end) && 'calendar-event--multiday'
+        ),
+    blockEventClass: 'calendar-event--block',
+    columnEventClass: 'calendar-event--column',
     eventInnerClass: 'calendar-event-inner',
     eventTitleClass: 'calendar-event-title',
     eventTimeClass: 'calendar-event-time',

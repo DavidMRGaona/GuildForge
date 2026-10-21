@@ -236,6 +236,13 @@ const calendarOptions = computed<CalendarOptions>(() => {
         height: 'auto',
         fixedWeekCount: !props.compact,
         eventDisplay: props.compact ? 'list-item' : 'block',
+        // Month view shows the time range ("18:00–21:00") on its own line
+        displayEventEnd: true,
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        },
         loading: (isLoadingArg: boolean) => {
             isLoading.value = isLoadingArg;
         },
