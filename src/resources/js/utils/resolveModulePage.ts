@@ -69,12 +69,38 @@ interface ManifestEntry {
     src?: string;
     isEntry?: boolean;
     css?: string[];
+    imports?: string[];
 }
 
 /**
  * Cache for module manifests (to avoid repeated fetches).
  */
 const manifestCache = new Map<string, Promise<Record<string, ManifestEntry> | null>>();
+
+/**
+ * Stylesheets a page needs: its own and those of every chunk it imports,
+ * recursively. Vite lists a stylesheet on the chunk that imports it, so a page
+ * built from a shared component that imports CSS (venue-bookings' calendar pulls
+ * in FullCalendar's) carries none of it on its own entry.
+ */
+function collectPageCss(
+    manifest: Record<string, ManifestEntry>,
+    key: string,
+    seen: Set<string> = new Set()
+): string[] {
+    const entry = manifest[key];
+
+    if (seen.has(key) || !entry) {
+        return [];
+    }
+
+    seen.add(key);
+
+    return [
+        ...(entry.css ?? []),
+        ...(entry.imports ?? []).flatMap((imported) => collectPageCss(manifest, imported, seen)),
+    ];
+}
 
 /**
  * Cache for dynamically loaded page components.
@@ -161,12 +187,8 @@ async function loadDynamicPage(
         // Construct the full URL to the built page component
         const pageUrl = `/build/modules/${moduleName}/${entry.file}`;
 
-        // Load CSS files if any
-        if (entry.css?.length) {
-            for (const cssFile of entry.css) {
-                const cssUrl = `/build/modules/${moduleName}/${cssFile}`;
-                attachModuleStylesheet(cssUrl);
-            }
+        for (const cssFile of collectPageCss(manifest, manifestKey)) {
+            attachModuleStylesheet(`/build/modules/${moduleName}/${cssFile}`);
         }
 
         // Standalone CSS entry points, which a module uses to ship the Tailwind
@@ -197,7 +219,7 @@ async function loadDynamicPage(
                 `\n  Error: ${error instanceof Error ? error.message : error}`,
                 isChunkError
                     ? `\n  Hint: This may be caused by a stale chunk reference after a deploy. A page reload should fix it.`
-                    : '',
+                    : ''
             );
             return null;
         }
@@ -261,7 +283,7 @@ export function createPageResolver(options: ResolveOptions) {
                 `\n  Available glob keys:`,
                 Object.keys(options.modulePages)
                     .filter((k) => k.includes(moduleName))
-                    .join(', ') || '(none for this module)',
+                    .join(', ') || '(none for this module)'
             );
             throw new Error(
                 `Module page not found: ${name}. Looked in module "${moduleName}" for ${modulePath}, ${alternativePath}, and runtime manifest.`
