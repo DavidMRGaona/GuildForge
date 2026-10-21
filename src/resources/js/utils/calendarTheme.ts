@@ -3,7 +3,7 @@ import { joinClassNames } from '@fullcalendar/vue3';
 import classicThemePlugin from '@fullcalendar/vue3/themes/classic';
 import '@fullcalendar/vue3/skeleton.css';
 import '@fullcalendar/vue3/themes/classic/theme.css';
-import { venueDayKey } from '@/utils/datetime';
+import { VENUE_TIMEZONE, venueDayKey } from '@/utils/datetime';
 
 /**
  * Look shared by every FullCalendar on the site, the core calendars and the
@@ -28,6 +28,33 @@ function spansSeveralDays(start: Date | null, end: Date | null): boolean {
     }
 
     return venueDayKey(start) !== venueDayKey(new Date(end.getTime() - 1));
+}
+
+/**
+ * Time range of a single-day timed event in the venue's time zone
+ * ("18:00–21:00"), or an empty string for all-day and multi-day events.
+ *
+ * Used for accessible names: FullCalendar drops the visible time in day cells
+ * narrower than 60 px (phones), and an `aria-label` replaces the visible text.
+ */
+export function eventTimeRange(
+    event: { allDay: boolean; start: Date | null; end: Date | null },
+    locale: string
+): string {
+    if (event.allDay || event.start === null || spansSeveralDays(event.start, event.end)) {
+        return '';
+    }
+
+    const formatter = new Intl.DateTimeFormat(locale, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+        timeZone: VENUE_TIMEZONE,
+    });
+
+    return event.end === null
+        ? formatter.format(event.start)
+        : formatter.formatRange(event.start, event.end);
 }
 
 /**

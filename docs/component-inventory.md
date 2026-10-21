@@ -309,7 +309,7 @@ Located in `src/resources/js/components/`.
 - **File**: `calendar/EventCalendar.vue`
 - **Props**: `compact?: boolean`, `showTooltips?: boolean`, `navigateOnClick?: boolean`
 - **Emits**: `eventSelect`, `calendarClick`, `eventsLoaded`
-- **Features**: FullCalendar 7 calendar with the `daygrid` and `interaction` plugins and the shared look from `calendarTheme.ts`. Loads events via API (`/eventos/calendario`). Event cache for quick access. Dynamic locale support (`useCalendarLocale`). Tooltips on hover (`EventTooltip`). Loading indicator. Configurable toolbar (compact vs full). Compact mode renders one event per day and draws its entries as dots in the `eventContent` slot
+- **Features**: FullCalendar 7 calendar with the `daygrid` and `interaction` plugins and the shared look from `calendarTheme.ts`. Loads events via API (`/eventos/calendario`). Event cache for quick access. Dynamic locale support (`useCalendarLocale`). Tooltips on hover (`EventTooltip`). Loading indicator. Configurable toolbar (compact vs full). Month view shows the time range (`18:00–21:00`) above the title; multi-day events show only the title. Each event's `aria-label` carries the time range and the title, since FullCalendar drops the visible time in day cells narrower than 60 px. Compact mode renders one event per day and draws its entries as dots in the `eventContent` slot
 
 #### EventDetailPanel
 
@@ -801,7 +801,8 @@ Located in `src/resources/js/utils/`.
 | Export | Purpose |
 |--------|---------|
 | `calendarThemePlugin` | FullCalendar classic theme plugin; also imports `skeleton.css` and the theme stylesheet (its palette is replaced by the `--fc-classic-*` mapping in `app.css`) |
-| `calendarClassOptions` | Stable `calendar-*` class hooks (title, buttons, day cells, events, ...) styled in `app.css`; shared with module calendars through `@/` |
+| `calendarClassOptions` | Stable `calendar-*` class hooks (title, buttons, day cells, events, ...) styled in `app.css`; shared with module calendars through `@/`. Events carry `calendar-event--block` (month view), `calendar-event--column` (time grid) and `calendar-event--multiday` (start and end on different venue days) |
+| `eventTimeRange(event, locale)` | Time range of a single-day timed event in the venue's time zone (`18:00–21:00`), empty for all-day and multi-day events; used for accessible names |
 
 ### csrf.ts
 

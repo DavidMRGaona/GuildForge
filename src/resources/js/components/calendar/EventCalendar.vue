@@ -7,7 +7,7 @@ import dayGridPlugin from '@fullcalendar/vue3/daygrid';
 import interactionPlugin from '@fullcalendar/vue3/interaction';
 import { useCalendarLocale } from '@/composables/useCalendarLocale';
 import { VENUE_TIMEZONE } from '@/utils/datetime';
-import { calendarClassOptions, calendarThemePlugin } from '@/utils/calendarTheme';
+import { calendarClassOptions, calendarThemePlugin, eventTimeRange } from '@/utils/calendarTheme';
 import type {
     CalendarOptions,
     EventClickInfo,
@@ -46,7 +46,7 @@ const emit = defineEmits<{
     eventsLoaded: [events: CalendarEntry[]];
 }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const calendarLocale = useCalendarLocale();
 const isLoading = ref(false);
 const error = ref<string | null>(null);
@@ -79,15 +79,15 @@ const fetchEvents = async (
 
         const data: CalendarEntry[] = await response.json();
 
+        // First venue day on screen, so long entries that started earlier still get dots
+        const firstDayKey = entryDayKey(info.startStr);
+
         // Cache entries (keyed by a source-prefixed uid) for tooltip/detail panel access.
         // In compact mode, multi-day entries are expanded into one synthetic, single-day
         // id per covered day (see expandEntriesPerDay) so every day gets a dot; those
         // synthetic ids must still resolve back to the ORIGINAL entry (real start/end),
         // not the single-day placeholder, so the tooltip/click/aria-label always reflect
         // the entry's real duration.
-        // First venue day on screen, so long entries that started earlier still get dots
-        const firstDayKey = entryDayKey(info.startStr);
-
         eventsCache.value.clear();
         if (props.compact) {
             data.forEach((entry) => {
@@ -193,7 +193,7 @@ const handleMouseLeave = (): void => {
  * Non-event activity types (e.g. game tables) are only distinguished from
  * core events by color, so keyboard/screen-reader users need a text
  * alternative independent of both the missing title and the hover-only
- * tooltip.
+ * tooltip. The label replaces the visible text, so it carries the time too.
  */
 const handleEventDidMount = (info: MountInfo<EventDisplayInfo>): void => {
     const labels = eventEntryUids(info.event)
@@ -201,9 +201,14 @@ const handleEventDidMount = (info: MountInfo<EventDisplayInfo>): void => {
         .filter((entry): entry is CalendarEntry => entry !== undefined)
         .map(entryLabel);
 
-    if (labels.length > 0) {
-        info.el.setAttribute('aria-label', labels.join('; '));
+    if (labels.length === 0) {
+        return;
     }
+
+    const time = eventTimeRange(info.event, locale.value);
+    const label = labels.join('; ');
+
+    info.el.setAttribute('aria-label', time !== '' ? `${time}, ${label}` : label);
 };
 
 const calendarOptions = computed<CalendarOptions>(() => {
