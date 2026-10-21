@@ -7,8 +7,10 @@ namespace Tests\Unit\Infrastructure\Services\Color;
 use App\Application\Services\ColorPaletteGeneratorInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\ValueObjects\ColorPalette;
+use App\Domain\ValueObjects\HexColor;
 use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 use App\Infrastructure\Services\ThemeSettingsService;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ThemeSettingsServicePaletteTest extends TestCase
@@ -195,6 +197,85 @@ final class ThemeSettingsServicePaletteTest extends TestCase
 
         $this->assertInstanceOf(ColorPalette::class, $palette);
         $this->assertEquals('neutral', $palette->name());
+    }
+
+    #[DataProvider('themeColours')]
+    public function test_text_colours_reach_aa_on_every_light_background(string $primary, string $accent): void
+    {
+        $this->useColours($primary, $accent);
+        $neutral = $this->service->getNeutralPalette();
+        $root = $this->extractRootSection($this->service->getCssVariables());
+
+        foreach (['--color-primary-link', '--color-text-muted'] as $variable) {
+            $text = $this->hexVariable($root, $variable);
+            foreach ([new HexColor('#FFFFFF'), $neutral->shade(50), $neutral->shade(100)] as $background) {
+                $this->assertNotNull($background);
+                $this->assertGreaterThanOrEqual(4.5, $text->contrastRatio($background), "{$variable} on {$background->value}");
+            }
+        }
+    }
+
+    #[DataProvider('themeColours')]
+    public function test_text_colours_reach_aa_on_every_dark_background(string $primary, string $accent): void
+    {
+        $this->useColours($primary, $accent);
+        $neutral = $this->service->getNeutralPalette();
+        $dark = $this->extractDarkSection($this->service->getCssVariables());
+
+        foreach (['--color-primary-link', '--color-text-muted'] as $variable) {
+            $text = $this->hexVariable($dark, $variable);
+            foreach ([$neutral->shade(800), $neutral->shade(900), $neutral->shade(950)] as $background) {
+                $this->assertNotNull($background);
+                $this->assertGreaterThanOrEqual(4.5, $text->contrastRatio($background), "{$variable} on {$background->value}");
+            }
+        }
+    }
+
+    public function test_muted_text_stays_lighter_than_secondary_text_in_light_mode(): void
+    {
+        $this->useColours('#DC2626', '#F59E0B');
+        $secondary = $this->service->getNeutralPalette()->shade(600);
+        $muted = $this->hexVariable($this->extractRootSection($this->service->getCssVariables()), '--color-text-muted');
+
+        $this->assertNotNull($secondary);
+        $this->assertGreaterThan($secondary->toOklch()['l'], $muted->toOklch()['l']);
+    }
+
+    /**
+     * The theme presets offered in the panel, plus the default colours.
+     *
+     * @return array<string, array{string, string}>
+     */
+    public static function themeColours(): array
+    {
+        return [
+            'default' => ['#D97706', '#0EA5E9'],
+            'dragon flames' => ['#DC2626', '#F59E0B'],
+            'elven forest' => ['#059669', '#84CC16'],
+            'ocean depths' => ['#0284C7', '#06B6D4'],
+            'royal purple' => ['#9333EA', '#EC4899'],
+            'shadow realm' => ['#475569', '#8B5CF6'],
+            'forge steel' => ['#0F766E', '#FB923C'],
+        ];
+    }
+
+    private function useColours(string $primary, string $accent): void
+    {
+        $this->settingsService->method('get')->willReturnCallback(
+            fn (string $key, mixed $default = null): mixed => match ($key) {
+                'theme_primary_base_color' => $primary,
+                'theme_accent_base_color' => $accent,
+                default => $default,
+            }
+        );
+    }
+
+    private function hexVariable(string $section, string $variable): HexColor
+    {
+        $this->assertMatchesRegularExpression('/'.preg_quote($variable, '/').':\s*#[0-9A-F]{6};/', $section, "{$variable} must be a computed colour");
+        preg_match('/'.preg_quote($variable, '/').':\s*(#[0-9A-F]{6});/', $section, $matches);
+
+        return new HexColor($matches[1]);
     }
 
     private function extractRootSection(string $css): string

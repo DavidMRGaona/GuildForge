@@ -286,6 +286,7 @@
     --color-primary-light: #fef3c7; /* amber-100 - subtle backgrounds */
     --color-primary-light-hover: #fde68a; /* amber-200 - hover for light backgrounds */
     --color-primary-dark: #92400e; /* amber-800 */
+    --color-primary-link: #b45500; /* text in the primary colour: 4.5:1 on page, surface and muted */
 
     /* Secondary Colors */
     --color-secondary: #57534e; /* stone-600 */
@@ -301,7 +302,7 @@
     /* Text Colors */
     --color-text-primary: #1c1917; /* stone-900 */
     --color-text-secondary: #57534e; /* stone-600 */
-    --color-text-muted: #a8a29e; /* stone-400 */
+    --color-text-muted: #756f6b; /* 4.5:1 on page, surface and muted (stone-400 was 2.5:1) */
     --color-text-inverted: #ffffff; /* white on dark bg */
 
     /* Border Colors */
@@ -346,6 +347,7 @@
     --color-primary-hover: #fbbf24; /* amber-400 - lighter on hover */
     --color-primary-light: #451a03; /* amber-950 - muted background */
     --color-primary-light-hover: #78350f; /* amber-900 - hover for light backgrounds in dark mode */
+    --color-primary-link: #f59e0b; /* amber-500 - 4.5:1 on page, surface and elevated */
     --color-primary-dark: #d97706; /* amber-600 */
 
     /* Secondary Colors */
@@ -362,7 +364,7 @@
     /* Text Colors - WCAG AA compliant */
     --color-text-primary: #f5f5f4; /* stone-100 - 15:1 AAA */
     --color-text-secondary: #d6d3d1; /* stone-300 - 11:1 AAA */
-    --color-text-muted: #a8a29e; /* stone-400 - 5.2:1 AA (was stone-500, failed) */
+    --color-text-muted: #a8a29e; /* stone-400 - 4.5:1 AA on page, surface and elevated */
     --color-text-inverted: #1c1917; /* stone-900 */
 
     /* Border Colors */
@@ -432,7 +434,9 @@
     color: var(--color-text-inverted);
 }
 .text-primary {
-    color: var(--color-primary);
+    /* Not --color-primary: that one is also the button background, too dark to read as text
+       in dark mode and too light in light mode for some site colours */
+    color: var(--color-primary-link, var(--color-primary));
 }
 .text-tooltip {
     color: var(--color-text-tooltip);
@@ -1168,7 +1172,10 @@ button[data-headlessui-state]:hover {
 /* The panel's editor (TipTap) stores a table's header row as the first row of <tbody>, with
    <th> cells: style it like the <thead> row the typography plugin knows (the last row keeps
    no border, as the plugin leaves it) */
-.prose :where(tbody tr:has(> th):not(:last-child)):not(:where([class~='not-prose'], [class~='not-prose'] *)) {
+.prose
+    :where(tbody tr:has(> th):not(:last-child)):not(
+        :where([class~='not-prose'], [class~='not-prose'] *)
+    ) {
     border-bottom-width: 1px;
     border-bottom-color: var(--color-border);
 }

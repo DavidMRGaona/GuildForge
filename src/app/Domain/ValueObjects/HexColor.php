@@ -165,6 +165,31 @@ final readonly class HexColor implements Stringable
     }
 
     /**
+     * The closest colour, same hue and chroma, that reaches the minimum contrast on every
+     * background: OKLCH lightness moves in small steps (darker for light backgrounds,
+     * lighter for dark ones) and stops at the first step that passes. If no step does,
+     * the end of the range (black or white) is returned.
+     *
+     * @param  list<self>  $backgrounds
+     */
+    public function readableOn(array $backgrounds, bool $lighten, float $minimum = 4.5): self
+    {
+        $oklch = $this->toOklch();
+        $step = $lighten ? 0.005 : -0.005;
+        $candidate = $this;
+
+        for ($lightness = $oklch['l']; $lightness >= 0.0 && $lightness <= 1.0; $lightness += $step) {
+            $candidate = $lightness === $oklch['l'] ? $this : self::fromOklch($lightness, $oklch['c'], $oklch['h']);
+
+            if (array_all($backgrounds, fn (self $background): bool => $candidate->contrastRatio($background) >= $minimum)) {
+                return $candidate;
+            }
+        }
+
+        return $lighten ? new self('#FFFFFF') : new self('#000000');
+    }
+
+    /**
      * Check if contrast meets WCAG AAA standard (7:1 for normal text).
      */
     public function meetsWcagAAA(self $other): bool
