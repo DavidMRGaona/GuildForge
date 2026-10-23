@@ -18,8 +18,9 @@ return [
                 'mail_notices' => 'Email notices',
             ],
             'mail_notices' => [
-                'placeholders_help' => 'Available placeholders: :lista. Leave it empty to use the default text.',
+                'placeholders_help' => 'Available placeholders: :lista. «Restore the default text» goes back to the module\'s text.',
                 'preview' => 'Preview email',
+                'restore_default' => 'Restore the default text',
                 'preview_title' => 'Preview: :label',
             ],
         ],

@@ -21,6 +21,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Locked;
@@ -79,8 +80,10 @@ final class LegalPagesSettings extends Page implements HasForms
     {
         $data = $this->loadSettings($settingsService);
 
+        // A notice without saved text shows the module's default, so the admin can start from it
         foreach ($this->mailNotices() as $notice) {
-            $data[self::noticeFieldName($notice->key)] = (string) $settingsService->get(self::noticeSettingKey($notice->key), '');
+            $saved = (string) $settingsService->get(self::noticeSettingKey($notice->key), '');
+            $data[self::noticeFieldName($notice->key)] = trim($saved) !== '' ? $saved : $notice->defaultContent;
         }
 
         $this->form->fill($data);
@@ -99,6 +102,11 @@ final class LegalPagesSettings extends Page implements HasForms
         return 'preview_mail_notice_'.sha1($noticeKey);
     }
 
+    public static function noticeRestoreActionName(string $noticeKey): string
+    {
+        return 'restore_mail_notice_'.sha1($noticeKey);
+    }
+
     public static function noticeSectionKey(string $noticeKey): string
     {
         return 'legal_mail_notice_section_'.sha1($noticeKey);
@@ -107,6 +115,22 @@ final class LegalPagesSettings extends Page implements HasForms
     private static function noticeSettingKey(string $noticeKey): string
     {
         return 'legal_mail_notice:'.$noticeKey;
+    }
+
+    /**
+     * Text to store for a notice: empty when it matches the module's default, so the site keeps
+     * following later changes of the default.
+     */
+    private static function noticeValueToStore(LegalMailNoticeDTO $notice, string $text): string
+    {
+        $text = trim($text);
+
+        return self::normaliseNoticeText($text) === self::normaliseNoticeText($notice->defaultContent) ? '' : $text;
+    }
+
+    private static function normaliseNoticeText(string $text): string
+    {
+        return trim(str_replace(["\r\n", "\r"], "\n", $text));
     }
 
     /**
@@ -134,8 +158,11 @@ final class LegalPagesSettings extends Page implements HasForms
                 ->key(self::noticeSectionKey($notice->key))
                 ->description($notice->help)
                 ->schema([
+                    // The section heading already names the notice
                     Textarea::make($field)
                         ->label($notice->label)
+                        ->hiddenLabel()
+                        ->extraInputAttributes(['aria-label' => $notice->label])
                         ->rows(8)
                         ->helperText(__('filament.pages.legal.mail_notices.placeholders_help', [
                             'lista' => implode(', ', $notice->placeholders),
@@ -143,6 +170,13 @@ final class LegalPagesSettings extends Page implements HasForms
                         ->columnSpanFull(),
                 ])
                 ->footerActions([
+                    Action::make(self::noticeRestoreActionName($notice->key))
+                        ->label(__('filament.pages.legal.mail_notices.restore_default'))
+                        ->icon('heroicon-o-arrow-uturn-left')
+                        ->color('gray')
+                        ->action(function (Set $set) use ($notice, $field): void {
+                            $set($field, $notice->defaultContent);
+                        }),
                     Action::make(self::noticePreviewActionName($notice->key))
                         ->label(__('filament.pages.legal.mail_notices.preview'))
                         ->icon('heroicon-o-eye')
@@ -262,7 +296,7 @@ final class LegalPagesSettings extends Page implements HasForms
         foreach ($this->mailNotices() as $notice) {
             $settingsService->set(
                 self::noticeSettingKey($notice->key),
-                trim((string) ($formData[self::noticeFieldName($notice->key)] ?? '')),
+                self::noticeValueToStore($notice, (string) ($formData[self::noticeFieldName($notice->key)] ?? '')),
             );
         }
 

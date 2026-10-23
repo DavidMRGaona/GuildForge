@@ -1423,7 +1423,7 @@ public function toMail(object $notifiable): MailMessage
 }
 ```
 
-- The text is plain text: blank lines separate paragraphs. Empty means the default text.
+- The text is plain text: blank lines separate paragraphs. Empty means the default text: the field shows the default while nothing is saved, saving it unchanged stores an empty value (so the site follows later changes of the default) and *Restaurar texto por defecto* puts it back in the field.
 - When building the email, call `LegalMailNoticeServiceInterface::paragraphs($key, [':site' => $site, …])` and escape each paragraph when rendering it.
 - `LegalMailNoticeServiceInterface::entity()` returns the data controller (`name`, `email`, `dpoEmail`) from the *Datos de la asociación* tab; the name falls back to the site name.
 - The preview shows the whole email with the text in the form, even if it is not saved yet. Use sample data, never real people.
