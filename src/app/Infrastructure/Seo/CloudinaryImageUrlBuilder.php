@@ -25,11 +25,12 @@ final readonly class CloudinaryImageUrlBuilder
 
     /**
      * Large preview image. JPG on purpose: WhatsApp does not reliably render
-     * WebP/AVIF, which f_auto may serve.
+     * WebP/AVIF, which f_auto may serve. Uniform borders (a poster uploaded with
+     * padding bands) are trimmed first, as the client-side card and hero do.
      */
     public function openGraph(string $publicId): ?string
     {
-        return $this->build($publicId, 'w_'.self::OG_WIDTH.',h_'.self::OG_HEIGHT.',c_fill,g_auto,q_auto,f_jpg');
+        return $this->build($publicId, 'e_trim/w_'.self::OG_WIDTH.',h_'.self::OG_HEIGHT.',c_fill,g_auto,q_auto,f_jpg');
     }
 
     /**

@@ -90,7 +90,7 @@ final class SeoMetadataFactoryTest extends TestCase
         $this->assertSame('https://tolerol.com/eventos/club', $seo->canonicalUrl);
         $this->assertSame('15 de enero de 2026, 18:00 · La Taberna · Traed vuestro libro', $seo->description);
         $this->assertSame(
-            'https://res.cloudinary.com/demo/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/guildforge/events/2026/01/club',
+            'https://res.cloudinary.com/demo/image/upload/e_trim/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/guildforge/events/2026/01/club',
             $seo->image?->url,
         );
         $this->assertTrue($seo->image->isLarge);
