@@ -57,7 +57,7 @@ final class PageSeoTest extends TestCase
         $response->assertSee('<meta property="og:title" content="Club de lectura" data-seo-server>', false);
         // The query string (fbclid) is dropped from the canonical URL
         $response->assertSee('<link rel="canonical" href="'.url('/eventos/club-de-lectura').'" data-seo-server>', false);
-        $response->assertSee('<meta property="og:image" content="https://res.cloudinary.com/demo/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/guildforge/events/2026/01/club" data-seo-server>', false);
+        $response->assertSee('<meta property="og:image" content="https://res.cloudinary.com/demo/image/upload/e_trim/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/guildforge/events/2026/01/club" data-seo-server>', false);
         $response->assertSee('content="15 de enero de 2026, 18:00 · La Taberna · Traed vuestro libro"', false);
         $response->assertSee('"@type":"Event"', false);
         $response->assertSee('"price":"0.00"', false);

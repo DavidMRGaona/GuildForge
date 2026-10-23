@@ -44,6 +44,11 @@ interface CloudinaryTransformations {
     gravity?: 'auto' | 'face' | 'center';
     /** Keep every frame of an animated image (`fl_animated`), whatever format `f_auto` picks. */
     animated?: boolean;
+    /**
+     * Trim uniform borders (`e_trim`) before resizing: a poster uploaded with padding bands
+     * would otherwise keep them through `c_fill`. A chained step, so it runs first.
+     */
+    trim?: boolean;
 }
 
 /** Marker the backend adds before the extension of animated avatars (`AvatarPath::ANIMATED_SUFFIX`). */
@@ -111,16 +116,16 @@ export function buildImageUrl(
     if (!transformations.format) parts.push('f_auto');
     if (transformations.animated) parts.push('fl_animated');
 
-    const transformationString = parts.join(',');
+    const transformationString = (transformations.trim ? 'e_trim/' : '') + parts.join(',');
     return `https://res.cloudinary.com/${cloudName}/image/upload/${transformationString}/${normalizedId}`;
 }
 
 // Presets
 export const buildCardImageUrl = (publicId: string | null | undefined): string | null =>
-    buildImageUrl(publicId, { width: 600, height: 400, crop: 'fill' });
+    buildImageUrl(publicId, { width: 600, height: 400, crop: 'fill', trim: true });
 
 export const buildHeroImageUrl = (publicId: string | null | undefined): string | null =>
-    buildImageUrl(publicId, { width: 1200, height: 600, crop: 'fill' });
+    buildImageUrl(publicId, { width: 1200, height: 600, crop: 'fill', trim: true });
 
 export const buildAvatarUrl = (publicId: string | null | undefined, size = 100): string | null =>
     buildImageUrl(publicId, {

@@ -15,9 +15,17 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         $builder = new CloudinaryImageUrlBuilder('demo', 'guildforge');
 
         $this->assertSame(
-            'https://res.cloudinary.com/demo/image/upload/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/guildforge/events/2026/01/abc',
+            'https://res.cloudinary.com/demo/image/upload/e_trim/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/guildforge/events/2026/01/abc',
             $builder->openGraph('events/2026/01/abc.jpg'),
         );
+    }
+
+    public function test_open_graph_trims_uniform_borders_before_cropping(): void
+    {
+        $url = (string) (new CloudinaryImageUrlBuilder('demo', ''))->openGraph('campaigns/poster.png');
+
+        // A poster uploaded with padding bands would keep them through c_fill; e_trim must run first
+        $this->assertStringContainsString('/upload/e_trim/w_1200,', $url);
     }
 
     public function test_dark_logo_is_padded_on_black(): void
