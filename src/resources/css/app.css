@@ -359,7 +359,7 @@
     --color-bg-page: #252220; /* neutral-950 - main background (was #1C1917) */
     --color-bg-surface: #302d2a; /* neutral-900 - cards (was #292524) */
     --color-bg-elevated: #3d3936; /* neutral-800 - modals, dropdowns (was #44403C) */
-    --color-bg-muted: #302d2a; /* neutral-900 - subtle sections (same as surface) */
+    --color-bg-muted: #3d3936; /* neutral-800 - subtle sections, one step above the surface */
 
     /* Text Colors - WCAG AA compliant */
     --color-text-primary: #f5f5f4; /* stone-100 - 15:1 AAA */

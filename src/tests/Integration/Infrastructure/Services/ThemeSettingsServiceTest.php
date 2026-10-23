@@ -159,6 +159,21 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertStringContainsString('--color-text-primary:', $darkModeSection);
     }
 
+    public function test_muted_background_stands_out_from_the_surface_in_both_modes(): void
+    {
+        $css = $this->service->getCssVariables();
+
+        foreach (['light' => $this->extractLightModeSection($css), 'dark' => $this->extractDarkModeSection($css)] as $mode => $section) {
+            $this->assertMatchesRegularExpression('/--color-bg-surface:\s*([^;]+);/', $section);
+            $this->assertMatchesRegularExpression('/--color-bg-muted:\s*([^;]+);/', $section);
+            preg_match('/--color-bg-surface:\s*([^;]+);/', $section, $surface);
+            preg_match('/--color-bg-muted:\s*([^;]+);/', $section, $muted);
+
+            // Boxes and pills drawn with bg-muted on a card vanish when both resolve to the same colour
+            $this->assertNotSame(trim($surface[1]), trim($muted[1]), "bg-muted equals bg-surface in {$mode} mode");
+        }
+    }
+
     public function test_get_css_variables_includes_semantic_colors(): void
     {
         $css = $this->service->getCssVariables();

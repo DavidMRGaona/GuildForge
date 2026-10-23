@@ -153,7 +153,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           /* Surface variables (Dark mode) */
           --color-bg-page: var(--color-neutral-950);
           --color-bg-surface: var(--color-neutral-900);
-          --color-bg-muted: var(--color-neutral-900);
+          --color-bg-muted: var(--color-neutral-800);
           --color-bg-elevated: var(--color-neutral-800);
 
           /* Text variables (Dark mode) */
