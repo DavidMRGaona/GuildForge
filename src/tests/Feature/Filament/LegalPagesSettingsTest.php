@@ -44,8 +44,9 @@ final class LegalPagesSettingsTest extends TestCase
         Livewire::test(LegalPagesSettings::class)
             ->assertSee('Avisos en correos')
             ->assertSee('Aviso de prueba')
-            ->assertSee('Huecos disponibles: :site, :days. Déjalo vacío para usar el texto por defecto.')
-            ->assertFormSet([$field => ''])
+            ->assertSee('Huecos disponibles: :site, :days. «Restaurar texto por defecto» vuelve al texto del módulo.')
+            ->assertSee('Restaurar texto por defecto')
+            ->assertFormSet([$field => 'Texto por defecto'])
             ->fillForm([$field => "Texto propio\n\nSegundo párrafo"])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -56,6 +57,94 @@ final class LegalPagesSettingsTest extends TestCase
         // Saving again with the text kept must not blank it, and reloading shows it.
         Livewire::test(LegalPagesSettings::class)
             ->assertFormSet([$field => "Texto propio\n\nSegundo párrafo"]);
+    }
+
+    public function test_the_field_shows_the_default_when_nothing_is_saved(): void
+    {
+        $this->registerNotice();
+
+        app(SettingsServiceInterface::class)->set('legal_mail_notice:'.self::KEY, '');
+
+        Livewire::test(LegalPagesSettings::class)
+            ->assertFormSet([LegalPagesSettings::noticeFieldName(self::KEY) => 'Texto por defecto']);
+    }
+
+    public function test_saving_the_default_unchanged_stores_an_empty_value(): void
+    {
+        $this->registerNotice(defaultContent: "Primer párrafo.\n\nSegundo párrafo.");
+
+        Livewire::test(LegalPagesSettings::class)
+            ->assertFormSet([LegalPagesSettings::noticeFieldName(self::KEY) => "Primer párrafo.\n\nSegundo párrafo."])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('', app(SettingsServiceInterface::class)->get('legal_mail_notice:'.self::KEY));
+    }
+
+    public function test_saving_the_default_with_other_line_endings_stores_an_empty_value(): void
+    {
+        $this->registerNotice(defaultContent: "Primer párrafo.\n\nSegundo párrafo.");
+
+        Livewire::test(LegalPagesSettings::class)
+            ->fillForm([LegalPagesSettings::noticeFieldName(self::KEY) => "  Primer párrafo.\r\n\r\nSegundo párrafo.\r\n"])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('', app(SettingsServiceInterface::class)->get('legal_mail_notice:'.self::KEY));
+    }
+
+    public function test_saving_an_empty_field_stores_an_empty_value(): void
+    {
+        $this->registerNotice();
+        $settings = app(SettingsServiceInterface::class);
+        $settings->set('legal_mail_notice:'.self::KEY, 'Guardado');
+
+        Livewire::test(LegalPagesSettings::class)
+            ->fillForm([LegalPagesSettings::noticeFieldName(self::KEY) => '   '])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('', $settings->get('legal_mail_notice:'.self::KEY));
+    }
+
+    public function test_saving_another_text_stores_it(): void
+    {
+        $this->registerNotice();
+
+        Livewire::test(LegalPagesSettings::class)
+            ->fillForm([LegalPagesSettings::noticeFieldName(self::KEY) => '  Texto por defecto, cambiado  '])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('Texto por defecto, cambiado', app(SettingsServiceInterface::class)->get('legal_mail_notice:'.self::KEY));
+    }
+
+    public function test_the_restore_action_puts_the_default_back_without_saving(): void
+    {
+        $this->registerNotice();
+        $field = LegalPagesSettings::noticeFieldName(self::KEY);
+        $settings = app(SettingsServiceInterface::class);
+        $settings->set('legal_mail_notice:'.self::KEY, 'Guardado');
+
+        Livewire::test(LegalPagesSettings::class)
+            ->assertFormSet([$field => 'Guardado'])
+            ->fillForm([$field => 'Texto sin guardar'])
+            ->callAction($this->restoreAction())
+            ->assertFormSet([$field => 'Texto por defecto']);
+
+        $this->assertSame('Guardado', $settings->get('legal_mail_notice:'.self::KEY));
+    }
+
+    public function test_the_notice_label_is_shown_once(): void
+    {
+        $this->registerNotice();
+
+        $html = Livewire::test(LegalPagesSettings::class)->html();
+
+        // The section heading names the notice; the field keeps its name for screen readers only
+        $this->assertStringContainsString('aria-label="Aviso de prueba"', $html);
+        $this->assertSame(1, preg_match_all('/<h2[^>]*>\s*Aviso de prueba\s*<\/h2>/u', $html));
+        $this->assertSame(0, preg_match_all('/<label(?![^>]*fi-sr-only)[^>]*>\s*Aviso de prueba\s*</u', $html));
     }
 
     public function test_the_other_tabs_do_not_blank_the_notices_when_the_registry_is_empty(): void
@@ -154,6 +243,12 @@ final class LegalPagesSettingsTest extends TestCase
         $this->assertMatchesRegularExpression('/<iframe[^>]*style="[^"]*min-height: \d+rem[^"]*"/', $content);
     }
 
+    private function restoreAction(): TestAction
+    {
+        return TestAction::make(LegalPagesSettings::noticeRestoreActionName(self::KEY))
+            ->schemaComponent(LegalPagesSettings::noticeSectionKey(self::KEY));
+    }
+
     private function previewAction(): TestAction
     {
         return TestAction::make(LegalPagesSettings::noticePreviewActionName(self::KEY))
@@ -163,14 +258,14 @@ final class LegalPagesSettingsTest extends TestCase
     /**
      * @param  (Closure(string): string)|null  $preview
      */
-    private function registerNotice(?Closure $preview = null): void
+    private function registerNotice(?Closure $preview = null, string $defaultContent = 'Texto por defecto'): void
     {
         app(LegalMailNoticeRegistryInterface::class)->register(new LegalMailNoticeDTO(
             key: self::KEY,
             module: 'fake-module',
             label: 'Aviso de prueba',
             help: 'Ayuda',
-            defaultContent: 'Texto por defecto',
+            defaultContent: $defaultContent,
             placeholders: [':site', ':days'],
             preview: $preview ?? static fn (string $content): string => '<p class="preview">'.$content.'</p>',
         ));

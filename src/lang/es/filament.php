@@ -40,8 +40,9 @@ return [
                 'mail_notices' => 'Avisos en correos',
             ],
             'mail_notices' => [
-                'placeholders_help' => 'Huecos disponibles: :lista. Déjalo vacío para usar el texto por defecto.',
+                'placeholders_help' => 'Huecos disponibles: :lista. «Restaurar texto por defecto» vuelve al texto del módulo.',
                 'preview' => 'Vista previa del correo',
+                'restore_default' => 'Restaurar texto por defecto',
                 'preview_title' => 'Vista previa: :label',
             ],
             'fields' => [
