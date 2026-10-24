@@ -55,6 +55,20 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
         $this->assertEquals(1, $listener->tries);
     }
 
+    public function test_enabling_a_module_in_tests_never_builds_its_assets(): void
+    {
+        // Module suites enable their module in every test, on a sync queue: a build there runs
+        // npm in the module directory each time, and fails over and over in CI without host packages
+        $this->createTestModuleWithComponentsAndConfig('test-module');
+        $this->createModuleRecord('test-module');
+        Log::spy();
+
+        event(new ModuleEnabled('fake-id', 'test-module'));
+
+        Log::shouldNotHaveReceived('info', ['Building assets for module: test-module']);
+        $this->assertDirectoryDoesNotExist($this->testModulesPath.'/test-module/node_modules');
+    }
+
     public function test_handle_logs_warning_when_module_not_found(): void
     {
         Log::shouldReceive('warning')
@@ -147,6 +161,21 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
         $listener->handle($event);
 
         $this->assertTrue(true);
+    }
+
+    private function createModuleRecord(string $name): void
+    {
+        ModuleModel::create([
+            'name' => $name,
+            'path' => $this->testModulesPath.'/'.$name,
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'description' => 'Test module',
+            'author' => 'Test Author',
+            'status' => ModuleStatus::Enabled->value,
+            'requires' => null,
+            'enabled_at' => now(),
+        ]);
     }
 
     private function createTestModule(string $name): void
