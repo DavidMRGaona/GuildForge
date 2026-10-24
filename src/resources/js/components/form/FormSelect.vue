@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Check, ChevronDown } from '@lucide/vue';
 import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue';
 
 interface Option {
@@ -65,15 +66,10 @@ function handleChange(value: string | number | null): void {
                 {{ getSelectedLabel() }}
             </span>
             <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                <svg
+                <ChevronDown
                     class="h-5 w-5 text-base-muted transition-transform ui-open:rotate-180"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
+                    aria-hidden="true"
+                />
             </span>
         </ListboxButton>
 
@@ -125,13 +121,7 @@ function handleChange(value: string | number | null): void {
                             v-if="selected"
                             class="absolute inset-y-0 right-0 flex items-center pr-4 text-primary"
                         >
-                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                    clip-rule="evenodd"
-                                />
-                            </svg>
+                            <Check class="h-5 w-5" aria-hidden="true" />
                         </span>
                     </li>
                 </ListboxOption>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Info, Search } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Event, Article } from '@/types';
@@ -49,40 +50,14 @@ function pluralize(count: number, key: string): string {
             class="rounded-lg bg-primary-50 p-4 text-primary-800 dark:bg-primary-900/20 dark:text-primary-300"
         >
             <p class="flex items-center gap-2">
-                <svg
-                    class="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                </svg>
+                <Info class="h-5 w-5" aria-hidden="true" />
                 {{ t('search.minCharsWarning') }}
             </p>
         </div>
 
         <!-- No Results -->
         <div v-else-if="query && !hasResults" class="rounded-lg bg-muted p-8 text-center">
-            <svg
-                class="mx-auto mb-4 h-16 w-16 text-neutral-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-            </svg>
+            <Search class="mx-auto mb-4 h-16 w-16 text-neutral-400" aria-hidden="true" />
             <p class="text-lg text-base-secondary">
                 {{ t('search.noResults', { query }) }}
             </p>

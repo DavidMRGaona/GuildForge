@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ChevronLeft, FileText } from '@lucide/vue';
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -34,20 +35,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ar
                 :href="routes.articles.index"
                 class="inline-flex items-center rounded text-sm text-base-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-page"
             >
-                <svg
-                    class="mr-1 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 19l-7-7 7-7"
-                    />
-                </svg>
+                <ChevronLeft class="mr-1 h-4 w-4" aria-hidden="true" />
                 {{ t('common.back') }}
             </Link>
         </div>
@@ -63,20 +51,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ar
                 v-else
                 class="flex h-48 w-full items-center justify-center bg-linear-to-br from-primary-400 to-neutral-600 sm:h-64 md:h-80 lg:h-96"
             >
-                <svg
-                    class="h-24 w-24 text-white/50"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                </svg>
+                <FileText class="h-24 w-24 text-white/50" aria-hidden="true" />
             </div>
 
             <div class="p-6 sm:p-8">

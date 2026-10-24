@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { FileText, Image } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -84,20 +85,7 @@ function openLightbox(index: number): void {
                 role="complementary"
                 class="rounded-lg border-2 border-dashed border-default p-8 text-center"
             >
-                <svg
-                    class="mx-auto h-8 w-8 text-base-muted"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                </svg>
+                <FileText class="mx-auto h-8 w-8 text-base-muted" aria-hidden="true" />
                 <p class="mt-4 text-base-muted">
                     {{ t('home.noArticles') }}
                 </p>
@@ -193,20 +181,7 @@ function openLightbox(index: number): void {
                 v-else-if="props.featuredGallery && displayPhotos.length === 0"
                 class="rounded-lg border border-default bg-muted p-8 text-center"
             >
-                <svg
-                    class="mx-auto h-12 w-12 text-base-muted"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                </svg>
+                <Image class="mx-auto h-12 w-12 text-base-muted" aria-hidden="true" />
                 <h3 class="mt-4 text-lg font-medium text-base-primary">
                     {{ props.featuredGallery.title }}
                 </h3>
@@ -230,20 +205,7 @@ function openLightbox(index: number): void {
                 role="complementary"
                 class="rounded-lg border-2 border-dashed border-default p-8 text-center"
             >
-                <svg
-                    class="mx-auto h-8 w-8 text-base-muted"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                </svg>
+                <Image class="mx-auto h-8 w-8 text-base-muted" aria-hidden="true" />
                 <p class="mt-4 text-base-muted">
                     {{ t('home.noGallery') }}
                 </p>

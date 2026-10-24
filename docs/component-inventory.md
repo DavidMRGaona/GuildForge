@@ -2,7 +2,7 @@
 
 > Updated: 2026-10-13 | Project: GuildForge core 3.5.1
 
-Icons come from `@lucide/vue` (mapped in `utils/icons.ts`).
+Icons come from `@lucide/vue` (dynamic ones mapped in `utils/icons.ts`). Components import the icon they need instead of inline SVGs; only the brand logos in `SocialLinks` stay as SVG, because Lucide has no brand icons. Modules reuse `LoadingSpinner` for loading states.
 
 ---
 
@@ -191,7 +191,7 @@ Located in `src/resources/js/components/`.
 
 - **File**: `ui/LoadingSpinner.vue`
 - **Props**: `size?: 'sm' | 'md' | 'lg'`, `color?: string` (default: `'text-primary'`)
-- **Features**: Animated SVG spinner with `role="status"` and hidden text for screen readers
+- **Features**: Spinning `LoaderCircle` (Lucide) with `role="status"` and hidden text for screen readers
 
 #### TagBadge
 
@@ -235,7 +235,7 @@ Located in `src/resources/js/components/`.
 
 - **File**: `ui/ImagePlaceholder.vue`
 - **Props**: `variant: 'event' | 'article' | 'gallery'`, `height?: string`, `iconSize?: string`
-- **Features**: Image placeholder with gradient and an SVG icon based on the content type
+- **Features**: Image placeholder with gradient and a Lucide icon based on the content type (Calendar, FileText, Image)
 
 #### SocialLinks
 

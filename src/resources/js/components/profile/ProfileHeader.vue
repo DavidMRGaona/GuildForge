@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Calendar, Camera, UserRound } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -88,17 +89,11 @@ function uploadAvatar(): void {
                         class="h-full w-full object-cover"
                     />
                     <!-- The silhouette spans y 5-24 of its 24-unit box: the shifted viewBox centres it -->
-                    <svg
+                    <UserRound
                         v-else
                         class="h-12 w-12 text-neutral-400 sm:h-16 sm:w-16"
-                        fill="currentColor"
-                        viewBox="0 2.5 24 24"
                         aria-hidden="true"
-                    >
-                        <path
-                            d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z"
-                        />
-                    </svg>
+                    />
 
                     <!-- Hover overlay -->
                     <div
@@ -111,27 +106,11 @@ function uploadAvatar(): void {
                             class="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent"
                         />
                         <!-- Camera icon -->
-                        <svg
+                        <Camera
                             v-else
                             class="h-8 w-8 text-white sm:h-10 sm:w-10"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
                             aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                            />
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                        </svg>
+                        />
                     </div>
                 </button>
 
@@ -155,20 +134,7 @@ function uploadAvatar(): void {
                     <p
                         class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-neutral-200 px-3 py-1 text-sm text-base-secondary dark:bg-neutral-700"
                     >
-                        <svg
-                            class="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                        </svg>
+                        <Calendar class="h-4 w-4" aria-hidden="true" />
                         {{ t('auth.profile.memberSince', { date: memberSinceDate }) }}
                     </p>
                 </div>

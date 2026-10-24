@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Minus, Plus } from '@lucide/vue';
 import { computed } from 'vue';
 
 const props = withDefaults(
@@ -83,15 +84,7 @@ function handleInput(event: Event): void {
             :class="[error ? 'border-error' : 'border-default']"
             @click="decrement"
         >
-            <svg
-                class="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
-            </svg>
+            <Minus class="h-4 w-4" aria-hidden="true" />
         </button>
 
         <!-- Number input -->
@@ -125,15 +118,7 @@ function handleInput(event: Event): void {
             :class="[error ? 'border-error' : 'border-default']"
             @click="increment"
         >
-            <svg
-                class="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
+            <Plus class="h-4 w-4" aria-hidden="true" />
         </button>
     </div>
 </template>

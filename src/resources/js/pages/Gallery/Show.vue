@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ChevronLeft, Image } from '@lucide/vue';
 import { computed, defineAsyncComponent } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -44,14 +45,7 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
                 :href="routes.gallery.index"
                 class="inline-flex items-center text-sm text-base-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded dark:focus:ring-offset-page"
             >
-                <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 19l-7-7 7-7"
-                    />
-                </svg>
+                <ChevronLeft class="mr-1 h-4 w-4" aria-hidden="true" />
                 {{ t('common.back') }}
             </Link>
         </div>
@@ -128,19 +122,10 @@ function getPhotoThumbnailUrl(photo: Photo): string | null {
                 </div>
 
                 <div v-else class="py-12 text-center">
-                    <svg
+                    <Image
                         class="mx-auto h-12 w-12 text-neutral-400 dark:text-neutral-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                    </svg>
+                        aria-hidden="true"
+                    />
                     <h3 class="mt-4 text-lg font-medium text-base-primary">
                         {{ t('common.noResults') }}
                     </h3>

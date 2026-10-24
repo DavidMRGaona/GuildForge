@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Calendar, ChevronLeft, Clock, Download, MapPin } from '@lucide/vue';
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -34,20 +35,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                 :href="routes.events.index"
                 class="inline-flex items-center text-sm text-base-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-page"
             >
-                <svg
-                    class="mr-1 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 19l-7-7 7-7"
-                    />
-                </svg>
+                <ChevronLeft class="mr-1 h-4 w-4" aria-hidden="true" />
                 {{ t('common.back') }}
             </Link>
         </div>
@@ -63,20 +51,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                 v-else
                 class="flex h-48 w-full items-center justify-center bg-gradient-to-br from-primary-400 to-primary-600 sm:h-64 md:h-80 lg:h-96"
             >
-                <svg
-                    class="h-24 w-24 text-white/50"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                </svg>
+                <Calendar class="h-24 w-24 text-white/50" aria-hidden="true" />
             </div>
 
             <div class="p-6 sm:p-8">
@@ -117,20 +92,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                 <div class="mb-6 flex flex-col gap-3 text-base-secondary sm:flex-row sm:gap-6">
                     <div class="flex items-center">
                         <span class="sr-only">{{ t('events.date') }}:</span>
-                        <svg
-                            class="mr-2 h-5 w-5 text-primary"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                        </svg>
+                        <Calendar class="mr-2 h-5 w-5 text-primary" aria-hidden="true" />
                         <span>{{
                             formatDateRange(props.event.startDate, props.event.endDate)
                         }}</span>
@@ -138,20 +100,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
 
                     <div class="flex items-center">
                         <span class="sr-only">{{ t('events.schedule') }}:</span>
-                        <svg
-                            class="mr-2 h-5 w-5 text-primary"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                        </svg>
+                        <Clock class="mr-2 h-5 w-5 text-primary" aria-hidden="true" />
                         <span>{{
                             formatSchedule(props.event.startDate, props.event.endDate)
                         }}</span>
@@ -159,26 +108,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
 
                     <div v-if="props.event.location" class="flex items-center">
                         <span class="sr-only">{{ t('events.location') }}:</span>
-                        <svg
-                            class="mr-2 h-5 w-5 text-primary"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                            />
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                        </svg>
+                        <MapPin class="mr-2 h-5 w-5 text-primary" aria-hidden="true" />
                         <span>{{ props.event.location }}</span>
                     </div>
                 </div>
@@ -223,20 +153,10 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                                 rel="noopener noreferrer"
                                 class="group flex items-start gap-3"
                             >
-                                <svg
+                                <Download
                                     class="mt-0.5 h-5 w-5 shrink-0 text-primary group-hover:text-primary-700"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
                                     aria-hidden="true"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-                                    />
-                                </svg>
+                                />
                                 <div>
                                     <span
                                         class="font-medium text-primary group-hover:text-primary-700 group-hover:underline"

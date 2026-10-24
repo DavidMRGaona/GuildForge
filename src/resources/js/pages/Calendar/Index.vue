@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { X } from '@lucide/vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CalendarEntry } from '@/types/models';
@@ -174,19 +175,7 @@ const closeMobileModal = (): void => {
                                 @click="closeMobileModal"
                             >
                                 <span class="sr-only">{{ t('buttons.close') }}</span>
-                                <svg
-                                    class="h-5 w-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
+                                <X class="h-5 w-5" aria-hidden="true" />
                             </button>
                         </div>
 

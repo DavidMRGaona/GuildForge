@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Check } from '@lucide/vue';
 import { computed } from 'vue';
 
 const props = withDefaults(
@@ -65,20 +66,12 @@ function toggle(): void {
             ]"
         >
             <!-- Checkmark with animation -->
-            <svg
-                class="h-3 w-3 transition-all duration-150"
+            <Check
+                class="h-3 w-3 transition-all duration-150 text-white"
                 :class="modelValue ? 'opacity-100 scale-100' : 'opacity-0 scale-0'"
-                viewBox="0 0 12 12"
-                fill="none"
-            >
-                <path
-                    d="M2 6l3 3 5-6"
-                    stroke="white"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-            </svg>
+                :stroke-width="3"
+                aria-hidden="true"
+            />
         </div>
 
         <!-- Label -->
