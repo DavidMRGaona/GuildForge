@@ -50,6 +50,7 @@ jobs:
           ISSUE_ID: ${{ github.event.issue.node_id }}
           ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
           ISSUE_AUTHOR: ${{ github.event.issue.author_association }}
+          LABEL: ${{ github.event.label.name }}
           STATE_REASON: ${{ github.event.issue.state_reason }}
           PR_ID: ${{ github.event.pull_request.node_id }}
         run: |
@@ -91,15 +92,15 @@ jobs:
               | jq -r --arg project "$PROJECT_ID" '.data.node.projectItems.nodes[] | select(.project.id == $project) | .id'
           }
 
-          status_of() {
+          value_of() {
             gh api graphql -f query='
-              query($item: ID!) {
+              query($item: ID!, $field: String!) {
                 node(id: $item) {
                   ... on ProjectV2Item {
-                    fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+                    fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue { name } }
                   }
                 }
-              }' -f item="$1" --jq '.data.node.fieldValueByName.name // ""'
+              }' -f item="$1" -f field="$2" --jq '.data.node.fieldValueByName.name // ""'
           }
 
           set_option() {
@@ -141,12 +142,17 @@ jobs:
                   fi
                   item=$(add_item "$ISSUE_ID")
                   set_option "$item" Módulo "$MODULE"
-                  if jq -e 'index("technical")' <<<"$ISSUE_LABELS" >/dev/null; then
+                  # Tipo comes from the labels while it is empty; afterwards only adding «technical» changes it
+                  if [ "$LABEL" = "technical" ]; then
                     set_option "$item" Tipo Técnico
-                  elif jq -e 'index("bug") or index("enhancement")' <<<"$ISSUE_LABELS" >/dev/null; then
-                    set_option "$item" Tipo Funcional
+                  elif [ -z "$(value_of "$item" Tipo)" ]; then
+                    if jq -e 'index("technical")' <<<"$ISSUE_LABELS" >/dev/null; then
+                      set_option "$item" Tipo Técnico
+                    elif jq -e 'index("bug") or index("enhancement")' <<<"$ISSUE_LABELS" >/dev/null; then
+                      set_option "$item" Tipo Funcional
+                    fi
                   fi
-                  if [ -z "$(status_of "$item")" ]; then
+                  if [ -z "$(value_of "$item" Status)" ]; then
                     set_option "$item" Status Pendiente
                   fi
                   ;;
@@ -162,7 +168,7 @@ jobs:
                 if [ -z "$item" ]; then
                   continue
                 fi
-                current=$(status_of "$item")
+                current=$(value_of "$item" Status)
                 if [ "$current" != "Hecho" ] && [ "$current" != "En curso" ]; then
                   set_option "$item" Status "En curso"
                 fi
