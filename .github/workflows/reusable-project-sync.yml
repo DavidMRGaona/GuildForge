@@ -6,6 +6,7 @@ name: Reusable project sync
 #   issues from people without write access wait until someone adds the label «approved»
 # - a pull request that closes issues («Closes #12», also across repositories) moves them to «En curso»
 # - an issue closed as completed goes to «Hecho»; a reopened one back to «Pendiente»
+# - when the last open issue of a Hito is closed, a project status update reports it (once per Hito)
 # Only issues already in the project are moved. «En diseño» is set by hand.
 
 on:
@@ -189,3 +190,124 @@ jobs:
               done
               ;;
           esac
+
+      # Runs after the card has moved, so a Hito whose last issue was just closed is complete
+      - name: Post a status update when a Hito is complete
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        env:
+          GH_TOKEN: ${{ secrets.project_token }}
+          OWNER: ${{ inputs.project_owner }}
+          NUMBER: ${{ inputs.project_number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          STATE_REASON: ${{ github.event.issue.state_reason }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$GH_TOKEN" ]; then
+            exit 0
+          fi
+
+          items='[]'
+          cursor=''
+          while :; do
+            page=$(gh api graphql -f query='
+              query($owner: String!, $number: Int!, $after: String) {
+                user(login: $owner) {
+                  projectV2(number: $number) {
+                    id
+                    items(first: 100, after: $after) {
+                      pageInfo { hasNextPage endCursor }
+                      nodes {
+                        hito: fieldValueByName(name: "Hito") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+                        module: fieldValueByName(name: "Módulo") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+                        start: fieldValueByName(name: "Inicio") { ... on ProjectV2ItemFieldDateValue { date } }
+                        target: fieldValueByName(name: "Objetivo") { ... on ProjectV2ItemFieldDateValue { date } }
+                        content { ... on Issue { title number url state stateReason repository { name } } }
+                      }
+                    }
+                  }
+                }
+              }' -f owner="$OWNER" -F number="$NUMBER" ${cursor:+-f after="$cursor"})
+            PROJECT_ID=$(jq -r '.data.user.projectV2.id' <<<"$page")
+            items=$(jq -c --argjson acc "$items" '$acc + .data.user.projectV2.items.nodes' <<<"$page")
+            [ "$(jq -r '.data.user.projectV2.items.pageInfo.hasNextPage' <<<"$page")" = "true" ] || break
+            cursor=$(jq -r '.data.user.projectV2.items.pageInfo.endCursor' <<<"$page")
+          done
+
+          # Issues only, with the closed issue taken as closed even if the API still lags behind the event
+          cards=$(jq -c --arg url "$ISSUE_URL" --arg reason "$(tr '[:lower:]' '[:upper:]' <<<"$STATE_REASON")" '
+            map(select(.content.url != null) | {
+              hito: .hito.name, module: (.module.name // .content.repository.name), start: .start.date, target: .target.date,
+              title: .content.title, number: .content.number, url: .content.url, state: .content.state, reason: .content.stateReason
+            } | if .url == $url then .state = "CLOSED" | .reason = $reason else . end)' <<<"$items")
+
+          hito=$(jq -r --arg url "$ISSUE_URL" '.[] | select(.url == $url) | .hito // ""' <<<"$cards")
+          if [ -z "$hito" ]; then
+            echo "The issue has no Hito"
+            exit 0
+          fi
+          open=$(jq --arg h "$hito" 'map(select(.hito == $h and .state != "CLOSED")) | length' <<<"$cards")
+          if [ "$open" != "0" ]; then
+            echo "«$hito» still has $open open cards"
+            exit 0
+          fi
+
+          heading="**Hito cerrado: $hito**"
+          posted=$(gh api graphql -f query='
+            query($owner: String!, $number: Int!) {
+              user(login: $owner) { projectV2(number: $number) { statusUpdates(first: 100) { nodes { body } } } }
+            }' -f owner="$OWNER" -F number="$NUMBER" \
+            | jq --arg h "$heading" '[.data.user.projectV2.statusUpdates.nodes[].body | select(startswith($h))] | length')
+          if [ "$posted" != "0" ]; then
+            echo "«$hito» already has its status update"
+            exit 0
+          fi
+
+          today=$(date -u +%F)
+          update=$(jq -r --arg h "$hito" --arg heading "$heading" --arg today "$today" '
+            def es: split("-") as [$y, $m, $d]
+              | "\($d | tonumber) \(["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][($m | tonumber) - 1]) \($y)";
+            def day: . + "T00:00:00Z" | fromdateiso8601 / 86400;
+            def plural($n; $one; $many): if $n == 1 then "1 \($one)" else "\($n) \($many)" end;
+            def list: map("- [\(.module) #\(.number)](\(.url)) \(.title)") | join("\n");
+            map(select(.hito == $h)) as $done
+            | ($done | map(.target // empty) | max) as $target
+            | ($done | map(select(.reason == "COMPLETED"))) as $completed
+            | ($done | map(select(.reason != "COMPLETED"))) as $dropped
+            | (map(select(.hito != $h and .state != "CLOSED")) | group_by(.hito)
+                | map({hito: .[0].hito, start: (map(.start // empty) | min), target: (map(.target // empty) | max), open: length})
+                | map(select(.start != null and .hito != null)) | sort_by(.start) | first) as $next
+            | (if $target == null or $today <= $target then "ON_TRACK" else "AT_RISK" end) as $status
+            | {
+                status: $status,
+                start: (map(.start // empty) | min),
+                target: (map(.target // empty) | max),
+                body: ([
+                  $heading,
+                  (if $target == null then "Cerrado el \($today | es)."
+                   elif $status == "ON_TRACK" then "Cerrado el \($today | es); objetivo: \($target | es)."
+                   else "Cerrado el \($today | es), \(plural(($today | day) - ($target | day); "día"; "días")) después del objetivo (\($target | es))." end),
+                  (if ($completed | length) > 0 then "Hechas (\($completed | length)):\n\($completed | list)" else empty end),
+                  (if ($dropped | length) > 0 then "Descartadas (\($dropped | length)):\n\($dropped | list)" else empty end),
+                  (if $next != null
+                   then "**Siguiente**: \($next.hito), del \($next.start | es) al \($next.target | es), con \(plural($next.open; "tarjeta abierta"; "tarjetas abiertas"))."
+                   else empty end)
+                ] | join("\n\n"))
+              }' <<<"$cards")
+
+          # The project's span (first Inicio to last Objetivo), so the latest update keeps showing it
+          dates=()
+          for date in start target; do
+            value=$(jq -r --arg d "$date" '.[$d] // ""' <<<"$update")
+            if [ -n "$value" ]; then
+              dates+=(-f "$date=$value")
+            fi
+          done
+          gh api graphql -f query='
+            mutation($project: ID!, $body: String!, $status: ProjectV2StatusUpdateStatus!, $start: Date, $target: Date) {
+              createProjectV2StatusUpdate(input: {
+                projectId: $project, body: $body, status: $status, startDate: $start, targetDate: $target
+              }) { statusUpdate { id } }
+            }' -f project="$PROJECT_ID" -f body="$(jq -r .body <<<"$update")" -f status="$(jq -r .status <<<"$update")" \
+            "${dates[@]}" >/dev/null
+          echo "Status update posted for «$hito»"
