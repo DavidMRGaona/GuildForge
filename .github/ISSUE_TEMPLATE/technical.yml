@@ -1,6 +1,7 @@
 name: Technical task
 description: Mantenimiento, dependencias, refactorización o herramientas · Maintenance, dependencies, refactoring or tooling
 labels: [technical]
+assignees: [DavidMRGaona]
 projects: ["DavidMRGaona/2"]
 body:
   - type: textarea

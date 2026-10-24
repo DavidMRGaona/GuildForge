@@ -1,6 +1,7 @@
 name: Reusable project sync
 
 # Keeps the roadmap project in step with the calling repository:
+# - a new issue nobody is assigned to is assigned to the maintainer
 # - a new issue is added with its Módulo, its Tipo (from the label) and status «Pendiente»;
 #   issues from people without write access wait until someone adds the label «approved»
 # - a pull request that closes issues («Closes #12», also across repositories) moves them to «En curso»
@@ -24,6 +25,11 @@ on:
         required: false
         type: number
         default: 2
+      assignee:
+        description: 'User assigned to new issues that nobody is assigned to'
+        required: false
+        type: string
+        default: 'DavidMRGaona'
     secrets:
       project_token:
         description: 'Classic personal token with the project and repo scopes (GITHUB_TOKEN cannot reach user-owned projects)'
@@ -51,6 +57,10 @@ jobs:
           ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
           ISSUE_AUTHOR: ${{ github.event.issue.author_association }}
           LABEL: ${{ github.event.label.name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_ASSIGNEES: ${{ toJSON(github.event.issue.assignees.*.login) }}
+          ASSIGNEE: ${{ inputs.assignee }}
+          REPOSITORY: ${{ github.repository }}
           STATE_REASON: ${{ github.event.issue.state_reason }}
           PR_ID: ${{ github.event.pull_request.node_id }}
         run: |
@@ -135,6 +145,10 @@ jobs:
                   fi
                   ;;
                 *)
+                  if [ "$ACTION" = "opened" ] && [ "$(jq 'length' <<<"$ISSUE_ASSIGNEES")" = "0" ]; then
+                    gh api -X POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/assignees" -f "assignees[]=$ASSIGNEE" >/dev/null
+                    echo "Assigned to $ASSIGNEE"
+                  fi
                   if [[ ! "$ISSUE_AUTHOR" =~ ^(OWNER|MEMBER|COLLABORATOR)$ ]] \
                     && ! jq -e 'index("approved")' <<<"$ISSUE_LABELS" >/dev/null; then
                     echo "Opened by $ISSUE_AUTHOR: waiting for the label «approved»"

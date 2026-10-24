@@ -1,6 +1,7 @@
 name: Bug report
 description: Algo no funciona como debería · Something does not work as it should
 labels: [bug]
+assignees: [DavidMRGaona]
 projects: ["DavidMRGaona/2"]
 body:
   - type: markdown
