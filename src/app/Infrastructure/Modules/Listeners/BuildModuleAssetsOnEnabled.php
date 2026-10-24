@@ -35,6 +35,16 @@ final class BuildModuleAssetsOnEnabled implements ShouldQueue
         private readonly ModuleRepositoryInterface $moduleRepository,
     ) {}
 
+    /**
+     * Never in tests: module suites enable their module in every test on a sync queue, so the
+     * listener would run npm in the module directory each time (and fail over and over in CI,
+     * where the host has no npm packages). handle() is still tested by calling it directly.
+     */
+    public function shouldQueue(ModuleEnabled $event): bool
+    {
+        return ! app()->runningUnitTests();
+    }
+
     public function handle(ModuleEnabled $event): void
     {
         try {
