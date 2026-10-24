@@ -9,12 +9,16 @@ import { attachModuleStylesheet } from '@/utils/moduleStyles';
 // Path: from composables/ -> js/ -> resources/ -> src/ -> modules/
 const moduleComponents: Record<string, () => Promise<{ default: Component }>> = import.meta.env.DEV
     ? import.meta.glob<{ default: Component }>(
-        '../../../modules/*/resources/js/components/**/*.vue'
-    )
+          '../../../modules/*/resources/js/components/**/*.vue'
+      )
     : {};
 
 // Cache for dynamically loaded module components (runtime fallback)
 const dynamicComponentCache = new Map<string, Promise<{ default: Component }>>();
+
+// Cache for resolved slot components. Vue tells components apart by identity, so a new
+// async wrapper on every recompute would remount the slot and lose its state
+const resolvedComponentCache = new Map<string, Component>();
 
 // Cache for module manifests (to avoid repeated fetches)
 const manifestCache = new Map<string, Promise<Record<string, ManifestEntry> | null>>();
@@ -150,7 +154,23 @@ async function loadDynamicComponent(
 }
 
 /**
- * Resolve a component path to an async component.
+ * Resolve a component path to an async component, reusing the same instance for
+ * every call with the same module and path.
+ */
+function resolveComponent(module: string, componentPath: string): Component {
+    const cacheKey = `${module}/${componentPath}`;
+    let component = resolvedComponentCache.get(cacheKey);
+
+    if (!component) {
+        component = createAsyncComponent(module, componentPath);
+        resolvedComponentCache.set(cacheKey, component);
+    }
+
+    return component;
+}
+
+/**
+ * Create an async component for a module component path.
  *
  * In production, always uses manifest-based loading from the module's own build.
  * The build-time glob creates chunks in the main app's output with different content
@@ -159,7 +179,7 @@ async function loadDynamicComponent(
  * In development, tries the build-time glob first (HMR support), then falls back
  * to runtime loading.
  */
-function resolveComponent(module: string, componentPath: string): Component | null {
+function createAsyncComponent(module: string, componentPath: string): Component {
     // In production, always use manifest-based loading from the module's own build.
     if (!import.meta.env.DEV) {
         return defineAsyncComponent({
@@ -178,7 +198,7 @@ function resolveComponent(module: string, componentPath: string): Component | nu
                     `[ModuleSlots] Failed to load component (attempt ${attempts}):`,
                     `\n  Module: ${module}`,
                     `\n  Component: ${componentPath}`,
-                    `\n  Error: ${error instanceof Error ? error.message : error}`,
+                    `\n  Error: ${error instanceof Error ? error.message : error}`
                 );
                 fail();
             },
@@ -199,7 +219,7 @@ function resolveComponent(module: string, componentPath: string): Component | nu
                     `\n  Module: ${module}`,
                     `\n  Component: ${componentPath}`,
                     `\n  Glob path: ${globPath}`,
-                    `\n  Error: ${error instanceof Error ? error.message : error}`,
+                    `\n  Error: ${error instanceof Error ? error.message : error}`
                 );
                 fail();
             },
@@ -223,7 +243,7 @@ function resolveComponent(module: string, componentPath: string): Component | nu
                 `[ModuleSlots] Failed to load dynamic component (attempt ${attempts}):`,
                 `\n  Module: ${module}`,
                 `\n  Component: ${componentPath}`,
-                `\n  Error: ${error instanceof Error ? error.message : error}`,
+                `\n  Error: ${error instanceof Error ? error.message : error}`
             );
             fail();
         },
@@ -265,22 +285,12 @@ export function useModuleSlots(): ModuleSlotsComposable {
     function getSlotComponents(slotName: SlotPosition): ResolvedSlotComponent[] {
         const registrations = moduleSlots.value[slotName] ?? [];
 
-        return registrations
-            .map((registration) => {
-                const component = resolveComponent(registration.module, registration.component);
-
-                if (!component) {
-                    return null;
-                }
-
-                return {
-                    key: `${registration.module}-${registration.component}-${registration.order}`,
-                    component,
-                    props: getComponentProps(registration, page.props as Record<string, unknown>),
-                    registration,
-                };
-            })
-            .filter((item): item is ResolvedSlotComponent => item !== null);
+        return registrations.map((registration) => ({
+            key: `${registration.module}-${registration.component}-${registration.order}`,
+            component: resolveComponent(registration.module, registration.component),
+            props: getComponentProps(registration, page.props as Record<string, unknown>),
+            registration,
+        }));
     }
 
     /**
