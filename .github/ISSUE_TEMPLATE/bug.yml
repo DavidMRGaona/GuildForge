@@ -1,0 +1,42 @@
+name: Fallo · Bug report
+description: Algo no funciona como debería · Something does not work as it should
+labels: [bug]
+projects: ["DavidMRGaona/2"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por avisar. Si el fallo deja ver o hacer algo que no se debería, no lo publiques aquí: avísalo en privado desde la pestaña *Security*.
+        Thanks for reporting. If the bug lets someone see or do something they should not, do not post it here: report it privately from the *Security* tab.
+  - type: textarea
+    id: what-happens
+    attributes:
+      label: Qué pasa · What happens
+      description: Describe el fallo y dónde lo ves · Describe the bug and where you see it
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Cómo reproducirlo · Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Qué debería pasar · Expected behaviour
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión · Version
+      description: La del core o la del módulo, si la sabes · Core or module version, if you know it
+  - type: textarea
+    id: context
+    attributes:
+      label: Más contexto · Additional context
+      description: Capturas, navegador, mensajes de error… · Screenshots, browser, error messages…

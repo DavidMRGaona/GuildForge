@@ -1,0 +1,17 @@
+name: Roadmap project
+
+on:
+  issues:
+    types: [opened, labeled, reopened, closed]
+  pull_request:
+    types: [opened, reopened, ready_for_review, edited]
+
+permissions: {}
+
+jobs:
+  sync:
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-project-sync.yml@main
+    with:
+      module: 'core'
+    secrets:
+      project_token: ${{ secrets.PROJECT_TOKEN }}
