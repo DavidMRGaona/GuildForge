@@ -1,0 +1,23 @@
+name: Tarea técnica · Technical task
+description: Mantenimiento, dependencias, refactorización o herramientas · Maintenance, dependencies, refactoring or tooling
+labels: [technical]
+projects: ["DavidMRGaona/2"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivo · Why
+      description: Qué problema resuelve o qué riesgo evita · What problem it solves or what risk it avoids
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Alcance · Scope
+      description: Qué hay que hacer y cómo saber que está hecho · What to do and how to tell it is done
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notas · Notes

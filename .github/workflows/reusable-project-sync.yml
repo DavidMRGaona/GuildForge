@@ -1,0 +1,171 @@
+name: Reusable project sync
+
+# Keeps the roadmap project in step with the calling repository:
+# - a new issue is added with its Módulo, its Tipo (from the label) and status «Pendiente»;
+#   issues from people without write access wait until someone adds the label «approved»
+# - a pull request that closes issues («Closes #12», also across repositories) moves them to «En curso»
+# - an issue closed as completed goes to «Hecho»; a reopened one back to «Pendiente»
+# Only issues already in the project are moved. «En diseño» is set by hand.
+
+on:
+  workflow_call:
+    inputs:
+      module:
+        description: 'Option of the project Módulo field for this repository'
+        required: true
+        type: string
+      project_owner:
+        description: 'User that owns the project'
+        required: false
+        type: string
+        default: 'DavidMRGaona'
+      project_number:
+        description: 'Project number'
+        required: false
+        type: number
+        default: 2
+    secrets:
+      project_token:
+        description: 'Classic personal token with the project and repo scopes (GITHUB_TOKEN cannot reach user-owned projects)'
+        required: false
+
+permissions: {}
+
+jobs:
+  sync:
+    name: Sync project
+    runs-on: ubuntu-latest
+    concurrency:
+      group: project-sync-${{ github.repository }}-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Update the project item
+        env:
+          GH_TOKEN: ${{ secrets.project_token }}
+          OWNER: ${{ inputs.project_owner }}
+          NUMBER: ${{ inputs.project_number }}
+          MODULE: ${{ inputs.module }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+          ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+          ISSUE_AUTHOR: ${{ github.event.issue.author_association }}
+          STATE_REASON: ${{ github.event.issue.state_reason }}
+          PR_ID: ${{ github.event.pull_request.node_id }}
+        run: |
+          set -euo pipefail
+
+          # Pull requests from forks and Dependabot get no secrets
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::PROJECT_TOKEN is not available to this run; the project was not updated"
+            exit 0
+          fi
+
+          PROJECT=$(gh api graphql -f query='
+            query($owner: String!, $number: Int!) {
+              user(login: $owner) {
+                projectV2(number: $number) {
+                  id
+                  fields(first: 50) {
+                    nodes { ... on ProjectV2SingleSelectField { id name options { id name } } }
+                  }
+                }
+              }
+            }' -f owner="$OWNER" -F number="$NUMBER")
+          PROJECT_ID=$(jq -r '.data.user.projectV2.id' <<<"$PROJECT")
+
+          # Idempotent: an item already in the project is returned as it is
+          add_item() {
+            gh api graphql -f query='
+              mutation($project: ID!, $content: ID!) {
+                addProjectV2ItemById(input: {projectId: $project, contentId: $content}) { item { id } }
+              }' -f project="$PROJECT_ID" -f content="$1" --jq '.data.addProjectV2ItemById.item.id'
+          }
+
+          # The content's item in this project; empty when it is not in it
+          project_item() {
+            gh api graphql -f query='
+              query($content: ID!) {
+                node(id: $content) { ... on Issue { projectItems(first: 50) { nodes { id project { id } } } } }
+              }' -f content="$1" \
+              | jq -r --arg project "$PROJECT_ID" '.data.node.projectItems.nodes[] | select(.project.id == $project) | .id'
+          }
+
+          status_of() {
+            gh api graphql -f query='
+              query($item: ID!) {
+                node(id: $item) {
+                  ... on ProjectV2Item {
+                    fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+                  }
+                }
+              }' -f item="$1" --jq '.data.node.fieldValueByName.name // ""'
+          }
+
+          set_option() {
+            local item=$1 field=$2 option=$3 field_id option_id
+            field_id=$(jq -r --arg f "$field" '.data.user.projectV2.fields.nodes[] | select(.name == $f) | .id' <<<"$PROJECT")
+            option_id=$(jq -r --arg f "$field" --arg o "$option" \
+              '.data.user.projectV2.fields.nodes[] | select(.name == $f) | .options[] | select(.name == $o) | .id' <<<"$PROJECT")
+            if [ -z "$field_id" ] || [ -z "$option_id" ]; then
+              echo "::warning::The project has no option «$option» in «$field»"
+              return 0
+            fi
+            gh api graphql -f query='
+              mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}
+                }) { projectV2Item { id } }
+              }' -f project="$PROJECT_ID" -f item="$item" -f field="$field_id" -f option="$option_id" >/dev/null
+            echo "$field → $option"
+          }
+
+          case "$EVENT" in
+            issues)
+              case "$ACTION" in
+                closed|reopened)
+                  item=$(project_item "$ISSUE_ID")
+                  if [ -z "$item" ]; then
+                    echo "The issue is not in the project"
+                  elif [ "$ACTION" = "reopened" ]; then
+                    set_option "$item" Status Pendiente
+                  elif [ "$STATE_REASON" = "completed" ]; then
+                    set_option "$item" Status Hecho
+                  fi
+                  ;;
+                *)
+                  if [[ ! "$ISSUE_AUTHOR" =~ ^(OWNER|MEMBER|COLLABORATOR)$ ]] \
+                    && ! jq -e 'index("approved")' <<<"$ISSUE_LABELS" >/dev/null; then
+                    echo "Opened by $ISSUE_AUTHOR: waiting for the label «approved»"
+                    exit 0
+                  fi
+                  item=$(add_item "$ISSUE_ID")
+                  set_option "$item" Módulo "$MODULE"
+                  if jq -e 'index("technical")' <<<"$ISSUE_LABELS" >/dev/null; then
+                    set_option "$item" Tipo Técnico
+                  elif jq -e 'index("bug") or index("enhancement")' <<<"$ISSUE_LABELS" >/dev/null; then
+                    set_option "$item" Tipo Funcional
+                  fi
+                  if [ -z "$(status_of "$item")" ]; then
+                    set_option "$item" Status Pendiente
+                  fi
+                  ;;
+              esac
+              ;;
+            pull_request)
+              issues=$(gh api graphql -f query='
+                query($pr: ID!) {
+                  node(id: $pr) { ... on PullRequest { closingIssuesReferences(first: 20) { nodes { id } } } }
+                }' -f pr="$PR_ID" --jq '.data.node.closingIssuesReferences.nodes[].id')
+              for issue in $issues; do
+                item=$(project_item "$issue")
+                if [ -z "$item" ]; then
+                  continue
+                fi
+                current=$(status_of "$item")
+                if [ "$current" != "Hecho" ] && [ "$current" != "En curso" ]; then
+                  set_option "$item" Status "En curso"
+                fi
+              done
+              ;;
+          esac
