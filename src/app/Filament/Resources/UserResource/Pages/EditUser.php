@@ -36,8 +36,8 @@ class EditUser extends EditRecord
             app(MemberRoleServiceInterface::class)->assignTo($user);
         }
 
-        // The roles checkbox list writes the pivot directly: drop the cached roles and permissions
-        app(AuthorizationServiceInterface::class)->invalidateCache();
+        // The roles checkbox list writes the pivot directly: drop this user's cached roles and permissions
+        app(AuthorizationServiceInterface::class)->invalidateCacheFor($user);
     }
 
     /**
