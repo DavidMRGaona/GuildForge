@@ -9,6 +9,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleMigrationViolationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 
 final readonly class ModuleMigrationRunner
 {
@@ -29,18 +30,7 @@ final readonly class ModuleMigrationRunner
      */
     public function run(Module $module): int
     {
-        $modulePath = $module->path();
-
-        // Fall back to default path if module path is not set
-        if (! is_dir($modulePath)) {
-            $modulePath = $this->modulesPath.'/'.$module->name()->value;
-        }
-
-        if (! is_dir($modulePath)) {
-            throw ModuleNotFoundException::withName($module->name()->value);
-        }
-
-        $migrationsPath = $modulePath.'/database/migrations';
+        $migrationsPath = $this->resolveModulePath($module).'/database/migrations';
 
         if (! is_dir($migrationsPath)) {
             return 0;
@@ -73,18 +63,7 @@ final readonly class ModuleMigrationRunner
      */
     public function rollback(Module $module, int $steps = 1): int
     {
-        $modulePath = $module->path();
-
-        // Fall back to default path if module path is not set
-        if (! is_dir($modulePath)) {
-            $modulePath = $this->modulesPath.'/'.$module->name()->value;
-        }
-
-        if (! is_dir($modulePath)) {
-            throw ModuleNotFoundException::withName($module->name()->value);
-        }
-
-        $migrationsPath = $modulePath.'/database/migrations';
+        $migrationsPath = $this->resolveModulePath($module).'/database/migrations';
 
         if (! is_dir($migrationsPath)) {
             return 0;
@@ -103,18 +82,7 @@ final readonly class ModuleMigrationRunner
      */
     public function rollbackAll(Module $module): int
     {
-        $modulePath = $module->path();
-
-        // Fall back to default path if module path is not set
-        if (! is_dir($modulePath)) {
-            $modulePath = $this->modulesPath.'/'.$module->name()->value;
-        }
-
-        if (! is_dir($modulePath)) {
-            throw ModuleNotFoundException::withName($module->name()->value);
-        }
-
-        $migrationsPath = $modulePath.'/database/migrations';
+        $migrationsPath = $this->resolveModulePath($module).'/database/migrations';
 
         if (! is_dir($migrationsPath)) {
             return 0;
@@ -131,69 +99,71 @@ final readonly class ModuleMigrationRunner
     }
 
     /**
-     * Run migrations if Laravel is fully booted.
+     * Run migrations if Laravel is fully booted. Errors reach the caller: the ZIP update
+     * restores its backup on them, and nobody is told migrations ran when they did not.
      */
     private function runMigrationsIfPossible(string $moduleName, string $migrationsPath): void
     {
-        try {
-            // Check if we're in a Laravel application context
-            if (! function_exists('app')) {
-                return;
-            }
-
-            $app = app();
-
-            // Check if the application has the migrator bound (indicates full boot)
-            if (! $app->bound('migrator')) {
-                return;
-            }
-
-            // Runtime guard: protect core tables during migration execution
-            $this->schemaGuard->protect($moduleName, function () use ($migrationsPath): void {
-                Artisan::call('migrate', [
-                    // Absolute and real: a module outside base_path() migrates too (tests)
-                    '--path' => $migrationsPath,
-                    '--realpath' => true,
-                    '--force' => true,
-                ]);
-            });
-        } catch (ModuleMigrationViolationException $e) {
-            throw $e;
-        } catch (\Throwable) {
-            // Silently fail if anything goes wrong (unit tests, missing dependencies, etc.)
+        // Without the migrator (plain unit tests) there is nothing to run them with
+        if (! app()->bound('migrator')) {
+            return;
         }
+
+        // Runtime guard: protect core tables during migration execution
+        $this->schemaGuard->protect($moduleName, function () use ($migrationsPath): void {
+            Artisan::call('migrate', [
+                // Absolute and real: a module outside base_path() migrates too (tests)
+                '--path' => $migrationsPath,
+                '--realpath' => true,
+                '--force' => true,
+            ]);
+        });
     }
 
     /**
-     * Rollback migrations if Laravel is fully booted.
+     * Rollback migrations if Laravel is fully booted. Errors reach the caller.
      */
     private function rollbackMigrationsIfPossible(string $migrationsPath, int $steps): int
     {
-        try {
-            // Check if we're in a Laravel application context
-            if (! function_exists('app')) {
-                return 0;
-            }
-
-            $app = app();
-
-            // Check if the application has the migrator bound (indicates full boot)
-            if (! $app->bound('migrator')) {
-                return 0;
-            }
-
-            Artisan::call('migrate:rollback', [
-                // Absolute and real: a module outside base_path() rolls back too (tests)
-                '--path' => $migrationsPath,
-                '--realpath' => true,
-                '--step' => $steps,
-                '--force' => true,
-            ]);
-
-            return $steps;
-        } catch (\Throwable) {
-            // Silently fail if anything goes wrong (unit tests, missing dependencies, etc.)
+        if (! app()->bound('migrator')) {
             return 0;
         }
+
+        Artisan::call('migrate:rollback', [
+            // Absolute and real: a module outside base_path() rolls back too (tests)
+            '--path' => $migrationsPath,
+            '--realpath' => true,
+            '--step' => $steps,
+            '--force' => true,
+        ]);
+
+        return $steps;
+    }
+
+    /**
+     * The stored path, or the modules directory when the module was moved there.
+     *
+     * @throws ModuleNotFoundException
+     */
+    private function resolveModulePath(Module $module): string
+    {
+        $modulePath = $module->path();
+
+        if (is_dir($modulePath)) {
+            return $modulePath;
+        }
+
+        $defaultPath = $this->modulesPath.'/'.$module->name()->value;
+
+        if (! is_dir($defaultPath)) {
+            throw ModuleNotFoundException::withName($module->name()->value);
+        }
+
+        Log::warning("Stored path of module {$module->name()->value} does not exist, using the modules directory", [
+            'stored_path' => $modulePath,
+            'path' => $defaultPath,
+        ]);
+
+        return $defaultPath;
     }
 }

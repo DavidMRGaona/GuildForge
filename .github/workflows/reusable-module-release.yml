@@ -54,6 +54,8 @@ jobs:
 
       - name: Extract and validate version
         id: manifest
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
         run: |
           VERSION=$(jq -r '.version' module.json)
           NAME=$(jq -r '.name' module.json)
@@ -63,8 +65,8 @@ jobs:
             exit 1
           fi
 
-          if [ "$NAME" != "${{ inputs.module_name }}" ]; then
-            echo "::error::Module name mismatch: expected '${{ inputs.module_name }}', got '$NAME'"
+          if [ "$NAME" != "$MODULE_NAME" ]; then
+            echo "::error::Module name mismatch: expected '$MODULE_NAME', got '$NAME'"
             exit 1
           fi
 
@@ -87,8 +89,10 @@ jobs:
             IS_PRERELEASE="true"
           fi
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          {
+            echo "version=$VERSION"
+            echo "is_prerelease=$IS_PRERELEASE"
+          } >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION (prerelease: $IS_PRERELEASE)"
 
       # Same grammar as App\Domain\Modules\Services\ConstraintMatcher (keep both in sync with its tests)
@@ -192,18 +196,18 @@ jobs:
           cd -
 
           # Copy module into main app structure
-          mkdir -p guildforge-app/src/modules/$MODULE_NAME
-          rsync -a --exclude='.git' --exclude='node_modules' --exclude='guildforge-app' . guildforge-app/src/modules/$MODULE_NAME/
+          mkdir -p "guildforge-app/src/modules/$MODULE_NAME"
+          rsync -a --exclude='.git' --exclude='node_modules' --exclude='guildforge-app' . "guildforge-app/src/modules/$MODULE_NAME/"
 
           # Build module in main app context (resolves @/ to main app source)
-          cd guildforge-app/src/modules/$MODULE_NAME
+          cd "guildforge-app/src/modules/$MODULE_NAME"
           npm install
           MODULE_STANDALONE_OUTPUT=true npm run build
           cd -
 
           # Copy built assets back to module checkout
           mkdir -p public
-          cp -a guildforge-app/src/modules/$MODULE_NAME/public/build public/build
+          cp -a "guildforge-app/src/modules/$MODULE_NAME/public/build" public/build
 
           # Verify
           if [ -f "public/build/manifest.json" ]; then
@@ -249,7 +253,7 @@ jobs:
           sha256sum "$ZIP_NAME" > "${ZIP_NAME}.sha256"
 
           echo "Created: $ZIP_NAME"
-          echo "Checksum: $(cat ${ZIP_NAME}.sha256)"
+          echo "Checksum: $(cat "${ZIP_NAME}.sha256")"
 
       - name: Generate changelog
         id: changelog
@@ -263,9 +267,13 @@ jobs:
             CHANGELOG=$(git log --pretty=format:"- %s" -10)
           fi
 
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Random delimiter: a commit subject reading "EOF" would end a fixed one early
+          DELIMITER="CHANGELOG_$(openssl rand -hex 16)"
+          {
+            echo "changelog<<$DELIMITER"
+            echo "$CHANGELOG"
+            echo "$DELIMITER"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         id: create_release

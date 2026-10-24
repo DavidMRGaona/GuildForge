@@ -79,9 +79,18 @@ interface AuthorizationServiceInterface
     /**
      * Invalidate every cached role and permission lookup, so the next checks read them again.
      *
-     * Call it after any change to a user's roles or to a role (its permissions, its name,
-     * its deletion) made without assignRole(), removeRole() or syncRoles(). Inside a
-     * database transaction it takes effect once the transaction commits.
+     * Call it after any change to a role (its permissions, its name, its deletion), which
+     * reaches all its users, or to the roles of many users at once. Inside a database
+     * transaction it takes effect once the transaction commits.
      */
     public function invalidateCache(): void;
+
+    /**
+     * Invalidate the cached role and permission lookups of one user; everyone else keeps theirs.
+     *
+     * Call it after a change to that user's roles made without assignRole(), removeRole() or
+     * syncRoles(), which call it themselves. Inside a database transaction it takes effect
+     * once the transaction commits.
+     */
+    public function invalidateCacheFor(object $user): void;
 }

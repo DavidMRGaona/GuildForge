@@ -25,7 +25,7 @@ export function getModulePageMapping(): Record<string, string> {
  * Extract the prefix from a page name.
  * For example, "GameTables/Index" returns "GameTables".
  */
-function extractPrefix(pageName: string): string {
+export function extractPrefix(pageName: string): string {
     const slashIndex = pageName.indexOf('/');
     return slashIndex !== -1 ? pageName.substring(0, slashIndex) : pageName;
 }

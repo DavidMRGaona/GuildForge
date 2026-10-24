@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Http\Middleware;
 
+use App\Application\Modules\DTOs\PagePrefixDTO;
+use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -40,10 +42,26 @@ final class HandleInertiaRequestsTest extends TestCase
         $this->assertArrayHasKey('flash', $shared);
         $this->assertArrayHasKey('moduleSlots', $shared);
         $this->assertArrayHasKey('modulePages', $shared);
+        $this->assertArrayHasKey('coreLayoutPagePrefixes', $shared);
         $this->assertArrayHasKey('moduleTranslations', $shared);
         $this->assertArrayHasKey('navigation', $shared);
         $this->assertArrayHasKey('cloudinary', $shared);
         $this->assertArrayHasKey('seo', $shared);
+    }
+
+    public function test_the_page_prefixes_that_use_the_core_layout_are_shared(): void
+    {
+        $registry = app(ModulePageRegistryInterface::class);
+        $registry->clear();
+        $registry->registerMany([
+            new PagePrefixDTO(prefix: 'GameTables', module: 'game-tables', usesCoreLayout: true),
+            new PagePrefixDTO(prefix: 'Legacy', module: 'legacy-module'),
+        ]);
+
+        $request = Request::create('/test', 'GET');
+        $request->setLaravelSession($this->app['session']->driver());
+
+        $this->assertSame(['GameTables'], value($this->middleware->share($request)['coreLayoutPagePrefixes']));
     }
 
     public function test_cloudinary_config_is_shared_for_runtime_url_building(): void

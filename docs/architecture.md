@@ -470,7 +470,7 @@ src/modules/
 | `registerPermissions()` | `PermissionDTO[]` | Module permissions |
 | `registerNavigation()` | `NavigationItemDTO[]` | Admin-panel navigation items, collected in `ModuleNavigationRegistry`. They are never copied into the public menu |
 | `registerSlots()` | `SlotRegistrationDTO[]` | Vue components injectable into the layout |
-| `registerPagePrefixes()` | `PagePrefixDTO[]` | Page prefixes for Inertia resolution |
+| `registerPagePrefixes()` | `PagePrefixDTO[]` | Page prefixes for Inertia resolution; `usesCoreLayout: true` (core ≥ 3.16) renders the core's persistent layout around their pages |
 | `registerRoutes()` | `ModuleRouteDTO[]` | Public pages offered in the menu editor (`MenuItemResource`) |
 | `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Entries for the public calendars (`/calendario` and the home widget, through `/eventos/calendario`) |
 | `registerPolicies()` | `array<model, policy>` | Authorization policies |
@@ -491,7 +491,7 @@ Modules may also define `registerFilamentWidgets()`: it is not declared on `Modu
 
 1. **Install (optional)**: from `ModulesPage`, an admin uploads a release ZIP (maintenance mode required). `ModuleInstaller::installFromZip()` validates the manifest, rejects incompatible packages, moves the module into `src/modules/`, publishes its pre-built assets and fires `ModuleInstalled`; the page then runs discovery. A module cloned into `src/modules/` skips this step
 2. **Discover**: `php artisan module:discover` (or the panel) scans `src/modules/` and registers modules in the database. Fires `ModuleDiscovered`
-3. **Enable**: `php artisan module:enable` or the panel. Refuses an incompatible module, checks dependencies, runs the module's migrations and seeders the first time it is enabled, then fires `ModuleEnabled` (clears caches, queues the Vue asset build, reactivates the module's existing menu links)
+3. **Enable**: `php artisan module:enable` or the panel. Refuses an incompatible module, checks dependencies, runs the module's migrations and seeders the first time it is enabled (a failing migration stops the enable and reaches the caller), then fires `ModuleEnabled` (clears caches, queues the Vue asset build, reactivates the module's existing menu links)
 4. **Boot**: on every request, `ModuleLoader::boot()` loads the ServiceProvider of each module `EnabledModulesResolver` accepts and registers its hooks. Migrations of every compatible module on disk are known to `migrate` (`EnabledModulesResolver::migrationPaths()`); `module:migrate` runs one module's
 5. **Disable**: `php artisan module:disable` deactivates the module without deleting data. Fires `ModuleDisabled` (deactivates its menu links)
 6. **Uninstall**: `ModuleManagerService::uninstall()` deletes the module directory and, when asked to delete data, rolls back its migrations. Fires `ModuleUninstalled` (deletes its menu links)
@@ -674,7 +674,7 @@ Authorization is based on a role system with granular permissions:
 
 Modules extend this system with their own permissions using the format `module:resource.action`.
 
-Admins pass every check (fast path in `AuthorizationService`). `MenuItemPolicy` checks the `menu_items.*` permissions defined in `CorePermissionDefinitions` (granted to no role by default; admins grant them in the role editor), and a test fails whenever a policy or panel page checks a permission nobody defines. Cached role and permission lookups carry a version token read once per request; every role or permission change (role edits and deletions, user role changes, `assignRole`/`removeRole`/`syncRoles`, seeders) replaces the token after the database commit, and the cache fails closed: a missing or malformed token, a malformed entry or a store error falls back to the database. Several panel pages check `isAdmin()` instead of a permission: `ModulesPage` and the pages in `Filament/Pages/Settings/`.
+Admins pass every check (fast path in `AuthorizationService`). `MenuItemPolicy` checks the `menu_items.*` permissions defined in `CorePermissionDefinitions` (granted to no role by default; admins grant them in the role editor), and a test fails whenever a policy or panel page checks a permission nobody defines. Cached role and permission lookups carry two version tokens, each read once per request: a global one and one per user. Changes to a role (edits, deletions, permission changes), bulk role assignments and seeders replace the global token (`invalidateCache()`); changes to one user's roles (the user form, `assignRole`/`removeRole`/`syncRoles`, anonymizing) replace only that user's token (`invalidateCacheFor()`), so everyone else keeps their cached lookups. Both are replaced after the database commit, and the cache fails closed: a missing or malformed token, a malformed entry or a store error falls back to the database, and a token that cannot be replaced is forgotten and the error rethrown. Several panel pages check `isAdmin()` instead of a permission: `ModulesPage` and the pages in `Filament/Pages/Settings/`.
 
 ### Base role and association member role
 
@@ -950,8 +950,8 @@ Modules can:
 
 Location: `src/resources/js/layouts/`
 
-- `DefaultLayout.vue` - Main layout for the public site (header, footer, navigation, module slots)
-- `AuthLayout.vue` - Layout for authentication pages
+- `DefaultLayout.vue` - Main layout for the public site (header, footer, navigation, module slots). Applied by the app (`createInertiaApp({ layout })`, `utils/pageLayout.ts`) to core pages and to module prefixes with `usesCoreLayout`, and kept across visits
+- `AuthLayout.vue` - Persistent layout for authentication pages and the maintenance page (`defineOptions({ layout })` + `setLayoutProps()`)
 
 ### Pages
 

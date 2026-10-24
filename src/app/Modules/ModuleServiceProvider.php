@@ -228,7 +228,8 @@ abstract class ModuleServiceProvider extends ServiceProvider
 
     /**
      * Register page prefixes provided by this module.
-     * Allows module Vue pages to be resolved by Inertia.
+     * Allows module Vue pages to be resolved by Inertia. With usesCoreLayout the core renders
+     * its persistent DefaultLayout around them, and the pages must not wrap one of their own.
      *
      * @return array<PagePrefixDTO>
      */

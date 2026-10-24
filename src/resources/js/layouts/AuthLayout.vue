@@ -5,14 +5,11 @@ import { usePage, Link } from '@inertiajs/vue3';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRoutes } from '@/composables/useRoutes';
 import type { ThemeSettings } from '@/types/inertia';
+import type { AuthLayoutProps } from '@/types/layouts';
 
-interface Props {
-    title: string;
-    subtitle?: string;
-    showBackLink?: boolean;
-}
-
-const props = withDefaults(defineProps<Props>(), {
+// Set by each page with setLayoutProps(): empty on the first render, before the page sets them
+const props = withDefaults(defineProps<AuthLayoutProps>(), {
+    title: '',
     subtitle: '',
     showBackLink: true,
 });

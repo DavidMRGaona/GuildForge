@@ -449,7 +449,7 @@ public function registerPermissions(): array
 ```
 
 - Policies check the full key: `$this->authorize($user, 'my-module:games.view_any')` with the `AuthorizesWithPermissions` trait. The policies made by `module:make-filament-resource` check `<module>:<plural>.view_any|view|create|update|delete`; declare those five names.
-- Admins pass every check. Other roles need the permission, granted from the role editor in the panel; `roles` lists the roles the core's roles seeder grants it to.
+- Admins pass every check. Other roles need the permission, granted from the role editor in the panel. `roles` lists the roles the module suggests it for: from core 3.16 the role editor marks it *Sugerido para este rol* on those roles, but nobody gets it until an admin ticks it.
 - `php artisan permissions:sync` stores the definitions in the database (the production container runs it on every start).
 
 ### Registered users and association members
@@ -744,16 +744,20 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 public function registerPagePrefixes(): array
 {
     return [
-        new PagePrefixDTO(prefix: 'MyModule', module: $this->moduleName()),
+        new PagePrefixDTO(prefix: 'MyModule', module: $this->moduleName(), usesCoreLayout: true),
     ];
 }
 ```
 
-`MyModule/GameList` resolves to `resources/js/pages/MyModule/GameList.vue` (or `resources/js/pages/GameList.vue`). Module prefixes are checked before the core pages, so never use a prefix that matches a core page directory (`Events`, `Articles`, `Profile`…). Pages wrap their content in the core layout (`import DefaultLayout from '@/layouts/DefaultLayout.vue'`), as `module:make-vue-page` does.
+`MyModule/GameList` resolves to `resources/js/pages/MyModule/GameList.vue` (or `resources/js/pages/GameList.vue`). Module prefixes are checked before the core pages, so never use a prefix that matches a core page directory (`Events`, `Articles`, `Profile`…).
+
+**Layout.** From core 3.16, with `usesCoreLayout: true` the core renders its `DefaultLayout` around the prefix's pages and keeps it across visits, also between core and module pages: header, footer and the module slots keep their state. Such pages declare no layout and never import `DefaultLayout` (it would show twice); `module:make` and `module:make-vue-page` generate them that way. A module that sets the flag must require `"core": "^3.16"` in `module.json`: older cores do not know the argument. Without the flag (the default, for modules released before 3.16) the core renders no layout around the pages, and each page wraps its own `<DefaultLayout>`; that copy is bundled into the module build, so it shows the header of the core version the module was built against and remounts on every visit.
 
 ### Shared packages
 
 The site shares `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` with modules through an import map: the module build keeps them external, so a module uses the site's instances. Any other package must be bundled. Imports from `@/` (core components, composables, layouts, types) resolve to the core's `resources/js` and are bundled into the module's build.
+
+Link core pages through `useRoutes()` (`@/composables/useRoutes`), never with hand-written URLs; for example a consent checkbox links `useRoutes().legal.privacy` (core ≥ 3.16).
 
 ### Frontend translations
 

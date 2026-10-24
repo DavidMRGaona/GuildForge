@@ -54,6 +54,9 @@ jobs:
       - name: PHP code style
         run: vendor/bin/pint --test
 
+      - name: Static analysis
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
+
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
@@ -107,6 +110,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+
+      # Pinned release checked against its sha256; shellcheck comes with the runner image and
+      # actionlint skips the run: scripts silently without it, hence the explicit check
+      - name: Lint workflows
+        working-directory: .
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          command -v shellcheck > /dev/null || { echo "::error::shellcheck is not installed"; exit 1; }
+          ARCHIVE="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$ARCHIVE" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${ARCHIVE}"
+          echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/$ARCHIVE" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$ARCHIVE" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
 
       - name: Setup Node
         uses: actions/setup-node@v7

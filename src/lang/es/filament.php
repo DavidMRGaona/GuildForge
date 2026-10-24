@@ -488,7 +488,7 @@ return [
         'sections' => [
             'general' => 'Información general',
             'permissions' => 'Permisos',
-            'permissionsDescription' => 'Selecciona los permisos que tendrá este rol.',
+            'permissionsDescription' => 'Selecciona los permisos que tendrá este rol. «Sugerido para este rol» indica lo que el núcleo o el módulo proponen para él; nunca se concede sin marcarlo.',
         ],
         'fields' => [
             'name' => 'Nombre',
@@ -500,6 +500,7 @@ return [
             'associationMemberRoleHint' => 'Es el rol de socio configurado en Configuración del sitio: no se puede renombrar ni eliminar.',
             'baseRoleHint' => 'Es el rol base de todas las cuentas: no se puede renombrar ni eliminar, pero sí cambiar sus permisos.',
             'permissions' => 'Permisos',
+            'suggestedForRole' => 'Sugerido para este rol',
             'permissionsCount' => 'Permisos',
             'usersCount' => 'Usuarios',
             'createdAt' => 'Creado',

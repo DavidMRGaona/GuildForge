@@ -35,6 +35,10 @@ declare module '@inertiajs/vue3' {
         };
         errors: Record<string, string>;
         moduleSlots: ModuleSlots;
+        /** Page prefix => module name, for every module page prefix */
+        modulePages: Record<string, string>;
+        /** Module page prefixes whose pages use the core layout instead of wrapping their own */
+        coreLayoutPagePrefixes: string[];
         seo: SeoProps;
     }
 }

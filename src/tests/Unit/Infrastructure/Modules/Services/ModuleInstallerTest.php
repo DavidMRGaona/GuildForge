@@ -402,7 +402,7 @@ final class ModuleInstallerTest extends TestCase
             ->with(Mockery::type(ModuleName::class))
             ->andReturn($backupPath);
 
-        // Migration/seeder runners are real instances, they'll run silently in test mode
+        // Migration/seeder runners are real instances; the package has neither migrations nor seeders
 
         $this->dispatcher->shouldReceive('dispatch')
             ->once()
@@ -514,6 +514,81 @@ final class ModuleInstallerTest extends TestCase
         $this->expectException(ModuleInstallationException::class);
 
         $this->installer->updateFromZip($file);
+    }
+
+    public function test_update_restores_backup_when_a_migration_fails(): void
+    {
+        $moduleDir = $this->modulesPath.'/migrating-module';
+        File::makeDirectory($moduleDir, 0755, true);
+
+        $module = new Module(
+            id: ModuleId::generate(),
+            name: new ModuleName('migrating-module'),
+            displayName: 'Migrating Module',
+            description: 'Test module whose new migration fails',
+            version: ModuleVersion::fromString('1.0.0'),
+            author: 'Test Author',
+            requirements: new ModuleRequirements(
+                phpVersion: null,
+                laravelVersion: null,
+                requiredModules: [],
+                requiredExtensions: []
+            ),
+            status: ModuleStatus::Enabled,
+            path: $moduleDir
+        );
+
+        $this->repository->shouldReceive('findByName')
+            ->with(Mockery::type(ModuleName::class))
+            ->andReturn($module);
+
+        // New version saved, then the previous one restored
+        $this->repository->shouldReceive('save')->twice()->with($module);
+
+        $backupPath = $this->tempDir.'/backup.zip';
+        $this->backupService->shouldReceive('createBackup')
+            ->once()
+            ->with(Mockery::type(ModuleName::class))
+            ->andReturn($backupPath);
+
+        $this->backupService->shouldReceive('restoreBackup')
+            ->once()
+            ->with(Mockery::type(ModuleName::class), $backupPath);
+
+        $this->dispatcher->shouldNotReceive('dispatch')->with(Mockery::type(ModuleUpdated::class));
+
+        $zipPath = $this->createValidZip([
+            'module.json' => json_encode([
+                'name' => 'migrating-module',
+                'version' => '2.0.0',
+                'namespace' => 'Modules\\MigratingModule',
+                'provider' => 'Modules\\MigratingModule\\ServiceProvider',
+            ]),
+            'database/migrations/2026_01_01_000000_break.php' => <<<'PHP'
+                <?php
+
+                use Illuminate\Database\Migrations\Migration;
+
+                return new class extends Migration
+                {
+                    public function up(): void
+                    {
+                        throw new RuntimeException('Migration failed on purpose');
+                    }
+                };
+                PHP,
+        ]);
+
+        $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
+
+        try {
+            $this->installer->updateFromZip($file);
+            $this->fail('The update should fail when a migration fails');
+        } catch (ModuleInstallationException $e) {
+            $this->assertStringContainsString('Migration failed on purpose', $e->getMessage());
+        }
+
+        $this->assertSame('1.0.0', $module->version()->value());
     }
 
     public function test_peek_manifest_returns_manifest_without_installing(): void

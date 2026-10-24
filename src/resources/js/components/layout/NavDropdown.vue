@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { ChevronDown } from '@lucide/vue';
 import type { MenuItem } from '@/types/navigation';
+import { useOnNavigate } from '@/composables/useOnNavigate';
 
 interface Props {
     item: MenuItem;
@@ -19,6 +20,10 @@ const emit = defineEmits<{
 
 const page = usePage();
 const isOpen = ref(false);
+
+useOnNavigate(() => {
+    isOpen.value = false;
+});
 
 const currentUrl = computed(() => page.url);
 

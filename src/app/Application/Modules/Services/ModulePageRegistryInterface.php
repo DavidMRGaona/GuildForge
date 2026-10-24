@@ -42,6 +42,13 @@ interface ModulePageRegistryInterface
     public function toInertiaPayload(): array;
 
     /**
+     * Prefixes whose pages use the core layout instead of wrapping their own.
+     *
+     * @return list<string>
+     */
+    public function coreLayoutPrefixes(): array;
+
+    /**
      * Unregister all page prefixes for a module.
      */
     public function unregisterModule(string $moduleName): void;

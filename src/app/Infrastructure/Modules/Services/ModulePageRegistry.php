@@ -51,6 +51,19 @@ final class ModulePageRegistry implements ModulePageRegistryInterface
         return $payload;
     }
 
+    public function coreLayoutPrefixes(): array
+    {
+        $prefixes = [];
+
+        foreach ($this->prefixes as $dto) {
+            if ($dto->usesCoreLayout) {
+                $prefixes[] = $dto->prefix;
+            }
+        }
+
+        return $prefixes;
+    }
+
     public function unregisterModule(string $moduleName): void
     {
         $this->prefixes = array_values(

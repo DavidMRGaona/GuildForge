@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { X } from '@lucide/vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CalendarEntry } from '@/types/models';
-import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel.vue';
 import { extractLegend, type CalendarLegendItem } from '@/utils/calendarEntries';
@@ -62,60 +62,20 @@ const closeMobileModal = (): void => {
 </script>
 
 <template>
-    <DefaultLayout>
-        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <!-- Page header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold tracking-tight text-base-primary">
-                    {{ t('calendar.title') }}
-                </h1>
-            </div>
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <!-- Page header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold tracking-tight text-base-primary">
+                {{ t('calendar.title') }}
+            </h1>
+        </div>
 
-            <!-- Desktop layout: Calendar + Side panel -->
-            <div class="hidden lg:grid lg:grid-cols-3 lg:gap-8">
-                <!-- Calendar (2/3 width) -->
-                <div class="lg:col-span-2">
-                    <EventCalendar
-                        show-tooltips
-                        :navigate-on-click="false"
-                        @event-select="handleEventSelect"
-                        @events-loaded="handleEventsLoaded"
-                    />
-
-                    <!-- Legend -->
-                    <ul
-                        v-if="legend.length > 0"
-                        class="mt-4 flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
-                        :aria-label="t('calendar.legendLabel')"
-                    >
-                        <li
-                            v-for="item in legend"
-                            :key="item.sourceType"
-                            class="flex items-center gap-1.5 text-sm text-base-secondary"
-                        >
-                            <span
-                                :class="[
-                                    'calendar-legend-dot',
-                                    `calendar-legend-dot--${item.color}`,
-                                ]"
-                                aria-hidden="true"
-                            ></span>
-                            {{ item.sourceLabel }}
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Detail panel (1/3 width) -->
-                <div class="lg:col-span-1">
-                    <div class="sticky top-4">
-                        <EventDetailPanel :event="selectedEvent" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mobile layout: Calendar only -->
-            <div class="lg:hidden">
+        <!-- Desktop layout: Calendar + Side panel -->
+        <div class="hidden lg:grid lg:grid-cols-3 lg:gap-8">
+            <!-- Calendar (2/3 width) -->
+            <div class="lg:col-span-2">
                 <EventCalendar
+                    show-tooltips
                     :navigate-on-click="false"
                     @event-select="handleEventSelect"
                     @events-loaded="handleEventsLoaded"
@@ -140,67 +100,90 @@ const closeMobileModal = (): void => {
                     </li>
                 </ul>
             </div>
+
+            <!-- Detail panel (1/3 width) -->
+            <div class="lg:col-span-1">
+                <div class="sticky top-4">
+                    <EventDetailPanel :event="selectedEvent" />
+                </div>
+            </div>
         </div>
 
-        <!-- Mobile modal -->
-        <Teleport to="body">
-            <Transition
-                enter-active-class="transition-opacity duration-300"
-                leave-active-class="transition-opacity duration-300"
-                enter-from-class="opacity-0"
-                leave-to-class="opacity-0"
+        <!-- Mobile layout: Calendar only -->
+        <div class="lg:hidden">
+            <EventCalendar
+                :navigate-on-click="false"
+                @event-select="handleEventSelect"
+                @events-loaded="handleEventsLoaded"
+            />
+
+            <!-- Legend -->
+            <ul
+                v-if="legend.length > 0"
+                class="mt-4 flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
+                :aria-label="t('calendar.legendLabel')"
             >
-                <div
-                    v-if="showMobileModal"
-                    class="fixed inset-0 z-50 lg:hidden"
-                    @click="closeMobileModal"
-                    @keydown.esc="closeMobileModal"
+                <li
+                    v-for="item in legend"
+                    :key="item.sourceType"
+                    class="flex items-center gap-1.5 text-sm text-base-secondary"
                 >
-                    <!-- Backdrop -->
-                    <div class="absolute inset-0 bg-black/50"></div>
+                    <span
+                        :class="['calendar-legend-dot', `calendar-legend-dot--${item.color}`]"
+                        aria-hidden="true"
+                    ></span>
+                    {{ item.sourceLabel }}
+                </li>
+            </ul>
+        </div>
+    </div>
 
-                    <!-- Modal content -->
-                    <Transition
-                        enter-active-class="transition-transform duration-300"
-                        leave-active-class="transition-transform duration-300"
-                        enter-from-class="translate-y-full"
-                        leave-to-class="translate-y-full"
+    <!-- Mobile modal -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition-opacity duration-300"
+            leave-active-class="transition-opacity duration-300"
+            enter-from-class="opacity-0"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showMobileModal"
+                class="fixed inset-0 z-50 lg:hidden"
+                @click="closeMobileModal"
+                @keydown.esc="closeMobileModal"
+            >
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-black/50"></div>
+
+                <!-- Modal content -->
+                <Transition
+                    enter-active-class="transition-transform duration-300"
+                    leave-active-class="transition-transform duration-300"
+                    enter-from-class="translate-y-full"
+                    leave-to-class="translate-y-full"
+                >
+                    <div
+                        v-if="showMobileModal"
+                        class="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-xl bg-surface p-4 shadow-xl"
+                        @click.stop
                     >
-                        <div
-                            v-if="showMobileModal"
-                            class="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-xl bg-surface p-4 shadow-xl"
-                            @click.stop
-                        >
-                            <!-- Close button -->
-                            <div class="mb-4 flex justify-end">
-                                <button
-                                    type="button"
-                                    class="rounded-full p-2 text-base-muted hover:bg-muted hover:text-base-secondary"
-                                    @click="closeMobileModal"
-                                >
-                                    <span class="sr-only">{{ t('buttons.close') }}</span>
-                                    <svg
-                                        class="h-5 w-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <!-- Event details -->
-                            <EventDetailPanel :event="selectedEvent" />
+                        <!-- Close button -->
+                        <div class="mb-4 flex justify-end">
+                            <button
+                                type="button"
+                                class="rounded-full p-2 text-base-muted hover:bg-muted hover:text-base-secondary"
+                                @click="closeMobileModal"
+                            >
+                                <span class="sr-only">{{ t('buttons.close') }}</span>
+                                <X class="h-5 w-5" aria-hidden="true" />
+                            </button>
                         </div>
-                    </Transition>
-                </div>
-            </Transition>
-        </Teleport>
-    </DefaultLayout>
+
+                        <!-- Event details -->
+                        <EventDetailPanel :event="selectedEvent" />
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
 </template>

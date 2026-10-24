@@ -205,7 +205,7 @@ The project uses GitHub Actions for CI/CD:
 
 ### CI jobs
 
-- **test**: PHP 8.5, PostgreSQL 17, Redis 7.2. Checks PHP style (`vendor/bin/pint --test`), builds the assets, checks the module import map (`npm run verify:build`), then runs the migrations and the test suite (serially, on PostgreSQL).
+- **test**: PHP 8.5, PostgreSQL 17, Redis 7.2. Checks PHP style (`vendor/bin/pint --test`) and static analysis (`vendor/bin/phpstan analyse`, PHPStan level 8), builds the assets, checks the module import map (`npm run verify:build`), then runs the migrations and the test suite (serially, on PostgreSQL).
 - **lint**: TypeScript type-check and ESLint.
 
 ### Required secrets

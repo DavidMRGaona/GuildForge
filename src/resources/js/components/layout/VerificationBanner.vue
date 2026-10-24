@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { MailWarning } from '@lucide/vue';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
+import { useOnNavigate } from '@/composables/useOnNavigate';
 
 type ResendState = 'idle' | 'sent' | 'throttled' | 'error';
 
@@ -24,6 +25,11 @@ const email = computed<string>(() => user.value?.verificationEmail ?? user.value
 
 const form = useForm({});
 const state = ref<ResendState>('idle');
+
+// The feedback is about this page's resend, not the next page's
+useOnNavigate(() => {
+    state.value = 'idle';
+});
 
 const feedback = computed<string>(() => {
     switch (state.value) {

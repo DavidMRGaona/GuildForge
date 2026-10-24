@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Calendar } from '@lucide/vue';
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -65,20 +66,10 @@ const sectionTitle = computed(() =>
                     class="flex flex-1 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-8 dark:border-neutral-600 dark:bg-muted"
                 >
                     <div class="text-center">
-                        <svg
+                        <Calendar
                             class="mx-auto h-8 w-8 text-neutral-400 dark:text-neutral-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
                             aria-hidden="true"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
-                        </svg>
+                        />
                         <p class="mt-2 text-sm text-base-muted">
                             {{ t('home.noEventsCompact') }}
                         </p>

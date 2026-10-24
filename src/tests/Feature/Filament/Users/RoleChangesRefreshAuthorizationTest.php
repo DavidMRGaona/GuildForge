@@ -208,9 +208,11 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $user = UserModel::factory()->create();
         $user->roles()->attach($role->id);
         $version = str_repeat('a', 32);
+        $userVersion = str_repeat('b', 32);
         Cache::forever('authorization_cache_version', $version);
-        Cache::put("user_permissions_{$version}_{$user->id}", 'events.delete', 3600);
-        Cache::put("user_roles_{$version}_{$user->id}", ['admin', 42], 3600);
+        Cache::forever("authorization_cache_version_user_{$user->id}", $userVersion);
+        Cache::put("user_permissions_{$version}_{$userVersion}_{$user->id}", 'events.delete', 3600);
+        Cache::put("user_roles_{$version}_{$userVersion}_{$user->id}", ['admin', 42], 3600);
         $this->app->forgetScopedInstances();
 
         $this->assertTrue($this->authorization->can($user, 'events.create'));
@@ -239,14 +241,14 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $user->roles()->attach($role->id);
         $this->app->forgetScopedInstances();
 
-        // Version token, cached roles (admin check) and cached permissions
-        $this->assertSame(['version' => 1, 'total' => 3], $this->cacheReadsDuring(fn () => $this->authorization->can($user, 'events.create')));
-        $this->assertSame(['version' => 0, 'total' => 2], $this->cacheReadsDuring(fn () => $this->authorization->can($user, 'events.delete')));
-        $this->assertSame(['version' => 0, 'total' => 2], $this->cacheReadsDuring(fn () => $this->authorization->canAny($user, ['events.delete', 'events.create'])));
+        // Both version tokens, cached roles (admin check) and cached permissions
+        $this->assertSame(['version' => 1, 'user_version' => 1, 'total' => 4], $this->cacheReadsDuring(fn () => $this->authorization->can($user, 'events.create')));
+        $this->assertSame(['version' => 0, 'user_version' => 0, 'total' => 2], $this->cacheReadsDuring(fn () => $this->authorization->can($user, 'events.delete')));
+        $this->assertSame(['version' => 0, 'user_version' => 0, 'total' => 2], $this->cacheReadsDuring(fn () => $this->authorization->canAny($user, ['events.delete', 'events.create'])));
 
         $this->app->forgetScopedInstances();
 
-        $this->assertSame(['version' => 1, 'total' => 3], $this->cacheReadsDuring(fn () => $this->authorization->canAll($user, ['events.create'])));
+        $this->assertSame(['version' => 1, 'user_version' => 1, 'total' => 4], $this->cacheReadsDuring(fn () => $this->authorization->canAll($user, ['events.create'])));
     }
 
     public function test_an_admin_check_reads_the_version_token_once_per_request(): void
@@ -254,9 +256,9 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $admin = UserModel::factory()->admin()->create();
         $this->app->forgetScopedInstances();
 
-        // Version token and cached roles: the admin answer needs no permissions
-        $this->assertSame(['version' => 1, 'total' => 2], $this->cacheReadsDuring(fn () => $this->authorization->can($admin, 'events.create')));
-        $this->assertSame(['version' => 0, 'total' => 1], $this->cacheReadsDuring(fn () => $this->authorization->can($admin, 'users.delete')));
+        // Both version tokens and cached roles: the admin answer needs no permissions
+        $this->assertSame(['version' => 1, 'user_version' => 1, 'total' => 3], $this->cacheReadsDuring(fn () => $this->authorization->can($admin, 'events.create')));
+        $this->assertSame(['version' => 0, 'user_version' => 0, 'total' => 1], $this->cacheReadsDuring(fn () => $this->authorization->can($admin, 'users.delete')));
     }
 
     public function test_the_request_sees_its_own_invalidation(): void
@@ -304,6 +306,148 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $this->assertTrue($this->authorization->can($user, 'events.create'));
     }
 
+    public function test_a_role_change_of_one_user_keeps_the_cached_lookups_of_the_others(): void
+    {
+        $role = $this->roleWith('events.create');
+        $changed = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        $this->assertFalse($this->authorization->can($changed, 'events.create'));
+        $this->assertFalse($this->authorization->can($other, 'events.create'));
+
+        $this->authorization->assignRole($changed, $role->name);
+
+        $this->assertTrue($this->authorization->can($changed, 'events.create'));
+        $this->assertSame(0, $this->databaseQueriesDuring(fn () => $this->authorization->can($other, 'events.create')));
+    }
+
+    public function test_a_role_change_from_the_user_form_keeps_the_cached_lookups_of_the_others(): void
+    {
+        $role = $this->roleWith('events.create');
+        $changed = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        $this->assertFalse($this->authorization->can($other, 'events.create'));
+
+        Livewire::test(EditUser::class, ['record' => $changed->getRouteKey()])
+            ->fillForm(['roles' => [$role->id]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertTrue($this->authorization->can($changed, 'events.create'));
+        $this->assertSame(0, $this->databaseQueriesDuring(fn () => $this->authorization->can($other, 'events.create')));
+    }
+
+    public function test_removed_and_synced_roles_apply_at_once(): void
+    {
+        $role = $this->roleWith('events.create');
+        $user = UserModel::factory()->create();
+        $this->authorization->assignRole($user, $role->name);
+        $this->assertTrue($this->authorization->can($user, 'events.create'));
+
+        $this->authorization->removeRole($user, $role->name);
+        $this->assertFalse($this->authorization->can($user, 'events.create'));
+
+        $this->authorization->syncRoles($user, [$role->name]);
+        $this->assertTrue($this->authorization->can($user, 'events.create'));
+    }
+
+    public function test_a_user_invalidation_waits_for_the_commit(): void
+    {
+        $role = $this->roleWith('events.create');
+        $user = UserModel::factory()->create();
+        $user->roles()->attach($role->id);
+        $this->authorization->invalidateCacheFor($user);
+        $this->assertTrue($this->authorization->can($user, 'events.create'));
+
+        DB::transaction(function () use ($role, $user): void {
+            $user->roles()->detach($role->id);
+            $this->authorization->invalidateCacheFor($user);
+
+            $this->assertTrue($this->authorization->can($user, 'events.create'), 'invalidated before the commit');
+        });
+
+        $this->assertFalse($this->authorization->can($user, 'events.create'));
+    }
+
+    public function test_a_lost_user_version_key_falls_back_to_the_database(): void
+    {
+        $user = $this->userRevokedAfterAnEarlierCachedUserGrant();
+
+        Cache::forget("authorization_cache_version_user_{$user->id}");
+        $this->app->forgetScopedInstances();
+
+        $this->assertFalse($this->authorization->can($user, 'events.create'));
+    }
+
+    public function test_a_garbage_user_version_key_falls_back_to_the_database(): void
+    {
+        $user = $this->userRevokedAfterAnEarlierCachedUserGrant();
+
+        Cache::forever("authorization_cache_version_user_{$user->id}", 'garbage');
+        $this->app->forgetScopedInstances();
+
+        $this->assertFalse($this->authorization->can($user, 'events.create'));
+    }
+
+    public function test_the_request_sees_its_own_user_invalidation(): void
+    {
+        $role = $this->roleWith('events.create');
+        $user = UserModel::factory()->create();
+        $this->assertFalse($this->authorization->can($user, 'events.create'));
+
+        $user->roles()->attach($role->id);
+        $this->authorization->invalidateCacheFor($user);
+
+        $this->assertTrue($this->authorization->can($user, 'events.create'));
+    }
+
+    public function test_a_failed_user_token_replacement_forgets_the_old_token_and_is_reported(): void
+    {
+        $user = UserModel::factory()->create();
+        $store = Mockery::mock(Repository::class);
+        $store->shouldReceive('forever')->andThrow(new RuntimeException('cache down'));
+        $store->shouldReceive('forget')->once()->with("authorization_cache_version_user_{$user->id}")->andReturnTrue();
+        Cache::swap($store);
+        Log::spy();
+
+        try {
+            $this->authorization->invalidateCacheFor($user);
+            $this->fail('The failed invalidation must reach the caller');
+        } catch (RuntimeException $e) {
+            $this->assertSame('cache down', $e->getMessage());
+        }
+
+        Log::shouldHaveReceived('error')->once();
+    }
+
+    /**
+     * A user cached with events.create under a first user token, who then lost the role
+     * (invalidated for that user only): the entries of that token are still in the store.
+     */
+    private function userRevokedAfterAnEarlierCachedUserGrant(): UserModel
+    {
+        $role = $this->roleWith('events.create');
+        $user = UserModel::factory()->create();
+        $user->roles()->attach($role->id);
+        $this->assertTrue($this->authorization->can($user, 'events.create'));
+        $user->roles()->detach($role->id);
+        $this->authorization->invalidateCacheFor($user);
+        $this->assertFalse($this->authorization->can($user, 'events.create'));
+
+        return $user;
+    }
+
+    private function databaseQueriesDuring(callable $check): int
+    {
+        $queries = 0;
+        DB::listen(static function () use (&$queries): void {
+            $queries++;
+        });
+
+        $check();
+
+        return $queries;
+    }
+
     /**
      * A user cached with events.create under the first version, whose role then lost it
      * (invalidated): the entries of that first version are still in the store.
@@ -322,7 +466,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
     }
 
     /**
-     * @return array{version: int, total: int}
+     * @return array{version: int, user_version: int, total: int}
      */
     private function cacheReadsDuring(callable $check): array
     {
@@ -336,6 +480,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
 
         return [
             'version' => count(array_filter($keys, static fn (string $key): bool => $key === 'authorization_cache_version')),
+            'user_version' => count(array_filter($keys, static fn (string $key): bool => str_starts_with($key, 'authorization_cache_version_user_'))),
             'total' => count($keys),
         ];
     }

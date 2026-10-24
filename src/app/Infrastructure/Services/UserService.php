@@ -57,7 +57,7 @@ final readonly class UserService implements UserServiceInterface
         ]);
 
         $userModel->roles()->detach();
-        $this->authService->invalidateCache();
+        $this->authService->invalidateCacheFor($userModel);
     }
 
     public function isAdmin(string $userId): bool
@@ -107,7 +107,7 @@ final readonly class UserService implements UserServiceInterface
             $userModel->roles()->detach();
         });
 
-        $this->authService->invalidateCache();
+        $this->authService->invalidateCacheFor($userModel);
     }
 
     private function transferUserContent(string $fromUserId, string $toUserId): void

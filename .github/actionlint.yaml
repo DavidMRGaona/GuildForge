@@ -1,0 +1,5 @@
+paths:
+  # $names inside single-quoted GraphQL queries and jq programs are their own variables, not shell ones
+  .github/workflows/reusable-project-sync.yml:
+    ignore:
+      - 'SC2016:'

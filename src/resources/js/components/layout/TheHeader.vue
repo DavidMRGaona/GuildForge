@@ -7,6 +7,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import type { ThemeMode } from '@/stores/useAppStore';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
+import { useOnNavigate } from '@/composables/useOnNavigate';
 import TheNavigation from './TheNavigation.vue';
 import UserDropdown from './UserDropdown.vue';
 import AuthLinks from './AuthLinks.vue';
@@ -19,6 +20,11 @@ const appStore = useAppStore();
 
 const isMobileMenuOpen = ref(false);
 const isThemeMenuOpen = ref(false);
+
+useOnNavigate(() => {
+    isMobileMenuOpen.value = false;
+    isThemeMenuOpen.value = false;
+});
 
 const appName = computed(() => page.props.appName as string);
 const siteLogoLight = computed(() => page.props.siteLogoLight as string);

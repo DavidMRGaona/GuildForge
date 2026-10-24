@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, setLayoutProps } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import type { AuthLayoutProps } from '@/types/layouts';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useNotifications } from '@/composables/useNotifications';
@@ -9,6 +10,13 @@ import { useRoutes } from '@/composables/useRoutes';
 import type { RegisterFormData } from '@/types/models';
 
 const { t } = useI18n();
+
+defineOptions({ layout: AuthLayout });
+setLayoutProps<AuthLayoutProps>({
+    title: t('auth.register.title'),
+    subtitle: t('auth.register.subtitle'),
+});
+
 const { authSettings } = useAuth();
 const notifications = useNotifications();
 const routes = useRoutes();
@@ -29,93 +37,86 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthLayout :title="t('auth.register.title')" :subtitle="t('auth.register.subtitle')">
-        <form class="space-y-6" @submit.prevent="submit">
-            <div>
-                <label for="name" class="block text-sm font-medium text-base-secondary">
-                    {{ t('auth.register.name') }}
-                </label>
-                <input
-                    id="name"
-                    v-model="form.name"
-                    type="text"
-                    required
-                    autocomplete="name"
-                    class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                />
-                <p v-if="form.errors.name" class="mt-1 text-sm text-error">
-                    {{ form.errors.name }}
-                </p>
-            </div>
-
-            <div>
-                <label for="email" class="block text-sm font-medium text-base-secondary">
-                    {{ t('auth.register.email') }}
-                </label>
-                <input
-                    id="email"
-                    v-model="form.email"
-                    type="email"
-                    required
-                    autocomplete="email"
-                    class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                />
-                <p v-if="form.errors.email" class="mt-1 text-sm text-error">
-                    {{ form.errors.email }}
-                </p>
-            </div>
-
-            <div>
-                <label for="password" class="block text-sm font-medium text-base-secondary">
-                    {{ t('auth.register.password') }}
-                </label>
-                <input
-                    id="password"
-                    v-model="form.password"
-                    type="password"
-                    required
-                    autocomplete="new-password"
-                    class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                />
-                <p v-if="form.errors.password" class="mt-1 text-sm text-error">
-                    {{ form.errors.password }}
-                </p>
-            </div>
-
-            <div>
-                <label
-                    for="password_confirmation"
-                    class="block text-sm font-medium text-base-secondary"
-                >
-                    {{ t('auth.register.passwordConfirm') }}
-                </label>
-                <input
-                    id="password_confirmation"
-                    v-model="form.password_confirmation"
-                    type="password"
-                    required
-                    autocomplete="new-password"
-                    class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                />
-            </div>
-
-            <div>
-                <BaseButton
-                    type="submit"
-                    variant="primary"
-                    class="w-full"
-                    :disabled="form.processing"
-                >
-                    {{ form.processing ? t('common.loading') : t('auth.register.submit') }}
-                </BaseButton>
-            </div>
-
-            <p v-if="authSettings.loginEnabled" class="text-center text-sm text-base-secondary">
-                {{ t('auth.register.hasAccount') }}
-                <Link :href="routes.auth.login" class="font-medium text-primary hover:opacity-80">
-                    {{ t('auth.register.loginLink') }}
-                </Link>
+    <form class="space-y-6" @submit.prevent="submit">
+        <div>
+            <label for="name" class="block text-sm font-medium text-base-secondary">
+                {{ t('auth.register.name') }}
+            </label>
+            <input
+                id="name"
+                v-model="form.name"
+                type="text"
+                required
+                autocomplete="name"
+                class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+            />
+            <p v-if="form.errors.name" class="mt-1 text-sm text-error">
+                {{ form.errors.name }}
             </p>
-        </form>
-    </AuthLayout>
+        </div>
+
+        <div>
+            <label for="email" class="block text-sm font-medium text-base-secondary">
+                {{ t('auth.register.email') }}
+            </label>
+            <input
+                id="email"
+                v-model="form.email"
+                type="email"
+                required
+                autocomplete="email"
+                class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+            />
+            <p v-if="form.errors.email" class="mt-1 text-sm text-error">
+                {{ form.errors.email }}
+            </p>
+        </div>
+
+        <div>
+            <label for="password" class="block text-sm font-medium text-base-secondary">
+                {{ t('auth.register.password') }}
+            </label>
+            <input
+                id="password"
+                v-model="form.password"
+                type="password"
+                required
+                autocomplete="new-password"
+                class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+            />
+            <p v-if="form.errors.password" class="mt-1 text-sm text-error">
+                {{ form.errors.password }}
+            </p>
+        </div>
+
+        <div>
+            <label
+                for="password_confirmation"
+                class="block text-sm font-medium text-base-secondary"
+            >
+                {{ t('auth.register.passwordConfirm') }}
+            </label>
+            <input
+                id="password_confirmation"
+                v-model="form.password_confirmation"
+                type="password"
+                required
+                autocomplete="new-password"
+                class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+            />
+        </div>
+
+        <div>
+            <BaseButton type="submit" variant="primary" class="w-full" :disabled="form.processing">
+                {{ form.processing ? t('common.loading') : t('auth.register.submit') }}
+            </BaseButton>
+        </div>
+
+        <p v-if="authSettings.loginEnabled" class="text-center text-sm text-base-secondary">
+            {{ t('auth.register.hasAccount') }}
+            <Link :href="routes.auth.login" class="font-medium text-primary hover:opacity-80">
+                {{ t('auth.register.loginLink') }}
+            </Link>
+        </p>
+    </form>
 </template>

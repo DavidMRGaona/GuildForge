@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Check, ChevronDown } from '@lucide/vue';
 import { computed } from 'vue';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/vue';
 
@@ -129,20 +130,11 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                         <span class="text-sm text-base-muted">
                             {{ selectedCount(group) }}/{{ group.options.length }}
                         </span>
-                        <svg
+                        <ChevronDown
                             class="h-5 w-5 text-base-muted transition-transform duration-200"
                             :class="{ 'rotate-180': open }"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M19 9l-7 7-7-7"
-                            />
-                        </svg>
+                            aria-hidden="true"
+                        />
                     </div>
                 </DisclosureButton>
 
@@ -179,24 +171,16 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                                     ]"
                                 >
                                     <!-- Checkmark with animation -->
-                                    <svg
-                                        class="h-3 w-3 transition-all duration-150"
+                                    <Check
+                                        class="h-3 w-3 transition-all duration-150 text-white"
                                         :class="
                                             isChecked(option.id)
                                                 ? 'opacity-100 scale-100'
                                                 : 'opacity-0 scale-0'
                                         "
-                                        viewBox="0 0 12 12"
-                                        fill="none"
-                                    >
-                                        <path
-                                            d="M2 6l3 3 5-6"
-                                            stroke="white"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        />
-                                    </svg>
+                                        :stroke-width="3"
+                                        aria-hidden="true"
+                                    />
                                 </div>
 
                                 <div class="flex-1 min-w-0">
@@ -270,24 +254,16 @@ function getSeverityClasses(severity?: 'mild' | 'moderate' | 'severe'): {
                             ]"
                         >
                             <!-- Checkmark with animation -->
-                            <svg
-                                class="h-3 w-3 transition-all duration-150"
+                            <Check
+                                class="h-3 w-3 transition-all duration-150 text-white"
                                 :class="
                                     isChecked(option.id)
                                         ? 'opacity-100 scale-100'
                                         : 'opacity-0 scale-0'
                                 "
-                                viewBox="0 0 12 12"
-                                fill="none"
-                            >
-                                <path
-                                    d="M2 6l3 3 5-6"
-                                    stroke="white"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                />
-                            </svg>
+                                :stroke-width="3"
+                                aria-hidden="true"
+                            />
                         </div>
 
                         <div class="flex-1 min-w-0">

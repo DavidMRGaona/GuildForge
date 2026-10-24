@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Check } from '@lucide/vue';
 import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -119,21 +120,12 @@ const hasActiveTags = computed(() => props.currentTags.length > 0);
             }"
             @click="toggleTag(tag.slug)"
         >
-            <svg
+            <Check
                 v-if="isActive(tag.slug)"
                 class="h-3.5 w-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                :stroke-width="3"
                 aria-hidden="true"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="3"
-                    d="M5 13l4 4L19 7"
-                />
-            </svg>
+            />
             {{ tag.name }}
         </button>
     </div>

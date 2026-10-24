@@ -413,7 +413,7 @@ make cs-fix   # Auto-fix
 
 ### PHPStan (static analysis)
 
-Uses `larastan/larastan` (PHPStan + Laravel rules) for static analysis:
+Uses `larastan/larastan` (PHPStan + Laravel rules) for static analysis at level 8 over `app/`; CI fails on any error:
 
 ```bash
 make phpstan

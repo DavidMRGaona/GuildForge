@@ -134,7 +134,7 @@ final class UserServiceTest extends TestCase
         $rolesRelation->shouldReceive('detach')->once();
         $userModel->shouldReceive('roles')->once()->andReturn($rolesRelation);
         // Without its roles the user must lose access at once, not when the cache expires
-        $this->authService->shouldReceive('invalidateCache')->once();
+        $this->authService->shouldReceive('invalidateCacheFor')->once()->with($userModel);
 
         $this->service->anonymize($userId->value());
 

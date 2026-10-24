@@ -2,7 +2,7 @@
 
 > Updated: 2026-10-13 | Project: GuildForge core 3.5.1
 
-Icons come from `@lucide/vue` (mapped in `utils/icons.ts`).
+Icons come from `@lucide/vue` (dynamic ones mapped in `utils/icons.ts`). Components import the icon they need instead of inline SVGs; only the brand logos in `SocialLinks` stay as SVG, because Lucide has no brand icons. Modules reuse `LoadingSpinner` for loading states.
 
 ---
 
@@ -85,6 +85,7 @@ Located in `src/resources/js/layouts/`.
 
 - **File**: `DefaultLayout.vue`
 - **Slots**: `default` (main content)
+- **Applied by**: the app, not the pages. `createInertiaApp({ layout })` (`utils/pageLayout.ts`) renders it around every core page that declares no layout and around module pages whose prefix sets `usesCoreLayout`; it persists across visits, so components in it use `useOnNavigate()` to reset state tied to the previous page (open menus, the verification banner's feedback)
 - **Shared functionality**:
   - Injects dynamic theme CSS variables
   - Loads web fonts from Bunny Fonts
@@ -97,7 +98,8 @@ Located in `src/resources/js/layouts/`.
 ### AuthLayout
 
 - **File**: `AuthLayout.vue`
-- **Props**: `title: string`, `subtitle?: string`, `showBackLink?: boolean` (default: `true`)
+- **Props**: `title?: string`, `subtitle?: string`, `showBackLink?: boolean` (default: `true`), typed as `AuthLayoutProps` (`types/layouts.ts`)
+- **Usage**: persistent layout of the auth pages and the maintenance page: `defineOptions({ layout: AuthLayout })` plus `setLayoutProps<AuthLayoutProps>({ title, subtitle })`; Inertia resets the props on every page change
 - **Slots**: `default` (form)
 - **Shared functionality**:
   - Same theme and font injection as `DefaultLayout`
@@ -189,7 +191,7 @@ Located in `src/resources/js/components/`.
 
 - **File**: `ui/LoadingSpinner.vue`
 - **Props**: `size?: 'sm' | 'md' | 'lg'`, `color?: string` (default: `'text-primary'`)
-- **Features**: Animated SVG spinner with `role="status"` and hidden text for screen readers
+- **Features**: Spinning `LoaderCircle` (Lucide) with `role="status"` and hidden text for screen readers
 
 #### TagBadge
 
@@ -233,7 +235,7 @@ Located in `src/resources/js/components/`.
 
 - **File**: `ui/ImagePlaceholder.vue`
 - **Props**: `variant: 'event' | 'article' | 'gallery'`, `height?: string`, `iconSize?: string`
-- **Features**: Image placeholder with gradient and an SVG icon based on the content type
+- **Features**: Image placeholder with gradient and a Lucide icon based on the content type (Calendar, FileText, Image)
 
 #### SocialLinks
 
@@ -540,7 +542,7 @@ Located in `src/resources/js/composables/`.
 - **Parameters**: --
 - **Returns**: `RouteDefinitions` (object with all application routes)
 - **Dependencies**: --
-- **Purpose**: Centralized route definitions. Eliminates hardcoded URLs. Public routes, content routes (with `show(slug)` functions), authentication, profile, admin and contact routes. All URLs in Spanish
+- **Purpose**: Centralized route definitions. Eliminates hardcoded URLs. Public routes, content routes (with `show(slug)` functions), the legal pages (`legal.privacy`, `legal.notice`, `legal.cookies`, `legal.terms`, the URLs of route `legal.show`, pinned by `LegalRoutesInFrontendTest`), authentication, profile, admin and contact routes. All URLs in Spanish
 
 ### useHeroSlider
 

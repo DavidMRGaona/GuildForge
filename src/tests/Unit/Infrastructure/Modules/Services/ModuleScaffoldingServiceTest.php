@@ -706,7 +706,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $provider = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
 
         $this->assertStringNotContainsString('mergeConfigFrom', $provider);
-        $this->assertStringContainsString("new PagePrefixDTO(prefix: 'BlogPosts', module: \$this->moduleName())", $provider);
+        $this->assertStringContainsString("new PagePrefixDTO(prefix: 'BlogPosts', module: \$this->moduleName(), usesCoreLayout: true)", $provider);
         foreach (['registerPolicies', 'registerPermissions', 'registerFilamentWidgets', 'registerFilamentPages', 'registerCalendarSources', 'registerPagePrefixes'] as $hook) {
             $this->assertStringContainsString("public function {$hook}(): array", $provider);
         }
@@ -951,15 +951,16 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringNotContainsString('App\Domain\User', $filament);
     }
 
-    public function test_a_page_lives_under_the_module_prefix_inside_the_site_layout(): void
+    public function test_a_page_lives_under_the_module_prefix_and_leaves_the_layout_to_the_core(): void
     {
         $this->service->createModule('blog-posts');
         $this->service->createVuePage('blog-posts', 'Archive');
 
         $page = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/pages/BlogPosts/Archive.vue');
 
-        $this->assertStringContainsString("import DefaultLayout from '@/layouts/DefaultLayout.vue';", $page);
-        $this->assertStringContainsString('<DefaultLayout>', $page);
+        // The prefix declares usesCoreLayout: a page that wrapped its own layout would show it twice
+        $this->assertStringNotContainsString('DefaultLayout', $page);
+        $this->assertStringNotContainsString('layout:', $page);
         $this->assertStringContainsString("{{ \$t('blogPosts.title') }}", $page);
         $this->assertStringNotContainsString('bg-white', $page);
         $this->assertStringNotContainsString('text-gray-', $page);

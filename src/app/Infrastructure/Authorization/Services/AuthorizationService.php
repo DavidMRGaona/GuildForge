@@ -25,6 +25,12 @@ final class AuthorizationService implements AuthorizationServiceInterface
      */
     private const string CACHE_VERSION_KEY = 'authorization_cache_version';
 
+    /**
+     * Each user's own token, followed by the user id: also part of that user's lookup keys,
+     * with the same rules, so a change to one user's roles replaces only that user's token.
+     */
+    private const string USER_CACHE_VERSION_KEY_PREFIX = 'authorization_cache_version_user_';
+
     private const string CACHE_VERSION_PATTERN = '/^[0-9a-f]{32}$/';
 
     public function __construct(
@@ -136,7 +142,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
         $role = RoleModel::where('name', $roleName)->firstOrFail();
         /** @var UserModel $user */
         $user->roles()->syncWithoutDetaching([$role->id]);
-        $this->invalidateCache();
+        $this->invalidateCacheFor($user);
     }
 
     public function removeRole(object $user, string $roleName): void
@@ -150,7 +156,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
         if ($role !== null) {
             /** @var UserModel $user */
             $user->roles()->detach($role->id);
-            $this->invalidateCache();
+            $this->invalidateCacheFor($user);
         }
     }
 
@@ -169,7 +175,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
 
         $roleIds = RoleModel::whereIn('name', $roleNames)->pluck('id')->toArray();
         $user->roles()->sync($roleIds);
-        $this->invalidateCache();
+        $this->invalidateCacheFor($user);
     }
 
     public function invalidateCache(): void
@@ -178,25 +184,20 @@ final class AuthorizationService implements AuthorizationServiceInterface
         // data again under the new version. Runs at once outside a transaction.
         DB::afterCommit(static function (): void {
             $current = app(AuthorizationCacheVersion::class);
-            $version = self::newCacheVersion();
+            // Until the new token is stored: if storing fails, this request reads the store again
+            $current->token = null;
+            $current->token = self::replaceToken(self::CACHE_VERSION_KEY);
+        });
+    }
 
-            try {
-                Cache::forever(self::CACHE_VERSION_KEY, $version);
-                $current->token = $version;
-            } catch (Throwable $e) {
-                $current->token = null;
-                Log::error("Authorization cache could not be invalidated: {$e->getMessage()}");
+    public function invalidateCacheFor(object $user): void
+    {
+        $userId = $this->getUserId($user);
 
-                // Without a token readers start a new one, so the old entries are never served
-                try {
-                    Cache::forget(self::CACHE_VERSION_KEY);
-                } catch (Throwable) {
-                    // Store unreachable: readers fall back to the database meanwhile
-                }
-
-                // The change is committed: the admin must still see that access may lag
-                throw $e;
-            }
+        DB::afterCommit(static function () use ($userId): void {
+            $current = app(AuthorizationCacheVersion::class);
+            unset($current->userTokens[$userId]);
+            $current->userTokens[$userId] = self::replaceToken(self::USER_CACHE_VERSION_KEY_PREFIX.$userId);
         });
     }
 
@@ -212,8 +213,12 @@ final class AuthorizationService implements AuthorizationServiceInterface
         $key = null;
 
         try {
-            // Fixed prefix, server-side version token and the user's primary key: nothing user supplied
-            $key = "user_{$kind}_{$this->cacheVersion()}_{$this->getUserId($user)}";
+            // Fixed prefix, server-side version tokens and the user's primary key: nothing user supplied
+            $userId = $this->getUserId($user);
+            $current = app(AuthorizationCacheVersion::class);
+            $version = $current->token ??= self::readToken(self::CACHE_VERSION_KEY);
+            $userVersion = $current->userTokens[$userId] ??= self::readToken(self::USER_CACHE_VERSION_KEY_PREFIX.$userId);
+            $key = "user_{$kind}_{$version}_{$userVersion}_{$userId}";
             $cached = Cache::get($key);
 
             if (self::isListOfNames($cached)) {
@@ -237,23 +242,47 @@ final class AuthorizationService implements AuthorizationServiceInterface
         return $fresh;
     }
 
-    private function cacheVersion(): string
+    /**
+     * The token stored under $key. Callers keep it in AuthorizationCacheVersion, so it is
+     * read once per request or job.
+     */
+    private static function readToken(string $key): string
     {
-        $current = app(AuthorizationCacheVersion::class);
-
-        if ($current->token !== null) {
-            return $current->token;
-        }
-
-        $version = Cache::get(self::CACHE_VERSION_KEY);
+        $version = Cache::get($key);
 
         if (! is_string($version) || preg_match(self::CACHE_VERSION_PATTERN, $version) !== 1) {
             // Missing (evicted, flushed) or malformed: start a version no cached lookup can match
             $version = self::newCacheVersion();
-            Cache::forever(self::CACHE_VERSION_KEY, $version);
+            Cache::forever($key, $version);
         }
 
-        return $current->token = $version;
+        return $version;
+    }
+
+    /**
+     * Writes a new token under $key, so every lookup cached under the old one is left behind.
+     */
+    private static function replaceToken(string $key): string
+    {
+        $version = self::newCacheVersion();
+
+        try {
+            Cache::forever($key, $version);
+
+            return $version;
+        } catch (Throwable $e) {
+            Log::error("Authorization cache could not be invalidated ({$key}): {$e->getMessage()}");
+
+            // Without a token readers start a new one, so the old entries are never served
+            try {
+                Cache::forget($key);
+            } catch (Throwable) {
+                // Store unreachable: readers fall back to the database meanwhile
+            }
+
+            // The change is committed: the admin must still see that access may lag
+            throw $e;
+        }
     }
 
     private static function newCacheVersion(): string
