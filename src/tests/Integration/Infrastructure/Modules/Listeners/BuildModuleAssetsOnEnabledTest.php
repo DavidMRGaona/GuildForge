@@ -135,32 +135,18 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
 
     public function test_handle_catches_exceptions_and_logs_error(): void
     {
-        // Create module directory but not the database record properly
-        $this->createTestModuleWithComponentsAndConfig('test-module');
-
-        ModuleModel::create([
-            'name' => 'test-module',
-            'path' => $this->testModulesPath.'/test-module',
-            'display_name' => 'Test Module',
-            'version' => '1.0.0',
-            'description' => 'Test module',
-            'author' => 'Test Author',
-            'status' => ModuleStatus::Enabled->value,
-            'requires' => null,
-            'enabled_at' => now(),
-        ]);
-
-        // The listener should handle exceptions gracefully
-        Log::shouldReceive('info')->andReturnNull();
-        Log::shouldReceive('error')->andReturnNull();
+        // The record outlives its directory: the builder throws before reaching npm,
+        // so the test never launches a process
+        $this->createModuleRecord('test-module');
+        Log::spy();
 
         $listener = $this->app->make(BuildModuleAssetsOnEnabled::class);
-        $event = new ModuleEnabled('fake-id', 'test-module');
+        $listener->handle(new ModuleEnabled('fake-id', 'test-module'));
 
-        // Should not throw exception
-        $listener->handle($event);
-
-        $this->assertTrue(true);
+        Log::shouldHaveReceived('error')
+            ->once()
+            ->withArgs(fn (string $message, array $context): bool => $message === 'BuildModuleAssetsOnEnabled: Exception while building assets for test-module'
+                && $context['exception'] === "Module 'test-module' not found.");
     }
 
     private function createModuleRecord(string $name): void
