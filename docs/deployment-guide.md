@@ -190,7 +190,7 @@ Runs on every push or pull request to `main`.
 
 **Job `test`:**
 - Services: PostgreSQL 17, Redis 7.2
-- Steps: checkout, setup PHP 8.5, composer install, Pint (`vendor/bin/pint --test`), setup Node 24, npm ci, build assets, check the module import map (`npm run verify:build`), prepare `.env`, run migrations, run tests (serially, on PostgreSQL)
+- Steps: checkout, setup PHP 8.5, composer install, Pint (`vendor/bin/pint --test`), PHPStan (`vendor/bin/phpstan analyse`), setup Node 24, npm ci, build assets, check the module import map (`npm run verify:build`), prepare `.env`, run migrations, run tests (serially, on PostgreSQL)
 
 > **Note on PostgreSQL versions:** CI, development and prod-local use PostgreSQL 17, the major version production runs. Migrations use Laravel's schema builder, so they also run on SQLite (local tests); CI runs migrations and tests on PostgreSQL 17.
 

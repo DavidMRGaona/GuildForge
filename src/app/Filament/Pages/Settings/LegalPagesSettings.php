@@ -207,7 +207,7 @@ final class LegalPagesSettings extends Page implements HasForms
         return $schema
             ->components([
                 Tabs::make('Tabs')
-                    ->tabs(array_values(array_filter([
+                    ->tabs(array_filter([
                         Tab::make(__('filament.pages.legal.tabs.entity'))
                             ->schema([
                                 TextInput::make('legal_entity_name')
@@ -282,7 +282,7 @@ final class LegalPagesSettings extends Page implements HasForms
                             ]),
 
                         $this->mailNoticesTab(),
-                    ])))
+                    ]))
                     ->columnSpanFull(),
             ])
             ->statePath('data');
