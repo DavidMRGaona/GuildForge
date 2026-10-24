@@ -7,6 +7,7 @@ namespace App\Filament\Resources;
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
@@ -87,11 +88,7 @@ class RoleResource extends BaseResource
                             ->searchable()
                             ->bulkToggleable()
                             ->gridDirection('row')
-                            ->descriptions(
-                                PermissionModel::query()
-                                    ->pluck('key', 'id')
-                                    ->toArray()
-                            ),
+                            ->descriptions(fn (?RoleModel $record): array => self::permissionDescriptions($record)),
                     ]),
             ]);
     }
@@ -162,6 +159,26 @@ class RoleResource extends BaseResource
     /**
      * Why the name of a role that is not protected cannot be changed, if it cannot.
      */
+    /**
+     * Each permission's key, marked when the core or its module suggests it for this role.
+     * Only marked: a suggestion is never granted without an admin ticking it.
+     *
+     * @return array<string, string>
+     */
+    private static function permissionDescriptions(?RoleModel $record): array
+    {
+        $registry = app(PermissionRegistryInterface::class);
+        $suggested = (string) __('filament.roles.fields.suggestedForRole');
+
+        return PermissionModel::query()
+            ->pluck('key', 'id')
+            ->map(static fn (string $key): string => $record !== null
+                && in_array($record->name, $registry->find($key)->defaultRoles ?? [], true)
+                ? "{$key} · {$suggested}"
+                : $key)
+            ->all();
+    }
+
     private static function lockedNameHint(?RoleModel $record): ?string
     {
         return match (true) {
