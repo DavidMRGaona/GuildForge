@@ -24,6 +24,14 @@ export interface RouteDefinitions {
     };
     calendar: string;
 
+    // Legal pages (route legal.show): link these, never a hand-written URL
+    legal: {
+        privacy: string;
+        notice: string;
+        cookies: string;
+        terms: string;
+    };
+
     // Auth
     auth: {
         login: string;
@@ -65,6 +73,14 @@ const routes: RouteDefinitions = {
         show: (slug: string) => `/galeria/${slug}`,
     },
     calendar: '/calendario',
+
+    // Legal pages
+    legal: {
+        privacy: '/politica-de-privacidad',
+        notice: '/aviso-legal',
+        cookies: '/politica-de-cookies',
+        terms: '/terminos-y-condiciones',
+    },
 
     // Auth
     auth: {

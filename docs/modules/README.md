@@ -757,6 +757,8 @@ public function registerPagePrefixes(): array
 
 The site shares `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` with modules through an import map: the module build keeps them external, so a module uses the site's instances. Any other package must be bundled. Imports from `@/` (core components, composables, layouts, types) resolve to the core's `resources/js` and are bundled into the module's build.
 
+Link core pages through `useRoutes()` (`@/composables/useRoutes`), never with hand-written URLs; for example a consent checkbox links `useRoutes().legal.privacy` (core ≥ 3.16).
+
 ### Frontend translations
 
 Texts for pages and components live in `resources/js/locales/es.ts` and `en.ts`, under one top-level key (`module:make` writes `myModule: { title }`):

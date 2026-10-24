@@ -542,7 +542,7 @@ Located in `src/resources/js/composables/`.
 - **Parameters**: --
 - **Returns**: `RouteDefinitions` (object with all application routes)
 - **Dependencies**: --
-- **Purpose**: Centralized route definitions. Eliminates hardcoded URLs. Public routes, content routes (with `show(slug)` functions), authentication, profile, admin and contact routes. All URLs in Spanish
+- **Purpose**: Centralized route definitions. Eliminates hardcoded URLs. Public routes, content routes (with `show(slug)` functions), the legal pages (`legal.privacy`, `legal.notice`, `legal.cookies`, `legal.terms`, the URLs of route `legal.show`, pinned by `LegalRoutesInFrontendTest`), authentication, profile, admin and contact routes. All URLs in Spanish
 
 ### useHeroSlider
 
