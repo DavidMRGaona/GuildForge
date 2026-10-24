@@ -1,6 +1,7 @@
 name: Feature request
 description: Una función nueva o un cambio en una que ya existe · A new feature or a change to an existing one
 labels: [enhancement]
+assignees: [DavidMRGaona]
 projects: ["DavidMRGaona/2"]
 body:
   - type: textarea
