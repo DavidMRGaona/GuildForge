@@ -449,7 +449,7 @@ public function registerPermissions(): array
 ```
 
 - Policies check the full key: `$this->authorize($user, 'my-module:games.view_any')` with the `AuthorizesWithPermissions` trait. The policies made by `module:make-filament-resource` check `<module>:<plural>.view_any|view|create|update|delete`; declare those five names.
-- Admins pass every check. Other roles need the permission, granted from the role editor in the panel; `roles` lists the roles the core's roles seeder grants it to.
+- Admins pass every check. Other roles need the permission, granted from the role editor in the panel. `roles` lists the roles the module suggests it for: from core 3.16 the role editor marks it *Sugerido para este rol* on those roles, but nobody gets it until an admin ticks it.
 - `php artisan permissions:sync` stores the definitions in the database (the production container runs it on every start).
 
 ### Registered users and association members
