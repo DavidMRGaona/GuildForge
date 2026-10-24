@@ -144,54 +144,11 @@ jobs:
     name: Test module
     needs: validate
     if: inputs.run_tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src
-    steps:
-      - name: Checkout host application
-        uses: actions/checkout@v7
-        with:
-          repository: DavidMRGaona/GuildForge
-          ref: ${{ inputs.host_ref }}
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ inputs.php_version }}
-          extensions: pdo_pgsql, pdo_sqlite, redis, gd, zip, bcmath, intl
-          coverage: none
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v6
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-php${{ inputs.php_version }}-composer-${{ hashFiles('src/composer.lock') }}
-          restore-keys: ${{ runner.os }}-php${{ inputs.php_version }}-composer-
-
-      - name: Install host dependencies
-        run: composer install --prefer-dist --no-progress --no-interaction
-
-      - name: Prepare environment
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      # Checked out after the host is installed: Composer scripts and key:generate
-      # boot the application without any module, exactly as in the host CI
-      - name: Checkout module
-        uses: actions/checkout@v7
-        with:
-          path: src/modules/${{ inputs.module_name }}
-
-      - name: Run module tests
-        env:
-          MODULE_NAME: ${{ inputs.module_name }}
-        run: sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME"
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-tests.yml@main
+    with:
+      module_name: ${{ inputs.module_name }}
+      php_version: ${{ inputs.php_version }}
+      host_ref: ${{ inputs.host_ref }}
 
   release:
     name: Create release
