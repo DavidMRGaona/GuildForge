@@ -744,12 +744,14 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 public function registerPagePrefixes(): array
 {
     return [
-        new PagePrefixDTO(prefix: 'MyModule', module: $this->moduleName()),
+        new PagePrefixDTO(prefix: 'MyModule', module: $this->moduleName(), usesCoreLayout: true),
     ];
 }
 ```
 
-`MyModule/GameList` resolves to `resources/js/pages/MyModule/GameList.vue` (or `resources/js/pages/GameList.vue`). Module prefixes are checked before the core pages, so never use a prefix that matches a core page directory (`Events`, `Articles`, `Profile`…). Pages wrap their content in the core layout (`import DefaultLayout from '@/layouts/DefaultLayout.vue'`), as `module:make-vue-page` does.
+`MyModule/GameList` resolves to `resources/js/pages/MyModule/GameList.vue` (or `resources/js/pages/GameList.vue`). Module prefixes are checked before the core pages, so never use a prefix that matches a core page directory (`Events`, `Articles`, `Profile`…).
+
+**Layout.** From core 3.16, with `usesCoreLayout: true` the core renders its `DefaultLayout` around the prefix's pages and keeps it across visits, also between core and module pages: header, footer and the module slots keep their state. Such pages declare no layout and never import `DefaultLayout` (it would show twice); `module:make` and `module:make-vue-page` generate them that way. A module that sets the flag must require `"core": "^3.16"` in `module.json`: older cores do not know the argument. Without the flag (the default, for modules released before 3.16) the core renders no layout around the pages, and each page wraps its own `<DefaultLayout>`; that copy is bundled into the module build, so it shows the header of the core version the module was built against and remounts on every visit.
 
 ### Shared packages
 

@@ -9,6 +9,7 @@ import { createI18n } from 'vue-i18n';
 import es from '@/locales/es';
 import en from '@/locales/en';
 import { createPageResolver, setModulePageMapping } from '@/utils/resolveModulePage';
+import { resolveDefaultLayout } from '@/utils/pageLayout';
 import {
     loadAllModuleTranslations,
     loadModuleTranslationsFromProps,
@@ -116,6 +117,8 @@ void createInertiaApp({
     // adding a second <title data-inertia> to the head.
     title: (title: string): string => title,
     resolve: pageResolver,
+    // Persistent layout for pages that declare none (see resolveDefaultLayout)
+    layout: resolveDefaultLayout,
     setup({ el, App, props, plugin }) {
         // Update module pages mapping when props change (for subsequent navigations)
         const modulePagesProp = (props.initialPage.props as Record<string, unknown>).modulePages as

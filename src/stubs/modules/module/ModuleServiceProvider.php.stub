@@ -217,13 +217,14 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      * Register page prefixes provided by this module.
      * Allows module Vue pages to be resolved by Inertia: module:make-vue-page writes
      * pages to resources/js/pages/{{ moduleNameStudly }}/, rendered as "{{ moduleNameStudly }}/<Page>".
+     * With usesCoreLayout the core renders its layout around them: pages never wrap their own.
      *
      * @return array<PagePrefixDTO>
      */
     public function registerPagePrefixes(): array
     {
         return [
-            new PagePrefixDTO(prefix: '{{ moduleNameStudly }}', module: $this->moduleName()),
+            new PagePrefixDTO(prefix: '{{ moduleNameStudly }}', module: $this->moduleName(), usesCoreLayout: true),
         ];
     }
 

@@ -470,7 +470,7 @@ src/modules/
 | `registerPermissions()` | `PermissionDTO[]` | Module permissions |
 | `registerNavigation()` | `NavigationItemDTO[]` | Admin-panel navigation items, collected in `ModuleNavigationRegistry`. They are never copied into the public menu |
 | `registerSlots()` | `SlotRegistrationDTO[]` | Vue components injectable into the layout |
-| `registerPagePrefixes()` | `PagePrefixDTO[]` | Page prefixes for Inertia resolution |
+| `registerPagePrefixes()` | `PagePrefixDTO[]` | Page prefixes for Inertia resolution; `usesCoreLayout: true` (core ≥ 3.16) renders the core's persistent layout around their pages |
 | `registerRoutes()` | `ModuleRouteDTO[]` | Public pages offered in the menu editor (`MenuItemResource`) |
 | `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Entries for the public calendars (`/calendario` and the home widget, through `/eventos/calendario`) |
 | `registerPolicies()` | `array<model, policy>` | Authorization policies |
@@ -950,8 +950,8 @@ Modules can:
 
 Location: `src/resources/js/layouts/`
 
-- `DefaultLayout.vue` - Main layout for the public site (header, footer, navigation, module slots)
-- `AuthLayout.vue` - Layout for authentication pages
+- `DefaultLayout.vue` - Main layout for the public site (header, footer, navigation, module slots). Applied by the app (`createInertiaApp({ layout })`, `utils/pageLayout.ts`) to core pages and to module prefixes with `usesCoreLayout`, and kept across visits
+- `AuthLayout.vue` - Persistent layout for authentication pages and the maintenance page (`defineOptions({ layout })` + `setLayoutProps()`)
 
 ### Pages
 

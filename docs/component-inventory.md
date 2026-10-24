@@ -85,6 +85,7 @@ Located in `src/resources/js/layouts/`.
 
 - **File**: `DefaultLayout.vue`
 - **Slots**: `default` (main content)
+- **Applied by**: the app, not the pages. `createInertiaApp({ layout })` (`utils/pageLayout.ts`) renders it around every core page that declares no layout and around module pages whose prefix sets `usesCoreLayout`; it persists across visits, so components in it use `useOnNavigate()` to reset state tied to the previous page (open menus, the verification banner's feedback)
 - **Shared functionality**:
   - Injects dynamic theme CSS variables
   - Loads web fonts from Bunny Fonts
@@ -97,7 +98,8 @@ Located in `src/resources/js/layouts/`.
 ### AuthLayout
 
 - **File**: `AuthLayout.vue`
-- **Props**: `title: string`, `subtitle?: string`, `showBackLink?: boolean` (default: `true`)
+- **Props**: `title?: string`, `subtitle?: string`, `showBackLink?: boolean` (default: `true`), typed as `AuthLayoutProps` (`types/layouts.ts`)
+- **Usage**: persistent layout of the auth pages and the maintenance page: `defineOptions({ layout: AuthLayout })` plus `setLayoutProps<AuthLayoutProps>({ title, subtitle })`; Inertia resets the props on every page change
 - **Slots**: `default` (form)
 - **Shared functionality**:
   - Same theme and font injection as `DefaultLayout`

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { ChevronDown, User, Settings, LogOut } from '@lucide/vue';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
+import { useOnNavigate } from '@/composables/useOnNavigate';
 
 const emit = defineEmits<{
     (e: 'navigate'): void;
@@ -24,6 +25,8 @@ function toggleDropdown(): void {
 function closeDropdown(): void {
     isOpen.value = false;
 }
+
+useOnNavigate(closeDropdown);
 
 function handleClickOutside(event: MouseEvent): void {
     const target = event.target as HTMLElement | null;

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import type { LegalPageProps } from '@/types/legal';
-
-defineOptions({ layout: DefaultLayout });
 
 defineProps<LegalPageProps>();
 </script>

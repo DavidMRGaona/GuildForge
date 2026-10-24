@@ -86,6 +86,7 @@ final class HandleInertiaRequests extends Middleware
             ],
             'moduleSlots' => fn () => $this->getModuleSlots(),
             'modulePages' => fn () => $this->getModulePages(),
+            'coreLayoutPagePrefixes' => fn (): array => $this->getCoreLayoutPagePrefixes(),
             'moduleTranslations' => fn () => $this->getModuleTranslations(),
             'cloudinary' => fn (): array => $this->getCloudinaryConfig(),
             'navigation' => fn () => $this->getNavigation($request),
@@ -300,6 +301,22 @@ final class HandleInertiaRequests extends Middleware
             return $slotRegistry->toInertiaPayload();
         } catch (\Throwable $e) {
             $this->logDebugError('getModuleSlots', $e);
+
+            return [];
+        }
+    }
+
+    /**
+     * Module page prefixes rendered inside the core layout (see PagePrefixDTO::$usesCoreLayout).
+     *
+     * @return list<string>
+     */
+    private function getCoreLayoutPagePrefixes(): array
+    {
+        try {
+            return app(ModulePageRegistryInterface::class)->coreLayoutPrefixes();
+        } catch (\Throwable $e) {
+            $this->logDebugError('getCoreLayoutPagePrefixes', $e);
 
             return [];
         }

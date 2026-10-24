@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { Link, useForm, usePage, setLayoutProps } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import type { AuthLayoutProps } from '@/types/layouts';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
@@ -19,6 +20,13 @@ interface FlashProps {
 const props = defineProps<Props>();
 
 const { t } = useI18n();
+
+defineOptions({ layout: AuthLayout });
+setLayoutProps<AuthLayoutProps>({
+    title: t('auth.verifyEmail.title'),
+    subtitle: t('auth.verifyEmail.subtitle'),
+});
+
 const { logout } = useAuth();
 const routes = useRoutes();
 const page = usePage();
@@ -39,43 +47,36 @@ const resend = () => {
 </script>
 
 <template>
-    <AuthLayout :title="t('auth.verifyEmail.title')" :subtitle="t('auth.verifyEmail.subtitle')">
-        <div v-if="successMessage" class="mb-4 rounded-md bg-success-light p-4">
-            <p class="text-sm text-success">{{ successMessage }}</p>
-        </div>
+    <div v-if="successMessage" class="mb-4 rounded-md bg-success-light p-4">
+        <p class="text-sm text-success">{{ successMessage }}</p>
+    </div>
 
-        <div v-if="errorMessage" role="alert" class="mb-4 rounded-md bg-error-light p-4">
-            <p class="text-sm text-error">{{ errorMessage }}</p>
-        </div>
+    <div v-if="errorMessage" role="alert" class="mb-4 rounded-md bg-error-light p-4">
+        <p class="text-sm text-error">{{ errorMessage }}</p>
+    </div>
 
-        <div class="space-y-6">
-            <p class="text-sm text-base-secondary">
-                {{ t('auth.verifyEmail.description') }}
-            </p>
+    <div class="space-y-6">
+        <p class="text-sm text-base-secondary">
+            {{ t('auth.verifyEmail.description') }}
+        </p>
 
-            <p class="text-sm font-medium text-base-primary">
-                {{ sentToMessage }}
-            </p>
+        <p class="text-sm font-medium text-base-primary">
+            {{ sentToMessage }}
+        </p>
 
-            <BaseButton
-                variant="primary"
-                class="w-full"
-                :disabled="form.processing"
-                @click="resend"
-            >
-                {{ form.processing ? t('common.loading') : t('auth.verifyEmail.resend') }}
-            </BaseButton>
+        <BaseButton variant="primary" class="w-full" :disabled="form.processing" @click="resend">
+            {{ form.processing ? t('common.loading') : t('auth.verifyEmail.resend') }}
+        </BaseButton>
 
-            <p class="text-center text-sm text-base-secondary">
-                {{ t('auth.verifyEmail.wrongEmail') }}
-                <Link :href="routes.profile" class="font-medium text-primary hover:opacity-80">
-                    {{ t('auth.verifyEmail.changeEmail') }}
-                </Link>
-            </p>
+        <p class="text-center text-sm text-base-secondary">
+            {{ t('auth.verifyEmail.wrongEmail') }}
+            <Link :href="routes.profile" class="font-medium text-primary hover:opacity-80">
+                {{ t('auth.verifyEmail.changeEmail') }}
+            </Link>
+        </p>
 
-            <BaseButton variant="ghost" class="w-full" @click="logout">
-                {{ t('auth.verifyEmail.logout') }}
-            </BaseButton>
-        </div>
-    </AuthLayout>
+        <BaseButton variant="ghost" class="w-full" @click="logout">
+            {{ t('auth.verifyEmail.logout') }}
+        </BaseButton>
+    </div>
 </template>
