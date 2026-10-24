@@ -1,4 +1,4 @@
-name: Fallo · Bug report
+name: Bug report
 description: Algo no funciona como debería · Something does not work as it should
 labels: [bug]
 projects: ["DavidMRGaona/2"]
@@ -11,14 +11,14 @@ body:
   - type: textarea
     id: what-happens
     attributes:
-      label: Qué pasa · What happens
+      label: What happens
       description: Describe el fallo y dónde lo ves · Describe the bug and where you see it
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Cómo reproducirlo · Steps to reproduce
+      label: Steps to reproduce
       placeholder: |
         1. …
         2. …
@@ -27,16 +27,16 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Qué debería pasar · Expected behaviour
+      label: Expected behaviour
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: Versión · Version
+      label: Version
       description: La del core o la del módulo, si la sabes · Core or module version, if you know it
   - type: textarea
     id: context
     attributes:
-      label: Más contexto · Additional context
+      label: Additional context
       description: Capturas, navegador, mensajes de error… · Screenshots, browser, error messages…

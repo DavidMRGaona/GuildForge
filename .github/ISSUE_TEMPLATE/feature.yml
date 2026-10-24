@@ -1,4 +1,4 @@
-name: Mejora funcional · Feature request
+name: Feature request
 description: Una función nueva o un cambio en una que ya existe · A new feature or a change to an existing one
 labels: [enhancement]
 projects: ["DavidMRGaona/2"]
@@ -6,21 +6,21 @@ body:
   - type: textarea
     id: need
     attributes:
-      label: Qué hace falta · What is needed
+      label: What is needed
       description: El problema o la situación, más que la solución · The problem or situation rather than the solution
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Propuesta · Proposal
+      label: Proposal
       description: Cómo lo resolverías, si tienes una idea · How you would solve it, if you have an idea
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternativas · Alternatives
+      label: Alternatives
       description: Otras opciones que has pensado · Other options you have considered
   - type: textarea
     id: context
     attributes:
-      label: Más contexto · Additional context
+      label: Additional context
