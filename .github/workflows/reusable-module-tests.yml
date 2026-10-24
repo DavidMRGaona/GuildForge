@@ -1,0 +1,80 @@
+name: Reusable module tests
+
+# Runs a module's PHPUnit suite inside the host application. Called by each module's
+# tests.yml on every pull request and by reusable-module-release.yml before a release.
+
+on:
+  workflow_call:
+    inputs:
+      module_name:
+        description: 'Module name (kebab-case)'
+        required: true
+        type: string
+      php_version:
+        description: 'PHP version'
+        required: false
+        type: string
+        default: '8.5'
+      host_ref:
+        description: 'Ref of DavidMRGaona/GuildForge to test against (branch, tag or SHA)'
+        required: false
+        type: string
+        default: 'main'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test module
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Checkout host application
+        uses: actions/checkout@v7
+        with:
+          repository: DavidMRGaona/GuildForge
+          ref: ${{ inputs.host_ref }}
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php_version }}
+          extensions: pdo_pgsql, pdo_sqlite, redis, gd, zip, bcmath, intl
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php${{ inputs.php_version }}-composer-${{ hashFiles('src/composer.lock') }}
+          restore-keys: ${{ runner.os }}-php${{ inputs.php_version }}-composer-
+
+      - name: Install host dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # Checked out after the host is installed: Composer scripts and key:generate
+      # boot the application without any module, exactly as in the host CI
+      - name: Checkout module
+        uses: actions/checkout@v7
+        with:
+          path: src/modules/${{ inputs.module_name }}
+          # The pull request's code runs here: leave no token behind in .git/config
+          persist-credentials: false
+
+      - name: Run module tests
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
+        run: sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME"
