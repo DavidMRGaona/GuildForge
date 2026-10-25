@@ -50,7 +50,7 @@ The workflow automatically:
 1. Validates that `module.json` exists and has the correct format: its `name` matches `module_name`, its `version` is semver, and its compatibility requirements are valid (`requires.core` is mandatory; `requires.modules` and `requires.extensions`, when present, must be lists of strings)
 2. Verifies that the tag matches the version in `module.json`
 3. Runs the module's PHPUnit suite inside the host application: it checks out `DavidMRGaona/GuildForge` at `host_ref`, installs its Composer dependencies, places the module in `src/modules/<module_name>` and runs `php artisan test --parallel --configuration=modules/<module_name>/phpunit.xml`, one process per CPU core with its own compiled-view directory (`.github/scripts/run-module-tests.sh`). Modules without `phpunit.xml` or tests are skipped with a notice; a failing test blocks the release
-4. If the module has a `vite.config.ts`, builds its assets: it checks out the host's `src/resources/js`, `src/public` and `src/scripts` at `host_ref`, runs `npm ci` there, copies the module to `src/modules/<module_name>` and runs `MODULE_STANDALONE_OUTPUT=true sh scripts/build-module.sh <module_name>` with the core's toolchain (`defineModuleConfig`, after `npm ci` in the module when it has a `package.json` of runtime libraries). A module with its own toolchain (a `package.json` with Vite, deprecated) still runs `npm install` and `MODULE_STANDALONE_OUTPUT=true npm run build` in its directory. The step fails without `public/build/manifest.json`
+4. If the module has a `vite.config.ts`, builds its assets: it checks out the host's `src/resources/js`, `src/public` and `src/scripts` at `host_ref`, runs `npm ci` there, copies the module to `src/modules/<module_name>` and runs `MODULE_STANDALONE_OUTPUT=true sh scripts/build-module.sh <module_name>` with the core's toolchain (`defineModuleConfig`, after `npm ci` in the module when it has a `package.json` of runtime libraries). A module on the legacy module toolchain (its own `package.json` with Vite, deprecated) still runs `npm install` and `MODULE_STANDALONE_OUTPUT=true npm run build` in its directory. The step fails without `public/build/manifest.json`
 5. Generates a ZIP with the correct structure, compiled assets included
 6. Calculates a SHA256 checksum
 7. Creates a GitHub Release with the ZIP, its checksum and `module.json` as assets
@@ -140,7 +140,7 @@ Everything in the repository is copied except `.git/`, `.github/`, `tests/`, `no
 
 ## Building a ZIP locally
 
-`make module-zip`, run on the host, lists the modules in `src/modules/` and asks which one to package. If it has a `vite.config.ts`, it builds the assets in the `guildforge_node` container with `MODULE_STANDALONE_OUTPUT=true` (`npm run build:module`, or the module's own npm build for a module with its own toolchain) (and fails without `public/build/manifest.json`). It then writes `dist/<name>-<version>.zip`, with the same exclusions as the release workflow, and `dist/<name>-<version>.zip.sha256`. Tests are not run.
+`make module-zip`, run on the host, lists the modules in `src/modules/` and asks which one to package. If it has a `vite.config.ts`, it builds the assets in the `guildforge_node` container with `MODULE_STANDALONE_OUTPUT=true` (`npm run build:module`, or the module's own npm build for a module on the legacy module toolchain) (and fails without `public/build/manifest.json`). It then writes `dist/<name>-<version>.zip`, with the same exclusions as the release workflow, and `dist/<name>-<version>.zip.sha256`. Tests are not run.
 
 ## Installing a module
 
@@ -193,7 +193,7 @@ Each module's `tests.yml` calls `reusable-module-tests.yml` on every pull reques
   - Rector (`src/`, dry run), then Pint (the whole module), then PHPStan level 8 (`src/` and `tests/`, `phpstan-modules.neon`, whose `phpstan-modules-bootstrap.php` autoloads `Modules\<Name>\Tests\` and `Modules\<Name>\Database\{Seeders,Factories}\` for PHPStan only)
   - ESLint and Prettier (`resources/js/`), and `vue-tsc` with the module's `tsconfig.json` (required when the module has TypeScript or Vue files; copy `src/stubs/modules/module/tsconfig.json.stub`), which checks the module against the core's own sources
   - for a module on the core's toolchain (`defineModuleConfig`): its `package.json`, if any, declares only runtime libraries (`src/scripts/check-module-package.mjs`); the module builds into a scratch directory, so a runtime import outside the [public frontend API](modules/README.md#public-frontend-api) or an undeclared package fails here; Vitest runs with the core's (`vitest.module.config.ts`) when the module has `vitest.config.ts` and a spec under `tests/js`
-  - for a module with its own toolchain (deprecated): Vitest, when the module has `vitest.config.ts` and `package-lock.json` (its own dependencies)
+  - for a module on the legacy module toolchain (deprecated): Vitest, when the module has `vitest.config.ts` and `package-lock.json` (its own dependencies)
 
 Every tool runs even when an earlier one fails, so one run lists everything. A module turns `quality` on in the pull request that leaves its code passing them, and the check then becomes required in its `main` protection, like `test / Test module`. Any quality tool added to the core goes into the script as well.
 
