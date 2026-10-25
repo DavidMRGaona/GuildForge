@@ -167,7 +167,6 @@ final class SesUsageTrackerTest extends TestCase
 
         $result = $this->tracker->getMonthlyUsage();
 
-        $this->assertIsArray($result);
         $this->assertSame(350, $result['emails_sent']);
         $this->assertEqualsWithDelta(0.035, $result['estimated_cost'], 0.0001);
         $this->assertSame(6, $result['bounces_count']);
@@ -220,7 +219,6 @@ final class SesUsageTrackerTest extends TestCase
 
         $result = $this->tracker->getMonthlyUsage();
 
-        $this->assertIsArray($result);
         $this->assertSame(150, $result['emails_sent']);
         $this->assertEqualsWithDelta(0.015, $result['estimated_cost'], 0.0001);
         $this->assertSame(1, $result['bounces_count']);

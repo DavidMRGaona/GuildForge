@@ -10,15 +10,12 @@ use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\ValueObjects\Slug;
 use DateTimeImmutable;
 use Mockery;
+use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\TestCase;
 
 final class SlugRedirectServiceTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
-    }
+    use MockeryPHPUnitIntegration;
 
     public function test_resolve_current_slug_returns_new_slug_when_redirect_exists(): void
     {
@@ -79,9 +76,6 @@ final class SlugRedirectServiceTest extends TestCase
         $service = new SlugRedirectService($repository);
 
         $service->handleSlugChange($slug, $slug, $entityType, $entityId);
-
-        // If we get here without exceptions, the test passes
-        $this->assertTrue(true);
     }
 
     public function test_handle_slug_change_creates_redirect(): void
@@ -115,8 +109,6 @@ final class SlugRedirectServiceTest extends TestCase
         $service = new SlugRedirectService($repository);
 
         $service->handleSlugChange($oldSlug, $newSlug, $entityType, $entityId);
-
-        $this->assertTrue(true);
     }
 
     public function test_handle_slug_change_updates_existing_redirect(): void
@@ -151,8 +143,6 @@ final class SlugRedirectServiceTest extends TestCase
         $service = new SlugRedirectService($repository);
 
         $service->handleSlugChange($oldSlug, $newSlug, $entityType, $entityId);
-
-        $this->assertTrue(true);
     }
 
     public function test_handle_slug_change_updates_chain_redirects(): void
@@ -179,7 +169,5 @@ final class SlugRedirectServiceTest extends TestCase
         $service = new SlugRedirectService($repository);
 
         $service->handleSlugChange($oldSlug, $newSlug, $entityType, $entityId);
-
-        $this->assertTrue(true);
     }
 }

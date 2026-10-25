@@ -31,6 +31,7 @@ final class ModuleUpdateResultDTOTest extends TestCase
         $this->assertCount(2, $dto->migrationsRun);
         $this->assertCount(1, $dto->seedersRun);
         $this->assertNull($dto->errorMessage);
+        $this->assertNotNull($dto->backupPath);
         $this->assertStringContainsString('forum_1.0.0', $dto->backupPath);
         $this->assertEquals('abc-123-def-456', $dto->historyId);
     }

@@ -57,6 +57,7 @@ final class CloudinaryStorageAdapterTest extends TestCase
             ['public_id' => 'guildforge/hero/slide', 'resource_type' => 'image', 'asset_folder' => 'guildforge/hero'],
         );
         $stream = fopen('php://memory', 'r+b');
+        $this->assertIsResource($stream);
         fwrite($stream, 'large');
         rewind($stream);
 
@@ -218,13 +219,13 @@ final class CloudinaryStorageAdapterTest extends TestCase
 
     private function assertFileExistsFailsSafeOn(Throwable $error): void
     {
-        Log::spy();
+        $log = Log::spy();
         $admin = $this->createStub(AdminApi::class);
         $admin->method('asset')->willThrowException($error);
 
         $this->assertTrue($this->adapter(admin: $admin)->fileExists('events/a.jpg'));
 
-        Log::shouldHaveReceived('warning')->once()->withArgs(
+        $log->shouldHaveReceived('warning')->once()->withArgs(
             static fn (string $message, array $context): bool => $context === ['path' => 'events/a.jpg', 'exception' => $error::class]
                 && ! str_contains($message.json_encode($context), 'secret'),
         );

@@ -5,13 +5,34 @@ declare(strict_types=1);
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Testing\PendingCommand;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
+use LogicException;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\AssertionFailedError;
+use Symfony\Component\HttpFoundation\Response;
 
 abstract class TestCase extends BaseTestCase
 {
+    /**
+     * artisan() for a test that inspects the command (output, questions, exit code). artisan()
+     * itself returns the exit code instead when console output mocking is off, as the framework
+     * does internally (RefreshDatabase), so it cannot be narrowed.
+     *
+     * @param  array<string, mixed>  $parameters
+     */
+    protected function artisanCommand(string $command, array $parameters = []): PendingCommand
+    {
+        $pending = $this->artisan($command, $parameters);
+
+        if (! $pending instanceof PendingCommand) {
+            throw new LogicException('artisanCommand() needs console output mocking, which this test turned off.');
+        }
+
+        return $pending;
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -22,13 +43,13 @@ abstract class TestCase extends BaseTestCase
         // Inertia 3 omits encryptHistory and clearHistory when they are false.
         TestResponse::macro('assertInertia', function (?\Closure $callback = null) {
             try {
-                /** @var TestResponse $this */
+                /** @var TestResponse<Response> $this */
                 $this->assertViewHas('page');
                 $pageData = $this->viewData('page');
 
                 // Use JSON_PRESERVE_ZERO_FRACTION to maintain float types
                 $page = json_decode(
-                    json_encode($pageData, JSON_PRESERVE_ZERO_FRACTION),
+                    json_encode($pageData, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR),
                     true
                 );
 

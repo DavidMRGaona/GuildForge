@@ -185,7 +185,7 @@ final class ModuleInstallerTest extends TestCase
             'module.json' => json_encode([
                 'name' => 'test-module',
                 // missing version, namespace, provider
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
@@ -211,7 +211,7 @@ final class ModuleInstallerTest extends TestCase
                 'version' => '1.0.0',
                 'namespace' => 'Modules\\ExistingModule',
                 'provider' => 'Modules\\ExistingModule\\ExistingModuleServiceProvider',
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
@@ -226,7 +226,7 @@ final class ModuleInstallerTest extends TestCase
         // Create leftover directory (from incomplete uninstall)
         $leftoverPath = $this->modulesPath.'/leftover-module';
         File::makeDirectory($leftoverPath, 0755, true);
-        File::put($leftoverPath.'/module.json', json_encode(['name' => 'leftover-module']));
+        File::put($leftoverPath.'/module.json', json_encode(['name' => 'leftover-module'], JSON_THROW_ON_ERROR));
 
         // No DB record exists — this is a leftover
         $this->repository->shouldReceive('exists')
@@ -239,7 +239,7 @@ final class ModuleInstallerTest extends TestCase
                 'version' => '1.0.0',
                 'namespace' => 'Modules\\LeftoverModule',
                 'provider' => 'Modules\\LeftoverModule\\LeftoverModuleServiceProvider',
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'src/LeftoverModuleServiceProvider.php' => '<?php namespace Modules\\LeftoverModule;',
         ]);
 
@@ -261,7 +261,7 @@ final class ModuleInstallerTest extends TestCase
                     'version' => '1.0.0',
                     'namespace' => 'Modules\\'.ucfirst($forbiddenName),
                     'provider' => 'Modules\\'.ucfirst($forbiddenName).'\\ServiceProvider',
-                ]),
+                ], JSON_THROW_ON_ERROR),
             ]);
 
             $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
@@ -269,8 +269,8 @@ final class ModuleInstallerTest extends TestCase
             try {
                 $this->installer->installFromZip($file);
                 $this->fail("Expected ModuleInstallationException for forbidden name: {$forbiddenName}");
-            } catch (ModuleInstallationException) {
-                $this->assertTrue(true);
+            } catch (ModuleInstallationException $e) {
+                $this->assertStringContainsString($forbiddenName, $e->getMessage());
             }
 
             // Cleanup for next iteration
@@ -288,7 +288,7 @@ final class ModuleInstallerTest extends TestCase
                 'provider' => 'Modules\\ValidTestModule\\ValidTestModuleServiceProvider',
                 'description' => 'A valid test module',
                 'author' => 'Test Author',
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'src/ValidTestModuleServiceProvider.php' => '<?php namespace Modules\\ValidTestModule;',
         ]);
 
@@ -310,7 +310,7 @@ final class ModuleInstallerTest extends TestCase
                 'version' => '2.0.0',
                 'namespace' => 'Modules\\ValidTestModule2',
                 'provider' => 'Modules\\ValidTestModule2\\ServiceProvider',
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'valid-test-module-2/src/ServiceProvider.php' => '<?php',
         ]);
 
@@ -343,14 +343,14 @@ final class ModuleInstallerTest extends TestCase
         $realFilesystem = File::getFacadeRoot();
 
         // Create a partial mock that intercepts specific methods
-        File::partialMock()
-            ->shouldReceive('moveDirectory')
+        $filesystem = File::partialMock();
+        $filesystem->shouldReceive('moveDirectory')
             ->once()
-            ->andReturn(false) // Simulate move failure
-            ->shouldReceive('copyDirectory')
+            ->andReturn(false); // Simulate move failure
+        $filesystem->shouldReceive('copyDirectory')
             ->once()
-            ->andReturnUsing(fn ($source, $target) => $realFilesystem->copyDirectory($source, $target))
-            ->shouldReceive('deleteDirectory')
+            ->andReturnUsing(fn ($source, $target) => $realFilesystem->copyDirectory($source, $target));
+        $filesystem->shouldReceive('deleteDirectory')
             ->atLeast()
             ->times(2) // At least: once for source after copy, once for temp cleanup (tearDown adds more)
             ->andReturnUsing(fn ($path) => $realFilesystem->deleteDirectory($path));
@@ -414,7 +414,7 @@ final class ModuleInstallerTest extends TestCase
                 'version' => '2.0.0',
                 'namespace' => 'Modules\\UpdateTestModule',
                 'provider' => 'Modules\\UpdateTestModule\\ServiceProvider',
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'src/NewFile.php' => '<?php // new content',
         ]);
 
@@ -440,7 +440,7 @@ final class ModuleInstallerTest extends TestCase
                 'version' => '1.0.0',
                 'namespace' => 'Modules\\NonExistent',
                 'provider' => 'Modules\\NonExistent\\ServiceProvider',
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
@@ -506,7 +506,7 @@ final class ModuleInstallerTest extends TestCase
                 'version' => '2.0.0',
                 'namespace' => 'Modules\\FailingModule',
                 'provider' => 'Modules\\FailingModule\\ServiceProvider',
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
@@ -563,7 +563,7 @@ final class ModuleInstallerTest extends TestCase
                 'version' => '2.0.0',
                 'namespace' => 'Modules\\MigratingModule',
                 'provider' => 'Modules\\MigratingModule\\ServiceProvider',
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'database/migrations/2026_01_01_000000_break.php' => <<<'PHP'
                 <?php
 
@@ -601,7 +601,7 @@ final class ModuleInstallerTest extends TestCase
                 'provider' => 'Modules\\PeekTest\\ServiceProvider',
                 'description' => 'Test peeking',
                 'author' => 'Test Author',
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         $file = new UploadedFile($zipPath, 'module.zip', 'application/zip', null, true);
@@ -647,7 +647,7 @@ final class ModuleInstallerTest extends TestCase
                 'version' => '1.0.0',
                 'namespace' => 'Modules\\AssetsTest',
                 'provider' => 'Modules\\AssetsTest\\ServiceProvider',
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'public/build/app.js' => 'console.log("module app");',
             'public/build/app.css' => '.module { color: red; }',
         ]);
@@ -674,10 +674,10 @@ final class ModuleInstallerTest extends TestCase
     {
         $this->rejectEverything();
         $zipPath = $this->createValidZip([
-            'module.json' => (string) json_encode([
+            'module.json' => json_encode([
                 'name' => 'future-module', 'version' => '9.0.0', 'namespace' => 'Modules\\FutureModule',
                 'provider' => 'FutureModuleServiceProvider', 'requires' => ['core' => '^3.0'],
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         try {
@@ -699,10 +699,10 @@ final class ModuleInstallerTest extends TestCase
         $this->backupService->shouldNotReceive('createBackup');
         $this->repository->shouldNotReceive('save');
         $zipPath = $this->createValidZip([
-            'module.json' => (string) json_encode([
+            'module.json' => json_encode([
                 'name' => 'update-test-module', 'version' => '2.0.0', 'namespace' => 'Modules\\UpdateTestModule',
                 'provider' => 'UpdateTestModuleServiceProvider', 'requires' => ['core' => '^3.0'],
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         $this->expectException(ModuleIncompatibleException::class);
@@ -723,10 +723,10 @@ final class ModuleInstallerTest extends TestCase
                 new CompatibilityIssue(RequirementType::Core, '', '2.6.0', CompatibilityIssue::INVALID_CONSTRAINT),
             ]));
         $zipPath = $this->createValidZip([
-            'module.json' => (string) json_encode([
+            'module.json' => json_encode([
                 'name' => 'future-module', 'version' => '9.0.0', 'namespace' => 'Modules\\FutureModule',
                 'provider' => 'FutureModuleServiceProvider', 'requires' => ['core' => null],
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         try {
@@ -743,10 +743,10 @@ final class ModuleInstallerTest extends TestCase
     {
         $this->compatibility->shouldNotReceive('checkManifest');
         $zipPath = $this->createValidZip([
-            'module.json' => (string) json_encode([
+            'module.json' => json_encode([
                 'name' => 'future-module', 'version' => '9.0.0', 'namespace' => 'Modules\\FutureModule',
                 'provider' => 'FutureModuleServiceProvider', 'requires' => ['extensions' => 'intl', 'modules' => [1, 'announcements']],
-            ]),
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         try {

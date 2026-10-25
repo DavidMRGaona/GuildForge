@@ -58,7 +58,7 @@ final class ModuleImportMapTest extends TestCase
     {
         $list = tempnam(sys_get_temp_dir(), 'public-api');
         file_put_contents($list, '{"packages": ');
-        Log::spy();
+        $log = Log::spy();
 
         try {
             $html = (new ModuleImportMap($list))->render()->render();
@@ -68,7 +68,7 @@ final class ModuleImportMapTest extends TestCase
 
         // Every page renders without module frontends rather than failing whole
         $this->assertEmpty($html);
-        Log::shouldHaveReceived('error')->once();
+        $log->shouldHaveReceived('error')->once();
     }
 
     /**

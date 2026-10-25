@@ -38,6 +38,7 @@ final class AssertInertiaMacroTest extends TestCase
 
     /**
      * @param  array<string, mixed>  $page
+     * @return TestResponse<Response>
      */
     private function responseWithPage(array $page): TestResponse
     {

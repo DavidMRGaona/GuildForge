@@ -8,17 +8,13 @@ use App\Domain\Modules\Events\ModuleDisabled;
 use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use App\Infrastructure\Navigation\Listeners\DeactivateMenuItemsOnModuleDisabled;
 use Mockery;
+use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class DeactivateMenuItemsOnModuleDisabledTest extends TestCase
 {
-    protected function tearDown(): void
-    {
-        $this->addToAssertionCount(Mockery::getContainer()->mockery_getExpectationCount());
-        Mockery::close();
-        parent::tearDown();
-    }
+    use MockeryPHPUnitIntegration;
 
     #[Test]
     public function it_deactivates_menu_items_for_disabled_module(): void

@@ -205,7 +205,6 @@ final class PermissionDTOTest extends TestCase
         );
 
         $this->assertEmpty($dto->roles);
-        $this->assertIsArray($dto->roles);
     }
 
     public function test_full_name_with_complex_module_name(): void

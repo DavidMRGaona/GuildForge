@@ -31,6 +31,9 @@ final class SeoHeadTest extends TestCase
         ], $overrides);
     }
 
+    /**
+     * @param  array<string, mixed>|null  $seo
+     */
     private function render(?array $seo): string
     {
         return (new SeoHead($seo))->render()->render();

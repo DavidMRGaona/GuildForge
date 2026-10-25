@@ -16,6 +16,7 @@ use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use App\Infrastructure\Modules\Services\ModuleSchemaGuard;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 
 final class ModuleMigrationRunnerTest extends TestCase
@@ -24,7 +25,7 @@ final class ModuleMigrationRunnerTest extends TestCase
 
     private string $testModulesPath;
 
-    private ModuleMigrationAnalyzerInterface $analyzer;
+    private ModuleMigrationAnalyzerInterface&Stub $analyzer;
 
     private ModuleSchemaGuard $schemaGuard;
 
@@ -66,7 +67,6 @@ final class ModuleMigrationRunnerTest extends TestCase
         $count = $this->runner->run($module);
 
         // Assert
-        $this->assertIsInt($count);
         $this->assertGreaterThan(0, $count);
     }
 

@@ -121,14 +121,15 @@ final class UserServiceTest extends TestCase
             ->with('anonymized_user_name', 'Anónimo')
             ->andReturn('Usuario anónimo');
 
+        $updates = [];
         $userModel
             ->shouldReceive('update')
             ->once()
-            ->with(Mockery::on(fn (array $data) => $data['name'] === 'Usuario anónimo'
-                && $data['display_name'] === null
-                && $data['avatar_public_id'] === null
-                && $data['anonymized_at'] !== null
-            ));
+            ->andReturnUsing(function (array $data) use (&$updates): bool {
+                $updates[] = $data;
+
+                return true;
+            });
 
         $rolesRelation = Mockery::mock(BelongsToMany::class);
         $rolesRelation->shouldReceive('detach')->once();
@@ -138,8 +139,11 @@ final class UserServiceTest extends TestCase
 
         $this->service->anonymize($userId->value());
 
-        // No exception means success
-        $this->assertTrue(true);
+        $this->assertCount(1, $updates);
+        $this->assertSame('Usuario anónimo', $updates[0]['name']);
+        $this->assertNull($updates[0]['display_name']);
+        $this->assertNull($updates[0]['avatar_public_id']);
+        $this->assertNotNull($updates[0]['anonymized_at']);
     }
 
     public function test_it_throws_exception_when_anonymizing_nonexistent_user(): void

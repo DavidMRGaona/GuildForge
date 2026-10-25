@@ -37,7 +37,9 @@ final class ColorPaletteTest extends TestCase
 
         $palette = new ColorPalette('primary', $shades);
 
-        $this->assertTrue($expected->equals($palette->shade(600)));
+        $shade = $palette->shade(600);
+        $this->assertNotNull($shade);
+        $this->assertTrue($expected->equals($shade));
     }
 
     public function test_it_returns_null_for_invalid_shade(): void

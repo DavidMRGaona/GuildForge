@@ -84,11 +84,11 @@ final class ProcessModulePostUpdateRunnerTest extends TestCase
     public function test_a_failed_cache_refresh_is_logged_and_does_not_throw(): void
     {
         Process::fake(['*' => Process::result(errorOutput: 'view:cache failed', exitCode: 1)]);
-        Log::spy();
+        $log = Log::spy();
 
         $this->runner()->refreshCaches();
 
-        Log::shouldHaveReceived('warning')->once();
+        $log->shouldHaveReceived('warning')->once();
     }
 
     private function runner(): ProcessModulePostUpdateRunner

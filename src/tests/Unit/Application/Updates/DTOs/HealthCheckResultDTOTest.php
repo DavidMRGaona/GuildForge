@@ -208,8 +208,6 @@ final class HealthCheckResultDTOTest extends TestCase
             filamentRegisters: true,
         );
 
-        $this->assertIsArray($dto->errors);
-        $this->assertIsArray($dto->warnings);
         $this->assertEmpty($dto->errors);
         $this->assertEmpty($dto->warnings);
     }

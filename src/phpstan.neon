@@ -1,10 +1,15 @@
 includes:
     - vendor/larastan/larastan/extension.neon
+    # A Mockery mock is also the class it mocks (type extension only, no extra rules)
+    - vendor/phpstan/phpstan-mockery/extension.neon
 
 parameters:
     phpVersion: 80500
     paths:
         - app/
+        - tests/TestCase.php
+        - tests/Support/
+        - tests/Unit/
     level: 8
     ignoreErrors:
         - '#Trait .+ is used zero times and is not analysed#'

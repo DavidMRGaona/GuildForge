@@ -219,7 +219,7 @@ final class SeoMetadataFactoryTest extends TestCase
 
     public function test_never_throws_and_falls_back_to_minimal_metadata(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $branding = Mockery::mock(SiteBrandingServiceInterface::class);
         $branding->shouldReceive('customLogoPath')->andThrow(new RuntimeException('settings table missing'));
         $this->app->instance(SiteBrandingServiceInterface::class, $branding);
@@ -229,6 +229,6 @@ final class SeoMetadataFactoryTest extends TestCase
         $this->assertSame(SeoMetadata::SCOPE_SITE, $seo->scope);
         $this->assertSame('Sitio de ejemplo', $seo->fullTitle);
         $this->assertNull($seo->image);
-        Log::shouldHaveReceived('warning')->once();
+        $log->shouldHaveReceived('warning')->once();
     }
 }

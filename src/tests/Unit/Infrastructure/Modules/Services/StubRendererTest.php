@@ -7,9 +7,12 @@ namespace Tests\Unit\Infrastructure\Modules\Services;
 use App\Infrastructure\Modules\Services\StubRenderer;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\Files\ReadsFiles;
 
 final class StubRendererTest extends TestCase
 {
+    use ReadsFiles;
+
     private StubRenderer $renderer;
 
     private string $stubsPath;
@@ -163,7 +166,7 @@ final class StubRendererTest extends TestCase
         $this->assertTrue($result);
         $this->assertFileExists($destination);
 
-        $content = file_get_contents($destination);
+        $content = self::readFile($destination);
         $this->assertStringContainsString('Module: TestModule', $content);
         $this->assertStringContainsString('Class: Service', $content);
 
@@ -185,7 +188,7 @@ final class StubRendererTest extends TestCase
         $result = $this->renderer->renderTo('test.php.stub', $destination, $variables, false);
 
         $this->assertFalse($result);
-        $content = file_get_contents($destination);
+        $content = self::readFile($destination);
         $this->assertEquals('Original content', $content);
 
         unlink($destination);
@@ -206,7 +209,7 @@ final class StubRendererTest extends TestCase
         $result = $this->renderer->renderTo('test.php.stub', $destination, $variables, true);
 
         $this->assertTrue($result);
-        $content = file_get_contents($destination);
+        $content = self::readFile($destination);
         $this->assertStringContainsString('Module: Forced', $content);
         $this->assertStringNotContainsString('Original content', $content);
 

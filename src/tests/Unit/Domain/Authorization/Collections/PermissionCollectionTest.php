@@ -62,9 +62,7 @@ final class PermissionCollectionTest extends TestCase
 
         $result = $collection->all();
 
-        $this->assertIsArray($result);
         $this->assertCount(2, $result);
-        $this->assertContainsOnlyInstancesOf(Permission::class, $result);
     }
 
     public function test_find_by_key_returns_permission(): void
@@ -164,7 +162,6 @@ final class PermissionCollectionTest extends TestCase
 
         $result = $collection->grouped();
 
-        $this->assertIsArray($result);
         $this->assertArrayHasKey('events', $result);
         $this->assertArrayHasKey('users', $result);
         $this->assertCount(2, $result['events']);
@@ -177,7 +174,6 @@ final class PermissionCollectionTest extends TestCase
 
         $result = $collection->grouped();
 
-        $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
 

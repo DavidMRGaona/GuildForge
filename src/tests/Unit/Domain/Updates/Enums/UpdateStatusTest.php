@@ -34,6 +34,9 @@ final class UpdateStatusTest extends TestCase
         $this->assertTrue($status->isTerminal());
     }
 
+    /**
+     * @return array<string, array{UpdateStatus}>
+     */
     public static function terminalStatusesProvider(): array
     {
         return [
@@ -49,6 +52,9 @@ final class UpdateStatusTest extends TestCase
         $this->assertFalse($status->isTerminal());
     }
 
+    /**
+     * @return array<string, array{UpdateStatus}>
+     */
     public static function nonTerminalStatusesProvider(): array
     {
         return [
@@ -69,6 +75,9 @@ final class UpdateStatusTest extends TestCase
         $this->assertTrue($status->isInProgress());
     }
 
+    /**
+     * @return array<string, array{UpdateStatus}>
+     */
     public static function inProgressStatusesProvider(): array
     {
         return [
@@ -88,6 +97,9 @@ final class UpdateStatusTest extends TestCase
         $this->assertFalse($status->isInProgress());
     }
 
+    /**
+     * @return array<string, array{UpdateStatus}>
+     */
     public static function notInProgressStatusesProvider(): array
     {
         return [
@@ -104,6 +116,9 @@ final class UpdateStatusTest extends TestCase
         $this->assertEquals($expectedLabel, $status->label());
     }
 
+    /**
+     * @return array<string, array{UpdateStatus, string}>
+     */
     public static function labelsProvider(): array
     {
         return [
@@ -127,6 +142,9 @@ final class UpdateStatusTest extends TestCase
         $this->assertEquals($expectedIcon, $status->icon());
     }
 
+    /**
+     * @return array<string, array{UpdateStatus, string}>
+     */
     public static function iconsProvider(): array
     {
         return [
@@ -150,6 +168,9 @@ final class UpdateStatusTest extends TestCase
         $this->assertEquals($expectedColor, $status->color());
     }
 
+    /**
+     * @return array<string, array{UpdateStatus, string}>
+     */
     public static function colorsProvider(): array
     {
         return [
