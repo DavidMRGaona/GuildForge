@@ -98,6 +98,40 @@ export default {
         legendLabel: 'Tipos de actividad',
         entryAriaLabel: '{source}: {title}',
         free: 'Gratuito',
+        // Texts of the FullCalendar toolbar and grids (see useCalendarLocale)
+        fullcalendar: {
+            previous: {
+                day: 'Día anterior',
+                week: 'Semana anterior',
+                month: 'Mes anterior',
+                year: 'Año anterior',
+                other: 'Anterior',
+            },
+            next: {
+                day: 'Día siguiente',
+                week: 'Semana siguiente',
+                month: 'Mes siguiente',
+                year: 'Año siguiente',
+                other: 'Siguiente',
+            },
+            current: {
+                day: 'Hoy',
+                week: 'Esta semana',
+                month: 'Este mes',
+                year: 'Este año',
+                other: 'Hoy',
+            },
+            view: {
+                day: 'Vista de día',
+                week: 'Vista de semana',
+                month: 'Vista de mes',
+                year: 'Vista de año',
+                other: 'Vista: {view}',
+            },
+            viewChange: 'Cambiar vista',
+            timed: 'Por horas',
+            moreLink: 'Mostrar uno más | Mostrar {count} más',
+        },
     },
     about: {
         title: 'Sobre {appName}',

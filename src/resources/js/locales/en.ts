@@ -98,6 +98,40 @@ export default {
         legendLabel: 'Activity types',
         entryAriaLabel: '{source}: {title}',
         free: 'Free',
+        // Texts of the FullCalendar toolbar and grids (see useCalendarLocale)
+        fullcalendar: {
+            previous: {
+                day: 'Previous day',
+                week: 'Previous week',
+                month: 'Previous month',
+                year: 'Previous year',
+                other: 'Previous',
+            },
+            next: {
+                day: 'Next day',
+                week: 'Next week',
+                month: 'Next month',
+                year: 'Next year',
+                other: 'Next',
+            },
+            current: {
+                day: 'Today',
+                week: 'This week',
+                month: 'This month',
+                year: 'This year',
+                other: 'Today',
+            },
+            view: {
+                day: 'Day view',
+                week: 'Week view',
+                month: 'Month view',
+                year: 'Year view',
+                other: '{view} view',
+            },
+            viewChange: 'Change view',
+            timed: 'Timed',
+            moreLink: 'Show one more | Show {count} more',
+        },
     },
     about: {
         title: 'About {appName}',
