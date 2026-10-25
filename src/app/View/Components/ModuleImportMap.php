@@ -9,12 +9,13 @@ use Illuminate\Support\Facades\Vite;
 use Illuminate\View\Component;
 
 /**
- * Generates an import map for module externals.
+ * Generates the import map that serves the core's public frontend API to modules.
  *
- * Modules are built with vue, pinia, vue-i18n, @inertiajs/vue3, @unhead/vue and the core's
- * browser contracts (`@/contracts/*`) marked as external dependencies. The browser needs an
- * import map to resolve these specifiers to the actual chunk files from the main app, so the
- * page loads each of them once.
+ * Module builds keep the shared packages (vue, pinia, vue-i18n, @inertiajs/vue3, @unhead/vue,
+ * FullCalendar) and the public entries of resources/js out of their bundles; the browser
+ * resolves those specifiers here to the app's own chunks, so the page loads each of them once
+ * and every module uses the installed core. The list is resources/js/public-api.json, which the
+ * core's build, scripts/verify-build.mjs and the module build read too.
  */
 final class ModuleImportMap extends Component
 {
@@ -26,31 +27,18 @@ final class ModuleImportMap extends Component
     }
 
     /**
-     * Build import map from the main app's Vite manifest.
+     * Resolve every specifier of the list through the Vite manifest.
      *
-     * Maps bare import specifiers (vue, pinia, vue-i18n, @inertiajs/vue3, @unhead/vue)
-     * to the built vendor-export entry points that re-export all symbols, and each
-     * contract to its own entry point.
-     *
-     * Uses Vite::asset() to resolve paths through the same mechanism
-     * as @vite(), making it resilient to manifest location changes.
+     * Uses Vite::asset() to resolve paths through the same mechanism as @vite(), making it
+     * resilient to manifest location changes. An entry the manifest lacks is left out.
      *
      * @return array<string, string>
      */
     private function getImportMap(): array
     {
-        $mappings = [
-            'resources/js/vendor-exports/vue.ts' => 'vue',
-            'resources/js/vendor-exports/pinia.ts' => 'pinia',
-            'resources/js/vendor-exports/vue-i18n.ts' => 'vue-i18n',
-            'resources/js/vendor-exports/inertia.ts' => '@inertiajs/vue3',
-            'resources/js/vendor-exports/unhead.ts' => '@unhead/vue',
-            'resources/js/contracts/cookieConsent.ts' => '@/contracts/cookieConsent',
-        ];
-
         $imports = [];
 
-        foreach ($mappings as $entryPoint => $importSpecifier) {
+        foreach ($this->publicApi() as $importSpecifier => $entryPoint) {
             try {
                 $imports[$importSpecifier] = Vite::asset($entryPoint);
             } catch (\Throwable) {
@@ -59,5 +47,18 @@ final class ModuleImportMap extends Component
         }
 
         return $imports;
+    }
+
+    /**
+     * The shared packages and the public entries, specifier => Vite entry.
+     *
+     * @return array<string, string>
+     */
+    private function publicApi(): array
+    {
+        /** @var array{packages: array<string, string>, entries: array<string, string>} $list */
+        $list = json_decode((string) file_get_contents(resource_path('js/public-api.json')), true, flags: JSON_THROW_ON_ERROR);
+
+        return [...$list['packages'], ...$list['entries']];
     }
 }

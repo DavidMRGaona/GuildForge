@@ -37,7 +37,10 @@ onErrorCaptured((error, instance, info) => {
 <template>
     <template v-if="hasComponents">
         <template v-for="item in components" :key="item.key">
-            <div v-if="slotErrors.has(item.key) && isDev" class="module-slot-error">
+            <div
+                v-if="slotErrors.has(item.key) && isDev"
+                class="my-1 rounded border border-dashed border-error bg-error/5 p-2 text-xs text-error"
+            >
                 <small>Module slot error: {{ slotErrors.get(item.key)?.message }}</small>
             </div>
             <Suspense v-else>
@@ -45,25 +48,9 @@ onErrorCaptured((error, instance, info) => {
                     <component :is="item.component" v-bind="item.props" />
                 </div>
                 <template #fallback>
-                    <div class="module-slot-loading" aria-hidden="true"></div>
+                    <div class="min-h-8" aria-hidden="true"></div>
                 </template>
             </Suspense>
         </template>
     </template>
 </template>
-
-<style scoped>
-.module-slot-loading {
-    min-height: 2rem;
-}
-
-.module-slot-error {
-    padding: 0.5rem;
-    margin: 0.25rem 0;
-    border: 1px dashed #e74c3c;
-    border-radius: 0.25rem;
-    color: #e74c3c;
-    font-size: 0.75rem;
-    background: rgba(231, 76, 60, 0.05);
-}
-</style>
