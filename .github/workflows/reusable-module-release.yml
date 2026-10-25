@@ -168,13 +168,13 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
-        if: hashFiles('package.json') != ''
+        if: hashFiles('vite.config.ts') != ''
         uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
 
       - name: Checkout main app for build context
-        if: hashFiles('package.json') != ''
+        if: hashFiles('vite.config.ts') != ''
         uses: actions/checkout@v7
         with:
           repository: DavidMRGaona/GuildForge
@@ -184,13 +184,14 @@ jobs:
           sparse-checkout: |
             src/resources/js
             src/public
+            src/scripts
 
       - name: Build Vue components
-        if: hashFiles('package.json') != ''
+        if: hashFiles('vite.config.ts') != ''
         env:
           MODULE_NAME: ${{ inputs.module_name }}
         run: |
-          # Install main app deps (provides @headlessui/vue, etc. for @/ resolution)
+          # The core's toolchain (Vite, plugins, vite.module.config.ts) and its sources for @/
           cd guildforge-app/src
           npm ci
           cd -
@@ -199,10 +200,25 @@ jobs:
           mkdir -p "guildforge-app/src/modules/$MODULE_NAME"
           rsync -a --exclude='.git' --exclude='node_modules' --exclude='guildforge-app' . "guildforge-app/src/modules/$MODULE_NAME/"
 
-          # Build module in main app context (resolves @/ to main app source)
-          cd "guildforge-app/src/modules/$MODULE_NAME"
-          npm install
-          MODULE_STANDALONE_OUTPUT=true npm run build
+          cd guildforge-app/src
+          case "$(sh scripts/module-build-mode.sh "modules/$MODULE_NAME")" in
+            core)
+              # Its own runtime libraries only, then the core's build with the public API guard
+              if [ -f "modules/$MODULE_NAME/package.json" ]; then
+                (cd "modules/$MODULE_NAME" && npm ci)
+              fi
+              MODULE_STANDALONE_OUTPUT=true sh scripts/build-module.sh "$MODULE_NAME"
+              ;;
+            legacy)
+              # Legacy module toolchain: the module's own Vite. Removed once every module is on
+              # defineModuleConfig
+              (cd "modules/$MODULE_NAME" && npm install && MODULE_STANDALONE_OUTPUT=true npm run build)
+              ;;
+            *)
+              echo "::error::modules/$MODULE_NAME/vite.config.ts builds with neither the core's toolchain nor its own"
+              exit 1
+              ;;
+          esac
           cd -
 
           # Copy built assets back to module checkout
