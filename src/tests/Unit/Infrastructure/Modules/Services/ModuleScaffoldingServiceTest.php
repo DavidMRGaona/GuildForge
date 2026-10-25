@@ -629,6 +629,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('quality: true', $tests);
         $this->assertStringContainsString("host_ref: \${{ vars.GUILDFORGE_HOST_REF || 'main' }}", $tests);
         $this->assertStringContainsString('group: tests-${{ github.event.pull_request.number }}', $tests);
+        // A weekly run against the core's main catches a core change that breaks the module
+        $this->assertStringContainsString("cron: '0 6 * * 1'", $tests);
     }
 
     public function test_the_tsconfig_type_checks_against_the_core(): void
@@ -654,32 +656,19 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $config = (string) file_get_contents($this->tempModulesPath.'/blog-posts/vite.config.ts');
 
-        $this->assertStringContainsString("const MODULE_NAME = 'blog-posts';", $config);
-        $this->assertStringContainsString("process.env.MODULE_STANDALONE_OUTPUT === 'true'", $config);
-        $this->assertStringContainsString("resolve(__dirname, '../public')", $config);
-        $this->assertStringContainsString('base: (isStandalone || forceStandaloneOutput)', $config);
-        $this->assertStringContainsString("discoverEntries(pagesDir, 'resources/js/pages')", $config);
-        $this->assertStringContainsString("discoverEntries(componentsDir, 'resources/js/components')", $config);
-        $this->assertStringContainsString("['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3', '@unhead/vue']", $config);
-        $this->assertStringContainsString("isStandalone && id.startsWith('@/')", $config);
-        // The core's contracts come from the import map, so every bundle shares one instance
-        $this->assertStringContainsString("id.startsWith('@/contracts/')", $config);
-        $this->assertStringContainsString("'module-styles': resolve(__dirname, 'resources/css/module.css')", $config);
-        $this->assertStringContainsString('plugins: [vue(), tailwindcss()]', $config);
+        // The core's build configuration: entries, output, externals and the public API guard
+        $this->assertStringContainsString("import { defineModuleConfig } from '../../vite.module.config';", $config);
+        $this->assertStringContainsString("defineModuleConfig({ name: 'blog-posts', root: __dirname })", $config);
+        $this->assertStringNotContainsString('external', $config);
     }
 
-    public function test_package_json_pins_the_module_toolchain(): void
+    public function test_a_new_module_has_no_package_json(): void
     {
-        $this->service->createModule('blog-posts');
+        $result = $this->service->createModule('blog-posts');
 
-        /** @var array<string, mixed> $package */
-        $package = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/package.json'), true);
-
-        $this->assertSame('@guildforge/module-blog-posts', $package['name']);
-        $this->assertSame('vite build', $package['scripts']['build']);
-        $this->assertSame('^7.3.1', $package['devDependencies']['vite']);
-        $this->assertSame('^6.0.3', $package['devDependencies']['@vitejs/plugin-vue']);
-        $this->assertSame('^4.1.18', $package['devDependencies']['@tailwindcss/vite']);
+        // Modules build and test with the core's toolchain; a package.json only lists runtime libraries
+        $this->assertFileDoesNotExist($this->tempModulesPath.'/blog-posts/package.json');
+        $this->assertArrayNotHasKey('package.json', $result->files);
     }
 
     public function test_the_manifest_has_a_display_name_and_no_repository_by_default(): void
@@ -1203,6 +1192,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
             $steps = implode("\n", $result->nextSteps);
             $this->assertStringNotContainsString('module:build', $steps, $result->message);
             $this->assertStringContainsString('guildforge_node', $steps, $result->message);
+            $this->assertStringContainsString('npm run build:module -- blog-posts', $steps, $result->message);
             $this->assertStringContainsString('release workflow', $steps, $result->message);
         }
     }

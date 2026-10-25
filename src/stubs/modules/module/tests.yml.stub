@@ -3,6 +3,9 @@ name: Tests
 on:
   pull_request:
     branches: [main]
+  # Weekly against the core's main, so a core change that breaks the module shows up
+  schedule:
+    - cron: '0 6 * * 1'
 
 # A new push to the same pull request cancels the run it makes obsolete
 concurrency:
