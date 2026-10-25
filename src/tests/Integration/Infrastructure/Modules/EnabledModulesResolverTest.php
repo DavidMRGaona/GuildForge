@@ -40,7 +40,7 @@ final class EnabledModulesResolverTest extends TestCase
         // A compatible module with migrations that nobody enabled yet
         File::ensureDirectoryExists("{$this->modulesPath}/disabled-module/database/migrations");
         File::put("{$this->modulesPath}/disabled-module/module.json", (string) json_encode([
-            'name' => 'disabled-module', 'version' => '1.0.0', 'namespace' => 'Modules\\DisabledModule', 'provider' => 'DisabledModuleServiceProvider',
+            'name' => 'disabled-module', 'version' => '1.0.0', 'storesUtc' => true, 'namespace' => 'Modules\\DisabledModule', 'provider' => 'DisabledModuleServiceProvider',
             'requires' => ['core' => '>=2.0'],
         ]));
     }

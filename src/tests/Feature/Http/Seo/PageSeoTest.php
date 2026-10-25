@@ -8,6 +8,8 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -36,9 +38,9 @@ final class PageSeoTest extends TestCase
             'title' => 'Club de lectura',
             'slug' => 'club-de-lectura',
             'description' => '<p>Traed vuestro libro</p>',
-            // app.timezone is Europe/Madrid, so these are venue local times
-            'start_date' => '2026-01-15 18:00:00',
-            'end_date' => '2026-01-15 22:00:00',
+            // Venue local times, as instants: the storage zone does not matter
+            'start_date' => new DateTimeImmutable('2026-01-15 18:00', new DateTimeZone('Europe/Madrid')),
+            'end_date' => new DateTimeImmutable('2026-01-15 22:00', new DateTimeZone('Europe/Madrid')),
             'location' => 'La Taberna',
             'image_public_id' => $image,
             'member_price' => null,

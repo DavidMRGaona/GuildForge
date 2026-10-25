@@ -89,6 +89,7 @@ return [
             'unknown_host_version' => 'requires :requirement :required and the installed version could not be determined',
             'manifest_missing' => 'module.json not found',
             'below_core_minimum' => 'this core requires version :required or later of the module, not :found',
+            'not_utc_ready' => 'this module is not ready to store dates in UTC',
             'manifest_invalid' => 'module.json is not valid',
         ],
         'short' => [

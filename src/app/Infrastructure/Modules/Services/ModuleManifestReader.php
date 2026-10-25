@@ -50,6 +50,12 @@ final readonly class ModuleManifestReader
             unset($data['repository']);
         }
 
+        // Same split as requires: a bad flag never aborts discovery, the module just does not count as ready
+        if (array_key_exists('storesUtc', $data) && ! is_bool($data['storesUtc'])) {
+            $this->logger->warning("Invalid storesUtc in {$path}: the module is treated as not ready for UTC storage");
+            $data['storesUtc'] = false;
+        }
+
         if (array_key_exists('requires', $data)) {
             $normalized = ModuleManifestDTO::normalizeRequires($data['requires']);
 

@@ -91,6 +91,7 @@ return [
             'unknown_host_version' => 'requiere :requirement :required y no se pudo determinar la versión instalada',
             'manifest_missing' => 'no se encuentra module.json',
             'below_core_minimum' => 'este core necesita la versión :required o superior del módulo, no la :found',
+            'not_utc_ready' => 'este módulo no está preparado para guardar las fechas en UTC',
             'manifest_invalid' => 'module.json no válido',
         ],
         'short' => [

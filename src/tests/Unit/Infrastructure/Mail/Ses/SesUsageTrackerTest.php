@@ -176,6 +176,26 @@ final class SesUsageTrackerTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_the_monthly_range_follows_the_display_month_at_a_month_boundary(): void
+    {
+        // 23:30Z on 31 October is 00:30 on 1 November in Madrid (CET): November already
+        Carbon::setTestNow(Carbon::parse('2026-10-31T23:30:00Z'));
+
+        foreach (['2026-10-31', '2026-11-01', '2026-11-30'] as $day) {
+            SesUsageRecordModel::create([
+                'date' => $day,
+                'emails_sent' => 10,
+                'estimated_cost' => 0.001,
+                'bounces_count' => 0,
+                'complaints_count' => 0,
+            ]);
+        }
+
+        $this->assertSame(20, $this->tracker->getMonthlyUsage()['emails_sent']);
+
+        Carbon::setTestNow();
+    }
+
     public function test_get_monthly_usage_excludes_other_months(): void
     {
         Carbon::setTestNow(Carbon::create(2025, 6, 15));

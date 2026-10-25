@@ -64,7 +64,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $this->modulesPath = $this->tempDir.'/modules';
         File::ensureDirectoryExists("{$this->modulesPath}/real-mod/src");
         File::ensureDirectoryExists("{$this->modulesPath}/real-mod/config");
-        File::put("{$this->modulesPath}/real-mod/module.json", (string) json_encode(['name' => 'real-mod', 'version' => '1.0.0-beta', 'requires' => ['core' => '>=2.0']]));
+        File::put("{$this->modulesPath}/real-mod/module.json", (string) json_encode(['name' => 'real-mod', 'version' => '1.0.0-beta', 'storesUtc' => true, 'requires' => ['core' => '>=2.0']]));
 
         config([
             'modules.path' => $this->modulesPath,
@@ -155,7 +155,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         foreach ($releaseFiles as $path => $content) {
             $archive->addFromString('real-mod-1.0.1-beta/'.$path, $content);
         }
-        $archive->addFromString('real-mod-1.0.1-beta/module.json', (string) json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta', 'namespace' => 'Modules\\RealMod', 'provider' => 'RealModServiceProvider', 'requires' => ['core' => '>=2.0']]));
+        $archive->addFromString('real-mod-1.0.1-beta/module.json', (string) json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta', 'storesUtc' => true, 'namespace' => 'Modules\\RealMod', 'provider' => 'RealModServiceProvider', 'requires' => ['core' => '>=2.0']]));
         $archive->close();
 
         $fetcher = Mockery::mock(GitHubReleaseFetcherInterface::class);

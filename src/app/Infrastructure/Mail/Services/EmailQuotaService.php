@@ -7,14 +7,17 @@ namespace App\Infrastructure\Mail\Services;
 use App\Application\Mail\DTOs\Response\QuotaStatusResponseDTO;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Mail\Enums\EmailStatus;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
+use DateTimeImmutable;
 
 final readonly class EmailQuotaService implements EmailQuotaServiceInterface
 {
     public function __construct(
         private EmailLogRepositoryInterface $emailLogRepository,
         private SettingsServiceInterface $settingsService,
+        private ?TimezoneServiceInterface $timezone = null,
     ) {}
 
     public function canSendEmail(): bool
@@ -25,7 +28,7 @@ final readonly class EmailQuotaService implements EmailQuotaServiceInterface
         if ($dailyLimit > 0) {
             $sentToday = $this->emailLogRepository->countByStatusSince(
                 EmailStatus::Sent,
-                now()->startOfDay(),
+                $this->startOfDay(),
             );
 
             if ($sentToday >= $dailyLimit) {
@@ -36,7 +39,7 @@ final readonly class EmailQuotaService implements EmailQuotaServiceInterface
         if ($monthlyLimit > 0) {
             $sentThisMonth = $this->emailLogRepository->countByStatusSince(
                 EmailStatus::Sent,
-                now()->startOfMonth(),
+                $this->startOfMonth(),
             );
 
             if ($sentThisMonth >= $monthlyLimit) {
@@ -55,12 +58,12 @@ final readonly class EmailQuotaService implements EmailQuotaServiceInterface
 
         $dailyUsed = $this->emailLogRepository->countByStatusSince(
             EmailStatus::Sent,
-            now()->startOfDay(),
+            $this->startOfDay(),
         );
 
         $monthlyUsed = $this->emailLogRepository->countByStatusSince(
             EmailStatus::Sent,
-            now()->startOfMonth(),
+            $this->startOfMonth(),
         );
 
         $percentageUsed = $this->calculatePercentage($dailyUsed, $dailyLimit, $monthlyUsed, $monthlyLimit);
@@ -85,5 +88,19 @@ final readonly class EmailQuotaService implements EmailQuotaServiceInterface
         $monthlyPercentage = $monthlyLimit > 0 ? ($monthlyUsed / $monthlyLimit) * 100 : 0.0;
 
         return min(max($dailyPercentage, $monthlyPercentage), 100.0);
+    }
+
+    private function startOfDay(): DateTimeImmutable
+    {
+        $timezone = $this->timezone ?? app(TimezoneServiceInterface::class);
+
+        return $timezone->displayDayRange($timezone->today())[0];
+    }
+
+    private function startOfMonth(): DateTimeImmutable
+    {
+        $timezone = $this->timezone ?? app(TimezoneServiceInterface::class);
+
+        return $timezone->displayMonthRange($timezone->today())[0];
     }
 }

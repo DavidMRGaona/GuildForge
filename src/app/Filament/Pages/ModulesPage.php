@@ -8,6 +8,7 @@ use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\InvalidModuleNameException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
@@ -20,6 +21,7 @@ use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Modules\ModuleLoader;
 use App\View\Modules\CompatibilityIssueFormatter;
+use DateTimeInterface;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -28,6 +30,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -58,6 +61,22 @@ final class ModulesPage extends Page implements HasForms
     public ?string $confirmingUninstall = null;
 
     public bool $confirmDeleteData = false;
+
+    protected TimezoneServiceInterface $timezone;
+
+    /** Livewire injects the container dependencies of boot() on every request. */
+    public function boot(TimezoneServiceInterface $timezone): void
+    {
+        $this->timezone = $timezone;
+    }
+
+    /** For the view: dates are always shown in the display zone. */
+    protected function formatDate(DateTimeInterface|string $value, ?string $format = null): string
+    {
+        $date = $value instanceof DateTimeInterface ? $value : Carbon::parse($value);
+
+        return $format === null ? $this->timezone->format($date) : $this->timezone->format($date, $format);
+    }
 
     public function mount(): void
     {

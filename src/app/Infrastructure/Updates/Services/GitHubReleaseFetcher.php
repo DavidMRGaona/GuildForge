@@ -46,14 +46,18 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
         $blockedIssues = [];
 
         foreach ($this->candidates($owner, $repo, $installed, $includePrereleases) as $release) {
-            $requirements = $this->releaseRequirements($owner, $repo, $release);
+            $manifest = $this->releaseManifest($owner, $repo, $release);
 
-            if (! $requirements instanceof ModuleRequirements) {
+            if ($manifest === null) {
                 $result = new CompatibilityResult([new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID)]);
                 $constraint = null;
             } else {
-                $result = $this->checker->check($requirements, $host);
-                $constraint = $requirements->effectiveCoreConstraint();
+                $result = $this->checker->withUtcReadiness(
+                    $this->checker->check($manifest['requirements'], $host),
+                    $manifest['storesUtc'],
+                    $host,
+                );
+                $constraint = $manifest['requirements']->effectiveCoreConstraint();
             }
 
             if ($result->isCompatible()) {
@@ -303,14 +307,17 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
      * Requirements published with a release, or null when its module.json asset is not a JSON object.
      * Releases published before the asset existed declare nothing, so the default core constraint applies.
      */
-    private function releaseRequirements(string $owner, string $repo, GitHubReleaseInfo $release): ?ModuleRequirements
+    /**
+     * @return array{requirements: ModuleRequirements, storesUtc: bool}|null null when the manifest is unusable
+     */
+    private function releaseManifest(string $owner, string $repo, GitHubReleaseInfo $release): ?array
     {
         if (! $release->hasManifest()) {
-            return ModuleRequirements::fromManifest([]);
+            return ['requirements' => ModuleRequirements::fromManifest([]), 'storesUtc' => false];
         }
 
         $cacheKey = $this->getManifestsCacheKey($owner, $repo);
-        /** @var array<string, array{requires?: array<string, mixed>, invalid?: bool}> $manifests */
+        /** @var array<string, array{requires?: array<string, mixed>, stores_utc?: bool, invalid?: bool}> $manifests */
         $manifests = Cache::get($cacheKey, []);
 
         if (! isset($manifests[$release->tagName])) {
@@ -321,11 +328,19 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
 
         $requires = $manifests[$release->tagName]['requires'] ?? null;
 
-        return $requires === null ? null : ModuleRequirements::fromManifest($requires);
+        if ($requires === null) {
+            return null;
+        }
+
+        // An entry cached before the flag was read counts as not ready: fail closed
+        return [
+            'requirements' => ModuleRequirements::fromManifest($requires),
+            'storesUtc' => ($manifests[$release->tagName]['stores_utc'] ?? false) === true,
+        ];
     }
 
     /**
-     * @return array{requires?: array<string, mixed>, invalid?: bool}
+     * @return array{requires?: array<string, mixed>, stores_utc?: bool, invalid?: bool}
      */
     private function downloadManifest(string $owner, string $repo, GitHubReleaseInfo $release): array
     {
@@ -357,7 +372,11 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
             return ['invalid' => true];
         }
 
-        return ['requires' => ModuleManifestDTO::normalizeRequires($data['requires'] ?? null)['requires']];
+        return [
+            'requires' => ModuleManifestDTO::normalizeRequires($data['requires'] ?? null)['requires'],
+            // Only a literal true counts, as in ModuleManifestReader
+            'stores_utc' => ($data['storesUtc'] ?? false) === true,
+        ];
     }
 
     private function getManifestsCacheKey(string $owner, string $repo): string

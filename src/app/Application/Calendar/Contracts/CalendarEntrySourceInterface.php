@@ -28,6 +28,9 @@ interface CalendarEntrySourceInterface
     /**
      * Find calendar entries within the given date range.
      *
+     * The range is [from, to): the end is exclusive. Both bounds are instants in the
+     * storage timezone, as stored values are compared against them directly.
+     *
      * @return array<CalendarEntryDTO>
      */
     public function findByDateRange(DateTimeImmutable $from, DateTimeImmutable $to): array;

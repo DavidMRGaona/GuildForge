@@ -82,7 +82,7 @@
                                     </td>
                                     @if($showPublished)
                                         <td class="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">
-                                            {{ $update['published_at'] !== null ? \Illuminate\Support\Carbon::parse($update['published_at'])->format('d/m/Y') : '—' }}
+                                            {{ $update['published_at'] !== null ? $this->formatDate($update['published_at'], 'd/m/Y') : '—' }}
                                         </td>
                                     @endif
                                     <td class="whitespace-nowrap px-4 py-3">

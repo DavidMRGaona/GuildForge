@@ -23,6 +23,7 @@ final readonly class ModuleManifestDTO
         public ?array $requires = null,
         public ?array $dependencies = null,
         public ?string $repository = null,
+        public bool $storesUtc = false,
     ) {}
 
     /**
@@ -42,6 +43,11 @@ final readonly class ModuleManifestDTO
             throw new InvalidArgumentException("Invalid repository, expected 'owner/repo'");
         }
 
+        $storesUtc = $data['storesUtc'] ?? false;
+        if (! is_bool($storesUtc)) {
+            throw new InvalidArgumentException('Invalid storesUtc, expected a boolean');
+        }
+
         $requires = $data['requires'] ?? [];
         self::assertRequiresShape($requires);
 
@@ -56,6 +62,7 @@ final readonly class ModuleManifestDTO
             requires: $requires,
             dependencies: $data['dependencies'] ?? [],
             repository: $repository,
+            storesUtc: $storesUtc,
         );
     }
 
@@ -88,6 +95,9 @@ final readonly class ModuleManifestDTO
         }
         if ($this->repository !== null) {
             $result['repository'] = $this->repository;
+        }
+        if ($this->storesUtc) {
+            $result['storesUtc'] = true;
         }
 
         return $result;

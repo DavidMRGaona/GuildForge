@@ -7,6 +7,7 @@ namespace App\Infrastructure\Services;
 use App\Application\DTOs\Response\EventResponseDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\EventQueryServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Support\QueryHelpers;
 
@@ -14,6 +15,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
 {
     public function __construct(
         private ResponseDTOFactoryInterface $dtoFactory,
+        private TimezoneServiceInterface $timezone,
     ) {}
 
     public function getUpcomingEvents(int $limit = 10): array
@@ -106,18 +108,28 @@ final readonly class EventQueryService implements EventQueryServiceInterface
 
     public function findByDateRange(string $start, string $end): array
     {
+        // The requested days are display days: bind their midnights as storage-zone instants.
+        $start = $this->timezone->displayDayRange($start)[0]->format('Y-m-d H:i:s');
+        $end = $this->timezone->displayDayRange($end)[0]->format('Y-m-d H:i:s');
+
         $events = EventModel::query()
             ->with('tags')
             ->where('is_published', true)
             ->where(function ($query) use ($start, $end): void {
+                // The range ends before its end day starts (like FullCalendar's), so SQLite and
+                // PostgreSQL agree on an event starting exactly at that midnight.
                 // Event starts within range
-                $query->whereBetween('start_date', [$start, $end])
+                $query->where(function ($q) use ($start, $end): void {
+                    $q->where('start_date', '>=', $start)->where('start_date', '<', $end);
+                })
                     // Event ends within range (for events starting before range)
-                    ->orWhereBetween('end_date', [$start, $end])
+                    ->orWhere(function ($q) use ($start, $end): void {
+                        $q->where('end_date', '>=', $start)->where('end_date', '<', $end);
+                    })
                     // Event spans the entire range
                     ->orWhere(function ($q) use ($start, $end): void {
                         $q->where('start_date', '<', $start)
-                            ->where('end_date', '>', $end);
+                            ->where('end_date', '>=', $end);
                     });
             })
             ->orderBy('start_date')

@@ -14,6 +14,7 @@ use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Modules\ModuleLoader;
 use Closure;
@@ -228,7 +229,7 @@ final class HandleInertiaRequests extends Middleware
                 'mustVerifyEmail' => $this->mustVerifyEmail($user, $userDTO->emailVerified),
                 // Where a verification link goes: a pending address replaces the current one
                 'verificationEmail' => $userDTO->pendingEmail ?? $userDTO->email,
-                'createdAt' => $userDTO->createdAt->format('c'),
+                'createdAt' => app(TimezoneServiceInterface::class)->iso($userDTO->createdAt),
                 // Roles and permissions come from the user_role pivot
                 'roles' => $roles,
                 'permissions' => $permissions,

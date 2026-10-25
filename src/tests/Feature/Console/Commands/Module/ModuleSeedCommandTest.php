@@ -85,6 +85,7 @@ PHP);
         File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
             'name' => $name,
             'version' => '1.0.0',
+            'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],

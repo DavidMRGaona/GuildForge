@@ -23,6 +23,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Livewire;
 use Mockery;
 use Tests\Support\Modules\RegistersBootedModuleProviders;
@@ -359,12 +360,22 @@ final class ModulesPageTest extends TestCase
     /**
      * @param  array<string, mixed>  $requires
      */
+    public function test_format_date_cannot_be_called_as_a_livewire_action(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->expectException(MethodNotFoundException::class);
+
+        Livewire::test(ModulesPage::class)->call('formatDate', '2026-01-01');
+    }
+
     private function moduleOnDisk(string $name, array $requires = []): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
         File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
             'name' => $name,
             'version' => '1.0.0',
+            'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],

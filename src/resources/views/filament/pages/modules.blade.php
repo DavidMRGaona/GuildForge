@@ -86,7 +86,7 @@
                                         @endif
                                         @if($module->enabledAt() || $module->createdAt())
                                             <span class="mx-1">•</span>
-                                            {{ $module->enabledAt()?->format('d/m/Y') ?? $module->createdAt()->format('d/m/Y') }}
+                                            {{ $this->formatDate($module->enabledAt() ?? $module->createdAt(), 'd/m/Y') }}
                                         @endif
                                     </p>
                                 </div>

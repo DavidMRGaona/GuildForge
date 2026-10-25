@@ -28,6 +28,7 @@ final class HostEnvironmentProvider implements HostEnvironmentProviderInterface
             filament: $this->packageVersion('filament/filament'),
             extensions: array_map(strtolower(...), get_loaded_extensions()),
             moduleMinimums: array_map(ModuleVersion::fromString(...), CoreModuleMinimumVersions::VERSIONS),
+            storesUtc: config('app.timezone') === 'UTC',
         );
     }
 

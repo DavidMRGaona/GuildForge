@@ -2,6 +2,7 @@
     "name": "incompatible-module",
     "displayName": "Incompatible module",
     "version": "1.0.0",
+    "storesUtc": true,
     "namespace": "Modules\\IncompatibleModule",
     "provider": "IncompatibleModuleServiceProvider",
     "description": "Fixture that requires a core version this host will never have",

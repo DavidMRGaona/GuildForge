@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Updates\Persistence\Eloquent\Models;
 
+use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 final class ModuleSeederHistoryModel extends Model
 {
     use HasUuids;
+    use StoresInstantsInStorageTimezone;
 
     protected $table = 'module_seeder_history';
 

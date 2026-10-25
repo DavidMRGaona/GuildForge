@@ -117,8 +117,6 @@ final class ModuleManifestDTOTest extends TestCase
             version: '1.0.0',
             namespace: 'Modules\\Minimal',
             provider: 'Modules\\Minimal\\MinimalServiceProvider',
-            description: null,
-            author: null,
             requires: [],
             dependencies: [],
         );
@@ -182,8 +180,6 @@ final class ModuleManifestDTOTest extends TestCase
             version: '1.0.0',
             namespace: 'Modules\\Basic',
             provider: 'Modules\\Basic\\BasicServiceProvider',
-            description: null,
-            author: null,
             requires: [],
             dependencies: [],
         );
@@ -306,5 +302,24 @@ final class ModuleManifestDTOTest extends TestCase
     {
         $this->assertSame(['requires' => [], 'invalid' => []], ModuleManifestDTO::normalizeRequires(null));
         $this->assertSame(['requires' => [], 'invalid' => []], ModuleManifestDTO::normalizeRequires([]));
+    }
+
+    public function test_stores_utc_defaults_to_false_and_round_trips_when_true(): void
+    {
+        $base = ['name' => 'm', 'version' => '1.0.0', 'namespace' => 'Modules\\M', 'provider' => 'MServiceProvider'];
+
+        $this->assertFalse(ModuleManifestDTO::fromArray($base)->storesUtc);
+        $this->assertArrayNotHasKey('storesUtc', ModuleManifestDTO::fromArray($base)->toArray());
+
+        $flagged = ModuleManifestDTO::fromArray([...$base, 'storesUtc' => true]);
+        $this->assertTrue($flagged->storesUtc);
+        $this->assertTrue($flagged->toArray()['storesUtc']);
+    }
+
+    public function test_a_non_boolean_stores_utc_makes_the_manifest_invalid(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        ModuleManifestDTO::fromArray(['name' => 'm', 'version' => '1.0.0', 'namespace' => 'Modules\\M', 'provider' => 'MServiceProvider', 'storesUtc' => 'yes']);
     }
 }

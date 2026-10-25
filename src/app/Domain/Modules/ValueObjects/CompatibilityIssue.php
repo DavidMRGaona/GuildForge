@@ -23,6 +23,9 @@ final readonly class CompatibilityIssue
     /** The module is older than the minimum this core declares for it ($required = minimum, $found = module version) */
     public const string BELOW_CORE_MINIMUM = 'modules.compatibility.reasons.below_core_minimum';
 
+    /** The core stores instants in UTC and the module does not declare "storesUtc": true */
+    public const string NOT_UTC_READY = 'modules.compatibility.reasons.not_utc_ready';
+
     /**
      * @param  string  $required  Constraint (or extension name) as written in the manifest, '' when not applicable
      * @param  string|null  $found  Host version, when known
@@ -49,6 +52,7 @@ final readonly class CompatibilityIssue
             self::UNKNOWN_HOST_VERSION => "requires {$label} {$this->required} but its installed version is unknown",
             self::MANIFEST_MISSING => 'module.json not found',
             self::BELOW_CORE_MINIMUM => "this core requires version {$this->required} or later of the module, not {$this->found}",
+            self::NOT_UTC_READY => 'this module is not ready to store dates in UTC',
             default => 'module.json is not valid',
         };
     }

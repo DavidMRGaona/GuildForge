@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Eloquent\Repositories;
 
+use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Entities\Event;
 use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\ValueObjects\EventId;
@@ -15,6 +16,8 @@ use Illuminate\Support\Collection;
 
 final readonly class EloquentEventRepository implements EventRepositoryInterface
 {
+    public function __construct(private ?TimezoneServiceInterface $timezone = null) {}
+
     public function findById(EventId $id): ?Event
     {
         $model = EventModel::query()->find($id->value);
@@ -59,6 +62,11 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
 
     public function findByDateRange(DateTimeImmutable $start, DateTimeImmutable $end): Collection
     {
+        // The arguments are instants: bind them as storage-zone wall times, whatever zone they carry.
+        $timezone = $this->timezone ?? app(TimezoneServiceInterface::class);
+        $start = $timezone->toStorage($start)->format('Y-m-d H:i:s');
+        $end = $timezone->toStorage($end)->format('Y-m-d H:i:s');
+
         return EventModel::query()
             ->where('is_published', true)
             ->where(function ($query) use ($start, $end) {
@@ -127,11 +135,11 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
             'title' => $event->title(),
             'slug' => $event->slug()->value,
             'description' => $event->description(),
-            'start_date' => $event->startDate()->format('Y-m-d H:i:s'),
+            'start_date' => $event->startDate(),
             'location' => $event->location(),
             'image_public_id' => $event->imagePublicId(),
             'is_published' => $event->isPublished(),
-            'end_date' => $event->endDate()->format('Y-m-d H:i:s'),
+            'end_date' => $event->endDate(),
             'member_price' => $event->memberPrice()?->value,
             'non_member_price' => $event->nonMemberPrice()?->value,
         ];

@@ -8,6 +8,7 @@ use App\Application\DTOs\Response\LegalPageResponseDTO;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\LegalPageServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,7 +30,7 @@ final class LegalPageController extends Controller
         return Inertia::render('Legal/Show', [
             'title' => $page->title,
             'content' => $page->content,
-            'lastUpdated' => $page->lastUpdated?->format('c'),
+            'lastUpdated' => app(TimezoneServiceInterface::class)->iso($page->lastUpdated),
             'seo' => $this->seo->forPage(new SeoPageDTO(title: $page->title))->toArray(),
         ]);
     }

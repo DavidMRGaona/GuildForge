@@ -136,10 +136,34 @@ final class ModuleCompatibilityCheckerTest extends TestCase
         $this->assertTrue($this->checker->checkManifest($manifest, $this->host(moduleMinimums: ['game-tables' => '2.2.0']))->isCompatible());
     }
 
+    public function test_a_module_without_the_flag_is_incompatible_once_storage_is_utc(): void
+    {
+        $result = $this->checker->checkManifest($this->utcManifest(false), $this->host(storesUtc: true));
+
+        $this->assertFalse($result->isCompatible());
+        $this->assertSame(CompatibilityIssue::NOT_UTC_READY, $result->issues[0]->reasonKey);
+        $this->assertSame(RequirementType::Manifest, $result->issues[0]->requirement);
+    }
+
+    public function test_the_flag_is_not_required_while_storage_is_madrid(): void
+    {
+        $this->assertTrue($this->checker->checkManifest($this->utcManifest(false), $this->host(storesUtc: false))->isCompatible());
+    }
+
+    public function test_a_flagged_module_is_compatible_with_utc_storage(): void
+    {
+        $this->assertTrue($this->checker->checkManifest($this->utcManifest(true), $this->host(storesUtc: true))->isCompatible());
+    }
+
+    private function utcManifest(bool $storesUtc): ModuleManifestDTO
+    {
+        return new ModuleManifestDTO('m', '2.0.0', 'Modules\\M', 'MServiceProvider', requires: ['core' => '^2.6'], storesUtc: $storesUtc);
+    }
+
     /**
      * @param  array<string, string>  $moduleMinimums
      */
-    private function host(string $core = '2.6.0', ?string $filament = '3.3.56', array $moduleMinimums = []): HostEnvironment
+    private function host(string $core = '2.6.0', ?string $filament = '3.3.56', array $moduleMinimums = [], bool $storesUtc = false): HostEnvironment
     {
         return new HostEnvironment(
             core: ModuleVersion::fromString($core),
@@ -148,6 +172,7 @@ final class ModuleCompatibilityCheckerTest extends TestCase
             filament: $filament === null ? null : ModuleVersion::fromString($filament),
             extensions: ['intl', 'pdo_pgsql', 'json'],
             moduleMinimums: array_map(ModuleVersion::fromString(...), $moduleMinimums),
+            storesUtc: $storesUtc,
         );
     }
 }

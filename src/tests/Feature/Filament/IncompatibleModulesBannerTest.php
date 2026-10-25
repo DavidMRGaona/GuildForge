@@ -106,6 +106,7 @@ final class IncompatibleModulesBannerTest extends TestCase
             'name' => $name,
             'displayName' => $displayName,
             'version' => '1.0.0',
+            'storesUtc' => true,
             'namespace' => 'Modules\\'.ucfirst($name),
             'provider' => ucfirst($name).'ServiceProvider',
             'requires' => $requires,

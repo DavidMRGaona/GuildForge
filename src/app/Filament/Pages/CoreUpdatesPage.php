@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
+use DateTimeInterface;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -18,6 +20,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -56,18 +59,34 @@ final class CoreUpdatesPage extends Page implements HasTable
 
     public ?string $deployedAt = null;
 
+    protected TimezoneServiceInterface $timezone;
+
+    /** Livewire injects the container dependencies of boot() on every request. */
+    public function boot(TimezoneServiceInterface $timezone): void
+    {
+        $this->timezone = $timezone;
+    }
+
+    /** For the view: dates are always shown in the display zone. */
+    protected function formatDate(DateTimeInterface|string $value, ?string $format = null): string
+    {
+        $date = $value instanceof DateTimeInterface ? $value : Carbon::parse($value);
+
+        return $format === null ? $this->timezone->format($date) : $this->timezone->format($date, $format);
+    }
+
     public function mount(CoreVersionServiceInterface $versionService): void
     {
         $this->deployedCommit = $versionService->getCurrentCommit();
         $this->branch = (string) config('updates.core.branch', 'main');
         $this->repositoryUrl = 'https://github.com/'.config('updates.core.owner').'/'.config('updates.core.repo');
-        $this->deployedAt = CoreUpdateHistoryModel::query()
+        $deployedAt = CoreUpdateHistoryModel::query()
             ->where('git_commit_after', $this->deployedCommit)
             ->where('status', UpdateStatus::Completed)
             ->latest('created_at')
             ->first()
-            ?->created_at
-            ?->format('d/m/Y H:i');
+            ?->created_at;
+        $this->deployedAt = $deployedAt === null ? null : $this->formatDate($deployedAt);
 
         // Show the last check, unless it was made for a deployment that has since been replaced
         $lastCheck = Cache::get(self::LAST_CHECK_CACHE_KEY);

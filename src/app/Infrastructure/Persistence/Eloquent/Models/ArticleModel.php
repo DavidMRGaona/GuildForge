@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
+use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\ArticleModelFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -37,6 +38,7 @@ final class ArticleModel extends Model
     use HasFactory;
 
     use HasUuids;
+    use StoresInstantsInStorageTimezone;
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['featured_image_public_id'];

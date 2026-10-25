@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Domain\Mail\Enums\EmailStatus;
+use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\EmailLogModelFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,6 +32,7 @@ final class EmailLogModel extends Model
     use HasFactory;
 
     use HasUuids;
+    use StoresInstantsInStorageTimezone;
 
     protected static function newFactory(): EmailLogModelFactory
     {

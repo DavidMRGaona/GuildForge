@@ -39,6 +39,9 @@ interface EventQueryServiceInterface
     public function searchPublished(string $query, int $limit = 12): array;
 
     /**
+     * The range is [start, end): the end day is exclusive. Both arguments are display days;
+     * the implementation turns their midnights into storage-zone instants before comparing.
+     *
      * @return array<int, EventResponseDTO>
      */
     public function findByDateRange(string $start, string $end): array;

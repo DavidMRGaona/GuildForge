@@ -212,14 +212,14 @@ final readonly class EloquentModuleRepository implements ModuleRepositoryInterfa
             'source_owner' => $module->sourceOwner(),
             'source_repo' => $module->sourceRepo(),
             'latest_available_version' => $module->latestAvailableVersion(),
-            'last_update_check_at' => $module->lastUpdateCheckAt()?->format('Y-m-d H:i:s'),
+            'last_update_check_at' => $module->lastUpdateCheckAt(),
             'latest_blocked_version' => $module->latestBlockedVersion(),
             'latest_blocked_reason' => $module->latestBlockedVersion() === null
                 ? null
                 : array_map(static fn (CompatibilityIssue $issue): array => $issue->toArray(), $module->latestBlockedIssues()),
             'status' => $module->status()->value,
-            'enabled_at' => $module->enabledAt()?->format('Y-m-d H:i:s'),
-            'installed_at' => $module->installedAt()?->format('Y-m-d H:i:s'),
+            'enabled_at' => $module->enabledAt(),
+            'installed_at' => $module->installedAt(),
         ];
     }
 }

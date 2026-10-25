@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
+use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\TagModelFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -42,6 +43,7 @@ final class TagModel extends Model
     use HasFactory;
 
     use HasUuids;
+    use StoresInstantsInStorageTimezone;
 
     protected $table = 'tags';
 

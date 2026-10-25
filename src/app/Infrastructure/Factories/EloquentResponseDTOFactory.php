@@ -14,6 +14,7 @@ use App\Application\DTOs\Response\PhotoResponseDTO;
 use App\Application\DTOs\Response\TagResponseDTO;
 use App\Application\DTOs\Response\UserResponseDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -237,9 +238,12 @@ final readonly class EloquentResponseDTOFactory implements ResponseDTOFactoryInt
             pendingEmail: $model->pending_email,
             avatarPublicId: $model->avatar_public_id,
             emailVerified: $model->email_verified_at !== null,
-            createdAt: $model->created_at !== null
-                ? DateTimeImmutable::createFromMutable($model->created_at)
-                : new DateTimeImmutable,
+            // In the display zone because the DTO serializes itself (jsonSerialize) without a container
+            createdAt: app(TimezoneServiceInterface::class)->toDisplay(
+                $model->created_at !== null
+                    ? DateTimeImmutable::createFromMutable($model->created_at)
+                    : new DateTimeImmutable,
+            ),
         );
     }
 }

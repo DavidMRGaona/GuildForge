@@ -12,5 +12,6 @@
         "laravel": ">=13.0",
         "filament": "^5.0"
     },
+    "storesUtc": true,
     "dependencies": []
 }

@@ -26,6 +26,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Livewire;
 use Mockery;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
@@ -315,6 +316,15 @@ final class ModuleUpdatesPageTest extends TestCase
         $this->assertNull($column->getIcon($column->getState()), 'A successful update must not show any error icon');
         $column->record($failed);
         $this->assertSame('heroicon-o-exclamation-triangle', $column->getIcon($column->getState()));
+    }
+
+    public function test_format_date_cannot_be_called_as_a_livewire_action(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->expectException(MethodNotFoundException::class);
+
+        Livewire::test(ModuleUpdatesPage::class)->call('formatDate', '2026-01-01');
     }
 
     private function historyRow(UpdateStatus $status, ?string $error): ModuleUpdateHistoryModel

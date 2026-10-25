@@ -37,7 +37,7 @@ final class ModuleMigrateCommandTest extends TestCase
 
     public function test_it_runs_migrations_for_specific_module(): void
     {
-        $module = ModuleModel::factory()->enabled()->create([
+        ModuleModel::factory()->enabled()->create([
             'name' => 'test-module',
             'path' => $this->modulesPath.'/test-module',
         ]);
@@ -47,7 +47,7 @@ final class ModuleMigrateCommandTest extends TestCase
         $migrationsPath = $modulePath.'/database/migrations';
         File::makeDirectory($migrationsPath, 0755, true);
         File::put($modulePath.'/module.json', (string) json_encode([
-            'name' => 'test-module', 'version' => '1.0.0', 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
+            'name' => 'test-module', 'version' => '1.0.0', 'storesUtc' => true, 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
             'requires' => ['core' => '>=2.0'],
         ]));
 
@@ -101,7 +101,7 @@ PHP
         ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'version' => '1.0.0', 'path' => $this->modulesPath.'/test-module']);
         File::makeDirectory($this->modulesPath.'/test-module/database/migrations', 0755, true);
         File::put($this->modulesPath.'/test-module/module.json', (string) json_encode([
-            'name' => 'test-module', 'version' => '1.0.0', 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
+            'name' => 'test-module', 'version' => '1.0.0', 'storesUtc' => true, 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
             'requires' => ['core' => '^99.0'],
         ]));
 

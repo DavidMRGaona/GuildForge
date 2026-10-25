@@ -70,6 +70,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertSame('>=13.0', $manifest['requires']['laravel'] ?? null);
         $this->assertSame('>=8.5', $manifest['requires']['php'] ?? null);
         $this->assertSame('^5.0', $manifest['requires']['filament'] ?? null);
+        $this->assertTrue($manifest['storesUtc'] ?? null);
     }
 
     public function test_it_creates_module_with_correct_structure(): void
@@ -837,6 +838,18 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringNotContainsString('ServiceInterface', $logger);
         $this->assertStringContainsString('final readonly class MailerService implements MailerServiceInterface', $mailer);
         $this->assertStringContainsString('use Modules\Utils\Application\Services\MailerServiceInterface;', $mailer);
+    }
+
+    public function test_the_generated_model_stores_instants_in_the_storage_zone(): void
+    {
+        // The manifest stub declares "storesUtc": true, which only holds when the models use the trait
+        $this->service->createModule('blog-posts');
+        $this->service->createEntity('blog-posts', 'Post');
+
+        $model = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php');
+
+        $this->assertStringContainsString('use App\\Infrastructure\\Persistence\\Eloquent\\Concerns\\StoresInstantsInStorageTimezone;', $model);
+        $this->assertMatchesRegularExpression('/^    use HasUuids;\n    use StoresInstantsInStorageTimezone;$/m', $model);
     }
 
     public function test_the_policy_guards_the_model_the_entity_scaffold_writes_with_module_permission_keys(): void

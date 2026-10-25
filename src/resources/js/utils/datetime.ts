@@ -1,3 +1,31 @@
+const DEFAULT_VENUE_TIMEZONE = 'Europe/Madrid';
+
+// The server announces the zone in the layout; read once at load because the
+// formatters below are built at import time.
+function resolveVenueTimezone(): string {
+    if (typeof document === 'undefined') {
+        return DEFAULT_VENUE_TIMEZONE;
+    }
+
+    const announced = document
+        .querySelector('meta[name="display-timezone"]')
+        ?.getAttribute('content')
+        ?.trim();
+
+    if (!announced) {
+        return DEFAULT_VENUE_TIMEZONE;
+    }
+
+    // An unknown zone would make every formatter below throw at import time
+    try {
+        new Intl.DateTimeFormat('en', { timeZone: announced });
+    } catch {
+        return DEFAULT_VENUE_TIMEZONE;
+    }
+
+    return announced;
+}
+
 /**
  * Timezone of the guild's venue.
  *
@@ -6,7 +34,7 @@
  * `toLocale*` falls back to the browser timezone and shows an hour that does
  * not match the announced one.
  */
-export const VENUE_TIMEZONE = 'Europe/Madrid';
+export const VENUE_TIMEZONE: string = resolveVenueTimezone();
 
 const dayKeyFormatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: VENUE_TIMEZONE,

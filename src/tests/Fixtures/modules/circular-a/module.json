@@ -1,6 +1,7 @@
 {
     "name": "circular-a",
     "version": "1.0.0",
+    "storesUtc": true,
     "description": "Module A for circular dependency testing",
     "author": "GuildForge",
     "namespace": "Modules\\CircularA",
