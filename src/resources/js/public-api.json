@@ -1,0 +1,36 @@
+{
+    "packages": {
+        "vue": "resources/js/vendor-exports/vue.ts",
+        "pinia": "resources/js/vendor-exports/pinia.ts",
+        "vue-i18n": "resources/js/vendor-exports/vue-i18n.ts",
+        "@inertiajs/vue3": "resources/js/vendor-exports/inertia.ts",
+        "@unhead/vue": "resources/js/vendor-exports/unhead.ts",
+        "@fullcalendar/vue3": "resources/js/vendor-exports/fullcalendar.ts",
+        "@fullcalendar/vue3/daygrid": "resources/js/vendor-exports/fullcalendar-daygrid.ts",
+        "@fullcalendar/vue3/timegrid": "resources/js/vendor-exports/fullcalendar-timegrid.ts",
+        "@fullcalendar/vue3/interaction": "resources/js/vendor-exports/fullcalendar-interaction.ts",
+        "@fullcalendar/vue3/themes/classic": "resources/js/vendor-exports/fullcalendar-theme-classic.ts"
+    },
+    "entries": {
+        "@/components/form": "resources/js/components/form/index.ts",
+        "@/components/layout/ModuleSlot.vue": "resources/js/components/layout/ModuleSlot.vue",
+        "@/components/ui/BaseButton.vue": "resources/js/components/ui/BaseButton.vue",
+        "@/components/ui/BaseCard.vue": "resources/js/components/ui/BaseCard.vue",
+        "@/components/ui/ConfirmDialog.vue": "resources/js/components/ui/ConfirmDialog.vue",
+        "@/components/ui/EmptyState.vue": "resources/js/components/ui/EmptyState.vue",
+        "@/components/ui/LoadingSpinner.vue": "resources/js/components/ui/LoadingSpinner.vue",
+        "@/composables/useAuth": "resources/js/composables/useAuth.ts",
+        "@/composables/useCalendarLocale": "resources/js/composables/useCalendarLocale.ts",
+        "@/composables/useFlashMessages": "resources/js/composables/useFlashMessages.ts",
+        "@/composables/useGridLayout": "resources/js/composables/useGridLayout.ts",
+        "@/composables/useNotifications": "resources/js/composables/useNotifications.ts",
+        "@/composables/usePagination": "resources/js/composables/usePagination.ts",
+        "@/composables/useRoutes": "resources/js/composables/useRoutes.ts",
+        "@/composables/useVerificationGate": "resources/js/composables/useVerificationGate.ts",
+        "@/contracts/cookieConsent": "resources/js/contracts/cookieConsent.ts",
+        "@/utils/calendarTheme": "resources/js/utils/calendarTheme.ts",
+        "@/utils/cloudinary": "resources/js/utils/cloudinary.ts",
+        "@/utils/csrf": "resources/js/utils/csrf.ts",
+        "@/utils/datetime": "resources/js/utils/datetime.ts"
+    }
+}
