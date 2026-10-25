@@ -16,7 +16,7 @@ jobs:
       module_name: '{{ moduleName }}'
       # Host branch, tag or SHA to test against (main when the variable is unset)
       host_ref: ${{ vars.GUILDFORGE_HOST_REF || 'main' }}
-      # The core's quality tools (Rector, Pint, PHPStan, ESLint, Prettier, Vitest)
+      # The core's quality tools (Rector, Pint, PHPStan, ESLint, Prettier, vue-tsc, Vitest)
       quality: true
     permissions:
       contents: read

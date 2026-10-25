@@ -62,6 +62,18 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
     if [ -d "$DIR/resources/js" ]; then
         run ESLint npx eslint "$DIR/resources/js"
         run Prettier npx prettier --check --no-error-on-unmatched-pattern "$DIR/resources/js/**/*.{ts,vue}"
+
+        # Types against the core's own sources and the core's copies of the import map
+        # packages (stubs/modules/module/tsconfig.json.stub), so a changed core prop or
+        # composable fails here instead of in the browser
+        if [ -n "$(find "$DIR/resources/js" \( -name '*.ts' -o -name '*.vue' \) 2>/dev/null | head -n 1)" ]; then
+            if [ -f "$DIR/tsconfig.json" ]; then
+                run vue-tsc sh -c "cd '$DIR' && ../../node_modules/.bin/vue-tsc --noEmit -p tsconfig.json"
+            else
+                echo "::error::$MODULE has TypeScript or Vue files but no tsconfig.json: copy stubs/modules/module/tsconfig.json.stub"
+                FAILED="$FAILED vue-tsc"
+            fi
+        fi
     else
         echo "::notice::$MODULE has no resources/js, skipping ESLint and Prettier"
     fi

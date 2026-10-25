@@ -48,7 +48,7 @@ The command creates `modules/my-module/` with:
 - `routes/web.php` and `routes/api.php`
 - `lang/es/messages.php` and `resources/js/locales/{es,en}.ts`
 - `package.json`, `vite.config.ts`, `tsconfig.json` and `resources/css/module.css`, the same build setup the shipped modules use
-- `phpunit.xml`, `.gitignore` and `.github/workflows/release.yml`
+- `phpunit.xml`, `.gitignore`, `.github/workflows/release.yml` and `.github/workflows/tests.yml` (PHPUnit and the quality checks on every pull request, see [module CI/CD](../module-ci-cd.md#pull-request-checks))
 - the directory structure for all layers
 
 It ends by printing the next steps. Every `module:make-*` generator does the same: it lists what is left to wire by hand (bindings, routes, policies, widgets…).
@@ -907,6 +907,8 @@ Modules with Vue pages or components ship them compiled. Assets are built in CI 
 - **Output**: inside the host (`modules/<name>` next to the host's `public/`) the build writes to the host's `public/build/modules/<name>/` with `base: '/build/modules/<name>/'`. With `MODULE_STANDALONE_OUTPUT=true`, or outside a host, it writes to the module's own `public/build/` with `base: '/'`; the release workflow builds this way and fails without `public/build/manifest.json`.
 - **Externals**: `vue`, `vue-i18n`, `pinia`, `@inertiajs/vue3` and `@unhead/vue` (the import map, see [Shared packages](#shared-packages)). `@/` imports are bundled from the host's `resources/js`, and only left external in a standalone build.
 - **Plugins**: `@vitejs/plugin-vue` and `@tailwindcss/vite`.
+
+`tsconfig.json` type-checks the module against the core: `@/*` points to the host's `resources/js` (as the Vite alias does), the five import map packages resolve to the host's `node_modules` (their types are the host's copies, so `$t` and the Inertia page props are typed) and the host's `resources/js/types` declarations are included. Run it with `docker exec guildforge_node sh -c 'cd modules/my-module && ../../node_modules/.bin/vue-tsc --noEmit -p tsconfig.json'`; the quality checks run it too.
 
 `package.json` declares `@tailwindcss/vite`, `@vitejs/plugin-vue`, `typescript`, `vite` and `vue` as dev dependencies, with the `build` (`vite build`) and `build:watch` scripts. Run `npm install` in the node container and commit `package-lock.json`: building the production image with modules runs `npm ci` in each of them.
 
