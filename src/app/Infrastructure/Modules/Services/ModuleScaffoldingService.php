@@ -12,24 +12,24 @@ use App\Domain\Modules\Exceptions\InvalidModuleNameException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use Illuminate\Support\Str;
 
-final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterface
+final readonly class ModuleScaffoldingService implements ModuleScaffoldingServiceInterface
 {
-    private const RESERVED_NAMES = [
+    private const array RESERVED_NAMES = [
         'core', 'app', 'admin', 'system', 'modules',
         'api', 'web', 'auth', 'user', 'filament',
         'laravel', 'vendor', 'public', 'storage',
     ];
 
-    private const TRANSLATE_LABELS = 'Translate the labels written to lang/es/filament.php: they are derived from the class name';
+    private const string TRANSLATE_LABELS = 'Translate the labels written to lang/es/filament.php: they are derived from the class name';
 
     private string $modulesPath;
 
     public function __construct(
-        private readonly StubRenderer $stubRenderer,
+        private StubRenderer $stubRenderer,
         ?string $modulesPath = null,
-        private readonly ?CoreVersionServiceInterface $coreVersion = null,
+        private ?CoreVersionServiceInterface $coreVersion = null,
         // Core Inertia pages (resources/js/pages): a module cannot use one as its page prefix
-        private readonly ?string $corePagesPath = null,
+        private ?string $corePagesPath = null,
     ) {
         $this->modulesPath = $modulesPath ?? base_path('modules');
     }
@@ -43,7 +43,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     ): ScaffoldResultDTO {
         // Validate module name
         $validation = $this->validateModuleName($name);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -142,7 +142,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         if ($repository === null) {
             $nextSteps[] = "Set \"repository\" (owner/repo) in module.json, or run php artisan module:set-source {$name} owner/repo once installed, so updates are found";
         }
-        $nextSteps[] = self::buildAssetsStep($name);
+        $nextSteps[] = $this->buildAssetsStep($name);
         $nextSteps[] = "Run its tests with vendor/bin/phpunit -c modules/{$name}/phpunit.xml";
 
         return ScaffoldResultDTO::success(
@@ -156,7 +156,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createEntity(string $module, string $name, bool $withMigration = true): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -202,7 +202,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createController(string $module, string $name, string $type = 'default'): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -251,7 +251,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createRequest(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -274,7 +274,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createService(string $module, string $name, bool $withInterface = true): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -319,7 +319,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createDto(string $module, string $name, bool $isResponse = false): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -344,7 +344,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createFilamentResource(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -407,7 +407,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createPolicy(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -443,7 +443,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createMigration(string $module, string $name, ?string $table = null, bool $modify = false): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -451,9 +451,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
         $variables = $this->stubRenderer->getModuleVariables($module);
 
         // Generate table name from migration name if not provided
-        if ($table === null) {
-            $table = $this->extractTableName($name, $module);
-        }
+        $table ??= $this->extractTableName($name, $module);
 
         $variables['tableName'] = $table;
         $files = [];
@@ -476,7 +474,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createTest(string $module, string $name, string $type = 'unit'): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -526,7 +524,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createVuePage(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -561,7 +559,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
                     ? "{$entity}Controller renders it with {$renderedAs} (module:make-controller {$module} {$entity} --resource)"
                     : "Render it from a controller with {$renderedAs} (module:make-controller {$module} {$variables['nameStudly']})",
                 "Its texts come from resources/js/locales/es.ts ({$variables['moduleNameCamel']}.*)",
-                self::buildAssetsStep($module),
+                $this->buildAssetsStep($module),
             ],
         );
     }
@@ -569,7 +567,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createVueComponent(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -587,7 +585,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
             "Vue component '{$name}' created for module '{$module}'.",
             $files,
             nextSteps: [
-                self::buildAssetsStep($module),
+                $this->buildAssetsStep($module),
             ],
         );
     }
@@ -815,7 +813,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     /**
      * Module assets are built with Node, which the PHP container does not have.
      */
-    private static function buildAssetsStep(string $module): string
+    private function buildAssetsStep(string $module): string
     {
         return "Build its Vue assets in the Node container: docker exec guildforge_node sh -c 'cd modules/{$module} && npm install && npm run build'; releases build them in the release workflow";
     }
@@ -925,7 +923,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createEnum(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -963,7 +961,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createDomainEvent(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -992,7 +990,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createListener(string $module, string $name, string $eventName, bool $queued = false): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -1026,7 +1024,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createNotification(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -1063,7 +1061,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createRelationManager(string $module, string $name, ?string $resource = null): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 
@@ -1113,7 +1111,7 @@ final class ModuleScaffoldingService implements ModuleScaffoldingServiceInterfac
     public function createWidget(string $module, string $name): ScaffoldResultDTO
     {
         $validation = $this->validateModuleExists($module);
-        if ($validation !== null) {
+        if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
 

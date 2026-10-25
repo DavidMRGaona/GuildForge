@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\DTOs\Response\EventResponseDTO;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\EventQueryServiceInterface;
@@ -19,7 +20,7 @@ final class EventController extends Controller
 {
     use BuildsPaginatedResponse;
 
-    private const PER_PAGE = 12;
+    private const int PER_PAGE = 12;
 
     public function __construct(
         private readonly EventQueryServiceInterface $eventQuery,
@@ -55,7 +56,7 @@ final class EventController extends Controller
     {
         $event = $this->eventQuery->findPublishedBySlug($slug);
 
-        if ($event === null) {
+        if (! $event instanceof EventResponseDTO) {
             abort(404);
         }
 

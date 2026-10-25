@@ -75,7 +75,7 @@ final readonly class StructuredDataBuilder
             'organizer' => ['@type' => 'Organization', 'name' => $site->name, 'url' => $site->url],
         ];
 
-        if ($image !== null) {
+        if ($image instanceof SeoImage) {
             $data['image'] = [$image->url];
         }
 
@@ -130,7 +130,7 @@ final readonly class StructuredDataBuilder
             $data['author'] = ['@type' => 'Person', 'name' => $article->authorName];
         }
 
-        if ($image !== null) {
+        if ($image instanceof SeoImage) {
             $data['image'] = [$image->url];
         }
 

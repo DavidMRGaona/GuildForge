@@ -102,7 +102,7 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->schema([
                                         Select::make('icon')
                                             ->label(__('filament.settings.about.activity_icon'))
-                                            ->options(self::getActivityIconOptions())
+                                            ->options($this->getActivityIconOptions())
                                             ->required()
                                             ->native(false),
                                         TextInput::make('title')
@@ -347,7 +347,7 @@ final class AboutPageSettings extends Page implements HasForms
      *
      * @return array<string, string>
      */
-    private static function getActivityIconOptions(): array
+    private function getActivityIconOptions(): array
     {
         return [
             'dice' => __('filament.settings.about.icons.dice'),

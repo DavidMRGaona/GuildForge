@@ -93,8 +93,16 @@ function selectTheme(mode: ThemeMode): void {
                             @click="toggleThemeMenu"
                             @blur="closeThemeMenu"
                         >
-                            <Monitor v-if="appStore.themeMode === 'system'" class="h-5 w-5" aria-hidden="true" />
-                            <Sun v-else-if="appStore.themeMode === 'light'" class="h-5 w-5" aria-hidden="true" />
+                            <Monitor
+                                v-if="appStore.themeMode === 'system'"
+                                class="h-5 w-5"
+                                aria-hidden="true"
+                            />
+                            <Sun
+                                v-else-if="appStore.themeMode === 'light'"
+                                class="h-5 w-5"
+                                aria-hidden="true"
+                            />
                             <Moon v-else class="h-5 w-5" aria-hidden="true" />
                         </button>
 

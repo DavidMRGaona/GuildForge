@@ -41,9 +41,9 @@ final readonly class MenuService implements MenuServiceInterface
 
         return match ($visibilityEnum) {
             MenuVisibility::Public => true,
-            MenuVisibility::Authenticated => $user !== null,
-            MenuVisibility::Guests => $user === null,
-            MenuVisibility::Permission => $user !== null && $this->userHasAnyPermission($user, $permissions),
+            MenuVisibility::Authenticated => $user instanceof Authenticatable,
+            MenuVisibility::Guests => ! $user instanceof Authenticatable,
+            MenuVisibility::Permission => $user instanceof Authenticatable && $this->userHasAnyPermission($user, $permissions),
         };
     }
 

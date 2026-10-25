@@ -41,13 +41,13 @@ final class ModuleCompatibilityService implements ModuleCompatibilityServiceInte
     public function checkManifestFile(string $manifestPath): CompatibilityResult
     {
         if (! is_file($manifestPath)) {
-            return self::manifestProblem(CompatibilityIssue::MANIFEST_MISSING);
+            return $this->manifestProblem(CompatibilityIssue::MANIFEST_MISSING);
         }
 
         try {
             $manifest = $this->reader->read($manifestPath);
         } catch (InvalidArgumentException|TypeError) {
-            return self::manifestProblem(CompatibilityIssue::MANIFEST_INVALID);
+            return $this->manifestProblem(CompatibilityIssue::MANIFEST_INVALID);
         }
 
         return $this->checkManifest($manifest);
@@ -58,7 +58,7 @@ final class ModuleCompatibilityService implements ModuleCompatibilityServiceInte
         return $this->checker->checkManifest($manifest, $this->host->current());
     }
 
-    private static function manifestProblem(string $reasonKey): CompatibilityResult
+    private function manifestProblem(string $reasonKey): CompatibilityResult
     {
         return new CompatibilityResult([new CompatibilityIssue(RequirementType::Manifest, '', null, $reasonKey)]);
     }

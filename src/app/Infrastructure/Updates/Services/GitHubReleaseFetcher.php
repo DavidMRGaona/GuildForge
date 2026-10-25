@@ -48,7 +48,7 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
         foreach ($this->candidates($owner, $repo, $installed, $includePrereleases) as $release) {
             $requirements = $this->releaseRequirements($owner, $repo, $release);
 
-            if ($requirements === null) {
+            if (! $requirements instanceof ModuleRequirements) {
                 $result = new CompatibilityResult([new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::MANIFEST_INVALID)]);
                 $constraint = null;
             } else {
@@ -253,7 +253,7 @@ final class GitHubReleaseFetcher implements GitHubReleaseFetcherInterface
         }
 
         $releases = $response->json();
-        $releases = is_array($releases) ? array_values(array_filter($releases, 'is_array')) : [];
+        $releases = is_array($releases) ? array_values(array_filter($releases, is_array(...))) : [];
 
         Cache::put($cacheKey, $releases, (int) config('updates.cache.ttl', 3600));
         $this->cachedKeys[] = $cacheKey;

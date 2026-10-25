@@ -65,15 +65,11 @@ const networks: SocialNetwork[] = [
     },
 ];
 
-const visibleNetworks = computed(() =>
-    networks.filter((network) => props.links[network.key]),
-);
+const visibleNetworks = computed(() => networks.filter((network) => props.links[network.key]));
 
 const hasLinks = computed(() => visibleNetworks.value.length > 0);
 
-const iconClasses = computed(() =>
-    props.size === 'sm' ? 'h-4 w-4' : 'h-6 w-6',
-);
+const iconClasses = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-6 w-6'));
 
 const linkClasses = computed(() => {
     const base = 'rounded-lg transition-colors';
@@ -101,11 +97,7 @@ defineExpose({ hasLinks });
             :class="linkClasses"
             :aria-label="network.label"
         >
-            <svg
-                :class="iconClasses"
-                fill="currentColor"
-                :viewBox="network.viewBox"
-            >
+            <svg :class="iconClasses" fill="currentColor" :viewBox="network.viewBox">
                 <path :d="network.path" />
             </svg>
         </a>

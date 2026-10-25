@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
 
-final class StubRenderer
+final readonly class StubRenderer
 {
     private string $stubsPath;
 

@@ -164,7 +164,7 @@ final readonly class TrixContentMigrator implements TrixContentMigratorInterface
     {
         File::ensureDirectoryExists($this->backupDirectory);
         $path = $this->backupDirectory.'/trix-'.now()->format('Ymd-His').'-'.bin2hex(random_bytes(3)).'.json';
-        File::put($path, (string) json_encode($changes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        File::put($path, json_encode($changes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
 
         return $path;
     }

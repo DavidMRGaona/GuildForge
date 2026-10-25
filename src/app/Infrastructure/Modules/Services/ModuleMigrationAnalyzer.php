@@ -187,12 +187,6 @@ final readonly class ModuleMigrationAnalyzer implements ModuleMigrationAnalyzerI
      */
     private function hasAllowedPrefix(string $tableName, array $allowedPrefixes): bool
     {
-        foreach ($allowedPrefixes as $prefix) {
-            if (str_starts_with($tableName, $prefix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($allowedPrefixes, fn ($prefix) => str_starts_with($tableName, $prefix));
     }
 }

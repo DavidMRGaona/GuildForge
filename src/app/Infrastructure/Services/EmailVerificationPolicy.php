@@ -30,7 +30,7 @@ final readonly class EmailVerificationPolicy implements EmailVerificationPolicyI
 
         $cutoff = $this->settings->getEmailVerificationEnforcedSince();
 
-        if ($cutoff === null || $user->created_at === null) {
+        if (! $cutoff instanceof \DateTimeImmutable || $user->created_at === null) {
             return true;
         }
 

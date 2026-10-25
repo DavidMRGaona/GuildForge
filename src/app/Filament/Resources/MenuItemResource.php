@@ -111,7 +111,7 @@ class MenuItemResource extends BaseResource
                             ->native(false)
                             ->helperText(__('filament.menu_items.fields.page_help'))
                             ->afterStateHydrated(function (Select $component, ?string $state, ?MenuItemModel $record): void {
-                                if ($record === null || $state === null) {
+                                if (! $record instanceof MenuItemModel || $state === null) {
                                     return;
                                 }
                                 $routeParams = $record->route_params;
@@ -193,7 +193,7 @@ class MenuItemResource extends BaseResource
                         if ($record->parent_id === null) {
                             return '';
                         }
-                        $parentLabel = $record->parent !== null ? $record->parent->label : '';
+                        $parentLabel = $record->parent->label ?? '';
 
                         return '↳ '.__('filament.menu_items.submenu_of', ['parent' => $parentLabel]);
                     }),
@@ -310,7 +310,7 @@ class MenuItemResource extends BaseResource
     {
         $options = resolve(RouteRegistryInterface::class)->getAvailableRoutes();
 
-        if ($record === null || $record->route === null) {
+        if (! $record instanceof MenuItemModel || $record->route === null) {
             return $options;
         }
 
@@ -320,9 +320,7 @@ class MenuItemResource extends BaseResource
             $key .= ':'.$routeParams['slug'];
         }
 
-        if (! isset($options[$key])) {
-            $options[$key] = __('filament.menu_items.fields.page_unavailable', ['route' => $key]);
-        }
+        $options[$key] ??= __('filament.menu_items.fields.page_unavailable', ['route' => $key]);
 
         return $options;
     }
@@ -358,12 +356,10 @@ class MenuItemResource extends BaseResource
     {
         // Get permissions from the database
         try {
-            $permissions = PermissionModel::query()
+            return PermissionModel::query()
                 ->orderBy('key')
                 ->pluck('label', 'key')
                 ->toArray();
-
-            return $permissions;
         } catch (Throwable) {
             return [];
         }

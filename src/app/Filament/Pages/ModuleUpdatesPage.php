@@ -86,7 +86,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
         return app(SettingsServiceInterface::class)->isMaintenanceModeEnabled();
     }
 
-    private static function maintenanceRequiredMessage(): string
+    private function maintenanceRequiredMessage(): string
     {
         return __('filament.updates.modules.maintenance_required.title');
     }
@@ -182,7 +182,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                 ->disabled(fn (): bool => $this->availableUpdates === []
                     || $this->queuedModules !== []
                     || ! $this->isMaintenanceModeEnabled())
-                ->tooltip(fn (): ?string => $this->isMaintenanceModeEnabled() ? null : self::maintenanceRequiredMessage()),
+                ->tooltip(fn (): ?string => $this->isMaintenanceModeEnabled() ? null : $this->maintenanceRequiredMessage()),
         ];
     }
 

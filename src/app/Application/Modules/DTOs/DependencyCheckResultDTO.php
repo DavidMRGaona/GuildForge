@@ -49,7 +49,7 @@ final readonly class DependencyCheckResultDTO
             $messages[] = "Circular dependency detected: {$cycleStr}";
         }
 
-        foreach ($this->unsatisfiedRequirements as $requirement => $message) {
+        foreach ($this->unsatisfiedRequirements as $message) {
             $messages[] = $message;
         }
 

@@ -66,13 +66,13 @@ final class ModuleSyncFromImageCommand extends Command
         $imageVersion = $this->readVersion($imageDir);
         $volumeVersion = $this->readVersion($volumeDir);
 
-        if ($imageVersion === null) {
+        if (! $imageVersion instanceof ModuleVersion) {
             $this->warn("Skipping {$moduleName}: no valid module.json in image");
 
             return;
         }
 
-        if ($volumeVersion === null) {
+        if (! $volumeVersion instanceof ModuleVersion) {
             $this->syncModule($imageDir, $volumeDir, $moduleName, 'volume has no valid manifest');
 
             return;

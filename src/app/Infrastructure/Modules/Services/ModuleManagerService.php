@@ -61,7 +61,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             if ($this->repository->exists($moduleName)) {
                 // Get existing module and sync version from manifest
                 $existing = $this->repository->findByName($moduleName);
-                if ($existing !== null) {
+                if ($existing instanceof Module) {
                     $needsSave = false;
 
                     // Sync path: re-saving resolves stale relative paths via path()
@@ -90,7 +90,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                     }
 
                     $manifestAuthor = $manifest->author ?? '';
-                    $manifestDependencies = array_values(array_filter($manifest->dependencies ?? [], 'is_string'));
+                    $manifestDependencies = array_values(array_filter($manifest->dependencies ?? [], is_string(...)));
                     if ($existing->namespace() !== $manifest->namespace
                         || $existing->provider() !== $manifest->provider
                         || $existing->author() !== $manifestAuthor
@@ -166,13 +166,12 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                 author: $manifest->author ?? '',
                 requirements: ModuleRequirements::fromManifest($manifest->requires ?? []),
                 status: ModuleStatus::Disabled,
-                enabledAt: null,
                 createdAt: new DateTimeImmutable,
                 updatedAt: new DateTimeImmutable,
                 namespace: $manifest->namespace,
                 provider: $manifest->provider,
                 path: $modulesPath.'/'.$manifest->name,
-                dependencies: array_values(array_filter($manifest->dependencies ?? [], 'is_string')),
+                dependencies: array_values(array_filter($manifest->dependencies ?? [], is_string(...))),
                 sourceOwner: $manifest->repositoryOwner(),
                 sourceRepo: $manifest->repositoryName(),
             );
@@ -195,7 +194,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -252,7 +251,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -271,7 +270,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             }
         }
 
-        if (! empty($enabledDependents)) {
+        if ($enabledDependents !== []) {
             throw ModuleDependencyException::dependentModulesExist($name->value, $enabledDependents);
         }
 
@@ -294,7 +293,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -307,7 +306,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         // Merge both dependency sources
         $allRequirements = array_unique(array_merge($requiredModules, $simpleDependencies));
 
-        if (empty($allRequirements)) {
+        if ($allRequirements === []) {
             return new DependencyCheckResultDTO(satisfied: true);
         }
 
@@ -349,7 +348,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             }
         }
 
-        $satisfied = empty($missing) && empty($versionMismatch);
+        $satisfied = $missing === [] && $versionMismatch === [];
 
         return new DependencyCheckResultDTO(
             satisfied: $satisfied,
@@ -377,7 +376,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -388,7 +387,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -399,7 +398,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -410,7 +409,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -424,7 +423,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             }
         }
 
-        if (! empty($enabledDependents)) {
+        if ($enabledDependents !== []) {
             throw ModuleCannotUninstallException::hasDependents($name->value, $enabledDependents);
         }
 
@@ -480,7 +479,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -493,7 +492,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -516,7 +515,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     {
         $module = $this->repository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -578,11 +577,11 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
      */
     private function getFirstMissingDependency(DependencyCheckResultDTO $result): string
     {
-        if (! empty($result->missing)) {
+        if ($result->missing !== []) {
             return $result->missing[0];
         }
 
-        if (! empty($result->versionMismatch)) {
+        if ($result->versionMismatch !== []) {
             return array_key_first($result->versionMismatch);
         }
 

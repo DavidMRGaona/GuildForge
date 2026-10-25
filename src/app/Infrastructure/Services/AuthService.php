@@ -51,7 +51,7 @@ final readonly class AuthService implements AuthServiceInterface
         $user = $this->userRepository->create($dto);
         $userModel = $this->userModelQuery->findModelById($user->id());
 
-        if ($userModel === null) {
+        if (! $userModel instanceof UserModel) {
             throw new \RuntimeException('Failed to retrieve user after creation');
         }
 
@@ -275,7 +275,7 @@ final readonly class AuthService implements AuthServiceInterface
     {
         $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
-        return $userModel !== null && $userModel->hasVerifiedEmail();
+        return $userModel instanceof UserModel && $userModel->hasVerifiedEmail();
     }
 
     /**
@@ -287,7 +287,7 @@ final readonly class AuthService implements AuthServiceInterface
             UserId::fromString($userId)
         );
 
-        if ($userModel === null) {
+        if (! $userModel instanceof UserModel) {
             throw UserNotFoundException::withId($userId);
         }
 

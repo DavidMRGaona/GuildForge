@@ -255,9 +255,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(SnsMessageValidatorInterface::class, SnsMessageValidator::class);
 
         // Log context provider (uses request scoped binding)
-        $this->app->bind(LogContextProviderInterface::class, function ($app) {
-            return new HttpLogContextProvider($app['request'] ?? null);
-        });
+        $this->app->bind(LogContextProviderInterface::class, fn ($app) => new HttpLogContextProvider($app['request'] ?? null));
 
         // Factory bindings
         $this->app->singleton(ResponseDTOFactoryInterface::class, EloquentResponseDTOFactory::class);
@@ -284,41 +282,31 @@ class AppServiceProvider extends ServiceProvider
         // Module system bindings
         $this->app->bind(ModuleRepositoryInterface::class, EloquentModuleRepository::class);
 
-        $this->app->singleton(ModuleDiscoveryService::class, function ($app) {
-            return new ModuleDiscoveryService(
-                modulesPath: config('modules.path'),
-                logger: $app->make(LoggerInterface::class),
-            );
-        });
+        $this->app->singleton(ModuleDiscoveryService::class, fn ($app) => new ModuleDiscoveryService(
+            modulesPath: config('modules.path'),
+            logger: $app->make(LoggerInterface::class),
+        ));
 
-        $this->app->singleton(ModuleAssetBuilder::class, function ($app) {
-            return new ModuleAssetBuilder(
-                modulesPath: config('modules.path'),
-            );
-        });
+        $this->app->singleton(ModuleAssetBuilder::class, fn ($app) => new ModuleAssetBuilder(
+            modulesPath: config('modules.path'),
+        ));
 
-        $this->app->singleton(ModuleDependencyResolver::class, function () {
-            return new ModuleDependencyResolver;
-        });
+        $this->app->singleton(ModuleDependencyResolver::class, fn () => new ModuleDependencyResolver);
 
         $this->app->singleton(CoreTableRegistry::class);
         $this->app->singleton(ModuleSchemaGuard::class);
         $this->app->bind(ModuleMigrationAnalyzerInterface::class, ModuleMigrationAnalyzer::class);
 
-        $this->app->singleton(ModuleMigrationRunner::class, function ($app) {
-            return new ModuleMigrationRunner(
-                modulesPath: config('modules.path'),
-                analyzer: $app->make(ModuleMigrationAnalyzerInterface::class),
-                schemaGuard: $app->make(ModuleSchemaGuard::class),
-            );
-        });
+        $this->app->singleton(ModuleMigrationRunner::class, fn ($app) => new ModuleMigrationRunner(
+            modulesPath: config('modules.path'),
+            analyzer: $app->make(ModuleMigrationAnalyzerInterface::class),
+            schemaGuard: $app->make(ModuleSchemaGuard::class),
+        ));
 
-        $this->app->singleton(ModuleSeederRunner::class, function ($app) {
-            return new ModuleSeederRunner(
-                modulesPath: config('modules.path'),
-                analyzer: $app->make(ModuleMigrationAnalyzerInterface::class),
-            );
-        });
+        $this->app->singleton(ModuleSeederRunner::class, fn ($app) => new ModuleSeederRunner(
+            modulesPath: config('modules.path'),
+            analyzer: $app->make(ModuleMigrationAnalyzerInterface::class),
+        ));
 
         $this->app->singleton(ModuleManagerServiceInterface::class, ModuleManagerService::class);
 
@@ -332,18 +320,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(EnabledModulesResolverInterface::class, EnabledModulesResolver::class);
 
         // Module SDK services
-        $this->app->singleton(StubRenderer::class, function () {
-            return new StubRenderer(base_path('stubs/modules'));
-        });
+        $this->app->singleton(StubRenderer::class, fn () => new StubRenderer(base_path('stubs/modules')));
 
-        $this->app->singleton(ModuleScaffoldingServiceInterface::class, function ($app) {
-            return new ModuleScaffoldingService(
-                $app->make(StubRenderer::class),
-                config('modules.path'),
-                $app->make(CoreVersionServiceInterface::class),
-                resource_path('js/pages'),
-            );
-        });
+        $this->app->singleton(ModuleScaffoldingServiceInterface::class, fn ($app) => new ModuleScaffoldingService(
+            $app->make(StubRenderer::class),
+            config('modules.path'),
+            $app->make(CoreVersionServiceInterface::class),
+            resource_path('js/pages'),
+        ));
 
         $this->app->singleton(ModuleContextServiceInterface::class, ModuleContextService::class);
         $this->app->singleton(ModulePermissionRegistryInterface::class, ModulePermissionRegistry::class);
@@ -364,13 +348,11 @@ class AppServiceProvider extends ServiceProvider
 
         // Rich text written with the Trix editor (admin panel before core 3.0)
         $this->app->singleton(TrixHtmlConverterInterface::class, TrixHtmlConverter::class);
-        $this->app->singleton(TrixContentMigratorInterface::class, function ($app) {
-            return new TrixContentMigrator(
-                $app->make(TrixHtmlConverterInterface::class),
-                $app->make(SettingsServiceInterface::class),
-                storage_path('app/backups/rich-text'),
-            );
-        });
+        $this->app->singleton(TrixContentMigratorInterface::class, fn ($app) => new TrixContentMigrator(
+            $app->make(TrixHtmlConverterInterface::class),
+            $app->make(SettingsServiceInterface::class),
+            storage_path('app/backups/rich-text'),
+        ));
 
         // Update system bindings
         $this->app->singleton(GitHubReleaseFetcherInterface::class, GitHubReleaseFetcher::class);
@@ -387,12 +369,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CoreUpdateCheckerInterface::class, CoreUpdateChecker::class);
 
         // Module loader (for booting enabled modules)
-        $this->app->singleton(ModuleLoader::class, function ($app) {
-            return new ModuleLoader(
-                $app,
-                $app->make(EnabledModulesResolverInterface::class),
-            );
-        });
+        $this->app->singleton(ModuleLoader::class, fn ($app) => new ModuleLoader(
+            $app,
+            $app->make(EnabledModulesResolverInterface::class),
+        ));
     }
 
     /**
@@ -401,9 +381,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Register custom UUID-aware user provider to handle old integer-based cookies gracefully
-        Auth::provider('uuid-eloquent', function ($app, array $config) {
-            return new UuidEloquentUserProvider($app['hash'], $config['model']);
-        });
+        Auth::provider('uuid-eloquent', fn ($app, array $config) => new UuidEloquentUserProvider($app['hash'], $config['model']));
 
         // Rate limiter for login: 5 attempts per minute per IP + email combo
         RateLimiter::for(

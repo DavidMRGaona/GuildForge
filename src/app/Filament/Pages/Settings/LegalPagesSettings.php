@@ -82,7 +82,7 @@ final class LegalPagesSettings extends Page implements HasForms
 
         // A notice without saved text shows the module's default, so the admin can start from it
         foreach ($this->mailNotices() as $notice) {
-            $saved = (string) $settingsService->get(self::noticeSettingKey($notice->key), '');
+            $saved = (string) $settingsService->get($this->noticeSettingKey($notice->key), '');
             $data[self::noticeFieldName($notice->key)] = trim($saved) !== '' ? $saved : $notice->defaultContent;
         }
 
@@ -112,7 +112,7 @@ final class LegalPagesSettings extends Page implements HasForms
         return 'legal_mail_notice_section_'.sha1($noticeKey);
     }
 
-    private static function noticeSettingKey(string $noticeKey): string
+    private function noticeSettingKey(string $noticeKey): string
     {
         return 'legal_mail_notice:'.$noticeKey;
     }
@@ -121,14 +121,14 @@ final class LegalPagesSettings extends Page implements HasForms
      * Text to store for a notice: empty when it matches the module's default, so the site keeps
      * following later changes of the default.
      */
-    private static function noticeValueToStore(LegalMailNoticeDTO $notice, string $text): string
+    private function noticeValueToStore(LegalMailNoticeDTO $notice, string $text): string
     {
         $text = trim($text);
 
-        return self::normaliseNoticeText($text) === self::normaliseNoticeText($notice->defaultContent) ? '' : $text;
+        return $this->normaliseNoticeText($text) === $this->normaliseNoticeText($notice->defaultContent) ? '' : $text;
     }
 
-    private static function normaliseNoticeText(string $text): string
+    private function normaliseNoticeText(string $text): string
     {
         return trim(str_replace(["\r\n", "\r"], "\n", $text));
     }
@@ -295,8 +295,8 @@ final class LegalPagesSettings extends Page implements HasForms
 
         foreach ($this->mailNotices() as $notice) {
             $settingsService->set(
-                self::noticeSettingKey($notice->key),
-                self::noticeValueToStore($notice, (string) ($formData[self::noticeFieldName($notice->key)] ?? '')),
+                $this->noticeSettingKey($notice->key),
+                $this->noticeValueToStore($notice, (string) ($formData[self::noticeFieldName($notice->key)] ?? '')),
             );
         }
 

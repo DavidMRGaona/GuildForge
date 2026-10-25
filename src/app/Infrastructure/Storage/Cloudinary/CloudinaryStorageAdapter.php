@@ -60,12 +60,12 @@ use Throwable;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-final class CloudinaryStorageAdapter implements ChecksumProvider, FilesystemAdapter
+final readonly class CloudinaryStorageAdapter implements ChecksumProvider, FilesystemAdapter
 {
     public function __construct(
-        private readonly Cloudinary $cloudinary,
-        private readonly CloudinaryPathMapper $paths,
-        private readonly ?ImageOptimizationServiceInterface $imageOptimization = null,
+        private Cloudinary $cloudinary,
+        private CloudinaryPathMapper $paths,
+        private ?ImageOptimizationServiceInterface $imageOptimization = null,
     ) {}
 
     public function getUrl(string $path): string
@@ -107,7 +107,7 @@ final class CloudinaryStorageAdapter implements ChecksumProvider, FilesystemAdap
     {
         $mimeType = $this->paths->mimeType($path);
 
-        if ($this->imageOptimization !== null) {
+        if ($this->imageOptimization instanceof ImageOptimizationServiceInterface) {
             $contents = $this->imageOptimization->optimize($contents, $mimeType);
         }
 

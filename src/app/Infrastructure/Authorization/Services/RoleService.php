@@ -37,7 +37,7 @@ final readonly class RoleService implements RoleServiceInterface
         $roles = $this->roleRepository->findAll();
 
         return array_map(
-            fn (Role $role): RoleResponseDTO => $this->toResponseDTO($role),
+            $this->toResponseDTO(...),
             $roles
         );
     }
@@ -46,7 +46,7 @@ final readonly class RoleService implements RoleServiceInterface
     {
         $role = $this->roleRepository->findById(RoleId::fromString($id));
 
-        if ($role === null) {
+        if (! $role instanceof Role) {
             return null;
         }
 
@@ -57,7 +57,7 @@ final readonly class RoleService implements RoleServiceInterface
     {
         $role = $this->roleRepository->findByName(RoleName::fromString($name));
 
-        if ($role === null) {
+        if (! $role instanceof Role) {
             return null;
         }
 
@@ -88,7 +88,7 @@ final readonly class RoleService implements RoleServiceInterface
     {
         $existingRole = $this->roleRepository->findById(RoleId::fromString($id));
 
-        if ($existingRole === null) {
+        if (! $existingRole instanceof Role) {
             throw RoleNotFoundException::withId($id);
         }
 
@@ -114,7 +114,7 @@ final readonly class RoleService implements RoleServiceInterface
     {
         $role = $this->roleRepository->findById(RoleId::fromString($id));
 
-        if ($role === null) {
+        if (! $role instanceof Role) {
             throw RoleNotFoundException::withId($id);
         }
 

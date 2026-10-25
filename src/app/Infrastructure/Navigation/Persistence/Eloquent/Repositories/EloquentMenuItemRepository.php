@@ -123,7 +123,7 @@ final readonly class EloquentMenuItemRepository implements MenuItemRepositoryInt
         $query = MenuItemModel::query();
         $this->applyLocationFilter($query, $location);
 
-        if ($parentId !== null) {
+        if ($parentId instanceof MenuItemId) {
             $query->where('parent_id', $parentId->value);
         } else {
             $this->applyRootsFilter($query);

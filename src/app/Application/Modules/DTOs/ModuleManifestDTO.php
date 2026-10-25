@@ -135,7 +135,7 @@ final readonly class ModuleManifestDTO
                 $invalid[] = $key;
             }
 
-            $requires[$key] = is_array($requires[$key]) ? array_values(array_filter($requires[$key], 'is_string')) : [];
+            $requires[$key] = is_array($requires[$key]) ? array_values(array_filter($requires[$key], is_string(...))) : [];
         }
 
         return ['requires' => $requires, 'invalid' => $invalid];
@@ -162,7 +162,7 @@ final readonly class ModuleManifestDTO
 
     private static function isListOfStrings(mixed $value): bool
     {
-        return is_array($value) && array_is_list($value) && array_filter($value, 'is_string') === $value;
+        return is_array($value) && array_is_list($value) && array_filter($value, is_string(...)) === $value;
     }
 
     /**

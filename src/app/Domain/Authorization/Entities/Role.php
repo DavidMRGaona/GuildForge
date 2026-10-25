@@ -7,14 +7,14 @@ namespace App\Domain\Authorization\Entities;
 use App\Domain\Authorization\ValueObjects\RoleId;
 use App\Domain\Authorization\ValueObjects\RoleName;
 
-final class Role
+final readonly class Role
 {
     public function __construct(
-        private readonly RoleId $id,
-        private readonly RoleName $name,
-        private readonly string $displayName,
-        private readonly ?string $description = null,
-        private readonly bool $isProtected = false,
+        private RoleId $id,
+        private RoleName $name,
+        private string $displayName,
+        private ?string $description = null,
+        private bool $isProtected = false,
     ) {}
 
     public function id(): RoleId

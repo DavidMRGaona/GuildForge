@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 
 final class SesUsageTracker
 {
-    private const COST_PER_1000_EMAILS = 0.10;
+    private const float COST_PER_1000_EMAILS = 0.10;
 
     public function incrementEmailsSent(int $count = 1): void
     {

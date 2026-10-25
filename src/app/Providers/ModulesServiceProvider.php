@@ -125,11 +125,7 @@ final class ModulesServiceProvider extends ServiceProvider
             DB::connection()->getPdo();
 
             // Also check if the modules table exists (needed for fresh installs)
-            if (! Schema::hasTable('modules')) {
-                return false;
-            }
-
-            return true;
+            return Schema::hasTable('modules');
         } catch (\Throwable) {
             return false;
         }

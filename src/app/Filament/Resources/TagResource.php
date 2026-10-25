@@ -197,7 +197,7 @@ class TagResource extends BaseResource
         $tagService = self::getTagQueryService();
         $hierarchicalTags = $tagService->getAllInHierarchicalOrder();
 
-        if (empty($hierarchicalTags)) {
+        if ($hierarchicalTags === []) {
             /** @var Builder<TagModel> $query */
             $query = parent::getEloquentQuery();
 

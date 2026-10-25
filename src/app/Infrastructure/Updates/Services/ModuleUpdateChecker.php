@@ -14,6 +14,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use App\Domain\Updates\ValueObjects\ReleaseSelection;
 use DateTimeImmutable;
 use Illuminate\Support\Collection;
@@ -30,7 +31,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
     {
         $module = $this->moduleRepository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             return null;
         }
 
@@ -113,7 +114,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
                     $blocked[] = BlockedReleaseDTO::fromModule($module);
                 }
 
-                if ($update !== null) {
+                if ($update instanceof AvailableUpdateDTO) {
                     $updates->push($update);
                 }
             }
@@ -133,7 +134,7 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
     {
         $module = $this->moduleRepository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             return null;
         }
 
@@ -155,13 +156,13 @@ final readonly class ModuleUpdateChecker implements ModuleUpdateCheckerInterface
     {
         $currentVersion = $module->version();
         $release = $selection->compatible;
-        $isUpdate = $release !== null
+        $isUpdate = $release instanceof GitHubReleaseInfo
             && ($this->channelPolicy->includesPrereleasesFor($currentVersion) || ! $release->isPrerelease)
             && $release->version->isGreaterThan($currentVersion);
 
         $module->updateLastCheckAt(new DateTimeImmutable);
 
-        if ($selection->blocked !== null && $selection->blocked->version->isGreaterThan($currentVersion)) {
+        if ($selection->blocked instanceof GitHubReleaseInfo && $selection->blocked->version->isGreaterThan($currentVersion)) {
             $module->updateLatestBlocked($selection->blocked->version->value(), $selection->blockedIssues);
         } else {
             $module->clearLatestBlocked();

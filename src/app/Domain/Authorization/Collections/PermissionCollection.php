@@ -83,9 +83,7 @@ final class PermissionCollection
 
         foreach ($this->permissions as $permission) {
             $resource = $permission->resource();
-            if (! isset($grouped[$resource])) {
-                $grouped[$resource] = [];
-            }
+            $grouped[$resource] ??= [];
             $grouped[$resource][] = $permission;
         }
 

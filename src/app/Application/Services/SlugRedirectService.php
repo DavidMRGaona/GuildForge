@@ -41,7 +41,7 @@ final readonly class SlugRedirectService implements SlugRedirectServiceInterface
 
         $existing = $this->repository->findByOldSlugAndType($oldSlugVO, $entityType);
 
-        if ($existing !== null) {
+        if ($existing instanceof SlugRedirect) {
             $this->repository->save($existing->updateTarget($newSlugVO));
         } else {
             $redirect = new SlugRedirect(

@@ -133,7 +133,7 @@ final class ModuleLoader
 
         // Convert module PermissionDTO to PermissionDefinitionDTO
         $definitions = array_map(
-            fn (PermissionDTO $dto): PermissionDefinitionDTO => $this->convertPermissionDTO($dto),
+            $this->convertPermissionDTO(...),
             $permissions
         );
 

@@ -100,7 +100,7 @@ final class ModuleCollection implements Countable, IteratorAggregate
 
     public function isEmpty(): bool
     {
-        return empty($this->modules);
+        return $this->modules === [];
     }
 
     /**
@@ -146,7 +146,7 @@ final class ModuleCollection implements Countable, IteratorAggregate
     public function first(?callable $callback = null): ?Module
     {
         if ($callback === null) {
-            return empty($this->modules) ? null : reset($this->modules);
+            return $this->modules === [] ? null : reset($this->modules);
         }
 
         foreach ($this->modules as $module) {

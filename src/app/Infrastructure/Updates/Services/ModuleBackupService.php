@@ -6,6 +6,7 @@ namespace App\Infrastructure\Updates\Services;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Exceptions\UpdateException;
@@ -27,7 +28,7 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
     {
         $module = $this->moduleManager->find($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -70,7 +71,7 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
         }
 
         $module = $this->moduleManager->find($name);
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 

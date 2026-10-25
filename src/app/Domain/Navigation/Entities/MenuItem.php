@@ -138,12 +138,12 @@ final readonly class MenuItem
 
     public function isParent(): bool
     {
-        return $this->parentId === null;
+        return ! $this->parentId instanceof MenuItemId;
     }
 
     public function isChild(): bool
     {
-        return $this->parentId !== null;
+        return $this->parentId instanceof MenuItemId;
     }
 
     public function isFromModule(): bool

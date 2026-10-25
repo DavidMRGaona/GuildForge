@@ -8,16 +8,16 @@ use App\Domain\ValueObjects\GalleryId;
 use App\Domain\ValueObjects\PhotoId;
 use DateTimeImmutable;
 
-final class Photo
+final readonly class Photo
 {
     public function __construct(
-        private readonly PhotoId $id,
-        private readonly GalleryId $galleryId,
-        private readonly string $imagePublicId,
-        private readonly ?string $caption = null,
-        private readonly int $sortOrder = 0,
-        private readonly ?DateTimeImmutable $createdAt = null,
-        private readonly ?DateTimeImmutable $updatedAt = null,
+        private PhotoId $id,
+        private GalleryId $galleryId,
+        private string $imagePublicId,
+        private ?string $caption = null,
+        private int $sortOrder = 0,
+        private ?DateTimeImmutable $createdAt = null,
+        private ?DateTimeImmutable $updatedAt = null,
     ) {}
 
     public function id(): PhotoId

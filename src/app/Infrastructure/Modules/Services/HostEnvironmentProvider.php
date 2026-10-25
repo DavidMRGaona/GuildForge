@@ -25,8 +25,8 @@ final class HostEnvironmentProvider implements HostEnvironmentProviderInterface
             core: $this->coreVersion->getCurrentVersion(),
             php: new ModuleVersion(PHP_MAJOR_VERSION, PHP_MINOR_VERSION, PHP_RELEASE_VERSION),
             laravel: self::normalizeVersion(app()->version()) ?? new ModuleVersion(0, 0, 0),
-            filament: self::packageVersion('filament/filament'),
-            extensions: array_map('strtolower', get_loaded_extensions()),
+            filament: $this->packageVersion('filament/filament'),
+            extensions: array_map(strtolower(...), get_loaded_extensions()),
             moduleMinimums: array_map(ModuleVersion::fromString(...), CoreModuleMinimumVersions::VERSIONS),
         );
     }
@@ -43,7 +43,7 @@ final class HostEnvironmentProvider implements HostEnvironmentProviderInterface
         return new ModuleVersion((int) $matches[1], (int) $matches[2], (int) $matches[3]);
     }
 
-    private static function packageVersion(string $package): ?ModuleVersion
+    private function packageVersion(string $package): ?ModuleVersion
     {
         try {
             // getPrettyVersion() throws for packages that are not installed

@@ -161,11 +161,9 @@ final class SettingsService implements SettingsServiceInterface
      */
     private function getAllSettings(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, static function () {
-            return SettingModel::all()
-                ->pluck('value', 'key')
-                ->toArray();
-        });
+        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, static fn () => SettingModel::all()
+            ->pluck('value', 'key')
+            ->toArray());
     }
 
     /**

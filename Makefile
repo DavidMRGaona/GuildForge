@@ -158,11 +158,17 @@ test-serial: ## Run all tests without parallelization
 # CODE QUALITY
 # =============================================================================
 
-check: cs phpstan lint-js types ## Run ALL checks
+check: rector cs phpstan lint-js format-check types ## Run ALL checks
 	@echo "All checks passed!"
 
-check-fix: cs-fix lint-js-fix ## Fix all auto-fixable issues
+check-fix: rector-fix cs-fix lint-js-fix format-fix ## Fix all auto-fixable issues (Rector before Pint)
 	@echo "All auto-fixable issues resolved!"
+
+rector: ## Rector dry run (runs before Pint: its output is not Pint-clean)
+	docker exec $(PHP_CONTAINER) vendor/bin/rector process --dry-run
+
+rector-fix: ## Apply Rector (then run cs-fix)
+	docker exec $(PHP_CONTAINER) vendor/bin/rector process
 
 cs: ## PHP code style check (Pint)
 	docker exec $(PHP_CONTAINER) vendor/bin/pint --test
@@ -179,6 +185,12 @@ lint-js: ## ESLint
 lint-js-fix: ## Fix ESLint issues
 	docker exec $(NODE_CONTAINER) npm run lint:fix
 
+format-check: ## Prettier check
+	docker exec $(NODE_CONTAINER) npm run format:check
+
+format-fix: ## Prettier write
+	docker exec $(NODE_CONTAINER) npm run format
+
 types: ## TypeScript type check
 	docker exec $(NODE_CONTAINER) npm run type-check
 
@@ -187,9 +199,11 @@ types: ## TypeScript type check
 # =============================================================================
 
 check-q: ## Check with minimal output
+	@docker exec $(PHP_CONTAINER) vendor/bin/rector process --dry-run --no-progress-bar > /dev/null && echo "✓ Rector" || echo "✗ Rector"
 	@docker exec $(PHP_CONTAINER) vendor/bin/pint --test -q && echo "✓ CS" || echo "✗ CS"
 	@docker exec $(PHP_CONTAINER) vendor/bin/phpstan analyse --no-progress -q && echo "✓ PHPStan" || echo "✗ PHPStan"
 	@docker exec $(NODE_CONTAINER) npm run lint --silent && echo "✓ ESLint" || echo "✗ ESLint"
+	@docker exec $(NODE_CONTAINER) npm run format:check --silent > /dev/null 2>&1 && echo "✓ Prettier" || echo "✗ Prettier"
 	@docker exec $(NODE_CONTAINER) npm run type-check --silent && echo "✓ Types" || echo "✗ Types"
 
 test-q: ## Tests with compact output (parallel)

@@ -119,12 +119,6 @@ final readonly class SettingsTableModuleSettingsStore implements ModuleSettingsS
             return false;
         }
 
-        foreach (array_keys($value) as $key) {
-            if (! is_string($key)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all(array_keys($value), fn ($key) => is_string($key));
     }
 }

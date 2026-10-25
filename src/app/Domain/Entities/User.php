@@ -7,19 +7,19 @@ namespace App\Domain\Entities;
 use App\Domain\ValueObjects\UserId;
 use DateTimeImmutable;
 
-final class User
+final readonly class User
 {
     public function __construct(
-        private readonly UserId $id,
-        private readonly string $name,
-        private readonly string $email,
-        private readonly ?string $displayName = null,
-        private readonly ?string $pendingEmail = null,
-        private readonly ?string $avatarPublicId = null,
-        private readonly ?DateTimeImmutable $emailVerifiedAt = null,
-        private readonly ?DateTimeImmutable $anonymizedAt = null,
-        private readonly ?DateTimeImmutable $createdAt = null,
-        private readonly ?DateTimeImmutable $updatedAt = null,
+        private UserId $id,
+        private string $name,
+        private string $email,
+        private ?string $displayName = null,
+        private ?string $pendingEmail = null,
+        private ?string $avatarPublicId = null,
+        private ?DateTimeImmutable $emailVerifiedAt = null,
+        private ?DateTimeImmutable $anonymizedAt = null,
+        private ?DateTimeImmutable $createdAt = null,
+        private ?DateTimeImmutable $updatedAt = null,
     ) {}
 
     public function id(): UserId
@@ -74,12 +74,12 @@ final class User
 
     public function isEmailVerified(): bool
     {
-        return $this->emailVerifiedAt !== null;
+        return $this->emailVerifiedAt instanceof DateTimeImmutable;
     }
 
     public function isAnonymized(): bool
     {
-        return $this->anonymizedAt !== null;
+        return $this->anonymizedAt instanceof DateTimeImmutable;
     }
 
     public function getDisplayableName(): string

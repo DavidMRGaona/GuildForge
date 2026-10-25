@@ -107,7 +107,7 @@ final class PermissionRegistry implements PermissionRegistryInterface
 
     public function syncToDatabase(): void
     {
-        if ($this->permissionRepository === null) {
+        if (! $this->permissionRepository instanceof PermissionRepositoryInterface) {
             return;
         }
 

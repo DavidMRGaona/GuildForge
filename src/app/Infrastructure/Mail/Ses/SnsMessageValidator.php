@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Http;
 
 final readonly class SnsMessageValidator implements SnsMessageValidatorInterface
 {
-    private const REQUIRED_FIELDS = ['Type', 'SignatureVersion', 'Signature', 'SigningCertURL'];
+    private const array REQUIRED_FIELDS = ['Type', 'SignatureVersion', 'Signature', 'SigningCertURL'];
 
-    private const NOTIFICATION_SIGNING_FIELDS = ['Message', 'MessageId', 'Subject', 'Timestamp', 'TopicArn', 'Type'];
+    private const array NOTIFICATION_SIGNING_FIELDS = ['Message', 'MessageId', 'Subject', 'Timestamp', 'TopicArn', 'Type'];
 
-    private const SUBSCRIPTION_SIGNING_FIELDS = ['Message', 'MessageId', 'SubscribeURL', 'Timestamp', 'Token', 'TopicArn', 'Type'];
+    private const array SUBSCRIPTION_SIGNING_FIELDS = ['Message', 'MessageId', 'SubscribeURL', 'Timestamp', 'Token', 'TopicArn', 'Type'];
 
     /**
      * @param  array<string, mixed>  $message
@@ -39,13 +39,7 @@ final readonly class SnsMessageValidator implements SnsMessageValidatorInterface
      */
     private function hasRequiredFields(array $message): bool
     {
-        foreach (self::REQUIRED_FIELDS as $field) {
-            if (! isset($message[$field]) || ! is_string($message[$field])) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all(self::REQUIRED_FIELDS, fn ($field) => isset($message[$field]) && is_string($message[$field]));
     }
 
     private function isValidCertUrl(string $url): bool

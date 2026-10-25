@@ -45,9 +45,7 @@ final class ModuleNavigationRegistry implements ModuleNavigationRegistryInterfac
 
         foreach ($this->items as $item) {
             $group = $item->group;
-            if (! isset($groups[$group])) {
-                $groups[$group] = [];
-            }
+            $groups[$group] ??= [];
             $groups[$group][] = $item;
         }
 

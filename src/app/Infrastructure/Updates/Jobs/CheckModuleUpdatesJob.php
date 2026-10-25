@@ -25,8 +25,6 @@ final class CheckModuleUpdatesJob implements ShouldQueue
 
     public int $backoff = 60;
 
-    public function __construct() {}
-
     public function handle(
         ModuleUpdateCheckerInterface $updateChecker,
         Dispatcher $events,

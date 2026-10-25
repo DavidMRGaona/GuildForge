@@ -67,13 +67,7 @@ final class ModuleSchemaGuard
 
     private function hasAllowedPrefix(string $tableName): bool
     {
-        foreach ($this->allowedPrefixes as $prefix) {
-            if (str_starts_with($tableName, $prefix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->allowedPrefixes, fn ($prefix) => str_starts_with($tableName, $prefix));
     }
 
     /**

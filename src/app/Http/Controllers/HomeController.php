@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\DTOs\Response\GalleryDetailResponseDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\EventQueryServiceInterface;
@@ -49,6 +50,6 @@ final class HomeController extends Controller
     {
         $gallery = $this->galleryQuery->getFeaturedGallery(6);
 
-        return $gallery !== null ? GalleryWithPhotosResource::make($gallery)->resolve() : null;
+        return $gallery instanceof GalleryDetailResponseDTO ? GalleryWithPhotosResource::make($gallery)->resolve() : null;
     }
 }

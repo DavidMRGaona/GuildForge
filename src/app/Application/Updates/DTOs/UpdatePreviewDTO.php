@@ -31,12 +31,12 @@ final readonly class UpdatePreviewDTO
 
     public function hasMigrations(): bool
     {
-        return ! empty($this->pendingMigrations);
+        return $this->pendingMigrations !== [];
     }
 
     public function hasSeeders(): bool
     {
-        return ! empty($this->newSeeders);
+        return $this->newSeeders !== [];
     }
 
     public function hasBreakingChanges(): bool

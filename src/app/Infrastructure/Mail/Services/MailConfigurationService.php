@@ -13,11 +13,11 @@ use App\Domain\Mail\Enums\MailDriver;
 use App\Domain\Mail\Events\MailConfigurationUpdated;
 use Illuminate\Support\Facades\Config;
 
-final class MailConfigurationService implements MailConfigurationServiceInterface
+final readonly class MailConfigurationService implements MailConfigurationServiceInterface
 {
     public function __construct(
-        private readonly SettingsServiceInterface $settingsService,
-        private readonly SiteBrandingServiceInterface $siteBranding,
+        private SettingsServiceInterface $settingsService,
+        private SiteBrandingServiceInterface $siteBranding,
     ) {}
 
     public function getConfiguration(): MailConfigurationResponseDTO

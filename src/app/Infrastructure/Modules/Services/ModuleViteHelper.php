@@ -8,10 +8,10 @@ use App\Modules\ModuleLoader;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
-final class ModuleViteHelper
+final readonly class ModuleViteHelper
 {
     public function __construct(
-        private readonly ModuleLoader $loader,
+        private ModuleLoader $loader,
     ) {}
 
     /**
@@ -25,9 +25,9 @@ final class ModuleViteHelper
             return new HtmlString('');
         }
 
-        $moduleStudly = Str::studly($moduleName);
+        Str::studly($moduleName);
 
-        if (empty($entrypoints)) {
+        if ($entrypoints === []) {
             $entrypoints = ["modules/{$moduleName}/resources/js/app.ts"];
         }
 

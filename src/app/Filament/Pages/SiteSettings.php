@@ -152,7 +152,7 @@ final class SiteSettings extends Page implements HasForms
         }
 
         if (self::userCan('settings.maintenance')) {
-            $keys = [...$keys, ...self::MAINTENANCE_SETTINGS_KEYS];
+            return [...$keys, ...self::MAINTENANCE_SETTINGS_KEYS];
         }
 
         return $keys;

@@ -87,7 +87,7 @@ trait ManagesPageSettings
                 continue;
             }
 
-            $value = $settingsService->get($key, null);
+            $value = $settingsService->get($key);
 
             // If setting has not been saved, use default
             if ($value === null) {

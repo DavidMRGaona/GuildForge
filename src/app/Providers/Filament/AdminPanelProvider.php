@@ -403,9 +403,7 @@ class AdminPanelProvider extends PanelProvider
                     $moduleGroups = $provider->registerNavigationGroups();
 
                     foreach ($moduleGroups as $label => $options) {
-                        if (! isset($groups[$label])) {
-                            $groups[$label] = $options;
-                        }
+                        $groups[$label] ??= $options;
                     }
                 } catch (Throwable $e) {
                     // Log the error but continue with other modules

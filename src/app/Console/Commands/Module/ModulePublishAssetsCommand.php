@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands\Module;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Modules\Services\ModulePathResolver;
@@ -62,7 +63,7 @@ final class ModulePublishAssetsCommand extends Command
     {
         $module = $this->moduleManager->find(new ModuleName($moduleName));
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             $this->error("Module '{$moduleName}' not found.");
 
             return self::FAILURE;

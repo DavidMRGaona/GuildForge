@@ -63,7 +63,6 @@ final class OklchColorPaletteGenerator implements ColorPaletteGeneratorInterface
 
         // Calculate the chroma scaling factor based on base color
         $baseChroma = $baseOklch['c'];
-        $baseLightness = $baseOklch['l'];
 
         $shades = [];
 

@@ -19,17 +19,11 @@ final readonly class ModuleDependencyResolver
     {
         $requiredModules = $module->requirements()->requiredModules();
 
-        if (empty($requiredModules)) {
+        if ($requiredModules === []) {
             return true;
         }
 
-        foreach ($requiredModules as $requirement) {
-            if (! $this->isRequirementSatisfied($requirement, $availableModules)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($requiredModules, fn ($requirement) => $this->isRequirementSatisfied($requirement, $availableModules));
     }
 
     /**

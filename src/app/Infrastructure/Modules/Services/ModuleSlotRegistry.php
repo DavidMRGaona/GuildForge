@@ -59,9 +59,7 @@ final class ModuleSlotRegistry implements ModuleSlotRegistryInterface
 
         foreach ($this->slots as $slot) {
             $slotName = $slot->slot;
-            if (! isset($groups[$slotName])) {
-                $groups[$slotName] = [];
-            }
+            $groups[$slotName] ??= [];
             $groups[$slotName][] = $slot;
         }
 
