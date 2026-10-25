@@ -158,7 +158,6 @@ final class DependencyCheckResultDTOTest extends TestCase
 
         $messages = $dto->getErrorMessages();
 
-        $this->assertIsArray($messages);
         $this->assertNotEmpty($messages);
 
         // Check that error messages contain relevant information

@@ -137,7 +137,6 @@ final class ModuleCollectionTest extends TestCase
 
         $result = $collection->all();
 
-        $this->assertIsArray($result);
         $this->assertCount(2, $result);
     }
 

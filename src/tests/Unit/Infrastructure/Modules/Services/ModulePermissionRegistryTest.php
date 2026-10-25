@@ -318,6 +318,7 @@ final class ModulePermissionRegistryTest extends TestCase
         $this->registry->register($permission2);
 
         $found = $this->registry->find('blog.edit');
+        $this->assertNotNull($found);
         $this->assertEquals('Edit Updated', $found->label);
     }
 

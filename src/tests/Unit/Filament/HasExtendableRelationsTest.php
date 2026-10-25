@@ -62,8 +62,8 @@ final class HasExtendableRelationsTest extends TestCase
     {
         TestResource::clearExtendedRelations();
 
-        // Add a class that doesn't exist
-        TestResource::extendRelations([
+        // Add a class that doesn't exist, breaking the class-string contract on purpose
+        TestResource::extendRelations([ // @phpstan-ignore argument.type (the filter under test drops classes that do not exist)
             'NonExistent\\RelationManager\\Class',
         ]);
 

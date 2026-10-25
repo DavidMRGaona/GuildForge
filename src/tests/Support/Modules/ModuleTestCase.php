@@ -47,9 +47,11 @@ abstract class ModuleTestCase extends TestCase
         $this->clearNavigationRegistry();
 
         // Auto-enable module if configured
-        if ($this->autoEnableModule && $this->moduleName !== null) {
+        $moduleName = $this->moduleName;
+
+        if ($this->autoEnableModule && $moduleName !== null) {
             $this->discoverModules();
-            $this->enableModule($this->moduleName);
+            $this->enableModule($moduleName);
         }
     }
 

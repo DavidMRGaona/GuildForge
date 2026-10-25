@@ -65,10 +65,10 @@ return new class extends Migration
 };
 PHP);
 
-        // Act & Assert - should not throw
-        $this->analyzer->analyzeMigrations('game-tables', $this->migrationsPath);
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        // Act - should not throw
+        $this->analyzer->analyzeMigrations('game-tables', $this->migrationsPath);
     }
 
     public function test_it_passes_for_foreign_key_referencing_core_table(): void
@@ -92,10 +92,10 @@ return new class extends Migration
 };
 PHP);
 
-        // Act & Assert - should not throw
-        $this->analyzer->analyzeMigrations('game-tables', $this->migrationsPath);
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        // Act - should not throw
+        $this->analyzer->analyzeMigrations('game-tables', $this->migrationsPath);
     }
 
     public function test_it_detects_schema_table_on_core_table(): void
@@ -295,10 +295,10 @@ PHP);
 
     public function test_it_passes_for_empty_migrations_directory(): void
     {
-        // Act & Assert - should not throw for empty directory
-        $this->analyzer->analyzeMigrations('game-tables', $this->migrationsPath);
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        // Act - should not throw for empty directory
+        $this->analyzer->analyzeMigrations('game-tables', $this->migrationsPath);
     }
 
     public function test_it_passes_for_nonexistent_directory(): void
@@ -306,10 +306,10 @@ PHP);
         // Arrange
         $nonExistentPath = sys_get_temp_dir().'/nonexistent_migrations_'.bin2hex(random_bytes(8));
 
-        // Act & Assert - should not throw for nonexistent directory
-        $this->analyzer->analyzeMigrations('game-tables', $nonExistentPath);
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        // Act - should not throw for nonexistent directory
+        $this->analyzer->analyzeMigrations('game-tables', $nonExistentPath);
     }
 
     public function test_it_detects_cross_module_table_access(): void
@@ -361,10 +361,10 @@ class GametablesGamesSeeder extends Seeder
 }
 PHP);
 
-        // Act & Assert - should not throw
-        $this->analyzer->analyzeSeeders('game-tables', $this->seedersPath);
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        // Act - should not throw
+        $this->analyzer->analyzeSeeders('game-tables', $this->seedersPath);
     }
 
     public function test_seeder_detects_delete_on_core_table(): void

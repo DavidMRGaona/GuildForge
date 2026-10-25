@@ -51,6 +51,9 @@ final class MailDriverTest extends TestCase
         $this->assertEquals($expectedValue, $driver->value);
     }
 
+    /**
+     * @return array<string, array{MailDriver, string}>
+     */
     public static function valuesProvider(): array
     {
         return [
@@ -69,6 +72,9 @@ final class MailDriverTest extends TestCase
         $this->assertEquals($expectedLabel, $driver->label());
     }
 
+    /**
+     * @return array<string, array{MailDriver, string}>
+     */
     public static function labelsProvider(): array
     {
         return [
@@ -92,6 +98,9 @@ final class MailDriverTest extends TestCase
         $this->assertFalse($driver->requiresSmtpConfig());
     }
 
+    /**
+     * @return array<string, array{MailDriver}>
+     */
     public static function driversNotRequiringSmtpConfigProvider(): array
     {
         return [
@@ -114,6 +123,9 @@ final class MailDriverTest extends TestCase
         $this->assertFalse($driver->requiresSesConfig());
     }
 
+    /**
+     * @return array<string, array{MailDriver}>
+     */
     public static function driversNotRequiringSesConfigProvider(): array
     {
         return [
@@ -136,6 +148,9 @@ final class MailDriverTest extends TestCase
         $this->assertFalse($driver->requiresResendConfig());
     }
 
+    /**
+     * @return array<string, array{MailDriver}>
+     */
     public static function driversNotRequiringResendConfigProvider(): array
     {
         return [

@@ -34,6 +34,7 @@ final class UpdatePreviewDTOTest extends TestCase
         $this->assertTrue($dto->isMajorUpdate);
         $this->assertTrue($dto->coreCompatible);
         $this->assertEquals('^1.5', $dto->coreRequirement);
+        $this->assertNotNull($dto->downloadUrl);
         $this->assertStringContainsString('v2.0.0', $dto->downloadUrl);
         $this->assertEquals(1048576, $dto->downloadSize);
     }

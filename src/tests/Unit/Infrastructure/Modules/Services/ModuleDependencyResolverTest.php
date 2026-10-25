@@ -188,6 +188,10 @@ final class ModuleDependencyResolverTest extends TestCase
         $this->assertNotContains('module-c', $dependentNames);
     }
 
+    /**
+     * @param  list<string>  $requiredModules
+     * @param  list<string>  $requiredExtensions
+     */
     private function createModule(
         string $name,
         string $version,

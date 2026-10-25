@@ -22,20 +22,20 @@ final class ModuleSchemaGuardTest extends TestCase
 
     public function test_it_is_inactive_by_default(): void
     {
-        // Act & Assert - should not throw
-        $this->guard->assertPermitted('create', 'users');
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        // Act - should not throw
+        $this->guard->assertPermitted('create', 'users');
     }
 
     public function test_it_allows_operations_when_inactive(): void
     {
-        // Act & Assert - should not throw even for a core table
+        $this->expectNotToPerformAssertions();
+
+        // Act - should not throw even for a core table
         $this->guard->assertPermitted('table', 'users');
         $this->guard->assertPermitted('create', 'events');
         $this->guard->assertPermitted('table', 'articles');
-
-        $this->assertTrue(true);
     }
 
     public function test_it_blocks_ddl_on_core_table_when_active(): void
@@ -82,10 +82,10 @@ final class ModuleSchemaGuardTest extends TestCase
             // do nothing
         });
 
-        // Act & Assert - should not throw, guard is inactive again
-        $this->guard->assertPermitted('table', 'users');
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        // Act - should not throw, guard is inactive again
+        $this->guard->assertPermitted('table', 'users');
     }
 
     public function test_it_deactivates_even_on_exception(): void
@@ -99,10 +99,10 @@ final class ModuleSchemaGuardTest extends TestCase
             // Expected
         }
 
-        // Act & Assert - should not throw, guard is inactive again
-        $this->guard->assertPermitted('table', 'users');
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        // Act - should not throw, guard is inactive again
+        $this->guard->assertPermitted('table', 'users');
     }
 
     public function test_it_returns_callback_result(): void

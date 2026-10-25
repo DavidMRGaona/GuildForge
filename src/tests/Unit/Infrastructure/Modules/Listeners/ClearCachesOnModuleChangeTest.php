@@ -9,6 +9,7 @@ use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Modules\Events\ModuleInstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
 use App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange;
+use Illuminate\Support\Facades\Artisan;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -17,21 +18,23 @@ final class ClearCachesOnModuleChangeTest extends TestCase
     #[Test]
     public function it_is_noop_in_test_environment_for_module_enabled(): void
     {
+        $artisan = Artisan::spy();
         $listener = new ClearCachesOnModuleChange;
         $event = new ModuleEnabled(
             moduleId: 'test-module-id',
             moduleName: 'announcements'
         );
 
-        // Should return early without touching caches — no exception means success
+        // Returns early without touching caches
         $listener->handle($event);
 
-        $this->assertTrue(true);
+        $artisan->shouldNotHaveReceived('call');
     }
 
     #[Test]
     public function it_is_noop_in_test_environment_for_module_disabled(): void
     {
+        $artisan = Artisan::spy();
         $listener = new ClearCachesOnModuleChange;
         $event = new ModuleDisabled(
             moduleId: 'test-module-id',
@@ -40,12 +43,13 @@ final class ClearCachesOnModuleChangeTest extends TestCase
 
         $listener->handle($event);
 
-        $this->assertTrue(true);
+        $artisan->shouldNotHaveReceived('call');
     }
 
     #[Test]
     public function it_is_noop_in_test_environment_for_module_installed(): void
     {
+        $artisan = Artisan::spy();
         $listener = new ClearCachesOnModuleChange;
         $event = new ModuleInstalled(
             moduleName: 'announcements',
@@ -55,12 +59,13 @@ final class ClearCachesOnModuleChangeTest extends TestCase
 
         $listener->handle($event);
 
-        $this->assertTrue(true);
+        $artisan->shouldNotHaveReceived('call');
     }
 
     #[Test]
     public function it_is_noop_in_test_environment_for_module_updated(): void
     {
+        $artisan = Artisan::spy();
         $listener = new ClearCachesOnModuleChange;
         $event = new ModuleUpdated(
             moduleName: 'announcements',
@@ -71,6 +76,6 @@ final class ClearCachesOnModuleChangeTest extends TestCase
 
         $listener->handle($event);
 
-        $this->assertTrue(true);
+        $artisan->shouldNotHaveReceived('call');
     }
 }

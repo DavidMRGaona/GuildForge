@@ -34,6 +34,7 @@ final class EloquentResponseDTOFactoryTest extends TestCase
 
         $dto = $this->factory->createEventDTO($event);
 
+        $this->assertNotNull($dto->description);
         $this->assertStringContainsString('<p>Safe content</p>', $dto->description);
         $this->assertStringNotContainsString('<script>', $dto->description);
         $this->assertStringNotContainsString('alert', $dto->description);
@@ -47,6 +48,7 @@ final class EloquentResponseDTOFactoryTest extends TestCase
 
         $dto = $this->factory->createEventDTO($event);
 
+        $this->assertNotNull($dto->description);
         $this->assertStringContainsString('<p>Text with <strong>bold</strong> and <em>italic</em></p>', $dto->description);
     }
 

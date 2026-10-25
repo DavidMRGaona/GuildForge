@@ -11,13 +11,14 @@ use App\Domain\ValueObjects\HexColor;
 use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 use App\Infrastructure\Services\ThemeSettingsService;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 
 final class ThemeSettingsServicePaletteTest extends TestCase
 {
     private ThemeSettingsService $service;
 
-    private SettingsServiceInterface $settingsService;
+    private SettingsServiceInterface&Stub $settingsService;
 
     private ColorPaletteGeneratorInterface $paletteGenerator;
 
@@ -320,8 +321,9 @@ final class ThemeSettingsServicePaletteTest extends TestCase
 
     private function hexVariable(string $section, string $variable): HexColor
     {
-        $this->assertMatchesRegularExpression('/'.preg_quote($variable, '/').':\s*#[0-9A-F]{6};/', $section, "{$variable} must be a computed colour");
-        preg_match('/'.preg_quote($variable, '/').':\s*(#[0-9A-F]{6});/', $section, $matches);
+        if (preg_match('/'.preg_quote($variable, '/').':\s*(#[0-9A-F]{6});/', $section, $matches) !== 1) {
+            $this->fail("{$variable} must be a computed colour");
+        }
 
         return new HexColor($matches[1]);
     }

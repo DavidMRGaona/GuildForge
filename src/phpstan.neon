@@ -7,6 +7,9 @@ parameters:
     phpVersion: 80500
     paths:
         - app/
+        - tests/TestCase.php
+        - tests/Support/
+        - tests/Unit/
     level: 8
     ignoreErrors:
         - '#Trait .+ is used zero times and is not analysed#'

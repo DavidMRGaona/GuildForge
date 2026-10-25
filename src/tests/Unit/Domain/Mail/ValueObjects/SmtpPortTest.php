@@ -78,8 +78,7 @@ final class SmtpPortTest extends TestCase
     {
         $port = new SmtpPort(2525);
 
-        $this->assertIsInt($port->value());
-        $this->assertEquals(2525, $port->value());
+        $this->assertSame(2525, $port->value());
     }
 
     #[DataProvider('invalidPortsProvider')]
@@ -90,6 +89,9 @@ final class SmtpPortTest extends TestCase
         new SmtpPort($invalidPort);
     }
 
+    /**
+     * @return array<string, array{int}>
+     */
     public static function invalidPortsProvider(): array
     {
         return [

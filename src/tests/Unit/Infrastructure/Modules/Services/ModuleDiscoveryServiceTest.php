@@ -71,7 +71,6 @@ final class ModuleDiscoveryServiceTest extends TestCase
         $modules = $this->service->discover();
 
         // Assert
-        $this->assertIsArray($modules);
         $this->assertCount(0, $modules);
     }
 
@@ -84,7 +83,6 @@ final class ModuleDiscoveryServiceTest extends TestCase
         $modules = $this->service->discover();
 
         // Assert
-        $this->assertIsArray($modules);
         $this->assertCount(0, $modules);
     }
 
@@ -219,7 +217,7 @@ final class ModuleDiscoveryServiceTest extends TestCase
             'repository' => 'owner/good-repo',
         ]));
 
-        $manifests = collect($this->service->discover())->keyBy('name');
+        $manifests = collect($this->service->discover())->keyBy('name')->all();
 
         $this->assertCount(2, $manifests);
         $this->assertNull($manifests['bad-repo']->repository);
@@ -245,7 +243,7 @@ final class ModuleDiscoveryServiceTest extends TestCase
             'requires' => ['core' => '^2.6'],
         ]));
 
-        $manifests = collect($this->service->discover())->keyBy('name');
+        $manifests = collect($this->service->discover())->keyBy('name')->all();
 
         $this->assertCount(2, $manifests);
         $this->assertSame(['core' => '', 'extensions' => []], $manifests['bad-requires']->requires);

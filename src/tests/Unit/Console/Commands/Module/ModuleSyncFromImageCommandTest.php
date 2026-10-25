@@ -62,11 +62,11 @@ final class ModuleSyncFromImageCommandTest extends TestCase
             'version' => '1.0.0',
             'namespace' => 'Modules\\NewModule',
             'provider' => 'Modules\\NewModule\\ServiceProvider',
-        ]));
+        ], JSON_THROW_ON_ERROR));
         File::put($imageModulePath.'/src/ServiceProvider.php', '<?php namespace Modules\\NewModule;');
 
         // Run the command
-        $this->artisan('module:sync-from-image', ['path' => $this->imagePath])
+        $this->artisanCommand('module:sync-from-image', ['path' => $this->imagePath])
             ->assertExitCode(0);
 
         // Verify module was copied to volume
@@ -84,7 +84,7 @@ final class ModuleSyncFromImageCommandTest extends TestCase
         File::put($imageModulePath.'/module.json', json_encode([
             'name' => 'keep-module',
             'version' => '1.0.0',
-        ]));
+        ], JSON_THROW_ON_ERROR));
         File::put($imageModulePath.'/image-file.txt', 'image content');
 
         // Create module in volume with version 1.5.0 (newer)
@@ -93,11 +93,11 @@ final class ModuleSyncFromImageCommandTest extends TestCase
         File::put($volumeModulePath.'/module.json', json_encode([
             'name' => 'keep-module',
             'version' => '1.5.0',
-        ]));
+        ], JSON_THROW_ON_ERROR));
         File::put($volumeModulePath.'/volume-file.txt', 'volume content');
 
         // Run the command
-        $this->artisan('module:sync-from-image', ['path' => $this->imagePath])
+        $this->artisanCommand('module:sync-from-image', ['path' => $this->imagePath])
             ->assertExitCode(0);
 
         // Verify volume version is kept
@@ -116,7 +116,7 @@ final class ModuleSyncFromImageCommandTest extends TestCase
         File::put($imageModulePath.'/module.json', json_encode([
             'name' => 'update-module',
             'version' => '2.0.0',
-        ]));
+        ], JSON_THROW_ON_ERROR));
         File::put($imageModulePath.'/new-feature.txt', 'new feature');
 
         // Create module in volume with version 1.0.0 (older)
@@ -125,11 +125,11 @@ final class ModuleSyncFromImageCommandTest extends TestCase
         File::put($volumeModulePath.'/module.json', json_encode([
             'name' => 'update-module',
             'version' => '1.0.0',
-        ]));
+        ], JSON_THROW_ON_ERROR));
         File::put($volumeModulePath.'/old-file.txt', 'old content');
 
         // Run the command
-        $this->artisan('module:sync-from-image', ['path' => $this->imagePath])
+        $this->artisanCommand('module:sync-from-image', ['path' => $this->imagePath])
             ->assertExitCode(0);
 
         // Verify image version overwrote volume
@@ -143,15 +143,15 @@ final class ModuleSyncFromImageCommandTest extends TestCase
     public function test_syncing_a_newer_image_keeps_panel_settings(): void
     {
         File::ensureDirectoryExists($this->volumePath.'/settings-module/config');
-        File::put($this->volumePath.'/settings-module/module.json', (string) json_encode(['name' => 'settings-module', 'version' => '1.0.0']));
+        File::put($this->volumePath.'/settings-module/module.json', json_encode(['name' => 'settings-module', 'version' => '1.0.0'], JSON_THROW_ON_ERROR));
         File::put($this->volumePath.'/settings-module/config/settings.php', "<?php\n\nreturn ['a' => 1];\n");
         File::ensureDirectoryExists($this->imagePath.'/settings-module/config');
-        File::put($this->imagePath.'/settings-module/module.json', (string) json_encode(['name' => 'settings-module', 'version' => '1.1.0']));
+        File::put($this->imagePath.'/settings-module/module.json', json_encode(['name' => 'settings-module', 'version' => '1.1.0'], JSON_THROW_ON_ERROR));
         File::put($this->imagePath.'/settings-module/config/settings.php', "<?php\n\nreturn ['a' => 1, 'b' => true];\n");
         $store = app(ModuleSettingsStoreInterface::class);
         $store->store('settings-module', ['a' => 2]);
 
-        $this->artisan('module:sync-from-image', ['path' => $this->imagePath])->assertExitCode(0);
+        $this->artisanCommand('module:sync-from-image', ['path' => $this->imagePath])->assertExitCode(0);
 
         $this->assertSame(['a' => 2, 'b' => true], $store->effective('settings-module', $this->volumePath.'/settings-module'));
     }
@@ -160,12 +160,10 @@ final class ModuleSyncFromImageCommandTest extends TestCase
     {
         $nonExistentPath = storage_path('app/non-existent-path');
 
-        // Run the command with non-existent path
-        // The command should handle missing path without crashing
-        $this->artisan('module:sync-from-image', ['path' => $nonExistentPath]);
-
-        // If we reach here without exception, the test passes
-        $this->assertTrue(true);
+        // A missing image path is a warning, not a failure: the deploy must go on
+        $this->artisanCommand('module:sync-from-image', ['path' => $nonExistentPath])
+            ->expectsOutputToContain('Image path does not exist')
+            ->assertExitCode(0);
     }
 
     public function test_copies_pre_built_assets_from_synced_modules(): void
@@ -176,12 +174,12 @@ final class ModuleSyncFromImageCommandTest extends TestCase
         File::put($imageModulePath.'/module.json', json_encode([
             'name' => 'assets-module',
             'version' => '1.0.0',
-        ]));
+        ], JSON_THROW_ON_ERROR));
         File::put($imageModulePath.'/public/build/app.js', 'console.log("assets");');
         File::put($imageModulePath.'/public/build/app.css', '.assets { color: blue; }');
 
         // Run the command
-        $this->artisan('module:sync-from-image', ['path' => $this->imagePath])
+        $this->artisanCommand('module:sync-from-image', ['path' => $this->imagePath])
             ->assertExitCode(0);
 
         // Verify module was copied

@@ -418,7 +418,10 @@ final class BlockBotsMiddlewareTest extends TestCase
         $this->assertSame(403, $response->getStatusCode());
         $this->assertSame('application/json', $response->headers->get('Content-Type'));
 
-        $data = json_decode($response->getContent(), true);
+        $content = $response->getContent();
+        $this->assertIsString($content);
+        $data = json_decode($content, true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($data);
         $this->assertArrayHasKey('message', $data);
     }
 }

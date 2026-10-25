@@ -13,9 +13,12 @@ use App\Infrastructure\Modules\Services\StubRenderer;
 use Illuminate\Support\Arr;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\Files\ReadsFiles;
 
 final class ModuleScaffoldingServiceTest extends TestCase
 {
+    use ReadsFiles;
+
     private string $tempModulesPath;
 
     private StubRenderer $stubRenderer;
@@ -64,7 +67,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog', 'A blog module', 'Test Author');
 
         /** @var array<string, mixed> $manifest */
-        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog/module.json'), true);
+        $manifest = json_decode(self::readFile($this->tempModulesPath.'/blog/module.json'), true);
 
         $this->assertSame('^2.6', $manifest['requires']['core'] ?? null);
         $this->assertSame('>=13.0', $manifest['requires']['laravel'] ?? null);
@@ -106,7 +109,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertTrue($result->isSuccess());
 
         // Check that service provider has correct namespace and class name
-        $serviceProviderContent = file_get_contents($this->tempModulesPath.'/inventory/src/InventoryServiceProvider.php');
+        $serviceProviderContent = self::readFile($this->tempModulesPath.'/inventory/src/InventoryServiceProvider.php');
         $this->assertStringContainsString('namespace Modules\Inventory;', $serviceProviderContent);
         $this->assertStringContainsString('class InventoryServiceProvider', $serviceProviderContent);
     }
@@ -219,7 +222,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertArrayHasKey('src/Http/Controllers/BookController.php', $result->files);
 
         // Check file content has resource methods
-        $content = file_get_contents($this->tempModulesPath.'/library/src/Http/Controllers/BookController.php');
+        $content = self::readFile($this->tempModulesPath.'/library/src/Http/Controllers/BookController.php');
         $this->assertStringContainsString('class BookController', $content);
     }
 
@@ -509,7 +512,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['src/Domain/Events/AlertTriggered.php']);
 
         // Verify content uses Dispatchable pattern
-        $content = file_get_contents($this->tempModulesPath.'/alerts/src/Domain/Events/AlertTriggered.php');
+        $content = self::readFile($this->tempModulesPath.'/alerts/src/Domain/Events/AlertTriggered.php');
         $this->assertStringContainsString('use Dispatchable;', $content);
         $this->assertStringContainsString('use SerializesModels;', $content);
         $this->assertStringNotContainsString('final readonly class', $content);
@@ -535,7 +538,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['src/Infrastructure/Listeners/HandleTaskCreated.php']);
 
         // Verify content uses synchronous pattern
-        $content = file_get_contents($this->tempModulesPath.'/tasks/src/Infrastructure/Listeners/HandleTaskCreated.php');
+        $content = self::readFile($this->tempModulesPath.'/tasks/src/Infrastructure/Listeners/HandleTaskCreated.php');
         $this->assertStringContainsString('final readonly class HandleTaskCreated', $content);
         $this->assertStringContainsString('namespace Modules\Tasks\Infrastructure\Listeners;', $content);
         // The uncommented class declaration should not implement ShouldQueue
@@ -553,7 +556,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['src/Infrastructure/Listeners/SendWelcomeEmail.php']);
 
         // Verify content uses queued pattern
-        $content = file_get_contents($this->tempModulesPath.'/mailer/src/Infrastructure/Listeners/SendWelcomeEmail.php');
+        $content = self::readFile($this->tempModulesPath.'/mailer/src/Infrastructure/Listeners/SendWelcomeEmail.php');
         $this->assertStringContainsString('implements ShouldQueue', $content);
         $this->assertStringContainsString('public function failed(', $content);
         // No worker consumes a "listeners" queue: the listener runs on the default one
@@ -581,7 +584,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertEquals(ScaffoldResultDTO::STATUS_CREATED, $result->files['src/Notifications/WelcomeNotification.php']);
 
         // Verify content
-        $content = file_get_contents($this->tempModulesPath.'/comms/src/Notifications/WelcomeNotification.php');
+        $content = self::readFile($this->tempModulesPath.'/comms/src/Notifications/WelcomeNotification.php');
         $this->assertStringContainsString('extends Notification', $content);
         $this->assertStringContainsString('use Queueable;', $content);
         $this->assertStringContainsString('public function toMail(', $content);
@@ -609,7 +612,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertSame('tests/bootstrap.php', (string) $phpunit['bootstrap']);
 
         // The core's test bootstrap (it clears stale caches), then the test namespace for helpers under tests/Support
-        $bootstrap = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/bootstrap.php');
+        $bootstrap = self::readFile($this->tempModulesPath.'/blog-posts/tests/bootstrap.php');
         $this->assertStringContainsString("require __DIR__.'/../../../tests/bootstrap.php';", $bootstrap);
         $this->assertStringContainsString("\$loader->addPsr4('Modules\\\\BlogPosts\\\\Tests\\\\', __DIR__);", $bootstrap);
         $suites = [];
@@ -617,19 +620,19 @@ final class ModuleScaffoldingServiceTest extends TestCase
             $suites[(string) $suite['name']] = (string) $suite->directory;
         }
         $this->assertSame(['Unit' => './tests/Unit', 'Integration' => './tests/Integration', 'Feature' => './tests/Feature'], $suites);
-        $this->assertStringContainsString('<env name="DB_CONNECTION" value="sqlite"/>', (string) file_get_contents($this->tempModulesPath.'/blog-posts/phpunit.xml'));
+        $this->assertStringContainsString('<env name="DB_CONNECTION" value="sqlite"/>', self::readFile($this->tempModulesPath.'/blog-posts/phpunit.xml'));
 
-        $gitignore = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.gitignore');
+        $gitignore = self::readFile($this->tempModulesPath.'/blog-posts/.gitignore');
         foreach (['/vendor', '/node_modules', '/public/build', '/.phpunit.cache'] as $entry) {
             $this->assertStringContainsString($entry, $gitignore);
         }
 
-        $workflow = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.github/workflows/release.yml');
+        $workflow = self::readFile($this->tempModulesPath.'/blog-posts/.github/workflows/release.yml');
         $this->assertStringContainsString('reusable-module-release.yml@main', $workflow);
         $this->assertStringContainsString("module_name: 'blog-posts'", $workflow);
 
         // A new module starts clean, so its pull requests run the quality checks from day one
-        $tests = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.github/workflows/tests.yml');
+        $tests = self::readFile($this->tempModulesPath.'/blog-posts/.github/workflows/tests.yml');
         $this->assertStringContainsString('reusable-module-tests.yml@main', $tests);
         $this->assertStringContainsString("module_name: 'blog-posts'", $tests);
         $this->assertStringContainsString('quality: true', $tests);
@@ -648,7 +651,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
 
         /** @var array{compilerOptions: array{paths: array<string, list<string>>}, include: list<string>} $tsconfig */
-        $tsconfig = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/tsconfig.json'), true, flags: JSON_THROW_ON_ERROR);
+        $tsconfig = json_decode(self::readFile($this->tempModulesPath.'/blog-posts/tsconfig.json'), true, flags: JSON_THROW_ON_ERROR);
         $paths = $tsconfig['compilerOptions']['paths'];
 
         // '@/' is the core's code, as in the module's Vite and Vitest configs
@@ -664,7 +667,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $this->service->createModule('blog-posts');
 
-        $config = (string) file_get_contents($this->tempModulesPath.'/blog-posts/vite.config.ts');
+        $config = self::readFile($this->tempModulesPath.'/blog-posts/vite.config.ts');
 
         // The core's build configuration: entries, output, externals and the public API guard
         $this->assertStringContainsString("import { defineModuleConfig } from '../../vite.module.config';", $config);
@@ -676,7 +679,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $this->service->createModule('blog-posts');
 
-        $config = (string) file_get_contents($this->tempModulesPath.'/blog-posts/vitest.config.ts');
+        $config = self::readFile($this->tempModulesPath.'/blog-posts/vitest.config.ts');
 
         $this->assertStringContainsString("import { defineModuleTestConfig } from '../../vitest.module.config';", $config);
         $this->assertStringContainsString('defineModuleTestConfig({ root: __dirname })', $config);
@@ -696,7 +699,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
 
         /** @var array<string, mixed> $manifest */
-        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true);
+        $manifest = json_decode(self::readFile($this->tempModulesPath.'/blog-posts/module.json'), true);
 
         $this->assertSame('Blog posts', $manifest['displayName']);
         $this->assertArrayNotHasKey('repository', $manifest);
@@ -716,7 +719,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertTrue($result->isSuccess());
 
         /** @var array<string, mixed> $manifest */
-        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true, flags: JSON_THROW_ON_ERROR);
+        $manifest = json_decode(self::readFile($this->tempModulesPath.'/blog-posts/module.json'), true, flags: JSON_THROW_ON_ERROR);
 
         $this->assertSame('Entradas del blog', $manifest['displayName']);
         $this->assertSame('acme/guildforge-blog-posts', $manifest['repository']);
@@ -739,7 +742,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $this->service->createModule('blog-posts');
 
-        $provider = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+        $provider = self::readFile($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
 
         $this->assertStringNotContainsString('mergeConfigFrom', $provider);
         $this->assertStringContainsString("new PagePrefixDTO(prefix: 'BlogPosts', module: \$this->moduleName(), usesCoreLayout: true)", $provider);
@@ -766,7 +769,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
             $this->assertStringNotContainsString('blog_posts::', $content, $path);
         }
 
-        $resource = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php');
+        $resource = self::readFile($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php');
         $this->assertStringContainsString("__('blog-posts::filament.post.label')", $resource);
         $this->assertStringContainsString("__('blog-posts::filament.navigation_group')", $resource);
     }
@@ -827,7 +830,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $this->service->createModule('blog-posts');
 
-        $routes = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/api.php');
+        $routes = self::readFile($this->tempModulesPath.'/blog-posts/routes/api.php');
 
         $this->assertStringNotContainsString("prefix('api/", $routes);
         $this->assertStringNotContainsString("middleware('api')", $routes);
@@ -840,8 +843,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createService('utils', 'Logger', false);
         $this->service->createService('utils', 'Mailer', true);
 
-        $logger = (string) file_get_contents($this->tempModulesPath.'/utils/src/Infrastructure/Services/LoggerService.php');
-        $mailer = (string) file_get_contents($this->tempModulesPath.'/utils/src/Infrastructure/Services/MailerService.php');
+        $logger = self::readFile($this->tempModulesPath.'/utils/src/Infrastructure/Services/LoggerService.php');
+        $mailer = self::readFile($this->tempModulesPath.'/utils/src/Infrastructure/Services/MailerService.php');
 
         $this->assertStringNotContainsString('implements', $logger);
         $this->assertStringNotContainsString('ServiceInterface', $logger);
@@ -855,7 +858,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
         $this->service->createEntity('blog-posts', 'Post');
 
-        $model = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php');
+        $model = self::readFile($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php');
 
         $this->assertStringContainsString('use App\\Infrastructure\\Persistence\\Eloquent\\Concerns\\StoresInstantsInStorageTimezone;', $model);
         $this->assertMatchesRegularExpression('/^    use HasUuids;\n    use StoresInstantsInStorageTimezone;$/m', $model);
@@ -871,12 +874,12 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertFileExists($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php');
         $this->assertStringContainsString(
             'namespace Modules\BlogPosts\Infrastructure\Persistence\Eloquent\Models;',
-            (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php'),
+            self::readFile($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Models/PostModel.php'),
         );
-        $this->assertStringContainsString($model, (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Repositories/EloquentPostRepository.php'));
-        $this->assertStringContainsString($model, (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php'));
+        $this->assertStringContainsString($model, self::readFile($this->tempModulesPath.'/blog-posts/src/Infrastructure/Persistence/Eloquent/Repositories/EloquentPostRepository.php'));
+        $this->assertStringContainsString($model, self::readFile($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php'));
 
-        $policy = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Policies/PostPolicy.php');
+        $policy = self::readFile($this->tempModulesPath.'/blog-posts/src/Policies/PostPolicy.php');
         $this->assertStringContainsString($model, $policy);
         foreach (['view_any', 'view', 'create', 'update', 'delete'] as $action) {
             $this->assertStringContainsString("'blog-posts:posts.{$action}'", $policy);
@@ -890,7 +893,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $result = $this->service->createMigration('blog-posts', 'add_slug_to_posts_table', 'blog_posts_posts', modify: true);
 
-        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.array_key_first($result->files));
+        $content = self::readFile($this->tempModulesPath.'/blog-posts/'.array_key_first($result->files));
         $this->assertStringContainsString("Schema::table('blog_posts_posts', function (Blueprint \$table): void {", $content);
         $this->assertStringNotContainsString('Schema::create', $content);
         $this->assertStringNotContainsString('dropIfExists', $content);
@@ -902,7 +905,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $result = $this->service->createMigration('blog-posts', 'create_posts_table');
 
-        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.array_key_first($result->files));
+        $content = self::readFile($this->tempModulesPath.'/blog-posts/'.array_key_first($result->files));
         $this->assertStringContainsString("Schema::create('blog_posts_posts'", $content);
         $this->assertStringContainsString("Schema::dropIfExists('blog_posts_posts')", $content);
     }
@@ -915,9 +918,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createController('blog-posts', 'Entry', 'resource');
 
         $controllers = $this->tempModulesPath.'/blog-posts/src/Http/Controllers';
-        $default = (string) file_get_contents($controllers.'/PostController.php');
-        $invokable = (string) file_get_contents($controllers.'/ArchiveController.php');
-        $resource = (string) file_get_contents($controllers.'/EntryController.php');
+        $default = self::readFile($controllers.'/PostController.php');
+        $invokable = self::readFile($controllers.'/ArchiveController.php');
+        $resource = self::readFile($controllers.'/EntryController.php');
 
         $this->assertStringContainsString("Inertia::render('BlogPosts/Post')", $default);
         $this->assertStringContainsString("Inertia::render('BlogPosts/Archive')", $invokable);
@@ -937,7 +940,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
         $this->service->createWidget('blog-posts', 'Stats');
 
-        $widget = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Filament/Widgets/StatsWidget.php');
+        $widget = self::readFile($this->tempModulesPath.'/blog-posts/src/Filament/Widgets/StatsWidget.php');
 
         $this->assertStringContainsString('public function registerFilamentWidgets(): array', $widget);
         $this->assertStringNotContainsString('auto-discovered', $widget);
@@ -965,7 +968,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $result = $this->service->createTest('blog-posts', $name, $type);
 
         $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$path] ?? null, implode(', ', array_keys($result->files)));
-        $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.$path);
+        $content = self::readFile($this->tempModulesPath.'/blog-posts/'.$path);
         $class = basename($path, '.php');
         $namespace = 'Modules\BlogPosts\\'.str_replace('/', '\\', ucfirst(dirname($path)));
         $this->assertStringContainsString("final class {$class} extends", $content);
@@ -978,8 +981,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createTest('blog-posts', 'Post', 'feature');
         $this->service->createTest('blog-posts', 'Post', 'feature-filament');
 
-        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Http/Controllers/PostControllerTest.php');
-        $filament = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Filament/PostResourceTest.php');
+        $controller = self::readFile($this->tempModulesPath.'/blog-posts/tests/Feature/Http/Controllers/PostControllerTest.php');
+        $filament = self::readFile($this->tempModulesPath.'/blog-posts/tests/Feature/Filament/PostResourceTest.php');
 
         foreach ([$controller, $filament] as $content) {
             $this->assertStringContainsString('extends ModuleTestCase', $content);
@@ -1004,7 +1007,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
         $this->service->createVuePage('blog-posts', 'Archive');
 
-        $page = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/pages/BlogPosts/Archive.vue');
+        $page = self::readFile($this->tempModulesPath.'/blog-posts/resources/js/pages/BlogPosts/Archive.vue');
 
         // The prefix declares usesCoreLayout: a page that wrapped its own layout would show it twice
         $this->assertStringNotContainsString('DefaultLayout', $page);
@@ -1019,7 +1022,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
         $this->service->createVueComponent('blog-posts', 'PostCard');
 
-        $component = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/components/PostCard.vue');
+        $component = self::readFile($this->tempModulesPath.'/blog-posts/resources/js/components/PostCard.vue');
 
         $this->assertStringContainsString("{{ title ?? \$t('blogPosts.title') }}", $component);
         $this->assertStringNotContainsString("{{ '{{' }}", $component);
@@ -1031,7 +1034,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
         $this->service->createVuePage('blog-posts', 'Post');
 
-        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/Post.ts');
+        $types = self::readFile($this->tempModulesPath.'/blog-posts/resources/js/types/Post.ts');
 
         $this->assertStringContainsString('created_at: string;', $types);
         $this->assertStringContainsString('updated_at: string;', $types);
@@ -1045,11 +1048,11 @@ final class ModuleScaffoldingServiceTest extends TestCase
         foreach (['es', 'en'] as $locale) {
             $path = "resources/js/locales/{$locale}.ts";
             $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$path] ?? null, $path);
-            $content = (string) file_get_contents($this->tempModulesPath.'/blog-posts/'.$path);
+            $content = self::readFile($this->tempModulesPath.'/blog-posts/'.$path);
             $this->assertStringContainsString('export default {', $content);
             $this->assertStringContainsString('blogPosts: {', $content);
         }
-        $this->assertStringContainsString("title: 'Entradas del blog',", (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts'));
+        $this->assertStringContainsString("title: 'Entradas del blog',", self::readFile($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts'));
     }
 
     public function test_an_entity_without_migration_says_how_to_create_its_table(): void
@@ -1069,7 +1072,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $result = $this->service->createController('blog-posts', 'BlogPost', 'resource');
 
-        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/BlogPostController.php');
+        $controller = self::readFile($this->tempModulesPath.'/blog-posts/src/Http/Controllers/BlogPostController.php');
         // Route::resource('blog-posts', ...) names its routes after the URI: "blog-posts.index"
         $this->assertSame(3, substr_count($controller, "->route('blog_posts.blog-posts.index')"));
         $this->assertStringNotContainsString('blog_posts.blog_posts.', $controller);
@@ -1086,7 +1089,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $controllers = $this->tempModulesPath.'/blog-posts/src/Http/Controllers';
         foreach ([$controllers.'/BlogPostController.php', $controllers.'/Api/BlogPostController.php'] as $path) {
-            $content = (string) file_get_contents($path);
+            $content = self::readFile($path);
             $this->assertStringContainsString("Gate::authorize('create', BlogPostModel::class);", $content, $path);
             $this->assertStringContainsString("\$this->authorizeRecord('update', \$id);", $content, $path);
             $this->assertStringContainsString("\$this->authorizeRecord('delete', \$id);", $content, $path);
@@ -1097,11 +1100,11 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString("->except(['index', 'show'])->middleware('auth');", implode("\n", $resource->nextSteps));
         $this->assertStringContainsString("->except(['index', 'show'])->middleware('auth');", implode("\n", $api->nextSteps));
 
-        $request = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Requests/BlogPostRequest.php');
+        $request = self::readFile($this->tempModulesPath.'/blog-posts/src/Http/Requests/BlogPostRequest.php');
         $this->assertStringNotContainsString('Authorization lives in the policy', $request);
         $this->assertStringContainsString('Gate::authorize', $request);
 
-        $service = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Infrastructure/Services/BlogPostService.php');
+        $service = self::readFile($this->tempModulesPath.'/blog-posts/src/Infrastructure/Services/BlogPostService.php');
         $this->assertStringContainsString('if (! Str::isUuid($id)) {', $service);
     }
 
@@ -1111,11 +1114,11 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->service->createModule('blog-posts', displayName: $displayName);
 
-        $locale = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts');
+        $locale = self::readFile($this->tempModulesPath.'/blog-posts/resources/js/locales/es.ts');
         $this->assertStringContainsString("title: 'Reservas {\\'@\\'} sala {\\'|\\'} {\\'{\\'}norte{\\'}\\'} d\\'Or',", $locale);
 
         // Only the vue-i18n message is escaped
-        $manifest = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/module.json'), true);
+        $manifest = json_decode(self::readFile($this->tempModulesPath.'/blog-posts/module.json'), true);
         $this->assertSame($displayName, $manifest['displayName']);
         $messages = include $this->tempModulesPath.'/blog-posts/lang/es/messages.php';
         $this->assertSame($displayName, $messages['title']);
@@ -1126,7 +1129,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
         $this->service->createVuePage('blog-posts', 'BlogPost');
 
-        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPost.ts');
+        $types = self::readFile($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPost.ts');
 
         $this->assertStringContainsString("export interface BlogPostListProps {\n    blogPosts: BlogPost[];\n}", $types);
         $this->assertStringContainsString("export interface BlogPostShowProps {\n    blogPost: BlogPost;\n}", $types);
@@ -1136,7 +1139,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $this->service->createModule('blog-posts');
 
-        $messages = (string) file_get_contents($this->tempModulesPath.'/blog-posts/lang/es/messages.php');
+        $messages = self::readFile($this->tempModulesPath.'/blog-posts/lang/es/messages.php');
 
         $this->assertStringNotContainsString('/*', $messages);
         $this->assertStringNotContainsString('//', $messages);
@@ -1193,7 +1196,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $hint = implode("\n", $result->nextSteps);
         $writes = "Route::resource('blog-posts', BlogPostController::class)->except(['index', 'show'])->middleware('auth');";
         $reads = "Route::resource('blog-posts', BlogPostController::class)->only(['index', 'show']);";
-        $controller = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/BlogPostController.php');
+        $controller = self::readFile($this->tempModulesPath.'/blog-posts/src/Http/Controllers/BlogPostController.php');
 
         foreach ([$hint, $controller] as $text) {
             $this->assertNotFalse(strpos($text, $writes));
@@ -1206,7 +1209,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $this->service->createModule('blog-posts');
 
-        $provider = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+        $provider = self::readFile($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
 
         $this->assertStringNotContainsString('onEnable', $provider);
         $this->assertStringNotContainsString('onDisable', $provider);
@@ -1234,7 +1237,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createModule('blog-posts');
         $this->service->createTest('blog-posts', 'Archive', 'feature');
 
-        $test = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/Feature/Http/Controllers/ArchiveControllerTest.php');
+        $test = self::readFile($this->tempModulesPath.'/blog-posts/tests/Feature/Http/Controllers/ArchiveControllerTest.php');
 
         $this->assertStringNotContainsString('not looked up', $test);
     }
@@ -1261,7 +1264,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $index->files['resources/js/types/BlogPost.ts'] ?? null);
         $this->assertSame(ScaffoldResultDTO::STATUS_SKIPPED, $edit->files['resources/js/types/BlogPost.ts'] ?? null);
         $this->assertFileDoesNotExist($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPostIndex.ts');
-        $types = (string) file_get_contents($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPost.ts');
+        $types = self::readFile($this->tempModulesPath.'/blog-posts/resources/js/types/BlogPost.ts');
         $this->assertStringContainsString('blogPosts: BlogPost[];', $types);
         $this->assertStringContainsString('blogPost: BlogPost;', $types);
 
@@ -1282,7 +1285,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\BlogPostController;', $resource);
         $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\Api;', $api);
         $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\ArchiveController;', $default);
-        $apiController = (string) file_get_contents($this->tempModulesPath.'/blog-posts/src/Http/Controllers/Api/BlogPostController.php');
+        $apiController = self::readFile($this->tempModulesPath.'/blog-posts/src/Http/Controllers/Api/BlogPostController.php');
         $this->assertStringContainsString('use Modules\BlogPosts\Http\Controllers\Api;', $apiController);
     }
 
@@ -1290,8 +1293,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $this->service->createModule('blog-posts');
 
-        $web = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/web.php');
-        $api = (string) file_get_contents($this->tempModulesPath.'/blog-posts/routes/api.php');
+        $web = self::readFile($this->tempModulesPath.'/blog-posts/routes/web.php');
+        $api = self::readFile($this->tempModulesPath.'/blog-posts/routes/api.php');
 
         $this->assertStringNotContainsString('Web Routes', $web);
         $this->assertStringNotContainsString('API Routes', $api);
@@ -1324,7 +1327,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         foreach ($iterator as $file) {
             if ($file instanceof \SplFileInfo && $file->getExtension() === 'php') {
-                $files[$file->getPathname()] = (string) file_get_contents($file->getPathname());
+                $files[$file->getPathname()] = self::readFile($file->getPathname());
             }
         }
 

@@ -88,7 +88,6 @@ final class TagResponseDTOTest extends TestCase
             sortOrder: 0,
         );
 
-        $this->assertIsArray($dto->appliesTo);
         $this->assertEmpty($dto->appliesTo);
     }
 
@@ -105,8 +104,7 @@ final class TagResponseDTOTest extends TestCase
             sortOrder: 0,
         );
 
-        $this->assertEquals(0, $dto->sortOrder);
-        $this->assertIsInt($dto->sortOrder);
+        $this->assertSame(0, $dto->sortOrder);
     }
 
     public function test_it_is_readonly(): void

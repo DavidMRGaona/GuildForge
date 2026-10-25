@@ -90,11 +90,10 @@ final class ElasticsearchHandlerTest extends TestCase
             extra: [],
         );
 
+        $this->expectNotToPerformAssertions();
+
         // This should not throw an exception even when Elasticsearch is unavailable
         $handler->handle($record);
-
-        // If we reach here, the handler gracefully handled the failure
-        $this->assertTrue(true);
     }
 
     public function test_handler_is_handling_returns_true_for_level(): void
@@ -165,8 +164,9 @@ final class ElasticsearchHandlerTest extends TestCase
             message: 'Test error message',
         );
 
+        $this->expectNotToPerformAssertions();
+
         // Should not throw even without context provider
         $handler->handle($record);
-        $this->assertTrue(true);
     }
 }

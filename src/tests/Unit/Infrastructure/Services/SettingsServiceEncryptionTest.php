@@ -109,6 +109,7 @@ final class SettingsServiceEncryptionTest extends TestCase
 
         $storedValue = SettingModel::where('key', 'verifiable_key')->first();
         $this->assertNotNull($storedValue);
+        $this->assertNotNull($storedValue->value);
 
         $decrypted = Crypt::decryptString($storedValue->value);
         $this->assertEquals($plainText, $decrypted);
