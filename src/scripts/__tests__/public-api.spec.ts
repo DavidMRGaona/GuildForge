@@ -59,10 +59,7 @@ describe('public frontend API', () => {
     });
 
     it('points every package at a vendor export of the core', () => {
-        // FullCalendar's vendor exports come with its sharing
-        const missing = Object.entries(api.packages)
-            .filter(([specifier]) => !specifier.startsWith('@fullcalendar/'))
-            .filter(([, path]) => !existsSync(resolve(SRC, path)));
+        const missing = Object.entries(api.packages).filter(([, path]) => !existsSync(resolve(SRC, path)));
 
         expect(missing).toEqual([]);
     });
