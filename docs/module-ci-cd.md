@@ -186,7 +186,7 @@ Versions with a suffix (e.g., `1.0.0-beta.1`, `2.0.0-rc.1`) are automatically ma
 
 ## Pull request checks
 
-Each module's `tests.yml` calls `reusable-module-tests.yml` on every pull request and weekly (`schedule`, Mondays at 06:00 UTC) against the core's `main`, so a core change that breaks the module shows up even without new commits in it; the core never checks out modules, which anyone can write:
+Each module's `tests.yml` calls `reusable-module-tests.yml` on every pull request and weekly (`schedule`, Mondays at 06:00 UTC) against the core's `main`, so a core change that breaks the module shows up even without new commits in it; the core never checks out modules, which anyone can write. GitHub turns a scheduled workflow off after 60 days without activity in a public repository, so its `keepalive` job (weekly run only, `actions: write`) re-enables the workflow, which resets that count. Failures of a scheduled run are e-mailed to whoever last changed its `cron` line:
 
 - **`test / Test module`**: the module's PHPUnit suite inside the host (see step 3 above).
 - **`test / Quality`**, with `quality: true`: the core's quality tools with the core's configuration from `host_ref` (the module copies none of it), through `src/scripts/check-module-quality.sh`:

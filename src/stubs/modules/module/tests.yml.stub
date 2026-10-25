@@ -23,3 +23,16 @@ jobs:
       quality: true
     permissions:
       contents: read
+
+  # GitHub turns scheduled workflows off after 60 days without activity in a public repository.
+  # Re-enabling this workflow from its weekly run resets that count, so the weekly run never stops
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Keep the weekly run enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/enable"

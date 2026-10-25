@@ -631,6 +631,10 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('group: tests-${{ github.event.pull_request.number }}', $tests);
         // A weekly run against the core's main catches a core change that breaks the module
         $this->assertStringContainsString("cron: '0 6 * * 1'", $tests);
+        // ...and re-enables its own workflow, which GitHub turns off after 60 days without activity
+        $this->assertStringContainsString("if: github.event_name == 'schedule'", $tests);
+        $this->assertStringContainsString('actions: write', $tests);
+        $this->assertStringContainsString('gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/enable"', $tests);
     }
 
     public function test_the_tsconfig_type_checks_against_the_core(): void
