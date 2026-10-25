@@ -889,15 +889,19 @@ Reads slot registrations from Inertia shared props (`moduleSlots`). For each reg
 
 `resolveModulePage.ts` allows modules to register their own Inertia pages. The backend sends a prefix-to-module mapping, and the resolver tries to load the page:
 
-1. Build-time glob (modules present at compile time)
-2. Dynamic loading via Vite manifest (modules installed afterwards)
+1. **Development**: from the module's sources (`app.ts` globs `modules/*/resources/js/pages`, HMR)
+2. **Production**: always dynamic loading via the module's Vite manifest
 
 ### Module translation loading
 
 `moduleTranslations.ts` merges module translations into the i18n instance:
 
-1. **Build-time**: via `import.meta.glob` of `modules/*/resources/js/locales/{es,en}.ts` files
-2. **Runtime**: from Inertia shared props (`moduleTranslations`) for post-build modules
+1. **Development**: via `import.meta.glob` of `modules/*/resources/js/locales/{es,en}.ts` files
+2. **Production**: from Inertia shared props (`moduleTranslations`), parsed by the backend from the installed module
+
+### Production builds see no module sources
+
+The three globs over `modules/*` (pages, slot components, translations) exist only in development. A production build loads every module through the same path whether or not it sees `src/modules` (the local `Dockerfile.prod` image builds them in, deployments do not), so the local production image behaves like the sites. `npm run verify:build` fails if the core build contains a module's sources; `Dockerfile.prod` runs it after building the core.
 
 ### Module profile tabs
 

@@ -37,9 +37,12 @@ const head = createHead();
 
 // Glob patterns for core and module pages
 const corePages = import.meta.glob<DefineComponent>('./pages/**/*.vue');
-const modulePages = import.meta.glob<DefineComponent>(
-    '../../modules/*/resources/js/pages/**/*.vue'
-);
+// Module pages from their sources only in development (hot reload). A production build
+// loads them from each module's own build, as on a site built without modules, even
+// when it sees src/modules (scripts/verify-build.mjs checks it)
+const modulePages: Record<string, () => Promise<DefineComponent>> = import.meta.env.DEV
+    ? import.meta.glob<DefineComponent>('../../modules/*/resources/js/pages/**/*.vue')
+    : {};
 
 /**
  * Shared props read from the initial page the server embeds in the HTML.

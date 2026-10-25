@@ -171,7 +171,7 @@ All commands are executed through `make` and run inside Docker containers.
 | `make dev` | Vite server with HMR (only when the node container's own Vite is not running) |
 | `make build-assets` | Production asset build (`vue-tsc` + `vite build`) |
 
-CI also runs `npm run verify:build` after the build (`src/scripts/verify-build.mjs`, checks the module import map entries); run it with `docker exec guildforge_node npm run verify:build`, since a build can pass locally while CI fails this check.
+CI also runs `npm run verify:build` after the build (`src/scripts/verify-build.mjs`, checks the module import map entries and that the core build contains no module sources); run it with `docker exec guildforge_node npm run verify:build`, since a build can pass locally while CI fails this check.
 
 ### Code generation
 

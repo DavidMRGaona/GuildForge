@@ -3,13 +3,17 @@
  * Each module can have locales at modules/<module>/resources/js/locales/es.ts (and en.ts)
  * Using the same relative path pattern as app.ts uses for module pages.
  *
- * Note: This only captures modules present at build time. Modules installed after
- * the build will be loaded via the runtime fallback (loadModuleTranslationsFromProps).
+ * Only in development (hot reload). A production build takes every module's translations
+ * from the server (loadModuleTranslationsFromProps), as on a site built without modules,
+ * even when it sees src/modules: compiled-in copies would win over the installed ones
+ * (scripts/verify-build.mjs checks it).
  */
-const moduleLocales = import.meta.glob<{ default: Record<string, unknown> }>(
-    '../../../modules/*/resources/js/locales/{es,en}.ts',
-    { eager: true }
-);
+const moduleLocales: Record<string, { default: Record<string, unknown> }> = import.meta.env.DEV
+    ? import.meta.glob<{ default: Record<string, unknown> }>(
+          '../../../modules/*/resources/js/locales/{es,en}.ts',
+          { eager: true }
+      )
+    : {};
 
 // Debug: log what files were matched
 if (import.meta.env.DEV) {
@@ -109,7 +113,7 @@ export function loadModuleTranslationsFromProps(
         }
 
         for (const [locale, messages] of Object.entries(locales)) {
-            // Skip if already loaded from build-time glob
+            // Skip if already loaded from the module's sources (development only)
             if (loadedModules.has(`${moduleName}:${locale}`)) {
                 continue;
             }
