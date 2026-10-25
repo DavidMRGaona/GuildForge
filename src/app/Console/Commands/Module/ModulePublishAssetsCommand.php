@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Console\Commands\Module;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Infrastructure\Modules\Services\ModulePathResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -29,6 +31,7 @@ final class ModulePublishAssetsCommand extends Command
 
     public function __construct(
         private readonly ModuleManagerServiceInterface $moduleManager,
+        private readonly ModulePathResolver $paths = new ModulePathResolver,
     ) {
         parent::__construct();
     }
@@ -65,7 +68,14 @@ final class ModulePublishAssetsCommand extends Command
             return self::FAILURE;
         }
 
-        $sourcePath = $module->path().'/resources/assets';
+        try {
+            $sourcePath = $this->paths->resolve($module).'/resources/assets';
+        } catch (ModuleNotFoundException) {
+            $this->error("Files of module '{$moduleName}' not found.");
+
+            return self::FAILURE;
+        }
+
         $destinationPath = public_path('modules/'.$moduleName);
 
         if (! is_dir($sourcePath)) {
@@ -91,7 +101,11 @@ final class ModulePublishAssetsCommand extends Command
         $published = 0;
 
         foreach ($modules->all() as $module) {
-            $sourcePath = $module->path().'/resources/assets';
+            try {
+                $sourcePath = $this->paths->resolve($module).'/resources/assets';
+            } catch (ModuleNotFoundException) {
+                continue;
+            }
 
             if (! is_dir($sourcePath)) {
                 continue;

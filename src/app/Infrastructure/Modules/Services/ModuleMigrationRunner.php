@@ -9,7 +9,6 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleMigrationViolationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Log;
 
 final readonly class ModuleMigrationRunner
 {
@@ -147,23 +146,6 @@ final readonly class ModuleMigrationRunner
      */
     private function resolveModulePath(Module $module): string
     {
-        $modulePath = $module->path();
-
-        if (is_dir($modulePath)) {
-            return $modulePath;
-        }
-
-        $defaultPath = $this->modulesPath.'/'.$module->name()->value;
-
-        if (! is_dir($defaultPath)) {
-            throw ModuleNotFoundException::withName($module->name()->value);
-        }
-
-        Log::warning("Stored path of module {$module->name()->value} does not exist, using the modules directory", [
-            'stored_path' => $modulePath,
-            'path' => $defaultPath,
-        ]);
-
-        return $defaultPath;
+        return (new ModulePathResolver($this->modulesPath))->resolve($module);
     }
 }

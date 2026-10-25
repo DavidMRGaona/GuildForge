@@ -9,6 +9,7 @@ use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Infrastructure\Modules\Services\ModulePathResolver;
 use DateTimeImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
@@ -19,6 +20,7 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
 {
     public function __construct(
         private ModuleManagerServiceInterface $moduleManager,
+        private ModulePathResolver $paths = new ModulePathResolver,
     ) {}
 
     public function createBackup(ModuleName $name): string
@@ -29,8 +31,9 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
             throw ModuleNotFoundException::withName($name->value);
         }
 
-        $modulePath = $module->path();
-        if (! File::isDirectory($modulePath)) {
+        try {
+            $modulePath = $this->paths->resolve($module);
+        } catch (ModuleNotFoundException) {
             throw UpdateException::backupFailed($name->value, 'Module directory does not exist');
         }
 
@@ -71,7 +74,12 @@ final readonly class ModuleBackupService implements ModuleBackupServiceInterface
             throw ModuleNotFoundException::withName($name->value);
         }
 
-        $modulePath = $module->path();
+        // Restored where its files are; a module found nowhere goes back to its stored path
+        try {
+            $modulePath = $this->paths->resolve($module);
+        } catch (ModuleNotFoundException) {
+            $modulePath = $module->path();
+        }
 
         try {
             // Remove current module directory

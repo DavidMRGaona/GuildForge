@@ -45,6 +45,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private ModuleCompatibilityServiceInterface $compatibility,
         private EnabledModulesResolverInterface $resolver,
         private ModuleSettingsStoreInterface $settingsStore,
+        private ModulePathResolver $paths = new ModulePathResolver,
     ) {}
 
     public function discover(): ModuleCollection
@@ -452,19 +453,14 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         $version = $module->version()->value();
 
         // Delete module files
-        $modulePath = $module->path();
-        if (! File::isDirectory($modulePath)) {
-            $configPath = config('modules.path', base_path('modules')).'/'.$name->value;
-            if ($modulePath !== $configPath && File::isDirectory($configPath)) {
-                Log::warning("Module {$name->value}: stored path not found, using config path", [
-                    'stored' => $modulePath,
-                    'config' => $configPath,
-                ]);
-                $modulePath = $configPath;
-            }
+        try {
+            $modulePath = $this->paths->resolve($module);
+        } catch (ModuleNotFoundException) {
+            // Its files are already gone: only the database row is left to delete
+            $modulePath = null;
         }
 
-        if (File::isDirectory($modulePath)) {
+        if ($modulePath !== null) {
             if (! File::deleteDirectory($modulePath)) {
                 throw ModuleCannotUninstallException::deletionFailed($name->value, 'Failed to delete module directory');
             }
@@ -513,7 +509,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         $this->settingsStore->store($name->value, $settings);
 
         // The current request sees what the next one will
-        config()->set("modules.settings.{$name->value}", $this->settingsStore->effective($name->value, $module->path()));
+        config()->set("modules.settings.{$name->value}", $this->settingsStore->effective($name->value, $this->settingsPath($module)));
     }
 
     public function getDependents(ModuleName $name): ModuleCollection
@@ -591,5 +587,18 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         }
 
         return 'unknown';
+    }
+
+    /**
+     * Where the module's config/settings.php is; a module found nowhere keeps its stored
+     * path, whose missing file leaves only the values stored in the settings table.
+     */
+    private function settingsPath(Module $module): string
+    {
+        try {
+            return $this->paths->resolve($module);
+        } catch (ModuleNotFoundException) {
+            return $module->path();
+        }
     }
 }

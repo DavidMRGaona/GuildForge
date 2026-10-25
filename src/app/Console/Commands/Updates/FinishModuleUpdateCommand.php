@@ -9,6 +9,7 @@ use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Infrastructure\Modules\Services\ModulePathResolver;
 use App\Infrastructure\Modules\Services\ModuleSchemaGuard;
 use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use Illuminate\Console\Command;
@@ -45,6 +46,7 @@ final class FinishModuleUpdateCommand extends Command
         ModuleSchemaGuard $schemaGuard,
         ModuleSeederRunner $seederRunner,
         ModuleHealthCheckerInterface $healthChecker,
+        ModulePathResolver $paths,
     ): int {
         try {
             /** @var MigrationRepositoryInterface $migrationRepository */
@@ -70,9 +72,9 @@ final class FinishModuleUpdateCommand extends Command
                 }
             }
 
-            $report = DB::transaction(function () use ($module, $modules, $version, $schemaGuard, $seederRunner, $migrationRepository): PostUpdateReportDTO {
+            $report = DB::transaction(function () use ($module, $modules, $version, $schemaGuard, $seederRunner, $migrationRepository, $paths): PostUpdateReportDTO {
                 $migrations = [];
-                $migrationsPath = $module->path().'/database/migrations';
+                $migrationsPath = $paths->resolve($module).'/database/migrations';
 
                 if (is_dir($migrationsPath)) {
                     $before = $migrationRepository->getRan();

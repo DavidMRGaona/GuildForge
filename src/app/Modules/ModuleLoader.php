@@ -14,6 +14,8 @@ use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Exceptions\ModuleNotFoundException;
+use App\Infrastructure\Modules\Services\ModulePathResolver;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +27,7 @@ final class ModuleLoader
     public function __construct(
         private readonly Application $app,
         private readonly EnabledModulesResolverInterface $resolver,
+        private readonly ModulePathResolver $paths = new ModulePathResolver,
     ) {}
 
     /**
@@ -52,15 +55,11 @@ final class ModuleLoader
     public function bootModule(Module $module): void
     {
         $providerClass = $module->namespace().'\\'.$module->provider();
-        $modulePath = $module->path();
-
-        // Skip if module directory doesn't exist on disk
-        if (! is_dir($modulePath)) {
-            Log::warning('[ModuleLoader] Module path not found, skipping', [
-                'module' => $module->name()->value,
-                'path' => $modulePath,
-            ]);
-
+        try {
+            $modulePath = $this->paths->resolve($module);
+        } catch (ModuleNotFoundException) {
+            // Unreachable for an approved module: without module.json in the modules
+            // directory the compatibility check rejects it (shown on the panel banner)
             return;
         }
 
