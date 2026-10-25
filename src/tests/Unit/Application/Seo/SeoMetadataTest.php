@@ -16,11 +16,11 @@ final class SeoMetadataTest extends TestCase
         $metadata = new SeoMetadata(
             scope: SeoMetadata::SCOPE_PAGE,
             title: 'Club de lectura',
-            fullTitle: 'Club de lectura - Tolerol',
+            fullTitle: 'Club de lectura - Sitio de ejemplo',
             description: '15 de enero de 2026, 18:00 · La Taberna · Texto',
-            canonicalUrl: 'https://tolerol.com/eventos/club',
+            canonicalUrl: 'https://example.com/eventos/club',
             type: SeoType::Website,
-            siteName: 'Tolerol',
+            siteName: 'Sitio de ejemplo',
             locale: 'es_ES',
             image: new SeoImage('https://res.cloudinary.com/demo/image/upload/x', 1200, 630, 'Club de lectura', true),
             robots: null,
@@ -31,11 +31,11 @@ final class SeoMetadataTest extends TestCase
         $this->assertSame([
             'scope' => 'page',
             'title' => 'Club de lectura',
-            'fullTitle' => 'Club de lectura - Tolerol',
+            'fullTitle' => 'Club de lectura - Sitio de ejemplo',
             'description' => '15 de enero de 2026, 18:00 · La Taberna · Texto',
-            'canonicalUrl' => 'https://tolerol.com/eventos/club',
+            'canonicalUrl' => 'https://example.com/eventos/club',
             'type' => 'website',
-            'siteName' => 'Tolerol',
+            'siteName' => 'Sitio de ejemplo',
             'locale' => 'es_ES',
             'image' => [
                 'url' => 'https://res.cloudinary.com/demo/image/upload/x',
@@ -54,12 +54,12 @@ final class SeoMetadataTest extends TestCase
     {
         $metadata = new SeoMetadata(
             scope: SeoMetadata::SCOPE_SITE,
-            title: 'Tolerol',
-            fullTitle: 'Tolerol',
+            title: 'Sitio de ejemplo',
+            fullTitle: 'Sitio de ejemplo',
             description: '',
-            canonicalUrl: 'https://tolerol.com',
+            canonicalUrl: 'https://example.com',
             type: SeoType::Website,
-            siteName: 'Tolerol',
+            siteName: 'Sitio de ejemplo',
             locale: 'es_ES',
             image: null,
         );

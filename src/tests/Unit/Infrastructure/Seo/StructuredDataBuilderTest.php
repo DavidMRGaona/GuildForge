@@ -23,11 +23,11 @@ final class StructuredDataBuilderTest extends TestCase
         parent::setUp();
         $this->builder = new StructuredDataBuilder('Europe/Madrid');
         $this->site = new SeoSite(
-            name: 'Tolerol',
-            url: 'https://tolerol.com',
+            name: 'Sitio de ejemplo',
+            url: 'https://example.com',
             description: 'Asociación de juegos',
             logoUrl: 'https://res.cloudinary.com/demo/image/upload/logo',
-            sameAs: ['https://instagram.com/tolerol'],
+            sameAs: ['https://instagram.com/asociacion-ejemplo'],
         );
     }
 
@@ -36,7 +36,7 @@ final class StructuredDataBuilderTest extends TestCase
         $data = $this->builder->event(
             name: 'Club de lectura',
             description: 'Texto',
-            url: 'https://tolerol.com/eventos/club',
+            url: 'https://example.com/eventos/club',
             schedule: new SeoScheduleDTO(
                 start: new DateTimeImmutable('2026-01-15T17:00:00Z'),
                 end: new DateTimeImmutable('2026-01-15T21:00:00Z'),
@@ -52,19 +52,19 @@ final class StructuredDataBuilderTest extends TestCase
             '@type' => 'Event',
             'name' => 'Club de lectura',
             'description' => 'Texto',
-            'url' => 'https://tolerol.com/eventos/club',
+            'url' => 'https://example.com/eventos/club',
             'startDate' => '2026-01-15T18:00:00+01:00',
             'endDate' => '2026-01-15T22:00:00+01:00',
             'eventStatus' => 'https://schema.org/EventScheduled',
             'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
-            'organizer' => ['@type' => 'Organization', 'name' => 'Tolerol', 'url' => 'https://tolerol.com'],
+            'organizer' => ['@type' => 'Organization', 'name' => 'Sitio de ejemplo', 'url' => 'https://example.com'],
             'image' => ['https://img/x.jpg'],
             'location' => ['@type' => 'Place', 'name' => 'La Taberna', 'address' => 'La Taberna'],
             'offers' => [
                 '@type' => 'Offer',
                 'price' => '5.00',
                 'priceCurrency' => 'EUR',
-                'url' => 'https://tolerol.com/eventos/club',
+                'url' => 'https://example.com/eventos/club',
                 'availability' => 'https://schema.org/InStock',
             ],
         ], $data);
@@ -75,7 +75,7 @@ final class StructuredDataBuilderTest extends TestCase
         $data = $this->builder->event(
             name: 'Partida',
             description: 'Texto',
-            url: 'https://tolerol.com/mesas/partida',
+            url: 'https://example.com/mesas/partida',
             schedule: new SeoScheduleDTO(start: new DateTimeImmutable('2026-07-10T16:00:00Z')),
             image: null,
             site: $this->site,
@@ -92,7 +92,7 @@ final class StructuredDataBuilderTest extends TestCase
         $data = $this->builder->event(
             name: 'Gratis',
             description: '',
-            url: 'https://tolerol.com/eventos/gratis',
+            url: 'https://example.com/eventos/gratis',
             schedule: new SeoScheduleDTO(start: new DateTimeImmutable('2026-07-10T16:00:00Z'), price: 0.0),
             image: null,
             site: $this->site,
@@ -106,7 +106,7 @@ final class StructuredDataBuilderTest extends TestCase
         $data = $this->builder->article(
             headline: 'Crónica del torneo',
             description: 'Resumen',
-            url: 'https://tolerol.com/articulos/cronica',
+            url: 'https://example.com/articulos/cronica',
             article: new SeoArticleDTO(
                 publishedAt: new DateTimeImmutable('2026-02-01T09:00:00Z'),
                 modifiedAt: new DateTimeImmutable('2026-02-03T09:00:00Z'),
@@ -122,11 +122,11 @@ final class StructuredDataBuilderTest extends TestCase
         $this->assertSame('2026-02-03T10:00:00+01:00', $data['dateModified']);
         $this->assertSame(['@type' => 'Person', 'name' => 'Ana'], $data['author']);
         $this->assertSame(['https://img/a.jpg'], $data['image']);
-        $this->assertSame('https://tolerol.com/articulos/cronica', $data['mainEntityOfPage']);
+        $this->assertSame('https://example.com/articulos/cronica', $data['mainEntityOfPage']);
         $this->assertSame([
             '@type' => 'Organization',
-            'name' => 'Tolerol',
-            'url' => 'https://tolerol.com',
+            'name' => 'Sitio de ejemplo',
+            'url' => 'https://example.com',
             'logo' => ['@type' => 'ImageObject', 'url' => 'https://res.cloudinary.com/demo/image/upload/logo'],
         ], $data['publisher']);
     }
@@ -136,7 +136,7 @@ final class StructuredDataBuilderTest extends TestCase
         $data = $this->builder->article(
             headline: str_repeat('a', 200),
             description: '',
-            url: 'https://tolerol.com/articulos/x',
+            url: 'https://example.com/articulos/x',
             article: new SeoArticleDTO(publishedAt: new DateTimeImmutable('2026-02-01T09:00:00Z')),
             image: null,
             site: $this->site,
@@ -153,17 +153,17 @@ final class StructuredDataBuilderTest extends TestCase
         $this->assertSame([
             '@context' => 'https://schema.org',
             '@type' => 'Organization',
-            'name' => 'Tolerol',
-            'url' => 'https://tolerol.com',
+            'name' => 'Sitio de ejemplo',
+            'url' => 'https://example.com',
             'description' => 'Asociación de juegos',
             'logo' => 'https://res.cloudinary.com/demo/image/upload/logo',
-            'sameAs' => ['https://instagram.com/tolerol'],
+            'sameAs' => ['https://instagram.com/asociacion-ejemplo'],
         ], $this->builder->organization($this->site));
     }
 
     public function test_organization_without_logo_description_or_profiles(): void
     {
-        $data = $this->builder->organization(new SeoSite('Tolerol', 'https://tolerol.com', '', null, []));
+        $data = $this->builder->organization(new SeoSite('Sitio de ejemplo', 'https://example.com', '', null, []));
 
         $this->assertSame(['@context', '@type', 'name', 'url'], array_keys($data));
     }

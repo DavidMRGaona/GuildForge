@@ -54,30 +54,30 @@ final class LegalMailNoticeServiceTest extends TestCase
 
         $paragraphs = app(LegalMailNoticeServiceInterface::class)->paragraphs('mod.notice', [
             ':inviter' => 'John Doe',
-            ':site' => 'Tolerol',
+            ':site' => 'Sitio de ejemplo',
             ':days' => '14',
         ]);
 
-        $this->assertSame(['First John Doe', 'Second Tolerol and 14'], $paragraphs);
+        $this->assertSame(['First John Doe', 'Second Sitio de ejemplo and 14'], $paragraphs);
     }
 
     public function test_entity_falls_back_to_the_site_name(): void
     {
-        config(['app.name' => 'Tolerol']);
+        config(['app.name' => 'Sitio de ejemplo']);
         $service = app(LegalMailNoticeServiceInterface::class);
 
         $entity = $service->entity();
-        $this->assertSame('Tolerol', $entity->name);
+        $this->assertSame('Sitio de ejemplo', $entity->name);
         $this->assertNull($entity->email);
         $this->assertNull($entity->dpoEmail);
 
         $settings = app(SettingsServiceInterface::class);
-        $settings->set('legal_entity_name', 'Asociación Tolerol');
+        $settings->set('legal_entity_name', 'Asociación de ejemplo');
         $settings->set('legal_entity_email', 'hola@example.org');
         $settings->set('legal_entity_dpo_email', 'dpo@example.org');
 
         $entity = $service->entity();
-        $this->assertSame('Asociación Tolerol', $entity->name);
+        $this->assertSame('Asociación de ejemplo', $entity->name);
         $this->assertSame('hola@example.org', $entity->email);
         $this->assertSame('dpo@example.org', $entity->dpoEmail);
     }

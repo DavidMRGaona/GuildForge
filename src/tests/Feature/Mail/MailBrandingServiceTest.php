@@ -6,6 +6,7 @@ namespace Tests\Feature\Mail;
 
 use App\Application\Mail\Services\MailBrandingServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Domain\ValueObjects\HexColor;
 use App\Infrastructure\Mail\Services\MailBrandingService;
@@ -22,7 +23,7 @@ final class MailBrandingServiceTest extends TestCase
     {
         parent::setUp();
 
-        config(['app.name' => 'Asociación Tolerol', 'app.url' => 'https://tolerol.example']);
+        config(['app.name' => 'Asociación de ejemplo', 'app.url' => 'https://asociacion.example']);
         Storage::fake('images');
     }
 
@@ -36,6 +37,7 @@ final class MailBrandingServiceTest extends TestCase
         return new MailBrandingService(
             $this->settings(),
             app(ThemeSettingsServiceInterface::class),
+            app(SiteBrandingServiceInterface::class),
         );
     }
 
@@ -45,8 +47,8 @@ final class MailBrandingServiceTest extends TestCase
 
         $branding = $this->service()->branding();
 
-        $this->assertSame('Asociación Tolerol', $branding->siteName);
-        $this->assertSame('https://tolerol.example', $branding->siteUrl);
+        $this->assertSame('Asociación de ejemplo', $branding->siteName);
+        $this->assertSame('https://asociacion.example', $branding->siteUrl);
         $this->assertSame(Storage::disk('images')->url('settings/email-logo.png'), $branding->logoUrl);
     }
 
@@ -135,9 +137,12 @@ final class MailBrandingServiceTest extends TestCase
         $theme->method('getNeutralPalette')->willThrowException(new RuntimeException('cache down'));
         $theme->method('getThemeSettings')->willThrowException(new RuntimeException('cache down'));
 
-        $branding = (new MailBrandingService($settings, $theme))->branding();
+        $site = $this->createStub(SiteBrandingServiceInterface::class);
+        $site->method('siteName')->willThrowException(new RuntimeException('cache down'));
 
-        $this->assertSame('Asociación Tolerol', $branding->siteName);
+        $branding = (new MailBrandingService($settings, $theme, $site))->branding();
+
+        $this->assertSame('Asociación de ejemplo', $branding->siteName);
         $this->assertNull($branding->logoUrl);
         $this->assertGreaterThanOrEqual(3.0, (new HexColor($branding->primaryColor))->contrastRatio(new HexColor($branding->onPrimaryColor)));
         $this->assertTrue((new HexColor($branding->linkColor))->meetsWcagAA(new HexColor('#FFFFFF')));

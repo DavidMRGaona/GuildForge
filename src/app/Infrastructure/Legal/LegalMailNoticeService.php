@@ -8,12 +8,14 @@ use App\Application\Legal\DTOs\LegalEntityDTO;
 use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 
 final readonly class LegalMailNoticeService implements LegalMailNoticeServiceInterface
 {
     public function __construct(
         private LegalMailNoticeRegistryInterface $registry,
         private SettingsServiceInterface $settings,
+        private SiteBrandingServiceInterface $siteBranding,
     ) {}
 
     public function content(string $key): string
@@ -52,7 +54,7 @@ final readonly class LegalMailNoticeService implements LegalMailNoticeServiceInt
     public function entity(): LegalEntityDTO
     {
         return new LegalEntityDTO(
-            name: $this->setting('legal_entity_name') ?? (string) config('app.name', 'GuildForge'),
+            name: $this->setting('legal_entity_name') ?? $this->siteBranding->siteName(),
             email: $this->setting('legal_entity_email'),
             dpoEmail: $this->setting('legal_entity_dpo_email'),
         );

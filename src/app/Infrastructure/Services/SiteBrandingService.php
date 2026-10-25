@@ -16,7 +16,13 @@ final readonly class SiteBrandingService implements SiteBrandingServiceInterface
     public function __construct(
         private SettingsServiceInterface $settings,
         private AboutPageServiceInterface $aboutPage,
+        private SiteNameResolver $siteName,
     ) {}
+
+    public function siteName(): string
+    {
+        return $this->siteName->resolve();
+    }
 
     public function customLogoPath(): ?string
     {

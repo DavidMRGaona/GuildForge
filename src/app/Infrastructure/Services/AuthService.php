@@ -12,6 +12,7 @@ use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\ImageOptimizationServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Domain\Events\UserLoggedIn;
 use App\Domain\Events\UserLoggedOut;
@@ -41,6 +42,7 @@ final readonly class AuthService implements AuthServiceInterface
         private UserRepositoryInterface $userRepository,
         private UserModelQueryServiceInterface $userModelQuery,
         private MemberRoleServiceInterface $memberRole,
+        private SiteBrandingServiceInterface $siteBranding,
         private AvatarPath $avatarPaths = new AvatarPath,
     ) {}
 
@@ -60,8 +62,7 @@ final readonly class AuthService implements AuthServiceInterface
         Event::dispatch(new UserRegistered($user->id()->value, $user->email()));
 
         // Send welcome email
-        $appName = (string) config('app.name', 'GuildForge');
-        $userModel->notify(new WelcomeNotification($appName));
+        $userModel->notify(new WelcomeNotification($this->siteBranding->siteName()));
 
         return $this->dtoFactory->createUserDTO($userModel);
     }

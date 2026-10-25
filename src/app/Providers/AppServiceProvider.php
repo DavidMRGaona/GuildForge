@@ -208,6 +208,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\ServiceProvider;
 use League\Flysystem\Filesystem;
 use Psr\Log\LoggerInterface;
@@ -472,6 +473,15 @@ class AppServiceProvider extends ServiceProvider
         // Email theme: site name, logo, colors and fonts for every mail view
         View::composer(['mail::*', 'emails.*'], static function (ViewContract $view): void {
             $view->with('mailBranding', app(MailBrandingServiceInterface::class)->branding());
+        });
+
+        // Notifications without a salutation of their own sign with the site name, not APP_NAME
+        View::composer('notifications::email', static function (ViewContract $view): void {
+            if (empty($view->getData()['salutation'] ?? null)) {
+                $view->with('salutation', new HtmlString(
+                    e(__('Regards,')).'<br>'.e(app(MailBrandingServiceInterface::class)->branding()->siteName),
+                ));
+            }
         });
 
         // Calendars start on Monday (European convention)

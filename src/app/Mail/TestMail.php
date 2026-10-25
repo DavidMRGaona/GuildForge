@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
+use App\Application\Mail\Services\MailBrandingServiceInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -23,7 +24,9 @@ final class TestMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: __('mail.test.subject', ['app' => config('app.name')]),
+            // The mail theme's name: it falls back to APP_NAME when the settings fail,
+            // and this mail exists to diagnose the mail setup
+            subject: __('mail.test.subject', ['app' => app(MailBrandingServiceInterface::class)->branding()->siteName]),
         );
     }
 

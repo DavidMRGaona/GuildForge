@@ -19,12 +19,13 @@ final readonly class AboutPageService implements AboutPageServiceInterface
 
     public function __construct(
         private SettingsServiceInterface $settings,
+        private SiteNameResolver $siteName,
     ) {}
 
     public function getAboutPageData(): AboutPageResponseDTO
     {
         return new AboutPageResponseDTO(
-            guildName: $this->settings->get('guild_name', config('app.name')),
+            guildName: $this->siteName->resolve(),
             aboutHistory: $this->sanitizeHtml((string) $this->settings->get('about_history', '')),
             contactEmail: $this->settings->get('contact_email', ''),
             contactPhone: $this->settings->get('contact_phone', ''),
