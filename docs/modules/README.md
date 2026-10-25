@@ -1436,6 +1436,33 @@ public function toMail(object $notifiable): MailMessage
 
 ---
 
+## Cookies set by a module
+
+A module that sets its own cookie declares it in the core's registry (core ^3.18), so a cookie consent module can list it in the banner and the cookie policy. Declaring needs nothing else installed: without a cookie consent module nobody reads the list. Never import another module's classes for this.
+
+```php
+use App\Application\Cookies\DTOs\DeclaredCookieDTO;
+use App\Application\Cookies\Services\CookieDeclarationRegistryInterface;
+
+// In boot(): runs when the registry is first resolved (or at once if it already was),
+// so the module's translations are loaded by then
+$this->callAfterResolving(CookieDeclarationRegistryInterface::class, function (CookieDeclarationRegistryInterface $registry): void {
+    $registry->declare(new DeclaredCookieDTO(
+        name: 'my_module_cookie',
+        categorySlug: 'preferences',               // a consent category: necessary, preferences, analytics…
+        provider: (string) config('app.name'),
+        purpose: (string) __('my-module::messages.cookies.purpose'),
+        duration: (string) __('my-module::messages.cookies.duration'),
+        // type: CookieType::ThirdParty (App\Domain\Cookies\Enums) for a cookie a third party sets
+    ));
+});
+```
+
+- Declaring the same name again replaces the earlier entry.
+- The cookie consent module creates each declared cookie once, in its category; after that the administrators manage it from the panel.
+
+---
+
 ## Extending core functionality
 
 Modules can extend core entities, Filament resources, and add new relationships without modifying core code.
