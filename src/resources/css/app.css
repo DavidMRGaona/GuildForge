@@ -19,6 +19,12 @@
 @import 'tailwindcss' source(none);
 @plugin '@tailwindcss/typography';
 
+/* FullCalendar's own stylesheets, unlayered as the package ships them. They load here rather than from
+   resources/js/utils/calendarTheme.ts: that file is a public API entry, and a stylesheet imported by an entry
+   reaches no module page (module bundles take the entry from the import map, not its CSS). */
+@import '@fullcalendar/vue3/skeleton.css';
+@import '@fullcalendar/vue3/themes/classic/theme.css';
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -623,7 +629,7 @@ button[data-headlessui-state]:hover {
 /* ==========================================================================
    FullCalendar
    FullCalendar 7 renders hashed class names and ships no colours of its own:
-   resources/js/utils/calendarTheme.ts loads the classic theme and adds the
+   resources/js/utils/calendarTheme.ts registers the classic theme and adds the
    stable `calendar-*` classes styled here. Every colour is a site token, so
    the colours chosen in the site settings and dark mode reach the calendar.
    ========================================================================== */

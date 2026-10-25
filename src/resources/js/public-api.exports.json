@@ -1,0 +1,53 @@
+{
+    "@/components/form": [
+        "FormCheckbox",
+        "FormCheckboxGroup",
+        "FormCheckboxWithTooltip",
+        "FormCombobox",
+        "FormNumberInput",
+        "FormRadioGroup",
+        "FormSelect",
+        "FormTagsInput",
+        "FormToggle",
+        "FormTooltip"
+    ],
+    "@/components/layout/ModuleSlot.vue": ["default"],
+    "@/components/ui/BaseButton.vue": ["default"],
+    "@/components/ui/BaseCard.vue": ["default"],
+    "@/components/ui/ConfirmDialog.vue": ["default"],
+    "@/components/ui/EmptyState.vue": ["default"],
+    "@/components/ui/LoadingSpinner.vue": ["default"],
+    "@/composables/useAuth": ["useAuth"],
+    "@/composables/useCalendarLocale": ["useCalendarLocale"],
+    "@/composables/useFlashMessages": ["useFlashMessages"],
+    "@/composables/useGridLayout": ["useGridLayout"],
+    "@/composables/useNotifications": ["useNotifications"],
+    "@/composables/usePagination": ["usePagination"],
+    "@/composables/useRoutes": ["routes", "useRoutes"],
+    "@/composables/useVerificationGate": [
+        "VERIFICATION_REQUIRED_ERROR",
+        "VERIFICATION_REQUIRED_HEADER",
+        "useVerificationGate"
+    ],
+    "@/contracts/cookieConsent": [
+        "hasCookieConsent",
+        "notifyCookieConsentChanged",
+        "registerCookieConsentProvider"
+    ],
+    "@/utils/calendarTheme": ["calendarClassOptions", "calendarThemePlugin", "eventTimeRange"],
+    "@/utils/cloudinary": [
+        "buildAvatarUrl",
+        "buildCardImageUrl",
+        "buildFullScreenHeroImageUrl",
+        "buildGalleryImageUrl",
+        "buildHeroImageUrl",
+        "buildImageUrl",
+        "buildLightboxImageUrl",
+        "buildMosaicLargeUrl",
+        "buildMosaicSmallUrl",
+        "isAnimatedAvatar",
+        "setCloudinaryConfig"
+    ],
+    "@/utils/csrf": ["csrfHeaders", "isCsrfFailure"],
+    "@/utils/datetime": ["VENUE_TIMEZONE", "addVenueDays", "venueDayKey"]
+}

@@ -27,10 +27,12 @@ COPY src/ .
 RUN find . -mindepth 1 -maxdepth 1 \
         ! -name app ! -name resources ! -name modules ! -name scripts \
         ! -name package.json ! -name package-lock.json \
-        ! -name vite.config.ts ! -name tsconfig.json ! -name tsconfig.node.json \
+        ! -name vite.config.ts ! -name vite.module.config.ts \
+        ! -name tsconfig.json ! -name tsconfig.node.json \
         -exec rm -rf {} + \
     && find app -mindepth 1 -maxdepth 1 ! -name Filament -exec rm -rf {} + \
-    && find scripts -mindepth 1 -maxdepth 1 ! -name verify-build.mjs -exec rm -rf {} +
+    && find scripts -mindepth 1 -maxdepth 1 ! -name verify-build.mjs ! -name public-api.mjs \
+        ! -name build-module.sh ! -name module-build-mode.sh -exec rm -rf {} +
 
 # Stage 1: Build frontend assets
 FROM node:24-alpine AS assets
@@ -45,17 +47,26 @@ COPY --from=vendor /filament-css/ vendor/filament/
 # their pages, slot components and translations must load from each module's build here too
 RUN npx vite build && node scripts/verify-build.mjs
 
-# Build module assets (modules with package.json and vite.config.ts). Every module repo
-# tracks its lockfile, so npm ci; a module that fails to install or build fails the
-# image. Coolify builds carry no modules (src/modules is not in the host repo), so this
-# loop only does work in prod-local builds.
+# Build module assets. A module on the core's toolchain (defineModuleConfig) builds with the
+# core's Vite, after npm ci of its own runtime libraries when it has a package.json; a module
+# with its own toolchain (Legacy module toolchain, removed once every module is on
+# defineModuleConfig) runs npm ci + build in its directory. Every module repo tracks its
+# lockfile; a module that fails to install or build fails the image. Deployment builds carry no
+# modules (src/modules is not in the host repo), so this loop only does work in prod-local builds.
 RUN --mount=type=cache,target=/root/.npm \
     for dir in modules/*/; do \
-        if [ -f "$dir/package.json" ] && [ -f "$dir/vite.config.ts" ]; then \
-            echo "Building module: $dir"; \
-            (cd "/build/$dir" && npm ci && npm run build) \
-                || { echo "Module build failed: $dir" >&2; exit 1; }; \
-        fi; \
+        name=$(basename "$dir"); \
+        case "$(sh scripts/module-build-mode.sh "$dir")" in \
+            core) echo "Building module: $name"; \
+                { [ ! -f "$dir/package.json" ] || (cd "/build/$dir" && npm ci); } \
+                    && sh scripts/build-module.sh "$name" \
+                    || { echo "Module build failed: $name" >&2; exit 1; } ;; \
+            legacy) echo "Building module: $name"; \
+                (cd "/build/$dir" && npm ci && npm run build) \
+                    || { echo "Module build failed: $name" >&2; exit 1; } ;; \
+            none) ;; \
+            *) echo "Module build failed: $name (vite.config.ts on neither toolchain)" >&2; exit 1 ;; \
+        esac; \
     done
 
 # Consolidate module build artifacts for easy COPY to stage 2

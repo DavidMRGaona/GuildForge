@@ -82,7 +82,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             'module/routes-api.php.stub' => 'routes/api.php',
             'module/lang-messages.php.stub' => 'lang/es/messages.php',
             'module/vite.config.ts.stub' => 'vite.config.ts',
-            'module/package.json.stub' => 'package.json',
+            'module/vitest.config.ts.stub' => 'vitest.config.ts',
             'module/tsconfig.json.stub' => 'tsconfig.json',
             'module/module.css.stub' => 'resources/css/module.css',
             'module/phpunit.xml.stub' => 'phpunit.xml',
@@ -816,7 +816,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
      */
     private function buildAssetsStep(string $module): string
     {
-        return "Build its Vue assets in the Node container: docker exec guildforge_node sh -c 'cd modules/{$module} && npm install && npm run build'; releases build them in the release workflow";
+        return "Build its Vue assets in the Node container: docker exec guildforge_node npm run build:module -- {$module}; releases build them in the release workflow";
     }
 
     /**

@@ -143,6 +143,9 @@ jobs:
       - name: TypeScript check
         run: npm run type-check
 
+      - name: Public API report
+        run: npm run check:public-api
+
       - name: ESLint
         run: npm run lint
 

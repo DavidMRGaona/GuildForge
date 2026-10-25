@@ -47,7 +47,7 @@ The command creates `modules/my-module/` with:
 - `module.json`, the service provider and `config/module.php`
 - `routes/web.php` and `routes/api.php`
 - `lang/es/messages.php` and `resources/js/locales/{es,en}.ts`
-- `package.json`, `vite.config.ts`, `tsconfig.json` and `resources/css/module.css`, the same build setup the shipped modules use
+- `vite.config.ts` and `vitest.config.ts` (three lines each, on the core's `defineModuleConfig` and `defineModuleTestConfig`), `tsconfig.json` and `resources/css/module.css`, the same build setup the shipped modules use; no `package.json`, since modules build and test with the core's toolchain (see [Build configuration](#build-configuration))
 - `phpunit.xml`, `.gitignore`, `.github/workflows/release.yml` and `.github/workflows/tests.yml` (PHPUnit and the quality checks on every pull request, see [module CI/CD](../module-ci-cd.md#pull-request-checks))
 - the directory structure for all layers
 
@@ -90,9 +90,10 @@ Entries marked `*` are created by `module:make`; the rest come from the generato
 ```
 modules/my-module/
 ├── module.json              * Module manifest
-├── package.json             * npm dependencies for the Vue build
-├── package-lock.json          Created by npm install; commit it
-├── vite.config.ts           * Vite build configuration
+├── vite.config.ts           * Build configuration (the core's defineModuleConfig)
+├── vitest.config.ts         * Vitest configuration (the core's defineModuleTestConfig) for tests/js
+├── package.json               Only for runtime libraries the core does not bring (dependencies only)
+├── package-lock.json          With package.json, from the Node container's npm; commit it
 ├── tsconfig.json            * TypeScript configuration
 ├── phpunit.xml              * Test configuration
 ├── .gitignore               * Ignores node_modules, public/build, PHPUnit caches
@@ -753,11 +754,31 @@ public function registerPagePrefixes(): array
 
 **Layout.** From core 3.16, with `usesCoreLayout: true` the core renders its `DefaultLayout` around the prefix's pages and keeps it across visits, also between core and module pages: header, footer and the module slots keep their state. Such pages declare no layout and never import `DefaultLayout` (it would show twice); `module:make` and `module:make-vue-page` generate them that way. A module that sets the flag must require `"core": "^3.16"` in `module.json`: older cores do not know the argument. Without the flag (the default, for modules released before 3.16) the core renders no layout around the pages, and each page wraps its own `<DefaultLayout>`; that copy is bundled into the module build, so it shows the header of the core version the module was built against and remounts on every visit.
 
-### Shared packages
+### Public frontend API
 
-The site shares `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` with modules through an import map: the module build keeps them external, so a module uses the site's instances. Any other package must be bundled. Imports from `@/` (core components, composables, layouts, types) resolve to the core's `resources/js` and are bundled into the module's build, so each module carries its own copy: module-level state in such a file is not shared with the site or with other modules.
+A module's frontend may use, at runtime, only what the core publishes for modules: the list in `src/resources/js/public-api.json` (core ≥ 3.21). The page serves every specifier of the list through an import map, so all modules and the site share one instance of each, always the installed core's:
 
-The core's contracts (`@/contracts/*`, core ≥ 3.19) are the exception: they are import map entries too, and the module build keeps every `@/contracts/` import external, so the site and all modules share one instance. Shared state between modules goes there (see [Cookie consent in the browser](#cookie-consent-in-the-browser)).
+- **Shared packages**: `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3`, `@unhead/vue` and FullCalendar (`@fullcalendar/vue3` and its `daygrid`, `timegrid`, `interaction` and `themes/classic` plugins). FullCalendar's stylesheets come with the site's CSS.
+- **Public entries** of `resources/js`: the form components (`@/components/form`), `ModuleSlot`, the base UI components (`BaseButton`, `BaseCard`, `ConfirmDialog`, `EmptyState`, `LoadingSpinner`), the composables `useAuth`, `useCalendarLocale`, `useFlashMessages`, `useGridLayout`, `useNotifications`, `usePagination`, `useRoutes` and `useVerificationGate`, the contract `@/contracts/cookieConsent` and the utilities `calendarTheme`, `cloudinary`, `csrf` and `datetime`. Their exact exports and types are in `public-api.exports.json` and `public-api.api.md`, next to the list.
+
+Everything else under `@/` is private to the core: the module build stops on a runtime import of it, with `"@/…" is not part of the core's public frontend API`. Type imports (`import type { User } from '@/types'`) are fine anywhere: the compiler erases them.
+
+**What a module needs and the core does not publish:**
+
+- A private part of the core's frontend: ask for it in a pull request to the core, which adds it to `public-api.json` in a minor release; the module then requires that core in `requires.core`. A small, stateless piece can also be the module's own code.
+- Something several modules should share: it goes to the core as public API, never into another module.
+- A third-party library the core does not bring: declare it in the module's `package.json`, in `dependencies` only, with its `package-lock.json` (generated with the Node container's npm). The build bundles it from the module's `node_modules`; the production image and the release run `npm ci` in the module first. A library moves to the core's import map when it keeps state or must be a single instance on the page (Vue plugins, singletons, libraries that register globally, like FullCalendar), or when several modules load it whole on the same pages.
+- `@lucide/vue` is a library the core provides for module builds: undeclared, it is bundled from the core's `node_modules`, and each module carries only the icons it uses.
+
+The module's quality checks reject a `package.json` with `devDependencies`, `peerDependencies` or `optionalDependencies`, with build or test tooling (`vite`, `@vitejs/plugin-vue`, `@tailwindcss/vite`, `tailwindcss`, `vitest`, `@vue/test-utils`, `happy-dom`, `typescript`, `vue-tsc`, `vue`), a shared package or a package of its scope (`@fullcalendar/core`), a package of a scope bundled into the core's shared chunks (`@vue/*`, `@intlify/*`), `@lucide/vue`, or `dependencies` without `package-lock.json`.
+
+**Who answers for what.** The core answers for its contract: its CI fails when a public entry loses an export (`npm run verify:build` against `public-api.exports.json`) or when the types of the API change without the report being regenerated (`npm run check:public-api` against `public-api.api.md`, which also carries the hand-written declarations of `resources/js/types` that module tsconfigs include, such as the Inertia `PageProps`; regenerated with `npm run public-api:report`), so every change to the API shows up in the core's pull request. A module answers for working with the core: its tests run on every pull request and weekly against the core's `main` (`tests.yml`, `schedule`), so a core change that breaks it shows up within a week even without new commits. The core never checks out modules: anyone can write one.
+
+**Versioning.** The public API follows the core's semver: a new entry or export is a minor release; removing or changing one is breaking, and is first deprecated for at least one minor release (the old one keeps working and the guide says what replaces it).
+
+#### Shared packages
+
+The packages above stay out of every module bundle and come from the import map. A module never declares them.
 
 Link core pages through `useRoutes()` (`@/composables/useRoutes`), never with hand-written URLs; for example a consent checkbox links `useRoutes().legal.privacy` (core ≥ 3.16).
 
@@ -902,35 +923,43 @@ Modules with Vue pages or components ship them compiled. Assets are built in CI 
 
 ### Build configuration
 
-`module:make` writes the same `package.json`, `vite.config.ts` and `tsconfig.json` the shipped modules use. Keep `vite.config.ts` as generated; what the core and the release workflow rely on:
+`module:make` writes a `vite.config.ts` of three lines; the configuration itself is the core's (`src/vite.module.config.ts`):
 
-- **Entries**: every `.vue` file under `resources/js/components` and `resources/js/pages`, keyed by its path (`resources/js/components/GameCard.vue`), plus `resources/css/module.css` as the `module-styles` entry.
-- **Manifest**: `manifest: 'manifest.json'`, at the root of the output directory (not `.vite/manifest.json`): the site looks for `/build/modules/<name>/manifest.json`.
-- **Output**: inside the host (`modules/<name>` next to the host's `public/`) the build writes to the host's `public/build/modules/<name>/` with `base: '/build/modules/<name>/'`. With `MODULE_STANDALONE_OUTPUT=true`, or outside a host, it writes to the module's own `public/build/` with `base: '/'`; the release workflow builds this way and fails without `public/build/manifest.json`.
-- **Externals**: `vue`, `vue-i18n`, `pinia`, `@inertiajs/vue3`, `@unhead/vue` and every `@/contracts/` import (the import map, see [Shared packages](#shared-packages)). Other `@/` imports are bundled from the host's `resources/js`, and only left external in a standalone build. A module whose `vite.config.ts` predates core 3.19 must add the `@/contracts/` rule before importing a contract: bundled, the contract would be a private copy that never hears from its provider.
-- **Plugins**: `@vitejs/plugin-vue` and `@tailwindcss/vite`.
+```typescript
+import { defineModuleConfig } from '../../vite.module.config';
 
-`tsconfig.json` type-checks the module against the core: `@/*` points to the host's `resources/js` (as the Vite alias does), the five import map packages resolve to the host's `node_modules` (their types are the host's copies, so `$t` and the Inertia page props are typed) and the host's `resources/js/types` declarations are included. Run it with `docker exec guildforge_node sh -c 'cd modules/my-module && ../../node_modules/.bin/vue-tsc --noEmit -p tsconfig.json'`; the quality checks run it too.
+export default defineModuleConfig({ name: 'my-module', root: __dirname });
+```
 
-`package.json` declares `@tailwindcss/vite`, `@vitejs/plugin-vue`, `typescript`, `vite` and `vue` as dev dependencies, with the `build` (`vite build`) and `build:watch` scripts. Run `npm install` in the node container and commit `package-lock.json`: building the production image with modules runs `npm ci` in each of them.
+The path is the same in development (`src/modules/<name>`), in the production image and in the release workflow (`modules/<name>` inside the core). `defineModuleConfig` builds with the core's Vite and plugins, and holds what the core and the release workflow rely on:
+
+- **Entries**: every `.vue` file under `resources/js/components` and `resources/js/pages`, keyed by its path (`resources/js/components/GameCard.vue`), plus `resources/css/module.css` as the `module-styles` entry when it exists.
+- **Manifest**: `manifest.json`, at the root of the output directory (not `.vite/manifest.json`): the site looks for `/build/modules/<name>/manifest.json`.
+- **Output**: the core's `public/build/modules/<name>/` with `base: '/build/modules/<name>/'`; with `MODULE_STANDALONE_OUTPUT=true`, the module's own `public/build/` with `base: '/'`, as the release workflow builds (it fails without `public/build/manifest.json`).
+- **Externals**: every specifier of the [public frontend API](#public-frontend-api), served by the import map.
+- **Guard**: the build stops on a runtime import of a private part of the core (through `@/` or a relative path into the core's `resources/js`), on a subpath of a shared package the core does not share (`@fullcalendar/vue3/locales/es`) and on a package the module does not declare in `dependencies`.
+
+`tsconfig.json` type-checks the module against the core: `@/*` points to the host's `resources/js`, the import map packages resolve to the host's `node_modules` (their types are the host's copies, so `$t` and the Inertia page props are typed) and the host's `resources/js/types` declarations are included. Run it with `docker exec guildforge_node sh -c 'cd modules/my-module && ../../node_modules/.bin/vue-tsc --noEmit -p tsconfig.json'`; the quality checks run it too.
+
+Modules released before core 3.21 keep their own `package.json` with Vite and their own `vite.config.ts` (the legacy module toolchain): the core still builds them with npm in their directory, but that path is deprecated and is removed after at least one minor release. Move a module to `defineModuleConfig` by replacing its `vite.config.ts` (and `vitest.config.ts`, see [Running module tests](#running-module-tests)) with the three-line versions, deleting `package.json` and `package-lock.json` (or keeping only `dependencies`) and requiring the core that ships `defineModuleConfig` in `module.json`.
 
 ### Building in development
 
 ```bash
-docker exec guildforge_node sh -c 'cd modules/my-module && npm install && npm run build'
+docker exec guildforge_node npm run build:module -- my-module
 ```
 
-The assets land in `public/build/modules/my-module/`. With the Vite dev server running (`make up` starts it), the site loads module pages and slot components from their sources with hot reload, so a build is only needed to try the built output.
+The assets land in `public/build/modules/my-module/`. With the Vite dev server running (`make up` starts it), the site loads module pages and slot components from their sources with hot reload, so a build is only needed to try the built output. A module with runtime libraries of its own needs `npm ci` in its directory first.
 
 To reproduce the release output (the module's own `public/build/`):
 
 ```bash
-docker exec -e MODULE_STANDALONE_OUTPUT=true guildforge_node sh -c 'cd modules/my-module && npm run build'
+docker exec -e MODULE_STANDALONE_OUTPUT=true guildforge_node npm run build:module -- my-module
 ```
 
 `make module-zip` builds that output and packages the module as the release workflow does (see [Releasing a module](#releasing-a-module)).
 
-`php artisan module:build` and the listener that builds a module when it is enabled run npm inside the PHP process. Neither PHP image has npm, so in both they only log a failure.
+`php artisan module:build` and the listener that builds a module when it is enabled run the build (`scripts/build-module.sh`) inside the PHP process. Neither PHP image has Node, so in both they only log a failure.
 
 ### How assets reach a site
 
@@ -948,7 +977,7 @@ public/build/modules/my-module/
 ### Loading flow
 
 1. A page or slot names a module component (`components/GameCard.vue`) or page (`MyModule/GameList`).
-2. On a built site, the browser fetches `/build/modules/<module>/manifest.json`, finds `resources/js/<path>` in it and imports the built file. Under the dev server, slot components and pages come from the sources instead; pages also come from the core bundle when the core was built with the module present.
+2. On a built site, the browser fetches `/build/modules/<module>/manifest.json`, finds `resources/js/<path>` in it and imports the built file; its imports of the public frontend API resolve through the import map to the site's own chunks. Under the dev server, slot components and pages come from the sources instead.
 3. The module's CSS (the `module-styles` entry and any CSS attached to the loaded chunk) is added to the document once.
 4. The component renders with the props of its registration.
 
@@ -1131,6 +1160,20 @@ docker exec guildforge_app vendor/bin/phpunit -c modules/my-module/phpunit.xml
 ```
 
 `module:make` writes `phpunit.xml` as the shipped modules have it: it boots `../../vendor/autoload.php`, runs the `tests/Unit`, `tests/Integration` and `tests/Feature` suites on SQLite in memory, and its `APP_CONFIG_CACHE`/`APP_ROUTES_CACHE`/`APP_EVENTS_CACHE` block keeps tests away from the bootstrap caches of the container. Keep that block. The release workflow runs the same file (see [Releasing a module](#releasing-a-module)).
+
+Vue tests (`tests/js/**/*.spec.ts`) run with the core's Vitest, Vue Test Utils and happy-dom. The `vitest.config.ts` that `module:make` writes is three lines on the core's configuration (`src/vitest.module.config.ts`: the `@` alias to the core's `resources/js`, one Vue copy, `tests/js/setup.ts` when it exists):
+
+```typescript
+import { defineModuleTestConfig } from '../../vitest.module.config';
+
+export default defineModuleTestConfig({ root: __dirname });
+```
+
+```bash
+docker exec guildforge_node sh -c 'cd modules/my-module && ../../node_modules/.bin/vitest run'
+```
+
+The quality checks run it too once `tests/js` has a spec (`make check MODULE=my-module`), after building the module into a scratch directory, so a private import of the core fails in the module's pull request.
 
 ### Using ModuleTestCase
 
@@ -1465,7 +1508,7 @@ $this->callAfterResolving(CookieDeclarationRegistryInterface::class, function (C
 
 ### Cookie consent in the browser
 
-Before reading or writing a cookie that needs consent, a module's frontend asks the core's contract (core ^3.19), never a global or an event of another module:
+Before reading or writing a cookie that needs consent, a module's frontend asks the core's contract, a public entry of the [public frontend API](#public-frontend-api) (core ^3.19), never a global or an event of another module:
 
 ```typescript
 import { computed } from 'vue';
@@ -1482,7 +1525,7 @@ if (hasCookieConsent('preferences')) {
 - Without a cookie consent module on the page, or if it fails, the answer is no consent: the cookie is never written.
 - `hasCookieConsent()` reads reactive state: a `computed`, a `watch` or a template that calls it runs again when consent changes, so no listener is needed (`watch(() => hasCookieConsent('preferences'), …)` for side effects).
 - The cookie consent module is the provider: it calls `registerCookieConsentProvider({ hasConsent })` once its configuration is known and `notifyCookieConsentChanged()` after the visitor saves a choice. A later registration replaces the earlier one.
-- In Vitest the contract resolves to the core's source through the `@` alias: register a provider in the test instead of faking globals.
+- In Vitest the contract resolves to the core's source through the `@` alias of `defineModuleTestConfig`: register a provider in the test instead of faking globals.
 
 ---
 
@@ -1974,7 +2017,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `module:seed {module}` | Run the seeders that have not run yet |
 | `module:publish-assets [module] [--all]` | Copy `resources/assets` to `public/modules/<name>` |
 | `module:publish-build-assets` | Copy every module's `public/build` to `public/build/modules/<name>` |
-| `module:build {module} [--all] [--force]` | Build Vue assets with npm in the PHP process (needs npm there) |
+| `module:build {module} [--all] [--force]` | Build Vue assets in the PHP process (needs Node there) |
 | `module:check-updates [--force]` | Check GitHub for module updates (`--force` ignores the cache) |
 | `module:update [name] [--all] [--dry-run] [--force]` | Update a module or all modules |
 | `module:set-source {name} {owner/repo}` | Set the repository a module is updated from |

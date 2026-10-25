@@ -10,7 +10,9 @@ use App\Infrastructure\Modules\Listeners\BuildModuleAssetsOnEnabled;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
 
 final class BuildModuleAssetsOnEnabledTest extends TestCase
@@ -131,6 +133,22 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
         $event = new ModuleEnabled('fake-id', 'test-module');
 
         $listener->handle($event);
+    }
+
+    public function test_handle_builds_a_module_on_the_core_toolchain_without_package_json(): void
+    {
+        Process::fake();
+        config(['module-build.required_vite_env' => []]);
+        $this->createTestModuleWithComponents('test-module');
+        file_put_contents(
+            $this->testModulesPath.'/test-module/vite.config.ts',
+            "import { defineModuleConfig } from '../../vite.module.config';\n\nexport default defineModuleConfig({ name: 'test-module', root: __dirname });\n",
+        );
+        $this->createModuleRecord('test-module');
+
+        $this->app->make(BuildModuleAssetsOnEnabled::class)->handle(new ModuleEnabled('fake-id', 'test-module'));
+
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']);
     }
 
     public function test_handle_catches_exceptions_and_logs_error(): void

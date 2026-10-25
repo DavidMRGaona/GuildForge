@@ -1,8 +1,6 @@
 import type { CalendarOptions } from '@fullcalendar/vue3';
 import { joinClassNames } from '@fullcalendar/vue3';
 import classicThemePlugin from '@fullcalendar/vue3/themes/classic';
-import '@fullcalendar/vue3/skeleton.css';
-import '@fullcalendar/vue3/themes/classic/theme.css';
 import { VENUE_TIMEZONE, venueDayKey } from '@/utils/datetime';
 
 /**
@@ -10,7 +8,9 @@ import { VENUE_TIMEZONE, venueDayKey } from '@/utils/datetime';
  * module ones (venue-bookings imports this file through `@/`).
  *
  * FullCalendar 7 ships no CSS of its own and no stable `fc-*` classes: the
- * theme's classes are hashed. The classic theme supplies the layout, and its
+ * theme's classes are hashed. The classic theme supplies the layout (its
+ * stylesheets load from resources/css/app.css, since a public API entry's CSS
+ * never reaches module pages), and its
  * colours come from `--fc-classic-*` variables that resources/css/app.css maps
  * onto the site tokens under `.event-calendar`, so the colours chosen in the
  * site settings (and dark mode) reach the calendar. Its palette stylesheet is

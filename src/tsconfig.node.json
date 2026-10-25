@@ -13,7 +13,14 @@
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true,
         "composite": true,
+        "allowJs": true,
         "outDir": "./dist-node"
     },
-    "include": ["vite.config.ts", "vitest.config.ts"]
+    "include": [
+        "vite.config.ts",
+        "vitest.config.ts",
+        "vite.module.config.ts",
+        "vitest.module.config.ts",
+        "scripts/public-api.mjs"
+    ]
 }

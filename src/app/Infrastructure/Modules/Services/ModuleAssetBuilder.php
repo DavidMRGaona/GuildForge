@@ -7,8 +7,7 @@ namespace App\Infrastructure\Modules\Services;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 
 final readonly class ModuleAssetBuilder
 {
@@ -17,32 +16,39 @@ final readonly class ModuleAssetBuilder
     ) {}
 
     /**
-     * Check if a module has Vue components that need building.
+     * Check if a module has Vue components or pages that need building.
      */
     public function hasComponents(Module $module): bool
     {
         $modulePath = $this->resolveModulePath($module);
-        $componentsPath = $modulePath.'/resources/js/components';
 
-        if (! is_dir($componentsPath)) {
-            return false;
+        foreach (['components', 'pages'] as $directory) {
+            $path = $modulePath.'/resources/js/'.$directory;
+
+            if (is_dir($path) && ((glob($path.'/*.vue') ?: []) !== [] || (glob($path.'/**/*.vue') ?: []) !== [])) {
+                return true;
+            }
         }
 
-        $vueFiles = glob($componentsPath.'/**/*.vue') ?: [];
-        $rootVueFiles = glob($componentsPath.'/*.vue') ?: [];
-
-        return count($vueFiles) > 0 || count($rootVueFiles) > 0;
+        return false;
     }
 
     /**
-     * Check if a module has a package.json for building assets.
+     * Check if a module has a vite.config.ts for building assets.
+     *
+     * A module on the core's toolchain (its vite.config.ts calls defineModuleConfig) needs
+     * nothing else; one with its own toolchain also needs its package.json (Legacy module
+     * toolchain: removed once every module is on defineModuleConfig).
      */
     public function hasBuildConfig(Module $module): bool
     {
         $modulePath = $this->resolveModulePath($module);
 
-        return file_exists($modulePath.'/package.json')
-            && file_exists($modulePath.'/vite.config.ts');
+        if (! file_exists($modulePath.'/vite.config.ts')) {
+            return false;
+        }
+
+        return $this->usesCoreToolchain($modulePath) || file_exists($modulePath.'/package.json');
     }
 
     /**
@@ -99,24 +105,33 @@ final readonly class ModuleAssetBuilder
 
         Log::info("Building assets for module: {$module->name()->value}");
 
-        // Install dependencies if node_modules doesn't exist
-        if (! is_dir($modulePath.'/node_modules')) {
-            if (! $this->runNpmInstall($modulePath, $module->name()->value)) {
+        $name = $module->name()->value;
+
+        if ($this->usesCoreToolchain($modulePath)) {
+            // Only the module's own runtime libraries: the build tools are the core's
+            if (file_exists($modulePath.'/package.json') && ! is_dir($modulePath.'/node_modules')
+                && ! $this->run(['npm', 'ci', '--no-audit', '--no-fund'], $modulePath, 'npm ci', $name)) {
                 return false;
             }
+
+            return $this->run(['sh', 'scripts/build-module.sh', $name], base_path(), 'build', $name, $this->viteEnvironment());
         }
 
-        // Run the build
-        return $this->runNpmBuild($modulePath, $module->name()->value);
+        // Legacy module toolchain: a module whose package.json brings its own Vite. Removed once
+        // every module is on defineModuleConfig
+        if (! is_dir($modulePath.'/node_modules') && ! $this->run(['npm', 'install'], $modulePath, 'npm install', $name)) {
+            return false;
+        }
+
+        return $this->run(['npm', 'run', 'build'], $modulePath, 'npm build', $name, $this->viteEnvironment());
     }
 
     /**
      * Vite environment variables forwarded to the module build process.
      *
      * Vite resolves `import.meta.env.VITE_*` at build time from the `.env` file
-     * in its working directory. Module builds run inside the module directory,
-     * which has no `.env`, so the values are passed through the environment of
-     * the build process instead.
+     * in the build's root, the module directory, which has no `.env`, so the
+     * values are passed through the environment of the build process instead.
      *
      * @return array<string, string>
      */
@@ -148,53 +163,39 @@ final readonly class ModuleAssetBuilder
     }
 
     /**
-     * Run npm install in the module directory.
+     * Whether the module builds with the core's toolchain (vite.module.config.ts).
      */
-    private function runNpmInstall(string $modulePath, string $moduleName): bool
+    private function usesCoreToolchain(string $modulePath): bool
     {
-        Log::info("Running npm install for module: {$moduleName}");
+        $config = $modulePath.'/vite.config.ts';
 
-        $process = new Process(['npm', 'install'], $modulePath);
-        $process->setTimeout(300); // 5 minutes
-
-        try {
-            $process->mustRun();
-            Log::info("npm install completed for module: {$moduleName}");
-
-            return true;
-        } catch (ProcessFailedException $e) {
-            Log::error("npm install failed for module {$moduleName}: {$e->getMessage()}", [
-                'output' => $process->getOutput(),
-                'errorOutput' => $process->getErrorOutput(),
-            ]);
-
-            return false;
-        }
+        return file_exists($config) && str_contains((string) file_get_contents($config), 'defineModuleConfig');
     }
 
     /**
-     * Run npm build in the module directory.
+     * Run a build step, logging its outcome.
+     *
+     * @param  list<string>  $command
+     * @param  array<string, string>  $environment
      */
-    private function runNpmBuild(string $modulePath, string $moduleName): bool
+    private function run(array $command, string $path, string $step, string $moduleName, array $environment = []): bool
     {
-        Log::info("Running npm build for module: {$moduleName}");
+        Log::info("Running {$step} for module: {$moduleName}");
 
-        $process = new Process(['npm', 'run', 'build'], $modulePath, $this->viteEnvironment());
-        $process->setTimeout(300); // 5 minutes
+        $result = Process::path($path)->env($environment)->timeout(300)->run($command);
 
-        try {
-            $process->mustRun();
-            Log::info("npm build completed for module: {$moduleName}");
-
-            return true;
-        } catch (ProcessFailedException $e) {
-            Log::error("npm build failed for module {$moduleName}: {$e->getMessage()}", [
-                'output' => $process->getOutput(),
-                'errorOutput' => $process->getErrorOutput(),
+        if ($result->failed()) {
+            Log::error("{$step} failed for module {$moduleName}", [
+                'output' => $result->output(),
+                'errorOutput' => $result->errorOutput(),
             ]);
 
             return false;
         }
+
+        Log::info("{$step} completed for module: {$moduleName}");
+
+        return true;
     }
 
     /**

@@ -87,8 +87,29 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
         echo "::notice::$MODULE has no resources/js, skipping ESLint and Prettier"
     fi
 
-    # The module's own Vitest suite, with its own dependencies (vitest, test utils)
-    if [ -f "$DIR/vitest.config.ts" ] && [ -f "$DIR/package-lock.json" ]; then
+    MODE="$(sh scripts/module-build-mode.sh "$DIR")"
+    if [ "$MODE" = invalid ]; then
+        echo "::error::$DIR/vite.config.ts builds with neither the core's toolchain (defineModuleConfig, stubs/modules/module/vite.config.ts.stub) nor its own package.json"
+        FAILED="$FAILED Build"
+    elif [ "$MODE" = core ]; then
+        # Only runtime libraries, never tooling or what the core shares or provides
+        run Package node scripts/check-module-package.mjs "$DIR"
+        if [ -f "$DIR/package.json" ]; then
+            run "npm ci" sh -c "cd '$DIR' && npm ci --no-audit --no-fund"
+        fi
+        # The release build, into a scratch directory: a private import of the core or an
+        # undeclared package fails here (vite.module.config.ts), not when publishing
+        BUILD_OUT="$(mktemp -d)"
+        run Build sh scripts/build-module.sh "$MODULE" --outDir "$BUILD_OUT" --logLevel warn
+        rm -rf "$BUILD_OUT"
+        # The module's Vitest suite, with the core's Vitest (vitest.module.config.ts); a new
+        # module has the configuration before its first test
+        if [ -f "$DIR/vitest.config.ts" ] && [ -n "$(find "$DIR/tests/js" -name '*.spec.ts' 2>/dev/null | head -n 1)" ]; then
+            run Vitest sh -c "cd '$DIR' && ../../node_modules/.bin/vitest run"
+        fi
+    elif [ -f "$DIR/vitest.config.ts" ] && [ -f "$DIR/package-lock.json" ]; then
+        # Legacy module toolchain: the module's own Vitest and test utils. Removed once every
+        # module is on defineModuleConfig
         run Vitest sh -c "cd '$DIR' && npm ci --no-audit --no-fund && npx vitest run"
     fi
 fi

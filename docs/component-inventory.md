@@ -868,7 +868,7 @@ Modules extend the GuildForge frontend through several mechanisms:
 ### Runtime loading
 
 - **Initial page**: Inertia 3 embeds the page object in `<script data-page="app" type="application/json">`. `app.ts` reads it before mounting to set `modulePages`, `moduleTranslations` and the Cloudinary config.
-- **Import map**: module bundles are built in CI with `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` external. `<x-module-import-map>` maps those bare imports to the app's five `vendor-exports/*` entries, so modules share the app's single Vue instance. The core's contracts (`resources/js/contracts/*`, imported as `@/contracts/*`) are import map entries too: `cookieConsent` lets modules ask a cookie consent module for consent.
+- **Import map**: `<x-module-import-map>` serves the core's public frontend API (`resources/js/public-api.json`) to modules: the shared packages (`vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3`, `@unhead/vue`, FullCalendar, through `vendor-exports/*`) and the public entries of `resources/js` (form and base UI components, `ModuleSlot`, composables, `@/contracts/cookieConsent`, utilities), so the page loads one instance of each. Module builds keep them external (`vite.module.config.ts`).
 
 ### ModuleSlot component
 

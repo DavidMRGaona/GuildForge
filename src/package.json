@@ -10,13 +10,16 @@
         "dev": "vite",
         "build": "vue-tsc --noEmit && vite build",
         "preview": "vite preview",
-        "type-check": "vue-tsc --noEmit",
+        "type-check": "vue-tsc --noEmit && vue-tsc --noEmit -p tsconfig.node.json",
         "test:unit": "vitest run",
-        "lint": "eslint resources/js --ext .ts,.vue",
-        "lint:fix": "eslint resources/js --ext .ts,.vue --fix",
-        "format": "prettier --write \"resources/js/**/*.{ts,vue}\"",
-        "format:check": "prettier --check \"resources/js/**/*.{ts,vue}\"",
-        "verify:build": "node scripts/verify-build.mjs"
+        "lint": "eslint resources/js scripts *.config.ts --ext .ts,.vue,.mjs",
+        "lint:fix": "eslint resources/js scripts *.config.ts --ext .ts,.vue,.mjs --fix",
+        "format": "prettier --write \"resources/js/**/*.{ts,vue}\" \"scripts/**/*.{mjs,ts,vue}\" \"*.config.ts\"",
+        "format:check": "prettier --check \"resources/js/**/*.{ts,vue}\" \"scripts/**/*.{mjs,ts,vue}\" \"*.config.ts\"",
+        "verify:build": "node scripts/verify-build.mjs",
+        "build:module": "sh scripts/build-module.sh",
+        "public-api:report": "node scripts/public-api-report.mjs --write",
+        "check:public-api": "node scripts/public-api-report.mjs"
     },
     "dependencies": {
         "@fullcalendar/vue3": "^7.1.3",

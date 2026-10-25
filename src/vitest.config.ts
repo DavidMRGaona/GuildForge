@@ -12,7 +12,7 @@ export default defineConfig({
     },
     test: {
         environment: 'happy-dom',
-        include: ['resources/js/**/__tests__/**/*.spec.ts'],
+        include: ['resources/js/**/__tests__/**/*.spec.ts', 'scripts/__tests__/**/*.spec.ts'],
         restoreMocks: true,
     },
 });
