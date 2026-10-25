@@ -7,15 +7,15 @@ namespace App\Domain\Authorization\Entities;
 use App\Domain\Authorization\ValueObjects\PermissionId;
 use App\Domain\Authorization\ValueObjects\PermissionKey;
 
-final class Permission
+final readonly class Permission
 {
     public function __construct(
-        private readonly PermissionId $id,
-        private readonly PermissionKey $key,
-        private readonly string $label,
-        private readonly string $resource,
-        private readonly string $action,
-        private readonly ?string $module = null,
+        private PermissionId $id,
+        private PermissionKey $key,
+        private string $label,
+        private string $resource,
+        private string $action,
+        private ?string $module = null,
     ) {}
 
     public function id(): PermissionId

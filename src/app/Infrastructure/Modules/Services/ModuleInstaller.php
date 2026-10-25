@@ -8,6 +8,7 @@ use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Events\ModuleInstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
@@ -77,7 +78,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 
             $module = $this->repository->findByName($moduleName);
 
-            if ($module === null) {
+            if (! $module instanceof Module) {
                 throw ModuleInstallationException::moduleNotInstalled($manifest->name);
             }
 
@@ -175,7 +176,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
     private function validateZipFile(UploadedFile $file): void
     {
         if ($file->getSize() > self::MAX_ZIP_SIZE) {
-            throw ModuleInstallationException::zipTooLarge((int) (self::MAX_ZIP_SIZE / (1024 * 1024)));
+            throw ModuleInstallationException::zipTooLarge(self::MAX_ZIP_SIZE / (1024 * 1024));
         }
 
         // Validate by actually opening as ZIP (more reliable than extension check)
@@ -244,7 +245,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
 
         try {
             return ModuleManifestDTO::fromArray($data);
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException) {
             throw ModuleInstallationException::invalidManifestJson();
         }
     }

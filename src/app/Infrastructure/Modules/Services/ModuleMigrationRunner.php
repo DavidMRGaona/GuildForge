@@ -37,7 +37,7 @@ final readonly class ModuleMigrationRunner
 
         $migrationFiles = glob($migrationsPath.'/*.php');
 
-        if ($migrationFiles === false || empty($migrationFiles)) {
+        if ($migrationFiles === false || $migrationFiles === []) {
             return 0;
         }
 

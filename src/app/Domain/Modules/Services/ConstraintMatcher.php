@@ -28,13 +28,7 @@ final class ConstraintMatcher
      */
     public function matches(string $constraint, ModuleVersion $version): bool
     {
-        foreach ($this->parse($constraint) as $comparisons) {
-            if ($this->satisfiesAll($comparisons, $version)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->parse($constraint), fn ($comparisons) => $this->satisfiesAll($comparisons, $version));
     }
 
     public function isValid(string $constraint): bool
@@ -105,13 +99,13 @@ final class ConstraintMatcher
         $bound = new ModuleVersion($major, $minor, $patch, $preRelease);
 
         return match ($operator) {
-            '^' => [self::atLeast($bound), self::below(self::caretCeiling($major, $minor, $patch, $written))],
+            '^' => [$this->atLeast($bound), $this->below($this->caretCeiling($major, $minor, $patch, $written))],
             '~' => [
-                self::atLeast($bound),
-                self::below($written === 3 ? new ModuleVersion($major, $minor + 1, 0) : new ModuleVersion($major + 1, 0, 0)),
+                $this->atLeast($bound),
+                $this->below($written === 3 ? new ModuleVersion($major, $minor + 1, 0) : new ModuleVersion($major + 1, 0, 0)),
             ],
-            '>=' => [self::atLeast($bound)],
-            '<' => [self::below($bound)],
+            '>=' => [$this->atLeast($bound)],
+            '<' => [$this->below($bound)],
             '>' => [['op' => '>', 'bound' => $bound, 'floor' => false]],
             '<=' => [['op' => '<=', 'bound' => $bound, 'floor' => false]],
             default => [['op' => '=', 'bound' => $bound, 'floor' => false]],
@@ -121,7 +115,7 @@ final class ConstraintMatcher
     /**
      * ^ raises the first non-zero component written; when all are zero, the last one written.
      */
-    private static function caretCeiling(int $major, int $minor, int $patch, int $written): ModuleVersion
+    private function caretCeiling(int $major, int $minor, int $patch, int $written): ModuleVersion
     {
         if ($major > 0) {
             return new ModuleVersion($major + 1, 0, 0);
@@ -145,7 +139,7 @@ final class ConstraintMatcher
     /**
      * @return array{op: string, bound: ModuleVersion, floor: bool}
      */
-    private static function atLeast(ModuleVersion $bound): array
+    private function atLeast(ModuleVersion $bound): array
     {
         return ['op' => '>=', 'bound' => $bound, 'floor' => true];
     }
@@ -153,7 +147,7 @@ final class ConstraintMatcher
     /**
      * @return array{op: string, bound: ModuleVersion, floor: bool}
      */
-    private static function below(ModuleVersion $bound): array
+    private function below(ModuleVersion $bound): array
     {
         return ['op' => '<', 'bound' => $bound, 'floor' => true];
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Legal;
 
 use App\Application\Legal\DTOs\LegalEntityDTO;
+use App\Application\Legal\DTOs\LegalMailNoticeDTO;
 use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
@@ -22,7 +23,7 @@ final readonly class LegalMailNoticeService implements LegalMailNoticeServiceInt
     {
         $notice = $this->registry->find($key);
 
-        if ($notice === null) {
+        if (! $notice instanceof LegalMailNoticeDTO) {
             return '';
         }
 

@@ -71,7 +71,7 @@ final readonly class CloudinaryImageUrlBuilder
         }
 
         if ($this->prefix !== '' && ! str_starts_with($publicId, $this->prefix.'/')) {
-            $publicId = $this->prefix.'/'.$publicId;
+            return $this->prefix.'/'.$publicId;
         }
 
         return $publicId;

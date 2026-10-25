@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Modules\Listeners;
 
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -50,7 +51,7 @@ final class BuildModuleAssetsOnEnabled implements ShouldQueue
         try {
             $module = $this->moduleRepository->findByName(ModuleName::fromString($event->moduleName));
 
-            if ($module === null) {
+            if (! $module instanceof Module) {
                 Log::warning("BuildModuleAssetsOnEnabled: Module not found: {$event->moduleName}");
 
                 return;

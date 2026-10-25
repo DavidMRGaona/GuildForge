@@ -18,10 +18,10 @@ use ZipArchive;
  * start with a dot: rename() only works within one mount point (production
  * bind-mounts modules/ and storage/ separately) and discovery skips dot directories.
  */
-final class ModulePackageInstaller implements ModulePackageInstallerInterface
+final readonly class ModulePackageInstaller implements ModulePackageInstallerInterface
 {
     public function __construct(
-        private readonly ModuleCompatibilityServiceInterface $compatibility,
+        private ModuleCompatibilityServiceInterface $compatibility,
     ) {}
 
     public function stage(string $zipPath, string $moduleName): string
@@ -150,7 +150,7 @@ final class ModulePackageInstaller implements ModulePackageInstallerInterface
             throw UpdateException::extractionFailed($moduleName, 'The package must contain a single module folder');
         }
 
-        $root = (string) array_key_first($roots);
+        $root = array_key_first($roots);
 
         if (! isset($hasManifest[$root])) {
             throw UpdateException::extractionFailed($moduleName, 'The package has no module.json');

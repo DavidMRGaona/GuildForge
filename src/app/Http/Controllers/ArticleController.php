@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\DTOs\Response\ArticleResponseDTO;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
@@ -58,7 +59,7 @@ final class ArticleController extends Controller
     {
         $article = $this->articleQuery->findPublishedBySlug($slug);
 
-        if ($article === null) {
+        if (! $article instanceof ArticleResponseDTO) {
             abort(404);
         }
 

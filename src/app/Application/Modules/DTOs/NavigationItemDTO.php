@@ -32,7 +32,7 @@ final readonly class NavigationItemDTO
         $children = [];
         if (isset($data['children']) && is_array($data['children'])) {
             $children = array_map(
-                fn (array $child): self => self::fromArray($child),
+                self::fromArray(...),
                 $data['children']
             );
         }

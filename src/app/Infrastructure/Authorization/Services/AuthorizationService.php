@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-final class AuthorizationService implements AuthorizationServiceInterface
+final readonly class AuthorizationService implements AuthorizationServiceInterface
 {
     private const int CACHE_TTL = 3600; // 1 hour
 
@@ -34,7 +34,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
     private const string CACHE_VERSION_PATTERN = '/^[0-9a-f]{32}$/';
 
     public function __construct(
-        private readonly BaseRoleRule $baseRole = new BaseRoleRule,
+        private BaseRoleRule $baseRole = new BaseRoleRule,
     ) {}
 
     public function can(object $user, string $permissionKey): bool
@@ -59,13 +59,8 @@ final class AuthorizationService implements AuthorizationServiceInterface
         }
 
         $permissions = $this->getPermissions($user);
-        foreach ($permissionKeys as $key) {
-            if (in_array($key, $permissions, true)) {
-                return true;
-            }
-        }
 
-        return false;
+        return array_any($permissionKeys, fn ($key) => in_array($key, $permissions, true));
     }
 
     /**
@@ -78,13 +73,8 @@ final class AuthorizationService implements AuthorizationServiceInterface
         }
 
         $permissions = $this->getPermissions($user);
-        foreach ($permissionKeys as $key) {
-            if (! in_array($key, $permissions, true)) {
-                return false;
-            }
-        }
 
-        return true;
+        return array_all($permissionKeys, fn ($key) => in_array($key, $permissions, true));
     }
 
     public function hasRole(object $user, string $roleName): bool
@@ -100,13 +90,8 @@ final class AuthorizationService implements AuthorizationServiceInterface
     public function hasAnyRole(object $user, array $roleNames): bool
     {
         $roles = $this->getRoles($user);
-        foreach ($roleNames as $name) {
-            if (in_array($name, $roles, true)) {
-                return true;
-            }
-        }
 
-        return false;
+        return array_any($roleNames, fn ($name) => in_array($name, $roles, true));
     }
 
     /**
@@ -216,12 +201,12 @@ final class AuthorizationService implements AuthorizationServiceInterface
             // Fixed prefix, server-side version tokens and the user's primary key: nothing user supplied
             $userId = $this->getUserId($user);
             $current = app(AuthorizationCacheVersion::class);
-            $version = $current->token ??= self::readToken(self::CACHE_VERSION_KEY);
-            $userVersion = $current->userTokens[$userId] ??= self::readToken(self::USER_CACHE_VERSION_KEY_PREFIX.$userId);
+            $version = $current->token ??= $this->readToken(self::CACHE_VERSION_KEY);
+            $userVersion = $current->userTokens[$userId] ??= $this->readToken(self::USER_CACHE_VERSION_KEY_PREFIX.$userId);
             $key = "user_{$kind}_{$version}_{$userVersion}_{$userId}";
             $cached = Cache::get($key);
 
-            if (self::isListOfNames($cached)) {
+            if ($this->isListOfNames($cached)) {
                 return $cached;
             }
         } catch (Throwable $e) {
@@ -246,7 +231,7 @@ final class AuthorizationService implements AuthorizationServiceInterface
      * The token stored under $key. Callers keep it in AuthorizationCacheVersion, so it is
      * read once per request or job.
      */
-    private static function readToken(string $key): string
+    private function readToken(string $key): string
     {
         $version = Cache::get($key);
 
@@ -293,19 +278,13 @@ final class AuthorizationService implements AuthorizationServiceInterface
     /**
      * @phpstan-assert-if-true array<int, string> $value
      */
-    private static function isListOfNames(mixed $value): bool
+    private function isListOfNames(mixed $value): bool
     {
         if (! is_array($value) || ! array_is_list($value)) {
             return false;
         }
 
-        foreach ($value as $name) {
-            if (! is_string($name)) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($value, fn ($name) => is_string($name));
     }
 
     private function isAdmin(object $user): bool

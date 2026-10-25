@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Updates;
 
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use Illuminate\Console\Command;
@@ -32,7 +33,7 @@ final class SetModuleSourceCommand extends Command
 
         $module = $modules->findByName(new ModuleName((string) $this->argument('name')));
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             $this->error("Module '{$this->argument('name')}' is not installed.");
 
             return self::FAILURE;

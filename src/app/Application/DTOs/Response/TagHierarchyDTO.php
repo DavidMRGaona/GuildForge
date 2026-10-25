@@ -48,7 +48,7 @@ final readonly class TagHierarchyDTO
             fullPath: $fullPath,
             indentedNameForTable: self::computeIndentedNameForTable($tag->name, $depth),
             indentedNameForSelect: self::computeIndentedNameForSelect($tag->name, $depth),
-            hierarchySortKey: self::computeHierarchySortKey($tag->sortOrder, $depth),
+            hierarchySortKey: self::computeHierarchySortKey($tag->sortOrder),
             description: $description,
         );
     }
@@ -71,7 +71,7 @@ final readonly class TagHierarchyDTO
         return str_repeat('  ', $depth).$name;
     }
 
-    private static function computeHierarchySortKey(int $sortOrder, int $depth): string
+    private static function computeHierarchySortKey(int $sortOrder): string
     {
         return str_pad((string) $sortOrder, 5, '0', STR_PAD_LEFT);
     }

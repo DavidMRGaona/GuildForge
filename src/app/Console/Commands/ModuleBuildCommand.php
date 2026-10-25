@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
@@ -65,7 +66,7 @@ final class ModuleBuildCommand extends Command
     {
         $module = $this->moduleRepository->findByName(ModuleName::fromString($moduleName));
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             $this->error("Module not found: {$moduleName}");
 
             return Command::FAILURE;

@@ -106,10 +106,10 @@ final readonly class ModuleVersion implements Stringable
             return -1;
         }
 
-        return self::comparePreRelease($this->preRelease, $other->preRelease);
+        return $this->comparePreRelease($this->preRelease, $other->preRelease);
     }
 
-    private static function comparePreRelease(string $left, string $right): int
+    private function comparePreRelease(string $left, string $right): int
     {
         $leftIds = explode('.', $left);
         $rightIds = explode('.', $right);
@@ -119,7 +119,7 @@ final readonly class ModuleVersion implements Stringable
                 return 1;
             }
 
-            $result = self::compareIdentifier($identifier, $rightIds[$index]);
+            $result = $this->compareIdentifier($identifier, $rightIds[$index]);
 
             if ($result !== 0) {
                 return $result;
@@ -129,7 +129,7 @@ final readonly class ModuleVersion implements Stringable
         return count($leftIds) <=> count($rightIds);
     }
 
-    private static function compareIdentifier(string $left, string $right): int
+    private function compareIdentifier(string $left, string $right): int
     {
         $leftNumeric = ctype_digit($left);
         $rightNumeric = ctype_digit($right);

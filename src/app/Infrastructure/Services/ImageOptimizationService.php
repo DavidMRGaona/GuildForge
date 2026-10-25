@@ -33,7 +33,7 @@ use Throwable;
  * - Graceful fallback to original image on any error
  * - Prefers Imagick driver, falls back to GD
  */
-final class ImageOptimizationService implements ImageOptimizationServiceInterface
+final readonly class ImageOptimizationService implements ImageOptimizationServiceInterface
 {
     private const array OPTIMIZABLE_MIME_TYPES = [
         'image/jpeg',
@@ -46,9 +46,9 @@ final class ImageOptimizationService implements ImageOptimizationServiceInterfac
     private ImageManager $imageManager;
 
     public function __construct(
-        private readonly LoggerInterface $logger,
+        private LoggerInterface $logger,
         ?DriverInterface $driver = null,
-        private readonly AnimatedImageDetector $animation = new AnimatedImageDetector,
+        private AnimatedImageDetector $animation = new AnimatedImageDetector,
     ) {
         $this->imageManager = new ImageManager($driver ?? $this->defaultDriver());
     }

@@ -13,6 +13,7 @@ use App\Application\Updates\Services\ModulePackageInstallerInterface;
 use App\Application\Updates\Services\ModulePostUpdateRunnerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
@@ -22,6 +23,7 @@ use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Domain\Updates\Events\ModuleUpdateFailed;
 use App\Domain\Updates\Events\ModuleUpdateStarted;
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Domain\Updates\ValueObjects\GitHubReleaseInfo;
 use App\Infrastructure\Modules\Services\ModulePathResolver;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateLogModel;
@@ -31,28 +33,28 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-final class ModuleUpdater implements ModuleUpdaterInterface
+final readonly class ModuleUpdater implements ModuleUpdaterInterface
 {
     private const string LOCK_PREFIX = 'module_update_lock:';
 
     private const int LOCK_TTL = 600; // 10 minutes
 
-    private readonly string $tempPath;
+    private string $tempPath;
 
-    private readonly bool $verifyChecksum;
+    private bool $verifyChecksum;
 
-    private readonly bool $autoRollback;
+    private bool $autoRollback;
 
     public function __construct(
-        private readonly ModuleRepositoryInterface $moduleRepository,
-        private readonly ModuleManagerServiceInterface $moduleManager,
-        private readonly GitHubReleaseFetcherInterface $githubFetcher,
-        private readonly ModuleBackupServiceInterface $backupService,
-        private readonly Dispatcher $events,
-        private readonly ModulePackageInstallerInterface $installer,
-        private readonly ReleaseChannelPolicy $channelPolicy,
-        private readonly ModulePostUpdateRunnerInterface $postUpdateRunner,
-        private readonly ModulePathResolver $paths = new ModulePathResolver,
+        private ModuleRepositoryInterface $moduleRepository,
+        private ModuleManagerServiceInterface $moduleManager,
+        private GitHubReleaseFetcherInterface $githubFetcher,
+        private ModuleBackupServiceInterface $backupService,
+        private Dispatcher $events,
+        private ModulePackageInstallerInterface $installer,
+        private ReleaseChannelPolicy $channelPolicy,
+        private ModulePostUpdateRunnerInterface $postUpdateRunner,
+        private ModulePathResolver $paths = new ModulePathResolver,
     ) {
         $this->tempPath = (string) config('updates.temp_path', storage_path('app/temp/updates'));
         $this->verifyChecksum = (bool) config('updates.behavior.verify_checksum', true);
@@ -63,7 +65,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
     {
         $module = $this->moduleRepository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -88,11 +90,11 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         // Preview the blocked release too, so the CLI and the panel can say why it cannot be applied
         $release = $selection->compatible ?? $selection->blocked;
 
-        if ($release === null || ! $release->version->isGreaterThan($module->version())) {
+        if (! $release instanceof GitHubReleaseInfo || ! $release->version->isGreaterThan($module->version())) {
             throw UpdateException::noUpdateAvailable($name->value);
         }
 
-        $coreCompatible = $selection->compatible !== null;
+        $coreCompatible = $selection->compatible instanceof GitHubReleaseInfo;
         $coreRequirement = $coreCompatible ? $selection->compatibleCoreConstraint : $selection->blockedCoreConstraint;
         $compatibilityIssues = $coreCompatible
             ? []
@@ -122,7 +124,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
     {
         $module = $this->moduleRepository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 
@@ -162,8 +164,8 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             );
             $release = $selection->compatible;
 
-            if ($release === null || ! $release->version->isGreaterThan($module->version())) {
-                if ($selection->blocked !== null) {
+            if (! $release instanceof GitHubReleaseInfo || ! $release->version->isGreaterThan($module->version())) {
+                if ($selection->blocked instanceof GitHubReleaseInfo) {
                     throw UpdateException::noCompatibleRelease(
                         $name->value,
                         $selection->blocked->version->value(),
@@ -324,7 +326,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
     {
         $module = $this->moduleRepository->findByName($name);
 
-        if ($module === null) {
+        if (! $module instanceof Module) {
             throw ModuleNotFoundException::withName($name->value);
         }
 

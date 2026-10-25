@@ -149,14 +149,19 @@ All commands are executed through `make` and run inside Docker containers.
 
 | Command | Description |
 |---------|-------------|
-| `make check` | Run all linters (Pint + PHPStan + ESLint + types) |
+| `make check` | Run all linters (Rector + Pint + PHPStan + ESLint + Prettier + types) |
+| `make check-fix` | Fix what can be fixed, in order: Rector, Pint, ESLint, Prettier |
 | `make check-q` | Same checks with one line per tool (always exits 0: read the ✗ marks) |
 | `make format` | Format all code (Pint + ESLint + Prettier) |
+| `make rector` | Rector (check only) |
+| `make rector-fix` | Apply Rector (run `make cs-fix` after it) |
 | `make cs` | PHP code style with Pint (check only) |
 | `make cs-fix` | PHP code style with Pint (fix) |
 | `make phpstan` | PHP static analysis |
 | `make lint-js` | ESLint for TypeScript/Vue |
 | `make lint-js-fix` | Fix ESLint issues |
+| `make format-check` | Prettier (check only) |
+| `make format-fix` | Prettier (write) |
 | `make types` | TypeScript type checking |
 
 ### Frontend
@@ -402,6 +407,17 @@ PHPUnit notices and deprecations fail the suite (`failOnPhpunitNotice`, `failOnP
 
 ## Linting and formatting
 
+PHP tools run in this order: **Rector → Pint → PHPStan**. Rector's output is not Pint-clean (spacing, imports, braces), so Pint always runs after it; once Pint has run, Rector finds nothing to change. CI runs `rector process --dry-run` before `pint --test`. After editing PHP in the core, run Rector and then Pint on the files you touched.
+
+### Rector (PHP refactoring)
+
+Uses `src/rector.php` over `app/`: PHP 8.5 syntax, dead code and code quality sets. A rule that does not fit the project is skipped there with `withSkip()` and a comment, rather than worked around in the code. CI fails if Rector would change anything:
+
+```bash
+make rector       # Check (dry-run)
+make rector-fix   # Apply, then make cs-fix
+```
+
 ### Pint (PHP code style)
 
 Uses `laravel/pint` with the `laravel` preset plus `declare_strict_types` (`src/pint.json`); `modules/` is excluded because each module is its own repository. CI fails on any style difference (`vendor/bin/pint --test`):
@@ -438,11 +454,12 @@ make types
 
 ### Prettier (frontend formatting)
 
-Formats `.ts` and `.vue` files:
+Formats `.ts` and `.vue` files in `resources/js/`; CI fails on any difference (`npm run format:check`):
 
 ```bash
-# Included in make format:
-make format   # Runs Pint + ESLint fix + Prettier
+make format-check   # Check
+make format-fix     # Write
+make format         # Pint + ESLint fix + Prettier
 ```
 
 ### Check everything at once

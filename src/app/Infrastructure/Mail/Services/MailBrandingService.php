@@ -42,7 +42,7 @@ final class MailBrandingService implements MailBrandingServiceInterface
 
     public function branding(): MailBrandingDTO
     {
-        if ($this->branding !== null) {
+        if ($this->branding instanceof MailBrandingDTO) {
             return $this->branding;
         }
 
@@ -136,7 +136,7 @@ final class MailBrandingService implements MailBrandingServiceInterface
         foreach ($keys as $key) {
             $shade = $palette->shade($key);
 
-            if ($shade !== null && $shade->meetsWcagAA($against)) {
+            if ($shade instanceof HexColor && $shade->meetsWcagAA($against)) {
                 return $shade->value;
             }
         }

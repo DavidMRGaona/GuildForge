@@ -53,7 +53,7 @@ final readonly class ModuleSeederRunner
 
         $seederFiles = glob($seedersPath.'/*Seeder.php');
 
-        if ($seederFiles === false || empty($seederFiles)) {
+        if ($seederFiles === false || $seederFiles === []) {
             return [];
         }
 

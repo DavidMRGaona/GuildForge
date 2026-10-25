@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
+use Rector\DeadCode\Rector\ClassMethod\RemoveUnusedPublicMethodParameterRector;
 use Rector\Php84\Rector\MethodCall\NewMethodCallWithoutParenthesesRector;
 use Rector\Php85\Rector\Property\AddOverrideAttributeToOverriddenPropertiesRector;
 
@@ -15,4 +16,6 @@ return RectorConfig::configure()
         AddOverrideAttributeToOverriddenPropertiesRector::class,
         // Skipped to avoid rewriting existing `(new Foo())->bar()` calls in bulk; the PHP 8.4 form is allowed in new code.
         NewMethodCallWithoutParenthesesRector::class,
+        // A listener's handle() names the event it listens to, even when it does not read it.
+        RemoveUnusedPublicMethodParameterRector::class => [__DIR__.'/app/*/Listeners/*'],
     ]);

@@ -152,6 +152,6 @@ final readonly class ModuleRequirements
     {
         $value = $data[$key] ?? [];
 
-        return is_array($value) ? array_values(array_filter($value, 'is_string')) : [];
+        return is_array($value) ? array_values(array_filter($value, is_string(...))) : [];
     }
 }

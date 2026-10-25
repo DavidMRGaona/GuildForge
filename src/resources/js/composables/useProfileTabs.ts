@@ -63,14 +63,16 @@ export function useProfileTabs(): UseProfileTabsReturn {
     }
 
     const profileRegistrations = computed(() =>
-        (moduleSlots.value['profile-sections'] ?? []).filter((registration) => registration.profileTab),
+        (moduleSlots.value['profile-sections'] ?? []).filter(
+            (registration) => registration.profileTab
+        )
     );
     const visibleTabIds = profileRegistrations.value
         .filter(isRegistrationVisible)
         .map(registeredTabId);
     const requestedTab = tabFromUrl(page.url);
     const activeTabId = ref(
-        requestedTab !== null && visibleTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB,
+        requestedTab !== null && visibleTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB
     );
 
     const tabs = computed<ProfileTab[]>(() => {
@@ -133,12 +135,16 @@ export function useProfileTabs(): UseProfileTabsReturn {
             if (hiddenIds.includes(activeTabId.value)) {
                 setActiveTab(DEFAULT_TAB);
             }
-        },
+        }
     );
 
     function setActiveTab(id: string): void {
         activeTabId.value = id;
-        router.replace({ url: urlWithTab(page.url, id), preserveScroll: true, preserveState: true });
+        router.replace({
+            url: urlWithTab(page.url, id),
+            preserveScroll: true,
+            preserveState: true,
+        });
     }
 
     function isActiveTab(id: string): boolean {

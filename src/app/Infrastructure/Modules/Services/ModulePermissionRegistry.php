@@ -46,9 +46,7 @@ final class ModulePermissionRegistry implements ModulePermissionRegistryInterfac
 
         foreach ($this->permissions as $permission) {
             $group = $permission->group;
-            if (! isset($groups[$group])) {
-                $groups[$group] = [];
-            }
+            $groups[$group] ??= [];
             $groups[$group][] = $permission;
         }
 

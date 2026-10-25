@@ -22,7 +22,7 @@ onErrorCaptured((error, instance, info) => {
     console.error(
         `[ModuleSlot] Error in slot "${props.name}"${componentKey ? ` (component: ${componentKey})` : ''}:`,
         errorObj.message,
-        `\nLifecycle: ${info}`,
+        `\nLifecycle: ${info}`
     );
 
     if (componentKey) {

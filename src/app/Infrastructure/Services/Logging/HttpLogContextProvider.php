@@ -10,10 +10,10 @@ use Illuminate\Http\Request;
 /**
  * Provides HTTP request context for logging.
  */
-final class HttpLogContextProvider implements LogContextProviderInterface
+final readonly class HttpLogContextProvider implements LogContextProviderInterface
 {
     public function __construct(
-        private readonly ?Request $request = null,
+        private ?Request $request = null,
     ) {}
 
     public function getRequestId(): ?string
@@ -41,7 +41,7 @@ final class HttpLogContextProvider implements LogContextProviderInterface
      */
     public function getAdditionalContext(): array
     {
-        if ($this->request === null) {
+        if (! $this->request instanceof Request) {
             return [];
         }
 

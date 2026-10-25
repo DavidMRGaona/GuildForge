@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\DTOs\Response\LegalPageResponseDTO;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\LegalPageServiceInterface;
@@ -21,7 +22,7 @@ final class LegalPageController extends Controller
     {
         $page = $this->legalPageService->getPublishedPage($slug);
 
-        if ($page === null) {
+        if (! $page instanceof LegalPageResponseDTO) {
             abort(404);
         }
 

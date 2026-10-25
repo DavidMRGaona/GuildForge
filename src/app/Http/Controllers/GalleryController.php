@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\DTOs\Response\GalleryDetailResponseDTO;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\GalleryQueryServiceInterface;
@@ -20,7 +21,7 @@ final class GalleryController extends Controller
 {
     use BuildsPaginatedResponse;
 
-    private const PER_PAGE = 12;
+    private const int PER_PAGE = 12;
 
     public function __construct(
         private readonly GalleryQueryServiceInterface $galleryQuery,
@@ -59,7 +60,7 @@ final class GalleryController extends Controller
     {
         $gallery = $this->galleryQuery->findPublishedBySlug($slug);
 
-        if ($gallery === null) {
+        if (! $gallery instanceof GalleryDetailResponseDTO) {
             abort(404);
         }
 

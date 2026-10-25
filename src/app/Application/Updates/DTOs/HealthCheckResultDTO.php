@@ -23,12 +23,12 @@ final readonly class HealthCheckResultDTO
 
     public function passes(): bool
     {
-        return $this->providerLoads && empty($this->errors);
+        return $this->providerLoads && $this->errors === [];
     }
 
     public function hasWarnings(): bool
     {
-        return ! empty($this->warnings);
+        return $this->warnings !== [];
     }
 
     /**

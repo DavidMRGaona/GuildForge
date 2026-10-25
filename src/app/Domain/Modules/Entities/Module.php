@@ -295,7 +295,7 @@ final class Module
 
     public function isInstalled(): bool
     {
-        return $this->installedAt !== null;
+        return $this->installedAt instanceof DateTimeImmutable;
     }
 
     public function markInstalled(): void

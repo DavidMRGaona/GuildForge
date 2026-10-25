@@ -67,7 +67,7 @@ final readonly class AboutPageService implements AboutPageServiceInterface
             );
 
             return array_values(array_map(
-                fn (array $activity): ActivityDTO => ActivityDTO::fromArray($activity),
+                ActivityDTO::fromArray(...),
                 $filtered
             ));
         } catch (JsonException) {

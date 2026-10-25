@@ -6,6 +6,7 @@ namespace App\Console\Commands\Module;
 
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -49,7 +50,7 @@ final class ModuleSeedCommand extends Command
             $name = new ModuleName($moduleName);
             $module = $this->moduleManager->find($name);
 
-            if ($module === null) {
+            if (! $module instanceof Module) {
                 throw ModuleNotFoundException::withName($moduleName);
             }
 

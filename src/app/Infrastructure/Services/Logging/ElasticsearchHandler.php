@@ -81,7 +81,7 @@ final class ElasticsearchHandler extends AbstractProcessingHandler
 
     private function getClient(): Client
     {
-        if ($this->client === null) {
+        if (! $this->client instanceof Client) {
             $scheme = $this->ssl ? 'https' : 'http';
             $builder = ClientBuilder::create()
                 ->setHosts(["{$scheme}://{$this->host}:{$this->port}"]);

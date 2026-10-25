@@ -7,6 +7,7 @@ namespace App\Infrastructure\Updates\Services;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Updates\DTOs\HealthCheckResultDTO;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Modules\Services\ModulePathResolver;
 use Illuminate\Support\Facades\Log;
@@ -53,7 +54,7 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
         try {
             $module = $this->moduleManager->find($name);
 
-            if ($module === null) {
+            if (! $module instanceof Module) {
                 return false;
             }
 
@@ -83,7 +84,7 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
         try {
             $module = $this->moduleManager->find($name);
 
-            if ($module === null) {
+            if (! $module instanceof Module) {
                 return false;
             }
 
@@ -129,7 +130,7 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
         try {
             $module = $this->moduleManager->find($name);
 
-            if ($module === null) {
+            if (! $module instanceof Module) {
                 return false;
             }
 

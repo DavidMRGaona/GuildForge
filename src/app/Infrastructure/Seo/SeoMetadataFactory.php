@@ -80,7 +80,7 @@ final readonly class SeoMetadataFactory implements SeoMetadataFactoryInterface
             description: $excerpt !== '' ? $excerpt : $article->content,
             imagePublicId: $article->featuredImage,
             type: SeoType::Article,
-            article: $publishedAt !== null
+            article: $publishedAt instanceof \DateTimeImmutable
                 ? new SeoArticleDTO($publishedAt, $article->updatedAt, $article->author?->displayName)
                 : null,
         ));
@@ -131,15 +131,15 @@ final readonly class SeoMetadataFactory implements SeoMetadataFactoryInterface
         $structuredData = [];
         $extraMeta = [];
 
-        if ($page->schedule !== null) {
+        if ($page->schedule instanceof SeoScheduleDTO) {
             $structuredData[] = $this->structuredData->event($page->title, $description, $url, $page->schedule, $image, $site);
         }
 
-        if ($page->article !== null) {
+        if ($page->article instanceof SeoArticleDTO) {
             $structuredData[] = $this->structuredData->article($page->title, $description, $url, $page->article, $image, $site);
             $extraMeta[] = ['property' => 'article:published_time', 'content' => $this->structuredData->date($page->article->publishedAt)];
 
-            if ($page->article->modifiedAt !== null) {
+            if ($page->article->modifiedAt instanceof \DateTimeInterface) {
                 $extraMeta[] = ['property' => 'article:modified_time', 'content' => $this->structuredData->date($page->article->modifiedAt)];
             }
         }

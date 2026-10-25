@@ -139,7 +139,7 @@ final class Event
 
     public function isFree(): bool
     {
-        return $this->memberPrice === null && $this->nonMemberPrice === null;
+        return ! $this->memberPrice instanceof Price && ! $this->nonMemberPrice instanceof Price;
     }
 
     /**

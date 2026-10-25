@@ -79,7 +79,7 @@ Key environment variables to configure:
 | `make shell`     | Enter PHP container                                                 |
 | `make test`      | Run all tests                                                       |
 | `make test-unit` | Run unit tests only                                                 |
-| `make check`     | Run ALL linters (PHP + JS + types)                                  |
+| `make check`     | Run ALL linters (Rector, Pint, PHPStan, ESLint, Prettier, types)    |
 | `make fresh`     | Fresh migration with seeders                                        |
 
 ## Project structure
@@ -205,8 +205,8 @@ The project uses GitHub Actions for CI/CD:
 
 ### CI jobs
 
-- **test**: PHP 8.5, PostgreSQL 17, Redis 7.2. Checks PHP style (`vendor/bin/pint --test`) and static analysis (`vendor/bin/phpstan analyse`, PHPStan level 8), builds the assets, checks the module import map (`npm run verify:build`), then runs the migrations and the test suite (serially, on PostgreSQL).
-- **lint**: TypeScript type-check and ESLint.
+- **test**: PHP 8.5, PostgreSQL 17, Redis 7.2. Checks Rector (`vendor/bin/rector process --dry-run`), PHP style (`vendor/bin/pint --test`) and static analysis (`vendor/bin/phpstan analyse`, PHPStan level 8), builds the assets, checks the module import map (`npm run verify:build`), then runs the migrations and the test suite (serially, on PostgreSQL).
+- **lint**: TypeScript type-check, ESLint, Prettier (`npm run format:check`) and Vitest.
 
 ### Required secrets
 

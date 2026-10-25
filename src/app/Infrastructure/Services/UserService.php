@@ -12,6 +12,7 @@ use App\Application\Services\UserServiceInterface;
 use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -28,7 +29,7 @@ final readonly class UserService implements UserServiceInterface
     {
         $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
-        if ($userModel === null) {
+        if (! $userModel instanceof UserModel) {
             return false;
         }
 
@@ -39,7 +40,7 @@ final readonly class UserService implements UserServiceInterface
     {
         $userModel = $this->userModelQuery->findModelByIdWithTrashed(UserId::fromString($userId));
 
-        if ($userModel === null) {
+        if (! $userModel instanceof UserModel) {
             throw UserNotFoundException::withId($userId);
         }
 
@@ -64,7 +65,7 @@ final readonly class UserService implements UserServiceInterface
     {
         $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
-        if ($userModel === null) {
+        if (! $userModel instanceof UserModel) {
             return false;
         }
 
@@ -82,7 +83,7 @@ final readonly class UserService implements UserServiceInterface
     {
         $userModel = $this->userModelQuery->findModelByIdWithTrashed(UserId::fromString($dto->userId));
 
-        if ($userModel === null) {
+        if (! $userModel instanceof UserModel) {
             throw UserNotFoundException::withId($dto->userId);
         }
 

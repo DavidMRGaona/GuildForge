@@ -14,8 +14,8 @@
         "test:unit": "vitest run",
         "lint": "eslint resources/js --ext .ts,.vue",
         "lint:fix": "eslint resources/js --ext .ts,.vue --fix",
-        "format": "prettier --write resources/js/**/*.{ts,vue}",
-        "format:check": "prettier --check resources/js/**/*.{ts,vue}",
+        "format": "prettier --write \"resources/js/**/*.{ts,vue}\"",
+        "format:check": "prettier --check \"resources/js/**/*.{ts,vue}\"",
         "verify:build": "node scripts/verify-build.mjs"
     },
     "dependencies": {

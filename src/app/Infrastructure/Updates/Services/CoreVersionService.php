@@ -22,7 +22,7 @@ final class CoreVersionService implements CoreVersionServiceInterface
 
     public function getCurrentVersion(): ModuleVersion
     {
-        if ($this->cachedVersion !== null) {
+        if ($this->cachedVersion instanceof ModuleVersion) {
             return $this->cachedVersion;
         }
 

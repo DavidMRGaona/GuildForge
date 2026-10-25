@@ -64,7 +64,7 @@ final class RecordDeploymentCommand extends Command
             return; // A restart of a deployment that already finished
         }
 
-        if ($current !== null) {
+        if ($current instanceof CoreUpdateHistoryModel) {
             $current->update(['status' => UpdateStatus::Applying, 'error_message' => null]);
 
             return;

@@ -8,9 +8,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class SearchRequest extends FormRequest
 {
-    private const MIN_QUERY_LENGTH = 2;
+    private const int MIN_QUERY_LENGTH = 2;
 
-    private const MAX_QUERY_LENGTH = 100;
+    private const int MAX_QUERY_LENGTH = 100;
 
     /**
      * Determine if the user is authorized to make this request.

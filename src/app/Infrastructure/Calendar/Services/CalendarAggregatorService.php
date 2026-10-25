@@ -14,11 +14,11 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-final class CalendarAggregatorService implements CalendarAggregatorServiceInterface
+final readonly class CalendarAggregatorService implements CalendarAggregatorServiceInterface
 {
     public function __construct(
-        private readonly Container $container,
-        private readonly CalendarSourceRegistryInterface $sourceRegistry,
+        private Container $container,
+        private CalendarSourceRegistryInterface $sourceRegistry,
     ) {}
 
     /**

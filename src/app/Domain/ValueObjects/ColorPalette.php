@@ -103,13 +103,7 @@ final readonly class ColorPalette
             return false;
         }
 
-        foreach ($this->shades as $key => $color) {
-            if (! isset($other->shades[$key]) || ! $color->equals($other->shades[$key])) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($this->shades, fn ($color, $key) => isset($other->shades[$key]) && $color->equals($other->shades[$key]));
     }
 
     /**

@@ -48,9 +48,7 @@ final class ModuleMakeListenerCommand extends Command
         /** @var string|null $event */
         $event = $this->option('event');
 
-        if ($event === null) {
-            $event = $this->ask('What domain event should this listener handle?', 'SomeEvent');
-        }
+        $event ??= $this->ask('What domain event should this listener handle?', 'SomeEvent');
 
         /** @var bool $queued */
         $queued = $this->option('queued');

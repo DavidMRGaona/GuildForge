@@ -31,7 +31,7 @@ final readonly class SeoDescriptionBuilder
 
         $parts = [];
 
-        if ($schedule !== null) {
+        if ($schedule instanceof SeoScheduleDTO) {
             $parts[] = $this->formatSchedule($schedule);
 
             $location = $this->plainText($schedule->location);
@@ -64,12 +64,12 @@ final readonly class SeoDescriptionBuilder
     {
         $locale = app()->getLocale();
         $start = CarbonImmutable::instance($schedule->start)->setTimezone($this->timezone)->settings(['locale' => $locale]);
-        $end = $schedule->end !== null
+        $end = $schedule->end instanceof \DateTimeInterface
             ? CarbonImmutable::instance($schedule->end)->setTimezone($this->timezone)->settings(['locale' => $locale])
             : null;
 
         // An end at 00:00 belongs to the day before: 20:00–00:00 is a one-day event
-        if ($end !== null && $end->greaterThan($start) && $end->format('H:i:s') === '00:00:00') {
+        if ($end instanceof CarbonImmutable && $end->greaterThan($start) && $end->format('H:i:s') === '00:00:00') {
             $end = $end->subSecond();
         }
 
@@ -116,7 +116,7 @@ final readonly class SeoDescriptionBuilder
         }
 
         // Regex instead of rtrim(): rtrim works on bytes and would split "·" or "–".
-        return (string) preg_replace('/[\s.,;:·–-]+$/u', '', $cut).'…';
+        return preg_replace('/[\s.,;:·–-]+$/u', '', $cut).'…';
     }
 
     /**

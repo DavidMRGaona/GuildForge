@@ -7,6 +7,7 @@ namespace App\Infrastructure\Content\Services;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use Dom\Element;
 use Dom\HTMLDocument;
+use Dom\HTMLElement;
 use Dom\Node;
 use Dom\Text;
 use Filament\Forms\Components\RichEditor\RichContentRenderer;
@@ -99,7 +100,7 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
         $document = $this->parse($html);
         $body = $document->body;
 
-        if ($body === null) {
+        if (! $body instanceof HTMLElement) {
             return $html;
         }
 
@@ -111,7 +112,7 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
         foreach ($body->querySelectorAll('['.self::SLOT.']') as $slot) {
             $figure = $this->parse($attachments[(int) $slot->getAttribute(self::SLOT)] ?? '')->body?->firstElementChild;
 
-            if ($figure === null) {
+            if (! $figure instanceof Element) {
                 $slot->remove();
 
                 continue;
@@ -161,7 +162,7 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
         $caption = $this->caption($attachment, $attributes + $data);
         $replacement = $document->createDocumentFragment();
 
-        if ($image !== null) {
+        if ($image instanceof Element) {
             $img = $document->createElement('img');
             $img->setAttribute('src', (string) ($image->getAttribute('src') ?: ($data['url'] ?? '')));
             $img->setAttribute('alt', $caption !== '' ? $caption : (string) $image->getAttribute('alt'));
@@ -181,10 +182,10 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
 
         // Older Trix content wraps a linked attachment in an <a> of its own
         $wrapper = $slot->parentElement;
-        $target = $wrapper !== null && $wrapper->localName === 'a' && $wrapper->childNodes->length === 1 ? $wrapper : $slot;
+        $target = $wrapper instanceof Element && $wrapper->localName === 'a' && $wrapper->childNodes->length === 1 ? $wrapper : $slot;
 
         // Text after a captioned image starts on a line of its own
-        if ($caption !== '' && $image !== null && trim((string) $target->nextSibling?->textContent) !== '') {
+        if ($caption !== '' && $image instanceof Element && trim((string) $target->nextSibling?->textContent) !== '') {
             $replacement->append($document->createElement('br'));
         }
 
@@ -211,7 +212,7 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
 
         $figcaption = $attachment->querySelector('figcaption');
 
-        if ($figcaption === null || $figcaption->querySelector('.attachment__name') !== null) {
+        if (! $figcaption instanceof Element || $figcaption->querySelector('.attachment__name') instanceof Element) {
             return '';
         }
 
@@ -241,7 +242,7 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
      */
     private function replaceBlock(HTMLDocument $document, Element $block): void
     {
-        if ($block->parentNode === null) {
+        if (! $block->parentNode instanceof Node) {
             return;
         }
 
@@ -251,7 +252,7 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
 
         foreach (iterator_to_array($block->childNodes) as $node) {
             if ($node instanceof Element && $node->localName === 'br') {
-                if ($pendingBreak !== null) {
+                if ($pendingBreak instanceof Element) {
                     $paragraphs[] = $current;
                     $current = [];
                     $pendingBreak = null;
@@ -264,7 +265,7 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
                 continue;
             }
 
-            if ($pendingBreak !== null) {
+            if ($pendingBreak instanceof Element) {
                 $current[] = $pendingBreak;
                 $pendingBreak = null;
             }

@@ -104,12 +104,12 @@ final readonly class HexColor implements Stringable
         $rgb = $this->toRgb();
 
         // Convert to linear RGB
-        $linearR = self::srgbToLinear($rgb['r'] / 255);
-        $linearG = self::srgbToLinear($rgb['g'] / 255);
-        $linearB = self::srgbToLinear($rgb['b'] / 255);
+        $linearR = $this->srgbToLinear($rgb['r'] / 255);
+        $linearG = $this->srgbToLinear($rgb['g'] / 255);
+        $linearB = $this->srgbToLinear($rgb['b'] / 255);
 
         // Convert to OKLab
-        $lab = self::linearRgbToOklab($linearR, $linearG, $linearB);
+        $lab = $this->linearRgbToOklab($linearR, $linearG, $linearB);
 
         // Convert OKLab to OKLCH
         $c = sqrt($lab['a'] ** 2 + $lab['b'] ** 2);
@@ -134,9 +134,9 @@ final readonly class HexColor implements Stringable
     {
         $rgb = $this->toRgb();
 
-        $r = self::luminanceComponent($rgb['r'] / 255);
-        $g = self::luminanceComponent($rgb['g'] / 255);
-        $b = self::luminanceComponent($rgb['b'] / 255);
+        $r = $this->luminanceComponent($rgb['r'] / 255);
+        $g = $this->luminanceComponent($rgb['g'] / 255);
+        $b = $this->luminanceComponent($rgb['b'] / 255);
 
         return 0.2126 * $r + 0.7152 * $g + 0.0722 * $b;
     }
@@ -228,7 +228,7 @@ final readonly class HexColor implements Stringable
         throw InvalidHexColorException::invalidFormat($value);
     }
 
-    private static function srgbToLinear(float $value): float
+    private function srgbToLinear(float $value): float
     {
         return $value <= 0.04045
             ? $value / 12.92
@@ -242,7 +242,7 @@ final readonly class HexColor implements Stringable
             : 1.055 * ($value ** (1 / 2.4)) - 0.055;
     }
 
-    private static function luminanceComponent(float $value): float
+    private function luminanceComponent(float $value): float
     {
         return $value <= 0.03928
             ? $value / 12.92
@@ -254,7 +254,7 @@ final readonly class HexColor implements Stringable
      *
      * @return array{l: float, a: float, b: float}
      */
-    private static function linearRgbToOklab(float $r, float $g, float $b): array
+    private function linearRgbToOklab(float $r, float $g, float $b): array
     {
         // Matrix multiplication: linear RGB to LMS
         $l = 0.4122214708 * $r + 0.5363325363 * $g + 0.0514459929 * $b;

@@ -56,7 +56,7 @@ class RoleResource extends BaseResource
                             ->required()
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
-                            ->disabled(fn (?RoleModel $record): bool => $record !== null && self::isLocked($record))
+                            ->disabled(fn (?RoleModel $record): bool => $record instanceof RoleModel && self::isLocked($record))
                             ->hint(fn (?RoleModel $record): ?string => self::lockedNameHint($record))
                             ->hintIcon(fn (?RoleModel $record): ?string => self::lockedNameHint($record) !== null ? 'heroicon-o-lock-closed' : null)
                             ->hintColor('warning')
@@ -153,7 +153,7 @@ class RoleResource extends BaseResource
      */
     public static function isBaseRole(?RoleModel $record): bool
     {
-        return $record !== null && app(BaseRoleRule::class)->isBaseRoleName($record->name);
+        return $record instanceof RoleModel && app(BaseRoleRule::class)->isBaseRoleName($record->name);
     }
 
     /**
@@ -172,7 +172,7 @@ class RoleResource extends BaseResource
 
         return PermissionModel::query()
             ->pluck('key', 'id')
-            ->map(static fn (string $key): string => $record !== null
+            ->map(static fn (string $key): string => $record instanceof RoleModel
                 && in_array($record->name, $registry->find($key)->defaultRoles ?? [], true)
                 ? "{$key} · {$suggested}"
                 : $key)
@@ -194,7 +194,7 @@ class RoleResource extends BaseResource
      */
     public static function isAssociationMemberRole(?RoleModel $record): bool
     {
-        return $record !== null
+        return $record instanceof RoleModel
             && app(AssociationMemberRoleRule::class)->isAssociationMemberRoleName($record->name);
     }
 

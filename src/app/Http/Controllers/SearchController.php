@@ -16,7 +16,7 @@ use Inertia\Response;
 
 final class SearchController extends Controller
 {
-    private const MAX_RESULTS = 12;
+    private const int MAX_RESULTS = 12;
 
     public function __construct(
         private readonly EventQueryServiceInterface $eventQuery,

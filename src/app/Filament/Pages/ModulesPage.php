@@ -17,7 +17,6 @@ use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
-use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Modules\ModuleLoader;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -97,7 +96,7 @@ final class ModulesPage extends Page implements HasForms
         return auth()->user()?->isAdmin() ?? false;
     }
 
-    private static function installRequiresMaintenanceMessage(): string
+    private function installRequiresMaintenanceMessage(): string
     {
         return __('modules.filament.install_form.maintenance_required');
     }
@@ -117,11 +116,9 @@ final class ModulesPage extends Page implements HasForms
 
         if ($this->search !== '') {
             $search = strtolower($this->search);
-            $collection = $collection->filter(function (Module $module) use ($search): bool {
-                return str_contains(strtolower($module->name()->value), $search)
-                    || str_contains(strtolower($module->displayName()), $search)
-                    || str_contains(strtolower($module->description()), $search);
-            });
+            $collection = $collection->filter(fn (Module $module): bool => str_contains(strtolower($module->name()->value), $search)
+                || str_contains(strtolower($module->displayName()), $search)
+                || str_contains(strtolower($module->description()), $search));
         }
 
         return $collection->sortBy(fn (Module $m) => $m->name()->value);
@@ -174,7 +171,7 @@ final class ModulesPage extends Page implements HasForms
                 ->disabled(fn (SettingsServiceInterface $settings): bool => ! $settings->isMaintenanceModeEnabled())
                 ->tooltip(fn (SettingsServiceInterface $settings): ?string => $settings->isMaintenanceModeEnabled()
                     ? null
-                    : self::installRequiresMaintenanceMessage())
+                    : $this->installRequiresMaintenanceMessage())
                 ->action(function (array $data, ModuleInstallerInterface $installer, ModuleManagerServiceInterface $moduleManager): void {
                     try {
                         $uploadedFile = $this->resolveUploadedFile($data['zipFile']);
@@ -392,7 +389,7 @@ final class ModulesPage extends Page implements HasForms
 
         return [
             'compatible' => $result->isCompatible(),
-            'reasons' => array_map(static fn (CompatibilityIssue $issue): string => $formatter->format($issue), $result->issues),
+            'reasons' => array_map($formatter->format(...), $result->issues),
         ];
     }
 

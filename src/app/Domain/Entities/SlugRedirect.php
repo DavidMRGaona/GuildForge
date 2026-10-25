@@ -7,15 +7,15 @@ namespace App\Domain\Entities;
 use App\Domain\ValueObjects\Slug;
 use DateTimeImmutable;
 
-final class SlugRedirect
+final readonly class SlugRedirect
 {
     public function __construct(
-        private readonly string $id,
-        private readonly Slug $oldSlug,
-        private readonly Slug $newSlug,
-        private readonly string $entityType,
-        private readonly string $entityId,
-        private readonly DateTimeImmutable $createdAt,
+        private string $id,
+        private Slug $oldSlug,
+        private Slug $newSlug,
+        private string $entityType,
+        private string $entityId,
+        private DateTimeImmutable $createdAt,
     ) {}
 
     public function id(): string

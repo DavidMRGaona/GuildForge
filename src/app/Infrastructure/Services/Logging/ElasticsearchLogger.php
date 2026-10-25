@@ -8,10 +8,10 @@ use App\Application\Services\LogContextProviderInterface;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
 
-final class ElasticsearchLogger
+final readonly class ElasticsearchLogger
 {
     public function __construct(
-        private readonly ?LogContextProviderInterface $contextProvider = null,
+        private ?LogContextProviderInterface $contextProvider = null,
     ) {}
 
     /**

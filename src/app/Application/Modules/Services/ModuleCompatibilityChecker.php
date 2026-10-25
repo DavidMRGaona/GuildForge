@@ -42,7 +42,7 @@ final readonly class ModuleCompatibilityChecker
 
         $filament = $requirements->filamentVersion();
         if ($filament !== null) {
-            if ($host->filament === null) {
+            if (! $host->filament instanceof ModuleVersion) {
                 $issues[] = new CompatibilityIssue(RequirementType::Filament, $filament, null, CompatibilityIssue::UNKNOWN_HOST_VERSION);
             } else {
                 $this->checkConstraint($issues, RequirementType::Filament, $filament, $host->filament);
@@ -63,7 +63,7 @@ final readonly class ModuleCompatibilityChecker
         $result = $this->check(ModuleRequirements::fromManifest($manifest->requires ?? []), $host);
         $minimum = $host->minimumVersionOf($manifest->name);
 
-        if ($minimum === null) {
+        if (! $minimum instanceof ModuleVersion) {
             return $result;
         }
 

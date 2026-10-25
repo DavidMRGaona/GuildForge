@@ -35,7 +35,7 @@ final class ProcessModulePostUpdateRunner implements ModulePostUpdateRunnerInter
             ->run([self::phpBinary(), base_path('artisan'), 'module:finish-update', $moduleName->value, $version->value(), '--no-interaction']);
 
         if (! $result->successful()) {
-            throw UpdateException::postUpdateFailed($moduleName->value, self::reason($result));
+            throw UpdateException::postUpdateFailed($moduleName->value, $this->reason($result));
         }
 
         return PostUpdateReportDTO::fromOutput($result->output())
@@ -50,7 +50,7 @@ final class ProcessModulePostUpdateRunner implements ModulePostUpdateRunnerInter
                 ->run([self::phpBinary(), base_path('artisan'), 'module:refresh-caches', '--no-interaction']);
 
             if (! $result->successful()) {
-                Log::warning('Could not refresh caches after a module update', ['error' => self::reason($result)]);
+                Log::warning('Could not refresh caches after a module update', ['error' => $this->reason($result)]);
             }
         } catch (\Throwable $e) {
             Log::warning('Could not refresh caches after a module update', ['error' => $e->getMessage()]);
@@ -66,7 +66,7 @@ final class ProcessModulePostUpdateRunner implements ModulePostUpdateRunnerInter
         return (new PhpExecutableFinder)->find(false) ?: 'php';
     }
 
-    private static function reason(ProcessResult $result): string
+    private function reason(ProcessResult $result): string
     {
         $output = trim($result->errorOutput()) !== '' ? $result->errorOutput() : $result->output();
 

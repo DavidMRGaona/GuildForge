@@ -16,7 +16,7 @@ final readonly class UpdatesAvailable
 
     public function hasUpdates(): bool
     {
-        return ! empty($this->moduleUpdates) || $this->coreUpdate !== null;
+        return $this->moduleUpdates !== [] || $this->coreUpdate !== null;
     }
 
     public function count(): int

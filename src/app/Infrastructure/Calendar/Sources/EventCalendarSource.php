@@ -11,10 +11,10 @@ use App\Application\Services\EventQueryServiceInterface;
 use App\Domain\Calendar\Enums\CalendarSourceColor;
 use DateTimeImmutable;
 
-final class EventCalendarSource implements CalendarEntrySourceInterface
+final readonly class EventCalendarSource implements CalendarEntrySourceInterface
 {
     public function __construct(
-        private readonly EventQueryServiceInterface $eventQueryService,
+        private EventQueryServiceInterface $eventQueryService,
     ) {}
 
     public function sourceType(): string
@@ -43,7 +43,7 @@ final class EventCalendarSource implements CalendarEntrySourceInterface
         );
 
         return array_map(
-            fn (EventResponseDTO $event): CalendarEntryDTO => $this->toEntry($event),
+            $this->toEntry(...),
             $events,
         );
     }

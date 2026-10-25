@@ -6,13 +6,13 @@ namespace App\Application\Modules\DTOs;
 
 final readonly class ScaffoldResultDTO
 {
-    public const STATUS_CREATED = 'created';
+    public const string STATUS_CREATED = 'created';
 
-    public const STATUS_SKIPPED = 'skipped';
+    public const string STATUS_SKIPPED = 'skipped';
 
-    public const STATUS_OVERWRITTEN = 'overwritten';
+    public const string STATUS_OVERWRITTEN = 'overwritten';
 
-    public const STATUS_FAILED = 'failed';
+    public const string STATUS_FAILED = 'failed';
 
     /**
      * @param  array<string, string>  $files  Files created/modified with their status

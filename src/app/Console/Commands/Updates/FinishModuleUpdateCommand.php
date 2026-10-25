@@ -6,6 +6,7 @@ namespace App\Console\Commands\Updates;
 
 use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
@@ -56,7 +57,7 @@ final class FinishModuleUpdateCommand extends Command
             $version = ModuleVersion::fromString((string) $this->argument('version'));
             $module = $modules->findByName($name);
 
-            if ($module === null) {
+            if (! $module instanceof Module) {
                 $this->error("Module '{$name->value}' is not installed.");
 
                 return self::FAILURE;
