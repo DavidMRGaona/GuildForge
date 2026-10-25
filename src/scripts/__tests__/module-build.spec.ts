@@ -52,6 +52,12 @@ describe('defineModuleConfig', () => {
         );
     });
 
+    it('stops the build on a relative import of the core sources', async () => {
+        await expect(buildFixture('relative-core-module')).rejects.toThrow(
+            `is a file of the core's sources: import "@/composables/useNotifications" instead`
+        );
+    });
+
     it('stops the build on a package the module does not declare', async () => {
         await expect(buildFixture('undeclared-module')).rejects.toThrow(
             `"leaflet" is not a dependency of the module: declare leaflet in the module's package.json dependencies`

@@ -31,6 +31,7 @@ export interface ModuleConfigOptions {
 }
 
 const coreDir = import.meta.dirname;
+const coreJs = resolve(coreDir, 'resources/js');
 
 /** Every .vue file under a directory, entry name (relative to the module root) => path. */
 function discoverEntries(root: string, dir: string): Record<string, string> {
@@ -93,24 +94,37 @@ function publicApiGuard(root: string, api: PublicApi): Plugin {
         );
     };
 
+    const privateImport = (id: string): string =>
+        `"${id}" is not part of the core's public frontend API (src/resources/js/public-api.json): import a public entry or ask for it to be added`;
+
     return {
         name: 'guildforge:public-api',
         enforce: 'pre',
-        resolveId(id, importer): null {
-            if (!moduleSource(importer)) {
+        async resolveId(id, importer): Promise<null> {
+            // The external option keeps these out before any plugin runs; never judge them here
+            if (!moduleSource(importer) || isSharedWithModules(id, api)) {
                 return null;
             }
             if (isPrivateCoreImport(id, api)) {
-                this.error(
-                    `"${id}" is not part of the core's public frontend API (src/resources/js/public-api.json): import a public entry or ask for it to be added`
-                );
+                this.error(privateImport(id));
             }
-            if (
-                id.startsWith('.') ||
-                id.startsWith('/') ||
-                id.startsWith('\0') ||
-                id.startsWith('@/')
-            ) {
+            if (id.startsWith('.') || id.startsWith('/')) {
+                // A path into the core's sources would bundle a private copy of the file
+                const resolved = await this.resolve(id, importer, { skipSelf: true });
+                const path =
+                    resolved === null ? '..' : relative(coreJs, resolved.id.split('?')[0] ?? '');
+                if (!path.startsWith('..')) {
+                    const specifier = `@/${path.replace(/\.(ts|js)$/, '')}`;
+                    this.error(
+                        Object.hasOwn(api.entries, specifier)
+                            ? `"${id}" is a file of the core's sources: import "${specifier}" instead`
+                            : privateImport(specifier)
+                    );
+                }
+
+                return null;
+            }
+            if (id.startsWith('\0') || id.startsWith('@/')) {
                 return null;
             }
             if (sharedPackages.has(packageName(id))) {
@@ -154,7 +168,7 @@ export function defineModuleConfig({ name, root }: ModuleConfigOptions): UserCon
                 : resolve(coreDir, 'public/build/modules', name),
             emptyOutDir: true,
             manifest: 'manifest.json',
-            rollupOptions: {
+            rolldownOptions: {
                 input: {
                     ...entries,
                     // Utilities the core stylesheet cannot generate for this module
