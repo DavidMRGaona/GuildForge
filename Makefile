@@ -242,6 +242,8 @@ build-assets: ## Production build
 # MODULE PACKAGING
 # =============================================================================
 
+# Legacy module toolchain: the module's own npm build in module-zip goes once every module is
+# on defineModuleConfig
 module-zip: ## Build and package a module as a production-ready ZIP
 	@MODULES=""; \
 	INDEX=0; \
@@ -275,10 +277,16 @@ module-zip: ## Build and package a module as a production-ready ZIP
 	echo ""; \
 	echo "Packaging $$MODULE_NAME v$$MODULE_VERSION..."; \
 	echo ""; \
-	if [ -f "src/modules/$$MODULE_NAME/package.json" ]; then \
+	MODE=$$(sh src/scripts/module-build-mode.sh "src/modules/$$MODULE_NAME"); \
+	if [ "$$MODE" != none ]; then \
 		echo "Building Vue assets..."; \
-		docker exec -e MODULE_STANDALONE_OUTPUT=true $(NODE_CONTAINER) \
-			sh -c "cd modules/$$MODULE_NAME && npm install && npm run build"; \
+		if [ "$$MODE" = core ]; then \
+			docker exec -e MODULE_STANDALONE_OUTPUT=true $(NODE_CONTAINER) \
+				sh -c "{ [ ! -f modules/$$MODULE_NAME/package.json ] || (cd modules/$$MODULE_NAME && npm ci); } && npm run build:module -- $$MODULE_NAME"; \
+		else \
+			docker exec -e MODULE_STANDALONE_OUTPUT=true $(NODE_CONTAINER) \
+				sh -c "cd modules/$$MODULE_NAME && npm install && npm run build"; \
+		fi; \
 		if [ ! -f "src/modules/$$MODULE_NAME/public/build/manifest.json" ]; then \
 			echo "Build failed: manifest.json not found"; \
 			exit 1; \
@@ -286,7 +294,7 @@ module-zip: ## Build and package a module as a production-ready ZIP
 		echo "Vue assets built successfully"; \
 		echo ""; \
 	else \
-		echo "No package.json found, skipping Vue build"; \
+		echo "No vite.config.ts found, skipping Vue build"; \
 		echo ""; \
 	fi; \
 	PACKAGE_DIR="$$MODULE_NAME-$$MODULE_VERSION"; \

@@ -171,7 +171,7 @@ All commands are executed through `make` and run inside Docker containers.
 | `make dev` | Vite server with HMR (only when the node container's own Vite is not running) |
 | `make build-assets` | Production asset build (`vue-tsc` + `vite build`) |
 
-CI also runs `npm run verify:build` after the build (`src/scripts/verify-build.mjs`, checks the module import map entries and that the core build contains no module sources); run it with `docker exec guildforge_node npm run verify:build`, since a build can pass locally while CI fails this check.
+CI also runs `npm run verify:build` after the build (`src/scripts/verify-build.mjs`: the entries of the public frontend API for modules, their exports against `resources/js/public-api.exports.json`, one chunk per vendor group, and no module sources in the core build) and, in the lint job, `npm run check:public-api` (the API's types against `resources/js/public-api.api.md`). Run them with `docker exec guildforge_node npm run verify:build` and `docker exec guildforge_node npm run check:public-api`; after an intended API change regenerate the files with `node scripts/verify-build.mjs public/build --write-snapshot` and `npm run public-api:report`, and review the diff in the pull request.
 
 ### Code generation
 
