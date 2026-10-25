@@ -37,19 +37,6 @@ export default [
                 ecmaVersion: 'latest',
                 sourceType: 'module',
             },
-            globals: {
-                console: 'readonly',
-                document: 'readonly',
-                window: 'readonly',
-                fetch: 'readonly',
-                Response: 'readonly',
-                MediaQueryList: 'readonly',
-                MediaQueryListEvent: 'readonly',
-                URL: 'readonly',
-                File: 'readonly',
-                HTMLLinkElement: 'readonly',
-                HTMLScriptElement: 'readonly',
-            },
         },
         plugins: {
             '@typescript-eslint': typescript,
@@ -60,6 +47,9 @@ export default [
             '@typescript-eslint/explicit-function-return-type': 'error',
             '@typescript-eslint/no-explicit-any': 'error',
             '@typescript-eslint/strict-boolean-expressions': 'off',
+            // TypeScript already rejects undefined names (vue-tsc, type-check), and no-undef
+            // does not know the DOM types: typescript-eslint recommends turning it off
+            'no-undef': 'off',
         },
     },
     {
@@ -73,22 +63,6 @@ export default [
                 // Vue 3 has no filters: '|' in a TypeScript cast is not one
                 vueFeatures: { filter: false },
             },
-            globals: {
-                console: 'readonly',
-                document: 'readonly',
-                window: 'readonly',
-                Event: 'readonly',
-                MouseEvent: 'readonly',
-                KeyboardEvent: 'readonly',
-                HTMLElement: 'readonly',
-                HTMLButtonElement: 'readonly',
-                HTMLInputElement: 'readonly',
-                setTimeout: 'readonly',
-                clearTimeout: 'readonly',
-                fetch: 'readonly',
-                URLSearchParams: 'readonly',
-                URL: 'readonly',
-            },
         },
         plugins: {
             '@typescript-eslint': typescript,
@@ -99,6 +73,9 @@ export default [
             'vue/no-v-html': 'warn',
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
             '@typescript-eslint/no-explicit-any': 'error',
+            // TypeScript already rejects undefined names (vue-tsc, type-check), and no-undef
+            // does not know the DOM types: typescript-eslint recommends turning it off
+            'no-undef': 'off',
         },
     },
     // Last: turns off the formatting rules that Prettier owns

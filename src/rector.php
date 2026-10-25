@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUnusedPublicMethodParameterRector;
+use Rector\Php80\Rector\Ternary\TernaryToNullsafeCoalesceRector;
 use Rector\Php84\Rector\MethodCall\NewMethodCallWithoutParenthesesRector;
 use Rector\Php85\Rector\Property\AddOverrideAttributeToOverriddenPropertiesRector;
 
@@ -20,4 +21,7 @@ return RectorConfig::configure()
         // policy method receives the model the Gate checks, even when they do not read them.
         // Plain patterns, so they also match a module's src/ (scripts/check-module-quality.sh).
         RemoveUnusedPublicMethodParameterRector::class => ['*/Listeners/*', '*/Policies/*'],
+        // Writes `$a?->b ?? $c`, which PHPStan rejects (nullsafe.neverNull: ?? already covers
+        // the null); `$a->b ?? $c` is what both accept.
+        TernaryToNullsafeCoalesceRector::class,
     ]);
