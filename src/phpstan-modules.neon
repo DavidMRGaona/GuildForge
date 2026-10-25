@@ -1,7 +1,10 @@
 # The core's PHPStan configuration applied to a module (scripts/check-module-quality.sh
-# passes the module's src/ as the path). The core's ignore patterns need not match there.
+# passes the module's src/ and tests/ as the paths). The core's ignore patterns need not match there.
 includes:
     - phpstan.neon
 
 parameters:
     reportUnmatchedIgnoredErrors: false
+    # Autoloads the modules' tests and database classes, which app/Modules/autoload.php leaves out
+    bootstrapFiles:
+        - phpstan-modules-bootstrap.php

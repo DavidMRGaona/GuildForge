@@ -53,8 +53,17 @@ if [ "$PART" = php ] || [ "$PART" = all ]; then
         run Rector vendor/bin/rector process --dry-run --no-progress-bar "$DIR/src"
     fi
     run Pint vendor/bin/pint --test "$DIR"
-    if [ -d "$DIR/src" ]; then
-        run PHPStan vendor/bin/phpstan analyse --no-progress --memory-limit=2G --configuration=phpstan-modules.neon "$DIR/src"
+    # The tests too, so their types do not drift while nobody looks
+    STAN_PATHS=""
+    for STAN_DIR in "$DIR/src" "$DIR/tests"; do
+        if [ -d "$STAN_DIR" ]; then
+            STAN_PATHS="$STAN_PATHS $STAN_DIR"
+        fi
+    done
+    if [ -n "$STAN_PATHS" ]; then
+        # Word splitting is wanted: the paths have no spaces (the module name is checked above)
+        # shellcheck disable=SC2086
+        run PHPStan vendor/bin/phpstan analyse --no-progress --memory-limit=2G --configuration=phpstan-modules.neon $STAN_PATHS
     fi
 fi
 
