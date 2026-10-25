@@ -29,6 +29,8 @@ export default {
         slideNavigation: 'Slide navigation',
         goToSlide: 'Go to slide {number}',
         moreInfo: 'More information',
+        removeTag: 'Remove {tag}',
+        addTag: 'Add tag',
     },
     events: {
         title: 'Events',

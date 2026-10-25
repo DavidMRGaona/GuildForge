@@ -29,6 +29,8 @@ export default {
         slideNavigation: 'Navegación del carrusel',
         goToSlide: 'Ir a la diapositiva {number}',
         moreInfo: 'Más información',
+        removeTag: 'Quitar {tag}',
+        addTag: 'Añadir etiqueta',
     },
     events: {
         title: 'Eventos',
