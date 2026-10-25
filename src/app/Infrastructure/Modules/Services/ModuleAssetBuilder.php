@@ -204,17 +204,6 @@ final readonly class ModuleAssetBuilder
      */
     private function resolveModulePath(Module $module): string
     {
-        $modulePath = $module->path();
-
-        // Fall back to default path if module path is not set
-        if (! is_dir($modulePath)) {
-            $modulePath = $this->modulesPath.'/'.$module->name()->value;
-        }
-
-        if (! is_dir($modulePath)) {
-            throw ModuleNotFoundException::withName($module->name()->value);
-        }
-
-        return $modulePath;
+        return (new ModulePathResolver($this->modulesPath))->resolve($module);
     }
 }

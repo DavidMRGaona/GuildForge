@@ -8,6 +8,7 @@ use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Updates\DTOs\HealthCheckResultDTO;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Infrastructure\Modules\Services\ModulePathResolver;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
@@ -15,6 +16,7 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
 {
     public function __construct(
         private ModuleManagerServiceInterface $moduleManager,
+        private ModulePathResolver $paths = new ModulePathResolver,
     ) {}
 
     public function check(ModuleName $name): HealthCheckResultDTO
@@ -86,8 +88,9 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
             }
 
             // Check if route files exist
-            $webRoutePath = $module->path().'/routes/web.php';
-            $apiRoutePath = $module->path().'/routes/api.php';
+            $modulePath = $this->paths->resolve($module);
+            $webRoutePath = $modulePath.'/routes/web.php';
+            $apiRoutePath = $modulePath.'/routes/api.php';
 
             $hasRoutes = file_exists($webRoutePath) || file_exists($apiRoutePath);
 
@@ -130,7 +133,7 @@ final readonly class ModuleHealthChecker implements ModuleHealthCheckerInterface
                 return false;
             }
 
-            $filamentPath = $module->path().'/src/Filament';
+            $filamentPath = $this->paths->resolve($module).'/src/Filament';
 
             if (! is_dir($filamentPath)) {
                 // No Filament resources - this is okay

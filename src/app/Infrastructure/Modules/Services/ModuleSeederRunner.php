@@ -43,16 +43,7 @@ final readonly class ModuleSeederRunner
      */
     public function seed(Module $module): array
     {
-        $modulePath = $module->path();
-
-        // Fall back to default path if module path is not set
-        if (! is_dir($modulePath)) {
-            $modulePath = $this->modulesPath.'/'.$module->name()->value;
-        }
-
-        if (! is_dir($modulePath)) {
-            throw ModuleNotFoundException::withName($module->name()->value);
-        }
+        $modulePath = (new ModulePathResolver($this->modulesPath))->resolve($module);
 
         $seedersPath = $modulePath.'/database/seeders';
 

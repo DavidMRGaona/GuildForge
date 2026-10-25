@@ -22,6 +22,7 @@ use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Domain\Updates\Events\ModuleUpdateFailed;
 use App\Domain\Updates\Events\ModuleUpdateStarted;
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Infrastructure\Modules\Services\ModulePathResolver;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateLogModel;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -51,6 +52,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
         private readonly ModulePackageInstallerInterface $installer,
         private readonly ReleaseChannelPolicy $channelPolicy,
         private readonly ModulePostUpdateRunnerInterface $postUpdateRunner,
+        private readonly ModulePathResolver $paths = new ModulePathResolver,
     ) {
         $this->tempPath = (string) config('updates.temp_path', storage_path('app/temp/updates'));
         $this->verifyChecksum = (bool) config('updates.behavior.verify_checksum', true);
@@ -214,7 +216,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
             // in this worker and left the module's bindings unresolvable for the steps below
             $previousPath = $this->installer->swap($stagedRoot, $name->value);
             $stagedRoot = null;
-            $this->publishPreBuiltAssets($module->path(), $name->value);
+            $this->publishPreBuiltAssets($this->paths->resolve($module), $name->value);
             $this->log($history->id, 'apply', 'completed', 'Update applied');
 
             // Step 6: Health check, then migrations, seeders and the new version in one
@@ -271,7 +273,7 @@ final class ModuleUpdater implements ModuleUpdaterInterface
                     $this->log($history->id, 'rollback', 'started', 'Restoring the previous version...');
                     $this->installer->revert($previousPath, $name->value);
                     $previousPath = null;
-                    $this->publishPreBuiltAssets($module->path(), $name->value);
+                    $this->publishPreBuiltAssets($this->paths->resolve($module), $name->value);
                     $wasRolledBack = true;
                     $history->markRolledBack($e->getMessage());
                     $this->log($history->id, 'rollback', 'completed', 'Previous version restored');
