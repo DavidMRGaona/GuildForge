@@ -70,8 +70,7 @@ final class HeroSlideModelTest extends TestCase
             'sort_order' => 5,
         ]);
 
-        $this->assertIsInt($slide->sort_order);
-        $this->assertEquals(5, $slide->sort_order);
+        $this->assertSame(5, $slide->sort_order);
     }
 
     public function test_scope_active_ordered_returns_active_slides_in_order(): void
@@ -97,10 +96,8 @@ final class HeroSlideModelTest extends TestCase
         $this->assertCount(2, $activeSlides);
 
         // Should be ordered by sort_order ascending
-        $this->assertEquals('First Slide', $activeSlides[0]->title);
-        $this->assertEquals(1, $activeSlides[0]->sort_order);
-        $this->assertEquals('Second Slide', $activeSlides[1]->title);
-        $this->assertEquals(2, $activeSlides[1]->sort_order);
+        $this->assertSame(['First Slide', 'Second Slide'], $activeSlides->pluck('title')->all());
+        $this->assertSame([1, 2], $activeSlides->pluck('sort_order')->all());
     }
 
     public function test_factory_creates_inactive_slide_by_default(): void

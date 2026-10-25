@@ -148,14 +148,17 @@ final class CoreVersionServiceTest extends TestCase
     #[DataProvider('malformedVersions')]
     public function test_a_malformed_version_file_falls_back_to_0_0_0_and_logs_once(string $content): void
     {
-        Log::spy();
+        $log = Log::spy();
         $this->writeVersion($content);
 
         $service = new CoreVersionService($this->versionFilePath);
 
-        $this->assertSame('0.0.0', $service->getCurrentVersion()->value());
-        $this->assertSame('0.0.0', $service->getCurrentVersion()->value());
-        Log::shouldHaveReceived('error')
+        $first = $service->getCurrentVersion()->value();
+        $second = $service->getCurrentVersion()->value();
+
+        $this->assertSame('0.0.0', $first);
+        $this->assertSame('0.0.0', $second);
+        $log->shouldHaveReceived('error')
             ->once()
             ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'core version')
                 && $context['file'] === $this->versionFilePath
@@ -164,12 +167,12 @@ final class CoreVersionServiceTest extends TestCase
 
     public function test_a_directory_in_place_of_the_version_file_falls_back_to_0_0_0_and_logs(): void
     {
-        Log::spy();
+        $log = Log::spy();
         File::ensureDirectoryExists($this->versionFilePath);
 
         try {
             $this->assertSame('0.0.0', (new CoreVersionService($this->versionFilePath))->getCurrentVersion()->value());
-            Log::shouldHaveReceived('error')
+            $log->shouldHaveReceived('error')
                 ->once()
                 ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'core version')
                     && $context['file'] === $this->versionFilePath);

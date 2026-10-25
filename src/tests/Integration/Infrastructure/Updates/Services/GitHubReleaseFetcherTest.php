@@ -419,8 +419,9 @@ final class GitHubReleaseFetcherTest extends TestCase
 
         $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
 
-        $this->assertSame('1.1.0', $selection->compatible?->version->value());
-        $this->assertSame('1.1.0', $selection->compatible?->tagName);
+        $this->assertNotNull($selection->compatible);
+        $this->assertSame('1.1.0', $selection->compatible->version->value());
+        $this->assertSame('1.1.0', $selection->compatible->tagName);
         $this->assertNull($selection->blocked);
         $this->assertNull($selection->blockedCoreConstraint);
         $this->assertSame([], $selection->blockedIssues);
@@ -496,7 +497,7 @@ final class GitHubReleaseFetcherTest extends TestCase
     {
         Http::fake([
             'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0', withManifest: true)]),
-            'example.test/v1.1.0/module.json' => Http::response(json_encode(['name' => 'm', 'padding' => str_repeat('x', 70_000)])),
+            'example.test/v1.1.0/module.json' => Http::response(json_encode(['name' => 'm', 'padding' => str_repeat('x', 70_000)], JSON_THROW_ON_ERROR)),
         ]);
 
         $selection = $this->fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);

@@ -64,7 +64,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $this->modulesPath = $this->tempDir.'/modules';
         File::ensureDirectoryExists("{$this->modulesPath}/real-mod/src");
         File::ensureDirectoryExists("{$this->modulesPath}/real-mod/config");
-        File::put("{$this->modulesPath}/real-mod/module.json", (string) json_encode(['name' => 'real-mod', 'version' => '1.0.0-beta', 'storesUtc' => true, 'requires' => ['core' => '>=2.0']]));
+        File::put("{$this->modulesPath}/real-mod/module.json", json_encode(['name' => 'real-mod', 'version' => '1.0.0-beta', 'storesUtc' => true, 'requires' => ['core' => '>=2.0']], JSON_THROW_ON_ERROR));
 
         config([
             'modules.path' => $this->modulesPath,
@@ -100,7 +100,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $row = ModuleModel::query()->where('name', 'real-mod')->firstOrFail();
         $this->assertSame(UpdateStatus::Completed, $result->status, (string) $result->errorMessage);
         $this->assertSame('1.0.1-beta', $row->version);
-        $this->assertSame('enabled', $row->status instanceof \BackedEnum ? $row->status->value : $row->status);
+        $this->assertSame('enabled', $row->status);
         $this->assertSame('1.0.1-beta', $this->diskVersion());
     }
 
@@ -112,7 +112,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         $this->assertSame(UpdateStatus::RolledBack, $result->status);
         $this->assertSame('1.0.0-beta', $this->diskVersion());
         $this->assertSame('1.0.0-beta', $row->version);
-        $this->assertSame('enabled', $row->status instanceof \BackedEnum ? $row->status->value : $row->status);
+        $this->assertSame('enabled', $row->status);
         $this->assertStringContainsString(
             'provider failed',
             (string) ModuleUpdateHistoryModel::findOrFail($result->historyId)->error_message,
@@ -155,7 +155,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
         foreach ($releaseFiles as $path => $content) {
             $archive->addFromString('real-mod-1.0.1-beta/'.$path, $content);
         }
-        $archive->addFromString('real-mod-1.0.1-beta/module.json', (string) json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta', 'storesUtc' => true, 'namespace' => 'Modules\\RealMod', 'provider' => 'RealModServiceProvider', 'requires' => ['core' => '>=2.0']]));
+        $archive->addFromString('real-mod-1.0.1-beta/module.json', json_encode(['name' => 'real-mod', 'version' => '1.0.1-beta', 'storesUtc' => true, 'namespace' => 'Modules\\RealMod', 'provider' => 'RealModServiceProvider', 'requires' => ['core' => '>=2.0']], JSON_THROW_ON_ERROR));
         $archive->close();
 
         $fetcher = Mockery::mock(GitHubReleaseFetcherInterface::class);

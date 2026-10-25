@@ -63,11 +63,11 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
         // npm in the module directory each time, and fails over and over in CI without host packages
         $this->createTestModuleWithComponentsAndConfig('test-module');
         $this->createModuleRecord('test-module');
-        Log::spy();
+        $log = Log::spy();
 
         event(new ModuleEnabled('fake-id', 'test-module'));
 
-        Log::shouldNotHaveReceived('info', ['Building assets for module: test-module']);
+        $log->shouldNotHaveReceived('info', ['Building assets for module: test-module']);
         $this->assertDirectoryDoesNotExist($this->testModulesPath.'/test-module/node_modules');
     }
 
@@ -156,12 +156,12 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
         // The record outlives its directory: the builder throws before reaching npm,
         // so the test never launches a process
         $this->createModuleRecord('test-module');
-        Log::spy();
+        $log = Log::spy();
 
         $listener = $this->app->make(BuildModuleAssetsOnEnabled::class);
         $listener->handle(new ModuleEnabled('fake-id', 'test-module'));
 
-        Log::shouldHaveReceived('error')
+        $log->shouldHaveReceived('error')
             ->once()
             ->withArgs(fn (string $message, array $context): bool => $message === 'BuildModuleAssetsOnEnabled: Exception while building assets for test-module'
                 && $context['exception'] === "Module 'test-module' not found.");
@@ -192,7 +192,7 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
             'version' => '1.0.0',
             'description' => 'Test module',
             'author' => 'Test Author',
-        ]));
+        ], JSON_THROW_ON_ERROR));
     }
 
     private function createTestModuleWithComponents(string $name): void

@@ -66,14 +66,16 @@ final class TrixContentMigratorTest extends TestCase
         $report = $this->migrator()->migrate();
 
         $this->assertCount(3, $report->changed);
-        $this->assertSame(self::TIPTAP, $article->fresh()?->content);
+        $freshArticle = $article->fresh();
+        $this->assertNotNull($freshArticle);
+        $this->assertSame(self::TIPTAP, $freshArticle->content);
         $this->assertSame(self::TIPTAP, $event->fresh()?->description);
         $this->assertSame(self::TIPTAP, $untouched->fresh()?->description);
         $this->assertSame(self::TIPTAP, app(SettingsServiceInterface::class)->get('about_history'));
         // Not an edit: the record keeps its last modification date
-        $this->assertSame($updatedAt, $article->fresh()?->updated_at?->toIso8601String());
+        $this->assertSame($updatedAt, $freshArticle->updated_at?->toIso8601String());
         $this->assertFileExists((string) $report->backupPath);
-        $this->assertStringContainsString(json_encode(self::TRIX, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '', (string) File::get((string) $report->backupPath));
+        $this->assertStringContainsString(json_encode(self::TRIX, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), (string) File::get((string) $report->backupPath));
 
         $again = $this->migrator()->migrate();
 

@@ -90,12 +90,12 @@ final class ModuleMigrationRunnerErrorsTest extends TestCase
 
     public function test_falling_back_to_the_default_path_logs_a_warning(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $stalePath = $this->modulesPath.'/moved-away';
 
         $this->assertSame(0, $this->runner->run($this->module(path: $stalePath)));
 
-        Log::shouldHaveReceived('warning')
+        $log->shouldHaveReceived('warning')
             ->once()
             ->withArgs(fn (string $message, array $context): bool => $message === 'Stored path of module '.self::MODULE.' does not exist, using the modules directory'
                 && $context === ['stored_path' => $stalePath, 'path' => $this->modulesPath.'/'.self::MODULE]);

@@ -52,8 +52,7 @@ final class PhotoModelTest extends TestCase
             'sort_order' => 10,
         ]);
 
-        $this->assertEquals(10, $photo->sort_order);
-        $this->assertIsInt($photo->sort_order);
+        $this->assertSame(10, $photo->sort_order);
     }
 
     public function test_it_belongs_to_gallery(): void
@@ -84,7 +83,6 @@ final class PhotoModelTest extends TestCase
     {
         $photo = PhotoModel::factory()->create();
 
-        $this->assertNotNull($photo->gallery_id);
         $this->assertInstanceOf(GalleryModel::class, $photo->gallery);
     }
 }

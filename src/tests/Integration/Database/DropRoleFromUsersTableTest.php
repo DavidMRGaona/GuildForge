@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Tests\Integration\Database;
 
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Tests\Support\Database\RunsMigrationFiles;
 use Tests\TestCase;
 
 /**
@@ -19,6 +19,7 @@ use Tests\TestCase;
 final class DropRoleFromUsersTableTest extends TestCase
 {
     use RefreshDatabase;
+    use RunsMigrationFiles;
 
     private const string MIGRATION = 'migrations/2026_10_15_100001_drop_role_from_users_table.php';
 
@@ -29,11 +30,10 @@ final class DropRoleFromUsersTableTest extends TestCase
 
     public function test_dropping_the_column_keeps_the_users(): void
     {
-        $migration = $this->migration();
-        $migration->down();
+        $this->runMigration('down');
         $user = UserModel::factory()->create(['email' => 'kept@example.com']);
 
-        $migration->up();
+        $this->runMigration('up');
 
         $this->assertFalse(Schema::hasColumn('users', 'role'));
         $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => 'kept@example.com']);
@@ -43,7 +43,7 @@ final class DropRoleFromUsersTableTest extends TestCase
     {
         $existing = UserModel::factory()->create();
 
-        $this->migration()->down();
+        $this->runMigration('down');
 
         $this->assertTrue(Schema::hasColumn('users', 'role'));
         $column = collect(Schema::getColumns('users'))->firstWhere('name', 'role');
@@ -60,20 +60,15 @@ final class DropRoleFromUsersTableTest extends TestCase
 
     public function test_up_after_down_drops_it_again(): void
     {
-        $migration = $this->migration();
-
-        $migration->down();
-        $migration->up();
+        $this->runMigration('down');
+        $this->runMigration('up');
 
         $this->assertFalse(Schema::hasColumn('users', 'role'));
     }
 
-    private function migration(): Migration
+    private function runMigration(string $direction): void
     {
-        /** @var Migration $migration */
-        $migration = require database_path(self::MIGRATION);
-
-        return $migration;
+        $this->runMigrationFile(database_path(self::MIGRATION), $direction);
     }
 
     /**

@@ -72,6 +72,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         app(EventRepositoryInterface::class)->save($event);
 
         $row = DB::table('events')->where('id', $id->value)->first();
+        $this->assertNotNull($row);
         $this->assertSame('2026-07-01 10:00:00', $row->start_date);
         $this->assertSame('2026-07-01 12:00:00', $row->end_date);
     }
@@ -81,7 +82,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $record = new SesUsageRecordModel;
-        $record->date = new DateTimeImmutable('2026-10-25 00:00', new DateTimeZone('Europe/Madrid'));
+        $record->setAttribute('date', new DateTimeImmutable('2026-10-25 00:00', new DateTimeZone('Europe/Madrid')));
 
         $this->assertSame('2026-10-25 00:00:00', $record->getAttributes()['date']);
     }
@@ -91,7 +92,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $event = new EventModel;
-        $event->start_date = new DateTimeImmutable('2026-10-25 00:30', new DateTimeZone('Europe/Madrid'));
+        $event->setAttribute('start_date', new DateTimeImmutable('2026-10-25 00:30', new DateTimeZone('Europe/Madrid')));
 
         $this->assertSame('2026-10-24 22:30:00', $event->getAttributes()['start_date']);
     }
@@ -101,7 +102,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $event = new EventModel;
-        $event->start_date = '2026-07-01T12:00:00+02:00';
+        $event->setAttribute('start_date', '2026-07-01T12:00:00+02:00');
 
         $this->assertSame('2026-07-01 10:00:00', $event->getAttributes()['start_date']);
     }
@@ -111,7 +112,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $event = new EventModel;
-        $event->start_date = '2026-07-01 12:00:00';
+        $event->setAttribute('start_date', '2026-07-01 12:00:00');
 
         $this->assertSame('2026-07-01 12:00:00', $event->getAttributes()['start_date']);
     }
@@ -121,7 +122,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $record = new SesUsageRecordModel;
-        $record->date = '2026-10-25';
+        $record->setAttribute('date', '2026-10-25');
 
         $this->assertSame('2026-10-25 00:00:00', $record->getAttributes()['date']);
     }
@@ -131,7 +132,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $record = new SesUsageRecordModel;
-        $record->date = '2026-10-25T00:30:00+02:00';
+        $record->setAttribute('date', '2026-10-25T00:30:00+02:00');
 
         $this->assertSame('2026-10-25 00:00:00', $record->getAttributes()['date']);
     }
@@ -141,13 +142,13 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $model = new CustomDateCastModel;
-        $model->day = new DateTimeImmutable('2026-10-25 00:00', new DateTimeZone('Europe/Madrid'));
+        $model->setAttribute('day', new DateTimeImmutable('2026-10-25 00:00', new DateTimeZone('Europe/Madrid')));
         $this->assertStringStartsWith('2026-10-25', $model->getAttributes()['day']);
 
-        $model->day = '2026-10-25T00:30:00+02:00';
+        $model->setAttribute('day', '2026-10-25T00:30:00+02:00');
         $this->assertStringStartsWith('2026-10-25', $model->getAttributes()['day']);
 
-        $model->imm = new DateTimeImmutable('2026-10-25 00:00', new DateTimeZone('Europe/Madrid'));
+        $model->setAttribute('imm', new DateTimeImmutable('2026-10-25 00:00', new DateTimeZone('Europe/Madrid')));
         $this->assertStringStartsWith('2026-10-25', $model->getAttributes()['imm']);
     }
 
@@ -156,8 +157,8 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $event = new EventModel;
-        $event->start_date = '2026-07-01 12:00:00';
-        $event->end_date = null;
+        $event->setAttribute('start_date', '2026-07-01 12:00:00');
+        $event->setAttribute('end_date', null);
 
         $this->assertSame('2026-07-01 12:00:00', $event->getAttributes()['start_date']);
         $this->assertNull($event->getAttributes()['end_date']);
@@ -169,7 +170,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
 
         $moment = Carbon::parse('2026-10-25 00:30', 'Europe/Madrid');
         $event = new EventModel;
-        $event->start_date = $moment;
+        $event->setAttribute('start_date', $moment);
 
         $this->assertSame('Europe/Madrid', $moment->getTimezone()->getName());
         $this->assertSame('2026-10-25 00:30:00', $moment->format('Y-m-d H:i:s'));
@@ -196,7 +197,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->travelTo(Carbon::parse('2031-03-04 12:00:00', 'UTC'));
 
         $record = new SesUsageRecordModel;
-        $record->date = 'today';
+        $record->setAttribute('date', 'today');
 
         $this->assertSame('2031-03-04 00:00:00', $record->getAttributes()['date']);
     }
@@ -206,7 +207,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $model = new CustomDateCastModel;
-        $model->moment = '2026-07-01T12:00:00+02:00';
+        $model->setAttribute('moment', '2026-07-01T12:00:00+02:00');
 
         $this->assertSame('2026-07-01 10:00', Carbon::parse($model->getAttributes()['moment'])->format('Y-m-d H:i'));
     }
@@ -216,7 +217,7 @@ final class StoresInstantsInStorageTimezoneTest extends TestCase
         $this->useUtcStorage();
 
         $model = new CustomDateCastModel;
-        $model->moment = new DateTimeImmutable('2026-10-25 00:30', new DateTimeZone('Europe/Madrid'));
+        $model->setAttribute('moment', new DateTimeImmutable('2026-10-25 00:30', new DateTimeZone('Europe/Madrid')));
 
         $this->assertSame('2026-10-24 22:30', $model->getAttributes()['moment']->format('Y-m-d H:i'));
     }

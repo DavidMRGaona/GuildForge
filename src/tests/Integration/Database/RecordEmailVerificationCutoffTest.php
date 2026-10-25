@@ -6,15 +6,16 @@ namespace Tests\Integration\Database;
 
 use App\Application\Services\SettingsServiceInterface;
 use DateTimeImmutable;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\Database\RunsMigrationFiles;
 use Tests\TestCase;
 
 final class RecordEmailVerificationCutoffTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RunsMigrationFiles;
 
     private const string KEY = 'email_verification_enforced_since';
 
@@ -25,29 +26,31 @@ final class RecordEmailVerificationCutoffTest extends TestCase
         // ambiguous during the autumn hour the clock repeats
         $before = new DateTimeImmutable('@'.(time() - 1));
 
-        $this->migration()->up();
+        $this->runMigration('up');
 
         $after = new DateTimeImmutable('@'.(time() + 1));
         $rows = DB::table('settings')->where('key', self::KEY)->get();
         $this->assertCount(1, $rows);
+        $row = $rows->first();
+        $this->assertNotNull($row);
 
-        $value = (string) $rows->first()->value;
+        $value = (string) $row->value;
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$/', $value);
         $recorded = DateTimeImmutable::createFromFormat(DATE_ATOM, $value);
         $this->assertInstanceOf(DateTimeImmutable::class, $recorded);
         $this->assertGreaterThanOrEqual($before, $recorded);
         $this->assertLessThanOrEqual($after, $recorded);
-        $this->assertIsString($rows->first()->id);
-        $this->assertNotNull($rows->first()->created_at);
+        $this->assertIsString($row->id);
+        $this->assertNotNull($row->created_at);
     }
 
     public function test_a_second_run_keeps_the_recorded_cutoff(): void
     {
         DB::table('settings')->where('key', self::KEY)->delete();
-        $this->migration()->up();
+        $this->runMigration('up');
         DB::table('settings')->where('key', self::KEY)->update(['value' => '2026-10-14T10:30:00+00:00']);
 
-        $this->migration()->up();
+        $this->runMigration('up');
 
         $this->assertSame(1, DB::table('settings')->where('key', self::KEY)->count());
         $this->assertSame('2026-10-14T10:30:00+00:00', DB::table('settings')->where('key', self::KEY)->value('value'));
@@ -60,7 +63,7 @@ final class RecordEmailVerificationCutoffTest extends TestCase
         $settings->clearCache();
         $this->assertNull($settings->getEmailVerificationEnforcedSince());
 
-        $this->migration()->up();
+        $this->runMigration('up');
 
         $this->assertNotNull($settings->getEmailVerificationEnforcedSince());
     }
@@ -76,7 +79,7 @@ final class RecordEmailVerificationCutoffTest extends TestCase
 
         // The migrator runs each migration in a transaction on PostgreSQL
         DB::transaction(function (): void {
-            $this->migration()->up();
+            $this->runMigration('up');
 
             // Cleared before the commit, a request could cache the old settings again for an hour
             $this->assertTrue(Cache::has('site_settings'), 'The cache was cleared before the commit');
@@ -88,16 +91,16 @@ final class RecordEmailVerificationCutoffTest extends TestCase
 
     public function test_down_keeps_the_cutoff(): void
     {
-        $this->migration()->up();
+        $this->runMigration('up');
         $value = DB::table('settings')->where('key', self::KEY)->value('value');
 
-        $this->migration()->down();
+        $this->runMigration('down');
 
         $this->assertSame($value, DB::table('settings')->where('key', self::KEY)->value('value'));
     }
 
-    private function migration(): Migration
+    private function runMigration(string $direction): void
     {
-        return require database_path('migrations/2026_10_14_100003_record_email_verification_cutoff.php');
+        $this->runMigrationFile(database_path('migrations/2026_10_14_100003_record_email_verification_cutoff.php'), $direction);
     }
 }

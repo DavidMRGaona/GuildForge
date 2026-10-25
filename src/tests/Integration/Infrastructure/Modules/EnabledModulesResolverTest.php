@@ -39,10 +39,10 @@ final class EnabledModulesResolverTest extends TestCase
 
         // A compatible module with migrations that nobody enabled yet
         File::ensureDirectoryExists("{$this->modulesPath}/disabled-module/database/migrations");
-        File::put("{$this->modulesPath}/disabled-module/module.json", (string) json_encode([
+        File::put("{$this->modulesPath}/disabled-module/module.json", json_encode([
             'name' => 'disabled-module', 'version' => '1.0.0', 'storesUtc' => true, 'namespace' => 'Modules\\DisabledModule', 'provider' => 'DisabledModuleServiceProvider',
             'requires' => ['core' => '>=2.0'],
-        ]));
+        ], JSON_THROW_ON_ERROR));
     }
 
     protected function tearDown(): void
@@ -133,13 +133,13 @@ final class EnabledModulesResolverTest extends TestCase
     public function test_a_rejection_is_logged_once_across_processes(): void
     {
         $this->enabled('incompatible-module');
-        Log::spy();
+        $log = Log::spy();
 
         // Every scheduler tick is a new process with a new resolver
         app()->make(EnabledModulesResolver::class)->names();
         app()->make(EnabledModulesResolver::class)->names();
 
-        Log::shouldHaveReceived('warning')
+        $log->shouldHaveReceived('warning')
             ->with('[EnabledModulesResolver] Module rejected', \Mockery::on(
                 static fn (array $context): bool => $context['module'] === 'incompatible-module',
             ))
@@ -149,7 +149,7 @@ final class EnabledModulesResolverTest extends TestCase
     public function test_web_requests_never_log_a_rejection(): void
     {
         $this->enabled('incompatible-module');
-        Log::spy();
+        $log = Log::spy();
         $setConsole = fn (bool $console) => (fn () => $this->isRunningInConsole = $console)->call(app());
         $setConsole(false);
 
@@ -162,13 +162,13 @@ final class EnabledModulesResolverTest extends TestCase
         }
 
         // The panel banner replaces the log on the web
-        Log::shouldNotHaveReceived('warning');
+        $log->shouldNotHaveReceived('warning');
     }
 
     public function test_a_different_reason_is_logged_again(): void
     {
         $this->enabled('incompatible-module');
-        Log::spy();
+        $log = Log::spy();
 
         app()->make(EnabledModulesResolver::class)->names();
 
@@ -176,7 +176,7 @@ final class EnabledModulesResolverTest extends TestCase
         File::put($manifest, str_replace('^99.0', '^999.0', File::get($manifest)));
         app()->make(EnabledModulesResolver::class)->names();
 
-        Log::shouldHaveReceived('warning')->twice();
+        $log->shouldHaveReceived('warning')->twice();
     }
 
     private function resolver(): EnabledModulesResolverInterface

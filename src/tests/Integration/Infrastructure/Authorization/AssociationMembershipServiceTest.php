@@ -86,19 +86,19 @@ final class AssociationMembershipServiceTest extends TestCase
 
     public function test_a_forbidden_setting_is_logged_once_per_request(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $this->configure('member');
 
         $this->service()->roleName();
         $this->service()->roleName();
         $this->service()->isAssociationMember(UserModel::factory()->create());
 
-        Log::shouldHaveReceived('warning')->withArgs(self::forbiddenRoleWarning(...))->once();
+        $log->shouldHaveReceived('warning')->withArgs(self::forbiddenRoleWarning(...))->once();
     }
 
     public function test_the_forbidden_setting_warning_is_logged_again_in_the_next_request(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $this->configure('member');
 
         $this->service()->roleName();
@@ -106,7 +106,7 @@ final class AssociationMembershipServiceTest extends TestCase
         $this->app->forgetScopedInstances();
         $this->service()->roleName();
 
-        Log::shouldHaveReceived('warning')->withArgs(self::forbiddenRoleWarning(...))->twice();
+        $log->shouldHaveReceived('warning')->withArgs(self::forbiddenRoleWarning(...))->twice();
     }
 
     /**

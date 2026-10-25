@@ -116,8 +116,8 @@ final class EloquentEventRepositoryTest extends TestCase
 
         $events = $this->repository->findUpcoming();
 
-        $this->assertEquals('First Event', $events->first()->title());
-        $this->assertEquals('Third Event', $events->last()->title());
+        $this->assertEquals('First Event', $events->first()?->title());
+        $this->assertEquals('Third Event', $events->last()?->title());
     }
 
     public function test_it_finds_published_events(): void
@@ -242,7 +242,6 @@ final class EloquentEventRepositoryTest extends TestCase
 
         $savedEvent = $this->repository->findById($id);
         $this->assertNotNull($savedEvent);
-        $this->assertNotNull($savedEvent->endDate());
         $this->assertEquals($endDate->format('Y-m-d'), $savedEvent->endDate()->format('Y-m-d'));
     }
 
@@ -276,6 +275,7 @@ final class EloquentEventRepositoryTest extends TestCase
         $savedEvent = $this->repository->findById($id);
         $this->assertNotNull($savedEvent);
         $this->assertNotNull($savedEvent->memberPrice());
+        $this->assertNotNull($savedEvent->nonMemberPrice());
         $this->assertEquals(15.50, $savedEvent->memberPrice()->value);
         $this->assertEquals(20.00, $savedEvent->nonMemberPrice()->value);
     }
@@ -293,7 +293,6 @@ final class EloquentEventRepositoryTest extends TestCase
         $event = $this->repository->findById(new EventId($model->id));
 
         $this->assertNotNull($event);
-        $this->assertNotNull($event->endDate());
         $this->assertNotNull($event->memberPrice());
         $this->assertNotNull($event->nonMemberPrice());
         $this->assertEquals(12.50, $event->memberPrice()->value);
@@ -359,7 +358,7 @@ final class EloquentEventRepositoryTest extends TestCase
         $events = $this->repository->findByDateRange($start, $end);
 
         $this->assertCount(1, $events);
-        $this->assertEquals('Multi-day Event', $events->first()->title());
+        $this->assertEquals('Multi-day Event', $events->first()?->title());
     }
 
     public function test_find_by_date_range_finds_events_spanning_range(): void
@@ -377,7 +376,7 @@ final class EloquentEventRepositoryTest extends TestCase
         $events = $this->repository->findByDateRange($start, $end);
 
         $this->assertCount(1, $events);
-        $this->assertEquals('Spanning Event', $events->first()->title());
+        $this->assertEquals('Spanning Event', $events->first()?->title());
     }
 
     public function test_find_by_date_range_excludes_events_outside_range(): void
@@ -423,7 +422,7 @@ final class EloquentEventRepositoryTest extends TestCase
         $events = $this->repository->findByDateRange($start, $end);
 
         $this->assertCount(1, $events);
-        $this->assertEquals('Published Event', $events->first()->title());
+        $this->assertEquals('Published Event', $events->first()?->title());
     }
 
     public function test_find_by_date_range_orders_by_start_date(): void
@@ -447,7 +446,7 @@ final class EloquentEventRepositoryTest extends TestCase
         $events = $this->repository->findByDateRange($start, $end);
 
         $this->assertCount(3, $events);
-        $this->assertEquals('First Event', $events->first()->title());
-        $this->assertEquals('Third Event', $events->last()->title());
+        $this->assertEquals('First Event', $events->first()?->title());
+        $this->assertEquals('Third Event', $events->last()?->title());
     }
 }
