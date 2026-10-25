@@ -662,6 +662,8 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString("discoverEntries(componentsDir, 'resources/js/components')", $config);
         $this->assertStringContainsString("['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3', '@unhead/vue']", $config);
         $this->assertStringContainsString("isStandalone && id.startsWith('@/')", $config);
+        // The core's contracts come from the import map, so every bundle shares one instance
+        $this->assertStringContainsString("id.startsWith('@/contracts/')", $config);
         $this->assertStringContainsString("'module-styles': resolve(__dirname, 'resources/css/module.css')", $config);
         $this->assertStringContainsString('plugins: [vue(), tailwindcss()]', $config);
     }

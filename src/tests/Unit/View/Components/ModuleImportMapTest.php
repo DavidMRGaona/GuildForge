@@ -175,6 +175,22 @@ final class ModuleImportMapTest extends TestCase
         $this->assertStringContainsString('"@unhead/vue": "/build/assets/unhead-MNO345.js"', $html);
     }
 
+    public function test_maps_the_cookie_consent_contract_for_modules(): void
+    {
+        Vite::shouldReceive('asset')
+            ->with('resources/js/contracts/cookieConsent.ts')
+            ->andReturn('/build/assets/cookieConsent-PQR678.js');
+
+        Vite::shouldReceive('asset')
+            ->andThrow(new \Exception('Not found'));
+
+        $component = new ModuleImportMap;
+        $view = $component->render();
+        $html = $view->render();
+
+        $this->assertStringContainsString('"@/contracts/cookieConsent": "/build/assets/cookieConsent-PQR678.js"', $html);
+    }
+
     public function test_handles_errors_gracefully(): void
     {
         Vite::shouldReceive('asset')

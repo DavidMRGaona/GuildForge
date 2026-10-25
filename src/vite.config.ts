@@ -18,6 +18,8 @@ export default defineConfig({
                 'resources/js/vendor-exports/vue-i18n.ts',
                 'resources/js/vendor-exports/inertia.ts',
                 'resources/js/vendor-exports/unhead.ts',
+                // Contracts shared with modules (import maps, kept external by module builds)
+                'resources/js/contracts/cookieConsent.ts',
             ],
             refresh: true,
         }),
@@ -60,7 +62,7 @@ export default defineConfig({
                     ],
                 },
             },
-            // Preserve exports from vendor-export entry points for import maps
+            // Preserve exports from vendor-export and contract entry points for import maps
             preserveEntrySignatures: 'exports-only',
         },
     },
