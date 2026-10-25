@@ -35,14 +35,18 @@ final class LegalMailNoticeServiceTest extends TestCase
         $service = app(LegalMailNoticeServiceInterface::class);
 
         $this->assertSame("Default one for :site\n\nDefault two", $service->content('mod.notice'));
+        $this->assertSame('', $service->content('mod.unknown'));
+    }
+
+    public function test_blank_content_falls_back_to_the_default(): void
+    {
+        $service = app(LegalMailNoticeServiceInterface::class);
 
         app(SettingsServiceInterface::class)->set('legal_mail_notice:mod.notice', '   ');
         $this->assertSame("Default one for :site\n\nDefault two", $service->content('mod.notice'));
 
         app(SettingsServiceInterface::class)->set('legal_mail_notice:mod.notice', 'Custom');
         $this->assertSame('Custom', $service->content('mod.notice'));
-
-        $this->assertSame('', $service->content('mod.unknown'));
     }
 
     public function test_paragraphs_split_and_fill_placeholders(): void

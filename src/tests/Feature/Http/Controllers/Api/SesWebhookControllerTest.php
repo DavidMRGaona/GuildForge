@@ -18,6 +18,9 @@ final class SesWebhookControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    /**
+     * @return array<string, string>
+     */
     private function subscriptionConfirmationPayload(): array
     {
         return [
@@ -33,6 +36,9 @@ final class SesWebhookControllerTest extends TestCase
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function bounceNotificationPayload(string $messageId = 'ses-message-id'): array
     {
         return [
@@ -50,7 +56,7 @@ final class SesWebhookControllerTest extends TestCase
                 'mail' => [
                     'messageId' => $messageId,
                 ],
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'Timestamp' => '2025-01-01T00:00:00.000Z',
             'SignatureVersion' => '1',
             'Signature' => 'base64signature',
@@ -58,6 +64,9 @@ final class SesWebhookControllerTest extends TestCase
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function complaintNotificationPayload(string $messageId = 'ses-message-id'): array
     {
         return [
@@ -74,7 +83,7 @@ final class SesWebhookControllerTest extends TestCase
                 'mail' => [
                     'messageId' => $messageId,
                 ],
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'Timestamp' => '2025-01-01T00:00:00.000Z',
             'SignatureVersion' => '1',
             'Signature' => 'base64signature',
@@ -82,6 +91,9 @@ final class SesWebhookControllerTest extends TestCase
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function deliveryNotificationPayload(string $messageId = 'ses-message-id'): array
     {
         return [
@@ -97,7 +109,7 @@ final class SesWebhookControllerTest extends TestCase
                 'mail' => [
                     'messageId' => $messageId,
                 ],
-            ]),
+            ], JSON_THROW_ON_ERROR),
             'Timestamp' => '2025-01-01T00:00:00.000Z',
             'SignatureVersion' => '1',
             'Signature' => 'base64signature',

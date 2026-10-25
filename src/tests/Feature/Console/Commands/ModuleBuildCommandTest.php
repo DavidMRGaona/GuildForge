@@ -32,14 +32,14 @@ final class ModuleBuildCommandTest extends TestCase
 
     public function test_command_requires_module_name_or_all_flag(): void
     {
-        $this->artisan('module:build')
+        $this->artisanCommand('module:build')
             ->expectsOutput('Please specify a module name or use --all to build all modules.')
             ->assertExitCode(1);
     }
 
     public function test_command_fails_when_module_not_found(): void
     {
-        $this->artisan('module:build', ['name' => 'non-existent'])
+        $this->artisanCommand('module:build', ['name' => 'non-existent'])
             ->expectsOutput('Module not found: non-existent')
             ->assertExitCode(1);
     }
@@ -60,7 +60,7 @@ final class ModuleBuildCommandTest extends TestCase
             'enabled_at' => now(),
         ]);
 
-        $this->artisan('module:build', ['name' => 'test-module'])
+        $this->artisanCommand('module:build', ['name' => 'test-module'])
             ->expectsOutput('Module test-module has no Vue components to build.')
             ->assertExitCode(0);
     }
@@ -81,14 +81,14 @@ final class ModuleBuildCommandTest extends TestCase
             'enabled_at' => now(),
         ]);
 
-        $this->artisan('module:build', ['name' => 'test-module'])
+        $this->artisanCommand('module:build', ['name' => 'test-module'])
             ->expectsOutput('Module test-module has Vue components but no build configuration.')
             ->assertExitCode(1);
     }
 
     public function test_command_with_all_flag_succeeds_when_no_modules(): void
     {
-        $this->artisan('module:build', ['--all' => true])
+        $this->artisanCommand('module:build', ['--all' => true])
             ->expectsOutput('No modules found.')
             ->assertExitCode(0);
     }
@@ -109,7 +109,7 @@ final class ModuleBuildCommandTest extends TestCase
             'enabled_at' => now(),
         ]);
 
-        $this->artisan('module:build', ['--all' => true])
+        $this->artisanCommand('module:build', ['--all' => true])
             ->expectsOutputToContain('Skipping module-one (no Vue components)')
             ->expectsOutputToContain('Build complete: 0 built, 1 skipped, 0 failed')
             ->assertExitCode(0);
@@ -131,7 +131,7 @@ final class ModuleBuildCommandTest extends TestCase
             'enabled_at' => now(),
         ]);
 
-        $this->artisan('module:build', ['--all' => true])
+        $this->artisanCommand('module:build', ['--all' => true])
             ->expectsOutputToContain('Skipping test-module (no build configuration)')
             ->expectsOutputToContain('Build complete: 0 built, 1 skipped, 0 failed')
             ->assertExitCode(0);
@@ -147,7 +147,7 @@ final class ModuleBuildCommandTest extends TestCase
             'version' => '1.0.0',
             'description' => 'Test module',
             'author' => 'Test Author',
-        ]));
+        ], JSON_THROW_ON_ERROR));
     }
 
     private function createTestModuleWithComponents(string $name): void

@@ -10,9 +10,14 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Pages\Settings\LegalPagesSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Actions\Testing\TestAction;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Notifications\Messages\MailMessage;
+use Livewire\Component;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -166,11 +171,10 @@ final class LegalPagesSettingsTest extends TestCase
             ->fillForm([$field => 'Texto sin guardar'])
             ->mountAction($this->previewAction());
 
-        $action = $page->instance()->getMountedAction();
-        $this->assertNotNull($action);
-        $this->assertSame('Vista previa: Aviso de prueba', (string) $action->getModalHeading());
+        $action = $this->mountedAction($page);
+        $this->assertSame('Vista previa: Aviso de prueba', $this->renderedHtml($action->getModalHeading()));
 
-        $content = (string) $action->getModalContent();
+        $content = $this->renderedHtml($action->getModalContent());
         $this->assertStringContainsString('sandbox', $content);
         $this->assertStringContainsString('srcdoc="&lt;p class=&quot;preview&quot;&gt;Texto sin guardar&lt;/p&gt;"', $content);
 
@@ -184,7 +188,7 @@ final class LegalPagesSettingsTest extends TestCase
         $page = Livewire::test(LegalPagesSettings::class)
             ->mountAction($this->previewAction());
 
-        $content = (string) $page->instance()->getMountedAction()?->getModalContent();
+        $content = $this->renderedHtml($this->mountedAction($page)->getModalContent());
         $this->assertStringContainsString('Texto por defecto', $content);
     }
 
@@ -203,7 +207,9 @@ final class LegalPagesSettingsTest extends TestCase
             ->mountAction($this->previewAction())
             ->getMountedActionModalHtml();
 
-        $this->assertSame(1, preg_match('/srcdoc="([^"]*)"/', $html, $match));
+        if (preg_match('/srcdoc="([^"]*)"/', $html, $match) !== 1) {
+            $this->fail('The preview has no srcdoc frame.');
+        }
         $srcdoc = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5);
         $this->assertSame($sent, $srcdoc);
         $this->assertMatchesRegularExpression('/<h1[^>]*>¡Hola!<\/h1>/u', $srcdoc);
@@ -227,7 +233,7 @@ final class LegalPagesSettingsTest extends TestCase
 
         // A later request while the modal is open must not reload the frame with a new email
         $page->call('$refresh');
-        $content = (string) $page->instance()->getMountedAction()?->getModalContent();
+        $content = $this->renderedHtml($this->mountedAction($page)->getModalContent());
         $this->assertStringContainsString('srcdoc="&lt;p class=&quot;preview&quot;&gt;Texto por defecto 1&lt;/p&gt;"', $content);
         $this->assertSame(1, $calls);
     }
@@ -236,9 +242,9 @@ final class LegalPagesSettingsTest extends TestCase
     {
         $this->registerNotice();
 
-        $content = (string) Livewire::test(LegalPagesSettings::class)
-            ->mountAction($this->previewAction())
-            ->instance()->getMountedAction()?->getModalContent();
+        $page = Livewire::test(LegalPagesSettings::class)
+            ->mountAction($this->previewAction());
+        $content = $this->renderedHtml($this->mountedAction($page)->getModalContent());
 
         $this->assertMatchesRegularExpression('/<iframe[^>]*style="[^"]*min-height: \d+rem[^"]*"/', $content);
     }
@@ -269,5 +275,27 @@ final class LegalPagesSettingsTest extends TestCase
             placeholders: [':site', ':days'],
             preview: $preview ?? static fn (string $content): string => '<p class="preview">'.$content.'</p>',
         ));
+    }
+
+    /**
+     * @param  Testable<Component>  $page
+     */
+    private function mountedAction(Testable $page): Action
+    {
+        $instance = $page->instance();
+        $this->assertInstanceOf(LegalPagesSettings::class, $instance);
+        $action = $instance->getMountedAction();
+        $this->assertNotNull($action);
+
+        return $action;
+    }
+
+    private function renderedHtml(Htmlable|View|string|null $content): string
+    {
+        return match (true) {
+            $content instanceof Htmlable => $content->toHtml(),
+            $content instanceof View => $content->render(),
+            default => $content ?? '',
+        };
     }
 }

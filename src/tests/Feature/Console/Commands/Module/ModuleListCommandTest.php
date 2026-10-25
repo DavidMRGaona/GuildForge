@@ -37,7 +37,7 @@ final class ModuleListCommandTest extends TestCase
         ModuleModel::factory()->create(['name' => 'future-module', 'version' => '2.0.0', 'description' => 'Future module description', 'status' => 'enabled']);
         ModuleModel::factory()->create(['name' => 'missing-module', 'version' => '1.0.0', 'description' => 'Missing module description', 'status' => 'disabled']);
 
-        $this->artisan('module:list')
+        $this->artisanCommand('module:list')
             ->expectsTable(
                 ['Name', 'Version', 'Status', 'Compatible', 'Description'],
                 [
@@ -51,7 +51,7 @@ final class ModuleListCommandTest extends TestCase
 
     public function test_it_displays_empty_message_when_no_modules(): void
     {
-        $this->artisan('module:list')
+        $this->artisanCommand('module:list')
             ->expectsOutput('No modules found.')
             ->assertExitCode(0);
     }
@@ -62,13 +62,13 @@ final class ModuleListCommandTest extends TestCase
     private function moduleOnDisk(string $name, array $requires = []): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
-        File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
+        File::put("{$this->modulesPath}/{$name}/module.json", json_encode([
             'name' => $name,
             'version' => '1.0.0',
             'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
-        ]));
+        ], JSON_THROW_ON_ERROR));
     }
 }

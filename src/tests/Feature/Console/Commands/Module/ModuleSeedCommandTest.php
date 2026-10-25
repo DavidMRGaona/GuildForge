@@ -34,7 +34,7 @@ final class ModuleSeedCommandTest extends TestCase
     {
         $this->moduleOnDisk('seed-gate-module');
 
-        $this->artisan('module:seed', ['module' => 'seed-gate-module'])
+        $this->artisanCommand('module:seed', ['module' => 'seed-gate-module'])
             ->expectsOutput('No seeders to run.')
             ->assertExitCode(0);
     }
@@ -60,7 +60,7 @@ PHP);
 
         $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
 
-        $this->artisan('module:seed', ['module' => 'seed-gate-module'])
+        $this->artisanCommand('module:seed', ['module' => 'seed-gate-module'])
             ->expectsOutput("No se pueden ejecutar los seeders de seed-gate-module en este servidor: requiere core ^99.0, instalado {$core}")
             ->doesntExpectOutputToContain('Running seeders')
             ->assertExitCode(1);
@@ -71,7 +71,7 @@ PHP);
 
     public function test_it_reports_an_unknown_module(): void
     {
-        $this->artisan('module:seed', ['module' => 'missing-module'])
+        $this->artisanCommand('module:seed', ['module' => 'missing-module'])
             ->expectsOutput('Module "missing-module" not found.')
             ->assertExitCode(1);
     }
@@ -82,14 +82,14 @@ PHP);
     private function moduleOnDisk(string $name, array $requires = []): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
-        File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
+        File::put("{$this->modulesPath}/{$name}/module.json", json_encode([
             'name' => $name,
             'version' => '1.0.0',
             'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
-        ]));
+        ], JSON_THROW_ON_ERROR));
         ModuleModel::factory()->enabled()->create([
             'name' => $name,
             'version' => '1.0.0',

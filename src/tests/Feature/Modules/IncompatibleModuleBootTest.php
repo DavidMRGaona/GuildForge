@@ -140,8 +140,8 @@ final class IncompatibleModuleBootTest extends TestCase
         $this->runArtisan($env, ['module:list']);
 
         $this->assertFileDoesNotExist($marker);
-        $this->assertSame([], $pdo->query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'incompatible_widgets'")?->fetchAll());
-        $this->assertCount(1, $pdo->query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'compatible_widgets'")?->fetchAll() ?? []);
+        $this->assertSame([], $this->tables($pdo, 'incompatible_widgets'));
+        $this->assertSame(['compatible_widgets'], $this->tables($pdo, 'compatible_widgets'));
     }
 
     /**
@@ -153,5 +153,16 @@ final class IncompatibleModuleBootTest extends TestCase
         $result = Process::path(base_path())->env($env)->timeout(300)->run(['php', 'artisan', ...$arguments]);
 
         $this->assertSame(0, $result->exitCode(), implode(' ', $arguments).":\n".$result->output().$result->errorOutput());
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function tables(PDO $pdo, string $name): array
+    {
+        $statement = $pdo->prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?");
+        $statement->execute([$name]);
+
+        return $statement->fetchAll(PDO::FETCH_COLUMN);
     }
 }

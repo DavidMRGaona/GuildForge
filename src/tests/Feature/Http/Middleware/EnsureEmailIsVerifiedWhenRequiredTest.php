@@ -307,8 +307,9 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
         $this->get($url)->assertRedirect(route('profile.show'));
 
         $fresh = $user->fresh();
-        $this->assertSame('corrected@example.com', $fresh?->email);
-        $this->assertNotNull($fresh?->email_verified_at);
+        $this->assertNotNull($fresh);
+        $this->assertSame('corrected@example.com', $fresh->email);
+        $this->assertNotNull($fresh->email_verified_at);
         $this->actingAs($fresh);
         $this->get(self::PROTECTED_URL)->assertOk();
     }

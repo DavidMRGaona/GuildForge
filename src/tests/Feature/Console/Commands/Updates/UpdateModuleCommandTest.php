@@ -41,7 +41,7 @@ final class UpdateModuleCommandTest extends TestCase
 
     public function test_it_requires_module_name_or_all_flag(): void
     {
-        $this->artisan('module:update')
+        $this->artisanCommand('module:update')
             ->expectsOutput('Please specify a module name or use --all')
             ->assertExitCode(1);
     }
@@ -66,7 +66,7 @@ final class UpdateModuleCommandTest extends TestCase
             ->with(Mockery::on(fn ($arg) => $arg instanceof ModuleName && $arg->value === 'forum'))
             ->andReturn($preview);
 
-        $this->artisan('module:update', ['name' => 'forum', '--dry-run' => true])
+        $this->artisanCommand('module:update', ['name' => 'forum', '--dry-run' => true])
             ->expectsOutput('Module: forum')
             ->expectsOutput('Current version: 1.0.0')
             ->expectsOutput('Available version: 1.2.0')
@@ -96,7 +96,7 @@ final class UpdateModuleCommandTest extends TestCase
 
         $this->updater->shouldNotReceive('update');
 
-        $this->artisan('module:update', ['name' => 'shop', '--dry-run' => true])
+        $this->artisanCommand('module:update', ['name' => 'shop', '--dry-run' => true])
             ->expectsOutput('Dry run - no changes made.')
             ->assertExitCode(0);
     }
@@ -136,7 +136,7 @@ final class UpdateModuleCommandTest extends TestCase
             ->with(Mockery::on(fn ($arg) => $arg instanceof ModuleName && $arg->value === 'gallery'))
             ->andReturn($result);
 
-        $this->artisan('module:update', ['name' => 'gallery', '--force' => true])
+        $this->artisanCommand('module:update', ['name' => 'gallery', '--force' => true])
             ->expectsOutput('Starting update...')
             ->expectsOutput('Successfully updated gallery to 1.1.0')
             ->assertExitCode(0);
@@ -161,7 +161,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldReceive('preview')
             ->andReturn($preview);
 
-        $this->artisan('module:update', ['name' => 'payments', '--dry-run' => true])
+        $this->artisanCommand('module:update', ['name' => 'payments', '--dry-run' => true])
             ->expectsOutput('This is a major version update!')
             ->assertExitCode(0);
     }
@@ -187,7 +187,7 @@ final class UpdateModuleCommandTest extends TestCase
 
         $this->updater->shouldNotReceive('update');
 
-        $this->artisan('module:update', ['name' => 'notifications', '--force' => true])
+        $this->artisanCommand('module:update', ['name' => 'notifications', '--force' => true])
             ->expectsOutput('Incompatible with current core version. Requires: ^3.0')
             ->assertExitCode(1);
     }
@@ -214,7 +214,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldReceive('preview')->andReturn($preview);
         $this->updater->shouldNotReceive('update');
 
-        $this->artisan('module:update', ['name' => 'notifications', '--force' => true])
+        $this->artisanCommand('module:update', ['name' => 'notifications', '--force' => true])
             ->expectsOutput('Version 1.1.0 cannot be installed on this host:')
             ->expectsOutput('  - requiere la extensión PHP intl')
             ->doesntExpectOutputToContain('Incompatible with current core version')
@@ -255,7 +255,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldReceive('update')
             ->andReturn($result);
 
-        $this->artisan('module:update', ['name' => 'events', '--force' => true])
+        $this->artisanCommand('module:update', ['name' => 'events', '--force' => true])
             ->expectsOutput('Update failed: Download failed: Connection timeout')
             ->assertExitCode(1);
     }
@@ -294,7 +294,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldReceive('update')
             ->andReturn($result);
 
-        $this->artisan('module:update', ['name' => 'calendar', '--force' => true])
+        $this->artisanCommand('module:update', ['name' => 'calendar', '--force' => true])
             ->expectsOutput('Update failed but was rolled back. Error: Health check failed')
             ->assertExitCode(1);
     }
@@ -304,7 +304,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldReceive('preview')
             ->andThrow(UpdateException::noUpdateAvailable('missing-module'));
 
-        $this->artisan('module:update', ['name' => 'missing-module'])
+        $this->artisanCommand('module:update', ['name' => 'missing-module'])
             ->expectsOutput("No update available for 'missing-module'.")
             ->assertExitCode(1);
     }
@@ -367,7 +367,7 @@ final class UpdateModuleCommandTest extends TestCase
                 )
             );
 
-        $this->artisan('module:update', ['--all' => true, '--force' => true])
+        $this->artisanCommand('module:update', ['--all' => true, '--force' => true])
             ->expectsOutput('Found 2 update(s):')
             ->expectsOutput('Update complete: 2 succeeded, 0 failed.')
             ->assertExitCode(0);
@@ -378,7 +378,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updateChecker->shouldReceive('checkAllForUpdates')
             ->andReturn(new Collection);
 
-        $this->artisan('module:update', ['--all' => true])
+        $this->artisanCommand('module:update', ['--all' => true])
             ->expectsOutput('All modules are up to date.')
             ->assertExitCode(0);
     }
@@ -405,7 +405,7 @@ final class UpdateModuleCommandTest extends TestCase
 
         $this->updater->shouldNotReceive('update');
 
-        $this->artisan('module:update', ['--all' => true, '--dry-run' => true])
+        $this->artisanCommand('module:update', ['--all' => true, '--dry-run' => true])
             ->expectsOutput('Dry run - no changes made.')
             ->assertExitCode(0);
     }
@@ -415,7 +415,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldReceive('preview')->andReturn($this->compatiblePreview('gallery'));
         $this->updater->shouldReceive('update')->andReturn($this->updateResult('gallery', UpdateStatus::Completed));
 
-        $this->artisan('module:update', ['name' => 'gallery', '--force' => true])->assertExitCode(0);
+        $this->artisanCommand('module:update', ['name' => 'gallery', '--force' => true])->assertExitCode(0);
 
         // Same signal as UpdateModuleJob: workers still hold the previous module code
         $this->assertNotNull(Cache::get('illuminate:queue:restart'));
@@ -426,7 +426,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldReceive('preview')->andReturn($this->compatiblePreview('gallery'));
         $this->updater->shouldReceive('update')->andReturn($this->updateResult('gallery', UpdateStatus::RolledBack));
 
-        $this->artisan('module:update', ['name' => 'gallery', '--force' => true])->assertExitCode(1);
+        $this->artisanCommand('module:update', ['name' => 'gallery', '--force' => true])->assertExitCode(1);
 
         $this->assertNotNull(Cache::get('illuminate:queue:restart'));
     }
@@ -449,7 +449,7 @@ final class UpdateModuleCommandTest extends TestCase
         ]));
         $this->updater->shouldReceive('update')->andReturn($this->updateResult('forum', UpdateStatus::Completed));
 
-        $this->artisan('module:update', ['--all' => true, '--force' => true])->assertExitCode(0);
+        $this->artisanCommand('module:update', ['--all' => true, '--force' => true])->assertExitCode(0);
 
         $this->assertNotNull(Cache::get('illuminate:queue:restart'));
     }
@@ -460,8 +460,8 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldNotReceive('update');
         $this->updateChecker->shouldReceive('checkAllForUpdates')->andReturn(new Collection);
 
-        $this->artisan('module:update', ['name' => 'gallery', '--dry-run' => true])->assertExitCode(0);
-        $this->artisan('module:update', ['--all' => true, '--force' => true])->assertExitCode(0);
+        $this->artisanCommand('module:update', ['name' => 'gallery', '--dry-run' => true])->assertExitCode(0);
+        $this->artisanCommand('module:update', ['--all' => true, '--force' => true])->assertExitCode(0);
 
         $this->assertNull(Cache::get('illuminate:queue:restart'));
     }
@@ -472,7 +472,7 @@ final class UpdateModuleCommandTest extends TestCase
         $this->updater->shouldReceive('update')->andThrow(new RuntimeException('Lock held by a queued update'));
 
         try {
-            $this->artisan('module:update', ['name' => 'gallery', '--force' => true])->run();
+            $this->artisanCommand('module:update', ['name' => 'gallery', '--force' => true])->run();
             $this->fail('The update error must reach the caller');
         } catch (RuntimeException $e) {
             $this->assertSame('Lock held by a queued update', $e->getMessage());
@@ -496,7 +496,7 @@ final class UpdateModuleCommandTest extends TestCase
             ->andThrow(new RuntimeException('Lock held by a queued update'));
 
         try {
-            $this->artisan('module:update', ['--all' => true, '--force' => true])->run();
+            $this->artisanCommand('module:update', ['--all' => true, '--force' => true])->run();
             $this->fail('The update error must reach the caller');
         } catch (RuntimeException $e) {
             $this->assertSame('Lock held by a queued update', $e->getMessage());

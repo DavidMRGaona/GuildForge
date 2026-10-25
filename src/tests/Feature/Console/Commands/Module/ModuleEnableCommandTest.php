@@ -37,7 +37,7 @@ final class ModuleEnableCommandTest extends TestCase
             'name' => 'test-module',
         ]);
 
-        $this->artisan('module:enable', ['module' => 'test-module'])
+        $this->artisanCommand('module:enable', ['module' => 'test-module'])
             ->expectsOutput('Module "test-module" has been enabled.')
             ->assertExitCode(0);
 
@@ -53,7 +53,7 @@ final class ModuleEnableCommandTest extends TestCase
 
     public function test_it_fails_when_module_not_found(): void
     {
-        $this->artisan('module:enable', ['module' => 'non-existent-module'])
+        $this->artisanCommand('module:enable', ['module' => 'non-existent-module'])
             ->expectsOutput('Module "non-existent-module" not found.')
             ->assertExitCode(1);
     }
@@ -64,7 +64,7 @@ final class ModuleEnableCommandTest extends TestCase
             'name' => 'test-module',
         ]);
 
-        $this->artisan('module:enable', ['module' => 'test-module'])
+        $this->artisanCommand('module:enable', ['module' => 'test-module'])
             ->expectsOutput('Module "test-module" is already enabled.')
             ->assertExitCode(1);
     }
@@ -77,7 +77,7 @@ final class ModuleEnableCommandTest extends TestCase
             'dependencies' => ['required-module'],
         ]);
 
-        $this->artisan('module:enable', ['module' => 'dependent-module'])
+        $this->artisanCommand('module:enable', ['module' => 'dependent-module'])
             ->expectsOutput('Cannot enable module "dependent-module". Missing dependencies: required-module')
             ->assertExitCode(1);
 
@@ -94,7 +94,7 @@ final class ModuleEnableCommandTest extends TestCase
 
         $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
 
-        $this->artisan('module:enable', ['module' => 'test-module'])
+        $this->artisanCommand('module:enable', ['module' => 'test-module'])
             ->expectsOutput("No se puede habilitar test-module: requiere core ^99.0, instalado {$core}")
             ->assertExitCode(1);
 
@@ -107,13 +107,13 @@ final class ModuleEnableCommandTest extends TestCase
     private function moduleOnDisk(string $name, array $requires = []): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
-        File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
+        File::put("{$this->modulesPath}/{$name}/module.json", json_encode([
             'name' => $name,
             'version' => '1.0.0',
             'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
-        ]));
+        ], JSON_THROW_ON_ERROR));
     }
 }

@@ -105,13 +105,13 @@ final class SharedEmailVerificationStateTest extends TestCase
 
     public function test_the_user_is_still_shared_when_the_policy_fails_and_an_unverified_account_must_verify(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $this->failingPolicy();
 
         $shared = $this->sharedUser($this->newUnverifiedUser());
 
         $this->assertTrue($shared['mustVerifyEmail']);
-        Log::shouldHaveReceived('warning')->withArgs(
+        $log->shouldHaveReceived('warning')->withArgs(
             fn (string $message): bool => str_contains($message, 'mustVerifyEmail'),
         );
     }

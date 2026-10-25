@@ -25,15 +25,13 @@ final class SuggestedPermissionsTest extends TestCase
 
     private PermissionModel $suggested;
 
-    private PermissionModel $notSuggested;
-
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->actingAs(UserModel::factory()->admin()->create());
         $this->suggested = $this->permission('test-module:widgets.view', ['editor']);
-        $this->notSuggested = $this->permission('test-module:widgets.delete', []);
+        $this->permission('test-module:widgets.delete', []);
     }
 
     public function test_the_editor_points_out_the_permissions_suggested_for_the_role(): void

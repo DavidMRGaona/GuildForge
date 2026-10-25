@@ -11,6 +11,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\Select;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Livewire\Component;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
@@ -178,8 +179,9 @@ final class SiteSettingsAssociationMemberRoleTest extends TestCase
         return $settings->get(self::KEY);
     }
 
-    private function select(SiteSettings $page): Select
+    private function select(Component $page): Select
     {
+        $this->assertInstanceOf(SiteSettings::class, $page);
         $select = $page->form->getComponent(fn ($component): bool => $component instanceof Select && $component->getName() === self::KEY, withHidden: true);
         $this->assertInstanceOf(Select::class, $select);
 

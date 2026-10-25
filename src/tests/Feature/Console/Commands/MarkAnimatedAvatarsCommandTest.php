@@ -7,6 +7,7 @@ namespace Tests\Feature\Console\Commands;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
 use Illuminate\Console\CacheCommandMutex;
+use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -38,7 +39,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
         $gif = ImageFixtures::gif(2);
         $user = $this->userWithAvatar('users/u1/0d1c2b3a.jpg', $gif);
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('users/u1/0d1c2b3a.jpg -> users/u1/0d1c2b3a-animated.gif')
             ->expectsOutputToContain('1 avatar(s) checked, 1 animated renamed')
             ->assertSuccessful();
@@ -53,7 +54,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
         $png = $this->userWithAvatar('users/u1/aaaa.jpg', ImageFixtures::png(2));
         $webp = $this->userWithAvatar('users/u2/bbbb.jpg', ImageFixtures::webp(2));
 
-        $this->artisan('users:mark-animated-avatars')->assertSuccessful();
+        $this->artisanCommand('users:mark-animated-avatars')->assertSuccessful();
 
         $this->assertSame('users/u1/aaaa-animated.png', $png->refresh()->avatar_public_id);
         $this->assertSame('users/u2/bbbb-animated.webp', $webp->refresh()->avatar_public_id);
@@ -66,7 +67,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
         $withoutAvatar = UserModel::factory()->create(['avatar_public_id' => null]);
         $updatedAt = $jpeg->updated_at;
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('2 avatar(s) checked, 0 animated renamed')
             ->assertSuccessful();
 
@@ -81,7 +82,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
     {
         $user = $this->userWithAvatar('users/u1/0d1c2b3a.jpg', ImageFixtures::gif(2));
 
-        $this->artisan('users:mark-animated-avatars', ['--dry-run' => true])
+        $this->artisanCommand('users:mark-animated-avatars', ['--dry-run' => true])
             ->expectsOutputToContain('users/u1/0d1c2b3a.jpg -> users/u1/0d1c2b3a-animated.gif')
             ->expectsOutputToContain('1 avatar(s) checked, 1 animated would be renamed')
             ->assertSuccessful();
@@ -94,11 +95,11 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
     public function test_a_second_run_changes_nothing_and_does_not_read_marked_avatars(): void
     {
         $user = $this->userWithAvatar('users/u1/0d1c2b3a.jpg', ImageFixtures::gif(2));
-        $this->artisan('users:mark-animated-avatars')->assertSuccessful();
+        $this->artisanCommand('users:mark-animated-avatars')->assertSuccessful();
         // A marked avatar is skipped by name: its bytes are not even read again
         $this->disk->delete('users/u1/0d1c2b3a-animated.gif');
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('0 avatar(s) checked, 0 animated renamed, 1 already marked')
             ->assertSuccessful();
 
@@ -110,7 +111,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
         $missing = UserModel::factory()->create(['avatar_public_id' => 'users/u1/gone.jpg']);
         $animated = $this->userWithAvatar('users/u2/bbbb.jpg', ImageFixtures::gif(2));
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('users/u1/gone.jpg')
             ->expectsOutputToContain('1 failed')
             ->assertFailed();
@@ -124,7 +125,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
         $user = $this->userWithAvatar('users/u1/0d1c2b3a.jpg', ImageFixtures::gif(2));
         $user->delete();
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('0 avatar(s) checked')
             ->assertSuccessful();
 
@@ -137,11 +138,12 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
     {
         $user = $this->userWithAvatar('users/u1/0d1c2b3a.jpg', ImageFixtures::gif(2));
         $command = $this->app->make(Kernel::class)->all()['users:mark-animated-avatars'];
+        $this->assertInstanceOf(Command::class, $command);
         $mutex = $this->app->make(CacheCommandMutex::class);
         $this->assertTrue($mutex->create($command));
 
         try {
-            $this->artisan('users:mark-animated-avatars')
+            $this->artisanCommand('users:mark-animated-avatars')
                 ->expectsOutputToContain('already running')
                 ->assertFailed();
         } finally {
@@ -161,7 +163,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
             UserModel::query()->whereKey($user->id)->update(['avatar_public_id' => 'users/u1/0d1c2b3a-animated.gif']);
         });
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('already renamed by another run')
             ->expectsOutputToContain('0 failed')
             ->assertSuccessful();
@@ -178,7 +180,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
             UserModel::query()->whereKey($user->id)->update(['avatar_public_id' => 'users/u1/fresh.png']);
         });
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('the avatar changed while renaming')
             ->expectsOutputToContain('1 failed')
             ->assertFailed();
@@ -193,7 +195,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
         $user = $this->userWithAvatar('users/u1/0d1c2b3a.jpg', ImageFixtures::gif(2));
         $this->replaceDisk(putResult: false);
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('users/u1/0d1c2b3a-animated.gif could not be stored (the disk refused it)')
             ->expectsOutputToContain('0 animated renamed, 0 already marked, 1 failed')
             ->assertFailed();
@@ -209,7 +211,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
             throw new RuntimeException('upload failed');
         });
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('could not be stored (RuntimeException)')
             ->assertFailed();
 
@@ -221,7 +223,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
         $user = $this->userWithAvatar('users/u1/0d1c2b3a.jpg', ImageFixtures::gif(2));
         $this->replaceDisk(deleteResult: false);
 
-        $this->artisan('users:mark-animated-avatars')
+        $this->artisanCommand('users:mark-animated-avatars')
             ->expectsOutputToContain('users/u1/0d1c2b3a.jpg could not be deleted (the disk refused it)')
             ->expectsOutputToContain('1 animated renamed, 0 already marked, 0 failed, 1 unused file(s) left behind')
             ->assertFailed();
@@ -259,6 +261,9 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
                 return $stored;
             }
 
+            /**
+             * @param  string|array<mixed>  $paths
+             */
             public function delete($paths)
             {
                 return $this->deleteResult ? parent::delete($paths) : false;

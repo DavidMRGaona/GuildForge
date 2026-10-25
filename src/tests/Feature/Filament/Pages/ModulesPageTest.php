@@ -329,6 +329,7 @@ final class ModulesPageTest extends TestCase
             ->assertSee("requiere core ^99.0, instalado {$core}");
 
         $page = Livewire::test(ModulesPage::class)->instance();
+        $this->assertInstanceOf(ModulesPage::class, $page);
         $this->assertSame(['compatible' => true, 'reasons' => []], $page->getCompatibility('good-module'));
         $this->assertSame(['compatible' => false, 'reasons' => ["requiere core ^99.0, instalado {$core}"]], $page->getCompatibility('test-module'));
     }
@@ -343,6 +344,7 @@ final class ModulesPageTest extends TestCase
         ])));
         $this->actingAs(UserModel::factory()->admin()->create());
         $page = Livewire::test(ModulesPage::class)->instance();
+        $this->assertInstanceOf(ModulesPage::class, $page);
 
         (fn () => $this->installPackage(
             UploadedFile::fake()->create('announcements-9.0.0.zip', 1, 'application/zip'),
@@ -357,9 +359,6 @@ final class ModulesPageTest extends TestCase
         ]));
     }
 
-    /**
-     * @param  array<string, mixed>  $requires
-     */
     public function test_format_date_cannot_be_called_as_a_livewire_action(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());
@@ -369,16 +368,19 @@ final class ModulesPageTest extends TestCase
         Livewire::test(ModulesPage::class)->call('formatDate', '2026-01-01');
     }
 
+    /**
+     * @param  array<string, mixed>  $requires
+     */
     private function moduleOnDisk(string $name, array $requires = []): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
-        File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
+        File::put("{$this->modulesPath}/{$name}/module.json", json_encode([
             'name' => $name,
             'version' => '1.0.0',
             'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
-        ]));
+        ], JSON_THROW_ON_ERROR));
     }
 }

@@ -113,8 +113,10 @@ final class EmailVerificationControllerTest extends TestCase
         $this->get($url)
             ->assertRedirect(route('profile.show'))
             ->assertSessionHas('error', __('auth.email_change_verification_failed'));
-        $this->assertSame('other@example.com', $other->fresh()?->email);
-        $this->assertSame('new@example.com', $other->fresh()?->pending_email);
+        $fresh = $other->fresh();
+        $this->assertNotNull($fresh);
+        $this->assertSame('other@example.com', $fresh->email);
+        $this->assertSame('new@example.com', $fresh->pending_email);
     }
 
     public function test_a_verified_account_is_sent_from_the_notice_to_the_page_it_asked_for(): void

@@ -6,9 +6,9 @@ namespace Tests\Feature\Database;
 
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Tests\Support\Database\RunsMigrationFiles;
 use Tests\TestCase;
 
 /**
@@ -18,6 +18,7 @@ use Tests\TestCase;
 final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RunsMigrationFiles;
 
     private string $modulesPath;
 
@@ -41,7 +42,7 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
         // A module disabled since the save keeps its values as well
         $this->module('announcements', "<?php\n\nreturn ".var_export(['show_banner' => false], true).";\n", enabled: false);
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertSame(['default_check_in_starts_before' => 30, 'nested' => ['on' => false]], $this->stored('tournaments'));
         $this->assertSame(['show_banner' => false], $this->stored('announcements'));
@@ -51,7 +52,7 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
     {
         $this->module('event-registrations', "<?php\n\nreturn [\n    'send_confirmation_email' => true,\n];\n");
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertFalse(SettingModel::query()->where('key', 'module_settings:event-registrations')->exists());
     }
@@ -61,7 +62,7 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
         $this->module('venue-bookings', "<?php\n\nreturn ".var_export(['approval_mode' => 'auto'], true).";\n");
         SettingModel::query()->create(['key' => 'module_settings:venue-bookings', 'value' => '{"approval_mode":"require_approval"}']);
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertSame(['approval_mode' => 'require_approval'], $this->stored('venue-bookings'));
     }
@@ -73,7 +74,7 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
         $this->module('not-an-array', "<?php\n\nreturn array ()[0] ?? 'scalar';\n");
         ModuleModel::factory()->enabled()->create(['name' => 'ghost-mod', 'path' => $this->modulesPath.'/ghost-mod']);
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertSame(0, SettingModel::query()->where('key', 'like', 'module_settings:%')->count());
     }
@@ -84,7 +85,7 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
         $this->module('announcements', "<?php\n\nreturn array (\n  'rotate_interval' => INF,\n);\n");
         $this->module('tournaments', "<?php\n\nreturn ".var_export(['default_check_in_starts_before' => 30], true).";\n");
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertNull($this->stored('announcements'));
         $this->assertSame(['default_check_in_starts_before' => 30], $this->stored('tournaments'));
@@ -94,8 +95,8 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
     {
         $this->module('tournaments', "<?php\n\nreturn ".var_export(['default_check_in_starts_before' => 30], true).";\n");
 
-        $this->migration()->up();
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertSame(1, SettingModel::query()->where('key', 'module_settings:tournaments')->count());
     }
@@ -122,8 +123,8 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
         return is_string($value) ? json_decode($value, true) : null;
     }
 
-    private function migration(): Migration
+    private function migrationPath(): string
     {
-        return require database_path('migrations/2026_10_14_000001_move_module_settings_to_settings_table.php');
+        return database_path('migrations/2026_10_14_000001_move_module_settings_to_settings_table.php');
     }
 }

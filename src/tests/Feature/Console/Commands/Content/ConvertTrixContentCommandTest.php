@@ -17,7 +17,7 @@ final class ConvertTrixContentCommandTest extends TestCase
         $migrator->shouldReceive('migrate')->once()->with(true)->andReturn(new TrixContentMigrationReportDTO(7, ['articles.content#a1', 'settings#about_history'], null));
         $this->app->instance(TrixContentMigratorInterface::class, $migrator);
 
-        $this->artisan('content:convert-trix', ['--dry-run' => true])
+        $this->artisanCommand('content:convert-trix', ['--dry-run' => true])
             ->expectsOutput('  articles.content#a1')
             ->expectsOutput('  settings#about_history')
             ->expectsOutput('7 value(s) checked, 2 would change.')
@@ -30,7 +30,7 @@ final class ConvertTrixContentCommandTest extends TestCase
         $migrator->shouldReceive('migrate')->once()->with(false)->andReturn(new TrixContentMigrationReportDTO(7, ['articles.content#a1'], '/backups/trix.json'));
         $this->app->instance(TrixContentMigratorInterface::class, $migrator);
 
-        $this->artisan('content:convert-trix')
+        $this->artisanCommand('content:convert-trix')
             ->expectsOutput('7 value(s) checked, 1 changed.')
             ->expectsOutput('Original values saved to /backups/trix.json')
             ->assertExitCode(0);
@@ -43,7 +43,7 @@ final class ConvertTrixContentCommandTest extends TestCase
         $migrator->shouldNotReceive('migrate');
         $this->app->instance(TrixContentMigratorInterface::class, $migrator);
 
-        $this->artisan('content:convert-trix', ['--restore' => '/backups/trix.json'])
+        $this->artisanCommand('content:convert-trix', ['--restore' => '/backups/trix.json'])
             ->expectsOutput('Restored 3 value(s) from /backups/trix.json.')
             ->assertExitCode(0);
     }
@@ -55,7 +55,7 @@ final class ConvertTrixContentCommandTest extends TestCase
         $migrator->shouldNotReceive('migrate');
         $this->app->instance(TrixContentMigratorInterface::class, $migrator);
 
-        $this->artisan('content:convert-trix', ['--restore' => '/backups/trix.json', '--dry-run' => true])
+        $this->artisanCommand('content:convert-trix', ['--restore' => '/backups/trix.json', '--dry-run' => true])
             ->expectsOutput('--dry-run cannot be combined with --restore: nothing was restored.')
             ->assertExitCode(1);
     }

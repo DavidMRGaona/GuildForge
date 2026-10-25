@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 /**
@@ -47,14 +48,14 @@ final class MemberRoleOnAccountCreationTest extends TestCase
     {
         // A migration creates it: remove it to simulate a database where it was deleted
         RoleModel::query()->where('name', 'member')->delete();
-        Log::spy();
+        $log = Log::spy();
 
         $this->register('nuevo@example.com')->assertRedirect(route('home'));
 
         $user = UserModel::query()->where('email', 'nuevo@example.com')->sole();
         $this->assertSame([], $this->authorization()->getRoles($user));
         $this->assertAuthenticatedAs($user);
-        Log::shouldHaveReceived('warning')->withArgs(
+        $log->shouldHaveReceived('warning')->withArgs(
             static fn (string $message): bool => str_contains($message, 'member')
         )->once();
     }
@@ -135,7 +136,7 @@ final class MemberRoleOnAccountCreationTest extends TestCase
         $this->memberRole();
         RoleModel::query()->create(['name' => 'admin', 'display_name' => 'Administrator', 'is_protected' => true]);
 
-        $this->artisan('make:admin-user')
+        $this->artisanCommand('make:admin-user')
             ->expectsQuestion('What is the username?', 'jefa')
             ->expectsQuestion('What is the email address?', 'jefa@example.com')
             ->expectsQuestion('What is the password?', 'secret-password')
@@ -146,6 +147,9 @@ final class MemberRoleOnAccountCreationTest extends TestCase
         $this->assertTrue($this->authorization()->hasRole($user, 'member'));
     }
 
+    /**
+     * @return TestResponse<Response>
+     */
     private function register(string $email): TestResponse
     {
         return $this->post('/registro', [

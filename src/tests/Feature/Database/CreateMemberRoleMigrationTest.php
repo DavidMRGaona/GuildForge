@@ -6,8 +6,8 @@ namespace Tests\Feature\Database;
 
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Database\Seeders\RolesSeeder;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\Support\Database\RunsMigrationFiles;
 use Tests\TestCase;
 
 /**
@@ -17,6 +17,7 @@ use Tests\TestCase;
 final class CreateMemberRoleMigrationTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RunsMigrationFiles;
 
     public function test_the_member_role_exists_after_migrating(): void
     {
@@ -29,7 +30,7 @@ final class CreateMemberRoleMigrationTest extends TestCase
     {
         RoleModel::query()->where('name', 'member')->delete();
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $member = RoleModel::query()->where('name', 'member')->sole();
         // The same values RolesSeeder::createRole() uses for member
@@ -51,8 +52,8 @@ final class CreateMemberRoleMigrationTest extends TestCase
             'is_protected' => false,
         ]);
 
-        $this->migration()->up();
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
+        $this->runMigrationFile($this->migrationPath());
 
         $member = RoleModel::query()->where('name', 'member')->sole();
         $this->assertSame($existing->id, $member->id);
@@ -63,7 +64,7 @@ final class CreateMemberRoleMigrationTest extends TestCase
     public function test_roles_seeder_does_not_duplicate_it(): void
     {
         RoleModel::query()->where('name', 'member')->delete();
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
         $id = RoleModel::query()->where('name', 'member')->value('id');
 
         $this->seed(RolesSeeder::class);
@@ -74,13 +75,13 @@ final class CreateMemberRoleMigrationTest extends TestCase
 
     public function test_down_keeps_the_role(): void
     {
-        $this->migration()->down();
+        $this->runMigrationFile($this->migrationPath(), 'down');
 
         $this->assertTrue(RoleModel::query()->where('name', 'member')->exists());
     }
 
-    private function migration(): Migration
+    private function migrationPath(): string
     {
-        return require database_path('migrations/2026_10_14_100002_create_member_role.php');
+        return database_path('migrations/2026_10_14_100002_create_member_role.php');
     }
 }

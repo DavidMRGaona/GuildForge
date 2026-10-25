@@ -148,7 +148,9 @@ final class ModuleSettingsPageTest extends TestCase
 
         $component = Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module']);
 
-        $breadcrumbs = $component->instance()->getBreadcrumbs();
+        $page = $component->instance();
+        $this->assertInstanceOf(ModuleSettingsPage::class, $page);
+        $breadcrumbs = $page->getBreadcrumbs();
 
         $this->assertArrayHasKey(ModulesPage::getUrl(), $breadcrumbs);
     }

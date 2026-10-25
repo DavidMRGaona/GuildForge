@@ -29,7 +29,9 @@ final class PanelDefaultsTest extends TestCase
     {
         $this->actingAs(UserModel::factory()->admin()->create());
 
-        $table = Livewire::test(ListArticles::class)->instance()->getTable();
+        $page = Livewire::test(ListArticles::class)->instance();
+        $this->assertInstanceOf(ListArticles::class, $page);
+        $table = $page->getTable();
 
         $this->assertFalse($table->hasDeferredFilters());
         $this->assertFalse($table->hasDefaultKeySort());

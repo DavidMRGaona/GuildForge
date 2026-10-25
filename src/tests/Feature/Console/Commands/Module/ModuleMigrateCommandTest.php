@@ -46,10 +46,10 @@ final class ModuleMigrateCommandTest extends TestCase
         $modulePath = $this->modulesPath.'/test-module';
         $migrationsPath = $modulePath.'/database/migrations';
         File::makeDirectory($migrationsPath, 0755, true);
-        File::put($modulePath.'/module.json', (string) json_encode([
+        File::put($modulePath.'/module.json', json_encode([
             'name' => 'test-module', 'version' => '1.0.0', 'storesUtc' => true, 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
             'requires' => ['core' => '>=2.0'],
-        ]));
+        ], JSON_THROW_ON_ERROR));
 
         // Create a simple test migration file
         $migrationFile = $migrationsPath.'/2024_01_01_000000_create_test_table.php';
@@ -81,7 +81,7 @@ return new class extends Migration
 PHP
         );
 
-        $this->artisan('module:migrate', ['module' => 'test-module'])
+        $this->artisanCommand('module:migrate', ['module' => 'test-module'])
             ->expectsOutput('Running migrations for module: test-module')
             ->assertExitCode(0);
 
@@ -91,7 +91,7 @@ PHP
 
     public function test_it_fails_when_module_not_found(): void
     {
-        $this->artisan('module:migrate', ['module' => 'non-existent-module'])
+        $this->artisanCommand('module:migrate', ['module' => 'non-existent-module'])
             ->expectsOutput('Module "non-existent-module" not found.')
             ->assertExitCode(1);
     }
@@ -100,14 +100,14 @@ PHP
     {
         ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'version' => '1.0.0', 'path' => $this->modulesPath.'/test-module']);
         File::makeDirectory($this->modulesPath.'/test-module/database/migrations', 0755, true);
-        File::put($this->modulesPath.'/test-module/module.json', (string) json_encode([
+        File::put($this->modulesPath.'/test-module/module.json', json_encode([
             'name' => 'test-module', 'version' => '1.0.0', 'storesUtc' => true, 'namespace' => 'Modules\\TestModule', 'provider' => 'TestModuleServiceProvider',
             'requires' => ['core' => '^99.0'],
-        ]));
+        ], JSON_THROW_ON_ERROR));
 
         $core = $this->app->make(CoreVersionServiceInterface::class)->getCurrentVersion()->value();
 
-        $this->artisan('module:migrate', ['module' => 'test-module'])
+        $this->artisanCommand('module:migrate', ['module' => 'test-module'])
             ->expectsOutput("No se puede habilitar test-module: requiere core ^99.0, instalado {$core}")
             ->assertExitCode(1);
     }

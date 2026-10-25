@@ -51,6 +51,6 @@ final class ModuleNavigationMenuTest extends TestCase
         app(ActivateMenuItemsOnModuleEnabled::class)
             ->handle(new ModuleEnabled(moduleId: 'venue-bookings', moduleName: 'venue-bookings'));
 
-        $this->assertTrue($item->fresh()->is_active);
+        $this->assertTrue($item->refresh()->is_active);
     }
 }

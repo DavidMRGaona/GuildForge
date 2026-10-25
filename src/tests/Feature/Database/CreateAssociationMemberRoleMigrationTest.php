@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Database;
 
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\Support\Database\RunsMigrationFiles;
 use Tests\TestCase;
 
 /**
@@ -16,12 +16,13 @@ use Tests\TestCase;
 final class CreateAssociationMemberRoleMigrationTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RunsMigrationFiles;
 
     public function test_it_creates_the_socio_role_when_missing(): void
     {
         RoleModel::query()->where('name', 'socio')->delete();
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $socio = RoleModel::query()->where('name', 'socio')->sole();
         $this->assertSame('Socio', $socio->display_name);
@@ -43,8 +44,8 @@ final class CreateAssociationMemberRoleMigrationTest extends TestCase
             'is_protected' => false,
         ]);
 
-        $this->migration()->up();
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
+        $this->runMigrationFile($this->migrationPath());
 
         $socio = RoleModel::query()->where('name', 'socio')->sole();
         $this->assertSame($existing->id, $socio->id);
@@ -56,23 +57,23 @@ final class CreateAssociationMemberRoleMigrationTest extends TestCase
     {
         RoleModel::query()->where('name', 'socio')->delete();
 
-        $this->migration()->up();
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertSame(1, RoleModel::query()->where('name', 'socio')->count());
     }
 
     public function test_down_keeps_the_role(): void
     {
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
-        $this->migration()->down();
+        $this->runMigrationFile($this->migrationPath(), 'down');
 
         $this->assertTrue(RoleModel::query()->where('name', 'socio')->exists());
     }
 
-    private function migration(): Migration
+    private function migrationPath(): string
     {
-        return require database_path('migrations/2026_10_14_100001_create_association_member_role.php');
+        return database_path('migrations/2026_10_14_100001_create_association_member_role.php');
     }
 }

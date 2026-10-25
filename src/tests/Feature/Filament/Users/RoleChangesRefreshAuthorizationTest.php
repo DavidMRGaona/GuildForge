@@ -281,7 +281,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $store->shouldReceive('forever')->andThrow(new RuntimeException('cache down'));
         $store->shouldReceive('forget')->once()->with('authorization_cache_version')->andReturnTrue();
         Cache::swap($store);
-        Log::spy();
+        $log = Log::spy();
 
         try {
             $this->authorization->invalidateCache();
@@ -290,7 +290,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
             $this->assertSame('cache down', $e->getMessage());
         }
 
-        Log::shouldHaveReceived('error')->once();
+        $log->shouldHaveReceived('error')->once();
     }
 
     public function test_invalidate_cache_forgets_the_cached_roles_and_permissions(): void
@@ -407,7 +407,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $store->shouldReceive('forever')->andThrow(new RuntimeException('cache down'));
         $store->shouldReceive('forget')->once()->with("authorization_cache_version_user_{$user->id}")->andReturnTrue();
         Cache::swap($store);
-        Log::spy();
+        $log = Log::spy();
 
         try {
             $this->authorization->invalidateCacheFor($user);
@@ -416,7 +416,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
             $this->assertSame('cache down', $e->getMessage());
         }
 
-        Log::shouldHaveReceived('error')->once();
+        $log->shouldHaveReceived('error')->once();
     }
 
     /**

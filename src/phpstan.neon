@@ -9,6 +9,7 @@ parameters:
         - app/
         - tests/TestCase.php
         - tests/Support/
+        - tests/Feature/
         - tests/Integration/
         - tests/Unit/
     level: 8
