@@ -8,6 +8,7 @@ use App\Application\Calendar\Services\CalendarAggregatorServiceInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
+use App\Application\Cookies\Services\CookieDeclarationRegistryInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
@@ -85,6 +86,7 @@ use App\Infrastructure\Calendar\Services\CalendarAggregatorService;
 use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
 use App\Infrastructure\Content\Services\TrixContentMigrator;
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
+use App\Infrastructure\Cookies\CookieDeclarationRegistry;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Legal\LegalMailNoticeRegistry;
 use App\Infrastructure\Legal\LegalMailNoticeService;
@@ -234,6 +236,7 @@ class AppServiceProvider extends ServiceProvider
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
         $this->app->singleton(LegalMailNoticeRegistryInterface::class, LegalMailNoticeRegistry::class);
+        $this->app->singleton(CookieDeclarationRegistryInterface::class, CookieDeclarationRegistry::class);
         $this->app->singleton(LegalMailNoticeServiceInterface::class, LegalMailNoticeService::class);
         $this->app->singleton(DashboardWidgetConfigServiceInterface::class, DashboardWidgetConfigService::class);
         $this->app->singleton(ThemeSettingsServiceInterface::class, ThemeSettingsService::class);
