@@ -37,6 +37,8 @@ trait BuildsPaginatedResponse
             total: $total,
             perPage: $perPage,
             baseUrl: url()->current(),
+            // The links keep the filters of the list
+            query: request()->query(),
         );
 
         return $paginated->toArray();
