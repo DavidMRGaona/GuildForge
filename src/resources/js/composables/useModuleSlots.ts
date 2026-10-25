@@ -1,6 +1,7 @@
 import { computed, defineAsyncComponent, type Component, type ComputedRef } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import type { SlotRegistration, SlotPosition } from '@/types/slots';
+import { getModuleManifest } from '@/utils/moduleManifest';
 import { attachModuleStylesheet } from '@/utils/moduleStyles';
 
 // Glob all module components for dynamic loading
@@ -19,16 +20,6 @@ const dynamicComponentCache = new Map<string, Promise<{ default: Component }>>()
 // Cache for resolved slot components. Vue tells components apart by identity, so a new
 // async wrapper on every recompute would remount the slot and lose its state
 const resolvedComponentCache = new Map<string, Component>();
-
-// Cache for module manifests (to avoid repeated fetches)
-const manifestCache = new Map<string, Promise<Record<string, ManifestEntry> | null>>();
-
-interface ManifestEntry {
-    file: string;
-    src?: string;
-    isEntry?: boolean;
-    css?: string[];
-}
 
 /**
  * Inject CSS files from a module's manifest into the document head.
@@ -51,32 +42,6 @@ async function injectModuleStyles(module: string): Promise<void> {
             attachModuleStylesheet(`/build/modules/${module}/${cssPath}`);
         }
     }
-}
-
-/**
- * Fetch and cache a module's Vite manifest.
- * Returns null if manifest doesn't exist (module not built).
- */
-async function getModuleManifest(module: string): Promise<Record<string, ManifestEntry> | null> {
-    if (manifestCache.has(module)) {
-        return manifestCache.get(module)!;
-    }
-
-    const manifestUrl = `/build/modules/${module}/manifest.json`;
-
-    // Same as resolveModulePage: the manifest keeps its URL across module updates, and
-    // browsers that cached it as immutable would keep loading the old slot components
-    const promise = fetch(manifestUrl, { cache: 'no-cache' })
-        .then((response) => {
-            if (!response.ok) {
-                return null;
-            }
-            return response.json() as Promise<Record<string, ManifestEntry>>;
-        })
-        .catch(() => null);
-
-    manifestCache.set(module, promise);
-    return promise;
 }
 
 export interface ResolvedSlotComponent {
