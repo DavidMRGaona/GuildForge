@@ -59,7 +59,9 @@ describe('public frontend API', () => {
     });
 
     it('points every package at a vendor export of the core', () => {
-        const missing = Object.entries(api.packages).filter(([, path]) => !existsSync(resolve(SRC, path)));
+        const missing = Object.entries(api.packages).filter(
+            ([, path]) => !existsSync(resolve(SRC, path))
+        );
 
         expect(missing).toEqual([]);
     });
