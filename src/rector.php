@@ -16,6 +16,8 @@ return RectorConfig::configure()
         AddOverrideAttributeToOverriddenPropertiesRector::class,
         // Skipped to avoid rewriting existing `(new Foo())->bar()` calls in bulk; the PHP 8.4 form is allowed in new code.
         NewMethodCallWithoutParenthesesRector::class,
-        // A listener's handle() names the event it listens to, even when it does not read it.
-        RemoveUnusedPublicMethodParameterRector::class => [__DIR__.'/app/*/Listeners/*'],
+        // Framework signatures: a listener's handle() names the event it listens to, and a
+        // policy method receives the model the Gate checks, even when they do not read them.
+        // Plain patterns, so they also match a module's src/ (scripts/check-module-quality.sh).
+        RemoveUnusedPublicMethodParameterRector::class => ['*/Listeners/*', '*/Policies/*'],
     ]);
