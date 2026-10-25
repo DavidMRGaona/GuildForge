@@ -167,6 +167,7 @@ final class ModulePackageInstallerTest extends TestCase
         return (string) json_encode([
             'name' => $name,
             'version' => $version,
+            'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],

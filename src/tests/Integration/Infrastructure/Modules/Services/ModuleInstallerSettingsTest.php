@@ -55,7 +55,7 @@ final class ModuleInstallerSettingsTest extends TestCase
 
     public function test_update_from_zip_keeps_panel_settings(): void
     {
-        File::put("{$this->modulesPath}/zip-mod/module.json", (string) json_encode(['name' => 'zip-mod', 'version' => '1.0.0', 'namespace' => 'Modules\\ZipMod', 'provider' => 'ZipModServiceProvider', 'requires' => ['core' => '>=2.0']]));
+        File::put("{$this->modulesPath}/zip-mod/module.json", (string) json_encode(['name' => 'zip-mod', 'version' => '1.0.0', 'storesUtc' => true, 'namespace' => 'Modules\\ZipMod', 'provider' => 'ZipModServiceProvider', 'requires' => ['core' => '>=2.0']]));
         File::put("{$this->modulesPath}/zip-mod/config/settings.php", "<?php\n\nreturn ['a' => 1];\n");
         ModuleModel::factory()->enabled()->create([
             'name' => 'zip-mod',
@@ -71,7 +71,7 @@ final class ModuleInstallerSettingsTest extends TestCase
         $this->app->instance(ModuleBackupServiceInterface::class, $backup);
 
         app(ModuleInstallerInterface::class)->updateFromZip($this->release([
-            'module.json' => (string) json_encode(['name' => 'zip-mod', 'version' => '1.1.0', 'namespace' => 'Modules\\ZipMod', 'provider' => 'ZipModServiceProvider', 'requires' => ['core' => '>=2.0']]),
+            'module.json' => (string) json_encode(['name' => 'zip-mod', 'version' => '1.1.0', 'storesUtc' => true, 'namespace' => 'Modules\\ZipMod', 'provider' => 'ZipModServiceProvider', 'requires' => ['core' => '>=2.0']]),
             'config/settings.php' => "<?php\n\nreturn ['a' => 1, 'b' => true];\n",
         ]));
 

@@ -97,7 +97,7 @@ final readonly class EloquentEmailLogRepository implements EmailLogRepositoryInt
             'status' => $emailLog->status()->value,
             'error_message' => $emailLog->errorMessage(),
             'message_id' => $emailLog->messageId(),
-            'sent_at' => $emailLog->sentAt()?->format('Y-m-d H:i:s'),
+            'sent_at' => $emailLog->sentAt(),
         ];
     }
 }

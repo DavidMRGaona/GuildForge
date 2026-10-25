@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Application\Updates\DTOs\AvailableUpdateDTO;
 use App\Application\Updates\DTOs\BlockedReleaseDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
@@ -17,6 +18,7 @@ use App\Filament\Concerns\ChecksPermissions;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\View\Modules\CompatibilityIssueFormatter;
+use DateTimeInterface;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -73,6 +75,14 @@ final class ModuleUpdatesPage extends Page implements HasTable
      */
     public array $blockedReleases = [];
 
+    protected TimezoneServiceInterface $timezone;
+
+    /** Livewire injects the container dependencies of boot() on every request. */
+    public function boot(TimezoneServiceInterface $timezone): void
+    {
+        $this->timezone = $timezone;
+    }
+
     public static function canAccess(): bool
     {
         return self::userCan('updates.apply');
@@ -101,6 +111,14 @@ final class ModuleUpdatesPage extends Page implements HasTable
         $count = self::pendingModules()->count();
 
         return $count > 0 ? (string) $count : null;
+    }
+
+    /** For the view: dates are always shown in the display zone. */
+    protected function formatDate(DateTimeInterface|string $value, ?string $format = null): string
+    {
+        $date = $value instanceof DateTimeInterface ? $value : Carbon::parse($value);
+
+        return $format === null ? $this->timezone->format($date) : $this->timezone->format($date, $format);
     }
 
     public function mount(): void

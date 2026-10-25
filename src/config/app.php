@@ -68,9 +68,19 @@ return [
     | on site, so the guild's local timezone is used as the single reference
     | for stored and displayed dates.
     |
+    | "timezone" is the STORAGE zone: it is overwritten at boot from the
+    | "storage_timezone" settings row (see StorageTimezoneResolver). What people
+    | see follows "display_timezone"; the scheduler follows "schedule_timezone".
+    |
     */
 
     'timezone' => env('APP_TIMEZONE', 'Europe/Madrid'),
+
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Europe/Madrid'),
+
+    'storage_timezone_default' => env('APP_STORAGE_TIMEZONE_DEFAULT', 'Europe/Madrid'),
+
+    'schedule_timezone' => env('APP_DISPLAY_TIMEZONE', 'Europe/Madrid'),
 
     /*
     |--------------------------------------------------------------------------

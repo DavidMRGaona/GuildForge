@@ -13,6 +13,7 @@ use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Modules\ModuleLoader;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Translation\Translator;
+use Tests\Support\Time\UsesUtcStorage;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,7 @@ abstract class ModuleTestCase extends TestCase
 {
     use InteractsWithModules;
     use LazilyRefreshDatabase;
+    use UsesUtcStorage;
 
     /**
      * The module name being tested.

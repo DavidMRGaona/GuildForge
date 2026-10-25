@@ -103,7 +103,7 @@ final readonly class EloquentArticleRepository implements ArticleRepositoryInter
             'excerpt' => $article->excerpt(),
             'featured_image_public_id' => $article->featuredImagePublicId(),
             'is_published' => $article->isPublished(),
-            'published_at' => $article->publishedAt()?->format('Y-m-d H:i:s'),
+            'published_at' => $article->publishedAt(),
             'author_id' => $article->authorId(),
         ];
     }

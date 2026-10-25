@@ -711,6 +711,7 @@ final class ModuleManagerServiceTest extends TestCase
         $this->mergeManifest('test-module', [
             'requires' => ['core' => '^2.6', 'filament' => '^3.3', 'php' => '>=8.3', 'modules' => ['base-module:^1.0']],
             'dependencies' => ['base-module'],
+            'storesUtc' => true,
             'namespace' => 'Modules\\Renamed',
             'provider' => 'RenamedServiceProvider',
             'author' => 'New Author',
@@ -876,6 +877,7 @@ final class ModuleManagerServiceTest extends TestCase
         $defaultManifest = [
             'name' => $name,
             'version' => '1.0.0',
+            'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'description' => 'Test module',

@@ -11,6 +11,7 @@ final readonly class HostEnvironment
     /**
      * @param  list<string>  $extensions  Loaded PHP extensions, lowercase
      * @param  array<string, ModuleVersion>  $moduleMinimums  Module name => oldest version this core can run
+     * @param  bool  $storesUtc  Whether this core stores instants in UTC (modules must then declare they are ready)
      */
     public function __construct(
         public ModuleVersion $core,
@@ -19,6 +20,7 @@ final readonly class HostEnvironment
         public ?ModuleVersion $filament,
         public array $extensions,
         public array $moduleMinimums = [],
+        public bool $storesUtc = false,
     ) {}
 
     public function minimumVersionOf(string $module): ?ModuleVersion

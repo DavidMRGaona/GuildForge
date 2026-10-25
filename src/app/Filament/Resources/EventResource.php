@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\Services\TimezoneServiceInterface;
 use App\Filament\Concerns\HasExtendableFormSections;
 use App\Filament\Concerns\HasExtendableRelations;
 use App\Filament\Resources\EventResource\Pages\CreateEvent;
@@ -200,11 +201,15 @@ class EventResource extends BaseResource
                     ->limit(50),
                 TextColumn::make('start_date')
                     ->label(__('Fecha'))
-                    ->formatStateUsing(fn (EventModel $record): string => $record->start_date->format('d/m/Y H:i').' – '.(
-                        $record->start_date->isSameDay($record->end_date)
-                            ? $record->end_date->format('H:i')
-                            : $record->end_date->format('d/m/Y H:i')
-                    ))
+                    ->formatStateUsing(function (EventModel $record): string {
+                        $timezone = app(TimezoneServiceInterface::class);
+
+                        return $timezone->format($record->start_date).' – '.(
+                            $timezone->format($record->start_date, 'Y-m-d') === $timezone->format($record->end_date, 'Y-m-d')
+                                ? $timezone->format($record->end_date, 'H:i')
+                                : $timezone->format($record->end_date)
+                        );
+                    })
                     ->sortable(),
                 TextColumn::make('location')
                     ->label(__('Ubicación'))

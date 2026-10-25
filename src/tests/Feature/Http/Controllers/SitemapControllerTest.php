@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Application\Services\TimezoneServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -41,10 +42,10 @@ final class SitemapControllerTest extends TestCase
     public function test_sitemap_includes_published_events(): void
     {
         // Arrange
-        $publishedEvent1 = EventModel::factory()->published()->create([
+        EventModel::factory()->published()->create([
             'slug' => 'warhammer-tournament',
         ]);
-        $publishedEvent2 = EventModel::factory()->published()->create([
+        EventModel::factory()->published()->create([
             'slug' => 'dnd-session',
         ]);
 
@@ -60,7 +61,7 @@ final class SitemapControllerTest extends TestCase
     public function test_sitemap_excludes_unpublished_events(): void
     {
         // Arrange
-        $draftEvent = EventModel::factory()->draft()->create([
+        EventModel::factory()->draft()->create([
             'slug' => 'draft-event',
         ]);
 
@@ -75,10 +76,10 @@ final class SitemapControllerTest extends TestCase
     public function test_sitemap_includes_published_articles(): void
     {
         // Arrange
-        $publishedArticle1 = ArticleModel::factory()->published()->create([
+        ArticleModel::factory()->published()->create([
             'slug' => 'painting-guide',
         ]);
-        $publishedArticle2 = ArticleModel::factory()->published()->create([
+        ArticleModel::factory()->published()->create([
             'slug' => 'game-review',
         ]);
 
@@ -94,7 +95,7 @@ final class SitemapControllerTest extends TestCase
     public function test_sitemap_excludes_unpublished_articles(): void
     {
         // Arrange
-        $draftArticle = ArticleModel::factory()->draft()->create([
+        ArticleModel::factory()->draft()->create([
             'slug' => 'draft-article',
         ]);
 
@@ -109,10 +110,10 @@ final class SitemapControllerTest extends TestCase
     public function test_sitemap_includes_published_galleries(): void
     {
         // Arrange
-        $publishedGallery1 = GalleryModel::factory()->published()->create([
+        GalleryModel::factory()->published()->create([
             'slug' => 'tournament-2024',
         ]);
-        $publishedGallery2 = GalleryModel::factory()->published()->create([
+        GalleryModel::factory()->published()->create([
             'slug' => 'painted-miniatures',
         ]);
 
@@ -128,7 +129,7 @@ final class SitemapControllerTest extends TestCase
     public function test_sitemap_excludes_unpublished_galleries(): void
     {
         // Arrange
-        $draftGallery = GalleryModel::factory()->draft()->create([
+        GalleryModel::factory()->draft()->create([
             'slug' => 'draft-gallery',
         ]);
 
@@ -170,9 +171,9 @@ final class SitemapControllerTest extends TestCase
 
         // Assert
         $response->assertOk();
-        $response->assertSee('<lastmod>'.$event->updated_at->toAtomString().'</lastmod>', false);
-        $response->assertSee('<lastmod>'.$article->updated_at->toAtomString().'</lastmod>', false);
-        $response->assertSee('<lastmod>'.$gallery->updated_at->toAtomString().'</lastmod>', false);
+        $response->assertSee('<lastmod>'.app(TimezoneServiceInterface::class)->iso($event->updated_at).'</lastmod>', false);
+        $response->assertSee('<lastmod>'.app(TimezoneServiceInterface::class)->iso($article->updated_at).'</lastmod>', false);
+        $response->assertSee('<lastmod>'.app(TimezoneServiceInterface::class)->iso($gallery->updated_at).'</lastmod>', false);
     }
 
     public function test_sitemap_includes_changefreq_and_priority(): void

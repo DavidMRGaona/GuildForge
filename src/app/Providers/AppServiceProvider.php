@@ -51,8 +51,10 @@ use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
 use App\Application\Services\SlugRedirectService;
 use App\Application\Services\SlugRedirectServiceInterface;
+use App\Application\Services\StorageTimezoneConverterInterface;
 use App\Application\Services\TagQueryServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
@@ -165,10 +167,12 @@ use App\Infrastructure\Services\SiteBrandingService;
 use App\Infrastructure\Services\SitemapQueryService;
 use App\Infrastructure\Services\TagQueryService;
 use App\Infrastructure\Services\ThemeSettingsService;
+use App\Infrastructure\Services\TimezoneService;
 use App\Infrastructure\Services\UserModelQueryService;
 use App\Infrastructure\Services\UserService;
 use App\Infrastructure\Storage\Cloudinary\CloudinaryPathMapper;
 use App\Infrastructure\Storage\Cloudinary\CloudinaryStorageAdapter;
+use App\Infrastructure\Time\StorageTimezoneConverter;
 use App\Infrastructure\Updates\Services\CoreUpdateChecker;
 use App\Infrastructure\Updates\Services\CoreVersionService;
 use App\Infrastructure\Updates\Services\GitHubReleaseFetcher;
@@ -193,10 +197,13 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Infolists\Components\ImageEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Support\Facades\FilamentTimezone;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\View\View as ViewContract;
@@ -235,6 +242,11 @@ class AppServiceProvider extends ServiceProvider
 
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
+        $this->app->singleton(
+            TimezoneServiceInterface::class,
+            fn (): TimezoneService => new TimezoneService((string) config('app.display_timezone')),
+        );
+        $this->app->bind(StorageTimezoneConverterInterface::class, StorageTimezoneConverter::class);
         $this->app->singleton(LegalMailNoticeRegistryInterface::class, LegalMailNoticeRegistry::class);
         $this->app->singleton(CookieDeclarationRegistryInterface::class, CookieDeclarationRegistry::class);
         $this->app->singleton(LegalMailNoticeServiceInterface::class, LegalMailNoticeService::class);
@@ -278,8 +290,8 @@ class AppServiceProvider extends ServiceProvider
             (string) config('cloudinary.cloud_name', ''),
             (string) config('cloudinary.prefix', ''),
         ));
-        $this->app->bind(SeoDescriptionBuilder::class, fn (): SeoDescriptionBuilder => new SeoDescriptionBuilder((string) config('app.timezone')));
-        $this->app->bind(StructuredDataBuilder::class, fn (): StructuredDataBuilder => new StructuredDataBuilder((string) config('app.timezone')));
+        $this->app->bind(SeoDescriptionBuilder::class, fn (): SeoDescriptionBuilder => new SeoDescriptionBuilder((string) config('app.display_timezone')));
+        $this->app->bind(StructuredDataBuilder::class, fn (): StructuredDataBuilder => new StructuredDataBuilder((string) config('app.display_timezone')));
         $this->app->bind(SeoMetadataFactoryInterface::class, SeoMetadataFactory::class);
 
         // Module system bindings
@@ -475,6 +487,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->preserveFilamentV3Defaults();
+        $this->showFilamentDatesInDisplayTimezone();
         $this->keepSentenceCaseInBulkDeleteHeadings();
 
         // Cloudinary driver of the "images" disk (App\Infrastructure\Storage\Cloudinary):
@@ -516,6 +529,19 @@ class AppServiceProvider extends ServiceProvider
         FileUpload::configureUsing(fn (FileUpload $upload): FileUpload => $upload->visibility('public'));
         ImageColumn::configureUsing(fn (ImageColumn $column): ImageColumn => $column->visibility('public'));
         ImageEntry::configureUsing(fn (ImageEntry $entry): ImageEntry => $entry->visibility('public'));
+    }
+
+    /**
+     * Filament reads and shows dates in the display zone, whatever zone they are stored in.
+     */
+    private function showFilamentDatesInDisplayTimezone(): void
+    {
+        $zone = (string) config('app.display_timezone');
+
+        // Pickers only; columns and entries keep the storage zone unless told otherwise
+        FilamentTimezone::set($zone);
+        TextColumn::configureUsing(fn (TextColumn $column): TextColumn => $column->timezone($zone));
+        TextEntry::configureUsing(fn (TextEntry $entry): TextEntry => $entry->timezone($zone));
     }
 
     /**

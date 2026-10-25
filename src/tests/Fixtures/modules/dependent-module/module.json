@@ -1,6 +1,7 @@
 {
     "name": "dependent-module",
     "version": "1.0.0",
+    "storesUtc": true,
     "description": "Module that depends on test-module",
     "author": "GuildForge",
     "namespace": "Modules\\DependentModule",

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Application\Calendar\DTOs\CalendarEntryDTO;
+use App\Application\Services\TimezoneServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,11 +21,13 @@ final class CalendarEntryResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $timezone = app(TimezoneServiceInterface::class);
+
         return array_merge([
             'id' => $this->resource->id,
             'title' => $this->resource->title,
-            'start' => $this->resource->start->format('c'),
-            'end' => $this->resource->end?->format('c'),
+            'start' => $timezone->iso($this->resource->start),
+            'end' => $timezone->iso($this->resource->end),
             'url' => $this->resource->url,
             'sourceType' => $this->resource->sourceType,
             'sourceLabel' => $this->resource->sourceLabel,

@@ -8,12 +8,15 @@ use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\Support\Time\UsesUtcStorage;
 use Tests\TestCase;
 
 final class EloquentResponseDTOFactoryTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use UsesUtcStorage;
 
     private EloquentResponseDTOFactory $factory;
 
@@ -61,5 +64,16 @@ final class EloquentResponseDTOFactoryTest extends TestCase
         $this->assertStringContainsString('<p>Safe article content</p>', $dto->content);
         $this->assertStringNotContainsString('<script>', $dto->content);
         $this->assertStringNotContainsString('alert', $dto->content);
+    }
+
+    public function test_create_user_dto_carries_created_at_in_the_display_zone(): void
+    {
+        $this->useUtcStorage();
+        $user = UserModel::factory()->create(['created_at' => new DateTimeImmutable('2026-07-01T10:00:00Z')]);
+
+        $dto = $this->factory->createUserDTO($user->fresh() ?? $user);
+
+        $this->assertSame('Europe/Madrid', $dto->createdAt->getTimezone()->getName());
+        $this->assertSame('2026-07-01T12:00:00+02:00', $dto->jsonSerialize()['createdAt']);
     }
 }

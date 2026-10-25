@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\HasSlug;
+use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\EventModelFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -40,6 +41,7 @@ final class EventModel extends Model
 
     use HasSlug;
     use HasUuids;
+    use StoresInstantsInStorageTimezone;
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['image_public_id'];

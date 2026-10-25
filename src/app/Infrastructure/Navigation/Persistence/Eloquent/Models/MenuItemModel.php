@@ -7,6 +7,7 @@ namespace App\Infrastructure\Navigation\Persistence\Eloquent\Models;
 use App\Domain\Navigation\Enums\LinkTarget;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Domain\Navigation\Enums\MenuVisibility;
+use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\MenuItemModelFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -38,6 +39,8 @@ use Illuminate\Support\Carbon;
  */
 final class MenuItemModel extends Model
 {
+    use StoresInstantsInStorageTimezone;
+
     /** Value of `module` on the links the core seeds itself. */
     public const string CORE_MODULE = 'core';
 

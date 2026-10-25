@@ -6,12 +6,15 @@ namespace App\Infrastructure\Mail\Services;
 
 use App\Application\Mail\DTOs\Response\ConnectionTestResultDTO;
 use App\Application\Mail\Services\MailTestServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Mail\TestMail;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
 
-final class MailTestService implements MailTestServiceInterface
+final readonly class MailTestService implements MailTestServiceInterface
 {
+    public function __construct(private ?TimezoneServiceInterface $timezone = null) {}
+
     public function testSmtpConnection(): ConnectionTestResultDTO
     {
         $host = Config::get('mail.mailers.smtp.host', '');
@@ -60,7 +63,7 @@ final class MailTestService implements MailTestServiceInterface
 
         try {
             $driver = (string) Config::get('mail.default', 'smtp');
-            $timestamp = now()->format('d/m/Y H:i:s');
+            $timestamp = ($this->timezone ?? app(TimezoneServiceInterface::class))->format(now(), 'd/m/Y H:i:s');
 
             Mail::to($to)->send(new TestMail($driver, $timestamp));
 

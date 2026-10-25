@@ -40,4 +40,21 @@ final class ModuleManifestReaderTest extends TestCase
         $this->assertStringContainsString('requires.extensions', $logger->messages[0]);
         $this->assertStringNotContainsString('incompatible', $logger->messages[0]);
     }
+
+    public function test_a_non_boolean_stores_utc_is_read_as_not_ready_instead_of_aborting(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'gf-manifest-');
+        file_put_contents($path, json_encode([
+            'name' => 'demo', 'version' => '1.0.0', 'namespace' => 'Modules\\Demo', 'provider' => 'DemoServiceProvider',
+            'storesUtc' => 'yes',
+        ], JSON_THROW_ON_ERROR));
+
+        try {
+            $manifest = (new ModuleManifestReader)->read((string) $path);
+        } finally {
+            unlink((string) $path);
+        }
+
+        $this->assertFalse($manifest->storesUtc);
+    }
 }

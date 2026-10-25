@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers;
 
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -13,16 +15,16 @@ final class EventDateTimezoneTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_application_runs_in_the_venue_timezone(): void
+    public function test_people_see_dates_in_the_venue_timezone(): void
     {
-        self::assertSame('Europe/Madrid', config('app.timezone'));
+        self::assertSame('Europe/Madrid', config('app.display_timezone'));
     }
 
     public function test_start_date_is_serialized_with_the_summer_time_offset(): void
     {
         EventModel::factory()->published()->create([
-            'start_date' => '2026-08-29 18:00:00',
-            'end_date' => '2026-08-29 21:00:00',
+            'start_date' => new DateTimeImmutable('2026-08-29 18:00:00', new DateTimeZone('Europe/Madrid')),
+            'end_date' => new DateTimeImmutable('2026-08-29 21:00:00', new DateTimeZone('Europe/Madrid')),
         ]);
 
         $response = $this->get('/eventos');
@@ -36,8 +38,8 @@ final class EventDateTimezoneTest extends TestCase
     public function test_start_date_is_serialized_with_the_winter_time_offset(): void
     {
         EventModel::factory()->published()->create([
-            'start_date' => '2026-01-15 18:00:00',
-            'end_date' => '2026-01-15 21:00:00',
+            'start_date' => new DateTimeImmutable('2026-01-15 18:00:00', new DateTimeZone('Europe/Madrid')),
+            'end_date' => new DateTimeImmutable('2026-01-15 21:00:00', new DateTimeZone('Europe/Madrid')),
         ]);
 
         $response = $this->get('/eventos');

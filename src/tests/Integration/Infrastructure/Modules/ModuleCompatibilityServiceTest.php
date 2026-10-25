@@ -7,19 +7,27 @@ namespace Tests\Integration\Infrastructure\Modules;
 use App\Application\Modules\Services\HostEnvironmentProviderInterface;
 use App\Application\Modules\Services\ModuleCompatibilityChecker;
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\Services\ConstraintMatcher;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\HostEnvironment;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Infrastructure\Modules\Services\HostEnvironmentProvider;
 use App\Infrastructure\Modules\Services\ModuleCompatibilityService;
 use App\Infrastructure\Modules\Services\ModuleManifestReader;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Mockery;
+use Tests\Support\Time\UsesUtcStorage;
 use Tests\TestCase;
 
 final class ModuleCompatibilityServiceTest extends TestCase
 {
+    use LazilyRefreshDatabase;
+    use UsesUtcStorage;
+
     private string $modulesPath;
 
     private ModuleCompatibilityService $service;
@@ -107,11 +115,14 @@ final class ModuleCompatibilityServiceTest extends TestCase
     public function test_an_unchanged_manifest_is_read_once(): void
     {
         $path = $this->modulesPath.'/announcements/module.json';
+        // A fixed mtime on both writes: reading it back and re-applying it would be shifted twice
+        // when the system clock is faked
+        $mtime = 1_700_000_000;
         $this->manifest('announcements', ['core' => '^3.0']);
+        touch($path, $mtime);
         $this->assertFalse($this->service->checkInstalled(new ModuleName('announcements'))->isCompatible());
 
         // Same size and mtime: only a memo hit can still see the first content
-        $mtime = (int) filemtime($path);
         $size = (int) filesize($path);
         $this->manifest('announcements', ['core' => '^2.6']);
         touch($path, $mtime);
@@ -140,6 +151,23 @@ final class ModuleCompatibilityServiceTest extends TestCase
         $this->assertFalse($this->service->checkManifestFile($this->modulesPath.'/nowhere/module.json')->isCompatible());
     }
 
+    public function test_under_utc_storage_the_real_host_reports_it_and_an_unflagged_module_is_incompatible(): void
+    {
+        $this->useUtcStorage();
+        $core = Mockery::mock(CoreVersionServiceInterface::class);
+        $core->shouldReceive('getCurrentVersion')->andReturn(new ModuleVersion(3, 20, 0));
+        $provider = new HostEnvironmentProvider($core);
+        $service = new ModuleCompatibilityService(new ModuleManifestReader, new ModuleCompatibilityChecker(new ConstraintMatcher), $provider);
+
+        $this->assertTrue($provider->current()->storesUtc);
+
+        $this->manifest('announcements', ['core' => '^3.0']);
+        $result = $service->checkInstalled(new ModuleName('announcements'));
+
+        $this->assertFalse($result->isCompatible());
+        $this->assertSame(CompatibilityIssue::NOT_UTC_READY, $result->issues[0]->reasonKey);
+    }
+
     public function test_it_is_bound_as_a_singleton(): void
     {
         $this->assertSame(app(ModuleCompatibilityServiceInterface::class), app(ModuleCompatibilityServiceInterface::class));
@@ -147,10 +175,10 @@ final class ModuleCompatibilityServiceTest extends TestCase
 
     private function serviceForCore(ModuleVersion $core): ModuleCompatibilityService
     {
-        $host = new class($core) implements HostEnvironmentProviderInterface
+        $host = new readonly class($core) implements HostEnvironmentProviderInterface
         {
             public function __construct(
-                private readonly ModuleVersion $core,
+                private ModuleVersion $core,
             ) {}
 
             public function current(): HostEnvironment

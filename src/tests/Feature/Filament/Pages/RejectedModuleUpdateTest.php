@@ -57,6 +57,8 @@ final class RejectedModuleUpdateTest extends TestCase
                 'name' => 'announcements',
                 'version' => '2.0.0',
                 'requires' => ['core' => '>=2.0', 'filament' => '^'.$filamentMajor.'.0'],
+                // A release without the flag is not offered on a host that stores UTC
+                'storesUtc' => true,
             ]),
         ]);
         Queue::fake();

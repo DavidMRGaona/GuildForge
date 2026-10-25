@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
+use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use App\Notifications\Contracts\NamesMailRecipient;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
@@ -44,6 +45,7 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
     use HasUuids;
     use Notifiable;
     use SoftDeletes;
+    use StoresInstantsInStorageTimezone;
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['avatar_public_id'];

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Application\DTOs\Response\GalleryResponseDTO;
+use App\Application\Services\TimezoneServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,6 +21,8 @@ final class GalleryResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $timezone = app(TimezoneServiceInterface::class);
+
         return [
             'id' => $this->resource->id,
             'title' => $this->resource->title,
@@ -29,8 +32,8 @@ final class GalleryResource extends JsonResource
             'isPublished' => $this->resource->isPublished,
             'isFeatured' => $this->resource->isFeatured,
             'photoCount' => $this->resource->photoCount,
-            'createdAt' => $this->resource->createdAt?->format('c'),
-            'updatedAt' => $this->resource->updatedAt?->format('c'),
+            'createdAt' => $timezone->iso($this->resource->createdAt),
+            'updatedAt' => $timezone->iso($this->resource->updatedAt),
             'tags' => TagResource::collection($this->resource->tags)->resolve(),
         ];
     }

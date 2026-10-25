@@ -61,6 +61,9 @@ final readonly class ModuleCompatibilityChecker
     public function checkManifest(ModuleManifestDTO $manifest, HostEnvironment $host): CompatibilityResult
     {
         $result = $this->check(ModuleRequirements::fromManifest($manifest->requires ?? []), $host);
+
+        $result = $this->withUtcReadiness($result, $manifest->storesUtc, $host);
+
         $minimum = $host->minimumVersionOf($manifest->name);
 
         if (! $minimum instanceof ModuleVersion) {
@@ -84,6 +87,22 @@ final readonly class ModuleCompatibilityChecker
         return new CompatibilityResult([
             ...$result->issues,
             new CompatibilityIssue(RequirementType::Core, $minimum->value(), $version->value(), CompatibilityIssue::BELOW_CORE_MINIMUM),
+        ]);
+    }
+
+    /**
+     * A host that stores UTC only accepts modules that declare "storesUtc": true; also used for
+     * releases that have not been downloaded, where only their manifest is known.
+     */
+    public function withUtcReadiness(CompatibilityResult $result, bool $moduleStoresUtc, HostEnvironment $host): CompatibilityResult
+    {
+        if (! $host->storesUtc || $moduleStoresUtc) {
+            return $result;
+        }
+
+        return new CompatibilityResult([
+            ...$result->issues,
+            new CompatibilityIssue(RequirementType::Manifest, '', null, CompatibilityIssue::NOT_UTC_READY),
         ]);
     }
 

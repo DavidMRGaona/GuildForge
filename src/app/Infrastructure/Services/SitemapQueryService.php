@@ -6,6 +6,7 @@ namespace App\Infrastructure\Services;
 
 use App\Application\DTOs\Response\SitemapEntryDTO;
 use App\Application\Services\SitemapQueryServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -13,6 +14,10 @@ use Illuminate\Support\Collection;
 
 final readonly class SitemapQueryService implements SitemapQueryServiceInterface
 {
+    public function __construct(
+        private ?TimezoneServiceInterface $timezone = null,
+    ) {}
+
     public function getAllEntries(): Collection
     {
         return $this->getStaticEntries()
@@ -65,7 +70,7 @@ final readonly class SitemapQueryService implements SitemapQueryServiceInterface
             ->get()
             ->map(fn (EventModel $event) => new SitemapEntryDTO(
                 loc: url('/eventos/'.$event->slug),
-                lastmod: $event->updated_at?->toAtomString(),
+                lastmod: $this->timezone()->iso($event->updated_at),
                 priority: '0.7',
                 changefreq: 'weekly',
             ));
@@ -79,7 +84,7 @@ final readonly class SitemapQueryService implements SitemapQueryServiceInterface
             ->get()
             ->map(fn (ArticleModel $article) => new SitemapEntryDTO(
                 loc: url('/articulos/'.$article->slug),
-                lastmod: $article->updated_at?->toAtomString(),
+                lastmod: $this->timezone()->iso($article->updated_at),
                 priority: '0.7',
                 changefreq: 'monthly',
             ));
@@ -93,9 +98,14 @@ final readonly class SitemapQueryService implements SitemapQueryServiceInterface
             ->get()
             ->map(fn (GalleryModel $gallery) => new SitemapEntryDTO(
                 loc: url('/galeria/'.$gallery->slug),
-                lastmod: $gallery->updated_at?->toAtomString(),
+                lastmod: $this->timezone()->iso($gallery->updated_at),
                 priority: '0.6',
                 changefreq: 'monthly',
             ));
+    }
+
+    private function timezone(): TimezoneServiceInterface
+    {
+        return $this->timezone ?? app(TimezoneServiceInterface::class);
     }
 }

@@ -45,7 +45,7 @@
                 :heading="$status['behind_by'] === 0
                     ? __('filament.updates.core.status.up_to_date', ['branch' => $status['branch']])
                     : trans_choice('filament.updates.core.status.behind', $status['behind_by'], ['count' => $status['behind_by'], 'branch' => $status['branch']])"
-                :description="__('filament.updates.core.status.checked_at', ['date' => \Illuminate\Support\Carbon::parse($checkedAt)->format('d/m/Y H:i')])"
+                :description="__('filament.updates.core.status.checked_at', ['date' => $this->formatDate($checkedAt)])"
             >
                 <div class="flex flex-col gap-4 text-sm">
                     @if($status['diverged'])
@@ -70,7 +70,7 @@
                                     </x-filament::link>
                                     <span class="text-gray-950 dark:text-white">{{ $commit['message'] }}</span>
                                     @if($commit['date'] !== null)
-                                        <span class="text-gray-500 dark:text-gray-400">{{ \Illuminate\Support\Carbon::parse($commit['date'])->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</span>
+                                        <span class="text-gray-500 dark:text-gray-400">{{ $this->formatDate($commit['date']) }}</span>
                                     @endif
                                 </li>
                             @endforeach

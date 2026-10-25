@@ -6,19 +6,23 @@ namespace App\Infrastructure\Mail\Services;
 
 use App\Application\Mail\DTOs\Response\MailStatisticsResponseDTO;
 use App\Application\Mail\Services\MailStatisticsServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Mail\Enums\EmailStatus;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
+use Illuminate\Support\Carbon;
 
 final readonly class MailStatisticsService implements MailStatisticsServiceInterface
 {
     public function __construct(
         private EmailLogRepositoryInterface $emailLogRepository,
+        private ?TimezoneServiceInterface $timezone = null,
     ) {}
 
     public function getStats(): MailStatisticsResponseDTO
     {
-        $startOfDay = now()->startOfDay();
-        $startOfMonth = now()->startOfMonth();
+        $timezone = $this->timezone ?? app(TimezoneServiceInterface::class);
+        $startOfDay = Carbon::instance($timezone->displayDayRange($timezone->today())[0]);
+        $startOfMonth = Carbon::instance($timezone->displayMonthRange($timezone->today())[0]);
 
         $sentToday = $this->emailLogRepository->countByStatusSince(EmailStatus::Sent, $startOfDay);
         $sentThisMonth = $this->emailLogRepository->countByStatusSince(EmailStatus::Sent, $startOfMonth);

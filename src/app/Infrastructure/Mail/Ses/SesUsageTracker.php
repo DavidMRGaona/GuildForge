@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Mail\Ses;
 
+use App\Application\Services\TimezoneServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\SesUsageRecordModel;
 use Illuminate\Support\Carbon;
 
-final class SesUsageTracker
+final readonly class SesUsageTracker
 {
     private const float COST_PER_1000_EMAILS = 0.10;
+
+    public function __construct(private ?TimezoneServiceInterface $timezone = null) {}
 
     public function incrementEmailsSent(int $count = 1): void
     {
@@ -36,7 +39,7 @@ final class SesUsageTracker
     public function getTodayUsage(): SesUsageRecordModel
     {
         return SesUsageRecordModel::query()
-            ->whereDate('date', Carbon::today())
+            ->whereDate('date', $this->today())
             ->first() ?? $this->makeEmptyRecord();
     }
 
@@ -46,8 +49,8 @@ final class SesUsageTracker
     public function getMonthlyUsage(): array
     {
         $records = SesUsageRecordModel::query()
-            ->whereDate('date', '>=', Carbon::now()->startOfMonth())
-            ->whereDate('date', '<=', Carbon::now()->endOfMonth())
+            ->whereDate('date', '>=', $this->monthStartDay())
+            ->whereDate('date', '<=', $this->monthEndDay())
             ->get();
 
         return [
@@ -66,7 +69,7 @@ final class SesUsageTracker
     private function getOrCreateTodayRecord(): SesUsageRecordModel
     {
         $existing = SesUsageRecordModel::query()
-            ->whereDate('date', Carbon::today())
+            ->whereDate('date', $this->today())
             ->first();
 
         if ($existing instanceof SesUsageRecordModel) {
@@ -75,7 +78,7 @@ final class SesUsageTracker
 
         /** @var SesUsageRecordModel */
         return SesUsageRecordModel::query()->create([
-            'date' => Carbon::today(),
+            'date' => $this->today(),
             'emails_sent' => 0,
             'estimated_cost' => 0,
             'bounces_count' => 0,
@@ -86,12 +89,33 @@ final class SesUsageTracker
     private function makeEmptyRecord(): SesUsageRecordModel
     {
         $record = new SesUsageRecordModel;
-        $record->date = Carbon::today();
+        $record->date = Carbon::parse($this->today());
         $record->emails_sent = 0;
         $record->estimated_cost = 0;
         $record->bounces_count = 0;
         $record->complaints_count = 0;
 
         return $record;
+    }
+
+    /** The `date` column holds the display calendar day, so it is written and compared as a Y-m-d string. */
+    private function today(): string
+    {
+        return $this->timezone()->today()->format('Y-m-d');
+    }
+
+    private function monthStartDay(): string
+    {
+        return $this->timezone()->today()->format('Y-m-01');
+    }
+
+    private function monthEndDay(): string
+    {
+        return $this->timezone()->today()->format('Y-m-t');
+    }
+
+    private function timezone(): TimezoneServiceInterface
+    {
+        return $this->timezone ?? app(TimezoneServiceInterface::class);
     }
 }

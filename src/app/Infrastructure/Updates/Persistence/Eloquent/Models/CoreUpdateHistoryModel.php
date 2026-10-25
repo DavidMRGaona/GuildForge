@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Updates\Persistence\Eloquent\Models;
 
 use App\Domain\Updates\Enums\UpdateStatus;
+use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
 final class CoreUpdateHistoryModel extends Model
 {
     use HasUuids;
+    use StoresInstantsInStorageTimezone;
 
     protected $table = 'core_update_history';
 

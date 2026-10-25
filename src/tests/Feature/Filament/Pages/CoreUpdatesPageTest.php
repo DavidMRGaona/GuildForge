@@ -13,16 +13,21 @@ use App\Filament\Pages\CoreUpdatesPage;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Livewire;
 use Mockery;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
+use Tests\Support\Time\UsesUtcStorage;
 use Tests\TestCase;
 
 final class CoreUpdatesPageTest extends TestCase
 {
     use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
+    use UsesUtcStorage;
 
     private const string DEPLOYED = 'abc1234def4567890abc123def4567890abc1234';
 
@@ -159,12 +164,30 @@ final class CoreUpdatesPageTest extends TestCase
     public function test_page_shows_when_the_deployed_commit_was_deployed(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());
-        $this->travelTo(now()->setDate(2026, 10, 4)->setTime(19, 52));
+        $this->travelTo(Carbon::create(2026, 10, 4, 19, 52, 0, 'Europe/Madrid'));
         CoreUpdateHistoryModel::query()->create([
             'from_version' => '2.5.10', 'to_version' => '2.5.10',
             'git_commit_before' => 'fff0000fff0000fff0000fff0000fff0000fff00', 'git_commit_after' => self::DEPLOYED,
             'status' => UpdateStatus::Completed,
         ]);
+
+        Livewire::test(CoreUpdatesPage::class)
+            ->assertSee('04/10/2026 19:52');
+    }
+
+    public function test_the_deployed_at_time_is_shown_in_madrid_under_utc_storage(): void
+    {
+        $this->useUtcStorage();
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->travelTo(Carbon::create(2026, 10, 4, 19, 52, 0, 'Europe/Madrid'));
+        CoreUpdateHistoryModel::query()->create([
+            'from_version' => '2.5.10', 'to_version' => '2.5.10',
+            'git_commit_before' => 'fff0000fff0000fff0000fff0000fff0000fff00', 'git_commit_after' => self::DEPLOYED,
+            'status' => UpdateStatus::Completed,
+        ]);
+
+        // Stored as 17:52 UTC
+        $this->assertSame('2026-10-04 17:52:00', DB::table('core_update_history')->value('created_at'));
 
         Livewire::test(CoreUpdatesPage::class)
             ->assertSee('04/10/2026 19:52');
@@ -183,6 +206,15 @@ final class CoreUpdatesPageTest extends TestCase
             ->assertCanSeeTableRecords([$failed])
             ->assertSee('ccc1111')
             ->assertSee(UpdateStatus::Failed->label());
+    }
+
+    public function test_format_date_cannot_be_called_as_a_livewire_action(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->expectException(MethodNotFoundException::class);
+
+        Livewire::test(CoreUpdatesPage::class)->call('formatDate', '2026-01-01');
     }
 
     private function behindStatus(): CoreUpdateStatusDTO

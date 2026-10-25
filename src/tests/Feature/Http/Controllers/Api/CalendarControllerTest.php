@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers\Api;
 
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -128,8 +130,8 @@ final class CalendarControllerTest extends TestCase
         $event = EventModel::factory()->published()->create([
             'title' => 'FullCalendar Event',
             'slug' => 'fullcalendar-event',
-            'start_date' => '2025-01-15 10:00:00',
-            'end_date' => '2025-01-15 18:00:00',
+            'start_date' => new DateTimeImmutable('2025-01-15 10:00:00', new DateTimeZone('Europe/Madrid')),
+            'end_date' => new DateTimeImmutable('2025-01-15 18:00:00', new DateTimeZone('Europe/Madrid')),
         ]);
 
         $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');
@@ -151,8 +153,8 @@ final class CalendarControllerTest extends TestCase
     {
         EventModel::factory()->published()->create([
             'title' => 'Single Day Event',
-            'start_date' => '2025-01-15 10:00:00',
-            'end_date' => '2025-01-15 18:00:00',
+            'start_date' => new DateTimeImmutable('2025-01-15 10:00:00', new DateTimeZone('Europe/Madrid')),
+            'end_date' => new DateTimeImmutable('2025-01-15 18:00:00', new DateTimeZone('Europe/Madrid')),
         ]);
 
         $response = $this->getJson('/eventos/calendario?start=2025-01-01&end=2025-01-31');

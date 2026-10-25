@@ -61,13 +61,37 @@ Platform for wargames and role-playing games guilds with:
 
 Key environment variables to configure:
 
-| Variable         | Description                                       |
-|------------------|---------------------------------------------------|
-| `APP_NAME`       | Guild name                                        |
-| `APP_URL`        | Application URL                                   |
-| `CLOUDINARY_URL` | Cloudinary connection string for images           |
-| `MAIL_*`         | Mail configuration (contact form, account emails) |
-| `DB_*`           | Database connection settings                      |
+| Variable                       | Description                                                                                                                                  |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| `APP_NAME`                     | Guild name                                                                                                                                   |
+| `APP_URL`                      | Application URL                                                                                                                              |
+| `CLOUDINARY_URL`               | Cloudinary connection string for images                                                                                                      |
+| `MAIL_*`                       | Mail configuration (contact form, account emails)                                                                                            |
+| `DB_*`                         | Database connection settings                                                                                                                 |
+| `APP_DISPLAY_TIMEZONE`         | Zone of every date people see and type, and of the scheduler (default `Europe/Madrid`)                                                       |
+| `APP_STORAGE_TIMEZONE_DEFAULT` | Zone the datetime columns are stored in (`Europe/Madrid` or `UTC`) while the site has no `storage_timezone` setting; default `Europe/Madrid` |
+
+### Storage and display timezones
+
+Dates are stored in the *storage zone* and shown in the *display zone*. The storage zone is the `storage_timezone` setting (`Europe/Madrid` or `UTC`); without it, `APP_STORAGE_TIMEZONE_DEFAULT` applies. Sites that already held data when the setting was introduced get `Europe/Madrid` written by a migration, so changing that variable never reinterprets their dates; a fresh install has no setting and follows the variable. The application refuses to boot when the setting cannot be read.
+
+Moving an existing site to UTC is a maintenance task, PostgreSQL only. Maintenance mode only holds back visitors: the queue worker and the scheduler keep running with the zone they started with, and panel users get past it, so:
+
+1. Turn maintenance mode on and make sure nobody edits anything in the panel until the end.
+2. Stop the queue worker and the scheduler (the command cannot stop them).
+3. `php artisan timezone:convert-storage --dry-run` counts what would change and lists anything that would stop the run.
+4. `php artisan timezone:convert-storage` converts (`--reverse` converts back to `Europe/Madrid`).
+5. Start the queue worker and the scheduler again.
+6. Turn maintenance mode off.
+
+The command converts every `timestamp without time zone` column of the core and the modules (never `date`, `time`, JSON or `timestamptz` columns, which it lists as already zone-aware) and writes the setting in the same transaction, so it can be repeated safely. It refuses to run outside maintenance mode, on a database other than PostgreSQL, while queued jobs exist, while a timestamp column has a database default it does not know, and, when converting to UTC (not with `--reverse`), while an installed module is not marked `"storesUtc": true`. Afterwards it clears the settings cache and signals the queue workers to restart, so start them again (step 5) once the command ends.
+
+Things to know before converting:
+
+- A wall time that does not exist (02:xx on the last Sunday of March, when clocks spring forward) is read as 03:xx, so it can collide with a real 03:xx value on a unique index and abort the run. The run is atomic: nothing changes, and the error names the index.
+- Once the data is in UTC, log timestamps and the daily log file boundary follow UTC too.
+- The health endpoint (`/up`) stays up while the database is unreachable, because it does not read stored dates; every other request fails closed, since the storage zone is read at boot and guessing it would shift stored dates.
+- Turn maintenance mode on and off through the panel or the settings service. The command reads the setting fresh, so a change made straight in the database is honoured as well.
 
 ## Commands
 

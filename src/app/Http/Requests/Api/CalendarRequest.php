@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Application\Services\TimezoneServiceInterface;
 use DateTimeImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -51,7 +52,7 @@ final class CalendarRequest extends FormRequest
      */
     public function startDateTime(): DateTimeImmutable
     {
-        return new DateTimeImmutable($this->startDate());
+        return $this->instant($this->startDate());
     }
 
     /**
@@ -59,6 +60,14 @@ final class CalendarRequest extends FormRequest
      */
     public function endDateTime(): DateTimeImmutable
     {
-        return new DateTimeImmutable($this->endDate());
+        return $this->instant($this->endDate());
+    }
+
+    /**
+     * The calendar sends wall times of the display zone, without offset; an explicit offset still wins.
+     */
+    private function instant(string $value): DateTimeImmutable
+    {
+        return new DateTimeImmutable($value, app(TimezoneServiceInterface::class)->displayTimezone());
     }
 }

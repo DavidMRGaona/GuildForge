@@ -546,6 +546,43 @@ final class GitHubReleaseFetcherTest extends TestCase
         $this->assertSame('^2.0', $selection->blockedCoreConstraint);
     }
 
+    public function test_a_utc_host_blocks_a_release_whose_manifest_lacks_the_flag(): void
+    {
+        $fetcher = new GitHubReleaseFetcher(new ModuleCompatibilityChecker(new ConstraintMatcher), $this->hostAt('2.6.0', storesUtc: true));
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.2.0', withManifest: true), $this->release('v1.1.0', withManifest: true), $this->release('v1.0.5')]),
+            'example.test/v1.2.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^2.6'], 'storesUtc' => true]),
+            'example.test/v1.1.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^2.6']]),
+        ]);
+
+        $selection = $fetcher->selectRelease('o', 'r', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertSame('1.2.0', $selection->compatible?->version->value());
+        $this->assertNull($selection->blocked);
+
+        $withoutNewest = new GitHubReleaseFetcher(new ModuleCompatibilityChecker(new ConstraintMatcher), $this->hostAt('2.6.0', storesUtc: true));
+        Http::fake([
+            'api.github.com/repos/o/r2/releases*' => Http::response([$this->release('v1.1.0', withManifest: true), $this->release('v1.0.5')]),
+            'example.test/v1.1.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^2.6']]),
+        ]);
+
+        $selection = $withoutNewest->selectRelease('o', 'r2', ModuleVersion::fromString('1.0.0'), false);
+
+        $this->assertNull($selection->compatible);
+        $this->assertSame('1.1.0', $selection->blocked?->version->value());
+        $this->assertSame(CompatibilityIssue::NOT_UTC_READY, $selection->blockedIssues[0]->reasonKey);
+    }
+
+    public function test_a_madrid_host_does_not_require_the_flag(): void
+    {
+        Http::fake([
+            'api.github.com/repos/o/r/releases*' => Http::response([$this->release('v1.1.0', withManifest: true)]),
+            'example.test/v1.1.0/module.json' => Http::response(['name' => 'm', 'requires' => ['core' => '^2.6']]),
+        ]);
+
+        $this->assertSame('1.1.0', $this->latest('o', 'r')?->version->value());
+    }
+
     public function test_service_is_registered_in_container(): void
     {
         $service = $this->app->make(GitHubReleaseFetcherInterface::class);
@@ -561,12 +598,13 @@ final class GitHubReleaseFetcherTest extends TestCase
         return $this->fetcher->selectRelease($owner, $repo, new ModuleVersion(0, 0, 0), $includePrereleases)->compatible;
     }
 
-    private function hostAt(string $core): HostEnvironmentProviderInterface
+    private function hostAt(string $core, bool $storesUtc = false): HostEnvironmentProviderInterface
     {
-        return new class($core) implements HostEnvironmentProviderInterface
+        return new readonly class($core, $storesUtc) implements HostEnvironmentProviderInterface
         {
             public function __construct(
-                private readonly string $core,
+                private string $core,
+                private bool $storesUtc,
             ) {}
 
             public function current(): HostEnvironment
@@ -577,6 +615,7 @@ final class GitHubReleaseFetcherTest extends TestCase
                     laravel: new ModuleVersion(12, 69, 3),
                     filament: new ModuleVersion(3, 3, 56),
                     extensions: ['json'],
+                    storesUtc: $this->storesUtc,
                 );
             }
         };

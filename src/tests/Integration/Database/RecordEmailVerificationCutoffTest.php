@@ -21,11 +21,13 @@ final class RecordEmailVerificationCutoffTest extends TestCase
     public function test_it_records_the_current_time_in_utc_when_the_cutoff_is_missing(): void
     {
         DB::table('settings')->where('key', self::KEY)->delete();
-        $before = new DateTimeImmutable('-1 second');
+        // Built from timestamps: a relative "-1 second" is resolved on the zone's wall time, which is
+        // ambiguous during the autumn hour the clock repeats
+        $before = new DateTimeImmutable('@'.(time() - 1));
 
         $this->migration()->up();
 
-        $after = new DateTimeImmutable('+1 second');
+        $after = new DateTimeImmutable('@'.(time() + 1));
         $rows = DB::table('settings')->where('key', self::KEY)->get();
         $this->assertCount(1, $rows);
 
@@ -96,7 +98,6 @@ final class RecordEmailVerificationCutoffTest extends TestCase
 
     private function migration(): Migration
     {
-        /** @var Migration */
         return require database_path('migrations/2026_10_14_100003_record_email_verification_cutoff.php');
     }
 }
