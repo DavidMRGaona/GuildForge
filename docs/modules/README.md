@@ -1171,7 +1171,18 @@ Module tests run inside the host application with the module's own `phpunit.xml`
 docker exec guildforge_app vendor/bin/phpunit -c modules/my-module/phpunit.xml
 ```
 
-`module:make` writes `phpunit.xml` as the shipped modules have it: it boots `../../vendor/autoload.php`, runs the `tests/Unit`, `tests/Integration` and `tests/Feature` suites on SQLite in memory, and its `APP_CONFIG_CACHE`/`APP_ROUTES_CACHE`/`APP_EVENTS_CACHE` block keeps tests away from the bootstrap caches of the container. Keep that block. The release workflow runs the same file (see [Releasing a module](#releasing-a-module)).
+`module:make` writes `phpunit.xml` as the shipped modules have it: it boots `tests/bootstrap.php`, runs the `tests/Unit`, `tests/Integration` and `tests/Feature` suites on SQLite in memory, and its `APP_CONFIG_CACHE`/`APP_ROUTES_CACHE`/`APP_EVENTS_CACHE` block keeps tests away from the bootstrap caches of the container. Keep that block. The release workflow runs the same file (see [Releasing a module](#releasing-a-module)).
+
+`tests/bootstrap.php` loads the core's test bootstrap (which clears a stale config cache and the compiled views before the suite) and then maps the module's test namespace to `tests/`:
+
+```php
+require __DIR__.'/../../../tests/bootstrap.php';
+
+$loader = require __DIR__.'/../../../vendor/autoload.php';
+$loader->addPsr4('Modules\\MyModule\\Tests\\', __DIR__);
+```
+
+The module autoloader only maps `src/`. PHPUnit loads the `*Test.php` files by path, but shared helpers (fakes, traits, builders) are only found through that mapping: put them under `tests/Support` with the `Modules\MyModule\Tests\Support` namespace. Modules created before this file existed boot `../../vendor/autoload.php` or their own `tests/bootstrap.php`; copy the one above (with the module's namespace) and point `bootstrap` in `phpunit.xml` at it the next time the module is touched.
 
 Vue tests (`tests/js/**/*.spec.ts`) run with the core's Vitest, Vue Test Utils and happy-dom. The `vitest.config.ts` that `module:make` writes is three lines on the core's configuration (`src/vitest.module.config.ts`: the `@` alias to the core's `resources/js`, one Vue copy, `tests/js/setup.ts` when it exists):
 
