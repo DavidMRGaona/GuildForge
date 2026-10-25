@@ -9,7 +9,6 @@ use App\Domain\Exceptions\StorageTimezoneUnavailableException;
 use App\Infrastructure\Time\StorageTimezoneResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Time\UsesUtcStorage;
@@ -20,8 +19,7 @@ final class StorageTimezoneResolverTest extends TestCase
     use RefreshDatabase;
     use UsesUtcStorage;
 
-    /** @var list<string> Named, so the rollback still finds the real connection after a test swaps the default. */
-    protected array $connectionsToTransact = ['sqlite'];
+    private ?string $transactedConnection = null;
 
     private string $zoneBeforeTest = 'Europe/Madrid';
 
@@ -74,7 +72,13 @@ final class StorageTimezoneResolverTest extends TestCase
 
     public function test_before_the_settings_table_exists_the_default_is_used(): void
     {
-        Schema::drop('settings');
+        // A database of its own with no tables: dropping the table inside the test's transaction
+        // would abort it on PostgreSQL, and a fresh install never has that transaction around it
+        config([
+            'database.connections.without_tables' => ['driver' => 'sqlite', 'database' => ':memory:'],
+            'database.default' => 'without_tables',
+        ]);
+
         $this->assertSame('Europe/Madrid', app(StorageTimezoneResolver::class)->resolve());
     }
 
@@ -183,6 +187,19 @@ final class StorageTimezoneResolverTest extends TestCase
 
         $this->useUtcStorage();
         $this->assertSame(1, DB::table('settings')->where('key', 'storage_timezone')->count());
+    }
+
+    /**
+     * Named, so the rollback still finds the real connection (SQLite or PostgreSQL, as the run
+     * is configured) after a test swaps the default.
+     *
+     * @return list<string>
+     */
+    protected function connectionsToTransact(): array
+    {
+        $this->transactedConnection ??= (string) config('database.default');
+
+        return [$this->transactedConnection];
     }
 
     private function makeDatabaseUnreachable(): void

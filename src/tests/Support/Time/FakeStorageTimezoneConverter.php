@@ -14,6 +14,9 @@ final class FakeStorageTimezoneConverter implements StorageTimezoneConverterInte
     /** @var list<array{string, string, int}> from, to and the transaction level of each call */
     public array $calls = [];
 
+    /** Set to false to stand in for a database the conversion cannot run on, whatever the real driver is. */
+    public bool $supported = true;
+
     /** @param  array<string, int>  $counts */
     public function __construct(
         private readonly array $counts,
@@ -23,7 +26,7 @@ final class FakeStorageTimezoneConverter implements StorageTimezoneConverterInte
 
     public function supportsConnection(): bool
     {
-        return true;
+        return $this->supported;
     }
 
     public function countValues(): array

@@ -90,6 +90,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $this->installModule('legacy-module', ['name' => 'legacy-module', 'version' => '1.0.0']);
         $this->createTableWithDatabaseDefaultedTimestamp();
         $this->setMaintenance(false);
+        $this->fakeConverter()->supported = false;
 
         $this->artisan('timezone:convert-storage --dry-run')
             ->expectsOutputToContain('PostgreSQL')
@@ -103,6 +104,9 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
 
     public function test_refuses_on_a_database_other_than_postgresql(): void
     {
+        // Stands in for any driver the conversion cannot run on, so this holds on PostgreSQL too
+        $this->fakeConverter()->supported = false;
+
         $this->artisan('timezone:convert-storage')
             ->expectsOutputToContain('PostgreSQL')
             ->assertFailed();
