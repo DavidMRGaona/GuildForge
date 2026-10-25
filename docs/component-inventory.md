@@ -582,9 +582,9 @@ Located in `src/resources/js/composables/`.
 ### useCalendarLocale
 
 - **Parameters**: --
-- **Returns**: `ComputedRef<LocaleInput | string>`
+- **Returns**: `ComputedRef<LocaleInput>`
 - **Dependencies**: `vue-i18n`, `@fullcalendar/vue3/locales/es`
-- **Purpose**: Dynamic locale resolution for FullCalendar based on the active i18n language
+- **Purpose**: FullCalendar locale for the active i18n language. The toolbar hints (previous, next, today, each view), the view switcher label, the time grid's timed-section label and the "more" link hint come from `calendar.fullcalendar.*` in the site's translations: FullCalendar 7's Spanish locale gets some wrong ("Mes antes", "Vista del semana") and lacks others, which would show in English ("Timed", "Change view"). Modules bundle it into their build, so a change reaches a module calendar when the module is rebuilt
 
 ### useGridLayout
 
