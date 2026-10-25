@@ -74,13 +74,14 @@ final class GallerySeeder extends Seeder
 
     /**
      * @param  array<string, mixed>  $attributes
-     * @param  callable(): array<string, mixed>  $factoryDefaults
+     * @param  callable(): array<array-key, mixed>  $factoryDefaults
      */
     private function firstOrCreateGallery(string $slug, array $attributes, callable $factoryDefaults): GalleryModel
     {
         return GalleryModel::firstOrCreate(
             ['slug' => $slug],
-            array_merge($factoryDefaults(), $attributes),
+            // raw() types its keys as int|string; the attributes are column names
+            array_merge(array_filter($factoryDefaults(), is_string(...), ARRAY_FILTER_USE_KEY), $attributes),
         );
     }
 }

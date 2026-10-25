@@ -14,6 +14,10 @@ final class SettingsSeeder extends Seeder
      */
     public function run(): void
     {
+        // APP_NAME through the config: env() reads null outside config/ once the config is cached
+        $appName = config('app.name');
+        $siteName = is_string($appName) && $appName !== '' ? $appName : 'GuildForge';
+
         $activities = [
             ['icon' => 'dice', 'title' => 'Juegos de rol', 'description' => 'Partidas semanales de D&D, Pathfinder, Call of Cthulhu y más sistemas.'],
             ['icon' => 'sword', 'title' => 'Wargames', 'description' => 'Batallas épicas con Warhammer, Infinity, Bolt Action y otros sistemas.'],
@@ -33,12 +37,12 @@ final class SettingsSeeder extends Seeder
         ];
 
         $settings = [
-            'location_name' => env('APP_NAME', 'GuildForge').' HQ',
+            'location_name' => $siteName.' HQ',
             'location_address' => 'Your address here',
             'location_lat' => '40.4168',
             'location_lng' => '-3.7038',
             'location_zoom' => '15',
-            'guild_name' => env('APP_NAME', 'GuildForge'),
+            'guild_name' => $siteName,
             'about_hero_image' => '',
             'about_tagline' => 'Tu comunidad de juegos de rol y wargames',
             'about_history' => '<p><strong>GuildForge</strong> nació en 2010 como un pequeño grupo de amigos apasionados por los juegos de rol y los wargames. Lo que comenzó como partidas casuales en el salón de uno de nuestros fundadores, pronto se convirtió en algo más grande.</p><p>En 2012, nos constituimos oficialmente como asociación, con el objetivo de promover los juegos de mesa, rol y wargames en nuestra comunidad. Desde entonces, hemos organizado cientos de eventos, torneos y jornadas que han reunido a jugadores de todas las edades y experiencias.</p><p>Hoy somos más de <strong>50 miembros activos</strong> y seguimos creciendo. Nuestra sede se ha convertido en un punto de encuentro para la comunidad gamer de la zona, donde cada semana se respira el espíritu de aventura y competición sana.</p>',
