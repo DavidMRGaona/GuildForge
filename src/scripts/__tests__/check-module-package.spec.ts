@@ -39,6 +39,25 @@ describe('checkModulePackage', () => {
         ).toEqual(['@fullcalendar/vue3: shared by the core through the import map']);
     });
 
+    it('rejects a package of a scope the core bundles into its shared chunks', () => {
+        expect(
+            checkModulePackage(
+                moduleWith({
+                    dependencies: { '@vue/reactivity': '^3', '@intlify/core-base': '^11' },
+                })
+            )
+        ).toEqual([
+            '@vue/reactivity: shared by the core through the import map',
+            '@intlify/core-base: shared by the core through the import map',
+        ]);
+    });
+
+    it('rejects Tailwind, which the core builds with', () => {
+        expect(checkModulePackage(moduleWith({ dependencies: { tailwindcss: '^4' } }))).toEqual([
+            'tailwindcss: build or test tooling, the core provides it',
+        ]);
+    });
+
     it('rejects a library the core provides for module builds', () => {
         expect(checkModulePackage(moduleWith({ dependencies: { '@lucide/vue': '^1' } }))).toEqual([
             '@lucide/vue: provided by the core for module builds',

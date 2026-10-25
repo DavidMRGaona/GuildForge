@@ -25,7 +25,14 @@ export const FORBIDDEN_MODULE_PACKAGES = Object.freeze([
     'typescript',
     'vue-tsc',
     'vue',
+    'tailwindcss',
 ]);
+
+/**
+ * Scopes whose packages the core bundles into the chunks it shares (vendor-vue holds @vue/* and
+ * @intlify/*): a module bundling one of them would load a second copy of their state.
+ */
+export const SHARED_SCOPES = Object.freeze(['@vue', '@intlify']);
 
 /**
  * @param {string} srcDir The core's src/ directory

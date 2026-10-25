@@ -2,7 +2,8 @@
 // Checks a module's package.json against the core's rules: a module builds and tests with
 // the core's toolchain, so it declares only its own runtime libraries, in dependencies, with
 // the lockfile `npm ci` needs; never build or test tooling, a package the core shares through
-// the import map (or another package of its scope, such as @fullcalendar/core), or a library
+// the import map (or another package of its scope, such as @fullcalendar/core, or of a scope
+// the core bundles into its shared chunks, such as @vue/reactivity), or a library
 // the core provides for module builds. No package.json passes.
 //
 //   node scripts/check-module-package.mjs modules/<name>
@@ -13,6 +14,7 @@ import {
     BUILD_PROVIDED_PACKAGES,
     FORBIDDEN_MODULE_PACKAGES,
     readPublicApi,
+    SHARED_SCOPES,
 } from './public-api.mjs';
 
 const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -36,9 +38,10 @@ export function checkModulePackage(moduleDir) {
 
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     const shared = new Set(Object.keys(readPublicApi(srcDir).packages).map(packageName));
-    const sharedScopes = new Set(
-        [...shared].filter((name) => name.startsWith('@')).map((name) => name.split('/')[0])
-    );
+    const sharedScopes = new Set([
+        ...SHARED_SCOPES,
+        ...[...shared].filter((name) => name.startsWith('@')).map((name) => name.split('/')[0]),
+    ]);
     const failures = [];
     const declared = {};
 
