@@ -80,7 +80,7 @@ final class ModuleBuildCommand extends Command
 
         if (! $this->assetBuilder->hasBuildConfig($module)) {
             $this->error("Module {$moduleName} has Vue components but no build configuration.");
-            $this->line('Ensure the module has both package.json and vite.config.ts files.');
+            $this->line('Ensure the module has a vite.config.ts on defineModuleConfig (stubs/modules/module/vite.config.ts.stub).');
 
             return Command::FAILURE;
         }

@@ -12,6 +12,8 @@ use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Process\PendingProcess;
+use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
 
 final class ModuleAssetBuilderTest extends TestCase
@@ -81,12 +83,91 @@ final class ModuleAssetBuilderTest extends TestCase
         $this->assertTrue($this->builder->hasComponents($module));
     }
 
-    public function test_has_build_config_returns_false_when_no_package_json(): void
+    public function test_has_build_config_returns_false_without_any_build_file(): void
     {
         $module = $this->createModule('test-module');
         $this->createModuleDirectory('test-module');
 
         $this->assertFalse($this->builder->hasBuildConfig($module));
+    }
+
+    public function test_has_build_config_returns_true_for_a_module_on_the_core_toolchain(): void
+    {
+        // Modules on defineModuleConfig have no package.json: they build with the core's Vite
+        $module = $this->createModule('test-module');
+        $this->createModuleOnTheCoreToolchain('test-module');
+
+        $this->assertTrue($this->builder->hasBuildConfig($module));
+    }
+
+    public function test_has_components_returns_true_when_only_pages_exist(): void
+    {
+        $module = $this->createModule('test-module');
+        $this->createModuleDirectory('test-module');
+        mkdir($this->testModulesPath.'/test-module/resources/js/pages', 0755, true);
+        file_put_contents($this->testModulesPath.'/test-module/resources/js/pages/Index.vue', '<template><div /></template>');
+
+        $this->assertTrue($this->builder->hasComponents($module));
+    }
+
+    public function test_build_runs_the_core_build_script_for_a_module_on_the_core_toolchain(): void
+    {
+        Process::fake();
+        config(['module-build.required_vite_env' => [], 'module-build.vite_env' => ['VITE_APP_NAME' => 'Example']]);
+        $module = $this->createModule('test-module');
+        $this->createModuleOnTheCoreToolchain('test-module');
+        $this->createModuleWithVueComponent('test-module', 'Test.vue');
+
+        $this->assertTrue($this->builder->build($module, true));
+
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']
+            && $process->path === base_path()
+            && $process->environment === ['VITE_APP_NAME' => 'Example']);
+        Process::assertRanTimes(fn (PendingProcess $process): bool => true, 1);
+    }
+
+    public function test_build_installs_the_libraries_of_a_module_on_the_core_toolchain_first(): void
+    {
+        Process::fake();
+        config(['module-build.required_vite_env' => []]);
+        $module = $this->createModule('test-module');
+        $this->createModuleOnTheCoreToolchain('test-module');
+        $this->createModuleWithVueComponent('test-module', 'Test.vue');
+        file_put_contents($this->testModulesPath.'/test-module/package.json', '{"dependencies": {}}');
+
+        $this->assertTrue($this->builder->build($module, true));
+
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['npm', 'ci', '--no-audit', '--no-fund']
+            && $process->path === $this->testModulesPath.'/test-module');
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']);
+    }
+
+    public function test_build_runs_npm_in_a_module_with_its_own_toolchain(): void
+    {
+        // Legacy module toolchain: removed with it once every module is on defineModuleConfig
+        Process::fake();
+        config(['module-build.required_vite_env' => []]);
+        $module = $this->createModule('test-module');
+        $this->createModuleWithBuildConfig('test-module');
+        $this->createModuleWithVueComponent('test-module', 'Test.vue');
+
+        $this->assertTrue($this->builder->build($module, true));
+
+        $modulePath = $this->testModulesPath.'/test-module';
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['npm', 'install'] && $process->path === $modulePath);
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['npm', 'run', 'build'] && $process->path === $modulePath);
+        Process::assertDidntRun(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']);
+    }
+
+    public function test_build_fails_when_the_build_process_fails(): void
+    {
+        Process::fake(['*' => Process::result(errorOutput: 'Build failed', exitCode: 1)]);
+        config(['module-build.required_vite_env' => []]);
+        $module = $this->createModule('test-module');
+        $this->createModuleOnTheCoreToolchain('test-module');
+        $this->createModuleWithVueComponent('test-module', 'Test.vue');
+
+        $this->assertFalse($this->builder->build($module, true));
     }
 
     public function test_has_build_config_returns_false_when_no_vite_config(): void
@@ -260,12 +341,6 @@ final class ModuleAssetBuilderTest extends TestCase
             author: 'Test Author',
             requirements: ModuleRequirements::fromArray([]),
             status: ModuleStatus::Disabled,
-            enabledAt: null,
-            installedAt: null,
-            createdAt: null,
-            updatedAt: null,
-            namespace: null,
-            provider: null,
             path: $this->testModulesPath.'/'.$name,
         );
     }
@@ -300,6 +375,16 @@ final class ModuleAssetBuilderTest extends TestCase
         ]));
 
         file_put_contents($modulePath.'/vite.config.ts', 'export default {}');
+    }
+
+    private function createModuleOnTheCoreToolchain(string $name): void
+    {
+        $this->createModuleDirectory($name);
+
+        file_put_contents(
+            $this->testModulesPath.'/'.$name.'/vite.config.ts',
+            "import { defineModuleConfig } from '../../vite.module.config';\n\nexport default defineModuleConfig({ name: '{$name}', root: __dirname });\n",
+        );
     }
 
     private function createModuleWithVueComponent(string $name, string $componentPath): void
