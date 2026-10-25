@@ -88,6 +88,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             'module/phpunit.xml.stub' => 'phpunit.xml',
             'module/gitignore.stub' => '.gitignore',
             'module/release.yml.stub' => '.github/workflows/release.yml',
+            'module/tests.yml.stub' => '.github/workflows/tests.yml',
             'module/locale.ts.stub' => 'resources/js/locales/es.ts',
         ];
 

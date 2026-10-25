@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+# A new push to the same pull request cancels the run it makes obsolete
+concurrency:
+  group: tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-tests.yml@main
+    with:
+      module_name: '{{ moduleName }}'
+      # Host branch, tag or SHA to test against (main when the variable is unset)
+      host_ref: ${{ vars.GUILDFORGE_HOST_REF || 'main' }}
+      # The core's quality tools (Rector, Pint, PHPStan, ESLint, Prettier, Vitest)
+      quality: true
+    permissions:
+      contents: read

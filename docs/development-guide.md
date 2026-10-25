@@ -420,7 +420,7 @@ make rector-fix   # Apply, then make cs-fix
 
 ### Pint (PHP code style)
 
-Uses `laravel/pint` with the `laravel` preset plus `declare_strict_types` (`src/pint.json`); `modules/` is excluded because each module is its own repository. CI fails on any style difference (`vendor/bin/pint --test`):
+Uses `laravel/pint` with the `laravel` preset plus `declare_strict_types` (`src/pint.json`); `modules/` is excluded from the core's run because each module is its own repository, and each module is checked with the same rules by its own CI (`make check MODULE=<module>` locally, see [module CI/CD](module-ci-cd.md#pull-request-checks)). CI fails on any style difference (`vendor/bin/pint --test`):
 
 ```bash
 make cs       # Check (dry-run)

@@ -184,6 +184,30 @@ Settings saved from the panel live in the database (`module_settings:<name>` in 
 
 Versions with a suffix (e.g., `1.0.0-beta.1`, `2.0.0-rc.1`) are automatically marked as prerelease on GitHub.
 
+## Pull request checks
+
+Each module's `tests.yml` calls `reusable-module-tests.yml` on every pull request:
+
+- **`test / Test module`**: the module's PHPUnit suite inside the host (see step 3 above).
+- **`test / Quality`**, with `quality: true`: the core's quality tools with the core's configuration from `host_ref` (the module copies none of it), through `src/scripts/check-module-quality.sh`:
+  - Rector (`src/`, dry run), then Pint (the whole module), then PHPStan level 8 (`src/`, `phpstan-modules.neon`)
+  - ESLint and Prettier (`resources/js/`)
+  - Vitest, when the module has `vitest.config.ts` and `package-lock.json` (its own dependencies)
+
+Every tool runs even when an earlier one fails, so one run lists everything. A module turns `quality` on in the pull request that leaves its code passing them, and the check then becomes required in its `main` protection, like `test / Test module`. Any quality tool added to the core goes into the script as well.
+
+```yaml
+jobs:
+  test:
+    uses: DavidMRGaona/GuildForge/.github/workflows/reusable-module-tests.yml@main
+    with:
+      module_name: 'my-module'
+      host_ref: ${{ vars.GUILDFORGE_HOST_REF || 'main' }}
+      quality: true
+```
+
+Locally, from the host root with the containers running: `make check MODULE=<module>`.
+
 ## Workflow options
 
 The reusable workflow accepts these parameters:

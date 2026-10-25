@@ -1,7 +1,9 @@
 name: Reusable module tests
 
-# Runs a module's PHPUnit suite inside the host application. Called by each module's
-# tests.yml on every pull request and by reusable-module-release.yml before a release.
+# Runs a module's PHPUnit suite inside the host application and, with quality: true, the
+# core's quality tools on it (src/scripts/check-module-quality.sh, also behind
+# `make check MODULE=<name>`). Called by each module's tests.yml on every pull request and
+# by reusable-module-release.yml before a release.
 
 on:
   workflow_call:
@@ -20,6 +22,11 @@ on:
         required: false
         type: string
         default: 'main'
+      quality:
+        description: "Also run the core's quality tools on the module (Rector, Pint, PHPStan, ESLint, Prettier, Vitest); each module turns it on once its code passes them"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -78,3 +85,62 @@ jobs:
         env:
           MODULE_NAME: ${{ inputs.module_name }}
         run: sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME"
+
+  quality:
+    name: Quality
+    if: inputs.quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Checkout host application
+        uses: actions/checkout@v7
+        with:
+          repository: DavidMRGaona/GuildForge
+          ref: ${{ inputs.host_ref }}
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php_version }}
+          extensions: pdo_pgsql, pdo_sqlite, redis, gd, zip, bcmath, intl
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php${{ inputs.php_version }}-composer-${{ hashFiles('src/composer.lock') }}
+          restore-keys: ${{ runner.os }}-php${{ inputs.php_version }}-composer-
+
+      - name: Install host dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install host npm dependencies
+        run: npm ci
+
+      # After the host is installed, as in the test job: the tools run with the core's
+      # configuration from host_ref, and the module copies none of it
+      - name: Checkout module
+        uses: actions/checkout@v7
+        with:
+          path: src/modules/${{ inputs.module_name }}
+          persist-credentials: false
+
+      - name: Run quality checks
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
+        run: sh scripts/check-module-quality.sh all "$MODULE_NAME"
