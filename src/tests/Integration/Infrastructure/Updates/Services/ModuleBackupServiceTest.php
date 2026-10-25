@@ -91,7 +91,7 @@ final class ModuleBackupServiceTest extends TestCase
     public function test_it_restores_module_from_backup(): void
     {
         $modulePath = $this->createTestModule('shop', '1.0.0');
-        $originalContent = File::get("{$modulePath}/src/ModuleProvider.php");
+        File::get("{$modulePath}/src/ModuleProvider.php");
 
         $module = $this->createRealModule('shop', '1.0.0', $modulePath);
         $this->moduleManager->shouldReceive('find')

@@ -425,9 +425,7 @@ TS;
         foreach ($adminPaths as $path) {
             $request = Request::create('/'.$path, 'GET');
 
-            $response = $this->middleware->handle($request, function ($req) {
-                return response('Bypassed', 200);
-            });
+            $response = $this->middleware->handle($request, fn ($req) => response('Bypassed', 200));
 
             $this->assertSame(200, $response->getStatusCode());
             $this->assertSame('Bypassed', $response->getContent());

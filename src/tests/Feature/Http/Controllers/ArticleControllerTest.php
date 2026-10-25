@@ -50,11 +50,11 @@ final class ArticleControllerTest extends TestCase
 
     public function test_index_orders_articles_by_published_date_descending(): void
     {
-        $oldArticle = ArticleModel::factory()->published()->create([
+        ArticleModel::factory()->published()->create([
             'title' => 'Old Article',
             'published_at' => now()->subDays(10),
         ]);
-        $newArticle = ArticleModel::factory()->published()->create([
+        ArticleModel::factory()->published()->create([
             'title' => 'New Article',
             'published_at' => now()->subDays(1),
         ]);
@@ -100,7 +100,7 @@ final class ArticleControllerTest extends TestCase
     {
         $author = UserModel::factory()->create();
 
-        $article = ArticleModel::factory()->published()->withAuthor($author)->create([
+        ArticleModel::factory()->published()->withAuthor($author)->create([
             'title' => 'Test Article',
             'slug' => 'test-article',
             'content' => 'Test content',
@@ -129,7 +129,7 @@ final class ArticleControllerTest extends TestCase
             'avatar_public_id' => 'avatar.jpg',
         ]);
 
-        $article = ArticleModel::factory()
+        ArticleModel::factory()
             ->published()
             ->withAuthor($author)
             ->create([
@@ -170,11 +170,11 @@ final class ArticleControllerTest extends TestCase
 
     public function test_index_includes_tags_in_response(): void
     {
-        $tag1 = TagModel::factory()->forArticles()->create([
+        TagModel::factory()->forArticles()->create([
             'name' => 'Tutorial',
             'slug' => 'tutorial',
         ]);
-        $tag2 = TagModel::factory()->forArticles()->create([
+        TagModel::factory()->forArticles()->create([
             'name' => 'Battle Report',
             'slug' => 'battle-report',
         ]);
@@ -223,7 +223,7 @@ final class ArticleControllerTest extends TestCase
         ]);
         $taggedArticle->tags()->attach($tag->id);
 
-        $untaggedArticle = ArticleModel::factory()->published()->withAuthor($author)->create([
+        ArticleModel::factory()->published()->withAuthor($author)->create([
             'title' => 'Game Review',
         ]);
 
@@ -246,7 +246,7 @@ final class ArticleControllerTest extends TestCase
         $taggedArticle = ArticleModel::factory()->published()->withAuthor($author)->create(['title' => 'Tagged Article']);
         $taggedArticle->tags()->attach($tag->id);
 
-        $untaggedArticle = ArticleModel::factory()->published()->withAuthor($author)->create(['title' => 'Untagged Article']);
+        ArticleModel::factory()->published()->withAuthor($author)->create(['title' => 'Untagged Article']);
 
         $response = $this->get('/articulos');
 
@@ -260,7 +260,7 @@ final class ArticleControllerTest extends TestCase
 
     public function test_index_returns_empty_when_tag_has_no_articles(): void
     {
-        $tag = TagModel::factory()->forArticles()->create([
+        TagModel::factory()->forArticles()->create([
             'slug' => 'unused-tag',
         ]);
 
@@ -309,7 +309,7 @@ final class ArticleControllerTest extends TestCase
     public function test_show_displays_article_without_tags(): void
     {
         $author = UserModel::factory()->create();
-        $article = ArticleModel::factory()->published()->withAuthor($author)->create([
+        ArticleModel::factory()->published()->withAuthor($author)->create([
             'slug' => 'untagged-article',
         ]);
 

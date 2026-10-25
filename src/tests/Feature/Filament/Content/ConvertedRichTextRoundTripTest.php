@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Integration\Infrastructure\Content\Services\TrixHtmlConverterTest;
+use Tests\Support\Files\ReadsFiles;
 use Tests\TestCase;
 
 /**
@@ -26,6 +27,7 @@ use Tests\TestCase;
 final class ConvertedRichTextRoundTripTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use ReadsFiles;
 
     protected function setUp(): void
     {
@@ -68,7 +70,7 @@ final class ConvertedRichTextRoundTripTest extends TestCase
 
     public function test_saving_the_converted_real_article_keeps_it(): void
     {
-        $converted = (new TrixHtmlConverter)->convert((string) file_get_contents(base_path('tests/Fixtures/rich-text/trix-article.html')));
+        $converted = (new TrixHtmlConverter)->convert(self::readFile(base_path('tests/Fixtures/rich-text/trix-article.html')));
         $article = ArticleModel::factory()->create(['content' => $converted]);
         $article->tags()->attach(TagModel::factory()->forArticles()->create(['parent_id' => null])->id);
 

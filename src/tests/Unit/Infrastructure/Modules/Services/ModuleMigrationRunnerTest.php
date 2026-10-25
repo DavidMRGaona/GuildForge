@@ -231,9 +231,6 @@ final class ModuleMigrationRunnerTest extends TestCase
                 requiredExtensions: []
             ),
             status: ModuleStatus::Disabled,
-            enabledAt: null,
-            createdAt: null,
-            updatedAt: null,
             namespace: 'Modules\\'.str_replace(' ', '', ucwords(str_replace('-', ' ', $name))),
             provider: 'ModuleServiceProvider',
             path: $this->testModulesPath.'/'.$name,

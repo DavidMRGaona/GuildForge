@@ -32,7 +32,6 @@ final class AnonymizeUserDTOTest extends TestCase
         $dto = new AnonymizeUserDTO(
             userId: $userId,
             contentAction: 'anonymize',
-            transferToUserId: null,
         );
 
         $this->assertEquals($userId, $dto->userId);

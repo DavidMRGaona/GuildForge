@@ -96,7 +96,7 @@ final class ImageOptimizationServiceTest extends TestCase
     {
         $contents = 'random binary content';
 
-        $result = $this->service->optimize($contents, null);
+        $result = $this->service->optimize($contents);
 
         $this->assertSame($contents, $result);
     }

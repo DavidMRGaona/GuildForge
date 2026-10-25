@@ -13,13 +13,13 @@ use DateTimeImmutable;
  * Configurable calendar source used in tests to simulate a module registering
  * entries through the CalendarSourceRegistry / CalendarAggregatorService.
  */
-final class FakeCalendarSource implements CalendarEntrySourceInterface
+final readonly class FakeCalendarSource implements CalendarEntrySourceInterface
 {
     /**
      * @param  array<CalendarEntryDTO>  $entries
      */
     public function __construct(
-        private readonly array $entries = [],
+        private array $entries = [],
     ) {}
 
     public function sourceType(): string

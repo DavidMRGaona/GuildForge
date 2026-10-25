@@ -136,7 +136,6 @@ final class HasSlugTest extends TestCase
         $model1->saveQuietly();
 
         $model2 = new TestSluggableModel;
-        $model2->id = $model1->id; // Force same ID prefix to test collision logic
         $model2->id = 'aaaaaaaa'.substr($model1->id, 8); // Same first 8 chars
 
         // This forces the collision detection to extend the UUID portion

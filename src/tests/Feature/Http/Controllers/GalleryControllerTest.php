@@ -50,11 +50,11 @@ final class GalleryControllerTest extends TestCase
 
     public function test_index_orders_galleries_by_created_at_descending(): void
     {
-        $oldGallery = GalleryModel::factory()->published()->create([
+        GalleryModel::factory()->published()->create([
             'title' => 'Old Gallery',
             'created_at' => now()->subDays(10),
         ]);
-        $newGallery = GalleryModel::factory()->published()->create([
+        GalleryModel::factory()->published()->create([
             'title' => 'New Gallery',
             'created_at' => now()->subDays(1),
         ]);
@@ -89,7 +89,7 @@ final class GalleryControllerTest extends TestCase
 
     public function test_show_displays_single_published_gallery(): void
     {
-        $gallery = GalleryModel::factory()->published()->create([
+        GalleryModel::factory()->published()->create([
             'title' => 'Test Gallery',
             'slug' => 'test-gallery',
             'description' => 'Test description',
@@ -157,11 +157,11 @@ final class GalleryControllerTest extends TestCase
 
     public function test_index_includes_tags_in_response(): void
     {
-        $tag1 = TagModel::factory()->forGalleries()->create([
+        TagModel::factory()->forGalleries()->create([
             'name' => 'Event Photos',
             'slug' => 'event-photos',
         ]);
-        $tag2 = TagModel::factory()->forGalleries()->create([
+        TagModel::factory()->forGalleries()->create([
             'name' => 'Miniatures',
             'slug' => 'miniatures',
         ]);
@@ -208,7 +208,7 @@ final class GalleryControllerTest extends TestCase
         ]);
         $taggedGallery->tags()->attach($tag->id);
 
-        $untaggedGallery = GalleryModel::factory()->published()->create([
+        GalleryModel::factory()->published()->create([
             'title' => 'Painted Miniatures',
         ]);
 
@@ -230,7 +230,7 @@ final class GalleryControllerTest extends TestCase
         $taggedGallery = GalleryModel::factory()->published()->create(['title' => 'Tagged Gallery']);
         $taggedGallery->tags()->attach($tag->id);
 
-        $untaggedGallery = GalleryModel::factory()->published()->create(['title' => 'Untagged Gallery']);
+        GalleryModel::factory()->published()->create(['title' => 'Untagged Gallery']);
 
         $response = $this->get('/galeria');
 
@@ -244,7 +244,7 @@ final class GalleryControllerTest extends TestCase
 
     public function test_index_returns_empty_when_tag_has_no_galleries(): void
     {
-        $tag = TagModel::factory()->forGalleries()->create([
+        TagModel::factory()->forGalleries()->create([
             'slug' => 'unused-tag',
         ]);
 
@@ -290,7 +290,7 @@ final class GalleryControllerTest extends TestCase
 
     public function test_show_displays_gallery_without_tags(): void
     {
-        $gallery = GalleryModel::factory()->published()->create([
+        GalleryModel::factory()->published()->create([
             'slug' => 'untagged-gallery',
         ]);
 

@@ -241,7 +241,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
         $fake = $this->disk;
         Storage::set('images', new class($fake, $afterPut, $putResult, $deleteResult) extends FilesystemAdapter
         {
-            public function __construct(FilesystemAdapter $fake, private ?Closure $afterPut, private bool $putResult, private bool $deleteResult)
+            public function __construct(FilesystemAdapter $fake, private readonly ?Closure $afterPut, private readonly bool $putResult, private readonly bool $deleteResult)
             {
                 parent::__construct($fake->getDriver(), $fake->getAdapter(), $fake->getConfig());
             }
@@ -254,7 +254,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
 
                 $stored = parent::put($path, $contents, $options);
 
-                if ($this->afterPut !== null) {
+                if ($this->afterPut instanceof Closure) {
                     ($this->afterPut)();
                 }
 
@@ -266,7 +266,7 @@ final class MarkAnimatedAvatarsCommandTest extends TestCase
              */
             public function delete($paths)
             {
-                return $this->deleteResult ? parent::delete($paths) : false;
+                return $this->deleteResult && parent::delete($paths);
             }
         });
     }

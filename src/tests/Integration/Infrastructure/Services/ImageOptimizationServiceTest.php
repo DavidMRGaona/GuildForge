@@ -323,19 +323,18 @@ final class ImageOptimizationServiceTest extends TestCase
             $rectColor = $this->randomColor($image);
             imagefilledrectangle(
                 $image,
-                rand(0, $width),
-                rand(0, $height),
-                rand(0, $width),
-                rand(0, $height),
+                random_int(0, $width),
+                random_int(0, $height),
+                random_int(0, $width),
+                random_int(0, $height),
                 $rectColor
             );
         }
 
         ob_start();
         imagejpeg($image, null, $quality);
-        $contents = ob_get_clean();
 
-        return $contents;
+        return ob_get_clean();
     }
 
     /**
@@ -351,9 +350,8 @@ final class ImageOptimizationServiceTest extends TestCase
 
         ob_start();
         imagepng($image);
-        $contents = ob_get_clean();
 
-        return $contents;
+        return ob_get_clean();
     }
 
     /**
@@ -369,9 +367,8 @@ final class ImageOptimizationServiceTest extends TestCase
 
         ob_start();
         imagegif($image);
-        $contents = ob_get_clean();
 
-        return $contents;
+        return ob_get_clean();
     }
 
     /**
@@ -384,7 +381,7 @@ final class ImageOptimizationServiceTest extends TestCase
 
     private function randomColor(GdImage $image): int
     {
-        $color = imagecolorallocate($image, rand(0, 255), rand(0, 255), rand(0, 255));
+        $color = imagecolorallocate($image, random_int(0, 255), random_int(0, 255), random_int(0, 255));
 
         if ($color === false) {
             $this->fail('GD could not allocate a colour');

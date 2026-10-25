@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use Tests\Support\Files\ReadsFiles;
 
 /**
  * Calls deprecated in PHP 8.5 that the application and its tests do not need:
@@ -20,6 +21,8 @@ use SplFileInfo;
  */
 final class NoPhp85DeprecatedCallsTest extends TestCase
 {
+    use ReadsFiles;
+
     private const string PATTERN = '/->setAccessible\s*\(|\bimagedestroy\s*\(|\bPDO::(MYSQL|PGSQL|SQLITE)_/';
 
     private const array DIRECTORIES = ['app', 'config', 'database', 'routes', 'tests'];
@@ -39,7 +42,7 @@ final class NoPhp85DeprecatedCallsTest extends TestCase
                     continue;
                 }
 
-                if (preg_match(self::PATTERN, (string) file_get_contents($file->getPathname())) === 1) {
+                if (preg_match(self::PATTERN, self::readFile($file->getPathname())) === 1) {
                     $offenders[] = substr($file->getPathname(), strlen($root) + 1);
                 }
             }

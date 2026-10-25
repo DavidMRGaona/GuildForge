@@ -40,9 +40,7 @@ final class MailTestServiceTest extends TestCase
         $this->assertNull($result->errorMessage);
         $this->assertNotNull($result->responseTimeMs);
 
-        Mail::assertSent(TestMail::class, function (TestMail $mail) {
-            return $mail->hasTo('test@example.com');
-        });
+        Mail::assertSent(TestMail::class, fn (TestMail $mail) => $mail->hasTo('test@example.com'));
     }
 
     public function test_send_test_email_returns_failure_on_exception(): void

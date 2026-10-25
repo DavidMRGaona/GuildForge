@@ -49,11 +49,11 @@ final class EventControllerTest extends TestCase
 
     public function test_index_orders_events_by_date_descending(): void
     {
-        $oldEvent = EventModel::factory()->published()->create([
+        EventModel::factory()->published()->create([
             'title' => 'Old Event',
             'start_date' => now()->subDays(10),
         ]);
-        $newEvent = EventModel::factory()->published()->create([
+        EventModel::factory()->published()->create([
             'title' => 'New Event',
             'start_date' => now()->addDays(10),
         ]);
@@ -72,7 +72,7 @@ final class EventControllerTest extends TestCase
 
     public function test_show_displays_single_published_event(): void
     {
-        $event = EventModel::factory()->published()->create([
+        EventModel::factory()->published()->create([
             'title' => 'Test Event',
             'slug' => 'test-event',
             'description' => 'Test description',
@@ -194,11 +194,11 @@ final class EventControllerTest extends TestCase
 
     public function test_index_includes_tags_in_response(): void
     {
-        $tag1 = TagModel::factory()->forEvents()->create([
+        TagModel::factory()->forEvents()->create([
             'name' => 'Warhammer 40k',
             'slug' => 'warhammer-40k',
         ]);
-        $tag2 = TagModel::factory()->forEvents()->create([
+        TagModel::factory()->forEvents()->create([
             'name' => 'Tournament',
             'slug' => 'tournament',
         ]);
@@ -245,7 +245,7 @@ final class EventControllerTest extends TestCase
         ]);
         $taggedEvent->tags()->attach($tag->id);
 
-        $untaggedEvent = EventModel::factory()->published()->create([
+        EventModel::factory()->published()->create([
             'title' => 'D&D Campaign',
         ]);
 
@@ -267,7 +267,7 @@ final class EventControllerTest extends TestCase
         $taggedEvent = EventModel::factory()->published()->create(['title' => 'Tagged Event']);
         $taggedEvent->tags()->attach($tag->id);
 
-        $untaggedEvent = EventModel::factory()->published()->create(['title' => 'Untagged Event']);
+        EventModel::factory()->published()->create(['title' => 'Untagged Event']);
 
         $response = $this->get('/eventos');
 
@@ -281,7 +281,7 @@ final class EventControllerTest extends TestCase
 
     public function test_index_returns_empty_when_tag_has_no_events(): void
     {
-        $tag = TagModel::factory()->forEvents()->create([
+        TagModel::factory()->forEvents()->create([
             'slug' => 'unused-tag',
         ]);
 
@@ -327,7 +327,7 @@ final class EventControllerTest extends TestCase
 
     public function test_show_displays_event_without_tags(): void
     {
-        $event = EventModel::factory()->published()->create([
+        EventModel::factory()->published()->create([
             'slug' => 'untagged-event',
         ]);
 

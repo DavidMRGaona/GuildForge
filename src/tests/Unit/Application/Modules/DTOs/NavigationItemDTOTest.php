@@ -14,7 +14,6 @@ final class NavigationItemDTOTest extends TestCase
         $dto = new NavigationItemDTO(
             label: 'Dashboard',
             route: 'admin.dashboard',
-            url: null,
             icon: 'heroicon-o-home',
             group: 'main',
             sort: 10,

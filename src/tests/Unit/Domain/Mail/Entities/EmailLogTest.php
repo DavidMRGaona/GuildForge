@@ -134,7 +134,6 @@ final class EmailLogTest extends TestCase
         ?string $sender = 'noreply@guildforge.com',
         ?string $subject = 'Test email subject',
         string $mailer = 'ses',
-        EmailStatus $status = EmailStatus::Sent,
         ?DateTimeImmutable $sentAt = null,
     ): EmailLog {
         return EmailLog::createSent(

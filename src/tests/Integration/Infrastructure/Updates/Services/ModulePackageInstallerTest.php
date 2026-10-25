@@ -164,14 +164,14 @@ final class ModulePackageInstallerTest extends TestCase
      */
     private function manifest(string $name, string $version, array $requires = []): string
     {
-        return (string) json_encode([
+        return json_encode([
             'name' => $name,
             'version' => $version,
             'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
-        ]);
+        ], JSON_THROW_ON_ERROR);
     }
 
     private function makeModule(string $name, string $version): void

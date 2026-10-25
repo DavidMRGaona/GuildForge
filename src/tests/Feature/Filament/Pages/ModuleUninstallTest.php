@@ -77,9 +77,7 @@ final class ModuleUninstallTest extends TestCase
 
         $this->assertFalse(File::isDirectory($modulePath));
 
-        Event::assertDispatched(ModuleUninstalled::class, function ($event) {
-            return $event->moduleName === 'test-module';
-        });
+        Event::assertDispatched(ModuleUninstalled::class, fn ($event) => $event->moduleName === 'test-module');
     }
 
     public function test_cannot_uninstall_module_with_enabled_dependents(): void
@@ -218,10 +216,8 @@ final class ModuleUninstallTest extends TestCase
             ->set('confirmingUninstall', 'event-module')
             ->call('uninstallModule');
 
-        Event::assertDispatched(ModuleUninstalled::class, function ($event) {
-            return $event->moduleName === 'event-module'
-                && $event->moduleVersion === '2.0.0';
-        });
+        Event::assertDispatched(ModuleUninstalled::class, fn ($event) => $event->moduleName === 'event-module'
+            && $event->moduleVersion === '2.0.0');
     }
 
     public function test_uninstall_without_confirming_module_is_noop(): void

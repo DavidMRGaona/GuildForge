@@ -13,7 +13,7 @@ final class HttpLogContextProviderTest extends TestCase
 {
     public function test_returns_null_values_when_no_request(): void
     {
-        $provider = new HttpLogContextProvider(null);
+        $provider = new HttpLogContextProvider;
 
         $this->assertNull($provider->getRequestId());
         $this->assertNull($provider->getClientIp());

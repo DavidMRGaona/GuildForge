@@ -93,7 +93,7 @@ final class AssociationMembershipServiceTest extends TestCase
         $this->service()->roleName();
         $this->service()->isAssociationMember(UserModel::factory()->create());
 
-        $log->shouldHaveReceived('warning')->withArgs(self::forbiddenRoleWarning(...))->once();
+        $log->shouldHaveReceived('warning')->withArgs($this->forbiddenRoleWarning(...))->once();
     }
 
     public function test_the_forbidden_setting_warning_is_logged_again_in_the_next_request(): void
@@ -106,13 +106,13 @@ final class AssociationMembershipServiceTest extends TestCase
         $this->app->forgetScopedInstances();
         $this->service()->roleName();
 
-        $log->shouldHaveReceived('warning')->withArgs(self::forbiddenRoleWarning(...))->twice();
+        $log->shouldHaveReceived('warning')->withArgs($this->forbiddenRoleWarning(...))->twice();
     }
 
     /**
      * Other warnings (a user created without the member role, for instance) must not count.
      */
-    private static function forbiddenRoleWarning(string $message): bool
+    private function forbiddenRoleWarning(string $message): bool
     {
         return str_contains($message, 'association member role setting holds the base role');
     }

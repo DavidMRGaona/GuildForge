@@ -92,7 +92,6 @@ final class UserServiceContentTest extends TestCase
         $dto = new AnonymizeUserDTO(
             userId: $user->id,
             contentAction: 'anonymize',
-            transferToUserId: null,
         );
 
         $this->service->anonymizeWithContentTransfer($dto);
@@ -115,7 +114,6 @@ final class UserServiceContentTest extends TestCase
         $dto = new AnonymizeUserDTO(
             userId: $user->id,
             contentAction: 'anonymize',
-            transferToUserId: null,
         );
 
         $this->service->anonymizeWithContentTransfer($dto);

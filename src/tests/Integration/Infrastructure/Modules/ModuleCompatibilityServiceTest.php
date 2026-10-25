@@ -202,12 +202,12 @@ final class ModuleCompatibilityServiceTest extends TestCase
     private function manifest(string $name, array $requires): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
-        File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
+        File::put("{$this->modulesPath}/{$name}/module.json", json_encode([
             'name' => $name,
             'version' => '1.0.0',
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires,
-        ]));
+        ], JSON_THROW_ON_ERROR));
     }
 }

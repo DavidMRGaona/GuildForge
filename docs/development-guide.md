@@ -429,7 +429,7 @@ make cs-fix   # Auto-fix
 
 ### PHPStan (static analysis)
 
-Uses `larastan/larastan` (PHPStan + Laravel rules) for static analysis at level 8 over `app/` and the parts of `tests/` listed in `phpstan.neon` (`tests/Unit`, `tests/Support`, `tests/TestCase.php`; the rest follow); CI fails on any error. `phpstan/phpstan-mockery` lets it see a Mockery mock as the class it mocks. Tests fix the errors in the code, without a baseline:
+Uses `larastan/larastan` (PHPStan + Laravel rules) for static analysis at level 8 over `app/`, `database/` and `tests/`; CI fails on any error. Rector (`rector.php`) covers the same directories, except migrations, which already ran on live sites, and `tests/Fixtures`. `phpstan/phpstan-mockery` lets it see a Mockery mock as the class it mocks. Tests fix the errors in the code, without a baseline:
 
 - A test that reads a command's output or exit code calls `$this->artisanCommand()`, which always returns a `PendingCommand` (`artisan()` may return the exit code)
 - `json_encode()` takes `JSON_THROW_ON_ERROR`, and files are read with `self::readFile()` (`Tests\Support\Files\ReadsFiles`), never through a `(string)` cast

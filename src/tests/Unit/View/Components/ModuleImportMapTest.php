@@ -7,10 +7,13 @@ namespace Tests\Unit\View\Components;
 use App\View\Components\ModuleImportMap;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Vite;
+use Tests\Support\Files\ReadsFiles;
 use Tests\TestCase;
 
 final class ModuleImportMapTest extends TestCase
 {
+    use ReadsFiles;
+
     public function test_maps_every_shared_package_and_public_entry_of_the_list(): void
     {
         Vite::shouldReceive('asset')->andReturnUsing(
@@ -79,7 +82,7 @@ final class ModuleImportMapTest extends TestCase
     private function publicApi(): array
     {
         /** @var array{packages: array<string, string>, entries: array<string, string>} $list */
-        $list = json_decode((string) file_get_contents(resource_path('js/public-api.json')), true, flags: JSON_THROW_ON_ERROR);
+        $list = json_decode(self::readFile(resource_path('js/public-api.json')), true, flags: JSON_THROW_ON_ERROR);
 
         return [...$list['packages'], ...$list['entries']];
     }

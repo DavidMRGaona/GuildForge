@@ -41,7 +41,7 @@ final class TagQueryServiceTest extends TestCase
             'parent_id' => null,
         ]);
 
-        $child = TagModel::factory()->create([
+        TagModel::factory()->create([
             'name' => 'Child',
             'slug' => 'child',
             'sort_order' => 1,
@@ -171,7 +171,7 @@ final class TagQueryServiceTest extends TestCase
             'parent_id' => $root->id,
         ]);
 
-        $level2 = TagModel::factory()->create([
+        TagModel::factory()->create([
             'name' => 'Level 2',
             'slug' => 'level-2',
             'parent_id' => $level1->id,
@@ -193,7 +193,7 @@ final class TagQueryServiceTest extends TestCase
             'parent_id' => null,
         ]);
 
-        $child = TagModel::factory()->create([
+        TagModel::factory()->create([
             'name' => 'Board Games',
             'slug' => 'board-games',
             'parent_id' => $root->id,
@@ -290,7 +290,7 @@ final class TagQueryServiceTest extends TestCase
             'parent_id' => null,
         ]);
 
-        $root2 = TagModel::factory()->create([
+        TagModel::factory()->create([
             'name' => 'Root 2',
             'slug' => 'root-2',
             'parent_id' => null,
@@ -303,7 +303,7 @@ final class TagQueryServiceTest extends TestCase
             'parent_id' => $root1->id,
         ]);
 
-        $child1_2 = TagModel::factory()->create([
+        TagModel::factory()->create([
             'name' => 'Child 1.2',
             'slug' => 'child-1-2',
             'parent_id' => $root1->id,

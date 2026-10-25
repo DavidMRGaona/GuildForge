@@ -102,7 +102,7 @@ final class IncompatibleModulesBannerTest extends TestCase
     private function enabledModule(string $name, string $displayName, array $requires): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
-        File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
+        File::put("{$this->modulesPath}/{$name}/module.json", json_encode([
             'name' => $name,
             'displayName' => $displayName,
             'version' => '1.0.0',
@@ -110,7 +110,7 @@ final class IncompatibleModulesBannerTest extends TestCase
             'namespace' => 'Modules\\'.ucfirst($name),
             'provider' => ucfirst($name).'ServiceProvider',
             'requires' => $requires,
-        ]));
+        ], JSON_THROW_ON_ERROR));
         ModuleModel::factory()->enabled()->create(['name' => $name, 'display_name' => $displayName]);
 
         // The panel resolved its modules when the test application booted, before this row existed

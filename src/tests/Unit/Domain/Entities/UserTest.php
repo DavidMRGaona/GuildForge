@@ -84,9 +84,7 @@ final class UserTest extends TestCase
 
     public function test_is_email_verified_returns_false_when_not_verified(): void
     {
-        $user = $this->createUser(
-            emailVerifiedAt: null,
-        );
+        $user = $this->createUser();
 
         $this->assertFalse($user->isEmailVerified());
     }
@@ -102,9 +100,7 @@ final class UserTest extends TestCase
 
     public function test_is_anonymized_returns_false_when_not_anonymized(): void
     {
-        $user = $this->createUser(
-            anonymizedAt: null,
-        );
+        $user = $this->createUser();
 
         $this->assertFalse($user->isAnonymized());
     }
@@ -128,7 +124,6 @@ final class UserTest extends TestCase
 
         $user = $this->createUser(
             name: $name,
-            displayName: null,
         );
 
         $this->assertEquals($name, $user->getDisplayableName());

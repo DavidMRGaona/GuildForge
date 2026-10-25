@@ -71,12 +71,10 @@ final class ContactServiceTest extends TestCase
         $result = $this->service->sendContactMessage($dto);
 
         $this->assertTrue($result);
-        Mail::assertSent(ContactFormMail::class, function (ContactFormMail $mail) {
-            return $mail->senderName === 'Richard Roe'
-                && $mail->senderEmail === 'richard@example.com'
-                && $mail->messageBody === 'Hola, quiero información.'
-                && $mail->hasTo('admin@example.com');
-        });
+        Mail::assertSent(ContactFormMail::class, fn (ContactFormMail $mail) => $mail->senderName === 'Richard Roe'
+            && $mail->senderEmail === 'richard@example.com'
+            && $mail->messageBody === 'Hola, quiero información.'
+            && $mail->hasTo('admin@example.com'));
     }
 
     #[Test]
