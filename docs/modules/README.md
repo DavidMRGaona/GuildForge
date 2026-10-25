@@ -157,7 +157,8 @@ modules/my-module/
         "modules": ["another-module:^1.0"],
         "extensions": ["json"]
     },
-    "dependencies": ["another-module"]
+    "dependencies": ["another-module"],
+    "storesUtc": true
 }
 ```
 
@@ -165,11 +166,22 @@ modules/my-module/
 - `displayName` is the name shown in the panel.
 - `repository` (`owner/repo`) is where updates come from; `module:discover` copies it to the module's record. A module installed without it needs `php artisan module:set-source <name> <owner/repo>` once.
 - `requires.modules` and `requires.extensions`, when present, must be lists of strings.
+- `storesUtc` (boolean, default `false`) declares that the module stores instants correctly when the core stores UTC (see [Dates and timezones](#dates-and-timezones)). Once the site stores UTC, a module without it is incompatible and the panel lists the reason. `module:make` writes it.
 - Other keys (some shipped modules carry a `provides` block) are ignored by the core.
 
 `requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). `module:make` writes the running core's `^major.minor` (`^3.6` on core 3.6.x): lower it to the oldest core minor you tested against.
 
 The core may also declare a minimum version for a module (`App\Domain\Modules\CoreModuleMinimumVersions`) when older releases of it would break on that core; releases below it are rejected the same way, pre-releases of the minimum included (`2.2.0-rc.1` is older than `2.2.0`). Extend core models from the module (`EventModel::resolveRelationUsing()` in the service provider), never by asking the core to reference module classes: the core must not import anything from `Modules\`.
+
+### Dates and timezones
+
+The core stores instants in the *storage zone* (`app.timezone`: `Europe/Madrid` or `UTC`, from the `storage_timezone` setting) and shows them in the *display zone* (`APP_DISPLAY_TIMEZONE`). A module must work with both:
+
+- Module models that have instant columns use `App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone`: it converts any `DateTimeInterface` to the storage zone on write. `date` and `immutable_date` casts are calendar days and keep their day.
+- Query bindings must be storage-zone instants (`TimezoneServiceInterface::toStorage()`).
+- Inject `App\Application\Services\TimezoneServiceInterface` for everything else: `toDisplay()`, `fromDisplayWallTime()`, `toDisplayWallTime()`, `format()`, `today()`, `displayDayRange()` and `displayMonthRange()` for calendar days, and `iso()` to serialize an instant for the browser (always in the display zone). Never use `config('app.timezone')` to show or interpret a date.
+- Filament pickers, columns and entries already use the display zone; frontend code reads it through `@/utils/datetime` (`VENUE_TIMEZONE`).
+- Tests extending `ModuleTestCase` can call `$this->useUtcStorage()` to run a case with UTC storage.
 
 ---
 
