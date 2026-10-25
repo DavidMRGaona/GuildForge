@@ -1030,7 +1030,7 @@ export declare function isCsrfFailure(response: Response): boolean;
 ## resources/js/utils/datetime.ts
 
 ```ts
-export declare const VENUE_TIMEZONE = "Europe/Madrid";
+export declare const VENUE_TIMEZONE: string;
 export declare function venueDayKey(date: Date): string;
 export declare function addVenueDays(dayKey: string, days: number): string;
 ```
