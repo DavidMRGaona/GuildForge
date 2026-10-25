@@ -17,6 +17,7 @@
         "format": "prettier --write \"resources/js/**/*.{ts,vue}\"",
         "format:check": "prettier --check \"resources/js/**/*.{ts,vue}\"",
         "verify:build": "node scripts/verify-build.mjs",
+        "build:module": "sh scripts/build-module.sh",
         "public-api:report": "node scripts/public-api-report.mjs --write",
         "check:public-api": "node scripts/public-api-report.mjs"
     },
