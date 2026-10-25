@@ -1,5 +1,7 @@
 includes:
     - vendor/larastan/larastan/extension.neon
+    # A Mockery mock is also the class it mocks (type extension only, no extra rules)
+    - vendor/phpstan/phpstan-mockery/extension.neon
 
 parameters:
     phpVersion: 80500
