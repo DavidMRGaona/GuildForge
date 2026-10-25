@@ -278,6 +278,10 @@ module-zip: ## Build and package a module as a production-ready ZIP
 	echo "Packaging $$MODULE_NAME v$$MODULE_VERSION..."; \
 	echo ""; \
 	MODE=$$(sh src/scripts/module-build-mode.sh "src/modules/$$MODULE_NAME"); \
+	if [ "$$MODE" = invalid ]; then \
+		echo "src/modules/$$MODULE_NAME/vite.config.ts builds with neither the core's toolchain nor its own"; \
+		exit 1; \
+	fi; \
 	if [ "$$MODE" != none ]; then \
 		echo "Building Vue assets..."; \
 		if [ "$$MODE" = core ]; then \

@@ -88,7 +88,10 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
     fi
 
     MODE="$(sh scripts/module-build-mode.sh "$DIR")"
-    if [ "$MODE" = core ]; then
+    if [ "$MODE" = invalid ]; then
+        echo "::error::$DIR/vite.config.ts builds with neither the core's toolchain (defineModuleConfig, stubs/modules/module/vite.config.ts.stub) nor its own package.json"
+        FAILED="$FAILED Build"
+    elif [ "$MODE" = core ]; then
         # Only runtime libraries, never tooling or what the core shares or provides
         run Package node scripts/check-module-package.mjs "$DIR"
         if [ -f "$DIR/package.json" ]; then

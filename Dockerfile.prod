@@ -64,6 +64,8 @@ RUN --mount=type=cache,target=/root/.npm \
             legacy) echo "Building module: $name"; \
                 (cd "/build/$dir" && npm ci && npm run build) \
                     || { echo "Module build failed: $name" >&2; exit 1; } ;; \
+            none) ;; \
+            *) echo "Module build failed: $name (vite.config.ts on neither toolchain)" >&2; exit 1 ;; \
         esac; \
     done
 
