@@ -49,9 +49,7 @@ final class EditMenuItemWithUnavailableRouteTest extends TestCase
         $item = $this->itemWithRoute(self::ADMIN_ROUTE);
 
         Livewire::test(EditMenuItem::class, ['record' => $item->getRouteKey()])
-            ->assertFormFieldExists('route', function ($field): bool {
-                return $field->getOptions()[self::ADMIN_ROUTE] === __('filament.menu_items.fields.page_unavailable', ['route' => self::ADMIN_ROUTE]);
-            })
+            ->assertFormFieldExists('route', fn ($field): bool => $field->getOptions()[self::ADMIN_ROUTE] === __('filament.menu_items.fields.page_unavailable', ['route' => self::ADMIN_ROUTE]))
             ->assertSee(__('filament.menu_items.fields.page_unavailable', ['route' => self::ADMIN_ROUTE]));
     }
 
@@ -60,10 +58,8 @@ final class EditMenuItemWithUnavailableRouteTest extends TestCase
         $item = $this->itemWithRoute('events.index');
 
         Livewire::test(EditMenuItem::class, ['record' => $item->getRouteKey()])
-            ->assertFormFieldExists('route', function ($field): bool {
-                return array_count_values(array_keys($field->getOptions()))['events.index'] === 1
-                    && $field->getOptions()['events.index'] === __('navigation.routes.events');
-            });
+            ->assertFormFieldExists('route', fn ($field): bool => array_count_values(array_keys($field->getOptions()))['events.index'] === 1
+                && $field->getOptions()['events.index'] === __('navigation.routes.events'));
     }
 
     private function itemWithRoute(string $route): MenuItemModel

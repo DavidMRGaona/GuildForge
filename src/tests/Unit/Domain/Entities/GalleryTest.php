@@ -107,7 +107,6 @@ final class GalleryTest extends TestCase
             id: GalleryId::generate(),
             title: 'Test Gallery',
             slug: new Slug('test-gallery'),
-            description: null,
             isPublished: $isPublished,
         );
     }

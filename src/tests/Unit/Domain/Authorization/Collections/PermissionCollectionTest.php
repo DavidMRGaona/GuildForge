@@ -128,7 +128,7 @@ final class PermissionCollectionTest extends TestCase
 
     public function test_for_module_filters_by_module(): void
     {
-        $core = $this->createPermission('events.create', 'events', null);
+        $core = $this->createPermission('events.create', 'events');
         $announcements1 = $this->createPermission('announcements:announcements.view', 'announcements', 'announcements');
         $announcements2 = $this->createPermission('announcements:announcements.create', 'announcements', 'announcements');
         $registrations = $this->createPermission('event-registrations:registrations.view', 'registrations', 'event-registrations');
@@ -145,7 +145,7 @@ final class PermissionCollectionTest extends TestCase
     public function test_for_module_returns_empty_collection_if_no_match(): void
     {
         $collection = new PermissionCollection(
-            $this->createPermission('events.create', 'events', null)
+            $this->createPermission('events.create', 'events')
         );
 
         $result = $collection->forModule('announcements');

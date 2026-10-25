@@ -103,11 +103,9 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
         Log::shouldReceive('info')
             ->atLeast()
             ->once()
-            ->withArgs(function (string $message, array $context): bool {
-                return str_contains($message, 'Module test-module version synced')
-                    && $context['from'] === '1.0.0'
-                    && $context['to'] === '1.1.0';
-            });
+            ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'Module test-module version synced')
+                && $context['from'] === '1.0.0'
+                && $context['to'] === '1.1.0');
 
         // Allow other Log::info calls (seeder runner logs)
         Log::shouldReceive('info')->withAnyArgs()->andReturnNull();
@@ -170,11 +168,9 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
 
         Log::shouldReceive('info')
             ->once()
-            ->withArgs(function (string $message, array $context): bool {
-                return str_contains($message, 'Module test-module version synced')
-                    && $context['from'] === '1.0.0'
-                    && $context['to'] === '1.1.0';
-            });
+            ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'Module test-module version synced')
+                && $context['from'] === '1.0.0'
+                && $context['to'] === '1.1.0');
 
         $service->discover();
 
@@ -249,21 +245,17 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
 
         Log::shouldReceive('warning')
             ->once()
-            ->withArgs(function (string $message, array $context): bool {
-                return str_contains($message, 'Failed to run migrations/seeders')
-                    && str_contains($message, 'test-module')
-                    && $context['previous_version'] === '1.0.0'
-                    && $context['new_version'] === '1.1.0'
-                    && isset($context['error']);
-            });
+            ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'Failed to run migrations/seeders')
+                && str_contains($message, 'test-module')
+                && $context['previous_version'] === '1.0.0'
+                && $context['new_version'] === '1.1.0'
+                && isset($context['error']));
 
         Log::shouldReceive('info')
             ->once()
-            ->withArgs(function (string $message, array $context): bool {
-                return str_contains($message, 'Module test-module version synced')
-                    && $context['from'] === '1.0.0'
-                    && $context['to'] === '1.1.0';
-            });
+            ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'Module test-module version synced')
+                && $context['from'] === '1.0.0'
+                && $context['to'] === '1.1.0');
 
         // discover() should NOT throw despite migration failure
         $service->discover();

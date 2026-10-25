@@ -146,9 +146,7 @@ final class SesWebhookControllerTest extends TestCase
         $response = $this->postJson('/api/webhooks/ses', $payload);
 
         $response->assertStatus(200);
-        Http::assertSent(function ($request) use ($payload): bool {
-            return $request->url() === $payload['SubscribeURL'];
-        });
+        Http::assertSent(fn ($request): bool => $request->url() === $payload['SubscribeURL']);
     }
 
     public function test_handles_bounce_notification(): void

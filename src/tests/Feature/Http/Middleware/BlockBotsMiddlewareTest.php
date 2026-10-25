@@ -18,9 +18,7 @@ final class BlockBotsMiddlewareTest extends TestCase
         parent::setUp();
 
         // Register a test route with the middleware
-        Route::get('/test-bot-protection', function () {
-            return response()->json(['message' => 'Success']);
-        })->middleware('bot-protection');
+        Route::get('/test-bot-protection', fn () => response()->json(['message' => 'Success']))->middleware('bot-protection');
     }
 
     public function test_full_http_request_with_blocked_bot_returns_403(): void
@@ -252,9 +250,7 @@ final class BlockBotsMiddlewareTest extends TestCase
         Config::set('bot-protection.blocked_bots', ['GPTBot']);
         Config::set('bot-protection.allowed_bots', []);
 
-        Route::post('/test-bot-protection-post', function () {
-            return response()->json(['message' => 'Created'], 201);
-        })->middleware('bot-protection');
+        Route::post('/test-bot-protection-post', fn () => response()->json(['message' => 'Created'], 201))->middleware('bot-protection');
 
         $response = $this->post('/test-bot-protection-post', [], [
             'User-Agent' => 'GPTBot/1.0',

@@ -20,7 +20,8 @@ final class TagModelFactory extends Factory
      */
     public function definition(): array
     {
-        $name = $this->faker->unique()->words(2, true);
+        $words = $this->faker->unique()->words(2);
+        $name = is_array($words) ? implode(' ', $words) : $words;
 
         return [
             'id' => $this->faker->uuid(),

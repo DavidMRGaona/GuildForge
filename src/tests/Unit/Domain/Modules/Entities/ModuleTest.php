@@ -123,14 +123,14 @@ final class ModuleTest extends TestCase
 
     public function test_is_installed_returns_false_when_installed_at_is_null(): void
     {
-        $module = $this->createModule(installedAt: null);
+        $module = $this->createModule();
 
         $this->assertFalse($module->isInstalled());
     }
 
     public function test_mark_installed_sets_installed_at(): void
     {
-        $module = $this->createModule(installedAt: null);
+        $module = $this->createModule();
 
         $module->markInstalled();
 

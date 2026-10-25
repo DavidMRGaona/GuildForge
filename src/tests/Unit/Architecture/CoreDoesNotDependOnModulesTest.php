@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use Tests\Support\Files\ReadsFiles;
 
 /**
  * Modules are optional and live in their own repositories: core code that imports
@@ -17,6 +18,8 @@ use SplFileInfo;
  */
 final class CoreDoesNotDependOnModulesTest extends TestCase
 {
+    use ReadsFiles;
+
     private const string PATTERN = '/^\s*use\s+\\\\?Modules\\\\|(?<![\w\\\\])\\\\?Modules\\\\[\w\\\\]+::class/m';
 
     private const array DIRECTORIES = ['app', 'bootstrap', 'config', 'database', 'routes'];
@@ -35,7 +38,7 @@ final class CoreDoesNotDependOnModulesTest extends TestCase
                     continue;
                 }
 
-                if (preg_match(self::PATTERN, (string) file_get_contents($file->getPathname())) === 1) {
+                if (preg_match(self::PATTERN, self::readFile($file->getPathname())) === 1) {
                     $offenders[] = $file->getPathname();
                 }
             }

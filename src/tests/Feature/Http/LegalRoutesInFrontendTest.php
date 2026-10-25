@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use Illuminate\Http\Request;
+use Tests\Support\Files\ReadsFiles;
 use Tests\TestCase;
 
 /**
@@ -14,9 +15,11 @@ use Tests\TestCase;
  */
 final class LegalRoutesInFrontendTest extends TestCase
 {
+    use ReadsFiles;
+
     public function test_use_routes_links_every_legal_page_the_route_serves(): void
     {
-        $source = (string) file_get_contents(resource_path('js/composables/useRoutes.ts'));
+        $source = self::readFile(resource_path('js/composables/useRoutes.ts'));
 
         foreach ([
             'privacy' => 'politica-de-privacidad',

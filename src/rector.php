@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
 use Rector\DeadCode\Rector\ClassMethod\RemoveUnusedPublicMethodParameterRector;
+use Rector\Php55\Rector\String_\StringClassNameToClassConstantRector;
 use Rector\Php80\Rector\Ternary\TernaryToNullsafeCoalesceRector;
 use Rector\Php84\Rector\MethodCall\NewMethodCallWithoutParenthesesRector;
 use Rector\Php85\Rector\Property\AddOverrideAttributeToOverriddenPropertiesRector;
 
 return RectorConfig::configure()
-    ->withPaths([__DIR__.'/app'])
+    ->withPaths([__DIR__.'/app', __DIR__.'/database', __DIR__.'/tests'])
     ->withPhpSets(php85: true)
     ->withPreparedSets(deadCode: true, codeQuality: true)
     ->withSkip([
+        // Migrations already ran on live sites, and fixtures are inputs kept exactly as written
+        __DIR__.'/database/migrations',
+        __DIR__.'/tests/Fixtures',
+        // The test builds this module class at runtime, so ::class would name a class static analysis cannot find
+        StringClassNameToClassConstantRector::class => [__DIR__.'/tests/Feature/Modules/ModuleTestCaseRouteLookupTest.php'],
         // Adding #[\Override] to every overridden property would churn about 100 files for no runtime gain.
         AddOverrideAttributeToOverriddenPropertiesRector::class,
         // Skipped to avoid rewriting existing `(new Foo())->bar()` calls in bulk; the PHP 8.4 form is allowed in new code.

@@ -101,7 +101,6 @@ final class PhotoTest extends TestCase
             id: PhotoId::generate(),
             galleryId: GalleryId::generate(),
             imagePublicId: 'galleries/test/photo.jpg',
-            caption: null,
             sortOrder: $sortOrder,
         );
     }

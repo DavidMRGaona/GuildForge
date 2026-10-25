@@ -40,11 +40,9 @@ final class LogSentEmailTest extends TestCase
 
         $this->repository->expects($this->once())
             ->method('save')
-            ->with($this->callback(function (EmailLog $emailLog): bool {
-                return $emailLog->recipient() === 'recipient@example.com'
-                    && $emailLog->subject() === 'Test subject'
-                    && $emailLog->status() === EmailStatus::Sent;
-            }));
+            ->with($this->callback(fn (EmailLog $emailLog): bool => $emailLog->recipient() === 'recipient@example.com'
+                && $emailLog->subject() === 'Test subject'
+                && $emailLog->status() === EmailStatus::Sent));
 
         $this->listener->handle($event);
     }
@@ -59,9 +57,7 @@ final class LogSentEmailTest extends TestCase
 
         $this->repository->expects($this->once())
             ->method('save')
-            ->with($this->callback(function (EmailLog $emailLog): bool {
-                return $emailLog->sender() === 'noreply@guildforge.com';
-            }));
+            ->with($this->callback(fn (EmailLog $emailLog): bool => $emailLog->sender() === 'noreply@guildforge.com'));
 
         $this->listener->handle($event);
     }

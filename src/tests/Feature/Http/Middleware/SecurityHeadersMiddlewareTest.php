@@ -17,9 +17,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         parent::setUp();
 
         // Register a test route with web middleware (which includes security headers)
-        Route::get('/test-security-headers', function () {
-            return response()->json(['message' => 'ok']);
-        })->middleware('web');
+        Route::get('/test-security-headers', fn () => response()->json(['message' => 'ok']))->middleware('web');
     }
 
     public function test_it_adds_x_frame_options_header(): void

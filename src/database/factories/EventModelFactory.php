@@ -29,7 +29,7 @@ final class EventModelFactory extends Factory
             'slug' => Str::slug($title),
             'description' => $this->faker->paragraphs(3, true),
             'start_date' => $this->faker->dateTimeBetween('+1 week', '+3 months'),
-            'end_date' => fn (array $attr) => Carbon::parse($attr['start_date'])->addDays(rand(0, 3)),
+            'end_date' => fn (array $attr) => Carbon::parse($attr['start_date'])->addDays(random_int(0, 3)),
             'location' => $this->faker->optional()->address(),
             'image_public_id' => null,
             'member_price' => $this->faker->optional(0.7)->randomFloat(2, 5, 50),
@@ -70,7 +70,7 @@ final class EventModelFactory extends Factory
 
             return [
                 'start_date' => $startDate,
-                'end_date' => (clone $startDate)->modify('+'.rand(0, 3).' days'),
+                'end_date' => (clone $startDate)->modify('+'.random_int(0, 3).' days'),
             ];
         });
     }
@@ -85,7 +85,7 @@ final class EventModelFactory extends Factory
 
             return [
                 'start_date' => $startDate,
-                'end_date' => (clone $startDate)->modify('+'.rand(0, 3).' days'),
+                'end_date' => (clone $startDate)->modify('+'.random_int(0, 3).' days'),
             ];
         });
     }

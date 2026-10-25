@@ -38,7 +38,7 @@ final class CloudinaryPathMapperTest extends TestCase
     public function test_the_prefix_is_trimmed_and_optional(): void
     {
         $this->assertSame(['guildforge/a', 'image'], (new CloudinaryPathMapper('/guildforge/'))->toResource('a.jpg'));
-        $this->assertSame(['events/a', 'image'], (new CloudinaryPathMapper(null))->toResource('events/a.jpg'));
+        $this->assertSame(['events/a', 'image'], (new CloudinaryPathMapper)->toResource('events/a.jpg'));
         $this->assertSame(['events/a', 'image'], (new CloudinaryPathMapper(''))->toResource('events/a.jpg'));
     }
 
@@ -49,7 +49,7 @@ final class CloudinaryPathMapperTest extends TestCase
         $this->assertSame('guildforge/events/2026', $paths->prefixed('events/2026'));
         $this->assertSame('guildforge/events', $paths->prefixed('/events'));
         $this->assertSame('guildforge', $paths->prefixed(''));
-        $this->assertSame('events', (new CloudinaryPathMapper(null))->prefixed('/events'));
+        $this->assertSame('events', (new CloudinaryPathMapper)->prefixed('/events'));
     }
 
     public function test_it_detects_mime_types_from_the_extension(): void

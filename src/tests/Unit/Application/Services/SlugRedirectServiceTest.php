@@ -92,12 +92,10 @@ final class SlugRedirectServiceTest extends TestCase
             ->andReturn(null);
         $repository->shouldReceive('save')
             ->once()
-            ->with(Mockery::on(function (SlugRedirect $redirect) use ($oldSlug, $newSlug, $entityType, $entityId) {
-                return $redirect->oldSlug()->value === $oldSlug
-                    && $redirect->newSlug()->value === $newSlug
-                    && $redirect->entityType() === $entityType
-                    && $redirect->entityId() === $entityId;
-            }));
+            ->with(Mockery::on(fn (SlugRedirect $redirect) => $redirect->oldSlug()->value === $oldSlug
+                && $redirect->newSlug()->value === $newSlug
+                && $redirect->entityType() === $entityType
+                && $redirect->entityId() === $entityId));
         $repository->shouldReceive('updateAllPointingTo')
             ->once()
             ->with(
@@ -133,10 +131,8 @@ final class SlugRedirectServiceTest extends TestCase
             ->andReturn($existingRedirect);
         $repository->shouldReceive('save')
             ->once()
-            ->with(Mockery::on(function (SlugRedirect $redirect) use ($newSlug) {
-                return $redirect->id() === 'redirect-id-123'
-                    && $redirect->newSlug()->value === $newSlug;
-            }));
+            ->with(Mockery::on(fn (SlugRedirect $redirect) => $redirect->id() === 'redirect-id-123'
+                && $redirect->newSlug()->value === $newSlug));
         $repository->shouldReceive('updateAllPointingTo')
             ->once();
 

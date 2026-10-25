@@ -31,15 +31,13 @@ final class ContactControllerTest extends TestCase
         ];
 
         // Act
-        $response = $this->post(route('contact.store'), $formData);
+        $this->post(route('contact.store'), $formData);
 
         // Assert
-        Mail::assertSent(ContactFormMail::class, function (ContactFormMail $mail) use ($formData): bool {
-            return $mail->hasTo('info@guildforge.es')
-                && $mail->senderName === $formData['name']
-                && $mail->senderEmail === $formData['email']
-                && $mail->messageBody === $formData['message'];
-        });
+        Mail::assertSent(ContactFormMail::class, fn (ContactFormMail $mail): bool => $mail->hasTo('info@guildforge.es')
+            && $mail->senderName === $formData['name']
+            && $mail->senderEmail === $formData['email']
+            && $mail->messageBody === $formData['message']);
     }
 
     /**

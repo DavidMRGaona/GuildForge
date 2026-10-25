@@ -7,6 +7,7 @@ parameters:
     phpVersion: 80500
     paths:
         - app/
+        - database/
         - tests/TestCase.php
         - tests/Support/
         - tests/Feature/

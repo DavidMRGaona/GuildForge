@@ -237,7 +237,7 @@ final class StubRendererTest extends TestCase
         unlink($destination);
         rmdir($directory);
         rmdir(dirname($directory));
-        rmdir(dirname(dirname($directory)));
+        rmdir(dirname($directory, 2));
     }
 
     public function test_it_handles_empty_variables_array(): void

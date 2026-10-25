@@ -13,6 +13,7 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionClass;
 use SplFileInfo;
+use Tests\Support\Files\ReadsFiles;
 
 /**
  * Eloquent formats a DateTimeInterface in its own zone without converting, so every
@@ -20,6 +21,8 @@ use SplFileInfo;
  */
 final class ModelsStoreInstantsInStorageTimezoneTest extends TestCase
 {
+    use ReadsFiles;
+
     /**
      * @return iterable<string, array{class-string}>
      */
@@ -39,7 +42,7 @@ final class ModelsStoreInstantsInStorageTimezoneTest extends TestCase
             // Only files that declare a class with a parent are autoloaded; reflection then
             // decides whether it is a model, so a custom base class or a fully qualified
             // parent cannot hide one
-            if (preg_match('/^(?:final\s+|abstract\s+|readonly\s+)*class\s+\w+\s+extends\s+\\\\?[\w\\\\]+/m', (string) file_get_contents($file->getPathname())) !== 1) {
+            if (preg_match('/^(?:final\s+|abstract\s+|readonly\s+)*class\s+\w+\s+extends\s+\\\\?[\w\\\\]+/m', self::readFile($file->getPathname())) !== 1) {
                 continue;
             }
 

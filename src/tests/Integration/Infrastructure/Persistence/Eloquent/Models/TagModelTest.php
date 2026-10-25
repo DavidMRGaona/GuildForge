@@ -100,13 +100,13 @@ final class TagModelTest extends TestCase
     {
         $parent = TagModel::factory()->create(['name' => 'Miniature Games']);
 
-        $child1 = TagModel::factory()->create([
+        TagModel::factory()->create([
             'name' => 'Warhammer 40k',
             'parent_id' => $parent->id,
             'sort_order' => 2,
         ]);
 
-        $child2 = TagModel::factory()->create([
+        TagModel::factory()->create([
             'name' => 'Age of Sigmar',
             'parent_id' => $parent->id,
             'sort_order' => 1,

@@ -116,7 +116,7 @@ final class ElasticsearchLoggerTest extends TestCase
     {
         config(['elasticsearch.enabled' => true]);
 
-        $factory = new ElasticsearchLogger(null);
+        $factory = new ElasticsearchLogger;
 
         $logger = $factory([]);
 

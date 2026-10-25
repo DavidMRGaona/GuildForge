@@ -23,7 +23,6 @@ final class SeoMetadataTest extends TestCase
             siteName: 'Sitio de ejemplo',
             locale: 'es_ES',
             image: new SeoImage('https://res.cloudinary.com/demo/image/upload/x', 1200, 630, 'Club de lectura', true),
-            robots: null,
             extraMeta: [['property' => 'article:published_time', 'content' => '2026-01-01T10:00:00+01:00']],
             structuredData: [['@type' => 'Event']],
         );

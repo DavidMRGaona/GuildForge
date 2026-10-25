@@ -85,13 +85,13 @@ final class RejectedModuleUpdateTest extends TestCase
     private function installedModule(string $name, string $version, array $requires): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
-        File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode([
+        File::put("{$this->modulesPath}/{$name}/module.json", json_encode([
             'name' => $name,
             'version' => $version,
             'namespace' => 'Modules\\Announcements',
             'provider' => 'AnnouncementsServiceProvider',
             'requires' => $requires,
-        ]));
+        ], JSON_THROW_ON_ERROR));
         ModuleModel::factory()->enabled()->create([
             'name' => $name,
             'version' => $version,

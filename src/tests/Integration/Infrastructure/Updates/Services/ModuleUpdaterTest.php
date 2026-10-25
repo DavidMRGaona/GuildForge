@@ -495,7 +495,7 @@ final class ModuleUpdaterTest extends TestCase
 
         foreach (['updtest-game', 'updtest-aaa'] as $name) {
             File::ensureDirectoryExists("{$this->modulesPath}/{$name}/public/build");
-            File::put("{$this->modulesPath}/{$name}/module.json", (string) json_encode(['name' => $name, 'version' => '1.0.0-beta', 'storesUtc' => true, 'requires' => ['core' => '>=2.0']]));
+            File::put("{$this->modulesPath}/{$name}/module.json", json_encode(['name' => $name, 'version' => '1.0.0-beta', 'storesUtc' => true, 'requires' => ['core' => '>=2.0']], JSON_THROW_ON_ERROR));
             File::put("{$this->modulesPath}/{$name}/public/build/manifest.json", 'old');
         }
 
@@ -548,14 +548,14 @@ final class ModuleUpdaterTest extends TestCase
         File::ensureDirectoryExists(dirname($path));
         $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        $zip->addFromString("{$name}-{$version}/module.json", (string) json_encode([
+        $zip->addFromString("{$name}-{$version}/module.json", json_encode([
             'name' => $name,
             'version' => $version,
             'storesUtc' => true,
             'namespace' => 'Modules\\'.str_replace('-', '', ucwords($name, '-')),
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
-        ]));
+        ], JSON_THROW_ON_ERROR));
         $zip->addFromString("{$name}-{$version}/public/build/manifest.json", $assetContent);
         $zip->close();
 

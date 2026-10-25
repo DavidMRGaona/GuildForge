@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use Tests\Support\Files\ReadsFiles;
 
 /**
  * cache:clear and optimize:clear run FLUSHDB on the Redis cache database, which
@@ -18,6 +19,8 @@ use SplFileInfo;
  */
 final class NoDataCacheFlushTest extends TestCase
 {
+    use ReadsFiles;
+
     /**
      * Artisan clear commands, any static or instance flush()/flushdb()/flushall()
      * (Cache facade, cache stores, Redis), and PSR-16 clear() on a cache store.
@@ -39,7 +42,7 @@ final class NoDataCacheFlushTest extends TestCase
                 continue;
             }
 
-            if (preg_match(self::PATTERN, (string) file_get_contents($file->getPathname())) === 1) {
+            if (preg_match(self::PATTERN, self::readFile($file->getPathname())) === 1) {
                 $offenders[] = $file->getPathname();
             }
         }

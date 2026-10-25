@@ -6,10 +6,13 @@ namespace Tests\Integration\Infrastructure\Content\Services;
 
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\Files\ReadsFiles;
 use Tests\TestCase;
 
 final class TrixHtmlConverterTest extends TestCase
 {
+    use ReadsFiles;
+
     #[DataProvider('trixHtml')]
     public function test_trix_markup_becomes_the_html_the_editor_keeps(string $trix, string $expected): void
     {
@@ -136,8 +139,8 @@ final class TrixHtmlConverterTest extends TestCase
                 '<h2>1. Normativa aplicable</h2><p>La presente política:</p><ul><li><p>Reglamento (UE) 2016/679.</p></li></ul>',
             ],
             'real article saved by trix' => [
-                (string) file_get_contents("{$fixtures}/trix-article.html"),
-                rtrim((string) file_get_contents("{$fixtures}/trix-article.expected.html"), "\n"),
+                self::readFile("{$fixtures}/trix-article.html"),
+                rtrim(self::readFile("{$fixtures}/trix-article.expected.html"), "\n"),
             ],
         ];
     }

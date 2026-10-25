@@ -23,14 +23,9 @@ final class UserSeeder extends Seeder
 
         // Create or get admin user. Roles live in the user_role pivot, given below: raw() only
         // returns column values, so a factory role state would have no effect here
-        $adminAttributes = UserModel::factory()->raw([
-            'name' => 'Admin User',
-            'display_name' => 'Administrator',
-        ]);
-        unset($adminAttributes['email']); // Remove factory-generated email
         $adminUser = UserModel::firstOrCreate(
             ['email' => 'admin@example.local'],
-            $adminAttributes,
+            $this->accountAttributes('Admin User', 'Administrator'),
         );
         if ($adminRole) {
             $authorization->assignRole($adminUser, 'admin');
@@ -41,14 +36,9 @@ final class UserSeeder extends Seeder
         $memberRole->assignTo($adminUser);
 
         // Create or get editor user
-        $editorAttributes = UserModel::factory()->raw([
-            'name' => 'Editor User',
-            'display_name' => 'Editor',
-        ]);
-        unset($editorAttributes['email']);
         $editorUser = UserModel::firstOrCreate(
             ['email' => 'editor@example.local'],
-            $editorAttributes,
+            $this->accountAttributes('Editor User', 'Editor'),
         );
         if ($editorRole) {
             $authorization->assignRole($editorUser, 'editor');
@@ -57,14 +47,9 @@ final class UserSeeder extends Seeder
         $memberRole->assignTo($editorUser);
 
         // Create or get member user
-        $memberAttributes = UserModel::factory()->raw([
-            'name' => 'Member User',
-            'display_name' => 'Member',
-        ]);
-        unset($memberAttributes['email']);
         $memberUser = UserModel::firstOrCreate(
             ['email' => 'member@example.local'],
-            $memberAttributes,
+            $this->accountAttributes('Member User', 'Member'),
         );
         $memberRole->assignTo($memberUser);
 
@@ -76,5 +61,19 @@ final class UserSeeder extends Seeder
                 $memberRole->assignTo($user);
             }
         }
+    }
+
+    /**
+     * Factory column values for a seeded account, without the generated email (the caller sets it)
+     *
+     * @return array<string, mixed>
+     */
+    private function accountAttributes(string $name, string $displayName): array
+    {
+        $attributes = UserModel::factory()->raw(['name' => $name, 'display_name' => $displayName]);
+        unset($attributes['email']);
+
+        // raw() types its keys as int|string; the attributes are column names
+        return array_filter($attributes, is_string(...), ARRAY_FILTER_USE_KEY);
     }
 }

@@ -154,7 +154,6 @@ final class ElasticsearchHandlerTest extends TestCase
             user: null,
             password: null,
             index: 'test-logs',
-            contextProvider: null,
         );
 
         $record = new LogRecord(

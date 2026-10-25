@@ -58,7 +58,7 @@ abstract class TestCase extends BaseTestCase
                 Assert::assertArrayHasKey('props', $page);
                 Assert::assertArrayHasKey('url', $page);
                 Assert::assertArrayHasKey('version', $page);
-            } catch (AssertionFailedError $e) {
+            } catch (AssertionFailedError) {
                 Assert::fail('Not a valid Inertia response.');
             }
 
@@ -92,7 +92,7 @@ abstract class TestCase extends BaseTestCase
                 $flashProp->setValue($instance, $page['flash']);
             }
 
-            if ($callback) {
+            if ($callback instanceof \Closure) {
                 $callback($instance);
             }
 

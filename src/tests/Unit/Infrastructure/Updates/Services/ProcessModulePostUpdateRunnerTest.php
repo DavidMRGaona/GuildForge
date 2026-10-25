@@ -22,10 +22,8 @@ final class ProcessModulePostUpdateRunnerTest extends TestCase
 
         $this->runner()->run(new ModuleName('game-tables'), ModuleVersion::fromString('1.0.19-beta'));
 
-        Process::assertRan(function (PendingProcess $process): bool {
-            return $process->command === [ProcessModulePostUpdateRunner::phpBinary(), base_path('artisan'), 'module:finish-update', 'game-tables', '1.0.19-beta', '--no-interaction']
-                && $process->path === base_path();
-        });
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === [ProcessModulePostUpdateRunner::phpBinary(), base_path('artisan'), 'module:finish-update', 'game-tables', '1.0.19-beta', '--no-interaction']
+            && $process->path === base_path());
     }
 
     public function test_it_returns_the_report_printed_by_the_command(): void

@@ -444,10 +444,10 @@ final class ModuleUpdateCheckerTest extends TestCase
     {
         return new ReleaseSelection(
             $compatible,
-            $compatible === null ? null : '^2.0',
+            $compatible instanceof GitHubReleaseInfo ? '^2.0' : null,
             $blocked,
-            $blocked === null ? null : '^3.0',
-            $blocked === null ? [] : [new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED)],
+            $blocked instanceof GitHubReleaseInfo ? '^3.0' : null,
+            $blocked instanceof GitHubReleaseInfo ? [new CompatibilityIssue(RequirementType::Core, '^3.0', '2.6.0', CompatibilityIssue::UNSATISFIED)] : [],
         );
     }
 

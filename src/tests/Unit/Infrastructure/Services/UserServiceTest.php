@@ -227,7 +227,6 @@ final class UserServiceTest extends TestCase
         $dto = new AnonymizeUserDTO(
             userId: $userId->value(),
             contentAction: 'anonymize',
-            transferToUserId: null,
         );
 
         $this->userModelQuery

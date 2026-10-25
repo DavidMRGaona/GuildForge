@@ -36,7 +36,7 @@ final class RolesSeeder extends Seeder
             isProtected: false,
         );
 
-        $memberRole = $this->createRole(
+        $this->createRole(
             name: 'member',
             displayName: 'Member',
             description: 'Basic member access',

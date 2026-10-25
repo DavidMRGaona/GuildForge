@@ -81,12 +81,12 @@ final class HeroSlideModelTest extends TestCase
         ]);
 
         // Create active slide with order 2
-        $slideTwo = HeroSlideModel::factory()->active()->withOrder(2)->create([
+        HeroSlideModel::factory()->active()->withOrder(2)->create([
             'title' => 'Second Slide',
         ]);
 
         // Create active slide with order 1
-        $slideOne = HeroSlideModel::factory()->active()->withOrder(1)->create([
+        HeroSlideModel::factory()->active()->withOrder(1)->create([
             'title' => 'First Slide',
         ]);
 
