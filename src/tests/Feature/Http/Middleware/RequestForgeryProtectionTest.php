@@ -6,6 +6,7 @@ namespace Tests\Feature\Http\Middleware;
 
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Facades\Filament;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Cookie\CookieValuePrefix;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -29,7 +30,7 @@ final class RequestForgeryProtectionTest extends TestCase
     {
         parent::setUp();
 
-        $this->app->bind(PreventRequestForgery::class, static fn (Application $app): PreventRequestForgery => new class($app, $app['encrypter']) extends PreventRequestForgery
+        $this->app->bind(PreventRequestForgery::class, static fn (Application $app): PreventRequestForgery => new class($app, $app->make(Encrypter::class)) extends PreventRequestForgery
         {
             protected function runningUnitTests(): bool
             {

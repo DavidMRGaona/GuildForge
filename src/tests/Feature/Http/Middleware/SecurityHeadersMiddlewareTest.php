@@ -51,10 +51,11 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $response->assertStatus(200);
-        $this->assertTrue($response->headers->has('Permissions-Policy'));
-        $this->assertStringContainsString('camera=()', $response->headers->get('Permissions-Policy'));
-        $this->assertStringContainsString('microphone=()', $response->headers->get('Permissions-Policy'));
-        $this->assertStringContainsString('geolocation=(self)', $response->headers->get('Permissions-Policy'));
+        $policy = $response->headers->get('Permissions-Policy');
+        $this->assertNotNull($policy);
+        $this->assertStringContainsString('camera=()', $policy);
+        $this->assertStringContainsString('microphone=()', $policy);
+        $this->assertStringContainsString('geolocation=(self)', $policy);
     }
 
     public function test_it_adds_content_security_policy_header(): void
@@ -70,6 +71,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString("default-src 'self'", $csp);
     }
 
@@ -78,6 +80,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString("frame-ancestors 'none'", $csp);
     }
 
@@ -86,6 +89,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString("base-uri 'self'", $csp);
     }
 
@@ -94,6 +98,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString("form-action 'self'", $csp);
     }
 
@@ -102,6 +107,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString('https://res.cloudinary.com', $csp);
     }
 
@@ -110,6 +116,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString('https://*.tile.openstreetmap.org', $csp);
     }
 
@@ -118,6 +125,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString("script-src 'self' 'unsafe-inline' 'unsafe-eval'", $csp);
     }
 
@@ -126,6 +134,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString("style-src 'self' 'unsafe-inline' https://fonts.bunny.net", $csp);
     }
 
@@ -134,6 +143,7 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
         $this->assertStringContainsString("font-src 'self' https://fonts.bunny.net data:", $csp);
     }
 

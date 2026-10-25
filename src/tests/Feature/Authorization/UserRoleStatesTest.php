@@ -61,7 +61,7 @@ final class UserRoleStatesTest extends TestCase
 
     public function test_make_admin_user_creates_an_administrator_with_the_member_role(): void
     {
-        $this->artisan('make:admin-user')
+        $this->artisanCommand('make:admin-user')
             ->expectsQuestion('What is the username?', 'jefa')
             ->expectsQuestion('What is the email address?', 'jefa@example.com')
             ->expectsQuestion('What is the password?', 'secret-password')

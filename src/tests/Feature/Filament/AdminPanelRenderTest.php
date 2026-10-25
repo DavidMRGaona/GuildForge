@@ -15,6 +15,7 @@ use App\Filament\Pages\Settings\MailSettings;
 use App\Filament\Pages\Settings\MailStatisticsPage;
 use App\Filament\Pages\SiteSettings;
 use App\Filament\Resources\ArticleResource;
+use App\Filament\Resources\BaseResource;
 use App\Filament\Resources\EventResource;
 use App\Filament\Resources\GalleryResource;
 use App\Filament\Resources\HeroSlideResource;
@@ -55,7 +56,7 @@ final class AdminPanelRenderTest extends TestCase
     }
 
     /**
-     * @param  class-string  $resource
+     * @param  class-string<BaseResource>  $resource
      */
     #[DataProvider('resourcePages')]
     public function test_resource_page_renders(string $resource, string $page): void
@@ -66,7 +67,7 @@ final class AdminPanelRenderTest extends TestCase
     }
 
     /**
-     * @return array<string, array{class-string, string}>
+     * @return array<string, array{class-string<BaseResource>, string}>
      */
     public static function resourcePages(): array
     {
@@ -120,17 +121,23 @@ final class AdminPanelRenderTest extends TestCase
     }
 
     /**
-     * @param  class-string  $resource
+     * @param  class-string<BaseResource>  $resource
      */
     private function recordFor(string $resource): Model
     {
-        /** @var class-string<Model> $model */
         $model = $resource::getModel();
 
         if ($model === RoleModel::class) {
             return RoleModel::query()->firstOrCreate(['name' => 'editor'], ['display_name' => 'Editor']);
         }
 
-        return $model::factory()->create();
+        if (! method_exists($model, 'factory')) {
+            $this->fail("{$model} has no factory to create a record from");
+        }
+
+        $record = $model::factory()->create();
+        $this->assertInstanceOf(Model::class, $record);
+
+        return $record;
     }
 }

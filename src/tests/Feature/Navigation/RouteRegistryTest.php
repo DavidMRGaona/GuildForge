@@ -14,7 +14,9 @@ final class RouteRegistryTest extends TestCase
     {
         foreach (array_keys(app(RouteRegistryInterface::class)->getAvailableRoutes()) as $option) {
             // "legal.show:aviso-legal" carries its slug, as MenuItemResource stores it
-            [$name, $slug] = array_pad(explode(':', $option, 2), 2, null);
+            $parts = explode(':', $option, 2);
+            $name = $parts[0];
+            $slug = $parts[1] ?? null;
 
             try {
                 $url = route($name, $slug === null ? [] : ['slug' => $slug]);

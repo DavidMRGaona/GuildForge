@@ -7,10 +7,13 @@ namespace Tests\Feature\Console\Commands\Module;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Tests\Support\Files\ReadsFiles;
 use Tests\TestCase;
 
 final class ModuleMakeCommandTest extends TestCase
 {
+    use ReadsFiles;
+
     private string $modulesPath;
 
     protected function setUp(): void
@@ -39,14 +42,14 @@ final class ModuleMakeCommandTest extends TestCase
 
     public function test_it_passes_the_display_name_and_repository_to_the_manifest(): void
     {
-        $this->artisan('module:make', [
+        $this->artisanCommand('module:make', [
             'name' => 'blog-posts',
             '--display-name' => 'Entradas del blog',
             '--repository' => 'acme/guildforge-blog-posts',
         ])->assertSuccessful();
 
         /** @var array<string, mixed> $manifest */
-        $manifest = json_decode((string) file_get_contents($this->modulesPath.'/blog-posts/module.json'), true);
+        $manifest = json_decode(self::readFile($this->modulesPath.'/blog-posts/module.json'), true);
 
         $this->assertSame('Entradas del blog', $manifest['displayName']);
         $this->assertSame('acme/guildforge-blog-posts', $manifest['repository']);
@@ -54,7 +57,7 @@ final class ModuleMakeCommandTest extends TestCase
 
     public function test_it_lists_the_steps_a_new_module_still_needs(): void
     {
-        $this->artisan('module:make', ['name' => 'blog-posts'])
+        $this->artisanCommand('module:make', ['name' => 'blog-posts'])
             ->expectsOutputToContain('module:discover')
             ->expectsOutputToContain('module:enable blog-posts')
             ->expectsOutputToContain('module:set-source blog-posts')
@@ -64,7 +67,7 @@ final class ModuleMakeCommandTest extends TestCase
 
     public function test_it_refuses_a_name_whose_page_prefix_is_a_core_page(): void
     {
-        $this->artisan('module:make', ['name' => 'events'])
+        $this->artisanCommand('module:make', ['name' => 'events'])
             ->expectsOutputToContain('page prefix is taken')
             ->assertFailed();
 

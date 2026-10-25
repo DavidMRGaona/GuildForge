@@ -59,7 +59,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $event = EventModel::factory()->create();
         $start = DB::table('events')->where('id', $event->id)->value('start_date');
 
-        $this->artisan('timezone:convert-storage --dry-run')
+        $this->artisanCommand('timezone:convert-storage --dry-run')
             ->expectsOutputToContain('events.start_date')
             ->expectsOutputToContain('nothing was changed')
             ->assertSuccessful();
@@ -70,7 +70,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
 
     public function test_dry_run_says_to_stop_the_queue_worker_and_the_scheduler(): void
     {
-        $this->artisan('timezone:convert-storage --dry-run')
+        $this->artisanCommand('timezone:convert-storage --dry-run')
             ->expectsOutputToContain('Stop the queue worker and the scheduler')
             ->assertSuccessful();
     }
@@ -80,7 +80,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         // Processes that booted before the conversion keep their zone: the command cannot stop them
         $this->fakeConverter();
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('Stop the queue worker and the scheduler')
             ->assertSuccessful();
     }
@@ -92,7 +92,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $this->setMaintenance(false);
         $this->fakeConverter()->supported = false;
 
-        $this->artisan('timezone:convert-storage --dry-run')
+        $this->artisanCommand('timezone:convert-storage --dry-run')
             ->expectsOutputToContain('PostgreSQL')
             ->expectsOutputToContain('legacy-module')
             ->expectsOutputToContain('Maintenance mode is off')
@@ -107,7 +107,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         // Stands in for any driver the conversion cannot run on, so this holds on PostgreSQL too
         $this->fakeConverter()->supported = false;
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('PostgreSQL')
             ->assertFailed();
 
@@ -125,7 +125,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         // The updater's staging copies are not installed modules
         File::ensureDirectoryExists($this->modulesPath.'/.staging-old');
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('legacy-module')
             ->expectsOutputToContain('flagged-false')
             ->expectsOutputToContain('broken-module (module.json missing or unreadable)')
@@ -143,7 +143,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $converter = $this->fakeConverter();
         $this->setMaintenance(false);
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('Maintenance mode is off')
             ->assertFailed();
 
@@ -157,7 +157,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $converter = $this->fakeConverter();
         $this->setMaintenance(false);
 
-        $this->artisan('timezone:convert-storage --reverse')
+        $this->artisanCommand('timezone:convert-storage --reverse')
             ->expectsOutputToContain('Maintenance mode is off')
             ->assertFailed();
 
@@ -171,7 +171,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $converter = $this->fakeConverter();
         $this->createTableWithDatabaseDefaultedTimestamp();
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('- zz_module_fixture.recorded_at')
             ->doesntExpectOutputToContain('failed_jobs.failed_at')
             ->assertFailed();
@@ -186,7 +186,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         config(['queue.default' => 'database']);
         Queue::connection('database')->pushRaw('{"job":"Illuminate\\\\Queue\\\\CallQueuedHandler@call"}');
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('1 job(s)')
             ->assertFailed();
 
@@ -199,7 +199,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $converter = $this->fakeConverter();
         $this->useUtcStorage();
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('already')
             ->assertSuccessful();
 
@@ -211,7 +211,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
     {
         $converter = $this->fakeConverter();
 
-        $this->artisan('timezone:convert-storage --reverse')
+        $this->artisanCommand('timezone:convert-storage --reverse')
             ->expectsOutputToContain('nothing to undo')
             ->assertSuccessful();
 
@@ -223,7 +223,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
     {
         $converter = $this->fakeConverter(['events.start_date' => 3, 'users.created_at' => 2]);
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('5 value(s) in 2 column(s)')
             ->expectsOutputToContain('events.start_date')
             ->assertSuccessful();
@@ -243,7 +243,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
             throw new RuntimeException('cache store unreachable');
         });
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('cache store unreachable')
             ->expectsOutputToContain('queue:restart')
             ->expectsOutputToContain('start the queue worker and the scheduler again')
@@ -257,7 +257,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $this->fakeConverter();
         $this->travelTo('2026-07-01 10:00:00 UTC');
 
-        $this->artisan('timezone:convert-storage')->assertSuccessful();
+        $this->artisanCommand('timezone:convert-storage')->assertSuccessful();
 
         $row = DB::table('settings')->where('key', StorageTimezoneResolver::SETTING_KEY)->first();
         $this->assertNotNull($row);
@@ -271,7 +271,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $converter = $this->fakeConverter(['events.start_date' => 1]);
         $this->installModule('legacy-module', ['name' => 'legacy-module', 'version' => '1.0.0']);
 
-        $this->artisan('timezone:convert-storage --reverse')->assertSuccessful();
+        $this->artisanCommand('timezone:convert-storage --reverse')->assertSuccessful();
 
         $this->assertSame([['UTC', 'Europe/Madrid', 1]], $converter->calls);
         // Never removed: without it the zone would depend on APP_STORAGE_TIMEZONE_DEFAULT again
@@ -285,7 +285,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         config(['app.storage_timezone_default' => 'UTC']);
         $converter = $this->fakeConverter();
 
-        $this->artisan('timezone:convert-storage --reverse')->assertSuccessful();
+        $this->artisanCommand('timezone:convert-storage --reverse')->assertSuccessful();
 
         $this->assertSame([['UTC', 'Europe/Madrid', 1]], $converter->calls);
         $this->assertSame('Europe/Madrid', $this->marker());
@@ -299,7 +299,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
             ]);
         });
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('rolled back')
             ->assertFailed();
 
@@ -315,7 +315,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         app(SettingsServiceInterface::class)->isMaintenanceModeEnabled();
         DB::table('settings')->where('key', 'maintenance_enabled')->update(['value' => '0']);
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('Maintenance mode is off')
             ->assertFailed();
 
@@ -327,7 +327,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
         $this->fakeConverter();
         $this->installModule('folder-name', ['name' => 'manifest-name', 'version' => '1.0.0']);
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('manifest-name')
             ->doesntExpectOutputToContain('folder-name')
             ->assertFailed();
@@ -343,7 +343,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
             DB::table('settings')->insert(['id' => (string) Str::uuid(), 'key' => 'converted_rows', 'value' => '1']);
         });
 
-        $this->artisan('timezone:convert-storage')
+        $this->artisanCommand('timezone:convert-storage')
             ->expectsOutputToContain('rolled back')
             ->assertFailed();
 
@@ -376,7 +376,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
     {
         File::ensureDirectoryExists($this->modulesPath.'/'.$folder);
         $manifest += ['namespace' => 'Modules\\Fixture', 'provider' => 'Modules\\Fixture\\FixtureServiceProvider'];
-        File::put($this->modulesPath.'/'.$folder.'/module.json', (string) json_encode($manifest));
+        File::put($this->modulesPath.'/'.$folder.'/module.json', json_encode($manifest, JSON_THROW_ON_ERROR));
     }
 
     /**

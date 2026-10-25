@@ -151,7 +151,7 @@ final class AboutControllerTest extends TestCase
         $activities = [
             ['icon' => 'dice', 'title' => 'Juegos de rol', 'description' => 'Partidas semanales'],
         ];
-        app(SettingsServiceInterface::class)->set('about_activities', json_encode($activities));
+        app(SettingsServiceInterface::class)->set('about_activities', json_encode($activities, JSON_THROW_ON_ERROR));
 
         // Act
         $response = $this->get('/nosotros');
@@ -212,7 +212,7 @@ final class AboutControllerTest extends TestCase
             ['title' => 'Step 1', 'description' => 'Description 1'],
             ['title' => 'Step 2', 'description' => null],
         ];
-        app(SettingsServiceInterface::class)->set('join_steps', json_encode($joinSteps));
+        app(SettingsServiceInterface::class)->set('join_steps', json_encode($joinSteps, JSON_THROW_ON_ERROR));
 
         // Act
         $response = $this->get('/nosotros');

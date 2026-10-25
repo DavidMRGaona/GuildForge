@@ -54,11 +54,21 @@ final class ModuleTestCaseTranslationsTest extends ModuleTestCase
 
     public function test_core_translations_loaded_before_enabling_a_module_still_resolve(): void
     {
-        $this->assertSame('El campo nombre es obligatorio.', __('validation.required', ['attribute' => 'nombre']));
+        $this->assertSame('El campo nombre es obligatorio.', $this->requiredMessage());
 
         $this->enableModule('translated-module');
 
-        $this->assertSame('El campo nombre es obligatorio.', __('validation.required', ['attribute' => 'nombre']));
+        $this->assertSame('El campo nombre es obligatorio.', $this->requiredMessage());
         $this->assertSame('Hola desde el módulo de pruebas', __(self::KEY));
+    }
+
+    /**
+     * Read anew on each call: enabling a module reloads the translator.
+     *
+     * @phpstan-impure
+     */
+    private function requiredMessage(): string
+    {
+        return __('validation.required', ['attribute' => 'nombre']);
     }
 }

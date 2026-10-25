@@ -8,6 +8,7 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -44,23 +45,24 @@ final class AssignMemberRoleCommandTest extends TestCase
 
     public function test_it_gives_member_to_every_user_without_it_and_keeps_their_roles(): void
     {
-        $alreadyMemberSince = $this->alreadyMember->roles()->first()?->pivot?->created_at;
+        $alreadyMemberSince = $this->memberSince($this->alreadyMember);
+        $this->assertNotNull($alreadyMemberSince);
 
-        $this->artisan('users:assign-member-role')
+        $this->artisanCommand('users:assign-member-role')
             ->expectsOutputToContain('2 usuarios actualizados')
             ->assertSuccessful();
 
         $this->assertSame(['admin', 'member', 'socio'], $this->roleNames($this->adminAndSocio));
         $this->assertSame(['member'], $this->roleNames($this->withoutRoles));
         $this->assertSame(['member'], $this->roleNames($this->alreadyMember));
-        $this->assertEquals($alreadyMemberSince, $this->alreadyMember->roles()->first()?->pivot?->created_at);
+        $this->assertSame($alreadyMemberSince, $this->memberSince($this->alreadyMember));
     }
 
     public function test_a_second_run_changes_nothing(): void
     {
-        $this->artisan('users:assign-member-role')->assertSuccessful();
+        $this->artisanCommand('users:assign-member-role')->assertSuccessful();
 
-        $this->artisan('users:assign-member-role')
+        $this->artisanCommand('users:assign-member-role')
             ->expectsOutputToContain('0 usuarios actualizados')
             ->assertSuccessful();
 
@@ -69,7 +71,7 @@ final class AssignMemberRoleCommandTest extends TestCase
 
     public function test_a_dry_run_counts_without_writing(): void
     {
-        $this->artisan('users:assign-member-role', ['--dry-run' => true])
+        $this->artisanCommand('users:assign-member-role', ['--dry-run' => true])
             ->expectsOutputToContain('2 usuarios se actualizarían')
             ->assertSuccessful();
 
@@ -80,7 +82,7 @@ final class AssignMemberRoleCommandTest extends TestCase
     {
         $this->member->delete();
 
-        $this->artisan('users:assign-member-role')
+        $this->artisanCommand('users:assign-member-role')
             ->expectsOutputToContain('No existe el rol «member»')
             ->assertFailed();
 
@@ -92,7 +94,7 @@ final class AssignMemberRoleCommandTest extends TestCase
         $authorization = app(AuthorizationServiceInterface::class);
         $this->assertFalse($authorization->hasRole($this->withoutRoles, 'member'));
 
-        $this->artisan('users:assign-member-role')->assertSuccessful();
+        $this->artisanCommand('users:assign-member-role')->assertSuccessful();
 
         $this->assertTrue($authorization->hasRole($this->withoutRoles, 'member'));
         $this->assertTrue($authorization->hasRole($this->adminAndSocio, 'member'));
@@ -103,7 +105,7 @@ final class AssignMemberRoleCommandTest extends TestCase
         $deleted = UserModel::factory()->create();
         $deleted->delete();
 
-        $this->artisan('users:assign-member-role')
+        $this->artisanCommand('users:assign-member-role')
             ->expectsOutputToContain('3 usuarios actualizados')
             ->assertSuccessful();
 
@@ -119,11 +121,11 @@ final class AssignMemberRoleCommandTest extends TestCase
         $deleted = UserModel::factory()->create();
         $deleted->delete();
 
-        $this->artisan('users:assign-member-role', ['--dry-run' => true])
+        $this->artisanCommand('users:assign-member-role', ['--dry-run' => true])
             ->expectsOutputToContain('3 usuarios se actualizarían')
             ->assertSuccessful();
 
-        $this->artisan('users:assign-member-role')
+        $this->artisanCommand('users:assign-member-role')
             ->expectsOutputToContain('3 usuarios actualizados')
             ->assertSuccessful();
 
@@ -136,7 +138,7 @@ final class AssignMemberRoleCommandTest extends TestCase
     {
         UserModel::factory()->count(3)->create();
 
-        $this->artisan('users:assign-member-role', ['--chunk' => 2])
+        $this->artisanCommand('users:assign-member-role', ['--chunk' => 2])
             ->expectsOutputToContain('5 usuarios actualizados')
             ->assertSuccessful();
 
@@ -149,5 +151,13 @@ final class AssignMemberRoleCommandTest extends TestCase
     private function roleNames(UserModel $user): array
     {
         return $user->roles()->orderBy('name')->pluck('name')->all();
+    }
+
+    private function memberSince(UserModel $user): mixed
+    {
+        return DB::table('user_role')
+            ->where('user_id', $user->id)
+            ->where('role_id', $this->member->id)
+            ->value('created_at');
     }
 }

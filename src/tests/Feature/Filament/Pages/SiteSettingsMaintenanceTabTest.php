@@ -7,7 +7,9 @@ namespace Tests\Feature\Filament\Pages;
 use App\Filament\Pages\SiteSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\Request;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -22,15 +24,17 @@ final class SiteSettingsMaintenanceTabTest extends TestCase
     public function test_the_maintenance_tab_url_opens_the_maintenance_tab(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());
-        parse_str((string) parse_url(SiteSettings::getMaintenanceTabUrl(), PHP_URL_QUERY), $query);
+        $query = Request::create(SiteSettings::getMaintenanceTabUrl())->query->all();
 
         $page = Livewire::test(SiteSettings::class)->instance();
+        $this->assertInstanceOf(SiteSettings::class, $page);
         request()->query->replace($query);
 
-        /** @var Tabs $tabs */
         $tabs = $page->form->getComponents()[0];
-        $labels = array_map(static fn ($tab): string => (string) $tab->getLabel(), $tabs->getChildComponents());
+        $this->assertInstanceOf(Tabs::class, $tabs);
+        $activeTab = $tabs->getChildComponents()[$tabs->getActiveTab() - 1] ?? null;
+        $this->assertInstanceOf(Tab::class, $activeTab);
 
-        $this->assertSame(__('filament.settings.tabs.maintenance'), $labels[$tabs->getActiveTab() - 1] ?? null);
+        $this->assertSame(__('filament.settings.tabs.maintenance'), $activeTab->getLabel());
     }
 }

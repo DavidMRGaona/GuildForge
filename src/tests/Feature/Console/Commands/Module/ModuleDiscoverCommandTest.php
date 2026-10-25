@@ -55,9 +55,9 @@ final class ModuleDiscoverCommandTest extends TestCase
             'author' => 'Test Author',
             'namespace' => 'Modules\\TestDiscoveryModule',
             'provider' => 'TestDiscoveryModuleServiceProvider',
-        ]));
+        ], JSON_THROW_ON_ERROR));
 
-        $this->artisan('module:discover')
+        $this->artisanCommand('module:discover')
             ->expectsOutput('Discovering modules...')
             ->expectsOutput('Found 1 module(s).')
             ->assertExitCode(0);
@@ -71,7 +71,7 @@ final class ModuleDiscoverCommandTest extends TestCase
     public function test_it_displays_message_when_no_modules_found(): void
     {
         // Ensure modules directory is empty or doesn't contain valid modules
-        $this->artisan('module:discover')
+        $this->artisanCommand('module:discover')
             ->expectsOutput('Discovering modules...')
             ->expectsOutput('No modules found.')
             ->assertExitCode(0);
@@ -92,10 +92,10 @@ final class ModuleDiscoverCommandTest extends TestCase
                 'author' => 'Test Author',
                 'namespace' => 'Modules\\'.str_replace('-', '', ucwords($moduleName, '-')),
                 'provider' => str_replace('-', '', ucwords($moduleName, '-')).'ServiceProvider',
-            ]));
+            ], JSON_THROW_ON_ERROR));
         }
 
-        $this->artisan('module:discover')
+        $this->artisanCommand('module:discover')
             ->expectsOutput('Discovering modules...')
             ->expectsOutput('Found 2 module(s).')
             ->assertExitCode(0);

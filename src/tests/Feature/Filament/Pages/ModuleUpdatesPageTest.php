@@ -22,6 +22,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use DateTimeImmutable;
+use Filament\Tables\Columns\IconColumn;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
@@ -311,7 +312,10 @@ final class ModuleUpdatesPageTest extends TestCase
         $page = Livewire::test(ModuleUpdatesPage::class)
             ->assertTableColumnFormattedStateSet('status', UpdateStatus::Completed->label(), $ok);
 
-        $column = $page->instance()->getTable()->getColumn('error_message');
+        $instance = $page->instance();
+        $this->assertInstanceOf(ModuleUpdatesPage::class, $instance);
+        $column = $instance->getTable()->getColumn('error_message');
+        $this->assertInstanceOf(IconColumn::class, $column);
         $column->record($ok);
         $this->assertNull($column->getIcon($column->getState()), 'A successful update must not show any error icon');
         $column->record($failed);

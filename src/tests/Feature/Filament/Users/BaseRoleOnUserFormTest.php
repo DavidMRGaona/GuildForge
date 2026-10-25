@@ -11,7 +11,9 @@ use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Resources\Pages\Page;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Livewire\Component;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -186,9 +188,16 @@ final class BaseRoleOnUserFormTest extends TestCase
         $this->assertEqualsCanonicalizing(['editor', 'member'], $this->authorization()->getRoles($user));
     }
 
+    /**
+     * @param  Testable<Component>  $page
+     */
     private function rolesField(Testable $page): CheckboxList
     {
-        $field = $page->instance()->form->getFlatFields(withHidden: true)['roles'] ?? null;
+        $instance = $page->instance();
+        $this->assertInstanceOf(Page::class, $instance);
+        $form = $instance->getSchema('form');
+        $this->assertNotNull($form);
+        $field = $form->getFlatFields(withHidden: true)['roles'] ?? null;
         $this->assertInstanceOf(CheckboxList::class, $field);
 
         return $field;

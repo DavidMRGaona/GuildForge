@@ -30,7 +30,7 @@ final class CoreVersionCommandTest extends TestCase
         $this->versionService->shouldReceive('getCurrentCommit')
             ->andReturn('abc123def456789');
 
-        $this->artisan('core:version')
+        $this->artisanCommand('core:version')
             ->expectsOutput('GuildForge Core v1.5.3')
             ->assertExitCode(0);
     }
@@ -43,7 +43,7 @@ final class CoreVersionCommandTest extends TestCase
         $this->versionService->shouldReceive('getCurrentCommit')
             ->andReturn('1234567890abcdef1234567890abcdef12345678');
 
-        $this->artisan('core:version')
+        $this->artisanCommand('core:version')
             ->expectsOutput('Git commit: 1234567890abcdef1234567890abcdef12345678')
             ->assertExitCode(0);
     }
@@ -56,7 +56,7 @@ final class CoreVersionCommandTest extends TestCase
         $this->versionService->shouldReceive('getCurrentCommit')
             ->andReturn('unknown');
 
-        $this->artisan('core:version')
+        $this->artisanCommand('core:version')
             ->assertExitCode(0);
     }
 
@@ -68,7 +68,7 @@ final class CoreVersionCommandTest extends TestCase
         $this->versionService->shouldReceive('getCurrentCommit')
             ->andReturn('unknown');
 
-        $this->artisan('core:version')
+        $this->artisanCommand('core:version')
             ->expectsOutput('Git commit: unknown')
             ->assertExitCode(0);
     }

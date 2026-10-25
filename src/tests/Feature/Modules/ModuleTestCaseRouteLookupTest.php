@@ -6,7 +6,6 @@ namespace Tests\Feature\Modules;
 
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Support\Facades\File;
-use Modules\RoutedModule\Http\PingController;
 use Tests\Support\Modules\ModuleTestCase;
 
 /**
@@ -15,6 +14,9 @@ use Tests\Support\Modules\ModuleTestCase;
  */
 final class ModuleTestCaseRouteLookupTest extends ModuleTestCase
 {
+    // Autoloaded from the fixture module only once the module is enabled
+    private const string PING_CONTROLLER = 'Modules\\RoutedModule\\Http\\PingController';
+
     private string $modulesPath;
 
     protected function setUp(): void
@@ -52,6 +54,6 @@ final class ModuleTestCaseRouteLookupTest extends ModuleTestCase
     {
         $this->enableModule('routed-module');
 
-        $this->assertSame(url('/routed-module/action'), action([PingController::class, 'show']));
+        $this->assertSame(url('/routed-module/action'), action([self::PING_CONTROLLER, 'show']));
     }
 }

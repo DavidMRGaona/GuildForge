@@ -62,7 +62,7 @@ final class RecordDeploymentCommandTest extends TestCase
     public function test_a_failed_boot_keeps_its_error_and_a_retry_reuses_the_row(): void
     {
         $this->deploy(self::FIRST, 'start');
-        $this->artisan('core:record-deployment', ['step' => 'fail', '--error' => 'Migrations failed'])->assertExitCode(0);
+        $this->artisanCommand('core:record-deployment', ['step' => 'fail', '--error' => 'Migrations failed'])->assertExitCode(0);
 
         $row = CoreUpdateHistoryModel::query()->sole();
         $this->assertSame(UpdateStatus::Failed, $row->status);
@@ -97,7 +97,7 @@ final class RecordDeploymentCommandTest extends TestCase
             }
         });
 
-        $this->artisan('core:record-deployment', ['step' => 'start'])->assertExitCode(0);
+        $this->artisanCommand('core:record-deployment', ['step' => 'start'])->assertExitCode(0);
 
         $this->assertSame(0, CoreUpdateHistoryModel::query()->count());
     }
@@ -106,13 +106,13 @@ final class RecordDeploymentCommandTest extends TestCase
     {
         config(['updates.core.commit' => self::FIRST]);
 
-        $this->artisan('core:record-deployment', ['step' => 'restart'])->assertExitCode(1);
+        $this->artisanCommand('core:record-deployment', ['step' => 'restart'])->assertExitCode(1);
     }
 
     private function deploy(string $commit, string $step): void
     {
         config(['updates.core.commit' => $commit]);
-        $this->artisan('core:record-deployment', ['step' => $step])->assertExitCode(0);
+        $this->artisanCommand('core:record-deployment', ['step' => $step])->assertExitCode(0);
         $this->travel(1)->minutes();
     }
 }

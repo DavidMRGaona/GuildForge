@@ -79,13 +79,13 @@ final class PublicMenuTest extends TestCase
 
     public function test_a_left_out_link_is_logged_once_and_not_on_every_request(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $this->menuItem(MenuLocation::Header, 'Mesas', route: 'gametables.index', module: 'game-tables', sort: 1);
 
         $this->get('/')->assertOk();
         $this->get('/')->assertOk();
 
-        Log::shouldHaveReceived('warning')
+        $log->shouldHaveReceived('warning')
             ->withArgs(fn (string $message, array $context = []): bool => str_starts_with($message, 'Menu item left out')
                 && ($context['label'] ?? null) === 'Mesas'
                 && ($context['route'] ?? null) === 'gametables.index')

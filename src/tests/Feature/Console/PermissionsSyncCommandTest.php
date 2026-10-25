@@ -17,7 +17,7 @@ final class PermissionsSyncCommandTest extends TestCase
 
     public function test_sync_creates_the_menu_item_permissions(): void
     {
-        $this->artisan('permissions:sync')->assertSuccessful();
+        $this->artisanCommand('permissions:sync')->assertSuccessful();
 
         $this->assertSame(5, PermissionModel::query()->whereIn('key', [
             'menu_items.view_any',

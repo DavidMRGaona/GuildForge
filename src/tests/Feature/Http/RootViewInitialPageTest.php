@@ -18,6 +18,7 @@ final class RootViewInitialPageTest extends TestCase
     public function test_the_root_html_carries_the_initial_page_with_the_props_the_client_boots_from(): void
     {
         $html = $this->get('/')->assertOk()->getContent();
+        $this->assertIsString($html);
 
         $page = $this->initialPage($html);
 
@@ -30,6 +31,7 @@ final class RootViewInitialPageTest extends TestCase
     public function test_the_initial_page_is_a_json_script_element_not_a_data_attribute(): void
     {
         $html = $this->get('/')->assertOk()->getContent();
+        $this->assertIsString($html);
 
         $this->assertStringContainsString('<script data-page="app" type="application/json">', $html);
         $this->assertDoesNotMatchRegularExpression('#<div[^>]*\bdata-page=#', $html);
@@ -38,7 +40,7 @@ final class RootViewInitialPageTest extends TestCase
     /**
      * Decodes the initial page from the JSON script element app.ts reads.
      *
-     * @return array{component: string, props: array<string, mixed>}
+     * @return array{component: string, props: array<mixed>}
      */
     private function initialPage(string $html): array
     {
@@ -48,7 +50,11 @@ final class RootViewInitialPageTest extends TestCase
 
         $page = json_decode($m[1], true, 512, JSON_THROW_ON_ERROR);
         $this->assertIsArray($page);
+        $component = $page['component'] ?? null;
+        $props = $page['props'] ?? null;
+        $this->assertIsString($component);
+        $this->assertIsArray($props);
 
-        return $page;
+        return ['component' => $component, 'props' => $props];
     }
 }

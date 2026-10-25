@@ -20,7 +20,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
             ['sha' => 'bbbbbbbbbb', 'message' => 'fix: one', 'date' => '2026-10-04T10:00:00Z', 'url' => 'https://github.com/o/r/commit/bbb'],
         ], false));
 
-        $this->artisan('core:check-updates')
+        $this->artisanCommand('core:check-updates')
             ->expectsOutputToContain('abc1234')
             ->expectsOutputToContain('1 commit(s) on main are not deployed')
             ->expectsOutputToContain('fix: one')
@@ -31,7 +31,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
     {
         $this->checkReturns(new CoreUpdateStatusDTO(self::DEPLOYED, 'main', 0, self::DEPLOYED, [], false));
 
-        $this->artisan('core:check-updates')
+        $this->artisanCommand('core:check-updates')
             ->expectsOutputToContain('The deployed commit is the latest on main.')
             ->assertExitCode(0);
     }
@@ -42,7 +42,7 @@ final class CoreCheckUpdatesCommandTest extends TestCase
         $checker->shouldReceive('check')->andThrow(UpdateException::githubRequestFailed('o/r', 'HTTP 403'));
         $this->app->instance(CoreUpdateCheckerInterface::class, $checker);
 
-        $this->artisan('core:check-updates')
+        $this->artisanCommand('core:check-updates')
             ->expectsOutputToContain('HTTP 403')
             ->assertExitCode(1);
     }

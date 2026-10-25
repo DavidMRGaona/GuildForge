@@ -18,7 +18,7 @@ final class ModuleDisableCommandTest extends TestCase
             'name' => 'test-module',
         ]);
 
-        $this->artisan('module:disable', ['module' => 'test-module'])
+        $this->artisanCommand('module:disable', ['module' => 'test-module'])
             ->expectsOutput('Module "test-module" has been disabled.')
             ->assertExitCode(0);
 
@@ -34,7 +34,7 @@ final class ModuleDisableCommandTest extends TestCase
 
     public function test_it_fails_when_module_not_found(): void
     {
-        $this->artisan('module:disable', ['module' => 'non-existent-module'])
+        $this->artisanCommand('module:disable', ['module' => 'non-existent-module'])
             ->expectsOutput('Module "non-existent-module" not found.')
             ->assertExitCode(1);
     }
@@ -45,7 +45,7 @@ final class ModuleDisableCommandTest extends TestCase
             'name' => 'test-module',
         ]);
 
-        $this->artisan('module:disable', ['module' => 'test-module'])
+        $this->artisanCommand('module:disable', ['module' => 'test-module'])
             ->expectsOutput('Module "test-module" is already disabled.')
             ->assertExitCode(1);
     }
@@ -62,7 +62,7 @@ final class ModuleDisableCommandTest extends TestCase
             'dependencies' => ['required-module'],
         ]);
 
-        $this->artisan('module:disable', ['module' => 'required-module'])
+        $this->artisanCommand('module:disable', ['module' => 'required-module'])
             ->expectsOutput('Cannot disable module "required-module". It is required by: dependent-module')
             ->assertExitCode(1);
 

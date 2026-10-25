@@ -60,7 +60,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
         $this->updateChecker->shouldReceive('checkAll')
             ->andReturn(new UpdateCheckResultDTO($updates, [], []));
 
-        $this->artisan('module:check-updates')
+        $this->artisanCommand('module:check-updates')
             ->expectsOutput('Found 2 update(s) available:')
             ->expectsTable(
                 ['Module', 'Current', 'Available', 'Major', 'Published'],
@@ -77,7 +77,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
         $this->updateChecker->shouldReceive('checkAll')
             ->andReturn(new UpdateCheckResultDTO(new Collection, [], []));
 
-        $this->artisan('module:check-updates')
+        $this->artisanCommand('module:check-updates')
             ->expectsOutput('All modules are up to date.')
             ->assertExitCode(0);
     }
@@ -102,7 +102,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
         $this->updateChecker->shouldReceive('checkAll')
             ->andReturn(new UpdateCheckResultDTO($updates, [], []));
 
-        $this->artisan('module:check-updates')
+        $this->artisanCommand('module:check-updates')
             ->expectsOutput('Found 1 update(s) available:')
             ->expectsTable(
                 ['Module', 'Current', 'Available', 'Major', 'Published'],
@@ -133,7 +133,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
         $this->updateChecker->shouldReceive('checkAll')
             ->andReturn(new UpdateCheckResultDTO($updates, [], []));
 
-        $this->artisan('module:check-updates')
+        $this->artisanCommand('module:check-updates')
             ->expectsTable(
                 ['Module', 'Current', 'Available', 'Major', 'Published'],
                 [
@@ -148,7 +148,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
         $this->updateChecker->shouldReceive('checkAll')
             ->andReturn(new UpdateCheckResultDTO(new Collection, [], []));
 
-        $this->artisan('module:check-updates')
+        $this->artisanCommand('module:check-updates')
             ->assertExitCode(0);
     }
 
@@ -157,7 +157,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
         $this->updateChecker->shouldReceive('checkAll')
             ->andReturn(new UpdateCheckResultDTO(new Collection, ['game-tables' => "GitHub request for 'o/r' failed: HTTP 403"], []));
 
-        $this->artisan('module:check-updates')
+        $this->artisanCommand('module:check-updates')
             ->expectsOutput("game-tables: GitHub request for 'o/r' failed: HTTP 403")
             ->assertExitCode(1);
     }
@@ -167,7 +167,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
         $this->updateChecker->shouldReceive('checkAll')
             ->andReturn(new UpdateCheckResultDTO(new Collection, [], ['security-test']));
 
-        $this->artisan('module:check-updates')
+        $this->artisanCommand('module:check-updates')
             ->expectsOutput('No repository configured for: security-test')
             ->assertExitCode(0);
     }
@@ -179,7 +179,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
             ->once()
             ->andReturn(new UpdateCheckResultDTO(new Collection, [], []));
 
-        $this->artisan('module:check-updates', ['--force' => true])
+        $this->artisanCommand('module:check-updates', ['--force' => true])
             ->assertExitCode(0);
     }
 
@@ -191,7 +191,7 @@ final class CheckModuleUpdatesCommandTest extends TestCase
             ]),
         ]));
 
-        $this->artisan('module:check-updates')
+        $this->artisanCommand('module:check-updates')
             ->expectsOutput('All modules are up to date.')
             ->expectsTable(['Module', 'Current', 'Blocked', 'Reason'], [['announcements', '1.1.0', '2.0.0', 'requiere core ^3.0']])
             ->assertExitCode(0);

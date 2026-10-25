@@ -6,9 +6,9 @@ namespace Tests\Feature\Database;
 
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Tests\Support\Database\RunsMigrationFiles;
 use Tests\TestCase;
 
 /**
@@ -18,6 +18,7 @@ use Tests\TestCase;
 final class BackfillModuleSeederHistoryMigrationTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RunsMigrationFiles;
 
     private string $modulesPath;
 
@@ -39,7 +40,7 @@ final class BackfillModuleSeederHistoryMigrationTest extends TestCase
     {
         $this->module('game-tables', 'Modules\\GameTables', installed: true, seeders: ['GameSystemsSeeder', 'PublishersSeeder']);
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertEqualsCanonicalizing(
             ['Modules\\GameTables\\Database\\Seeders\\GameSystemsSeeder', 'Modules\\GameTables\\Database\\Seeders\\PublishersSeeder'],
@@ -51,7 +52,7 @@ final class BackfillModuleSeederHistoryMigrationTest extends TestCase
     {
         $this->module('tournaments', 'Modules\\Tournaments', installed: false, seeders: ['GameProfilesSeeder']);
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertSame([], ModuleSeederHistoryModel::getExecutedSeeders('tournaments'));
     }
@@ -61,8 +62,8 @@ final class BackfillModuleSeederHistoryMigrationTest extends TestCase
         $this->module('cookie-consent', 'Modules\\CookieConsent', installed: true, seeders: ['DefaultCategoriesSeeder']);
         ModuleSeederHistoryModel::markExecuted('cookie-consent', 'Modules\\CookieConsent\\Database\\Seeders\\DefaultCategoriesSeeder');
 
-        $this->migration()->up();
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertCount(1, ModuleSeederHistoryModel::getExecutedSeeders('cookie-consent'));
     }
@@ -73,7 +74,7 @@ final class BackfillModuleSeederHistoryMigrationTest extends TestCase
             'name' => 'ghost-mod', 'path' => $this->modulesPath.'/ghost-mod', 'namespace' => 'Modules\\GhostMod', 'installed_at' => now(),
         ]);
 
-        $this->migration()->up();
+        $this->runMigrationFile($this->migrationPath());
 
         $this->assertSame([], ModuleSeederHistoryModel::getExecutedSeeders('ghost-mod'));
     }
@@ -97,8 +98,8 @@ final class BackfillModuleSeederHistoryMigrationTest extends TestCase
         ]);
     }
 
-    private function migration(): Migration
+    private function migrationPath(): string
     {
-        return require database_path('migrations/2026_10_04_000001_backfill_module_seeder_history.php');
+        return database_path('migrations/2026_10_04_000001_backfill_module_seeder_history.php');
     }
 }

@@ -51,7 +51,7 @@ final class ModuleUninstallTest extends TestCase
         // Create module directory
         $modulePath = $this->modulesPath.'/test-module';
         File::ensureDirectoryExists($modulePath);
-        File::put($modulePath.'/module.json', json_encode(['name' => 'test-module']));
+        File::put($modulePath.'/module.json', json_encode(['name' => 'test-module'], JSON_THROW_ON_ERROR));
 
         $module = ModuleModel::factory()->disabled()->create([
             'name' => 'test-module',
@@ -89,7 +89,7 @@ final class ModuleUninstallTest extends TestCase
         // Create base module directory
         $baseModulePath = $this->modulesPath.'/base-module';
         File::makeDirectory($baseModulePath, 0755, true);
-        File::put($baseModulePath.'/module.json', json_encode(['name' => 'base-module']));
+        File::put($baseModulePath.'/module.json', json_encode(['name' => 'base-module'], JSON_THROW_ON_ERROR));
 
         ModuleModel::factory()->disabled()->create([
             'name' => 'base-module',
@@ -123,7 +123,7 @@ final class ModuleUninstallTest extends TestCase
 
         $modulePath = $this->modulesPath.'/removable-module';
         File::makeDirectory($modulePath, 0755, true);
-        File::put($modulePath.'/module.json', json_encode(['name' => 'removable-module']));
+        File::put($modulePath.'/module.json', json_encode(['name' => 'removable-module'], JSON_THROW_ON_ERROR));
 
         $module = ModuleModel::factory()->disabled()->create([
             'name' => 'removable-module',
@@ -147,7 +147,7 @@ final class ModuleUninstallTest extends TestCase
 
         $modulePath = $this->modulesPath.'/file-module';
         File::makeDirectory($modulePath.'/src', 0755, true);
-        File::put($modulePath.'/module.json', json_encode(['name' => 'file-module']));
+        File::put($modulePath.'/module.json', json_encode(['name' => 'file-module'], JSON_THROW_ON_ERROR));
         File::put($modulePath.'/src/ServiceProvider.php', '<?php');
 
         ModuleModel::factory()->disabled()->create([
@@ -176,7 +176,7 @@ final class ModuleUninstallTest extends TestCase
         // Create module directory at the config-based path
         $configPath = $this->modulesPath.'/stale-path-module';
         File::ensureDirectoryExists($configPath);
-        File::put($configPath.'/module.json', json_encode(['name' => 'stale-path-module']));
+        File::put($configPath.'/module.json', json_encode(['name' => 'stale-path-module'], JSON_THROW_ON_ERROR));
 
         // Store a stale/wrong path in the DB record
         $module = ModuleModel::factory()->disabled()->create([
@@ -200,7 +200,7 @@ final class ModuleUninstallTest extends TestCase
 
         $modulePath = $this->modulesPath.'/event-module';
         File::makeDirectory($modulePath, 0755, true);
-        File::put($modulePath.'/module.json', json_encode(['name' => 'event-module']));
+        File::put($modulePath.'/module.json', json_encode(['name' => 'event-module'], JSON_THROW_ON_ERROR));
 
         ModuleModel::factory()->disabled()->create([
             'name' => 'event-module',
@@ -230,7 +230,7 @@ final class ModuleUninstallTest extends TestCase
 
         $modulePath = $this->modulesPath.'/noop-module';
         File::makeDirectory($modulePath, 0755, true);
-        File::put($modulePath.'/module.json', json_encode(['name' => 'noop-module']));
+        File::put($modulePath.'/module.json', json_encode(['name' => 'noop-module'], JSON_THROW_ON_ERROR));
 
         ModuleModel::factory()->disabled()->create([
             'name' => 'noop-module',

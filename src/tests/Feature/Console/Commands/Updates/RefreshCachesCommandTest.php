@@ -22,7 +22,7 @@ final class RefreshCachesCommandTest extends TestCase
 
     public function test_it_succeeds_without_touching_caches_under_unit_tests(): void
     {
-        $this->artisan('module:refresh-caches')->assertExitCode(0);
+        $this->artisanCommand('module:refresh-caches')->assertExitCode(0);
     }
 
     public function test_refresh_clears_framework_caches_and_rebuilds_the_cached_ones(): void
