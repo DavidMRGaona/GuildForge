@@ -19,6 +19,7 @@ final readonly class PaginatedResponseDTO
 
     /**
      * @param  array<int, mixed>  $data
+     * @param  array<string, mixed>  $query  Query string kept on every link (the list filters); its page is replaced
      */
     public static function create(
         array $data,
@@ -26,8 +27,11 @@ final readonly class PaginatedResponseDTO
         int $total,
         int $perPage,
         string $baseUrl,
+        array $query = [],
     ): self {
         $lastPage = $total > 0 ? (int) ceil($total / $perPage) : 1;
+        unset($query['page']);
+        $pageUrl = static fn (int $page): string => $baseUrl.'?'.http_build_query([...$query, 'page' => $page]);
 
         return new self(
             data: $data,
@@ -38,10 +42,10 @@ final readonly class PaginatedResponseDTO
                 'total' => $total,
             ],
             links: [
-                'first' => $baseUrl.'?page=1',
-                'last' => $baseUrl.'?page='.$lastPage,
-                'prev' => $currentPage > 1 ? $baseUrl.'?page='.($currentPage - 1) : null,
-                'next' => $currentPage < $lastPage ? $baseUrl.'?page='.($currentPage + 1) : null,
+                'first' => $pageUrl(1),
+                'last' => $pageUrl($lastPage),
+                'prev' => $currentPage > 1 ? $pageUrl($currentPage - 1) : null,
+                'next' => $currentPage < $lastPage ? $pageUrl($currentPage + 1) : null,
             ],
         );
     }
