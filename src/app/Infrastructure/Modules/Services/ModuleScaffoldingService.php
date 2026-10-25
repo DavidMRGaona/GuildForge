@@ -86,6 +86,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             'module/tsconfig.json.stub' => 'tsconfig.json',
             'module/module.css.stub' => 'resources/css/module.css',
             'module/phpunit.xml.stub' => 'phpunit.xml',
+            'module/test-bootstrap.php.stub' => 'tests/bootstrap.php',
             'module/gitignore.stub' => '.gitignore',
             'module/release.yml.stub' => '.github/workflows/release.yml',
             'module/tests.yml.stub' => '.github/workflows/tests.yml',

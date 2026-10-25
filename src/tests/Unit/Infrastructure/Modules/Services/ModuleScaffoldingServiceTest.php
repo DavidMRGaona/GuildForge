@@ -599,14 +599,19 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $result = $this->service->createModule('blog-posts');
 
-        foreach (['phpunit.xml', '.gitignore', 'resources/css/module.css', '.github/workflows/release.yml', '.github/workflows/tests.yml'] as $file) {
+        foreach (['phpunit.xml', 'tests/bootstrap.php', '.gitignore', 'resources/css/module.css', '.github/workflows/release.yml', '.github/workflows/tests.yml'] as $file) {
             $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$file] ?? null, $file);
             $this->assertFileExists($this->tempModulesPath.'/blog-posts/'.$file);
         }
 
         $phpunit = simplexml_load_file($this->tempModulesPath.'/blog-posts/phpunit.xml');
         $this->assertNotFalse($phpunit);
-        $this->assertSame('../../vendor/autoload.php', (string) $phpunit['bootstrap']);
+        $this->assertSame('tests/bootstrap.php', (string) $phpunit['bootstrap']);
+
+        // The core's test bootstrap (it clears stale caches), then the test namespace for helpers under tests/Support
+        $bootstrap = (string) file_get_contents($this->tempModulesPath.'/blog-posts/tests/bootstrap.php');
+        $this->assertStringContainsString("require __DIR__.'/../../../tests/bootstrap.php';", $bootstrap);
+        $this->assertStringContainsString("\$loader->addPsr4('Modules\\\\BlogPosts\\\\Tests\\\\', __DIR__);", $bootstrap);
         $suites = [];
         foreach ($phpunit->testsuites->testsuite as $suite) {
             $suites[(string) $suite['name']] = (string) $suite->directory;

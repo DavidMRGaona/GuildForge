@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * The core bootstrap first (it clears stale caches), then the test namespace: the module
+ * autoloader only maps src/, so helpers under tests/Support would not load otherwise.
+ */
+require __DIR__.'/../../../tests/bootstrap.php';
+
+$loader = require __DIR__.'/../../../vendor/autoload.php';
+$loader->addPsr4('Modules\\{{ moduleNameStudly }}\\Tests\\', __DIR__);
