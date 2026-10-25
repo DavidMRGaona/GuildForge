@@ -4,6 +4,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import NavDropdown from './NavDropdown.vue';
 import type { MenuItem, Navigation } from '@/types/navigation';
+import { isActiveHref } from '@/utils/navigation';
 
 interface Props {
     mobile?: boolean;
@@ -84,13 +85,8 @@ const headerItems = computed(() => {
     return items && items.length > 0 ? items : fallbackItems;
 });
 
-const currentUrl = computed(() => page.url);
-
 function isActive(href: string): boolean {
-    if (href === '/') {
-        return currentUrl.value === '/';
-    }
-    return currentUrl.value.startsWith(href);
+    return isActiveHref(href, page.url, window.location.origin);
 }
 
 function handleNavigate(): void {

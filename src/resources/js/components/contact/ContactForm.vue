@@ -68,7 +68,7 @@ const submit = (): void => {
                     class="block text-sm font-medium text-base-secondary mb-1"
                 >
                     {{ t('about.contact.form.name') }}
-                    <span class="text-error" aria-label="required">*</span>
+                    <span class="text-error" aria-hidden="true">*</span>
                 </label>
                 <input
                     id="contact-name"
@@ -102,7 +102,7 @@ const submit = (): void => {
                     class="block text-sm font-medium text-base-secondary mb-1"
                 >
                     {{ t('about.contact.email') }}
-                    <span class="text-error" aria-label="required">*</span>
+                    <span class="text-error" aria-hidden="true">*</span>
                 </label>
                 <input
                     id="contact-email"
@@ -136,7 +136,7 @@ const submit = (): void => {
                     class="block text-sm font-medium text-base-secondary mb-1"
                 >
                     {{ t('about.contact.form.message') }}
-                    <span class="text-error" aria-label="required">*</span>
+                    <span class="text-error" aria-hidden="true">*</span>
                 </label>
                 <textarea
                     id="contact-message"

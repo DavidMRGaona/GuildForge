@@ -45,7 +45,7 @@ const {
         </div>
     </div>
 
-    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <TagFilter
             :tags="props.tags"
             :current-tags="props.currentTags"
@@ -91,5 +91,5 @@ const {
                 </BaseButton>
             </div>
         </div>
-    </main>
+    </div>
 </template>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { ChevronDown } from '@lucide/vue';
 import type { MenuItem } from '@/types/navigation';
+import { isActiveHref } from '@/utils/navigation';
 import { useOnNavigate } from '@/composables/useOnNavigate';
 
 interface Props {
@@ -25,13 +26,8 @@ useOnNavigate(() => {
     isOpen.value = false;
 });
 
-const currentUrl = computed(() => page.url);
-
 function isActive(href: string): boolean {
-    if (href === '/') {
-        return currentUrl.value === '/';
-    }
-    return currentUrl.value.startsWith(href);
+    return isActiveHref(href, page.url, window.location.origin);
 }
 
 function isParentActive(): boolean {
@@ -97,6 +93,7 @@ function handleKeydown(event: KeyboardEvent): void {
                         :key="child.id"
                         :href="child.href"
                         :target="child.target"
+                        :aria-current="isActive(child.href) ? 'page' : undefined"
                         :class="[
                             'block px-4 py-2 text-sm transition-colors',
                             isActive(child.href)
@@ -127,6 +124,7 @@ function handleKeydown(event: KeyboardEvent): void {
                     :key="child.id"
                     :href="child.href"
                     :target="child.target"
+                    :aria-current="isActive(child.href) ? 'page' : undefined"
                     :class="[
                         'block rounded-md px-3 py-2 text-sm font-medium transition-colors',
                         isActive(child.href)

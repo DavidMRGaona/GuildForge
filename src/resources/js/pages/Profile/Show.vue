@@ -55,7 +55,7 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
             </aside>
 
             <!-- Tab content -->
-            <main class="min-w-0">
+            <div class="min-w-0">
                 <!-- Account tab -->
                 <ProfileAccountTab v-if="activeTabId === 'account'" :user="user" />
 
@@ -79,7 +79,7 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                         </Suspense>
                     </template>
                 </template>
-            </main>
+            </div>
         </div>
     </div>
 </template>

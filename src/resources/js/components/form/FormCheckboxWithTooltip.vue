@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Check, CircleQuestionMark } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
 import FormTooltip from './FormTooltip.vue';
 
 const props = withDefaults(
@@ -19,6 +20,8 @@ const props = withDefaults(
 const emit = defineEmits<{
     'update:modelValue': [value: string[]];
 }>();
+
+const { t } = useI18n();
 
 function isChecked(): boolean {
     return props.modelValue.includes(props.value);
@@ -69,7 +72,7 @@ function toggle(): void {
                 <button
                     type="button"
                     class="inline-flex items-center justify-center h-4 w-4 rounded-full bg-neutral-200 dark:bg-neutral-700 text-base-muted hover:text-base-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
-                    aria-label="Más información"
+                    :aria-label="t('common.moreInfo')"
                     @click.prevent
                 >
                     <CircleQuestionMark class="h-3 w-3" aria-hidden="true" />
