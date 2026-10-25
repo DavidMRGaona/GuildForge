@@ -59,8 +59,7 @@ final class TagModelTest extends TestCase
             'applies_to' => ['events', 'articles', 'galleries'],
         ]);
 
-        $this->assertIsArray($tag->applies_to);
-        $this->assertEquals(['events', 'articles', 'galleries'], $tag->applies_to);
+        $this->assertSame(['events', 'articles', 'galleries'], $tag->applies_to);
     }
 
     public function test_it_casts_sort_order_as_integer(): void
@@ -69,8 +68,7 @@ final class TagModelTest extends TestCase
             'sort_order' => 42,
         ]);
 
-        $this->assertIsInt($tag->sort_order);
-        $this->assertEquals(42, $tag->sort_order);
+        $this->assertSame(42, $tag->sort_order);
     }
 
     public function test_parent_relationship_returns_parent_tag(): void
@@ -117,8 +115,7 @@ final class TagModelTest extends TestCase
         $children = $parent->children;
 
         $this->assertCount(2, $children);
-        $this->assertEquals('Age of Sigmar', $children[0]->name);
-        $this->assertEquals('Warhammer 40k', $children[1]->name);
+        $this->assertSame(['Age of Sigmar', 'Warhammer 40k'], $children->pluck('name')->all());
     }
 
     public function test_children_relationship_orders_by_sort_order_then_name(): void
@@ -143,11 +140,9 @@ final class TagModelTest extends TestCase
             'sort_order' => 10,
         ]);
 
-        $children = $parent->fresh()->children;
+        $children = $parent->refresh()->children;
 
-        $this->assertEquals('Dungeons & Dragons', $children[0]->name);
-        $this->assertEquals('Pathfinder', $children[1]->name);
-        $this->assertEquals('Call of Cthulhu', $children[2]->name);
+        $this->assertSame(['Dungeons & Dragons', 'Pathfinder', 'Call of Cthulhu'], $children->pluck('name')->all());
     }
 
     public function test_events_relationship_returns_associated_events(): void
@@ -249,10 +244,7 @@ final class TagModelTest extends TestCase
 
         $tags = TagModel::ordered()->get();
 
-        $this->assertEquals('Alpha', $tags[0]->name);
-        $this->assertEquals('Zulu', $tags[1]->name);
-        $this->assertEquals('Beta', $tags[2]->name);
-        $this->assertEquals('Charlie', $tags[3]->name);
+        $this->assertSame(['Alpha', 'Zulu', 'Beta', 'Charlie'], $tags->pluck('name')->all());
     }
 
     public function test_applies_to_method_returns_true_when_type_matches(): void
@@ -310,6 +302,7 @@ final class TagModelTest extends TestCase
         $child = TagModel::factory()->withParent($parent)->create();
 
         $this->assertEquals($parent->id, $child->parent_id);
+        $this->assertNotNull($child->parent);
         $this->assertEquals('Parent Tag', $child->parent->name);
     }
 

@@ -41,22 +41,22 @@ final class ModulePathResolverTest extends TestCase
 
     public function test_the_stored_path_wins_while_it_exists(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $stored = $this->modulesPath.'/elsewhere/'.self::MODULE;
         File::makeDirectory($stored, 0755, true);
 
         $this->assertSame($stored, $this->resolver()->resolve($this->module($stored)));
-        Log::shouldNotHaveReceived('warning');
+        $log->shouldNotHaveReceived('warning');
     }
 
     public function test_a_stale_stored_path_falls_back_to_the_modules_directory(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $stale = $this->modulesPath.'/moved-away';
 
         $this->assertSame($this->modulesPath.'/'.self::MODULE, $this->resolver()->resolve($this->module($stale)));
 
-        Log::shouldHaveReceived('warning')
+        $log->shouldHaveReceived('warning')
             ->once()
             ->withArgs(fn (string $message, array $context): bool => $message === 'Stored path of module '.self::MODULE.' does not exist, using the modules directory'
                 && $context === ['stored_path' => $stale, 'path' => $this->modulesPath.'/'.self::MODULE]);
@@ -64,23 +64,23 @@ final class ModulePathResolverTest extends TestCase
 
     public function test_the_fallback_is_logged_once_a_day_not_on_every_request(): void
     {
-        Log::spy();
+        $log = Log::spy();
         $module = $this->module($this->modulesPath.'/moved-away');
 
         $this->resolver()->resolve($module);
         $this->resolver()->resolve($module);
 
-        Log::shouldHaveReceived('warning')->once();
+        $log->shouldHaveReceived('warning')->once();
     }
 
     public function test_the_fallback_is_logged_when_the_cache_is_down(): void
     {
-        Log::spy();
+        $log = Log::spy();
         Cache::shouldReceive('add')->andThrow(new \RuntimeException('cache down'));
 
         $this->resolver()->resolve($this->module($this->modulesPath.'/moved-away'));
 
-        Log::shouldHaveReceived('warning')->once();
+        $log->shouldHaveReceived('warning')->once();
     }
 
     public function test_a_module_found_nowhere_throws(): void

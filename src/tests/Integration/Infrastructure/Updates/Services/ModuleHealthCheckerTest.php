@@ -192,12 +192,15 @@ class PartialfailModuleServiceProvider extends ServiceProvider
 
         $result = $this->service->check(ModuleName::fromString('test'));
 
-        // Verify DTO has all expected properties
-        $this->assertIsBool($result->providerLoads);
-        $this->assertIsBool($result->routesRespond);
-        $this->assertIsBool($result->filamentRegisters);
-        $this->assertIsArray($result->errors);
-        $this->assertIsArray($result->warnings);
+        // A missing module fails every check, with one error and one warning per soft check
+        $this->assertFalse($result->providerLoads);
+        $this->assertFalse($result->routesRespond);
+        $this->assertFalse($result->filamentRegisters);
+        $this->assertSame(['Service provider failed to load'], $result->errors);
+        $this->assertSame([
+            'Module routes may not be responding correctly',
+            'Filament resources may not be registered correctly',
+        ], $result->warnings);
     }
 
     private function createValidModule(string $name): string

@@ -115,8 +115,8 @@ final class EloquentArticleRepositoryTest extends TestCase
 
         $articles = $this->repository->findPublished();
 
-        $this->assertEquals('Latest Article', $articles->first()->title());
-        $this->assertEquals('First Article', $articles->last()->title());
+        $this->assertEquals('Latest Article', $articles->first()?->title());
+        $this->assertEquals('First Article', $articles->last()?->title());
     }
 
     public function test_it_finds_articles_by_author(): void

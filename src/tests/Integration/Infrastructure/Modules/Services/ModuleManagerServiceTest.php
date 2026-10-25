@@ -23,11 +23,13 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Tests\Support\Files\ReadsFiles;
 use Tests\TestCase;
 
 final class ModuleManagerServiceTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use ReadsFiles;
 
     private ModuleManagerServiceInterface $service;
 
@@ -451,7 +453,6 @@ final class ModuleManagerServiceTest extends TestCase
 
         $migrationsRun = $this->service->migrate(ModuleName::fromString('test-module'));
 
-        $this->assertIsInt($migrationsRun);
         $this->assertGreaterThanOrEqual(0, $migrationsRun);
     }
 
@@ -483,7 +484,7 @@ final class ModuleManagerServiceTest extends TestCase
         ]);
 
         // Verify installed_at is set in database
-        $dbModule = ModuleModel::where('name', 'test-module')->first();
+        $dbModule = ModuleModel::where('name', 'test-module')->firstOrFail();
         $this->assertNotNull($dbModule->installed_at);
     }
 
@@ -510,7 +511,8 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertTrue($module->isInstalled());
 
         // installed_at should remain the same (not updated)
-        $dbModule = ModuleModel::where('name', 'test-module')->first();
+        $dbModule = ModuleModel::where('name', 'test-module')->firstOrFail();
+        $this->assertNotNull($dbModule->installed_at);
         $this->assertEquals(
             $installedAt->format('Y-m-d H:i:s'),
             $dbModule->installed_at->format('Y-m-d H:i:s')
@@ -570,12 +572,12 @@ final class ModuleManagerServiceTest extends TestCase
         $settingsFile = "{$this->testModulesPath}/test-module/config/settings.php";
         mkdir(dirname($settingsFile), 0755, true);
         file_put_contents($settingsFile, "<?php\n\nreturn ['notifications' => ['on_registration' => true, 'on_cancellation' => true], 'limit' => 5];\n");
-        $original = (string) file_get_contents($settingsFile);
+        $original = self::readFile($settingsFile);
         ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module"]);
 
         $this->service->updateSettings(ModuleName::fromString('test-module'), ['notifications' => ['on_registration' => false], 'limit' => 8]);
 
-        $this->assertSame($original, file_get_contents($settingsFile));
+        $this->assertSame($original, self::readFile($settingsFile));
         $this->assertSame(
             '{"notifications":{"on_registration":false},"limit":8}',
             SettingModel::query()->where('key', 'module_settings:test-module')->value('value'),
@@ -648,7 +650,8 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertTrue($module->isInstalled());
 
         // installed_at should remain the same (not updated)
-        $dbModule = ModuleModel::where('name', 'test-module')->first();
+        $dbModule = ModuleModel::where('name', 'test-module')->firstOrFail();
+        $this->assertNotNull($dbModule->installed_at);
         $this->assertEquals(
             $installedAt->format('Y-m-d H:i:s'),
             $dbModule->installed_at->format('Y-m-d H:i:s')
@@ -662,8 +665,9 @@ final class ModuleManagerServiceTest extends TestCase
         $this->service->discover();
 
         $module = $this->service->find(new ModuleName('repo-module'));
-        $this->assertSame('acme', $module?->sourceOwner());
-        $this->assertSame('guildforge-repo-module', $module?->sourceRepo());
+        $this->assertNotNull($module);
+        $this->assertSame('acme', $module->sourceOwner());
+        $this->assertSame('guildforge-repo-module', $module->sourceRepo());
     }
 
     public function test_discover_syncs_source_for_existing_modules(): void
@@ -675,8 +679,9 @@ final class ModuleManagerServiceTest extends TestCase
         $this->service->discover();
 
         $module = $this->service->find(new ModuleName('repo-module'));
-        $this->assertSame('acme', $module?->sourceOwner());
-        $this->assertSame('new-repo', $module?->sourceRepo());
+        $this->assertNotNull($module);
+        $this->assertSame('acme', $module->sourceOwner());
+        $this->assertSame('new-repo', $module->sourceRepo());
     }
 
     public function test_discover_keeps_manual_source_when_manifest_has_no_repository(): void
@@ -838,13 +843,13 @@ final class ModuleManagerServiceTest extends TestCase
         ]);
 
         // The skip is also observed through its warning
-        Log::spy();
+        $log = Log::spy();
 
         $this->service->discover();
 
         $this->assertFalse(Schema::hasTable('test_module_table'));
         $this->assertDatabaseHas('modules', ['name' => 'test-module', 'version' => '1.1.0', 'status' => 'enabled']);
-        Log::shouldHaveReceived('warning')
+        $log->shouldHaveReceived('warning')
             ->withArgs(fn (string $message): bool => str_contains($message, 'Not migrating module test-module'))
             ->once();
     }
@@ -853,9 +858,9 @@ final class ModuleManagerServiceTest extends TestCase
     {
         $path = $this->testModulesPath.'/'.$name.'/module.json';
         /** @var array<string, mixed> $manifest */
-        $manifest = json_decode((string) file_get_contents($path), true);
+        $manifest = json_decode(self::readFile($path), true);
         $manifest[$key] = $value;
-        file_put_contents($path, json_encode($manifest, JSON_PRETTY_PRINT));
+        file_put_contents($path, json_encode($manifest, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
     }
 
     /**
@@ -865,10 +870,13 @@ final class ModuleManagerServiceTest extends TestCase
     {
         $path = $this->testModulesPath.'/'.$name.'/module.json';
         /** @var array<string, mixed> $manifest */
-        $manifest = json_decode((string) file_get_contents($path), true);
-        file_put_contents($path, json_encode(array_merge($manifest, $values), JSON_PRETTY_PRINT));
+        $manifest = json_decode(self::readFile($path), true);
+        file_put_contents($path, json_encode(array_merge($manifest, $values), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
     }
 
+    /**
+     * @param  array<string, mixed>  $manifest
+     */
     private function createTestModule(string $name, array $manifest = []): void
     {
         $modulePath = $this->testModulesPath.'/'.$name;
@@ -889,7 +897,7 @@ final class ModuleManagerServiceTest extends TestCase
 
         file_put_contents(
             $modulePath.'/module.json',
-            json_encode($manifest, JSON_PRETTY_PRINT)
+            json_encode($manifest, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)
         );
     }
 

@@ -58,7 +58,6 @@ final class ThemeSettingsServiceTest extends TestCase
     {
         $css = $this->service->getCssVariables();
 
-        $this->assertIsString($css);
         $this->assertStringContainsString(':root {', $css);
         $this->assertStringContainsString('.dark {', $css);
         // New palette variables
@@ -164,13 +163,11 @@ final class ThemeSettingsServiceTest extends TestCase
         $css = $this->service->getCssVariables();
 
         foreach (['light' => $this->extractLightModeSection($css), 'dark' => $this->extractDarkModeSection($css)] as $mode => $section) {
-            $this->assertMatchesRegularExpression('/--color-bg-surface:\s*([^;]+);/', $section);
-            $this->assertMatchesRegularExpression('/--color-bg-muted:\s*([^;]+);/', $section);
-            preg_match('/--color-bg-surface:\s*([^;]+);/', $section, $surface);
-            preg_match('/--color-bg-muted:\s*([^;]+);/', $section, $muted);
+            $surface = $this->cssVariable($section, 'color-bg-surface');
+            $muted = $this->cssVariable($section, 'color-bg-muted');
 
             // Boxes and pills drawn with bg-muted on a card vanish when both resolve to the same colour
-            $this->assertNotSame(trim($surface[1]), trim($muted[1]), "bg-muted equals bg-surface in {$mode} mode");
+            $this->assertNotSame($surface, $muted, "bg-muted equals bg-surface in {$mode} mode");
         }
     }
 
@@ -223,6 +220,15 @@ final class ThemeSettingsServiceTest extends TestCase
 
         $this->assertStringContainsString("'Roboto', system-ui, sans-serif", $css);
         $this->assertStringContainsString("'Open Sans', system-ui, sans-serif", $css);
+    }
+
+    private function cssVariable(string $section, string $name): string
+    {
+        if (preg_match('/--'.preg_quote($name, '/').':\s*([^;]+);/', $section, $matches) !== 1) {
+            $this->fail("--{$name} is not defined");
+        }
+
+        return trim($matches[1]);
     }
 
     private function extractLightModeSection(string $css): string

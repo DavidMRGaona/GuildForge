@@ -116,7 +116,6 @@ final class EventModelTest extends TestCase
     {
         $event = EventModel::factory()->multiDay()->create();
 
-        $this->assertNotNull($event->end_date);
         $this->assertInstanceOf(\DateTimeInterface::class, $event->end_date);
         $this->assertGreaterThan($event->start_date, $event->end_date);
     }

@@ -7,6 +7,7 @@ namespace Tests\Integration\Infrastructure\Services;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Infrastructure\Services\ImageOptimizationService;
+use GdImage;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -95,7 +96,6 @@ final class ImageOptimizationServiceTest extends TestCase
 
         // Lower quality should result in smaller file (usually)
         // This is a soft assertion - compression behavior can vary
-        $this->assertIsString($result);
         $this->assertGreaterThan(0, strlen($result));
     }
 
@@ -279,7 +279,7 @@ final class ImageOptimizationServiceTest extends TestCase
         $this->assertSame([], $logger->records, 'optimize() must not swallow an exception into a warning');
         [$width] = $this->getImageDimensions($result);
         $this->assertLessThanOrEqual(1024, $width);
-        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
+        $this->assertSame('image/jpeg', $this->mimeType($result));
     }
 
     public function test_it_optimizes_with_the_gd_driver(): void
@@ -291,7 +291,7 @@ final class ImageOptimizationServiceTest extends TestCase
 
         $this->assertSame([], $logger->records);
         $this->assertLessThanOrEqual(1024, $this->getImageDimensions($result)[0]);
-        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
+        $this->assertSame('image/jpeg', $this->mimeType($result));
     }
 
     #[RequiresPhpExtension('imagick')]
@@ -304,21 +304,23 @@ final class ImageOptimizationServiceTest extends TestCase
 
         $this->assertSame([], $logger->records);
         $this->assertLessThanOrEqual(1024, $this->getImageDimensions($result)[0]);
-        $this->assertSame('image/jpeg', getimagesizefromstring($result)['mime']);
+        $this->assertSame('image/jpeg', $this->mimeType($result));
     }
 
     /**
      * Create a JPEG image with specified dimensions.
+     *
+     * @param  positive-int  $width
+     * @param  positive-int  $height
      */
     private function createJpegImage(int $width, int $height, int $quality = 90): string
     {
         $image = imagecreatetruecolor($width, $height);
-        $color = imagecolorallocate($image, rand(0, 255), rand(0, 255), rand(0, 255));
-        imagefill($image, 0, 0, $color);
+        imagefill($image, 0, 0, $this->randomColor($image));
 
         // Add some random rectangles to increase file size
         for ($i = 0; $i < 50; $i++) {
-            $rectColor = imagecolorallocate($image, rand(0, 255), rand(0, 255), rand(0, 255));
+            $rectColor = $this->randomColor($image);
             imagefilledrectangle(
                 $image,
                 rand(0, $width),
@@ -338,12 +340,14 @@ final class ImageOptimizationServiceTest extends TestCase
 
     /**
      * Create a PNG image with specified dimensions.
+     *
+     * @param  positive-int  $width
+     * @param  positive-int  $height
      */
     private function createPngImage(int $width, int $height): string
     {
         $image = imagecreatetruecolor($width, $height);
-        $color = imagecolorallocate($image, rand(0, 255), rand(0, 255), rand(0, 255));
-        imagefill($image, 0, 0, $color);
+        imagefill($image, 0, 0, $this->randomColor($image));
 
         ob_start();
         imagepng($image);
@@ -354,12 +358,14 @@ final class ImageOptimizationServiceTest extends TestCase
 
     /**
      * Create a static (non-animated) GIF image.
+     *
+     * @param  positive-int  $width
+     * @param  positive-int  $height
      */
     private function createStaticGif(int $width, int $height): string
     {
         $image = imagecreatetruecolor($width, $height);
-        $color = imagecolorallocate($image, rand(0, 255), rand(0, 255), rand(0, 255));
-        imagefill($image, 0, 0, $color);
+        imagefill($image, 0, 0, $this->randomColor($image));
 
         ob_start();
         imagegif($image);
@@ -374,6 +380,28 @@ final class ImageOptimizationServiceTest extends TestCase
     private function createAnimatedGif(): string
     {
         return ImageFixtures::gif(2, colorTable: "\xFF\xFF\xFF\x00\x00\x00");
+    }
+
+    private function randomColor(GdImage $image): int
+    {
+        $color = imagecolorallocate($image, rand(0, 255), rand(0, 255), rand(0, 255));
+
+        if ($color === false) {
+            $this->fail('GD could not allocate a colour');
+        }
+
+        return $color;
+    }
+
+    private function mimeType(string $contents): string
+    {
+        $info = getimagesizefromstring($contents);
+
+        if ($info === false) {
+            $this->fail('The result is not an image');
+        }
+
+        return $info['mime'];
     }
 
     /**

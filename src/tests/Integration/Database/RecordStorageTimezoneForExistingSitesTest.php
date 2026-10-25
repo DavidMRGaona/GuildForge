@@ -6,10 +6,10 @@ namespace Tests\Integration\Database;
 
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Time\StorageTimezoneResolver;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\Support\Database\RunsMigrationFiles;
 use Tests\TestCase;
 
 /**
@@ -19,6 +19,7 @@ use Tests\TestCase;
 final class RecordStorageTimezoneForExistingSitesTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RunsMigrationFiles;
 
     private const string MIGRATION = 'migrations/2026_10_25_000001_record_storage_timezone_for_existing_sites.php';
 
@@ -32,7 +33,7 @@ final class RecordStorageTimezoneForExistingSitesTest extends TestCase
     {
         UserModel::factory()->create();
 
-        $this->migration()->up();
+        $this->runMigration('up');
 
         $this->assertSame('Europe/Madrid', $this->marker());
         $row = DB::table('settings')->where('key', StorageTimezoneResolver::SETTING_KEY)->first();
@@ -43,7 +44,7 @@ final class RecordStorageTimezoneForExistingSitesTest extends TestCase
 
     public function test_a_site_without_data_gets_no_marker(): void
     {
-        $this->migration()->up();
+        $this->runMigration('up');
 
         $this->assertNull($this->marker());
     }
@@ -53,7 +54,7 @@ final class RecordStorageTimezoneForExistingSitesTest extends TestCase
         UserModel::factory()->create();
         $this->insertMarker('UTC');
 
-        $this->migration()->up();
+        $this->runMigration('up');
 
         $this->assertSame('UTC', $this->marker());
         $this->assertSame(1, DB::table('settings')->where('key', StorageTimezoneResolver::SETTING_KEY)->count());
@@ -62,9 +63,9 @@ final class RecordStorageTimezoneForExistingSitesTest extends TestCase
     public function test_down_keeps_the_madrid_marker(): void
     {
         UserModel::factory()->create();
-        $this->migration()->up();
+        $this->runMigration('up');
 
-        $this->migration()->down();
+        $this->runMigration('down');
 
         // Removing a marker is never safe: a UTC environment default would misread Madrid data
         $this->assertSame('Europe/Madrid', $this->marker());
@@ -75,7 +76,7 @@ final class RecordStorageTimezoneForExistingSitesTest extends TestCase
         // A converted site: removing its marker would read its UTC data as Madrid
         $this->insertMarker('UTC');
 
-        $this->migration()->down();
+        $this->runMigration('down');
 
         $this->assertSame('UTC', $this->marker());
     }
@@ -94,8 +95,8 @@ final class RecordStorageTimezoneForExistingSitesTest extends TestCase
         return $value === null ? null : (string) $value;
     }
 
-    private function migration(): Migration
+    private function runMigration(string $direction): void
     {
-        return require database_path(self::MIGRATION);
+        $this->runMigrationFile(database_path(self::MIGRATION), $direction);
     }
 }

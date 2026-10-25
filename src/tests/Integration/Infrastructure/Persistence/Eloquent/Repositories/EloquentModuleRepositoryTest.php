@@ -288,9 +288,10 @@ final class EloquentModuleRepositoryTest extends TestCase
         $this->assertSame([$issue->toArray()], $row->latest_blocked_reason);
 
         $reloaded = $this->repository->findByName(new ModuleName('blocked-module'));
-        $this->assertEquals([$issue], $reloaded?->latestBlockedIssues());
+        $this->assertNotNull($reloaded);
+        $this->assertEquals([$issue], $reloaded->latestBlockedIssues());
 
-        $reloaded?->clearLatestBlocked();
+        $reloaded->clearLatestBlocked();
         $this->repository->save($reloaded);
         $this->assertNull(ModuleModel::query()->where('name', 'blocked-module')->firstOrFail()->latest_blocked_reason);
     }

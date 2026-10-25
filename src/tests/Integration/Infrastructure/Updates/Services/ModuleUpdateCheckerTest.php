@@ -218,7 +218,7 @@ final class ModuleUpdateCheckerTest extends TestCase
         $results = $this->service->checkAllForUpdates();
 
         $this->assertCount(1, $results);
-        $this->assertEquals('forumall', $results->first()->moduleName);
+        $this->assertEquals('forumall', $results->first()?->moduleName);
     }
 
     public function test_check_all_returns_empty_when_all_up_to_date(): void

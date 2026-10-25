@@ -53,7 +53,6 @@ final class HasSlugTest extends TestCase
             'title' => 'My Test Title',
         ]);
 
-        $this->assertNotNull($model->slug);
         $this->assertStringStartsWith('my-test-title-', $model->slug);
         $this->assertMatchesRegularExpression('/^my-test-title-[a-f0-9]{8}$/', $model->slug);
     }
@@ -64,8 +63,7 @@ final class HasSlugTest extends TestCase
             'title' => 'My Test Title',
         ]);
 
-        $this->assertNotNull($model->slug);
-        $this->assertEquals('my-test-title', $model->slug);
+        $this->assertSame('my-test-title', $model->slug);
     }
 
     public function test_a_unique_slug_can_be_generated_for_an_existing_record(): void

@@ -60,15 +60,15 @@ final class StorageTimezoneConverterPgsqlTest extends TestCase
         app(SettingsServiceInterface::class)->set('maintenance_enabled', '1');
 
         try {
-            $this->artisan('timezone:convert-storage')->assertSuccessful();
+            $this->artisanCommand('timezone:convert-storage')->assertSuccessful();
 
             $this->assertSame('2026-07-01 10:00:00', $this->startOf($event));
             $this->assertSame('UTC', DB::table('settings')->where('key', StorageTimezoneResolver::SETTING_KEY)->value('value'));
 
-            $this->artisan('timezone:convert-storage')->expectsOutputToContain('already')->assertSuccessful();
+            $this->artisanCommand('timezone:convert-storage')->expectsOutputToContain('already')->assertSuccessful();
             $this->assertSame('2026-07-01 10:00:00', $this->startOf($event));
 
-            $this->artisan('timezone:convert-storage --reverse')->assertSuccessful();
+            $this->artisanCommand('timezone:convert-storage --reverse')->assertSuccessful();
 
             $this->assertSame('2026-07-01 12:00:00', $this->startOf($event));
             $this->assertSame('Europe/Madrid', DB::table('settings')->where('key', StorageTimezoneResolver::SETTING_KEY)->value('value'));
@@ -108,7 +108,7 @@ final class StorageTimezoneConverterPgsqlTest extends TestCase
         });
         DB::statement("insert into zz_module_fixture (id, signed_at) values ('".Str::uuid()."', '2026-07-01 12:00:00+02')");
 
-        $this->artisan('timezone:convert-storage --dry-run')
+        $this->artisanCommand('timezone:convert-storage --dry-run')
             ->expectsOutputToContain('Already zone-aware, not converted: zz_module_fixture.signed_at')
             ->assertSuccessful();
 
@@ -157,7 +157,7 @@ final class StorageTimezoneConverterPgsqlTest extends TestCase
             'reviewed_at' => null,
             'day' => '2026-07-01',
             'opens_at' => '12:00:00',
-            'payload' => json_encode(['at' => '2026-07-01 12:00:00']),
+            'payload' => json_encode(['at' => '2026-07-01 12:00:00'], JSON_THROW_ON_ERROR),
         ]);
         DB::table('failed_jobs')->insert([
             'uuid' => (string) Str::uuid(),

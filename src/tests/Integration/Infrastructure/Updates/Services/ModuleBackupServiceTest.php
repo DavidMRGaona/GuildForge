@@ -187,10 +187,12 @@ final class ModuleBackupServiceTest extends TestCase
         $backups = $this->service->listBackups(ModuleName::fromString('listbackups'));
 
         $this->assertCount(2, $backups);
-        $this->assertArrayHasKey('path', $backups->first());
-        $this->assertArrayHasKey('created_at', $backups->first());
-        $this->assertArrayHasKey('size', $backups->first());
-        $this->assertArrayHasKey('version', $backups->first());
+        $backup = $backups->first();
+        $this->assertNotNull($backup);
+        $this->assertArrayHasKey('path', $backup);
+        $this->assertArrayHasKey('created_at', $backup);
+        $this->assertArrayHasKey('size', $backup);
+        $this->assertArrayHasKey('version', $backup);
     }
 
     public function test_it_returns_empty_collection_when_no_backups_exist(): void
@@ -274,7 +276,7 @@ final class ModuleBackupServiceTest extends TestCase
             'name' => $name,
             'version' => $version,
             'namespace' => 'Modules\\'.ucfirst($name),
-        ]));
+        ], JSON_THROW_ON_ERROR));
 
         File::put("{$modulePath}/src/ModuleProvider.php", "<?php\nclass ".ucfirst($name).'ModuleServiceProvider {}');
         File::put("{$modulePath}/config/config.php", "<?php\nreturn [];");
