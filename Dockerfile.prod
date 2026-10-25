@@ -25,11 +25,12 @@ FROM alpine:3.22 AS frontend-sources
 WORKDIR /src
 COPY src/ .
 RUN find . -mindepth 1 -maxdepth 1 \
-        ! -name app ! -name resources ! -name modules \
+        ! -name app ! -name resources ! -name modules ! -name scripts \
         ! -name package.json ! -name package-lock.json \
         ! -name vite.config.ts ! -name tsconfig.json ! -name tsconfig.node.json \
         -exec rm -rf {} + \
-    && find app -mindepth 1 -maxdepth 1 ! -name Filament -exec rm -rf {} +
+    && find app -mindepth 1 -maxdepth 1 ! -name Filament -exec rm -rf {} + \
+    && find scripts -mindepth 1 -maxdepth 1 ! -name verify-build.mjs -exec rm -rf {} +
 
 # Stage 1: Build frontend assets
 FROM node:24-alpine AS assets
@@ -39,8 +40,10 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci
 COPY --from=frontend-sources /src/ .
 COPY --from=vendor /filament-css/ vendor/filament/
-# vite build only: types are checked by CI, which every deployment waits for
-RUN npx vite build
+# vite build only: types are checked by CI, which every deployment waits for. The check
+# fails if the core build took in the modules below: production builds carry none, and
+# their pages, slot components and translations must load from each module's build here too
+RUN npx vite build && node scripts/verify-build.mjs
 
 # Build module assets (modules with package.json and vite.config.ts). Every module repo
 # tracks its lockfile, so npm ci; a module that fails to install or build fails the

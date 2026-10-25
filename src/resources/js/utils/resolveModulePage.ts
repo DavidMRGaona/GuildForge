@@ -238,15 +238,15 @@ async function loadDynamicPage(
  * This is used in app.ts to configure Inertia's page resolution.
  *
  * The resolver tries multiple strategies:
- * 1. Build-time glob (modules present at build time) - fastest
- * 2. Runtime dynamic loading via manifest (modules installed after build)
+ * 1. The module's sources (development only: app.ts globs them for hot reload)
+ * 2. Runtime dynamic loading via the module's manifest (always in production)
  */
 export function createPageResolver(options: ResolveOptions) {
     return async (name: string): Promise<DefineComponent> => {
         const moduleName = getModuleForPage(name);
 
         if (moduleName !== null) {
-            // This is a module page - try build-time glob first
+            // This is a module page - try its sources first (development only)
             const modulePath = `../../modules/${moduleName}/resources/js/pages/${name}.vue`;
 
             if (options.modulePages[modulePath]) {

@@ -4,9 +4,13 @@
 // and its contracts are entries in the manifest and keep their exports, and
 // app.ts, vendor-exports/vue.ts and every contract import the same single
 // vendor-vue chunk (a contract on another Vue copy would lose reactivity).
-// The other entries' chunk imports are not checked. Run after `vite build`.
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+// The other entries' chunk imports are not checked. It also fails if the core
+// build contains a module's sources: in production module pages, slot
+// components and translations only come from each module's own build, so a
+// build that sees src/modules must not load them another way. Run after
+// `vite build`.
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 const buildDir = resolve(process.argv[2] ?? 'public/build');
 const manifest = JSON.parse(readFileSync(resolve(buildDir, 'manifest.json'), 'utf8'));
@@ -86,6 +90,22 @@ for (const contract of CONTRACTS) {
     const contractVue = vueChunks(contract);
     if (contractVue.length !== 1 || contractVue[0] !== appVue[0]) {
         failures.push(`${contract} does not import the app's vendor-vue chunk (${contractVue})`);
+    }
+}
+
+// A glob over module sources leaves their paths as string literals in the bundle
+const MODULE_SOURCE = /modules\/[a-z0-9-]+\/resources\/js\//;
+function builtScripts(dir) {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((item) => {
+        const path = join(dir, item.name);
+        if (item.isDirectory()) return item.name === 'modules' ? [] : builtScripts(path);
+        return item.name.endsWith('.js') ? [path] : [];
+    });
+}
+for (const file of builtScripts(buildDir)) {
+    const match = readFileSync(file, 'utf8').match(MODULE_SOURCE);
+    if (match) {
+        failures.push(`${file.slice(buildDir.length + 1)} contains module sources (${match[0]}…)`);
     }
 }
 
