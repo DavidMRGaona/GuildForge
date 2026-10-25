@@ -23,7 +23,6 @@ const emit = defineEmits<{
     cancel: [];
 }>();
 
-// eslint-disable-next-line no-undef
 const dialogRef = ref<HTMLDialogElement | null>(null);
 
 watch(
