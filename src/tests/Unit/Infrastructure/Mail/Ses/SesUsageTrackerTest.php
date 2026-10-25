@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Mail\Ses;
 
+use App\Application\Services\TimezoneServiceInterface;
 use App\Infrastructure\Mail\Ses\SesUsageTracker;
 use App\Infrastructure\Persistence\Eloquent\Models\SesUsageRecordModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
 use PHPUnit\Framework\Attributes\CoversClass;
+use Tests\Support\Time\UsesUtcStorage;
 use Tests\TestCase;
 
 #[CoversClass(SesUsageTracker::class)]
 final class SesUsageTrackerTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use UsesUtcStorage;
 
     private SesUsageTracker $tracker;
 
@@ -34,13 +37,13 @@ final class SesUsageTrackerTest extends TestCase
         $record = SesUsageRecordModel::query()->first();
         $this->assertNotNull($record);
         $this->assertSame(1, $record->emails_sent);
-        $this->assertTrue(Carbon::today()->isSameDay($record->date));
+        $this->assertSame($this->displayToday(), $record->date->format('Y-m-d'));
     }
 
     public function test_increment_emails_sent_updates_existing_record(): void
     {
         SesUsageRecordModel::create([
-            'date' => Carbon::today(),
+            'date' => $this->displayToday(),
             'emails_sent' => 5,
             'estimated_cost' => 0.0005,
             'bounces_count' => 0,
@@ -60,7 +63,7 @@ final class SesUsageTrackerTest extends TestCase
     {
         $this->tracker->incrementEmailsSent(1000);
 
-        $record = SesUsageRecordModel::query()->whereDate('date', Carbon::today())->first();
+        $record = SesUsageRecordModel::query()->whereDate('date', $this->displayToday())->first();
 
         $this->assertNotNull($record);
         $this->assertSame(1000, $record->emails_sent);
@@ -81,7 +84,7 @@ final class SesUsageTrackerTest extends TestCase
     public function test_increment_bounces_updates_existing_record(): void
     {
         SesUsageRecordModel::create([
-            'date' => Carbon::today(),
+            'date' => $this->displayToday(),
             'emails_sent' => 0,
             'estimated_cost' => 0,
             'bounces_count' => 2,
@@ -111,7 +114,7 @@ final class SesUsageTrackerTest extends TestCase
     public function test_get_today_usage_returns_existing_record(): void
     {
         SesUsageRecordModel::create([
-            'date' => Carbon::today(),
+            'date' => $this->displayToday(),
             'emails_sent' => 42,
             'estimated_cost' => 0.0042,
             'bounces_count' => 3,
@@ -124,6 +127,29 @@ final class SesUsageTrackerTest extends TestCase
         $this->assertSame(42, $result->emails_sent);
         $this->assertSame(3, $result->bounces_count);
         $this->assertSame(1, $result->complaints_count);
+    }
+
+    public function test_today_is_the_display_day_when_storage_and_display_dates_differ(): void
+    {
+        // 23:30Z on 25 October is 00:30 on 26 October in Madrid (CET): storage is still on the 25th
+        $this->useUtcStorage();
+        Carbon::setTestNow(Carbon::parse('2026-10-25T23:30:00Z'));
+        $this->assertSame('2026-10-26', $this->displayToday());
+
+        SesUsageRecordModel::create([
+            'date' => $this->displayToday(),
+            'emails_sent' => 5,
+            'estimated_cost' => 0.0005,
+            'bounces_count' => 0,
+            'complaints_count' => 0,
+        ]);
+
+        $this->tracker->incrementEmailsSent(3);
+
+        $this->assertDatabaseCount('ses_usage_records', 1);
+        $this->assertSame(8, $this->tracker->getTodayUsage()->emails_sent);
+
+        Carbon::setTestNow();
     }
 
     public function test_get_today_usage_returns_default_when_no_record(): void
@@ -232,5 +258,11 @@ final class SesUsageTrackerTest extends TestCase
         $this->assertEqualsWithDelta(0.05, $this->tracker->getEstimatedCost(500), 0.0001);
         $this->assertEqualsWithDelta(0.25, $this->tracker->getEstimatedCost(2500), 0.0001);
         $this->assertEqualsWithDelta(0.0, $this->tracker->getEstimatedCost(0), 0.0001);
+    }
+
+    /** The tracker's "today": the display calendar day, which differs from the storage day around midnight. */
+    private function displayToday(): string
+    {
+        return app(TimezoneServiceInterface::class)->today()->format('Y-m-d');
     }
 }
