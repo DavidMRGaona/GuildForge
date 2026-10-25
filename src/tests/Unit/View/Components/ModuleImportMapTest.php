@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\View\Components;
 
 use App\View\Components\ModuleImportMap;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
@@ -19,6 +20,10 @@ final class ModuleImportMapTest extends TestCase
         $html = (new ModuleImportMap)->render()->render();
 
         $this->assertStringContainsString('<script type="importmap">', $html);
+        // Installed module bundles import these: the list may grow, never lose them
+        foreach (['vue', 'pinia', 'vue-i18n', '@inertiajs/vue3', '@unhead/vue', '@/contracts/cookieConsent'] as $specifier) {
+            $this->assertStringContainsString("\"{$specifier}\": ", $html, $specifier);
+        }
         foreach ($this->publicApi() as $specifier => $entry) {
             $asset = '/build/assets/'.pathinfo($entry, PATHINFO_FILENAME).'-ABC123.js';
             $this->assertStringContainsString("\"{$specifier}\": \"{$asset}\"", $html, $specifier);
@@ -47,6 +52,23 @@ final class ModuleImportMapTest extends TestCase
         Vite::shouldReceive('asset')->andThrow(new \Exception('Manifest not found'));
 
         $this->assertEmpty((new ModuleImportMap)->render()->render());
+    }
+
+    public function test_renders_nothing_and_logs_when_the_list_is_unreadable(): void
+    {
+        $list = tempnam(sys_get_temp_dir(), 'public-api');
+        file_put_contents($list, '{"packages": ');
+        Log::spy();
+
+        try {
+            $html = (new ModuleImportMap($list))->render()->render();
+        } finally {
+            unlink($list);
+        }
+
+        // Every page renders without module frontends rather than failing whole
+        $this->assertEmpty($html);
+        Log::shouldHaveReceived('error')->once();
     }
 
     /**

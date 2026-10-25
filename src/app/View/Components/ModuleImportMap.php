@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\View\Components;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\View\Component;
 
@@ -19,6 +20,13 @@ use Illuminate\View\Component;
  */
 final class ModuleImportMap extends Component
 {
+    /**
+     * @param  string|null  $publicApiPath  The list, resources/js/public-api.json by default
+     */
+    public function __construct(
+        private readonly ?string $publicApiPath = null,
+    ) {}
+
     public function render(): View
     {
         return view('components.module-import-map', [
@@ -52,13 +60,27 @@ final class ModuleImportMap extends Component
     /**
      * The shared packages and the public entries, specifier => Vite entry.
      *
+     * An unreadable list leaves the map empty: pages render without module frontends instead
+     * of failing whole.
+     *
      * @return array<string, string>
      */
     private function publicApi(): array
     {
-        /** @var array{packages: array<string, string>, entries: array<string, string>} $list */
-        $list = json_decode((string) file_get_contents(resource_path('js/public-api.json')), true, flags: JSON_THROW_ON_ERROR);
+        $path = $this->publicApiPath ?? resource_path('js/public-api.json');
 
-        return [...$list['packages'], ...$list['entries']];
+        try {
+            /** @var array{packages: array<string, string>, entries: array<string, string>} $list */
+            $list = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+
+            return [...$list['packages'], ...$list['entries']];
+        } catch (\Throwable $e) {
+            Log::error('Module import map: the public frontend API list cannot be read', [
+                'path' => $path,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
     }
 }
