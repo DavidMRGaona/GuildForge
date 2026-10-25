@@ -598,7 +598,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
     {
         $result = $this->service->createModule('blog-posts');
 
-        foreach (['phpunit.xml', '.gitignore', 'resources/css/module.css', '.github/workflows/release.yml'] as $file) {
+        foreach (['phpunit.xml', '.gitignore', 'resources/css/module.css', '.github/workflows/release.yml', '.github/workflows/tests.yml'] as $file) {
             $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$file] ?? null, $file);
             $this->assertFileExists($this->tempModulesPath.'/blog-posts/'.$file);
         }
@@ -621,6 +621,14 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $workflow = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.github/workflows/release.yml');
         $this->assertStringContainsString('reusable-module-release.yml@main', $workflow);
         $this->assertStringContainsString("module_name: 'blog-posts'", $workflow);
+
+        // A new module starts clean, so its pull requests run the quality checks from day one
+        $tests = (string) file_get_contents($this->tempModulesPath.'/blog-posts/.github/workflows/tests.yml');
+        $this->assertStringContainsString('reusable-module-tests.yml@main', $tests);
+        $this->assertStringContainsString("module_name: 'blog-posts'", $tests);
+        $this->assertStringContainsString('quality: true', $tests);
+        $this->assertStringContainsString("host_ref: \${{ vars.GUILDFORGE_HOST_REF || 'main' }}", $tests);
+        $this->assertStringContainsString('group: tests-${{ github.event.pull_request.number }}', $tests);
     }
 
     public function test_the_vite_config_builds_like_the_release_workflow_expects(): void

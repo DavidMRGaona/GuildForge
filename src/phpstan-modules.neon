@@ -1,0 +1,7 @@
+# The core's PHPStan configuration applied to a module (scripts/check-module-quality.sh
+# passes the module's src/ as the path). The core's ignore patterns need not match there.
+includes:
+    - phpstan.neon
+
+parameters:
+    reportUnmatchedIgnoredErrors: false

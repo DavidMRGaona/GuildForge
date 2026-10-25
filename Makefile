@@ -158,8 +158,17 @@ test-serial: ## Run all tests without parallelization
 # CODE QUALITY
 # =============================================================================
 
-check: rector cs phpstan lint-js format-check types ## Run ALL checks
+ifdef MODULE
+# make check MODULE=<name>: the core's tools and configuration on src/modules/<name>,
+# as the module's Quality job does in CI
+check: ## Run ALL checks (MODULE=<name>: on that module, as its CI Quality job)
+	@docker exec $(PHP_CONTAINER) sh scripts/check-module-quality.sh php $(MODULE); php=$$?; \
+	docker exec $(NODE_CONTAINER) sh scripts/check-module-quality.sh js $(MODULE); js=$$?; \
+	[ $$php -eq 0 ] && [ $$js -eq 0 ]
+else
+check: rector cs phpstan lint-js format-check types
 	@echo "All checks passed!"
+endif
 
 check-fix: rector-fix cs-fix lint-js-fix format-fix ## Fix all auto-fixable issues (Rector before Pint)
 	@echo "All auto-fixable issues resolved!"
