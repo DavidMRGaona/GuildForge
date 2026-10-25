@@ -41,7 +41,10 @@ final class StorageTimezoneResolver
         'filament:optimize-clear', 'vendor:publish', 'filament:upgrade', 'list', 'key:generate', 'test', 'analyse', 'analyze',
     ];
 
-    public function resolve(?string $consoleCommand = null, ?Application $app = null): string
+    /** Health route path; bootstrap/app.php registers the route from it. */
+    public const string HEALTH_PATH = '/up';
+
+    public function resolve(?string $consoleCommand = null, ?Application $app = null, ?string $requestPath = null): string
     {
         $app ??= Container::getInstance();
 
@@ -57,6 +60,12 @@ final class StorageTimezoneResolver
             }
 
             if ($consoleCommand !== null && in_array($consoleCommand, self::BUILD_COMMANDS, true)) {
+                return $default;
+            }
+
+            // The health check reads no stored dates; failing it during a brief outage would
+            // make the proxy drop the site, so it reports the process as alive.
+            if ($requestPath !== null && $this->pathOf($requestPath) === self::HEALTH_PATH) {
                 return $default;
             }
 
@@ -76,12 +85,16 @@ final class StorageTimezoneResolver
     public function apply(Application $app): void
     {
         $command = null;
+        $path = null;
 
         if ($app->runningInConsole()) {
             $command = self::commandName($_SERVER['argv'] ?? []);
+        } else {
+            $uri = $_SERVER['REQUEST_URI'] ?? null;
+            $path = is_string($uri) ? $uri : null;
         }
 
-        $zone = $this->resolve($command, $app);
+        $zone = $this->resolve($command, $app, $path);
 
         $config = $app->make('config');
         $display = (string) $config->get('app.display_timezone', 'Europe/Madrid');
@@ -111,6 +124,14 @@ final class StorageTimezoneResolver
         }
 
         return null;
+    }
+
+    /** Request URI without its query string or fragment. */
+    private function pathOf(string $uri): string
+    {
+        $end = strcspn($uri, '?#');
+
+        return substr($uri, 0, $end);
     }
 
     private function settingsTableIsMissing(ContainerContract $app): bool

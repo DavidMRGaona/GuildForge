@@ -90,7 +90,7 @@ Things to know before converting:
 
 - A wall time that does not exist (02:xx on the last Sunday of March, when clocks spring forward) is read as 03:xx, so it can collide with a real 03:xx value on a unique index and abort the run. The run is atomic: nothing changes, and the error names the index.
 - Once the data is in UTC, log timestamps and the daily log file boundary follow UTC too.
-- The health endpoint (`/up`) fails while the database is unreachable: the storage zone is read at boot and the application refuses to start without it.
+- The health endpoint (`/up`) stays up while the database is unreachable, because it does not read stored dates; every other request fails closed, since the storage zone is read at boot and guessing it would shift stored dates.
 - Turn maintenance mode on and off through the panel or the settings service. The command reads the setting fresh, so a change made straight in the database is honoured as well.
 
 ## Commands

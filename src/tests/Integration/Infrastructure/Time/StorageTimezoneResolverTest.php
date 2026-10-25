@@ -85,6 +85,45 @@ final class StorageTimezoneResolverTest extends TestCase
         app(StorageTimezoneResolver::class)->resolve(consoleCommand: 'migrate');
     }
 
+    #[DataProvider('healthPathProvider')]
+    public function test_the_health_path_keeps_working_while_the_database_is_unreachable(string $path, bool $survives): void
+    {
+        $this->makeDatabaseUnreachable();
+
+        if (! $survives) {
+            $this->expectException(StorageTimezoneUnavailableException::class);
+        }
+
+        $this->assertSame('Europe/Madrid', app(StorageTimezoneResolver::class)->resolve(requestPath: $path));
+    }
+
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function healthPathProvider(): array
+    {
+        return [
+            'health' => ['/up', true],
+            'health with query' => ['/up?x=1', true],
+            'other page' => ['/eventos', false],
+            'prefix of another path' => ['/upload', false],
+            'nested' => ['/up/more', false],
+        ];
+    }
+
+    public function test_the_health_path_honours_a_readable_marker(): void
+    {
+        $this->useUtcStorage();
+        $this->assertSame('UTC', app(StorageTimezoneResolver::class)->resolve(requestPath: '/up'));
+    }
+
+    public function test_the_health_path_still_rejects_an_invalid_marker(): void
+    {
+        DB::table('settings')->insert(['id' => (string) Str::uuid(), 'key' => 'storage_timezone', 'value' => 'Europe/Paris']);
+        $this->expectException(StorageTimezoneUnavailableException::class);
+        app(StorageTimezoneResolver::class)->resolve(requestPath: '/up');
+    }
+
     public function test_an_unreachable_database_uses_the_default_for_build_commands(): void
     {
         $this->makeDatabaseUnreachable();
