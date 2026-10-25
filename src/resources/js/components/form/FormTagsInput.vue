@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Plus, X } from '@lucide/vue';
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 const props = withDefaults(
     defineProps<{
@@ -27,6 +28,8 @@ const props = withDefaults(
 const emit = defineEmits<{
     'update:modelValue': [value: string[]];
 }>();
+
+const { t } = useI18n();
 
 const inputValue = ref('');
 const inputRef = ref<HTMLInputElement | null>(null);
@@ -99,7 +102,7 @@ function focusInput(): void {
                     v-if="!disabled"
                     type="button"
                     class="ml-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full text-primary hover:bg-primary-200 dark:hover:bg-primary-800 hover:text-primary-800 dark:hover:text-primary-100 focus:outline-none focus:bg-primary-500 focus:text-white transition-colors duration-150"
-                    :aria-label="`Eliminar ${tag}`"
+                    :aria-label="t('common.removeTag', { tag })"
                     @click.stop="removeTag(index)"
                 >
                     <X class="h-3 w-3" aria-hidden="true" />
@@ -124,6 +127,7 @@ function focusInput(): void {
             <button
                 v-if="canAddMore && !disabled && inputValue.trim()"
                 type="button"
+                :aria-label="t('common.addTag')"
                 class="inline-flex items-center justify-center rounded-md bg-primary hover:bg-primary-600 px-2 py-1 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors duration-150"
                 @click="addTag"
             >
