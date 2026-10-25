@@ -662,6 +662,16 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringNotContainsString('external', $config);
     }
 
+    public function test_a_new_module_runs_its_vue_tests_with_the_core_configuration(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $config = (string) file_get_contents($this->tempModulesPath.'/blog-posts/vitest.config.ts');
+
+        $this->assertStringContainsString("import { defineModuleTestConfig } from '../../vitest.module.config';", $config);
+        $this->assertStringContainsString('defineModuleTestConfig({ root: __dirname })', $config);
+    }
+
     public function test_a_new_module_has_no_package_json(): void
     {
         $result = $this->service->createModule('blog-posts');

@@ -82,6 +82,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             'module/routes-api.php.stub' => 'routes/api.php',
             'module/lang-messages.php.stub' => 'lang/es/messages.php',
             'module/vite.config.ts.stub' => 'vite.config.ts',
+            'module/vitest.config.ts.stub' => 'vitest.config.ts',
             'module/tsconfig.json.stub' => 'tsconfig.json',
             'module/module.css.stub' => 'resources/css/module.css',
             'module/phpunit.xml.stub' => 'phpunit.xml',

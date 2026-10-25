@@ -99,8 +99,9 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
         BUILD_OUT="$(mktemp -d)"
         run Build sh scripts/build-module.sh "$MODULE" --outDir "$BUILD_OUT" --logLevel warn
         rm -rf "$BUILD_OUT"
-        # The module's Vitest suite, with the core's Vitest (vitest.module.config.ts)
-        if [ -f "$DIR/vitest.config.ts" ]; then
+        # The module's Vitest suite, with the core's Vitest (vitest.module.config.ts); a new
+        # module has the configuration before its first test
+        if [ -f "$DIR/vitest.config.ts" ] && [ -n "$(find "$DIR/tests/js" -name '*.spec.ts' 2>/dev/null | head -n 1)" ]; then
             run Vitest sh -c "cd '$DIR' && ../../node_modules/.bin/vitest run"
         fi
     elif [ -f "$DIR/vitest.config.ts" ] && [ -f "$DIR/package-lock.json" ]; then
