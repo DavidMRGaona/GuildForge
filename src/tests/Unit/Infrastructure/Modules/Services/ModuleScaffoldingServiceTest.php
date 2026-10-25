@@ -631,6 +631,23 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('group: tests-${{ github.event.pull_request.number }}', $tests);
     }
 
+    public function test_the_tsconfig_type_checks_against_the_core(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        /** @var array{compilerOptions: array{paths: array<string, list<string>>}, include: list<string>} $tsconfig */
+        $tsconfig = json_decode((string) file_get_contents($this->tempModulesPath.'/blog-posts/tsconfig.json'), true, flags: JSON_THROW_ON_ERROR);
+        $paths = $tsconfig['compilerOptions']['paths'];
+
+        // '@/' is the core's code, as in the module's Vite and Vitest configs
+        $this->assertSame(['../../resources/js/*'], $paths['@/*']);
+        // The import map's packages are the core's copies at runtime, so their types are too
+        foreach (['vue', 'vue-i18n', 'pinia', '@inertiajs/vue3', '@unhead/vue'] as $package) {
+            $this->assertSame(['../../node_modules/'.$package], $paths[$package], $package);
+        }
+        $this->assertContains('../../resources/js/types/**/*.d.ts', $tsconfig['include']);
+    }
+
     public function test_the_vite_config_builds_like_the_release_workflow_expects(): void
     {
         $this->service->createModule('blog-posts');

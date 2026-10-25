@@ -23,7 +23,7 @@ on:
         type: string
         default: 'main'
       quality:
-        description: "Also run the core's quality tools on the module (Rector, Pint, PHPStan, ESLint, Prettier, Vitest); each module turns it on once its code passes them"
+        description: "Also run the core's quality tools on the module (Rector, Pint, PHPStan, ESLint, Prettier, vue-tsc, Vitest); each module turns it on once its code passes them"
         required: false
         type: boolean
         default: false
