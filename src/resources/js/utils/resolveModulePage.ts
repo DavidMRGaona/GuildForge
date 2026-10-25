@@ -1,4 +1,5 @@
 import type { DefineComponent } from 'vue';
+import { getModuleManifest, type ModuleManifest } from '@/utils/moduleManifest';
 import { attachModuleStylesheet } from '@/utils/moduleStyles';
 
 /**
@@ -62,29 +63,13 @@ interface ResolveOptions {
 // ==================
 
 /**
- * Vite manifest entry structure.
- */
-interface ManifestEntry {
-    file: string;
-    src?: string;
-    isEntry?: boolean;
-    css?: string[];
-    imports?: string[];
-}
-
-/**
- * Cache for module manifests (to avoid repeated fetches).
- */
-const manifestCache = new Map<string, Promise<Record<string, ManifestEntry> | null>>();
-
-/**
  * Stylesheets a page needs: its own and those of every chunk it imports,
  * recursively. Vite lists a stylesheet on the chunk that imports it, so a page
  * built from a shared component that imports CSS (venue-bookings' calendar pulls
  * in FullCalendar's) carries none of it on its own entry.
  */
 function collectPageCss(
-    manifest: Record<string, ManifestEntry>,
+    manifest: ModuleManifest,
     key: string,
     seen: Set<string> = new Set()
 ): string[] {
@@ -106,35 +91,6 @@ function collectPageCss(
  * Cache for dynamically loaded page components.
  */
 const dynamicPageCache = new Map<string, Promise<DefineComponent>>();
-
-/**
- * Fetch and cache a module's Vite manifest.
- * Returns null if manifest doesn't exist (module not built).
- */
-async function getModuleManifest(
-    moduleName: string
-): Promise<Record<string, ManifestEntry> | null> {
-    if (manifestCache.has(moduleName)) {
-        return manifestCache.get(moduleName)!;
-    }
-
-    const manifestUrl = `/build/modules/${moduleName}/manifest.json`;
-
-    // The manifest keeps the same URL across module updates while the chunks it
-    // points to are renamed, so a cached copy must always be revalidated. Browsers
-    // that cached it as immutable would otherwise import chunks that no longer exist.
-    const promise = fetch(manifestUrl, { cache: 'no-cache' })
-        .then((response) => {
-            if (!response.ok) {
-                return null;
-            }
-            return response.json() as Promise<Record<string, ManifestEntry>>;
-        })
-        .catch(() => null);
-
-    manifestCache.set(moduleName, promise);
-    return promise;
-}
 
 /**
  * Load a module page dynamically at runtime.
