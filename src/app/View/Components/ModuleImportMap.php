@@ -11,9 +11,10 @@ use Illuminate\View\Component;
 /**
  * Generates an import map for module externals.
  *
- * Modules are built with vue, pinia, vue-i18n, @inertiajs/vue3, and @unhead/vue marked as
- * external dependencies. The browser needs an import map to resolve these
- * bare import specifiers to the actual vendor chunk files from the main app.
+ * Modules are built with vue, pinia, vue-i18n, @inertiajs/vue3, @unhead/vue and the core's
+ * browser contracts (`@/contracts/*`) marked as external dependencies. The browser needs an
+ * import map to resolve these specifiers to the actual chunk files from the main app, so the
+ * page loads each of them once.
  */
 final class ModuleImportMap extends Component
 {
@@ -28,7 +29,8 @@ final class ModuleImportMap extends Component
      * Build import map from the main app's Vite manifest.
      *
      * Maps bare import specifiers (vue, pinia, vue-i18n, @inertiajs/vue3, @unhead/vue)
-     * to the built vendor-export entry points that re-export all symbols.
+     * to the built vendor-export entry points that re-export all symbols, and each
+     * contract to its own entry point.
      *
      * Uses Vite::asset() to resolve paths through the same mechanism
      * as @vite(), making it resilient to manifest location changes.
@@ -43,6 +45,7 @@ final class ModuleImportMap extends Component
             'resources/js/vendor-exports/vue-i18n.ts' => 'vue-i18n',
             'resources/js/vendor-exports/inertia.ts' => '@inertiajs/vue3',
             'resources/js/vendor-exports/unhead.ts' => '@unhead/vue',
+            'resources/js/contracts/cookieConsent.ts' => '@/contracts/cookieConsent',
         ];
 
         $imports = [];

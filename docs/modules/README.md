@@ -755,7 +755,9 @@ public function registerPagePrefixes(): array
 
 ### Shared packages
 
-The site shares `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` with modules through an import map: the module build keeps them external, so a module uses the site's instances. Any other package must be bundled. Imports from `@/` (core components, composables, layouts, types) resolve to the core's `resources/js` and are bundled into the module's build.
+The site shares `vue`, `pinia`, `vue-i18n`, `@inertiajs/vue3` and `@unhead/vue` with modules through an import map: the module build keeps them external, so a module uses the site's instances. Any other package must be bundled. Imports from `@/` (core components, composables, layouts, types) resolve to the core's `resources/js` and are bundled into the module's build, so each module carries its own copy: module-level state in such a file is not shared with the site or with other modules.
+
+The core's contracts (`@/contracts/*`, core ≥ 3.19) are the exception: they are import map entries too, and the module build keeps every `@/contracts/` import external, so the site and all modules share one instance. Shared state between modules goes there (see [Cookie consent in the browser](#cookie-consent-in-the-browser)).
 
 Link core pages through `useRoutes()` (`@/composables/useRoutes`), never with hand-written URLs; for example a consent checkbox links `useRoutes().legal.privacy` (core ≥ 3.16).
 
@@ -905,7 +907,7 @@ Modules with Vue pages or components ship them compiled. Assets are built in CI 
 - **Entries**: every `.vue` file under `resources/js/components` and `resources/js/pages`, keyed by its path (`resources/js/components/GameCard.vue`), plus `resources/css/module.css` as the `module-styles` entry.
 - **Manifest**: `manifest: 'manifest.json'`, at the root of the output directory (not `.vite/manifest.json`): the site looks for `/build/modules/<name>/manifest.json`.
 - **Output**: inside the host (`modules/<name>` next to the host's `public/`) the build writes to the host's `public/build/modules/<name>/` with `base: '/build/modules/<name>/'`. With `MODULE_STANDALONE_OUTPUT=true`, or outside a host, it writes to the module's own `public/build/` with `base: '/'`; the release workflow builds this way and fails without `public/build/manifest.json`.
-- **Externals**: `vue`, `vue-i18n`, `pinia`, `@inertiajs/vue3` and `@unhead/vue` (the import map, see [Shared packages](#shared-packages)). `@/` imports are bundled from the host's `resources/js`, and only left external in a standalone build.
+- **Externals**: `vue`, `vue-i18n`, `pinia`, `@inertiajs/vue3`, `@unhead/vue` and every `@/contracts/` import (the import map, see [Shared packages](#shared-packages)). Other `@/` imports are bundled from the host's `resources/js`, and only left external in a standalone build. A module whose `vite.config.ts` predates core 3.19 must add the `@/contracts/` rule before importing a contract: bundled, the contract would be a private copy that never hears from its provider.
 - **Plugins**: `@vitejs/plugin-vue` and `@tailwindcss/vite`.
 
 `tsconfig.json` type-checks the module against the core: `@/*` points to the host's `resources/js` (as the Vite alias does), the five import map packages resolve to the host's `node_modules` (their types are the host's copies, so `$t` and the Inertia page props are typed) and the host's `resources/js/types` declarations are included. Run it with `docker exec guildforge_node sh -c 'cd modules/my-module && ../../node_modules/.bin/vue-tsc --noEmit -p tsconfig.json'`; the quality checks run it too.
@@ -1460,6 +1462,27 @@ $this->callAfterResolving(CookieDeclarationRegistryInterface::class, function (C
 
 - Declaring the same name again replaces the earlier entry.
 - The cookie consent module creates each declared cookie once, in its category; after that the administrators manage it from the panel.
+
+### Cookie consent in the browser
+
+Before reading or writing a cookie that needs consent, a module's frontend asks the core's contract (core ^3.19), never a global or an event of another module:
+
+```typescript
+import { computed } from 'vue';
+import { hasCookieConsent } from '@/contracts/cookieConsent';
+
+// Reactive: follows the banner registering after this component and the visitor changing their mind
+const canRemember = computed(() => hasCookieConsent('preferences'));
+
+if (hasCookieConsent('preferences')) {
+    document.cookie = 'my_module_cookie=…; Max-Age=7776000; Path=/; SameSite=Lax';
+}
+```
+
+- Without a cookie consent module on the page, or if it fails, the answer is no consent: the cookie is never written.
+- `hasCookieConsent()` reads reactive state: a `computed`, a `watch` or a template that calls it runs again when consent changes, so no listener is needed (`watch(() => hasCookieConsent('preferences'), …)` for side effects).
+- The cookie consent module is the provider: it calls `registerCookieConsentProvider({ hasConsent })` once its configuration is known and `notifyCookieConsentChanged()` after the visitor saves a choice. A later registration replaces the earlier one.
+- In Vitest the contract resolves to the core's source through the `@` alias: register a provider in the test instead of faking globals.
 
 ---
 

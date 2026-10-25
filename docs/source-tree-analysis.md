@@ -194,6 +194,7 @@ src/
 │   │   ├── layouts/                    # DefaultLayout, AuthLayout
 │   │   ├── utils/                      # cloudinary.ts, csrf.ts, resolveModulePage.ts, moduleTranslations.ts, etc.
 │   │   ├── locales/                    # Translations (es.ts, en.ts)
+│   │   ├── contracts/                  # Import map entries shared with modules (@/contracts/*): cookieConsent
 │   │   └── vendor-exports/             # Import map entries: vue, pinia, vue-i18n, @inertiajs/vue3, @unhead/vue
 │   └── views/                          # Blade: app.blade.php, components/ (module-import-map, seo-head, site-favicons), emails/, filament/, sitemap
 │

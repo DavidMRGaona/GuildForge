@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Checks the production build against the module import map
 // (app/View/Components/ModuleImportMap.php): its five vendor-exports entries
-// are entries in the manifest and keep their exports, and app.ts and
-// vendor-exports/vue.ts both import the same single vendor-vue chunk.
+// and its contracts are entries in the manifest and keep their exports, and
+// app.ts, vendor-exports/vue.ts and every contract import the same single
+// vendor-vue chunk (a contract on another Vue copy would lose reactivity).
 // The other entries' chunk imports are not checked. Run after `vite build`.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -17,7 +18,9 @@ const ENTRIES = {
     'resources/js/vendor-exports/vue-i18n.ts': 11,
     'resources/js/vendor-exports/inertia.ts': 23,
     'resources/js/vendor-exports/unhead.ts': 15,
+    'resources/js/contracts/cookieConsent.ts': 3,
 };
+const CONTRACTS = ['resources/js/contracts/cookieConsent.ts'];
 const REQUIRED = {
     'resources/js/vendor-exports/inertia.ts': [
         'Link',
@@ -30,6 +33,11 @@ const REQUIRED = {
     'resources/js/vendor-exports/unhead.ts': ['useHead'],
     'resources/js/vendor-exports/vue.ts': ['createApp', 'ref', 'computed', 'defineComponent', 'h'],
     'resources/js/vendor-exports/vue-i18n.ts': ['createI18n', 'useI18n'],
+    'resources/js/contracts/cookieConsent.ts': [
+        'registerCookieConsentProvider',
+        'notifyCookieConsentChanged',
+        'hasCookieConsent',
+    ],
 };
 
 const failures = [];
@@ -73,6 +81,12 @@ if (appVue.length !== 1 || exportVue.length !== 1 || appVue[0] !== exportVue[0])
     failures.push(
         `app.ts and vendor-exports/vue.ts do not share one vendor-vue chunk (${appVue} / ${exportVue})`
     );
+}
+for (const contract of CONTRACTS) {
+    const contractVue = vueChunks(contract);
+    if (contractVue.length !== 1 || contractVue[0] !== appVue[0]) {
+        failures.push(`${contract} does not import the app's vendor-vue chunk (${contractVue})`);
+    }
 }
 
 if (failures.length > 0) {
