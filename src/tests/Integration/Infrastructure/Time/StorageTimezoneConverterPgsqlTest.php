@@ -45,6 +45,11 @@ final class StorageTimezoneConverterPgsqlTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_supports_a_postgresql_connection(): void
+    {
+        $this->assertTrue(app(StorageTimezoneConverter::class)->supportsConnection());
+    }
+
     public function test_the_command_converts_the_data_and_writes_the_marker_then_reverses_both(): void
     {
         $event = $this->eventStartingAt('2026-07-01 12:00:00');
