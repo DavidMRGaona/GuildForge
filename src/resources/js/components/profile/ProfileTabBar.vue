@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import type { ProfileTab } from '@/types/profile';
 import ProfileTabIcon from './ProfileTabIcon.vue';
 
@@ -8,6 +9,8 @@ interface Props {
 }
 
 defineProps<Props>();
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
     'select-tab': [id: string];
@@ -21,7 +24,7 @@ function handleTabClick(tabId: string): void {
 <template>
     <nav
         class="flex gap-1 overflow-x-auto border-b border-default bg-surface px-4"
-        aria-label="Profile navigation"
+        :aria-label="t('auth.profile.navigation')"
     >
         <button
             v-for="tab in tabs"

@@ -95,7 +95,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
     </div>
 
     <!-- Main Content -->
-    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <!-- Activities Section -->
         <section v-if="activities.length > 0" class="mb-8">
             <h2 class="text-2xl font-bold text-base-primary mb-6">
@@ -333,5 +333,5 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                 </a>
             </p>
         </BaseCard>
-    </main>
+    </div>
 </template>

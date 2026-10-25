@@ -162,7 +162,7 @@ final readonly class SeoMetadataFactory implements SeoMetadataFactoryInterface
 
     private function site(): SeoSite
     {
-        $name = (string) config('app.name', 'GuildForge');
+        $name = $this->branding->siteName();
 
         return new SeoSite(
             name: $name,
@@ -230,6 +230,7 @@ final readonly class SeoMetadataFactory implements SeoMetadataFactoryInterface
         try {
             return $this->buildSite(SeoMetadata::SCOPE_SITE, $this->url->current(), []);
         } catch (Throwable) {
+            // The settings may be what failed: the installation name needs none
             $name = (string) config('app.name', 'GuildForge');
 
             return new SeoMetadata(

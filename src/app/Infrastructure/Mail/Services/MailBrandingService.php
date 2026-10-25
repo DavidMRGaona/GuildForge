@@ -7,6 +7,7 @@ namespace App\Infrastructure\Mail\Services;
 use App\Application\Mail\DTOs\Response\MailBrandingDTO;
 use App\Application\Mail\Services\MailBrandingServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Domain\ValueObjects\ColorPalette;
 use App\Domain\ValueObjects\HexColor;
@@ -36,6 +37,7 @@ final class MailBrandingService implements MailBrandingServiceInterface
     public function __construct(
         private readonly SettingsServiceInterface $settings,
         private readonly ThemeSettingsServiceInterface $theme,
+        private readonly SiteBrandingServiceInterface $site,
     ) {}
 
     public function branding(): MailBrandingDTO
@@ -70,7 +72,7 @@ final class MailBrandingService implements MailBrandingServiceInterface
         $bodyFont = $this->fontName($theme->fontBody);
 
         return new MailBrandingDTO(
-            siteName: $this->siteName(),
+            siteName: $this->site->siteName(),
             siteUrl: $this->siteUrl(),
             logoUrl: $this->settings->getEmailLogoUrl(),
             primaryColor: $button->value,
@@ -94,7 +96,7 @@ final class MailBrandingService implements MailBrandingServiceInterface
     private function defaults(): MailBrandingDTO
     {
         return new MailBrandingDTO(
-            siteName: $this->siteName(),
+            siteName: $this->installationName(),
             siteUrl: $this->siteUrl(),
             logoUrl: null,
             primaryColor: '#D97706',
@@ -115,7 +117,8 @@ final class MailBrandingService implements MailBrandingServiceInterface
         );
     }
 
-    private function siteName(): string
+    /** The settings may be what failed: the installation name needs none. */
+    private function installationName(): string
     {
         return (string) config('app.name', 'GuildForge');
     }

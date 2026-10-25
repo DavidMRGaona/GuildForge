@@ -68,7 +68,7 @@ final class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            'appName' => config('app.name'),
+            'appName' => fn (): string => app(SiteBrandingServiceInterface::class)->siteName(),
             'appDescription' => config('app.description'),
             'siteLogoLight' => fn () => $this->getSiteLogo('site_logo_light'),
             'siteLogoDark' => fn () => $this->getSiteLogo('site_logo_dark'),

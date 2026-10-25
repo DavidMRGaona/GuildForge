@@ -10,6 +10,7 @@ const { t } = useI18n();
 const page = usePage();
 
 const currentYear = computed(() => new Date().getFullYear());
+const appName = computed(() => page.props.appName as string);
 
 // Fallback footer links if none configured
 const fallbackLinks: MenuItem[] = [
@@ -84,7 +85,7 @@ const hasSocialLinks = computed(() => {
                 <!-- Copyright & Social -->
                 <div class="mt-6 text-center md:mt-0 md:text-right">
                     <p class="text-sm text-neutral-300 dark:text-neutral-400">
-                        {{ t('layout.copyright', { year: currentYear }) }}
+                        {{ t('layout.copyright', { year: currentYear, appName }) }}
                     </p>
                     <p class="mt-1 text-xs text-neutral-400">
                         {{ t('layout.madeWith') }}

@@ -18,11 +18,11 @@ final class SeoHeadTest extends TestCase
         return array_replace([
             'scope' => 'page',
             'title' => 'Club de lectura',
-            'fullTitle' => 'Club de lectura - Tolerol',
+            'fullTitle' => 'Club de lectura - Sitio de ejemplo',
             'description' => '15 de enero de 2026, 18:00 · Texto',
-            'canonicalUrl' => 'https://tolerol.com/eventos/club',
+            'canonicalUrl' => 'https://example.com/eventos/club',
             'type' => 'website',
-            'siteName' => 'Tolerol',
+            'siteName' => 'Sitio de ejemplo',
             'locale' => 'es_ES',
             'image' => ['url' => 'https://img/club.jpg', 'width' => 1200, 'height' => 630, 'alt' => 'Club de lectura', 'isLarge' => true],
             'robots' => null,
@@ -40,16 +40,16 @@ final class SeoHeadTest extends TestCase
     {
         $html = $this->render($this->seo());
 
-        $this->assertStringContainsString('<title>Club de lectura - Tolerol</title>', $html);
+        $this->assertStringContainsString('<title>Club de lectura - Sitio de ejemplo</title>', $html);
         foreach ([
             '<meta name="description" content="15 de enero de 2026, 18:00 · Texto" data-seo-server>',
-            '<link rel="canonical" href="https://tolerol.com/eventos/club" data-seo-server>',
+            '<link rel="canonical" href="https://example.com/eventos/club" data-seo-server>',
             '<meta property="og:type" content="website" data-seo-server>',
-            '<meta property="og:site_name" content="Tolerol" data-seo-server>',
+            '<meta property="og:site_name" content="Sitio de ejemplo" data-seo-server>',
             '<meta property="og:locale" content="es_ES" data-seo-server>',
             '<meta property="og:title" content="Club de lectura" data-seo-server>',
             '<meta property="og:description" content="15 de enero de 2026, 18:00 · Texto" data-seo-server>',
-            '<meta property="og:url" content="https://tolerol.com/eventos/club" data-seo-server>',
+            '<meta property="og:url" content="https://example.com/eventos/club" data-seo-server>',
             '<meta property="og:image" content="https://img/club.jpg" data-seo-server>',
             '<meta property="og:image:width" content="1200" data-seo-server>',
             '<meta property="og:image:height" content="630" data-seo-server>',
@@ -67,7 +67,7 @@ final class SeoHeadTest extends TestCase
     public function test_small_card_and_no_dimensions_for_a_logo_of_unknown_size(): void
     {
         $html = $this->render($this->seo([
-            'image' => ['url' => 'https://tolerol.com/storage/logo.png', 'width' => null, 'height' => null, 'alt' => 'Tolerol', 'isLarge' => false],
+            'image' => ['url' => 'https://example.com/storage/logo.png', 'width' => null, 'height' => null, 'alt' => 'Sitio de ejemplo', 'isLarge' => false],
         ]));
 
         $this->assertStringContainsString('<meta name="twitter:card" content="summary" data-seo-server>', $html);
@@ -113,8 +113,8 @@ final class SeoHeadTest extends TestCase
 
     public function test_without_seo_prop_falls_back_to_the_site_defaults(): void
     {
-        config(['app.name' => 'Tolerol']);
+        config(['app.name' => 'Sitio de ejemplo']);
 
-        $this->assertStringContainsString('<title>Tolerol</title>', $this->render(null));
+        $this->assertStringContainsString('<title>Sitio de ejemplo</title>', $this->render(null));
     }
 }

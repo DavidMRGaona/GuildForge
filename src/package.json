@@ -11,6 +11,7 @@
         "build": "vue-tsc --noEmit && vite build",
         "preview": "vite preview",
         "type-check": "vue-tsc --noEmit",
+        "test:unit": "vitest run",
         "lint": "eslint resources/js --ext .ts,.vue",
         "lint:fix": "eslint resources/js --ext .ts,.vue --fix",
         "format": "prettier --write resources/js/**/*.{ts,vue}",
@@ -40,15 +41,18 @@
         "@typescript-eslint/eslint-plugin": "^8.53.0",
         "@typescript-eslint/parser": "^8.53.0",
         "@vitejs/plugin-vue": "^6.0.3",
+        "@vue/test-utils": "^2.5.1",
         "concurrently": "^10.0.6",
         "eslint": "^10.12.0",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-vue": "^10.7.0",
+        "happy-dom": "^20.14.6",
         "laravel-vite-plugin": "^3.2.0",
         "prettier": "^3.8.0",
         "tailwindcss": "^4.0.0",
         "typescript": "~6.0.3",
         "vite": "^8.3.4",
+        "vitest": "^5.0.5",
         "vue-tsc": "^3.2.2"
     }
 }

@@ -194,7 +194,7 @@ return [
         'about' => [
             'title' => 'Sobre nosotros',
             'guild_name' => 'Nombre de la asociación',
-            'guild_name_help' => 'Se mostrará en el título de la página "Sobre nosotros"',
+            'guild_name_help' => 'Es el nombre del sitio: aparece en la cabecera, el pie, los títulos de las páginas, los correos y el panel. Si se deja vacío, se usa el nombre de la instalación.',
             'hero_image' => 'Imagen del encabezado',
             'hero_image_help' => 'Imagen de fondo para el hero. Si no se configura, se muestra un degradado.',
             'tagline' => 'Eslogan',
@@ -302,7 +302,7 @@ return [
             'from_address' => 'Dirección del remitente',
             'from_address_help' => 'Dirección de correo que aparecerá como remitente.',
             'from_name' => 'Nombre del remitente',
-            'from_name_help' => 'Nombre que aparecerá como remitente.',
+            'from_name_help' => 'Nombre que aparecerá como remitente. Si se deja vacío, se usa el nombre del sitio.',
             'smtp_host' => 'Servidor SMTP',
             'smtp_port' => 'Puerto',
             'smtp_username' => 'Usuario',

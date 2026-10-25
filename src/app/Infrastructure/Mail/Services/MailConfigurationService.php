@@ -8,6 +8,7 @@ use App\Application\Mail\DTOs\Response\MailConfigurationResponseDTO;
 use App\Application\Mail\DTOs\UpdateMailConfigurationDTO;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Domain\Mail\Enums\MailDriver;
 use App\Domain\Mail\Events\MailConfigurationUpdated;
 use Illuminate\Support\Facades\Config;
@@ -16,6 +17,7 @@ final class MailConfigurationService implements MailConfigurationServiceInterfac
 {
     public function __construct(
         private readonly SettingsServiceInterface $settingsService,
+        private readonly SiteBrandingServiceInterface $siteBranding,
     ) {}
 
     public function getConfiguration(): MailConfigurationResponseDTO
@@ -109,7 +111,8 @@ final class MailConfigurationService implements MailConfigurationServiceInterfac
 
         if ($fromAddress !== '') {
             Config::set('mail.from.address', $fromAddress);
-            Config::set('mail.from.name', $fromName);
+            // Without a sender name of its own, mail is signed with the site name
+            Config::set('mail.from.name', $fromName !== '' ? $fromName : $this->siteBranding->siteName());
         }
 
         if ($driver === 'smtp') {

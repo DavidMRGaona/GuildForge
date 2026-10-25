@@ -28,6 +28,7 @@ export default {
         of: 'of',
         slideNavigation: 'Slide navigation',
         goToSlide: 'Go to slide {number}',
+        moreInfo: 'More information',
     },
     events: {
         title: 'Events',
@@ -310,6 +311,7 @@ export default {
         },
         profile: {
             title: 'My profile',
+            navigation: 'Profile sections',
             information: 'Personal information',
             name: 'Name',
             displayName: 'Display name',

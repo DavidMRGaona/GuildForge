@@ -141,3 +141,6 @@ jobs:
 
       - name: ESLint
         run: npm run lint
+
+      - name: Vitest
+        run: npm run test:unit

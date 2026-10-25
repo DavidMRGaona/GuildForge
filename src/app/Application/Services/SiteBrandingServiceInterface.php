@@ -7,11 +7,14 @@ namespace App\Application\Services;
 /**
  * The site's own branding as configured in the admin settings.
  *
- * Every method returns null/empty when the site uses the GuildForge defaults,
- * so callers can tell "custom" from "default" apart.
+ * The custom* methods return null/empty when the site uses the GuildForge
+ * defaults, so callers can tell "custom" from "default" apart.
  */
 interface SiteBrandingServiceInterface
 {
+    /** The site's name: the association name from the settings, else APP_NAME. Never empty. */
+    public function siteName(): string;
+
     /** Storage path (Cloudinary public ID) of the site's logo: the light one, else the dark one, or null. */
     public function customLogoPath(): ?string;
 

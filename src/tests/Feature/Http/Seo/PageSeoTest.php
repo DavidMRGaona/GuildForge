@@ -22,7 +22,7 @@ final class PageSeoTest extends TestCase
         parent::setUp();
         app()->setLocale('es');
         config([
-            'app.name' => 'Tolerol',
+            'app.name' => 'Sitio de ejemplo',
             'app.description' => 'Asociación de juegos',
             'cloudinary.cloud_name' => 'demo',
             'cloudinary.prefix' => 'guildforge',
@@ -53,7 +53,7 @@ final class PageSeoTest extends TestCase
         $response = $this->get('/eventos/club-de-lectura?fbclid=abc');
 
         $response->assertOk();
-        $response->assertSee('<title>Club de lectura - Tolerol</title>', false);
+        $response->assertSee('<title>Club de lectura - Sitio de ejemplo</title>', false);
         $response->assertSee('<meta property="og:title" content="Club de lectura" data-seo-server>', false);
         // The query string (fbclid) is dropped from the canonical URL
         $response->assertSee('<link rel="canonical" href="'.url('/eventos/club-de-lectura').'" data-seo-server>', false);
@@ -95,16 +95,16 @@ final class PageSeoTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertSee('<title>Tolerol</title>', false);
+        $response->assertSee('<title>Sitio de ejemplo</title>', false);
         $response->assertSee('"@type":"Organization"', false);
     }
 
     public function test_section_pages_have_their_titles(): void
     {
-        $this->get('/eventos')->assertSee('<title>Eventos - Tolerol</title>', false);
-        $this->get('/articulos')->assertSee('<title>Artículos - Tolerol</title>', false);
-        $this->get('/galeria')->assertSee('<title>Galería - Tolerol</title>', false);
-        $this->get('/calendario')->assertSee('<title>Calendario de eventos - Tolerol</title>', false);
+        $this->get('/eventos')->assertSee('<title>Eventos - Sitio de ejemplo</title>', false);
+        $this->get('/articulos')->assertSee('<title>Artículos - Sitio de ejemplo</title>', false);
+        $this->get('/galeria')->assertSee('<title>Galería - Sitio de ejemplo</title>', false);
+        $this->get('/calendario')->assertSee('<title>Calendario de eventos - Sitio de ejemplo</title>', false);
     }
 
     public function test_private_and_utility_pages_are_noindex(): void
@@ -123,7 +123,7 @@ final class PageSeoTest extends TestCase
         $response = $this->get('/eventos');
 
         $response->assertStatus(503);
-        $response->assertSee('<title>Estamos en mantenimiento - Tolerol</title>', false);
+        $response->assertSee('<title>Estamos en mantenimiento - Sitio de ejemplo</title>', false);
         $response->assertSee('content="noindex, nofollow"', false);
     }
 

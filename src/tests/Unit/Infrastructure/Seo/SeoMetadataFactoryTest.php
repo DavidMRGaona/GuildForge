@@ -28,14 +28,14 @@ final class SeoMetadataFactoryTest extends TestCase
         parent::setUp();
         app()->setLocale('es');
         config([
-            'app.name' => 'Tolerol',
+            'app.name' => 'Sitio de ejemplo',
             'app.description' => 'Asociación de juegos',
             'app.timezone' => 'Europe/Madrid',
             'cloudinary.cloud_name' => 'demo',
             'cloudinary.prefix' => 'guildforge',
         ]);
         Storage::fake('images');
-        $this->visit('https://tolerol.com/eventos/club?utm_source=whatsapp');
+        $this->visit('https://example.com/eventos/club?utm_source=whatsapp');
         $this->branding(logoPath: null);
     }
 
@@ -49,10 +49,11 @@ final class SeoMetadataFactoryTest extends TestCase
     private function branding(?string $logoPath, ?string $logoUrl = null, bool $logoIsDark = false): void
     {
         $branding = Mockery::mock(SiteBrandingServiceInterface::class);
+        $branding->shouldReceive('siteName')->andReturn('Sitio de ejemplo');
         $branding->shouldReceive('customLogoPath')->andReturn($logoPath);
         $branding->shouldReceive('customLogoUrl')->andReturn($logoUrl);
         $branding->shouldReceive('customLogoIsDark')->andReturn($logoIsDark);
-        $branding->shouldReceive('socialProfileUrls')->andReturn(['https://instagram.com/tolerol']);
+        $branding->shouldReceive('socialProfileUrls')->andReturn(['https://instagram.com/asociacion-ejemplo']);
         $this->app->instance(SiteBrandingServiceInterface::class, $branding);
     }
 
@@ -86,8 +87,8 @@ final class SeoMetadataFactoryTest extends TestCase
 
         $this->assertSame(SeoMetadata::SCOPE_PAGE, $seo->scope);
         $this->assertSame('Club de lectura', $seo->title);
-        $this->assertSame('Club de lectura - Tolerol', $seo->fullTitle);
-        $this->assertSame('https://tolerol.com/eventos/club', $seo->canonicalUrl);
+        $this->assertSame('Club de lectura - Sitio de ejemplo', $seo->fullTitle);
+        $this->assertSame('https://example.com/eventos/club', $seo->canonicalUrl);
         $this->assertSame('15 de enero de 2026, 18:00 · La Taberna · Traed vuestro libro', $seo->description);
         $this->assertSame(
             'https://res.cloudinary.com/demo/image/upload/e_trim/w_1200,h_630,c_fill,g_auto,q_auto,f_jpg/guildforge/events/2026/01/club',
@@ -118,7 +119,7 @@ final class SeoMetadataFactoryTest extends TestCase
 
         $seo = $this->factory()->forEvent($this->event('events/club.jpg'));
 
-        $this->assertSame('https://tolerol.com/storage/settings/logo.png', $seo->image?->url);
+        $this->assertSame('https://example.com/storage/settings/logo.png', $seo->image?->url);
         $this->assertStringNotContainsString('images/defaults', json_encode($seo->toArray(), JSON_THROW_ON_ERROR));
     }
 
@@ -138,7 +139,7 @@ final class SeoMetadataFactoryTest extends TestCase
     {
         $seo = $this->factory()->forEvent($this->event(null));
 
-        $this->assertSame('https://tolerol.com/images/defaults/logo-light.png', $seo->image?->url);
+        $this->assertSame('https://example.com/images/defaults/logo-light.png', $seo->image?->url);
     }
 
     public function test_article_uses_content_when_there_is_no_excerpt(): void
@@ -194,10 +195,10 @@ final class SeoMetadataFactoryTest extends TestCase
         $seo = $this->factory()->forHome();
 
         $this->assertSame(SeoMetadata::SCOPE_PAGE, $seo->scope);
-        $this->assertSame('Tolerol', $seo->fullTitle);
-        $this->assertSame('https://tolerol.com', $seo->canonicalUrl);
+        $this->assertSame('Sitio de ejemplo', $seo->fullTitle);
+        $this->assertSame('https://example.com', $seo->canonicalUrl);
         $this->assertSame('Organization', $seo->structuredData[0]['@type']);
-        $this->assertSame(['https://instagram.com/tolerol'], $seo->structuredData[0]['sameAs']);
+        $this->assertSame(['https://instagram.com/asociacion-ejemplo'], $seo->structuredData[0]['sameAs']);
     }
 
     public function test_site_defaults(): void
@@ -226,7 +227,7 @@ final class SeoMetadataFactoryTest extends TestCase
         $seo = $this->factory()->forEvent($this->event('events/club.jpg'));
 
         $this->assertSame(SeoMetadata::SCOPE_SITE, $seo->scope);
-        $this->assertSame('Tolerol', $seo->fullTitle);
+        $this->assertSame('Sitio de ejemplo', $seo->fullTitle);
         $this->assertNull($seo->image);
         Log::shouldHaveReceived('warning')->once();
     }

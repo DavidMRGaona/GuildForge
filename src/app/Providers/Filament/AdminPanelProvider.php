@@ -7,6 +7,7 @@ namespace App\Providers\Filament;
 use App\Application\Modules\DTOs\RejectedModuleDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
 use App\Modules\ModuleServiceProvider;
@@ -56,7 +57,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName(config('app.name').' Admin')
+            ->brandName(fn (): string => app(SiteBrandingServiceInterface::class)->siteName().' Admin')
             ->brandLogo(fn (): ?string => $this->getBrandLogo('site_logo_light'))
             ->darkModeBrandLogo(fn (): ?string => $this->getBrandLogo('site_logo_dark'))
             ->brandLogoHeight('2.5rem')

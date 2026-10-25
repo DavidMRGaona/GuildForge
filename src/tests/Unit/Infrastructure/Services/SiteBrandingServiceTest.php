@@ -7,6 +7,7 @@ namespace Tests\Unit\Infrastructure\Services;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Services\SiteBrandingService;
+use App\Infrastructure\Services\SiteNameResolver;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Tests\TestCase;
@@ -23,7 +24,11 @@ final class SiteBrandingServiceTest extends TestCase
             fn (string $key, mixed $default = null): mixed => $settings[$key] ?? $default,
         );
 
-        return new SiteBrandingService($settingsService, app(AboutPageServiceInterface::class));
+        return new SiteBrandingService(
+            $settingsService,
+            app(AboutPageServiceInterface::class),
+            new SiteNameResolver($settingsService),
+        );
     }
 
     protected function setUp(): void
@@ -78,14 +83,29 @@ final class SiteBrandingServiceTest extends TestCase
     public function test_social_profiles_are_absolute_and_skip_empty_values(): void
     {
         $service = $this->service([
-            'social_instagram' => 'instagram.com/tolerol',
-            'social_facebook' => 'https://facebook.com/tolerol',
+            'social_instagram' => 'instagram.com/asociacion-ejemplo',
+            'social_facebook' => 'https://facebook.com/asociacion-ejemplo',
             'social_twitter' => '',
         ]);
 
         $this->assertSame(
-            ['https://facebook.com/tolerol', 'https://instagram.com/tolerol'],
+            ['https://facebook.com/asociacion-ejemplo', 'https://instagram.com/asociacion-ejemplo'],
             $service->socialProfileUrls(),
         );
+    }
+
+    public function test_site_name_is_the_association_name_from_the_settings(): void
+    {
+        config(['app.name' => 'Instalación genérica']);
+
+        $this->assertSame('Asociación de ejemplo', $this->service(['guild_name' => '  Asociación de ejemplo '])->siteName());
+    }
+
+    public function test_site_name_falls_back_to_the_installation_name(): void
+    {
+        config(['app.name' => 'Instalación genérica']);
+
+        $this->assertSame('Instalación genérica', $this->service([])->siteName());
+        $this->assertSame('Instalación genérica', $this->service(['guild_name' => '   '])->siteName());
     }
 }

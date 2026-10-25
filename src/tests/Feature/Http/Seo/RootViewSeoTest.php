@@ -15,7 +15,7 @@ final class RootViewSeoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['app.name' => 'Tolerol', 'app.description' => 'Asociación de juegos']);
+        config(['app.name' => 'Sitio de ejemplo', 'app.description' => 'Asociación de juegos']);
     }
 
     public function test_pages_without_their_own_metadata_get_the_site_defaults_in_the_html(): void
@@ -23,7 +23,7 @@ final class RootViewSeoTest extends TestCase
         $response = $this->get('/calendario');
 
         $response->assertOk();
-        $response->assertSee('<meta property="og:site_name" content="Tolerol" data-seo-server>', false);
+        $response->assertSee('<meta property="og:site_name" content="Sitio de ejemplo" data-seo-server>', false);
         $response->assertSee('<meta name="description" content="Asociación de juegos" data-seo-server>', false);
         $response->assertDontSee('<title inertia>', false);
     }
@@ -32,7 +32,7 @@ final class RootViewSeoTest extends TestCase
     {
         $this->get('/calendario')->assertInertia(
             fn (Assert $page) => $page
-                ->where('seo.siteName', 'Tolerol')
+                ->where('seo.siteName', 'Sitio de ejemplo')
                 ->has('seo.canonicalUrl')
                 ->has('seo.structuredData'),
         );

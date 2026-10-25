@@ -167,7 +167,7 @@ return [
         'about' => [
             'title' => 'About us',
             'guild_name' => 'Guild name',
-            'guild_name_help' => 'Shown in the "About us" page title',
+            'guild_name_help' => 'The site\'s name: shown in the header, the footer, page titles, emails and the admin panel. When empty, the installation name is used.',
             'hero_image' => 'Hero image',
             'hero_image_help' => 'Background image for the hero. If not set, a gradient is shown.',
             'tagline' => 'Tagline',

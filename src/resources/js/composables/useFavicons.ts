@@ -5,10 +5,13 @@ import type { FaviconSettings } from '@/types/inertia';
 
 /**
  * Updates the href attribute of a link element matching the given selector.
+ *
+ * Only when it points elsewhere: writing the same href again makes the browser fetch
+ * the icon once more, and the layout re-runs this on every mount.
  */
 function updateLinkHref(selector: string, href: string): void {
     const link = document.querySelector<HTMLLinkElement>(selector);
-    if (link) {
+    if (link && link.href !== new URL(href, document.baseURI).href) {
         link.href = href;
     }
 }

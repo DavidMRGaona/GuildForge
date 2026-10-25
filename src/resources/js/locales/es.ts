@@ -28,6 +28,7 @@ export default {
         of: 'de',
         slideNavigation: 'Navegación del carrusel',
         goToSlide: 'Ir a la diapositiva {number}',
+        moreInfo: 'Más información',
     },
     events: {
         title: 'Eventos',
@@ -312,6 +313,7 @@ export default {
         },
         profile: {
             title: 'Mi perfil',
+            navigation: 'Secciones del perfil',
             information: 'Información personal',
             name: 'Nombre',
             displayName: 'Nombre para mostrar',
