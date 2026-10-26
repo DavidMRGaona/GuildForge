@@ -53,9 +53,9 @@ if [ "$PART" = php ] || [ "$PART" = all ]; then
         run Rector vendor/bin/rector process --dry-run --no-progress-bar "$DIR/src"
     fi
     run Pint vendor/bin/pint --test "$DIR"
-    # The tests too, so their types do not drift while nobody looks
+    # The tests, factories and seeders too, so their types do not drift while nobody looks
     STAN_PATHS=""
-    for STAN_DIR in "$DIR/src" "$DIR/tests"; do
+    for STAN_DIR in "$DIR/src" "$DIR/tests" "$DIR/database"; do
         if [ -d "$STAN_DIR" ]; then
             STAN_PATHS="$STAN_PATHS $STAN_DIR"
         fi
