@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use Mockery;
 use RuntimeException;
+use Tests\Support\Authorization\FillsRolePermissionTabs;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ use Tests\TestCase;
  */
 final class RoleChangesRefreshAuthorizationTest extends TestCase
 {
+    use FillsRolePermissionTabs;
     use LazilyRefreshDatabase;
 
     private AuthorizationServiceInterface $authorization;
@@ -81,8 +83,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $user->roles()->attach($role->id);
         $this->assertFalse($this->authorization->can($user, 'events.delete'));
 
-        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-            ->fillForm(['permissions' => [...$role->permissions()->pluck('permissions.id')->all(), $permission->id]])
+        $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $role->getRouteKey()]), [...$role->permissions()->pluck('permissions.id')->all(), $permission->id])
             ->call('save')
             ->assertHasNoFormErrors();
 
@@ -97,8 +98,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $this->authorization->invalidateCache();
         $this->assertTrue($this->authorization->can($user, 'events.create'));
 
-        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-            ->fillForm(['permissions' => []])
+        $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $role->getRouteKey()]), [])
             ->call('save')
             ->assertHasNoFormErrors();
 

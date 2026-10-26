@@ -7,6 +7,7 @@ namespace App\Filament\Resources\RoleResource\Pages;
 use App\Application\Authorization\Services\RoleRestrictionRule;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Filament\Resources\RoleResource;
+use App\Filament\Resources\RoleResource\Concerns\SyncsPermissionTabs;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -14,6 +15,7 @@ class CreateRole extends CreateRecord
 {
     use GuardsRolePermissions;
     use RecordsRoleHistory;
+    use SyncsPermissionTabs;
 
     protected static string $resource = RoleResource::class;
 
@@ -22,7 +24,10 @@ class CreateRole extends CreateRecord
 
     protected function beforeCreate(): void
     {
-        $this->guardSubmittedPermissions([(string) ($this->data['name'] ?? '')], []);
+        $ids = $this->collectPermissionIds($this->data ?? [], null);
+
+        $this->guardSubmittedPermissions([(string) ($this->data['name'] ?? '')], [], $ids);
+        $this->rememberPermissionIdsToSync($ids);
     }
 
     /**
@@ -35,6 +40,9 @@ class CreateRole extends CreateRecord
             unset($data['requires_association_member'], $data['max_holders']);
         }
 
+        // Synced after creating (afterCreate), never written to the role itself
+        unset($data['permissions_by_section'], $data['panel_access']);
+
         return $data;
     }
 
@@ -43,6 +51,7 @@ class CreateRole extends CreateRecord
         /** @var RoleModel $record */
         $record = $this->record;
 
+        $this->syncPermissionTabs($record);
         $this->recordDefinitionChange($record, RoleAuditEvent::RoleCreated);
     }
 

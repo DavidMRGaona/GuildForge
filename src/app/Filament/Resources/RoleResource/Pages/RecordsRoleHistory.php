@@ -11,9 +11,9 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 
 /**
  * Writes the role history entry of a save in the role editor. The definition is read before
- * the save (beforeSave) and after it (afterSave / afterCreate, once the checkbox list has
- * synced the permissions), inside the page's database transaction: when the entry cannot be
- * written, the save is rolled back.
+ * the save (beforeSave) and after it (afterSave / afterCreate, once the page has synced the
+ * permissions), inside the page's database transaction: when the entry cannot be written, the
+ * save is rolled back.
  */
 trait RecordsRoleHistory
 {

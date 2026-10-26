@@ -12,20 +12,21 @@ use Filament\Notifications\Notification;
 use RuntimeException;
 
 /**
- * Server-side check of the permissions submitted in the role editor. The checkbox list syncs
- * the pivot by itself right after saving, so this runs before that (beforeSave / beforeCreate)
- * and halts: nothing is written when the check fails.
+ * Server-side check of the permissions submitted in the role editor: the ids the page will sync
+ * (every tab, the panel access switch and what the form cannot change). It runs before saving
+ * (beforeSave / beforeCreate) and halts: nothing is written when the check fails.
  */
 trait GuardsRolePermissions
 {
     /**
      * @param  list<string>  $roleNames  the current name and the submitted one
      * @param  list<string>  $currentIds  permission ids the role holds now
+     * @param  list<string>  $submittedIds  permission ids the role would hold after saving
      */
-    protected function guardSubmittedPermissions(array $roleNames, array $currentIds): void
+    protected function guardSubmittedPermissions(array $roleNames, array $currentIds, array $submittedIds): void
     {
         $currentIds = array_map(strval(...), $currentIds);
-        $submittedIds = $this->submittedPermissionIds();
+        $submittedIds = array_values(array_unique(array_map(strval(...), $submittedIds)));
 
         $added = array_diff($submittedIds, $currentIds);
         $removed = array_diff($currentIds, $submittedIds);
@@ -60,23 +61,6 @@ trait GuardsRolePermissions
                 }
             }
         }
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function submittedPermissionIds(): array
-    {
-        $raw = $this->data['permissions'] ?? [];
-
-        if (! is_array($raw)) {
-            return [];
-        }
-
-        return array_values(array_unique(array_map(
-            static fn (mixed $id): string => is_scalar($id) ? (string) $id : '',
-            $raw,
-        )));
     }
 
     /**

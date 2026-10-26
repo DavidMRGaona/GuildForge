@@ -7,28 +7,36 @@ namespace App\Filament\Resources;
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
-use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Authorization\Services\RoleDefinitionChanges;
+use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Application\Authorization\Services\RoleRestrictionRule;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Authorization\ValueObjects\RoleName;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
+use App\Filament\Resources\RoleResource\PermissionCatalog;
+use App\Filament\Resources\RoleResource\PermissionOption;
+use App\Filament\Resources\RoleResource\PermissionSection;
+use App\Filament\Resources\RoleResource\PermissionTab;
 use App\Filament\Resources\RoleResource\RelationManagers\RoleAuditRelationManager;
 use App\Filament\Resources\RoleResource\RoleRequirementImpact;
-use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Callout;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -58,6 +66,12 @@ class RoleResource extends BaseResource
 
     public static function form(Schema $schema): Schema
     {
+        $permissionTabs = array_values(array_filter(
+            app(PermissionCatalog::class)->tabs(),
+            static fn (PermissionTab $tab): bool => $tab->sections !== [],
+        ));
+        $editable = self::editablePermissionKeys();
+
         return $schema
             ->components([
                 Section::make(__('filament.roles.sections.general'))
@@ -111,21 +125,39 @@ class RoleResource extends BaseResource
                             ->helperText(__('filament.roles.fields.isProtectedHelp'))
                             ->disabled()
                             ->dehydrated(false),
+                        // admin.access, shown as a switch instead of a box in the tabs. The pages
+                        // turn it into the permission; the server check stays authoritative.
+                        Toggle::make('panel_access')
+                            ->label(__('filament.roles.fields.panelAccess'))
+                            ->helperText(__('filament.roles.fields.panelAccessHelp'))
+                            ->live()
+                            ->disabled(fn (?RoleModel $record): bool => self::isPanelAccessLocked($record)
+                                || ($editable !== null && ! in_array('admin.access', $editable, true)))
+                            ->hint(fn (?RoleModel $record): ?string => self::isPanelAccessLocked($record) ? (string) __('filament.roles.fields.panelAccessLockedHint') : null)
+                            ->hintIcon(fn (?RoleModel $record): ?string => self::isPanelAccessLocked($record) ? 'heroicon-o-lock-closed' : null)
+                            ->hintColor('warning'),
+                        Callout::make(fn (Get $get): string => trans_choice(
+                            'filament.roles.fields.permissionsWithoutPanel',
+                            self::tickedCount($get, $permissionTabs),
+                            ['count' => self::tickedCount($get, $permissionTabs)],
+                        ))
+                            ->warning()
+                            // The base and association roles never enter the panel: their
+                            // permissions are for the public site
+                            ->visible(fn (Get $get, ?RoleModel $record): bool => ! self::isPanelAccessLocked($record)
+                                && ! (bool) $get('panel_access')
+                                && self::tickedCount($get, $permissionTabs) > 0),
                     ]),
                 Section::make(__('filament.roles.sections.permissions'))
                     ->description(__('filament.roles.sections.permissionsDescription'))
                     ->schema([
-                        CheckboxList::make('permissions')
-                            ->label(__('filament.roles.fields.permissions'))
-                            ->relationship(
-                                name: 'permissions',
-                                titleAttribute: 'label',
-                            )
-                            ->columns(2)
-                            ->searchable()
-                            ->bulkToggleable()
-                            ->gridDirection('row')
-                            ->descriptions(fn (?RoleModel $record): array => self::permissionDescriptions($record)),
+                        Tabs::make(__('filament.roles.fields.permissions'))
+                            ->tabs(array_map(
+                                static fn (PermissionTab $tab): Tab => self::permissionTab($tab, $editable),
+                                $permissionTabs,
+                            ))
+                            ->activeTab(fn (?RoleModel $record): int => self::firstTabWithPermissions($permissionTabs, $record))
+                            ->hidden($permissionTabs === []),
                     ]),
             ]);
     }
@@ -259,28 +291,157 @@ class RoleResource extends BaseResource
     }
 
     /**
-     * Why the name of a role that is not protected cannot be changed, if it cannot.
+     * admin.access is refused on the base role of every account and on the association member
+     * role, so the panel access switch is locked there.
      */
+    private static function isPanelAccessLocked(?RoleModel $record): bool
+    {
+        return self::isBaseRole($record) || self::isAssociationMemberRole($record);
+    }
+
     /**
-     * Each permission's key, marked when the core or its module suggests it for this role.
-     * Only marked: a suggestion is never granted without an admin ticking it.
+     * The permission keys the signed-in user may tick or untick (null: all of them). Without a
+     * signed-in user, none.
+     *
+     * @return list<string>|null
+     */
+    private static function editablePermissionKeys(): ?array
+    {
+        $actor = auth()->user();
+
+        return $actor !== null ? app(RoleGrantPolicy::class)->editablePermissionKeys($actor) : [];
+    }
+
+    /**
+     * @param  list<string>|null  $editable
+     */
+    private static function permissionTab(PermissionTab $tab, ?array $editable): Tab
+    {
+        $total = array_sum(array_map(static fn (PermissionSection $section): int => count($section->permissions), $tab->sections));
+
+        return Tab::make($tab->label)
+            // Stable keys: two modules may share a display name
+            ->key('permission-tab-'.$tab->key, isInheritable: false)
+            ->badge(static fn (Get $get): string => self::tickedCount($get, [$tab]).'/'.$total)
+            ->schema(array_map(
+                static fn (PermissionSection $section): Fieldset => self::permissionSection($tab, $section, $editable),
+                $tab->sections,
+            ));
+    }
+
+    /**
+     * @param  list<string>|null  $editable
+     */
+    private static function permissionSection(PermissionTab $tab, PermissionSection $section, ?array $editable): Fieldset
+    {
+        $options = [];
+        $keys = [];
+        foreach ($section->permissions as $option) {
+            $options[$option->id] = $option->label;
+            $keys[$option->id] = $option->key;
+        }
+
+        return Fieldset::make($section->label)
+            ->columns(1)
+            ->schema([
+                CheckboxList::make("permissions_by_section.{$tab->key}.{$section->key}")
+                    ->label($section->label)
+                    ->hiddenLabel()
+                    ->options($options)
+                    ->descriptions(static fn (?RoleModel $record): array => self::permissionDescriptions($section, $record))
+                    // What the actor does not hold stays as it is: the pages keep it when saving
+                    ->disableOptionWhen(static fn (mixed $value): bool => $editable !== null
+                        && ! in_array($keys[is_scalar($value) ? (string) $value : ''] ?? '', $editable, true))
+                    // Filament only accepts enabled options by default, which would reject a
+                    // ticked disabled box: the server check decides on those
+                    ->in(static fn (CheckboxList $component): array => array_keys($component->getOptions()))
+                    ->bulkToggleable()
+                    ->selectAllAction(static fn (Action $action): Action => $action->label(__('filament.roles.fields.selectAllPermissions')))
+                    ->deselectAllAction(static fn (Action $action): Action => $action->label(__('filament.roles.fields.deselectAllPermissions')))
+                    ->columns(2)
+                    ->gridDirection('row')
+                    // The tab badges and the panel access warning follow the boxes
+                    ->live(),
+            ]);
+    }
+
+    /**
+     * Each permission's description, marked when the core or its module suggests it for this
+     * role. Only marked: a suggestion is never granted without an admin ticking it.
      *
      * @return array<string, string>
      */
-    private static function permissionDescriptions(?RoleModel $record): array
+    private static function permissionDescriptions(PermissionSection $section, ?RoleModel $record): array
     {
-        $registry = app(PermissionRegistryInterface::class);
         $suggested = (string) __('filament.roles.fields.suggestedForRole');
+        $descriptions = [];
 
-        return PermissionModel::query()
-            ->pluck('key', 'id')
-            ->map(static fn (string $key): string => $record instanceof RoleModel
-                && in_array($record->name, $registry->find($key)->defaultRoles ?? [], true)
-                ? "{$key} · {$suggested}"
-                : $key)
-            ->all();
+        foreach ($section->permissions as $option) {
+            $parts = array_filter([
+                $option->description,
+                $record instanceof RoleModel && in_array($record->name, $option->suggestedFor, true) ? $suggested : null,
+            ], filled(...));
+
+            if ($parts !== []) {
+                $descriptions[$option->id] = implode(' · ', $parts);
+            }
+        }
+
+        return $descriptions;
     }
 
+    /**
+     * How many permissions of the given tabs are ticked in the form state.
+     *
+     * @param  list<PermissionTab>  $tabs
+     */
+    private static function tickedCount(Get $get, array $tabs): int
+    {
+        $count = 0;
+
+        foreach ($tabs as $tab) {
+            foreach ($tab->sections as $section) {
+                $ticked = $get("permissions_by_section.{$tab->key}.{$section->key}");
+                $ticked = is_array($ticked) ? array_map(strval(...), array_filter($ticked, is_scalar(...))) : [];
+                $ids = array_map(static fn (PermissionOption $option): string => $option->id, $section->permissions);
+
+                $count += count(array_intersect($ticked, $ids));
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * The tab to open: the first one where the role holds something (1-based, as Filament
+     * counts them), or the first one.
+     *
+     * @param  list<PermissionTab>  $tabs
+     */
+    private static function firstTabWithPermissions(array $tabs, ?RoleModel $record): int
+    {
+        if (! $record instanceof RoleModel) {
+            return 1;
+        }
+
+        $held = $record->permissions()->pluck('permissions.id')->map(strval(...))->all();
+
+        foreach ($tabs as $index => $tab) {
+            foreach ($tab->sections as $section) {
+                foreach ($section->permissions as $option) {
+                    if (in_array($option->id, $held, true)) {
+                        return $index + 1;
+                    }
+                }
+            }
+        }
+
+        return 1;
+    }
+
+    /**
+     * Why the name of a role that is not protected cannot be changed, if it cannot.
+     */
     private static function lockedNameHint(?RoleModel $record): ?string
     {
         return match (true) {
