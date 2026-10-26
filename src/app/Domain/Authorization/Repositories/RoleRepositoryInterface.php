@@ -43,4 +43,11 @@ interface RoleRepositoryInterface
      * @return array<string>
      */
     public function getPermissionKeys(RoleId $roleId): array;
+
+    /**
+     * Get the names of every role a user holds, read from the database (no cache, no filtering).
+     *
+     * @return array<string>
+     */
+    public function getRoleNamesForUser(string $userId): array;
 }

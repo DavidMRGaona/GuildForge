@@ -11,6 +11,30 @@ use PHPUnit\Framework\TestCase;
 
 final class RoleTest extends TestCase
 {
+    public function test_role_defaults_to_no_requirement_and_no_limit(): void
+    {
+        $role = new Role(
+            id: RoleId::generate(),
+            name: new RoleName('plain'),
+            displayName: 'Plain',
+        );
+
+        $this->assertFalse($role->requiresAssociationMember());
+        $this->assertNull($role->maxHolders());
+    }
+
+    public function test_max_holders_below_one_is_rejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new Role(
+            id: RoleId::generate(),
+            name: new RoleName('capped'),
+            displayName: 'Capped',
+            maxHolders: 0,
+        );
+    }
+
     public function test_it_creates_role_with_required_data(): void
     {
         $id = RoleId::generate();

@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property string $display_name
  * @property string|null $description
  * @property bool $is_protected
+ * @property bool $requires_association_member
+ * @property int|null $max_holders
  */
 final class RoleModel extends Model
 {
@@ -29,12 +31,16 @@ final class RoleModel extends Model
         'display_name',
         'description',
         'is_protected',
+        'requires_association_member',
+        'max_holders',
     ];
 
     protected function casts(): array
     {
         return [
             'is_protected' => 'boolean',
+            'requires_association_member' => 'boolean',
+            'max_holders' => 'integer',
         ];
     }
 
