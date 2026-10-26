@@ -15,6 +15,8 @@ use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -537,6 +539,34 @@ final class ModuleManagerServiceTest extends TestCase
         ]);
     }
 
+    public function test_disable_keeps_the_module_permissions_on_the_roles_that_hold_them(): void
+    {
+        // Nothing takes a permission from a role here, so there is nothing for the role history
+        $this->createTestModule('test-module');
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module"]);
+        [$role, $permission] = $this->grantModulePermission('test-module');
+
+        $this->service->disable(ModuleName::fromString('test-module'));
+
+        $this->assertDatabaseHas('role_permission', ['role_id' => $role->id, 'permission_id' => $permission->id]);
+        $this->assertDatabaseEmpty('role_audit_log');
+    }
+
+    public function test_uninstall_with_delete_data_keeps_the_module_permissions_on_the_roles_that_hold_them(): void
+    {
+        // Permission data is never deleted: the module's migrations roll back, the grants stay
+        $this->createTestModule('test-module');
+        $this->createTestModuleMigration('test-module', 'create_test_module_table');
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module', 'path' => "{$this->testModulesPath}/test-module", 'installed_at' => now()]);
+        [$role, $permission] = $this->grantModulePermission('test-module');
+
+        $this->service->uninstall(ModuleName::fromString('test-module'), true);
+
+        $this->assertDatabaseHas('permissions', ['id' => $permission->id]);
+        $this->assertDatabaseHas('role_permission', ['role_id' => $role->id, 'permission_id' => $permission->id]);
+        $this->assertDatabaseEmpty('role_audit_log');
+    }
+
     public function test_uninstall_with_delete_data_forgets_the_seeders_that_ran(): void
     {
         // The data the seeders created is gone, so a reinstall must seed again
@@ -893,6 +923,24 @@ final class ModuleManagerServiceTest extends TestCase
             $modulePath.'/module.json',
             json_encode($manifest, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)
         );
+    }
+
+    /**
+     * @return array{RoleModel, PermissionModel}
+     */
+    private function grantModulePermission(string $module): array
+    {
+        $permission = PermissionModel::query()->create([
+            'key' => 'test_items.view_any',
+            'label' => 'Ver elementos de prueba',
+            'resource' => 'test_items',
+            'action' => 'view_any',
+            'module' => $module,
+        ]);
+        $role = RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta']);
+        $role->permissions()->attach($permission->id);
+
+        return [$role, $permission];
     }
 
     private function createTestModuleMigration(string $moduleName, string $migrationName): void
