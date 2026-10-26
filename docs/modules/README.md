@@ -175,13 +175,13 @@ The core may also declare a minimum version for a module (`App\Domain\Modules\Co
 
 ### Dates and timezones
 
-The core stores instants in the *storage zone* (`app.timezone`: `Europe/Madrid` or `UTC`, from the `storage_timezone` setting) and shows them in the *display zone* (`APP_DISPLAY_TIMEZONE`). A module must work with both:
+The core stores instants in the *storage zone* (`app.timezone`: `Europe/Madrid` or `UTC`, from the `storage_timezone` setting; `UTC` on fresh installs) and shows them in the *display zone* (`APP_DISPLAY_TIMEZONE`). A module must work with both:
 
 - Module models that have instant columns use `App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone`: it converts any `DateTimeInterface` to the storage zone on write. `date` and `immutable_date` casts are calendar days and keep their day.
 - Query bindings must be storage-zone instants (`TimezoneServiceInterface::toStorage()`).
 - Inject `App\Application\Services\TimezoneServiceInterface` for everything else: `toDisplay()`, `fromDisplayWallTime()`, `toDisplayWallTime()`, `format()`, `today()`, `displayDayRange()` and `displayMonthRange()` for calendar days, and `iso()` to serialize an instant for the browser (always in the display zone). Never use `config('app.timezone')` to show or interpret a date.
 - Filament pickers, columns and entries already use the display zone; frontend code reads it through `@/utils/datetime` (`VENUE_TIMEZONE`).
-- Tests extending `ModuleTestCase` can call `$this->useUtcStorage()` to run a case with UTC storage.
+- Module CI stores in UTC (the default in `.env.example`). Tests extending `ModuleTestCase` can call `$this->useUtcStorage()` to pin UTC storage for a case whatever the environment says.
 
 ---
 

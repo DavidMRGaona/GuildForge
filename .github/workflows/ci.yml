@@ -106,8 +106,8 @@ jobs:
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379
 
-  test-utc:
-    name: test (UTC storage)
+  test-madrid:
+    name: test (Madrid storage)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -151,8 +151,9 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
 
-      # Rehearsal of the storage zone the sites will move to: the same suite with instants stored in
-      # UTC, in its own job so it runs in parallel with the regular one
+      # The regular job stores in UTC, as fresh installs do; this one runs the same suite with
+      # instants stored in Europe/Madrid (sites not converted yet, and --reverse), in its own job
+      # so it runs in parallel with the regular one
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
@@ -189,7 +190,7 @@ jobs:
       - name: Run tests
         run: php artisan test --parallel
         env:
-          APP_STORAGE_TIMEZONE_DEFAULT: UTC
+          APP_STORAGE_TIMEZONE_DEFAULT: Europe/Madrid
           DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
           DB_PORT: 5432

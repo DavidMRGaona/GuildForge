@@ -71,6 +71,9 @@ return [
     | "timezone" is the STORAGE zone: it is overwritten at boot from the
     | "storage_timezone" settings row (see StorageTimezoneResolver). What people
     | see follows "display_timezone"; the scheduler follows "schedule_timezone".
+    | Without the row "storage_timezone_default" applies: UTC, so a fresh install
+    | starts in UTC; sites that held data before the row existed have it set to
+    | Europe/Madrid by a migration until they are converted.
     |
     */
 
@@ -78,7 +81,10 @@ return [
 
     'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Europe/Madrid'),
 
-    'storage_timezone_default' => env('APP_STORAGE_TIMEZONE_DEFAULT', 'Europe/Madrid'),
+    'storage_timezone_default' => env('APP_STORAGE_TIMEZONE_DEFAULT', 'UTC'),
+
+    // The variable as set (null when unset), to tell the old Madrid fallback from an explicit value
+    'storage_timezone_variable' => env('APP_STORAGE_TIMEZONE_DEFAULT'),
 
     'schedule_timezone' => env('APP_DISPLAY_TIMEZONE', 'Europe/Madrid'),
 

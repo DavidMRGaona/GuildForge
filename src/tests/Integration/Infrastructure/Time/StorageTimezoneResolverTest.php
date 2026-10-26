@@ -29,7 +29,7 @@ final class StorageTimezoneResolverTest extends TestCase
 
         $this->zoneBeforeTest = date_default_timezone_get();
 
-        // Pinned so these tests hold when the suite runs with another default (UTC rehearsal).
+        // Pinned so these tests hold when the suite runs with another default (Madrid lane).
         config(['app.storage_timezone_default' => 'Europe/Madrid']);
     }
 
