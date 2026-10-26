@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UserResource\Pages;
 
-use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource;
@@ -48,22 +47,13 @@ class EditUser extends EditRecord
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         /** @var UserModel $record */
-        $submittedRoles = $data['roles'] ?? [];
-        unset($data['roles']);
+        [$data, $submittedRoles] = $this->splitSubmittedRoles($data);
 
-        $saved = $this->saveAccountWithRoles($record, $submittedRoles, static function () use ($record, $data): UserModel {
+        return $this->saveAccountWithRoles($record, $submittedRoles, static function () use ($record, $data): UserModel {
             $record->update($data);
 
             return $record;
         });
-
-        // Without users.assign_roles the roles are left as they are: an account that lost its
-        // base role still gets it back. Anonymized accounts hold no roles on purpose.
-        if ($saved->anonymized_at === null) {
-            app(MemberRoleServiceInterface::class)->assignTo($saved);
-        }
-
-        return $saved;
     }
 
     /**

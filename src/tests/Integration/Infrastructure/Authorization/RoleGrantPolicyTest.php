@@ -214,6 +214,23 @@ final class RoleGrantPolicyTest extends TestCase
         $this->assertFalse($this->policy()->canManageAccount($actor, $target));
     }
 
+    public function test_a_role_with_an_unreadable_name_is_grantable_by_an_admin_only(): void
+    {
+        // A stored name the domain does not accept (not kebab-case) must not break the listing
+        RoleModel::query()->create(['name' => 'Juego_Libre', 'display_name' => 'Juego libre']);
+        $admin = UserModel::factory()->admin()->create();
+        $actor = $this->userWith('secretaria', ['users.assign_roles', 'articles.view_any']);
+
+        $policy = $this->policy();
+
+        $this->assertTrue($policy->canGrant($admin, 'Juego_Libre'));
+        $this->assertFalse($policy->canGrant($admin, 'Not_Stored'));
+        $this->assertContains('Juego_Libre', $policy->grantableRoleNames($admin));
+        $this->assertFalse($policy->canGrant($actor, 'Juego_Libre'));
+        $this->assertNotContains('Juego_Libre', $policy->grantableRoleNames($actor));
+        $this->assertContains('member', $policy->grantableRoleNames($actor));
+    }
+
     public function test_removals_are_computed_from_the_persisted_roles(): void
     {
         $this->role('tesoreria', ['settings.manage']);

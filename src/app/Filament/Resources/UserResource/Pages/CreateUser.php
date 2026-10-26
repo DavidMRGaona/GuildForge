@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UserResource\Pages;
 
-use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Concerns\SavesRolesThroughTheGrantRule;
@@ -24,8 +23,7 @@ class CreateUser extends CreateRecord
      */
     protected function handleRecordCreation(array $data): Model
     {
-        $submittedRoles = $data['roles'] ?? [];
-        unset($data['roles']);
+        [$data, $submittedRoles] = $this->splitSubmittedRoles($data);
 
         $user = new UserModel($data);
 
@@ -43,9 +41,6 @@ class CreateUser extends CreateRecord
 
         // Mark email as verified since admin created the user
         $user->markEmailAsVerified();
-
-        // Also without users.assign_roles, when the chosen roles are not saved
-        app(MemberRoleServiceInterface::class)->assignTo($user);
 
         $user->notify(new WelcomeNotification(app(SiteBrandingServiceInterface::class)->siteName()));
     }

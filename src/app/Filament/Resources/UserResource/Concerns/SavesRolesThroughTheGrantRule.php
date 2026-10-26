@@ -6,6 +6,7 @@ namespace App\Filament\Resources\UserResource\Concerns;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Domain\Authorization\Exceptions\RoleGrantDeniedException;
 use App\Domain\Authorization\Exceptions\RoleHolderLimitReachedException;
@@ -24,6 +25,22 @@ use LogicException;
 trait SavesRolesThroughTheGrantRule
 {
     /**
+     * The submitted form data without its roles, and those roles: null when the data carries no
+     * roles at all, which means "no change", never "untick them all".
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{array<string, mixed>, mixed}
+     */
+    private function splitSubmittedRoles(array $data): array
+    {
+        $roles = $data['roles'] ?? null;
+        unset($data['roles']);
+
+        return [$data, $roles];
+    }
+
+    /**
+     * @param  mixed  $submittedRoles  null when no roles were submitted: they stay as they are
      * @param  callable(): UserModel  $save  writes the account row
      */
     private function saveAccountWithRoles(UserModel $target, mixed $submittedRoles, callable $save): UserModel
@@ -50,6 +67,12 @@ trait SavesRolesThroughTheGrantRule
                     app(AuthorizationServiceInterface::class)->syncRoles($saved, $roles);
                 }
 
+                // Also when the roles were left as they are: an account that lost its base role
+                // gets it back. Anonymized accounts hold no roles on purpose.
+                if ($saved->anonymized_at === null) {
+                    app(MemberRoleServiceInterface::class)->assignTo($saved);
+                }
+
                 return $saved;
             });
         } catch (RoleGrantDeniedException|RoleHolderLimitReachedException $exception) {
@@ -66,19 +89,23 @@ trait SavesRolesThroughTheGrantRule
     }
 
     /**
-     * The roles the account must end up with, or null when the actor may not assign roles: the
-     * submitted state is then ignored and the roles stay as they are.
+     * The roles the account must end up with, or null for no change: when no roles were
+     * submitted, when the actor may not assign roles (the submitted state is then ignored) and
+     * on an anonymized account, which holds no roles on purpose.
      *
      * Every submitted role is kept, so a forged one reaches the rule and is refused rather than
      * dropped in silence. A role the account holds that the actor cannot grant is kept as well
      * (its option is disabled, so only a forged state can leave it out): it is never removed from
-     * here. The base role is always kept, except on an anonymized account, which holds no roles
-     * on purpose.
+     * here. The base role is always kept.
      *
      * @return list<string>|null
      */
     private function rolesToSave(UserModel $actor, UserModel $target, mixed $submittedRoles): ?array
     {
+        if ($submittedRoles === null || $target->anonymized_at !== null) {
+            return null;
+        }
+
         if (! app(AuthorizationServiceInterface::class)->can($actor, RoleGrantPolicy::ASSIGN_ROLES_PERMISSION)) {
             return null;
         }
@@ -91,14 +118,6 @@ trait SavesRolesThroughTheGrantRule
         $held = $target->exists ? $target->roles()->pluck('roles.name')->all() : [];
         $keptHeld = array_diff($held, app(RoleGrantPolicy::class)->grantableRoleNames($actor));
 
-        $roles = array_unique([...$submitted, ...$keptHeld]);
-
-        if ($target->anonymized_at === null) {
-            $roles[] = BaseRoleRule::NAME;
-        } else {
-            $roles = array_diff($roles, [BaseRoleRule::NAME]);
-        }
-
-        return array_values(array_unique($roles));
+        return array_values(array_unique([...$submitted, ...$keptHeld, BaseRoleRule::NAME]));
     }
 }

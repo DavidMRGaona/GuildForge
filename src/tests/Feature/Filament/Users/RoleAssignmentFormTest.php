@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament\Users;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Services\UserServiceInterface;
 use App\Domain\Authorization\Exceptions\RoleGrantDeniedException;
 use App\Domain\Authorization\Exceptions\RoleHolderLimitReachedException;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
@@ -167,11 +168,13 @@ final class RoleAssignmentFormTest extends TestCase
     }
 
     /**
-     * Through the edit page this cannot happen: an account holding a role beyond the actor is
-     * not manageable, so every request of its page is refused (UserPolicy). A new account is
-     * where the association role and such a role can be ticked together.
+     * What it proves: the create form reports the grant rule's refusal when the association
+     * role is ticked next to a role beyond the actor, and creates nothing. Waking dormant roles
+     * through the edit form cannot happen (an account holding a role beyond the actor is not
+     * manageable, so its page refuses every request); that branch of the rule is covered by
+     * RoleGrantPolicyTest.
      */
-    public function test_manual_association_role_is_rejected_when_it_would_wake_a_role_beyond_the_actor(): void
+    public function test_the_create_form_reports_a_refused_role_ticked_with_the_association_role(): void
     {
         $this->actingAs($this->editorWithPermissions(self::FORM_PERMISSIONS));
         $socio = $this->roleWith('socio', []);
@@ -184,6 +187,63 @@ final class RoleAssignmentFormTest extends TestCase
             ->assertNotified(RoleGrantDeniedException::forRoles(['Board'])->getMessage());
 
         $this->assertFalse(UserModel::query()->where('email', 'new.account@example.com')->exists());
+    }
+
+    public function test_a_role_with_an_unreadable_name_keeps_the_forms_working_and_only_an_admin_grants_it(): void
+    {
+        $unreadable = RoleModel::query()->create(['name' => 'Juego_Libre', 'display_name' => 'Juego libre']);
+        $target = $this->userWithMember();
+
+        $this->actingAs($this->editorWithPermissions(self::FORM_PERMISSIONS));
+        Livewire::test(CreateUser::class)->assertOk();
+        $page = Livewire::test(EditUser::class, ['record' => $target->getRouteKey()])->assertOk();
+        $this->assertTrue($this->rolesField($page)->isOptionDisabled($unreadable->name, $unreadable->display_name));
+        $page->set('data.roles', ['member', $unreadable->name])
+            ->call('save')
+            ->assertNotified(RoleGrantDeniedException::forRoles(['Juego_Libre'])->getMessage());
+        $this->assertSame(['member'], $this->roleNamesInDatabase($target));
+
+        $this->actingAs(UserModel::factory()->admin()->create());
+        Livewire::test(CreateUser::class)->assertOk();
+        Livewire::test(EditUser::class, ['record' => $target->getRouteKey()])
+            ->assertOk()
+            ->fillForm(['roles' => ['member', $unreadable->name]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+        $this->assertEqualsCanonicalizing(['Juego_Libre', 'member'], $this->roleNamesInDatabase($target));
+    }
+
+    public function test_a_submission_without_roles_changes_no_role(): void
+    {
+        $this->actingAs($this->editorWithPermissions(self::FORM_PERMISSIONS));
+        $role = $this->roleWith('game-master', ['events.create']);
+        $target = $this->userWithMember();
+        $target->roles()->attach($role->id);
+
+        $instance = Livewire::test(EditUser::class, ['record' => $target->getRouteKey()])->instance();
+        $this->assertInstanceOf(EditUser::class, $instance);
+
+        // As if the form had sent no roles at all: nothing to change, not "untick them all"
+        (fn (): mixed => $this->handleRecordUpdate($target, ['display_name' => 'Changed name']))->call($instance);
+
+        $this->assertEqualsCanonicalizing(['game-master', 'member'], $this->roleNamesInDatabase($target));
+        $this->assertSame('Changed name', $target->fresh()?->display_name);
+    }
+
+    public function test_an_anonymized_account_keeps_no_roles_whatever_is_submitted(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->roleWith('game-master', ['events.create']);
+        $target = $this->userWithMember();
+        $target->delete();
+        app(UserServiceInterface::class)->anonymize($target->id);
+
+        Livewire::test(EditUser::class, ['record' => $target->getRouteKey()])
+            ->set('data.roles', ['member', 'game-master'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame([], $this->roleNamesInDatabase($target));
     }
 
     public function test_base_role_stays_ticked_and_cannot_be_removed(): void

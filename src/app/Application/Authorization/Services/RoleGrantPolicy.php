@@ -39,12 +39,14 @@ final readonly class RoleGrantPolicy
     {
         $role = $this->findRole($roleName);
 
-        if (! $role instanceof Role) {
-            return false;
+        if ($this->isAdmin($actor)) {
+            // Any role that exists, even one whose stored name the domain no longer accepts
+            return $role instanceof Role || in_array($roleName, $this->roles->allNames(), true);
         }
 
-        if ($this->isAdmin($actor)) {
-            return true;
+        // Fails closed: a role that does not exist or cannot be read is never grantable
+        if (! $role instanceof Role) {
+            return false;
         }
 
         if (! $this->authorization->can($actor, self::ASSIGN_ROLES_PERMISSION)) {
@@ -149,21 +151,23 @@ final readonly class RoleGrantPolicy
     }
 
     /**
+     * Never fails on a stored name the domain no longer accepts: an admin gets it like any
+     * other role, anyone else never does.
+     *
      * @return list<string>
      */
     public function grantableRoleNames(object $actor): array
     {
-        $names = [];
+        $names = $this->roles->allNames();
 
-        foreach ($this->roles->findAll() as $role) {
-            $name = $role->name()->value;
-
-            if ($this->canGrant($actor, $name)) {
-                $names[] = $name;
-            }
+        if ($this->isAdmin($actor)) {
+            return $names;
         }
 
-        return $names;
+        return array_values(array_filter(
+            $names,
+            fn (string $name): bool => $this->canGrant($actor, $name),
+        ));
     }
 
     /**
