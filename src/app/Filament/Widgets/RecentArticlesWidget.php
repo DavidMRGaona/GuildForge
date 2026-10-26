@@ -31,7 +31,7 @@ class RecentArticlesWidget extends TableWidget
             ->query(
                 ArticleModel::query()
                     ->where('is_published', true)
-                    ->latest('published_at')
+                    ->orderedByPublication()
                     ->limit($limit)
             )
             ->columns([

@@ -93,6 +93,7 @@ final class GalleryModel extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(TagModel::class, 'gallery_tag', 'gallery_id', 'tag_id')
-            ->withTimestamps();
+            ->withTimestamps()
+            ->ordered();
     }
 }

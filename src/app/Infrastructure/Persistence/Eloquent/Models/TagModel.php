@@ -150,12 +150,14 @@ final class TagModel extends Model
     /**
      * Scope to order tags by sort_order then name.
      *
+     * Columns are qualified so the scope also works on the taggable relations, which join a pivot table.
+     *
      * @param  Builder<TagModel>  $query
      * @return Builder<TagModel>
      */
     public function scopeOrdered(Builder $query): Builder
     {
-        return $query->orderBy('sort_order')->orderBy('name');
+        return $query->orderBy($query->qualifyColumn('sort_order'))->orderBy($query->qualifyColumn('name'));
     }
 
     // =========================================================================
