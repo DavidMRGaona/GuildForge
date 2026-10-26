@@ -27,6 +27,9 @@ use Throwable;
  *
  * A module's change gets the source of the context it runs in (with its actor), not a
  * source of its own: the authorization service cannot tell who calls it.
+ *
+ * RoleAuditContext may impose another source (a module update's finish process records the
+ * queued job's); the history reads the source through it.
  */
 final class RoleAuditSourceResolver
 {

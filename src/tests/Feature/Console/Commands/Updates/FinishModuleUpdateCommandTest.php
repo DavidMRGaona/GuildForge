@@ -11,14 +11,18 @@ use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleAuditEntryModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\PendingCommand;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class FinishModuleUpdateCommandTest extends TestCase
@@ -202,14 +206,80 @@ PHP);
         $this->assertFalse(PermissionModel::query()->where('key', 'finishmod:items.manage')->exists());
     }
 
+    public function test_grants_made_by_the_migrations_are_recorded_for_who_requested_the_update(): void
+    {
+        $this->healthCheck(passes: true);
+        $this->addGrantingMigration();
+        $requester = UserModel::factory()->admin()->create();
+
+        $this->finish(['--audit-source' => 'queue', '--audit-actor' => $requester->id])->assertExitCode(0);
+
+        $entry = $this->grantEntry();
+        $this->assertSame($requester->id, $entry->actor_id);
+        $this->assertSame('queue', $entry->source);
+    }
+
+    public function test_without_the_audit_options_grants_are_recorded_as_a_command_without_actor(): void
+    {
+        $this->healthCheck(passes: true);
+        $this->addGrantingMigration();
+
+        $this->finish()->assertExitCode(0);
+
+        $entry = $this->grantEntry();
+        $this->assertNull($entry->actor_id);
+        $this->assertSame('command', $entry->source);
+    }
+
+    #[DataProvider('actorsWithoutAccount')]
+    public function test_an_actor_without_account_is_left_out_of_the_history_and_logged(string $actorId): void
+    {
+        // The account may be gone by the time the queued update runs; the update goes ahead
+        $this->healthCheck(passes: true);
+        $this->addGrantingMigration();
+        $log = Log::spy();
+
+        $this->finish(['--audit-source' => 'queue', '--audit-actor' => $actorId])->assertExitCode(0);
+
+        $entry = $this->grantEntry();
+        $this->assertNull($entry->actor_id);
+        $this->assertSame('queue', $entry->source);
+        $log->shouldHaveReceived('warning')->once();
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function actorsWithoutAccount(): array
+    {
+        return [
+            'no such account' => ['019a2b3c-4d5e-7f60-8a9b-0c1d2e3f4a5b'],
+            'not an id' => ['not-a-uuid'],
+        ];
+    }
+
+    public function test_an_unknown_audit_source_fails_without_touching_the_database(): void
+    {
+        $this->healthCheck(passes: true);
+
+        $this->finish(['--audit-source' => 'cron'])
+            ->expectsOutputToContain('cron')
+            ->assertExitCode(1);
+
+        $this->assertDatabaseUntouched();
+    }
+
     public function test_it_fails_for_an_unknown_module(): void
     {
         $this->artisanCommand('module:finish-update', ['name' => 'missing-mod', 'version' => '1.0.1-beta'])->assertExitCode(1);
     }
 
-    private function finish(): PendingCommand
+    /**
+     * @param  array<string, string>  $options
+     */
+    private function finish(array $options = []): PendingCommand
     {
-        $command = $this->artisan('module:finish-update', ['name' => 'finish-mod', 'version' => '1.0.1-beta']);
+        $command = $this->artisan('module:finish-update', ['name' => 'finish-mod', 'version' => '1.0.1-beta', ...$options]);
         assert($command instanceof PendingCommand);
 
         return $command;
@@ -235,6 +305,42 @@ PHP);
             action: 'manage',
             module: 'finish-mod',
         ));
+    }
+
+    /**
+     * A migration of the new version that grants a permission to a role, as modules do since #200.
+     */
+    private function addGrantingMigration(): void
+    {
+        File::put($this->modulesPath.'/finish-mod/database/migrations/2026_10_04_000001_grant_items_permission.php', <<<'PHP'
+<?php
+
+use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
+use App\Application\Authorization\Services\RolePermissionGrantsInterface;
+use Illuminate\Database\Migrations\Migration;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        app(RolePermissionGrantsInterface::class)->grantToRole('member', new PermissionDefinitionDTO(
+            key: 'finishmod:items.view',
+            label: 'View items',
+            resource: 'items',
+            action: 'view',
+            module: 'finish-mod',
+        ));
+    }
+};
+PHP);
+    }
+
+    private function grantEntry(): RoleAuditEntryModel
+    {
+        return RoleAuditEntryModel::query()
+            ->where('role_name', 'member')
+            ->where('event', 'role_updated')
+            ->sole();
     }
 
     private function healthCheck(bool $passes): void

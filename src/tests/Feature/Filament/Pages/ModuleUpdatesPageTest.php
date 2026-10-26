@@ -168,7 +168,8 @@ final class ModuleUpdatesPageTest extends TestCase
     {
         Queue::fake();
         $this->enableMaintenance();
-        $this->actingAs(UserModel::factory()->admin()->create());
+        $admin = UserModel::factory()->admin()->create();
+        $this->actingAs($admin);
         $this->pendingUpdate();
 
         Livewire::test(ModuleUpdatesPage::class)
@@ -176,7 +177,9 @@ final class ModuleUpdatesPageTest extends TestCase
             ->assertSet('queuedModules', ['event-registrations'])
             ->assertNotified(__('filament.updates.modules.notifications.update_queued', ['module' => 'event-registrations']));
 
-        Queue::assertPushed(UpdateModuleJob::class, fn (UpdateModuleJob $job): bool => $job->moduleName === 'event-registrations');
+        // The role history records who requested it, not the queue worker
+        Queue::assertPushed(UpdateModuleJob::class, fn (UpdateModuleJob $job): bool => $job->moduleName === 'event-registrations'
+            && $job->requestedBy === $admin->id);
     }
 
     public function test_update_module_is_refused_without_maintenance_mode(): void
@@ -209,9 +212,10 @@ final class ModuleUpdatesPageTest extends TestCase
 
     public function test_update_all_queues_one_job_per_pending_update(): void
     {
-        Queue::fake();
+        $queue = Queue::fake();
         $this->enableMaintenance();
-        $this->actingAs(UserModel::factory()->admin()->create());
+        $admin = UserModel::factory()->admin()->create();
+        $this->actingAs($admin);
         $this->pendingUpdate();
         ModuleModel::factory()->enabled()->create([
             'name' => 'tournaments',
@@ -224,6 +228,7 @@ final class ModuleUpdatesPageTest extends TestCase
         Livewire::test(ModuleUpdatesPage::class)->call('updateAllModules');
 
         Queue::assertPushed(UpdateModuleJob::class, 2);
+        $this->assertCount(2, $queue->pushed(UpdateModuleJob::class, fn (UpdateModuleJob $job): bool => $job->requestedBy === $admin->id));
     }
 
     public function test_poll_reports_finished_updates_and_stops_following_them(): void
