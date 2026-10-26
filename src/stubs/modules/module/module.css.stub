@@ -3,8 +3,10 @@
  * The core stylesheet cannot generate them: `src/modules/*` is gitignored (and
  * absent entirely when the core is built in CI), so Tailwind never sees these
  * files from there. Scanning them here works because, inside this repository,
- * they are ordinary tracked sources. Note the dev server hides the problem --
- * it resolves module classes on the fly, so it only shows in a built asset.
+ * they are ordinary tracked sources. The core attaches this sheet in development
+ * too: its dev server compiles it from these sources (with hot reload), and in
+ * production it comes from the module's build. Both go into the same cascade
+ * layer, so a class missing here is missing in both.
  *
  * `theme(reference)` keeps this cheap: the palette is referenced, not re-emitted,
  * so the file holds only utility rules pointing at variables the core defines.

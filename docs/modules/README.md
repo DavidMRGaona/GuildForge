@@ -990,7 +990,7 @@ public/build/modules/my-module/
 
 1. A page or slot names a module component (`components/GameCard.vue`) or page (`MyModule/GameList`).
 2. On a built site, the browser fetches `/build/modules/<module>/manifest.json`, finds `resources/js/<path>` in it and imports the built file; its imports of the public frontend API resolve through the import map to the site's own chunks. Under the dev server, slot components and pages come from the sources instead.
-3. The module's CSS (the `module-styles` entry and any CSS attached to the loaded chunk) is added to the document once.
+3. The module's CSS (the `module-styles` entry and any CSS attached to the loaded chunk) is added to the document once, inside the `module-utilities` cascade layer. Under the dev server it is `resources/css/module.css` compiled from the sources instead (see [Loading the stylesheet](#loading-the-stylesheet)).
 4. The component renders with the props of its registration.
 
 ---
@@ -999,7 +999,7 @@ public/build/modules/my-module/
 
 This section is about the public site: panel code cannot bring its own CSS (see [Panel code for core 3](#panel-code-for-core-3-filament-5)).
 
-The core stylesheet never sees module sources: `src/modules/*` is ignored by Git, so Tailwind skips it, and modules are absent when CI builds the core. A class a module uses only exists on a built site if the core's own sources or its safelist already produce it, or if the module compiles it. The dev server hides the problem, because it generates classes on the fly.
+The core stylesheet never sees module sources: `src/modules/*` is ignored by Git, so Tailwind skips it, and modules are absent when CI builds the core. A class a module uses only exists if the core's own sources or its safelist already produce it, or if the module compiles it. This holds under the dev server too: it attaches the module stylesheet compiled from the sources (see [Loading the stylesheet](#loading-the-stylesheet)), so a class missing there is missing on a built site as well.
 
 ### Module stylesheet
 
@@ -1027,7 +1027,16 @@ Every module with a frontend ships `resources/css/module.css` (written by `modul
 - Do not `@import 'tailwindcss'`: it would emit preflight and the default theme again.
 - Keep the token list in sync with the core's `resources/css/app.css` (the generated file mirrors it).
 
-The site adds the stylesheet when it loads a module page or slot component (see [Loading flow](#loading-flow)).
+### Loading the stylesheet
+
+The site adds the stylesheet once, when it loads a page or slot component of that module, and always inside the `module-utilities` cascade layer: above the core's `base` (a module's `text-2xl` beats the `h1` reset) and below the core's `utilities` (the core wins a tie). A `<link>` cannot carry a layer, so `attachModuleStylesheet()` (`resources/js/utils/moduleStyles.ts`) adds a `<style>` with `@import url(…) layer(module-utilities)`.
+
+| | Where the stylesheet comes from |
+|---|---|
+| Built site | The module's build: the `module-styles` entry of `/build/modules/<module>/manifest.json`, plus any CSS attached to the loaded chunk (see [Loading flow](#loading-flow)) |
+| Dev server | `resources/css/module.css` compiled by the core's dev server from the module's sources (`http://localhost:5173/modules/<module>/resources/css/module.css`), for the pages and components it loads from those sources. A module without sources (installed from a ZIP) falls back to its build |
+
+Under the dev server the stylesheet follows the sources: a change to a module's `.vue` or `.ts` makes Tailwind rescan them, and the core imports the sheet again without reloading the page; a change to `module.css` itself reloads the page. The test suite attaches no module stylesheet.
 
 ### Core safelist
 
