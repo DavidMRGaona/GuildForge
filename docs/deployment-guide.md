@@ -85,7 +85,7 @@ The `Dockerfile.prod` file uses a multi-stage build to optimize image size and s
 **Stage 1: `assets` (Node 24 Alpine)**
 - Installs npm dependencies (`npm ci`)
 - Compiles frontend assets and the admin panel theme (`resources/css/filament/admin/theme.css`) with `npx vite build`, using Filament's CSS from the `vendor` stage; types are checked by CI, which every deployment waits for
-- Compiles module assets that have `package.json` and `vite.config.ts` with `npm ci` and `npm run build`; a module that fails to install or build fails the image. Production builds from the repository carry no modules (they live outside the host repository), so this only does work in prod-local
+- Compiles module assets with the core's toolchain (`sh scripts/build-module.sh`, for a `vite.config.ts` on `defineModuleConfig`), after `npm ci` of the module's runtime libraries when it has a `package.json`; any other `vite.config.ts`, or a module that fails to install or build, fails the image. Production builds from the repository carry no modules (they live outside the host repository), so this only does work in prod-local
 - Consolidates module build artifacts for copying to the final stage
 
 **Stage 2: `final` (PHP 8.5 FPM Alpine 3.24)**

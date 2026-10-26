@@ -209,13 +209,8 @@ jobs:
               fi
               MODULE_STANDALONE_OUTPUT=true sh scripts/build-module.sh "$MODULE_NAME"
               ;;
-            legacy)
-              # Legacy module toolchain: the module's own Vite. Removed once every module is on
-              # defineModuleConfig
-              (cd "modules/$MODULE_NAME" && npm install && MODULE_STANDALONE_OUTPUT=true npm run build)
-              ;;
             *)
-              echo "::error::modules/$MODULE_NAME/vite.config.ts builds with neither the core's toolchain nor its own"
+              echo "::error::modules/$MODULE_NAME/vite.config.ts does not build with the core's toolchain (defineModuleConfig)"
               exit 1
               ;;
           esac
