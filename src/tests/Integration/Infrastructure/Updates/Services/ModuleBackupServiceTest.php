@@ -187,12 +187,14 @@ final class ModuleBackupServiceTest extends TestCase
         $backups = $this->service->listBackups(ModuleName::fromString('listbackups'));
 
         $this->assertCount(2, $backups);
-        $backup = $backups->first();
-        $this->assertNotNull($backup);
-        $this->assertArrayHasKey('path', $backup);
-        $this->assertArrayHasKey('created_at', $backup);
-        $this->assertArrayHasKey('size', $backup);
-        $this->assertArrayHasKey('version', $backup);
+        $newest = $backups->first();
+        $oldest = $backups->last();
+        $this->assertNotNull($newest);
+        $this->assertNotNull($oldest);
+        $this->assertFileExists($newest['path']);
+        $this->assertSame(filesize($newest['path']), $newest['size']);
+        $this->assertSame('1.0.0', $newest['version']);
+        $this->assertGreaterThan($oldest['created_at'], $newest['created_at']);
     }
 
     public function test_it_returns_empty_collection_when_no_backups_exist(): void

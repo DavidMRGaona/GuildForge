@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 
-use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Enums\RequirementType;
@@ -140,7 +139,6 @@ final class EloquentModuleRepositoryTest extends TestCase
 
         $all = $this->repository->all();
 
-        $this->assertInstanceOf(ModuleCollection::class, $all);
         $this->assertCount(3, $all);
     }
 
@@ -156,7 +154,6 @@ final class EloquentModuleRepositoryTest extends TestCase
 
         $enabled = $this->repository->enabled();
 
-        $this->assertInstanceOf(ModuleCollection::class, $enabled);
         $this->assertCount(2, $enabled);
         $enabled->each(function (Module $module) {
             $this->assertTrue($module->isEnabled());
@@ -175,7 +172,6 @@ final class EloquentModuleRepositoryTest extends TestCase
 
         $disabled = $this->repository->disabled();
 
-        $this->assertInstanceOf(ModuleCollection::class, $disabled);
         $this->assertCount(2, $disabled);
         $disabled->each(function (Module $module) {
             $this->assertTrue($module->isDisabled());

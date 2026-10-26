@@ -116,8 +116,6 @@ final class ThemeSettingsDTOTest extends TestCase
 
         $this->assertTrue($dto->darkModeDefault);
         $this->assertFalse($dto->darkModeToggleVisible);
-        $this->assertIsBool($dto->darkModeDefault);
-        $this->assertIsBool($dto->darkModeToggleVisible);
     }
 
     public function test_dto_is_readonly(): void

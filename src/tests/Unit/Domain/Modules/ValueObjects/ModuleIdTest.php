@@ -14,7 +14,6 @@ final class ModuleIdTest extends TestCase
     {
         $id = ModuleId::generate();
 
-        $this->assertInstanceOf(ModuleId::class, $id);
         $this->assertNotEmpty((string) $id);
     }
 

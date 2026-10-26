@@ -77,7 +77,6 @@ final class GalleryModelTest extends TestCase
         ]);
 
         $this->assertTrue($gallery->is_published);
-        $this->assertIsBool($gallery->is_published);
     }
 
     public function test_factory_creates_draft_gallery_by_default(): void

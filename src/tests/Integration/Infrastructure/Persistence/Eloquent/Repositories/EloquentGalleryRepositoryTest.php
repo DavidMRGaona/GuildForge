@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Domain\Entities\Gallery;
-use App\Domain\Repositories\GalleryRepositoryInterface;
 use App\Domain\ValueObjects\GalleryId;
 use App\Domain\ValueObjects\Slug;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -23,11 +22,6 @@ final class EloquentGalleryRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->repository = new EloquentGalleryRepository;
-    }
-
-    public function test_it_implements_gallery_repository_interface(): void
-    {
-        $this->assertInstanceOf(GalleryRepositoryInterface::class, $this->repository);
     }
 
     public function test_it_finds_gallery_by_id(): void

@@ -116,12 +116,10 @@ final class HexColorTest extends TestCase
         $oklch = $color->toOklch();
 
         // OKLCH values for amber: L ~0.66, C ~0.15, H ~60°
-        $this->assertArrayHasKey('l', $oklch);
-        $this->assertArrayHasKey('c', $oklch);
-        $this->assertArrayHasKey('h', $oklch);
         $this->assertGreaterThan(0, $oklch['l']);
         $this->assertLessThan(1, $oklch['l']);
         $this->assertGreaterThan(0, $oklch['c']);
+        $this->assertEqualsWithDelta(60, $oklch['h'], 5);
     }
 
     public function test_it_converts_white_to_oklch(): void
@@ -286,7 +284,6 @@ final class HexColorTest extends TestCase
     {
         $color = HexColor::fromOklch(0.66, 0.15, 60);
 
-        $this->assertInstanceOf(HexColor::class, $color);
         $this->assertMatchesRegularExpression('/^#[A-F0-9]{6}$/', $color->value);
     }
 

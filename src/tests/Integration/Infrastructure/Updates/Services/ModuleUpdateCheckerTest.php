@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
-use App\Application\Updates\DTOs\BlockedReleaseDTO;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Application\Updates\Services\ReleaseChannelPolicy;
 use App\Domain\Modules\Collections\ModuleCollection;
@@ -334,7 +333,6 @@ final class ModuleUpdateCheckerTest extends TestCase
         $this->assertNull($module->latestAvailableVersion());
         $this->assertSame('2.0.0', $module->latestBlockedVersion());
         $this->assertCount(1, $result->blocked);
-        $this->assertInstanceOf(BlockedReleaseDTO::class, $result->blocked[0]);
         $this->assertSame('2.0.0', $result->blocked[0]->blockedVersion);
         $this->assertSame('modules.compatibility.reasons.unsatisfied', $result->blocked[0]->toArray()['issues'][0]['reason_key']);
     }

@@ -123,7 +123,6 @@ final class SesUsageTrackerTest extends TestCase
 
         $result = $this->tracker->getTodayUsage();
 
-        $this->assertInstanceOf(SesUsageRecordModel::class, $result);
         $this->assertSame(42, $result->emails_sent);
         $this->assertSame(3, $result->bounces_count);
         $this->assertSame(1, $result->complaints_count);
@@ -156,7 +155,6 @@ final class SesUsageTrackerTest extends TestCase
     {
         $result = $this->tracker->getTodayUsage();
 
-        $this->assertInstanceOf(SesUsageRecordModel::class, $result);
         $this->assertSame(0, $result->emails_sent);
         $this->assertSame(0, $result->bounces_count);
         $this->assertSame(0, $result->complaints_count);

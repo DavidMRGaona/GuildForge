@@ -6,7 +6,6 @@ namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Application\DTOs\CreateUserDTO;
 use App\Domain\Entities\User;
-use App\Domain\Repositories\UserRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
@@ -23,11 +22,6 @@ final class EloquentUserRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->repository = new EloquentUserRepository;
-    }
-
-    public function test_it_implements_user_repository_interface(): void
-    {
-        $this->assertInstanceOf(UserRepositoryInterface::class, $this->repository);
     }
 
     public function test_it_finds_user_by_id(): void
@@ -109,7 +103,6 @@ final class EloquentUserRepositoryTest extends TestCase
 
         $user = $this->repository->create($dto);
 
-        $this->assertInstanceOf(User::class, $user);
         $this->assertEquals('DTO User', $user->name());
         $this->assertEquals('dto@example.com', $user->email());
         $this->assertDatabaseHas('users', [

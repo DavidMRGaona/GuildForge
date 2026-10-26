@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Domain\Entities\Photo;
-use App\Domain\Repositories\PhotoRepositoryInterface;
 use App\Domain\ValueObjects\GalleryId;
 use App\Domain\ValueObjects\PhotoId;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -24,11 +23,6 @@ final class EloquentPhotoRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->repository = new EloquentPhotoRepository;
-    }
-
-    public function test_it_implements_photo_repository_interface(): void
-    {
-        $this->assertInstanceOf(PhotoRepositoryInterface::class, $this->repository);
     }
 
     public function test_it_finds_photo_by_id(): void

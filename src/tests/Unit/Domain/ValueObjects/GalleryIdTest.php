@@ -14,7 +14,6 @@ final class GalleryIdTest extends TestCase
     {
         $id = GalleryId::generate();
 
-        $this->assertInstanceOf(GalleryId::class, $id);
         $this->assertNotEmpty((string) $id);
     }
 

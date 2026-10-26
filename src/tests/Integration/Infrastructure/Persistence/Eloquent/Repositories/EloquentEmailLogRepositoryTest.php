@@ -6,7 +6,6 @@ namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Domain\Mail\Entities\EmailLog;
 use App\Domain\Mail\Enums\EmailStatus;
-use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
 use App\Domain\Mail\ValueObjects\EmailLogId;
 use App\Infrastructure\Persistence\Eloquent\Models\EmailLogModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentEmailLogRepository;
@@ -25,11 +24,6 @@ final class EloquentEmailLogRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->repository = new EloquentEmailLogRepository;
-    }
-
-    public function test_it_implements_email_log_repository_interface(): void
-    {
-        $this->assertInstanceOf(EmailLogRepositoryInterface::class, $this->repository);
     }
 
     public function test_saves_email_log(): void

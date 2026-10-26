@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Domain\Mail\ValueObjects;
 
 use App\Domain\Mail\ValueObjects\EmailLogId;
-use App\Domain\ValueObjects\EntityId;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -17,7 +16,6 @@ final class EmailLogIdTest extends TestCase
 
         $id = EmailLogId::fromString($uuid);
 
-        $this->assertInstanceOf(EmailLogId::class, $id);
         $this->assertEquals($uuid, (string) $id);
     }
 
@@ -25,18 +23,10 @@ final class EmailLogIdTest extends TestCase
     {
         $id = EmailLogId::generate();
 
-        $this->assertInstanceOf(EmailLogId::class, $id);
         $this->assertMatchesRegularExpression(
             '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
             (string) $id
         );
-    }
-
-    public function test_it_extends_entity_id(): void
-    {
-        $id = EmailLogId::generate();
-
-        $this->assertInstanceOf(EntityId::class, $id);
     }
 
     public function test_it_throws_exception_for_invalid_uuid(): void

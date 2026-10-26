@@ -6,7 +6,6 @@ namespace Tests\Integration\Infrastructure\Modules\Services;
 
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Services\SettingsServiceInterface;
-use App\Infrastructure\Modules\Services\SettingsTableModuleSettingsStore;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -36,11 +35,6 @@ final class SettingsTableModuleSettingsStoreTest extends TestCase
     {
         File::deleteDirectory($this->modulePath);
         parent::tearDown();
-    }
-
-    public function test_it_is_the_bound_implementation(): void
-    {
-        $this->assertInstanceOf(SettingsTableModuleSettingsStore::class, app(ModuleSettingsStoreInterface::class));
     }
 
     public function test_effective_returns_release_defaults_when_nothing_is_stored(): void

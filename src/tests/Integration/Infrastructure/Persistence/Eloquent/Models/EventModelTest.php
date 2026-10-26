@@ -60,7 +60,6 @@ final class EventModelTest extends TestCase
             'start_date' => '2024-06-15 10:00:00',
         ]);
 
-        $this->assertInstanceOf(\DateTimeInterface::class, $event->start_date);
         $this->assertEquals('2024-06-15', $event->start_date->format('Y-m-d'));
     }
 
@@ -71,7 +70,6 @@ final class EventModelTest extends TestCase
             'end_date' => '2024-06-16 18:00:00',
         ]);
 
-        $this->assertInstanceOf(\DateTimeInterface::class, $event->end_date);
         $this->assertEquals('2024-06-16', $event->end_date->format('Y-m-d'));
     }
 
@@ -95,7 +93,6 @@ final class EventModelTest extends TestCase
         ]);
 
         $this->assertTrue($event->is_published);
-        $this->assertIsBool($event->is_published);
     }
 
     public function test_factory_creates_draft_event_by_default(): void
@@ -116,7 +113,6 @@ final class EventModelTest extends TestCase
     {
         $event = EventModel::factory()->multiDay()->create();
 
-        $this->assertInstanceOf(\DateTimeInterface::class, $event->end_date);
         $this->assertGreaterThan($event->start_date, $event->end_date);
     }
 

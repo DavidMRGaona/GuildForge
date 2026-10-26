@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Services;
 
-use App\Application\Services\UserModelQueryServiceInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Services\UserModelQueryService;
@@ -23,11 +22,6 @@ final class UserModelQueryServiceTest extends TestCase
         $this->service = new UserModelQueryService;
     }
 
-    public function test_it_implements_user_model_query_service_interface(): void
-    {
-        $this->assertInstanceOf(UserModelQueryServiceInterface::class, $this->service);
-    }
-
     public function test_it_finds_user_model_by_id(): void
     {
         $model = UserModel::factory()->create([
@@ -38,7 +32,6 @@ final class UserModelQueryServiceTest extends TestCase
         $foundModel = $this->service->findModelById(new UserId($model->id));
 
         $this->assertNotNull($foundModel);
-        $this->assertInstanceOf(UserModel::class, $foundModel);
         $this->assertEquals($model->id, $foundModel->id);
         $this->assertEquals('John Doe', $foundModel->name);
     }
@@ -75,7 +68,6 @@ final class UserModelQueryServiceTest extends TestCase
         $foundModel = $this->service->findByEmail('jane@example.com');
 
         $this->assertNotNull($foundModel);
-        $this->assertInstanceOf(UserModel::class, $foundModel);
         $this->assertEquals($model->id, $foundModel->id);
         $this->assertEquals('Jane Doe', $foundModel->name);
         $this->assertEquals('jane@example.com', $foundModel->email);

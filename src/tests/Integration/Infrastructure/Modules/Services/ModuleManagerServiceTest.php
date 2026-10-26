@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Modules\Services;
 
-use App\Application\Modules\DTOs\DependencyCheckResultDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
-use App\Domain\Modules\Collections\ModuleCollection;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
@@ -70,7 +68,6 @@ final class ModuleManagerServiceTest extends TestCase
 
         $modules = $this->service->discover();
 
-        $this->assertInstanceOf(ModuleCollection::class, $modules);
         $this->assertCount(2, $modules);
         $this->assertNotNull($modules->findByName(ModuleName::fromString('test-module')));
         $this->assertNotNull($modules->findByName(ModuleName::fromString('another-module')));
@@ -341,7 +338,6 @@ final class ModuleManagerServiceTest extends TestCase
 
         $modules = $this->service->all();
 
-        $this->assertInstanceOf(ModuleCollection::class, $modules);
         $this->assertCount(2, $modules);
     }
 
@@ -370,7 +366,6 @@ final class ModuleManagerServiceTest extends TestCase
 
         $modules = $this->service->enabled();
 
-        $this->assertInstanceOf(ModuleCollection::class, $modules);
         $this->assertCount(1, $modules);
         $this->assertTrue($modules->items()[0]->isEnabled());
     }
@@ -430,7 +425,6 @@ final class ModuleManagerServiceTest extends TestCase
 
         $result = $this->service->checkDependencies(ModuleName::fromString('dependent-module'));
 
-        $this->assertInstanceOf(DependencyCheckResultDTO::class, $result);
         $this->assertTrue($result->satisfied);
         $this->assertEmpty($result->missing);
     }

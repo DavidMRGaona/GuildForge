@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Domain\Entities\Article;
-use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\ValueObjects\ArticleId;
 use App\Domain\ValueObjects\Slug;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
@@ -25,11 +24,6 @@ final class EloquentArticleRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->repository = new EloquentArticleRepository;
-    }
-
-    public function test_it_implements_article_repository_interface(): void
-    {
-        $this->assertInstanceOf(ArticleRepositoryInterface::class, $this->repository);
     }
 
     public function test_it_finds_by_id(): void

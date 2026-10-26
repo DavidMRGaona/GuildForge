@@ -110,7 +110,6 @@ final class ColorPaletteTest extends TestCase
 
         $palette = new ColorPalette('primary', $shades);
 
-        $this->assertInstanceOf(HexColor::class, $palette->baseColor());
         $this->assertEquals('#D97706', $palette->baseColor()->value);
     }
 
@@ -187,8 +186,6 @@ final class ColorPaletteTest extends TestCase
         $palette = new ColorPalette('primary', $shades);
         $array = $palette->toArray();
 
-        $this->assertArrayHasKey('name', $array);
-        $this->assertArrayHasKey('shades', $array);
         $this->assertEquals('primary', $array['name']);
         $this->assertCount(11, $array['shades']);
         $this->assertEquals('#D97706', $array['shades'][600]);

@@ -62,7 +62,6 @@ final class PhotoModelTest extends TestCase
         ]);
         $photo = PhotoModel::factory()->forGallery($gallery)->create();
 
-        $this->assertInstanceOf(GalleryModel::class, $photo->gallery);
         $this->assertEquals('Test Gallery', $photo->gallery->title);
     }
 
@@ -83,6 +82,6 @@ final class PhotoModelTest extends TestCase
     {
         $photo = PhotoModel::factory()->create();
 
-        $this->assertInstanceOf(GalleryModel::class, $photo->gallery);
+        $this->assertDatabaseHas('galleries', ['id' => $photo->gallery_id]);
     }
 }

@@ -61,7 +61,6 @@ final class HeroSlideModelTest extends TestCase
         ]);
 
         $this->assertTrue($slide->is_active);
-        $this->assertIsBool($slide->is_active);
     }
 
     public function test_it_casts_sort_order_as_integer(): void

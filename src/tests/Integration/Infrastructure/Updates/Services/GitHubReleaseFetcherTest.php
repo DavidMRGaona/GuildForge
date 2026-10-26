@@ -6,7 +6,6 @@ namespace Tests\Integration\Infrastructure\Updates\Services;
 
 use App\Application\Modules\Services\HostEnvironmentProviderInterface;
 use App\Application\Modules\Services\ModuleCompatibilityChecker;
-use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Domain\Modules\Enums\RequirementType;
 use App\Domain\Modules\Services\ConstraintMatcher;
 use App\Domain\Modules\ValueObjects\CompatibilityIssue;
@@ -582,13 +581,6 @@ final class GitHubReleaseFetcherTest extends TestCase
         ]);
 
         $this->assertSame('1.1.0', $this->latest('o', 'r')?->version->value());
-    }
-
-    public function test_service_is_registered_in_container(): void
-    {
-        $service = $this->app->make(GitHubReleaseFetcherInterface::class);
-
-        $this->assertInstanceOf(GitHubReleaseFetcher::class, $service);
     }
 
     /**

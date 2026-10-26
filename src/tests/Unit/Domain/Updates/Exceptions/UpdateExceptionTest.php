@@ -122,11 +122,4 @@ final class UpdateExceptionTest extends TestCase
         $this->assertStringContainsString('custom-module', $exception->getMessage());
         $this->assertStringContainsString('no GitHub source configured', $exception->getMessage());
     }
-
-    public function test_exception_extends_domain_exception(): void
-    {
-        $exception = UpdateException::downloadFailed('test', 'error');
-
-        $this->assertInstanceOf(\DomainException::class, $exception);
-    }
 }

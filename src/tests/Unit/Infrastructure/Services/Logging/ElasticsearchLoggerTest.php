@@ -8,7 +8,7 @@ use App\Application\Services\LogContextProviderInterface;
 use App\Infrastructure\Services\Logging\ElasticsearchHandler;
 use App\Infrastructure\Services\Logging\ElasticsearchLogger;
 use Monolog\Handler\NullHandler;
-use Monolog\Logger;
+use Monolog\Level;
 use Tests\TestCase;
 
 final class ElasticsearchLoggerTest extends TestCase
@@ -27,15 +27,17 @@ final class ElasticsearchLoggerTest extends TestCase
         config(['elasticsearch.ssl' => false]);
     }
 
-    public function test_factory_creates_logger_instance(): void
+    public function test_factory_uses_the_channel_level_and_defaults_to_debug(): void
     {
         $factory = new ElasticsearchLogger;
 
-        $logger = $factory([
-            'level' => 'debug',
-        ]);
+        $handler = $factory(['level' => 'error'])->getHandlers()[0];
+        $this->assertInstanceOf(ElasticsearchHandler::class, $handler);
+        $this->assertSame(Level::Error, $handler->getLevel());
 
-        $this->assertInstanceOf(Logger::class, $logger);
+        $handler = $factory([])->getHandlers()[0];
+        $this->assertInstanceOf(ElasticsearchHandler::class, $handler);
+        $this->assertSame(Level::Debug, $handler->getLevel());
     }
 
     public function test_factory_returns_null_handler_when_disabled(): void
@@ -46,7 +48,6 @@ final class ElasticsearchLoggerTest extends TestCase
 
         $logger = $factory([]);
 
-        $this->assertInstanceOf(Logger::class, $logger);
         $handlers = $logger->getHandlers();
         $this->assertCount(1, $handlers);
         $this->assertInstanceOf(NullHandler::class, $handlers[0]);
@@ -85,7 +86,6 @@ final class ElasticsearchLoggerTest extends TestCase
 
         $logger = $factory([]);
 
-        $this->assertInstanceOf(Logger::class, $logger);
         $this->assertEquals('elasticsearch', $logger->getName());
     }
 

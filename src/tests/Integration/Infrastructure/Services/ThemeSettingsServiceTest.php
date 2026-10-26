@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Services;
 
-use App\Application\DTOs\ThemeSettingsDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Infrastructure\Services\ThemeSettingsService;
@@ -34,7 +33,6 @@ final class ThemeSettingsServiceTest extends TestCase
 
         $dto = $this->service->getThemeSettings();
 
-        $this->assertInstanceOf(ThemeSettingsDTO::class, $dto);
         $this->assertEquals('Roboto', $dto->fontHeading);
         $this->assertTrue($dto->darkModeDefault);
     }
@@ -43,7 +41,6 @@ final class ThemeSettingsServiceTest extends TestCase
     {
         $dto = $this->service->getThemeSettings();
 
-        $this->assertInstanceOf(ThemeSettingsDTO::class, $dto);
         $this->assertEquals('Inter', $dto->fontHeading);
         $this->assertEquals('Inter', $dto->fontBody);
         $this->assertEquals('16px', $dto->fontSizeBase);

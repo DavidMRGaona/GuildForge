@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Domain\Entities\SlugRedirect;
-use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\ValueObjects\Slug;
 use App\Infrastructure\Persistence\Eloquent\Models\SlugRedirectModel;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentSlugRedirectRepository;
@@ -23,11 +22,6 @@ final class EloquentSlugRedirectRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->repository = new EloquentSlugRedirectRepository;
-    }
-
-    public function test_it_implements_interface(): void
-    {
-        $this->assertInstanceOf(SlugRedirectRepositoryInterface::class, $this->repository);
     }
 
     public function test_find_by_old_slug_and_type_returns_redirect(): void

@@ -184,7 +184,7 @@ final class ModuleCollectionTest extends TestCase
         foreach ($collection as $name => $mod) {
             $iterations++;
             $this->assertEquals('test-module', $name);
-            $this->assertInstanceOf(Module::class, $mod);
+            $this->assertSame($module, $mod);
         }
 
         $this->assertEquals(1, $iterations);
@@ -234,8 +234,7 @@ final class ModuleCollectionTest extends TestCase
 
         $result = $collection->first();
 
-        $this->assertNotNull($result);
-        $this->assertInstanceOf(Module::class, $result);
+        $this->assertSame($module1, $result);
     }
 
     public function test_first_returns_null_for_empty_collection(): void

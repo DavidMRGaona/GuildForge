@@ -10,11 +10,6 @@ use PHPUnit\Framework\TestCase;
 
 final class MailDriverTest extends TestCase
 {
-    public function test_it_has_exactly_six_cases(): void
-    {
-        $this->assertCount(6, MailDriver::cases());
-    }
-
     public function test_it_has_smtp_case(): void
     {
         $this->assertContains(MailDriver::Smtp, MailDriver::cases());

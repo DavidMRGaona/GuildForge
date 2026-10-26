@@ -14,7 +14,6 @@ final class EventIdTest extends TestCase
     {
         $id = EventId::generate();
 
-        $this->assertInstanceOf(EventId::class, $id);
         $this->assertNotEmpty((string) $id);
     }
 

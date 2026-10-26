@@ -14,7 +14,6 @@ final class PhotoIdTest extends TestCase
     {
         $id = PhotoId::generate();
 
-        $this->assertInstanceOf(PhotoId::class, $id);
         $this->assertNotEmpty((string) $id);
     }
 

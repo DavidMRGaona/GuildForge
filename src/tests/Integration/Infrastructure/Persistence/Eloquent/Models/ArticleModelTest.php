@@ -65,7 +65,6 @@ final class ArticleModelTest extends TestCase
         ]);
 
         $this->assertTrue($article->is_published);
-        $this->assertIsBool($article->is_published);
     }
 
     public function test_it_casts_datetime_correctly(): void
@@ -115,7 +114,6 @@ final class ArticleModelTest extends TestCase
             'author_id' => $author->id,
         ]);
 
-        $this->assertInstanceOf(UserModel::class, $article->author);
         $this->assertEquals('John Doe', $article->author->name);
     }
 }

@@ -10,9 +10,9 @@ use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Tests\TestCase;
 
@@ -50,10 +50,15 @@ final class UpdateModuleJobTest extends TestCase
 
     public function test_job_is_unique_per_module(): void
     {
-        $job = new UpdateModuleJob('game-tables');
+        Queue::fake();
 
-        $this->assertInstanceOf(ShouldBeUnique::class, $job);
-        $this->assertSame('module-update:game-tables', $job->uniqueId());
+        UpdateModuleJob::dispatch('game-tables');
+        UpdateModuleJob::dispatch('game-tables');
+        UpdateModuleJob::dispatch('tournaments');
+
+        // The second update of the same module is dropped while the first one holds the lock
+        Queue::assertPushed(UpdateModuleJob::class, 2);
+        $this->assertSame('module-update:game-tables', (new UpdateModuleJob('game-tables'))->uniqueId());
     }
 
     public function test_queue_retry_after_exceeds_the_job_timeout(): void

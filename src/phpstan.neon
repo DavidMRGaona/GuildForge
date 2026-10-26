@@ -2,6 +2,9 @@ includes:
     - vendor/larastan/larastan/extension.neon
     # A Mockery mock is also the class it mocks (type extension only, no extra rules)
     - vendor/phpstan/phpstan-mockery/extension.neon
+    # Narrows types after PHPUnit assertions, so assertions that can never fail are reported
+    # (type extension only, not its rules.neon)
+    - vendor/phpstan/phpstan-phpunit/extension.neon
 
 parameters:
     phpVersion: 80500
