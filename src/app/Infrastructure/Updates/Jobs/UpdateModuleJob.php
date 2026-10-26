@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Updates\Jobs;
 
+use App\Application\Updates\DTOs\ModuleUpdateResultDTO;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Enums\UpdateStatus;
+use App\Infrastructure\Authorization\Services\RoleAuditContext;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -32,16 +34,23 @@ final class UpdateModuleJob implements ShouldBeUnique, ShouldQueue
     /** Seconds the uniqueness lock lasts if the job never finishes */
     public int $uniqueFor = 900;
 
+    /**
+     * @param  string|null  $requestedBy  Id of the user who requested the update, for the role history
+     */
     public function __construct(
         public readonly string $moduleName,
+        public readonly ?string $requestedBy = null,
     ) {}
 
-    public function handle(ModuleUpdaterInterface $updater): void
+    public function handle(ModuleUpdaterInterface $updater, RoleAuditContext $auditContext): void
     {
         Log::info("Starting update for module: {$this->moduleName}");
 
+        // A job queued before the requester was recorded is unserialized without it
+        $requestedBy = $this->requestedBy ?? null;
+
         try {
-            $result = $updater->update(new ModuleName($this->moduleName));
+            $result = $auditContext->actingFor($requestedBy, fn (): ModuleUpdateResultDTO => $updater->update(new ModuleName($this->moduleName)));
 
             if ($result->isSuccess()) {
                 Log::info('Module update completed successfully', [

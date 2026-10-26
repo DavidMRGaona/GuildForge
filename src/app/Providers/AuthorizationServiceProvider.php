@@ -26,6 +26,7 @@ use App\Infrastructure\Authorization\Services\AuthorizationService;
 use App\Infrastructure\Authorization\Services\MemberRoleService;
 use App\Infrastructure\Authorization\Services\PermissionRegistry;
 use App\Infrastructure\Authorization\Services\ProcessPermissionSyncRunner;
+use App\Infrastructure\Authorization\Services\RoleAuditContext;
 use App\Infrastructure\Authorization\Services\RoleAuditLogger;
 use App\Infrastructure\Authorization\Services\RoleAuditSourceResolver;
 use App\Infrastructure\Authorization\Services\RolePermissionGrants;
@@ -60,6 +61,8 @@ class AuthorizationServiceProvider extends ServiceProvider
         // A singleton, not scoped: it counts the running queued jobs, and the worker drops
         // scoped instances when a job starts
         $this->app->singleton(RoleAuditSourceResolver::class);
+        // Same reason: actingFor() lasts a whole queued job
+        $this->app->singleton(RoleAuditContext::class);
     }
 
     public function boot(): void

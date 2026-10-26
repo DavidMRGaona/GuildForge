@@ -303,7 +303,8 @@ final class ModuleUpdatesPage extends Page implements HasTable
             return;
         }
 
-        UpdateModuleJob::dispatch($moduleName);
+        $requestedBy = auth()->id();
+        UpdateModuleJob::dispatch($moduleName, is_scalar($requestedBy) ? (string) $requestedBy : null);
 
         $this->queuedModules[] = $moduleName;
         $this->queuedSince ??= now()->toIso8601String();

@@ -9,7 +9,6 @@ use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleAuditEntryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -20,7 +19,7 @@ use Illuminate\Support\Str;
 final readonly class RoleAuditLogger implements RoleAuditLoggerInterface
 {
     public function __construct(
-        private RoleAuditSourceResolver $source,
+        private RoleAuditContext $context,
     ) {}
 
     public function roleAssigned(object $user, string $roleName): void
@@ -61,8 +60,8 @@ final readonly class RoleAuditLogger implements RoleAuditLoggerInterface
             'role_name' => $roleName,
             'event' => $event->value,
             'changes' => $changes,
-            'actor_id' => $this->actorId(),
-            'source' => $this->source->resolve()->value,
+            'actor_id' => $this->context->actorId(),
+            'source' => $this->context->source()->value,
         ]);
     }
 
@@ -77,8 +76,8 @@ final readonly class RoleAuditLogger implements RoleAuditLoggerInterface
             return;
         }
 
-        $actorId = $this->actorId();
-        $source = $this->source->resolve()->value;
+        $actorId = $this->context->actorId();
+        $source = $this->context->source()->value;
         $now = now();
 
         RoleAuditEntryModel::query()->insert(array_map(
@@ -111,12 +110,5 @@ final readonly class RoleAuditLogger implements RoleAuditLoggerInterface
         $key = $user->getKey();
 
         return is_scalar($key) ? (string) $key : '';
-    }
-
-    private function actorId(): ?string
-    {
-        $id = Auth::id();
-
-        return is_scalar($id) ? (string) $id : null;
     }
 }

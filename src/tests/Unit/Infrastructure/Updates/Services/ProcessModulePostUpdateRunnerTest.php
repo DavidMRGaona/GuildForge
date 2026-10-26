@@ -8,6 +8,7 @@ use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Infrastructure\Authorization\Services\RoleAuditContext;
 use App\Infrastructure\Updates\Services\ProcessModulePostUpdateRunner;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Log;
@@ -22,8 +23,25 @@ final class ProcessModulePostUpdateRunnerTest extends TestCase
 
         $this->runner()->run(new ModuleName('game-tables'), ModuleVersion::fromString('1.0.19-beta'));
 
-        Process::assertRan(fn (PendingProcess $process): bool => $process->command === [ProcessModulePostUpdateRunner::phpBinary(), base_path('artisan'), 'module:finish-update', 'game-tables', '1.0.19-beta', '--no-interaction']
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === [ProcessModulePostUpdateRunner::phpBinary(), base_path('artisan'), 'module:finish-update', 'game-tables', '1.0.19-beta', '--audit-source=command', '--no-interaction']
             && $process->path === base_path());
+    }
+
+    public function test_the_process_records_role_changes_like_the_queued_update_that_runs_it(): void
+    {
+        // The child process cannot tell it runs for a queued job, nor who requested it
+        Process::fake(['*' => Process::result($this->reportLine())]);
+        $actorId = '019a2b3c-4d5e-7f60-8a9b-0c1d2e3f4a5b';
+
+        // The queued closure is serialized: no $this inside
+        dispatch(static function () use ($actorId): void {
+            app(RoleAuditContext::class)->actingFor(
+                $actorId,
+                static fn (): PostUpdateReportDTO => app(ProcessModulePostUpdateRunner::class)->run(new ModuleName('game-tables'), ModuleVersion::fromString('1.0.19-beta')),
+            );
+        });
+
+        Process::assertRan(fn (PendingProcess $process): bool => $process->command === [ProcessModulePostUpdateRunner::phpBinary(), base_path('artisan'), 'module:finish-update', 'game-tables', '1.0.19-beta', '--audit-source=queue', '--audit-actor='.$actorId, '--no-interaction']);
     }
 
     public function test_it_returns_the_report_printed_by_the_command(): void
@@ -91,7 +109,7 @@ final class ProcessModulePostUpdateRunnerTest extends TestCase
 
     private function runner(): ProcessModulePostUpdateRunner
     {
-        return new ProcessModulePostUpdateRunner;
+        return $this->app->make(ProcessModulePostUpdateRunner::class);
     }
 
     private function reportLine(): string

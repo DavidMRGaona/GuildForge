@@ -9,6 +9,7 @@ use App\Application\Updates\Services\ModulePostUpdateRunnerInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Infrastructure\Authorization\Services\RoleAuditContext;
 use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -20,19 +21,23 @@ use Symfony\Component\Process\PhpExecutableFinder;
  * The queue worker performing the update has the previous version's classes and
  * service providers loaded; a fresh process boots the new version only.
  */
-final class ProcessModulePostUpdateRunner implements ModulePostUpdateRunnerInterface
+final readonly class ProcessModulePostUpdateRunner implements ModulePostUpdateRunnerInterface
 {
     /** Below the queue's retry_after (660s), so the job is never redelivered mid-update */
     private const int TIMEOUT_SECONDS = 480;
 
     private const int CACHE_TIMEOUT_SECONDS = 120;
 
+    public function __construct(
+        private RoleAuditContext $auditContext,
+    ) {}
+
     public function run(ModuleName $moduleName, ModuleVersion $version): PostUpdateReportDTO
     {
         // A timeout kills the child before it commits, and PostgreSQL rolls its transaction back
         $result = Process::path(base_path())
             ->timeout(self::TIMEOUT_SECONDS)
-            ->run([self::phpBinary(), base_path('artisan'), 'module:finish-update', $moduleName->value, $version->value(), '--no-interaction']);
+            ->run([self::phpBinary(), base_path('artisan'), 'module:finish-update', $moduleName->value, $version->value(), ...$this->auditOptions(), '--no-interaction']);
 
         if (! $result->successful()) {
             throw UpdateException::postUpdateFailed($moduleName->value, $this->reason($result));
@@ -64,6 +69,24 @@ final class ProcessModulePostUpdateRunner implements ModulePostUpdateRunnerInter
     public static function phpBinary(): string
     {
         return (new PhpExecutableFinder)->find(false) ?: 'php';
+    }
+
+    /**
+     * What the child records in the role history: on its own it would see a console command
+     * run by nobody, not the queued update and who requested it.
+     *
+     * @return list<string>
+     */
+    private function auditOptions(): array
+    {
+        $options = ['--audit-source='.$this->auditContext->source()->value];
+        $actorId = $this->auditContext->actorId();
+
+        if ($actorId !== null) {
+            $options[] = '--audit-actor='.$actorId;
+        }
+
+        return $options;
     }
 
     private function reason(ProcessResult $result): string

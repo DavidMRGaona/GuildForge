@@ -8,6 +8,7 @@ use App\Application\Updates\DTOs\ModuleUpdateResultDTO;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Domain\Updates\Exceptions\UpdateException;
+use App\Infrastructure\Authorization\Services\RoleAuditContext;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,7 +27,44 @@ final class UpdateModuleJobTest extends TestCase
         $updater->shouldReceive('update')->once()->andReturn($this->updateResult(UpdateStatus::Completed));
         Artisan::shouldReceive('call')->once()->with('queue:restart');
 
-        (new UpdateModuleJob('game-tables'))->handle($updater);
+        (new UpdateModuleJob('game-tables'))->handle($updater, $this->app->make(RoleAuditContext::class));
+    }
+
+    public function test_the_update_runs_on_behalf_of_who_requested_it(): void
+    {
+        $actorId = '019a2b3c-4d5e-7f60-8a9b-0c1d2e3f4a5b';
+        $context = $this->app->make(RoleAuditContext::class);
+        $updater = Mockery::mock(ModuleUpdaterInterface::class);
+        $updater->shouldReceive('update')->once()->andReturnUsing(function () use ($context, $actorId): ModuleUpdateResultDTO {
+            // What the role history and the finish-update process get while the update runs
+            $this->assertSame($actorId, $context->actorId());
+
+            return $this->updateResult(UpdateStatus::Completed);
+        });
+        Artisan::shouldReceive('call')->once()->with('queue:restart');
+
+        (new UpdateModuleJob('game-tables', $actorId))->handle($updater, $context);
+
+        $this->assertNull($context->actorId());
+    }
+
+    public function test_a_job_queued_before_it_recorded_the_requester_still_runs(): void
+    {
+        // Unserializing skips the constructor: a job queued by the previous release has no requester
+        $class = new \ReflectionClass(UpdateModuleJob::class);
+        $job = $class->newInstanceWithoutConstructor();
+        $class->getProperty('moduleName')->setValue($job, 'game-tables');
+
+        $context = $this->app->make(RoleAuditContext::class);
+        $updater = Mockery::mock(ModuleUpdaterInterface::class);
+        $updater->shouldReceive('update')->once()->andReturnUsing(function () use ($context): ModuleUpdateResultDTO {
+            $this->assertNull($context->actorId());
+
+            return $this->updateResult(UpdateStatus::Completed);
+        });
+        Artisan::shouldReceive('call')->once()->with('queue:restart');
+
+        $job->handle($updater, $this->app->make(RoleAuditContext::class));
     }
 
     public function test_an_update_that_throws_is_recorded_as_failed_and_workers_restart(): void
@@ -36,7 +74,7 @@ final class UpdateModuleJobTest extends TestCase
         Artisan::shouldReceive('call')->once()->with('queue:restart');
 
         try {
-            (new UpdateModuleJob('game-tables'))->handle($updater);
+            (new UpdateModuleJob('game-tables'))->handle($updater, $this->app->make(RoleAuditContext::class));
             $this->fail('Expected the exception to propagate');
         } catch (UpdateException) {
         }
