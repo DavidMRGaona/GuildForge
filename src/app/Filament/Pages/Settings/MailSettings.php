@@ -7,6 +7,7 @@ namespace App\Filament\Pages\Settings;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
 use App\Application\Mail\Services\MailTestServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -29,6 +30,7 @@ use Filament\Schemas\Schema;
  */
 final class MailSettings extends Page implements HasForms
 {
+    use ChecksPermissions;
     use InteractsWithForms;
     use ManagesPageSettings;
 
@@ -60,7 +62,7 @@ final class MailSettings extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('mail.configure');
     }
 
     public function mount(SettingsServiceInterface $settingsService): void

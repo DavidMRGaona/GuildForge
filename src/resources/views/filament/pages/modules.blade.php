@@ -181,7 +181,7 @@
                             {{-- Actions --}}
                             <div class="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-neutral-200 pt-4 dark:border-neutral-700">
                                 @if($module->isEnabled())
-                                    @if($this->hasSettingsSchema($module->name()->value))
+                                    @if(\App\Filament\Pages\ModuleSettingsPage::canAccess() && $this->hasSettingsSchema($module->name()->value))
                                         <x-filament::button
                                             color="gray"
                                             tag="a"
@@ -192,6 +192,7 @@
                                         </x-filament::button>
                                     @endif
 
+                                    @if($this->canManageModules())
                                     <x-filament::button
                                         color="warning"
                                         wire:click="disableModule('{{ $module->name()->value }}')"
@@ -206,7 +207,8 @@
                                             {{ __('modules.filament.actions.disabling') }}
                                         </span>
                                     </x-filament::button>
-                                @else
+                                    @endif
+                                @elseif($this->canManageModules())
                                     <x-filament::button
                                         color="success"
                                         wire:click="enableModule('{{ $module->name()->value }}')"
