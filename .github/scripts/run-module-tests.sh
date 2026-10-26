@@ -31,8 +31,10 @@ fi
 # would warn about the missing ones
 mkdir -p "$DIR/tests/Unit" "$DIR/tests/Integration" "$DIR/tests/Feature"
 
-# One process per CPU core. Module suites use an in-memory SQLite database, so each
-# process already has its own; going through artisan rather than calling paratest
-# directly also gives each process its own compiled-view directory, without which
-# two processes rendering the same mail view occasionally break each other
+# One process per CPU core. Each process gets its own database: on PostgreSQL (CI)
+# Laravel creates <database>_test_<n>, a handful of connections well under the
+# server's 100; on the phpunit.xml default, in-memory SQLite, each already has one.
+# Going through artisan rather than calling paratest directly also gives each process
+# its own compiled-view directory, without which two processes rendering the same mail
+# view occasionally break each other
 exec php artisan test --parallel --configuration="$DIR/phpunit.xml"
