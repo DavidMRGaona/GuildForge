@@ -8,7 +8,10 @@ use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
+use App\Application\Authorization\Services\RoleDefinitionChanges;
 use App\Application\Authorization\Services\RoleRestrictionRule;
+use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Authorization\ValueObjects\RoleName;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
@@ -30,6 +33,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 
 class RoleResource extends BaseResource
 {
@@ -167,10 +171,32 @@ class RoleResource extends BaseResource
             ->defaultSort('display_name')
             ->recordActions([
                 EditAction::make(),
-                DeleteAction::make()
-                    ->hidden(fn (RoleModel $record): bool => self::isLocked($record))
-                    ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
+                self::deleteAction()
+                    ->hidden(fn (RoleModel $record): bool => self::isLocked($record)),
             ]);
+    }
+
+    /**
+     * Deleting a role from the panel (table row and edit page): the role and its history
+     * entries (the deletion, and the role taken from each holder) go in one transaction.
+     */
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->using(static fn (RoleModel $record): bool => DB::transaction(static function () use ($record): bool {
+                app(RoleAuditLoggerInterface::class)->roleChanged(
+                    $record->id,
+                    $record->name,
+                    RoleAuditEvent::RoleDeleted,
+                    app(RoleDefinitionChanges::class)->between(
+                        array_values($record->permissions()->pluck('permissions.key')->map(strval(...))->all()),
+                        [],
+                    ),
+                );
+
+                return (bool) $record->delete();
+            }))
+            ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache());
     }
 
     /**

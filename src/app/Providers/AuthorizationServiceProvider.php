@@ -9,6 +9,7 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Authorization\Services\PermissionSyncRunnerInterface;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
@@ -22,7 +23,13 @@ use App\Infrastructure\Authorization\Services\AuthorizationService;
 use App\Infrastructure\Authorization\Services\MemberRoleService;
 use App\Infrastructure\Authorization\Services\PermissionRegistry;
 use App\Infrastructure\Authorization\Services\ProcessPermissionSyncRunner;
+use App\Infrastructure\Authorization\Services\RoleAuditLogger;
+use App\Infrastructure\Authorization\Services\RoleAuditSourceResolver;
 use App\Infrastructure\Authorization\Services\RoleService;
+use Illuminate\Queue\Events\JobExceptionOccurred;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AuthorizationServiceProvider extends ServiceProvider
@@ -44,10 +51,21 @@ class AuthorizationServiceProvider extends ServiceProvider
         // Per request or job, so a forbidden association member role is logged once per lifecycle
         $this->app->scoped(AssociationMemberRoleWarning::class);
         $this->app->singleton(MemberRoleServiceInterface::class, MemberRoleService::class);
+        $this->app->singleton(RoleAuditLoggerInterface::class, RoleAuditLogger::class);
+        // A singleton, not scoped: it counts the running queued jobs, and the worker drops
+        // scoped instances when a job starts
+        $this->app->singleton(RoleAuditSourceResolver::class);
     }
 
     public function boot(): void
     {
+        // The role history tells changes made by a queued job (sync connection included)
+        Event::listen(JobProcessing::class, fn () => $this->app->make(RoleAuditSourceResolver::class)->jobStarted());
+        Event::listen(
+            [JobProcessed::class, JobExceptionOccurred::class],
+            fn () => $this->app->make(RoleAuditSourceResolver::class)->jobFinished(),
+        );
+
         // Register core permissions in memory (for use in policies and code)
         // The database sync is done by `php artisan permissions:sync` (every deploy), when a
         // module is enabled or updated (PermissionSyncRunnerInterface) and in module:finish-update

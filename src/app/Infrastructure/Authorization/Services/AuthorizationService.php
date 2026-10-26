@@ -7,6 +7,7 @@ namespace App\Infrastructure\Authorization\Services;
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Domain\Authorization\Exceptions\RoleHolderLimitReachedException;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -39,6 +40,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     public function __construct(
         private BaseRoleRule $baseRole = new BaseRoleRule,
         private RoleHolderLimitGuard $holderLimit = new RoleHolderLimitGuard,
+        private ?RoleAuditLoggerInterface $audit = null,
     ) {}
 
     public function can(object $user, string $permissionKey): bool
@@ -148,10 +150,11 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         DB::transaction(function () use ($user, $roleName): void {
             $role = RoleModel::where('name', $roleName)->firstOrFail();
 
-            // Already held: no new holder, nothing to check
+            // Already held: no new holder, nothing to check, nothing to log
             if (! $user->roles()->whereKey($role->id)->exists()) {
                 $this->holderLimit->assertCanHold($user, $role);
                 $user->roles()->attach($role->id);
+                $this->audit()->roleAssigned($user, $role->name);
             }
 
             $this->invalidateCacheFor($user);
@@ -168,8 +171,14 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         $role = RoleModel::where('name', $roleName)->first();
         if ($role !== null) {
             /** @var UserModel $user */
-            $user->roles()->detach($role->id);
-            $this->invalidateCacheFor($user);
+            DB::transaction(function () use ($user, $role): void {
+                // Logged only when the user held it; the entry and the change stand or fall together
+                if ($user->roles()->detach($role->id) > 0) {
+                    $this->audit()->roleRemoved($user, $role->name);
+                }
+
+                $this->invalidateCacheFor($user);
+            });
         }
     }
 
@@ -201,7 +210,19 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 }
             }
 
-            $user->roles()->sync($roles->pluck('id')->all());
+            $namesById = RoleModel::query()->whereIn('id', $currentIds)->pluck('name', 'id')->all()
+                + $roles->pluck('name', 'id')->all();
+            $changes = $user->roles()->sync($roles->pluck('id')->all());
+
+            // Only the real differences: a role kept as it was leaves no entry
+            foreach ($changes['detached'] as $roleId) {
+                $this->audit()->roleRemoved($user, (string) $namesById[$roleId]);
+            }
+
+            foreach ($changes['attached'] as $roleId) {
+                $this->audit()->roleAssigned($user, (string) $namesById[$roleId]);
+            }
+
             $this->invalidateCacheFor($user);
         });
     }
@@ -370,6 +391,14 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
 
             return null;
         }
+    }
+
+    /**
+     * Resolved when first needed unless injected: the logger never depends on this service.
+     */
+    private function audit(): RoleAuditLoggerInterface
+    {
+        return $this->audit ?? app(RoleAuditLoggerInterface::class);
     }
 
     private function isAdmin(object $user): bool
