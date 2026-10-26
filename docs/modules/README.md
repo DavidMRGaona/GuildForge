@@ -485,21 +485,28 @@ $isMember = $this->associationMembership->isAssociationMember($user);
 
 `roleName()` returns the configured role name (for queries such as "users with the role") and `null` when the setting holds a role that cannot be used; handle `null` as "nobody".
 
-**Granting a permission to `member` from a migration.** From core 3.8.0 a core migration creates `member` when it is missing, so the role exists once the core is migrated, also on a new install before the seeders run. The permission row may not exist when the migration runs (when the module is enabled for the first time, on a ZIP update, and on cores before the release with #184), so create it if needed, skip the grant on a site without the role, and invalidate the authorization cache, since the pivot is written directly:
+**Granting permissions to roles from a migration.** Use `RolePermissionGrantsInterface` (core ≥ the release with #200) and never write `role_permission` yourself: the grant then leaves an entry in the role history (`role_updated` with the permissions added, plus who and from where) and invalidates the authorization cache, like a change made in the role editor. It only adds (nothing a role holds is taken away, and only the permissions it did not have are logged), creates a permission row that does not exist yet from its definition (the row may be missing when the migration runs: when the module is enabled for the first time, on a ZIP update, and on cores before the release with #184) and leaves an existing row as it is. When no role gets the grant, nothing is written.
 
 ```php
-$permission = PermissionModel::query()->firstOrCreate(
-    ['key' => 'mymodule:games.join'],
-    ['id' => PermissionId::generate()->value, 'label' => $label, 'resource' => 'games', 'action' => 'join', 'module' => 'mymodule'],
+use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
+use App\Application\Authorization\Services\RolePermissionGrantsInterface;
+
+$join = new PermissionDefinitionDTO(
+    key: 'mymodule:games.join',
+    label: $label,
+    resource: 'games',
+    action: 'join',
+    module: 'mymodule',
 );
 
-RoleModel::query()->where('name', 'member')->first()
-    ?->permissions()->syncWithoutDetaching([$permission->id]);
+// Every signed-in user: does nothing on a site without the role
+app(RolePermissionGrantsInterface::class)->grantToRole('member', $join);
 
-app(AuthorizationServiceInterface::class)->invalidateCache();
+// A permission split in finer ones: every role holding the old one gets the new ones
+app(RolePermissionGrantsInterface::class)->grantToRolesWith('mymodule:games.update', $host, $join);
 ```
 
-`$label` is the permission's translated label with a literal fallback: a module migrated before it boots has no translations registered. Migrations run in file name order, core and module ones together: date the module migration after the core's `2026_10_14_100002_create_member_role`.
+`$label` is the permission's translated label with a literal fallback: a module migrated before it boots has no translations registered. Migrations run in file name order, core and module ones together: a migration granting to `member` goes after the core's `2026_10_14_100002_create_member_role` (core 3.8.0 creates the role there, so it exists once the core is migrated, also on a new install before the seeders run). Leave `down()` empty: roles may have been edited since. Migrations written before #200 (venue-bookings `cancel_own`, tournaments `report_results`/`manage_participants`) wrote the pivot directly and stay as they are, since they have already run.
 
 **Email verification.** Module web routes load in the `web` group, so routes with the `auth` middleware get the core's required email verification (`EnsureEmailIsVerifiedWhenRequired`, see [Required email verification](../architecture.md#required-email-verification)): while the site requires it, accounts that must verify are redirected to `/verificar-email`, or get a `403` on JSON requests. Do not add Laravel's `verified` middleware: it ignores the site setting and the cutoff that exempts accounts created before 3.8.0.
 

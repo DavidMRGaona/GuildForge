@@ -10,6 +10,7 @@ use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Authorization\Services\PermissionSyncRunnerInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
+use App\Application\Authorization\Services\RolePermissionGrantsInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
@@ -27,6 +28,7 @@ use App\Infrastructure\Authorization\Services\PermissionRegistry;
 use App\Infrastructure\Authorization\Services\ProcessPermissionSyncRunner;
 use App\Infrastructure\Authorization\Services\RoleAuditLogger;
 use App\Infrastructure\Authorization\Services\RoleAuditSourceResolver;
+use App\Infrastructure\Authorization\Services\RolePermissionGrants;
 use App\Infrastructure\Authorization\Services\RoleService;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessed;
@@ -54,6 +56,7 @@ class AuthorizationServiceProvider extends ServiceProvider
         $this->app->scoped(AssociationMemberRoleWarning::class);
         $this->app->singleton(MemberRoleServiceInterface::class, MemberRoleService::class);
         $this->app->singleton(RoleAuditLoggerInterface::class, RoleAuditLogger::class);
+        $this->app->singleton(RolePermissionGrantsInterface::class, RolePermissionGrants::class);
         // A singleton, not scoped: it counts the running queued jobs, and the worker drops
         // scoped instances when a job starts
         $this->app->singleton(RoleAuditSourceResolver::class);
