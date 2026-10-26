@@ -11,8 +11,13 @@ use Illuminate\Support\Facades\Process;
 
 final readonly class ModuleAssetBuilder
 {
+    /**
+     * @param  string|null  $buildRoot  Where scripts/build-module.sh runs, building
+     *                                  <buildRoot>/modules/<name>; null is base_path()
+     */
     public function __construct(
         private string $modulesPath,
+        private ?string $buildRoot = null,
     ) {}
 
     /**
@@ -34,21 +39,12 @@ final readonly class ModuleAssetBuilder
     }
 
     /**
-     * Check if a module has a vite.config.ts for building assets.
-     *
-     * A module on the core's toolchain (its vite.config.ts calls defineModuleConfig) needs
-     * nothing else; one with its own toolchain also needs its package.json (Legacy module
-     * toolchain: removed once every module is on defineModuleConfig).
+     * Check if a module has a vite.config.ts the core can build: one that calls
+     * defineModuleConfig (the core's toolchain). A module's own Vite is not run.
      */
     public function hasBuildConfig(Module $module): bool
     {
-        $modulePath = $this->resolveModulePath($module);
-
-        if (! file_exists($modulePath.'/vite.config.ts')) {
-            return false;
-        }
-
-        return $this->usesCoreToolchain($modulePath) || file_exists($modulePath.'/package.json');
+        return $this->usesCoreToolchain($this->resolveModulePath($module));
     }
 
     /**
@@ -74,7 +70,7 @@ final readonly class ModuleAssetBuilder
     {
         $modulePath = $this->resolveModulePath($module);
 
-        if (! $this->hasBuildConfig($module)) {
+        if (! file_exists($modulePath.'/vite.config.ts')) {
             Log::info("Module {$module->name()->value} has no build configuration, skipping asset build");
 
             return true;
@@ -84,6 +80,15 @@ final readonly class ModuleAssetBuilder
             Log::info("Module {$module->name()->value} has no Vue components, skipping asset build");
 
             return true;
+        }
+
+        if (! $this->usesCoreToolchain($modulePath)) {
+            Log::error(
+                "Cannot build assets for module {$module->name()->value}: its vite.config.ts does not call defineModuleConfig",
+                ['hint' => 'Modules build with the core\'s toolchain: see stubs/modules/module/vite.config.ts.stub'],
+            );
+
+            return false;
         }
 
         if (! $force && $this->hasBuiltAssets($module)) {
@@ -103,27 +108,30 @@ final readonly class ModuleAssetBuilder
             return false;
         }
 
-        Log::info("Building assets for module: {$module->name()->value}");
-
         $name = $module->name()->value;
+        $buildRoot = $this->buildRoot ?? base_path();
+        $builtPath = $buildRoot.'/modules/'.$name;
 
-        if ($this->usesCoreToolchain($modulePath)) {
-            // Only the module's own runtime libraries: the build tools are the core's
-            if (file_exists($modulePath.'/package.json') && ! is_dir($modulePath.'/node_modules')
-                && ! $this->run(['npm', 'ci', '--no-audit', '--no-fund'], $modulePath, 'npm ci', $name)) {
-                return false;
-            }
+        // The script only takes the name: a module elsewhere (another MODULES_PATH or stored
+        // path) would get its libraries installed in one directory and another one built
+        if (realpath($modulePath) !== realpath($builtPath)) {
+            Log::error(
+                "Cannot build assets for module {$name}: the build script builds another directory",
+                ['module_path' => $modulePath, 'built_path' => $builtPath],
+            );
 
-            return $this->run(['sh', 'scripts/build-module.sh', $name], base_path(), 'build', $name, $this->viteEnvironment());
-        }
-
-        // Legacy module toolchain: a module whose package.json brings its own Vite. Removed once
-        // every module is on defineModuleConfig
-        if (! is_dir($modulePath.'/node_modules') && ! $this->run(['npm', 'install'], $modulePath, 'npm install', $name)) {
             return false;
         }
 
-        return $this->run(['npm', 'run', 'build'], $modulePath, 'npm build', $name, $this->viteEnvironment());
+        Log::info("Building assets for module: {$name}");
+
+        // Only the module's own runtime libraries: the build tools are the core's
+        if (file_exists($modulePath.'/package.json') && ! is_dir($modulePath.'/node_modules')
+            && ! $this->run(['npm', 'ci', '--no-audit', '--no-fund'], $modulePath, 'npm ci', $name)) {
+            return false;
+        }
+
+        return $this->run(['sh', 'scripts/build-module.sh', $name], $buildRoot, 'build', $name, $this->viteEnvironment());
     }
 
     /**

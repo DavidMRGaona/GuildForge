@@ -21,9 +21,9 @@ describe('module-build-mode.sh', () => {
         expect(modeOf({ 'vite.config.ts': 'export default defineModuleConfig({});' })).toBe('core');
     });
 
-    it('reports a module with its own toolchain', () => {
+    it('rejects a module with its own toolchain', () => {
         expect(modeOf({ 'vite.config.ts': 'export default {};', 'package.json': '{}' })).toBe(
-            'legacy'
+            'invalid'
         );
     });
 

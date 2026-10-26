@@ -1,8 +1,7 @@
 #!/bin/sh
 # Prints how a module builds its frontend: `core` (its vite.config.ts calls defineModuleConfig,
-# the core's toolchain), `legacy` (Legacy module toolchain: its own package.json brings Vite;
-# removed once every module is on defineModuleConfig), `none` (nothing to build) or `invalid`
-# (a vite.config.ts on neither toolchain, which callers must fail on).
+# the core's toolchain), `none` (nothing to build) or `invalid` (any other vite.config.ts, such
+# as a module's own Vite, which callers must fail on).
 # Usage: sh scripts/module-build-mode.sh <module-dir>
 set -eu
 
@@ -12,8 +11,6 @@ if [ ! -f "$DIR/vite.config.ts" ]; then
     echo none
 elif grep -q defineModuleConfig "$DIR/vite.config.ts"; then
     echo core
-elif [ -f "$DIR/package.json" ]; then
-    echo legacy
 else
     echo invalid
 fi

@@ -22,6 +22,9 @@ final class ModuleAssetBuilderTest extends TestCase
 
     private ModuleAssetBuilder $builder;
 
+    /** Where the build script runs: it builds <root>/modules/<name> */
+    private string $testBuildRoot;
+
     private string $testModulesPath;
 
     private string $testPublicPath;
@@ -30,7 +33,8 @@ final class ModuleAssetBuilderTest extends TestCase
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.bin2hex(random_bytes(8));
+        $this->testBuildRoot = sys_get_temp_dir().'/guildforge-test-root-'.bin2hex(random_bytes(8));
+        $this->testModulesPath = $this->testBuildRoot.'/modules';
         $this->testPublicPath = sys_get_temp_dir().'/guildforge-test-public-'.bin2hex(random_bytes(8));
 
         mkdir($this->testModulesPath, 0755, true);
@@ -40,12 +44,12 @@ final class ModuleAssetBuilderTest extends TestCase
         config(['modules.path' => $this->testModulesPath]);
         $this->app->usePublicPath($this->testPublicPath);
 
-        $this->builder = new ModuleAssetBuilder($this->testModulesPath);
+        $this->builder = new ModuleAssetBuilder($this->testModulesPath, $this->testBuildRoot);
     }
 
     protected function tearDown(): void
     {
-        $this->removeDirectory($this->testModulesPath);
+        $this->removeDirectory($this->testBuildRoot);
         $this->removeDirectory($this->testPublicPath);
         parent::tearDown();
     }
@@ -121,7 +125,7 @@ final class ModuleAssetBuilderTest extends TestCase
         $this->assertTrue($this->builder->build($module, true));
 
         Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']
-            && $process->path === base_path()
+            && $process->path === $this->testBuildRoot
             && $process->environment === ['VITE_APP_NAME' => 'Example']);
         Process::assertRanTimes(fn (PendingProcess $process): bool => true, 1);
     }
@@ -142,21 +146,42 @@ final class ModuleAssetBuilderTest extends TestCase
         Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']);
     }
 
-    public function test_build_runs_npm_in_a_module_with_its_own_toolchain(): void
+    public function test_build_refuses_a_module_with_its_own_toolchain(): void
     {
-        // Legacy module toolchain: removed with it once every module is on defineModuleConfig
+        // The core no longer runs a module's own Vite: it must move to defineModuleConfig
         Process::fake();
         config(['module-build.required_vite_env' => []]);
         $module = $this->createModule('test-module');
-        $this->createModuleWithBuildConfig('test-module');
+        $this->createModuleWithItsOwnToolchain('test-module');
         $this->createModuleWithVueComponent('test-module', 'Test.vue');
 
-        $this->assertTrue($this->builder->build($module, true));
+        $this->assertFalse($this->builder->build($module, true));
 
-        $modulePath = $this->testModulesPath.'/test-module';
-        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['npm', 'install'] && $process->path === $modulePath);
-        Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['npm', 'run', 'build'] && $process->path === $modulePath);
-        Process::assertDidntRun(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']);
+        Process::assertNothingRan();
+    }
+
+    public function test_build_refuses_a_module_outside_the_directory_the_build_script_builds(): void
+    {
+        // The script builds <root>/modules/<name>: a module elsewhere would install its
+        // libraries in one directory and build another
+        Process::fake();
+        config(['module-build.required_vite_env' => []]);
+        $otherModulesPath = sys_get_temp_dir().'/guildforge-test-other-modules-'.bin2hex(random_bytes(8));
+        $this->testModulesPath = $otherModulesPath;
+        $module = $this->createModule('test-module');
+        $this->createModuleOnTheCoreToolchain('test-module');
+        $this->createModuleWithVueComponent('test-module', 'Test.vue');
+        file_put_contents($otherModulesPath.'/test-module/package.json', '{"dependencies": {}}');
+
+        try {
+            $builder = new ModuleAssetBuilder($otherModulesPath, $this->testBuildRoot);
+
+            $this->assertFalse($builder->build($module, true));
+
+            Process::assertNothingRan();
+        } finally {
+            $this->removeDirectory($otherModulesPath);
+        }
     }
 
     public function test_build_fails_when_the_build_process_fails(): void
@@ -179,12 +204,12 @@ final class ModuleAssetBuilderTest extends TestCase
         $this->assertFalse($this->builder->hasBuildConfig($module));
     }
 
-    public function test_has_build_config_returns_true_when_both_files_exist(): void
+    public function test_has_build_config_returns_false_for_a_module_with_its_own_toolchain(): void
     {
         $module = $this->createModule('test-module');
-        $this->createModuleWithBuildConfig('test-module');
+        $this->createModuleWithItsOwnToolchain('test-module');
 
-        $this->assertTrue($this->builder->hasBuildConfig($module));
+        $this->assertFalse($this->builder->hasBuildConfig($module));
     }
 
     public function test_has_built_assets_returns_false_when_no_manifest(): void
@@ -229,7 +254,7 @@ final class ModuleAssetBuilderTest extends TestCase
     public function test_build_returns_true_when_no_components(): void
     {
         $module = $this->createModule('test-module');
-        $this->createModuleWithBuildConfig('test-module');
+        $this->createModuleOnTheCoreToolchain('test-module');
 
         // Should return true (skip building gracefully)
         $result = $this->builder->build($module);
@@ -240,7 +265,7 @@ final class ModuleAssetBuilderTest extends TestCase
     public function test_build_skips_when_assets_already_built_and_not_forced(): void
     {
         $module = $this->createModule('test-module-skip');
-        $this->createModuleWithBuildConfig('test-module-skip');
+        $this->createModuleOnTheCoreToolchain('test-module-skip');
         $this->createModuleWithVueComponent('test-module-skip', 'Test.vue');
 
         // Create existing manifest in actual public path
@@ -323,7 +348,7 @@ final class ModuleAssetBuilderTest extends TestCase
         ]);
 
         $module = $this->createModule('test-module-env');
-        $this->createModuleWithBuildConfig('test-module-env');
+        $this->createModuleOnTheCoreToolchain('test-module-env');
         $this->createModuleWithVueComponent('test-module-env', 'Test.vue');
 
         // Must fail fast instead of producing assets with empty VITE_* values baked in
@@ -360,7 +385,7 @@ final class ModuleAssetBuilderTest extends TestCase
         ]));
     }
 
-    private function createModuleWithBuildConfig(string $name): void
+    private function createModuleWithItsOwnToolchain(string $name): void
     {
         $this->createModuleDirectory($name);
         $modulePath = $this->testModulesPath.'/'.$name;
