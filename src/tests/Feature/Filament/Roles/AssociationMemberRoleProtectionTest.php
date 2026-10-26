@@ -127,7 +127,7 @@ final class AssociationMemberRoleProtectionTest extends TestCase
         $socio = $this->role('socio');
 
         Livewire::test(EditRole::class, ['record' => $socio->getRouteKey()])
-            ->set('data.name', 'antiguos_socios')
+            ->set('data.name', 'antiguos-socios')
             ->set('data.display_name', 'Socio de pleno derecho')
             ->call('save')
             ->assertHasNoFormErrors();
@@ -143,7 +143,7 @@ final class AssociationMemberRoleProtectionTest extends TestCase
         $page = Livewire::test(EditRole::class, ['record' => $socio->getRouteKey()])->instance();
 
         // Called directly: the guard must hold even if the name field were enabled
-        $data = $this->mutateBeforeSave($page, ['name' => 'antiguos_socios', 'display_name' => 'Socios']);
+        $data = $this->mutateBeforeSave($page, ['name' => 'antiguos-socios', 'display_name' => 'Socios']);
 
         $this->assertArrayNotHasKey('name', $data);
         $this->assertSame('Socios', $data['display_name']);

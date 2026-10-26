@@ -12,6 +12,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditRole extends EditRecord
 {
+    use GuardsRolePermissions;
+
     protected static string $resource = RoleResource::class;
 
     /**
@@ -50,6 +52,24 @@ class EditRole extends EditRecord
         }
 
         return $data;
+    }
+
+    protected function beforeSave(): void
+    {
+        /** @var RoleModel $record */
+        $record = $this->record;
+
+        $names = [$record->name];
+
+        // A renamed role is checked under its new name too (a locked role keeps its own)
+        if (! RoleResource::isLocked($record) && is_string($this->data['name'] ?? null)) {
+            $names[] = $this->data['name'];
+        }
+
+        $this->guardSubmittedPermissions(
+            $names,
+            array_values($record->permissions()->pluck('permissions.id')->map(strval(...))->all()),
+        );
     }
 
     protected function afterSave(): void

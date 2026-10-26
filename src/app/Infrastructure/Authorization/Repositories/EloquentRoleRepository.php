@@ -48,6 +48,19 @@ final readonly class EloquentRoleRepository implements RoleRepositoryInterface
             ->all();
     }
 
+    /**
+     * @return list<string>
+     */
+    public function allNames(): array
+    {
+        /** @var list<string> */
+        return RoleModel::query()
+            ->orderBy('name')
+            ->pluck('name')
+            ->values()
+            ->all();
+    }
+
     public function save(Role $role): void
     {
         RoleModel::query()->updateOrCreate(

@@ -258,6 +258,7 @@ return [
             'section_association_description' => 'Qué rol distingue a los socios de la asociación de cualquier usuario registrado.',
             'association_member_role' => 'Rol de socio',
             'association_member_role_help' => 'Los usuarios con este rol son socios de la asociación (no confundir con «member», el rol de cualquier usuario registrado). Los módulos lo usan para el contenido solo para socios, el acceso anticipado y las membresías.',
+            'association_member_role_inactive_holders' => '{0} Nadie quedará con roles inactivos.|{1} 1 persona quedará con roles inactivos.|[2,*] :count personas quedarán con roles inactivos.',
             'association_member_role_unavailable' => 'El rol de socio guardado («:role») no existe o no se puede usar: elige otro y guarda.',
         ],
         'maintenance' => [
@@ -484,6 +485,11 @@ return [
         ],
     ],
     'roles' => [
+        'notifications' => [
+            'permissionsBeyondYours' => 'No puedes añadir ni quitar permisos que no tienes.',
+            'associationRoleNoPanel' => 'El rol de socio y el rol base no pueden tener acceso al panel de administración.',
+            'unknownPermission' => 'Alguno de los permisos enviados no existe.',
+        ],
         'label' => 'rol',
         'pluralLabel' => 'Roles',
         'sections' => [
@@ -493,6 +499,7 @@ return [
         ],
         'fields' => [
             'name' => 'Nombre',
+            'nameFormat' => 'Solo minúsculas, números y guiones, sin espacios.',
             'nameHelp' => 'Identificador interno del rol (no se puede cambiar en roles protegidos).',
             'displayName' => 'Nombre para mostrar',
             'description' => 'Descripción',

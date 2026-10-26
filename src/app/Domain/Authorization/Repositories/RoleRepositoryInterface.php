@@ -19,6 +19,14 @@ interface RoleRepositoryInterface
      */
     public function findAll(): array;
 
+    /**
+     * The stored name of every role, as stored: unlike findAll(), a name the domain no longer
+     * accepts (RoleName) is listed too instead of failing the whole listing.
+     *
+     * @return list<string>
+     */
+    public function allNames(): array;
+
     public function save(Role $role): void;
 
     public function delete(RoleId $id): void;

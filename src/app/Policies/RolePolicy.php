@@ -6,6 +6,7 @@ namespace App\Policies;
 
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Infrastructure\Authorization\Policies\AuthorizesWithPermissions;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -31,7 +32,12 @@ class RolePolicy
 
     public function update(UserModel $user, RoleModel $role): bool
     {
-        return $this->authorize($user, 'roles.update');
+        if (! $this->authorize($user, 'roles.update')) {
+            return false;
+        }
+
+        // Whoever is not an admin cannot open a role that goes beyond their own permissions
+        return app(RoleGrantPolicy::class)->canManageRole($user, $role->name);
     }
 
     public function delete(UserModel $user, RoleModel $role): bool
@@ -42,7 +48,8 @@ class RolePolicy
             return false;
         }
 
-        return $this->authorize($user, 'roles.delete');
+        return $this->authorize($user, 'roles.delete')
+            && app(RoleGrantPolicy::class)->canManageRole($user, $role->name);
     }
 
     public function restore(UserModel $user, RoleModel $role): bool
@@ -56,7 +63,8 @@ class RolePolicy
             return false;
         }
 
-        return $this->authorize($user, 'roles.delete');
+        return $this->authorize($user, 'roles.delete')
+            && app(RoleGrantPolicy::class)->canManageRole($user, $role->name);
     }
 
     private function isUndeletable(RoleModel $role): bool

@@ -10,7 +10,14 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateRole extends CreateRecord
 {
+    use GuardsRolePermissions;
+
     protected static string $resource = RoleResource::class;
+
+    protected function beforeCreate(): void
+    {
+        $this->guardSubmittedPermissions([(string) ($this->data['name'] ?? '')], []);
+    }
 
     /**
      * @param  array<string, mixed>  $data

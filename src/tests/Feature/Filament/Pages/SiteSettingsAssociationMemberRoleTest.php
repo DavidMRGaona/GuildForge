@@ -7,6 +7,7 @@ namespace Tests\Feature\Filament\Pages;
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Pages\SiteSettings;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\Select;
@@ -169,6 +170,89 @@ final class SiteSettingsAssociationMemberRoleTest extends TestCase
         $component = Livewire::test(SiteSettings::class);
 
         $this->assertNull($this->select($component->instance())->getHint());
+    }
+
+    public function test_roles_with_panel_access_requirement_or_limit_are_not_offered(): void
+    {
+        RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta directiva']);
+        $this->roleWithPanelAccess('panel');
+        RoleModel::query()->create(['name' => 'vocal', 'display_name' => 'Vocal', 'requires_association_member' => true]);
+        RoleModel::query()->create(['name' => 'tesorero', 'display_name' => 'Tesorero', 'max_holders' => 1]);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $options = $this->select(Livewire::test(SiteSettings::class)->instance())->getOptions();
+
+        $this->assertSame(['junta' => 'Junta directiva', 'socio' => 'Socio'], $options);
+    }
+
+    #[DataProvider('forgedRestrictedRoles')]
+    public function test_forged_panel_role_is_rejected_on_save(string $name): void
+    {
+        $this->roleWithPanelAccess('panel');
+        RoleModel::query()->create(['name' => 'vocal', 'display_name' => 'Vocal', 'requires_association_member' => true]);
+        RoleModel::query()->create(['name' => 'tesorero', 'display_name' => 'Tesorero', 'max_holders' => 1]);
+        app(SettingsServiceInterface::class)->set(self::KEY, 'socio');
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(SiteSettings::class)
+            ->set('data.'.self::KEY, $name)
+            ->call('save')
+            ->assertHasFormErrors([self::KEY]);
+
+        $this->assertSame('socio', $this->stored());
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function forgedRestrictedRoles(): array
+    {
+        return [
+            'panel access' => ['panel'],
+            'requires membership' => ['vocal'],
+            'holder cap' => ['tesorero'],
+        ];
+    }
+
+    public function test_choosing_another_association_role_warns_how_many_roles_go_inactive(): void
+    {
+        $junta = RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta directiva']);
+        $vocal = RoleModel::query()->create(['name' => 'vocal', 'display_name' => 'Vocal', 'requires_association_member' => true]);
+        $socio = RoleModel::query()->where('name', 'socio')->firstOrFail();
+        UserModel::factory()->create()->roles()->attach([$vocal->id, $socio->id]);
+        UserModel::factory()->create()->roles()->attach([$vocal->id, $socio->id]);
+        UserModel::factory()->create()->roles()->attach([$vocal->id, $junta->id]);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $component = Livewire::test(SiteSettings::class);
+        $this->assertNull($this->select($component->instance())->getHint());
+
+        $component->set('data.'.self::KEY, 'junta');
+
+        $this->assertSame('2 personas quedarán con roles inactivos.', $this->select($component->instance())->getHint());
+    }
+
+    public function test_a_saved_role_that_now_has_panel_access_shows_the_warning_instead_of_failing(): void
+    {
+        $this->roleWithPanelAccess('socio-panel');
+        app(SettingsServiceInterface::class)->set(self::KEY, 'socio-panel');
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $component = Livewire::test(SiteSettings::class)->assertOk();
+
+        $this->assertNotNull($this->select($component->instance())->getHint());
+    }
+
+    private function roleWithPanelAccess(string $name): RoleModel
+    {
+        $role = RoleModel::query()->create(['name' => $name, 'display_name' => ucfirst($name)]);
+        $permission = PermissionModel::query()->firstOrCreate(
+            ['key' => 'admin.access'],
+            ['label' => 'admin.access', 'resource' => 'admin', 'action' => 'access'],
+        );
+        $role->permissions()->attach($permission->id);
+
+        return $role;
     }
 
     private function stored(): mixed
