@@ -8,6 +8,7 @@ use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\HasSlug;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\EventModelFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,6 +32,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, TagModel> $tags
+ *
+ * @method static Builder<EventModel> orderedByStart(string $direction = 'asc')
  */
 final class EventModel extends Model
 {
@@ -89,7 +92,20 @@ final class EventModel extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(TagModel::class, 'event_tag', 'event_id', 'tag_id')
-            ->withTimestamps();
+            ->withTimestamps()
+            ->ordered();
+    }
+
+    /**
+     * Scope to order events by start, with a stable order for events starting at the same time.
+     *
+     * @param  Builder<EventModel>  $query
+     * @param  'asc'|'desc'  $direction
+     * @return Builder<EventModel>
+     */
+    public function scopeOrderedByStart(Builder $query, string $direction = 'asc'): Builder
+    {
+        return $query->orderBy('start_date', $direction)->orderBy('created_at', $direction)->orderBy('id', $direction);
     }
 
     /**

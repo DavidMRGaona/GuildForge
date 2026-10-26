@@ -24,7 +24,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
             ->with('tags')
             ->where('is_published', true)
             ->where('start_date', '>=', now())
-            ->orderBy('start_date', 'asc')
+            ->orderedByStart('asc')
             ->limit($limit)
             ->get();
 
@@ -37,7 +37,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
             ->with('tags')
             ->where('is_published', true)
             ->where('start_date', '<', now())
-            ->orderBy('start_date', 'desc')
+            ->orderedByStart('desc')
             ->limit($limit)
             ->get();
 
@@ -53,7 +53,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
         QueryHelpers::applyTagFilter($query, $tagSlugs);
 
         $events = QueryHelpers::applyPagination($query, $page, $perPage)
-            ->orderBy('start_date', 'desc')
+            ->orderedByStart('desc')
             ->get();
 
         return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
@@ -99,7 +99,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
                     ->orWhereRaw('LOWER(description) LIKE ?', [$searchTerm])
                     ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm]);
             })
-            ->orderBy('start_date', 'desc')
+            ->orderedByStart('desc')
             ->limit($limit)
             ->get();
 
@@ -132,7 +132,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
                             ->where('end_date', '>=', $end);
                     });
             })
-            ->orderBy('start_date')
+            ->orderedByStart('asc')
             ->get();
 
         return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();

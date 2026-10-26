@@ -40,7 +40,7 @@ final readonly class EloquentArticleRepository implements ArticleRepositoryInter
     {
         return ArticleModel::query()
             ->where('is_published', true)
-            ->orderBy('published_at', 'desc')
+            ->orderedByPublication()
             ->get()
             ->map(fn (ArticleModel $model): Article => $this->toDomain($model));
     }

@@ -119,6 +119,38 @@ final class EloquentArticleRepositoryTest extends TestCase
         $this->assertEquals('First Article', $articles->last()?->title());
     }
 
+    public function test_it_breaks_published_at_ties_by_creation_then_id(): void
+    {
+        $author = UserModel::factory()->create();
+        $publishedAt = '2026-03-01 10:00:00';
+
+        // Inserted in the reverse of the expected order.
+        ArticleModel::factory()->published()->create([
+            'title' => 'Tie oldest',
+            'published_at' => $publishedAt,
+            'created_at' => '2026-02-01 09:00:00',
+            'author_id' => $author->id,
+        ]);
+        ArticleModel::factory()->published()->create([
+            'id' => '11111111-1111-4111-8111-111111111111',
+            'title' => 'Tie low id',
+            'published_at' => $publishedAt,
+            'created_at' => '2026-02-02 09:00:00',
+            'author_id' => $author->id,
+        ]);
+        ArticleModel::factory()->published()->create([
+            'id' => 'ffffffff-ffff-4fff-bfff-ffffffffffff',
+            'title' => 'Tie high id',
+            'published_at' => $publishedAt,
+            'created_at' => '2026-02-02 09:00:00',
+            'author_id' => $author->id,
+        ]);
+
+        $titles = $this->repository->findPublished()->map(fn (Article $article): string => $article->title())->all();
+
+        $this->assertSame(['Tie high id', 'Tie low id', 'Tie oldest'], $titles);
+    }
+
     public function test_it_finds_articles_by_author(): void
     {
         $author1 = UserModel::factory()->create();

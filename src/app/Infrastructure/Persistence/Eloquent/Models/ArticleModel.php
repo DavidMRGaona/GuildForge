@@ -7,6 +7,7 @@ namespace App\Infrastructure\Persistence\Eloquent\Models;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\ArticleModelFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,6 +30,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read UserModel $author
  * @property-read Collection<int, TagModel> $tags
+ *
+ * @method static Builder<ArticleModel> orderedByPublication()
  */
 final class ArticleModel extends Model
 {
@@ -87,6 +90,18 @@ final class ArticleModel extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(TagModel::class, 'article_tag', 'article_id', 'tag_id')
-            ->withTimestamps();
+            ->withTimestamps()
+            ->ordered();
+    }
+
+    /**
+     * Scope to order articles newest first, with a stable order for articles published at the same time.
+     *
+     * @param  Builder<ArticleModel>  $query
+     * @return Builder<ArticleModel>
+     */
+    public function scopeOrderedByPublication(Builder $query): Builder
+    {
+        return $query->orderByDesc('published_at')->orderByDesc('created_at')->orderByDesc('id');
     }
 }

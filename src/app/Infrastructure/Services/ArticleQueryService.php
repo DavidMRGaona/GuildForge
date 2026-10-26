@@ -21,7 +21,7 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
         $articles = ArticleModel::query()
             ->with(['author', 'tags'])
             ->where('is_published', true)
-            ->orderBy('published_at', 'desc')
+            ->orderedByPublication()
             ->limit($limit)
             ->get();
 
@@ -37,7 +37,7 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
         QueryHelpers::applyTagFilter($query, $tagSlugs);
 
         $articles = QueryHelpers::applyPagination($query, $page, $perPage)
-            ->orderBy('published_at', 'desc')
+            ->orderedByPublication()
             ->get();
 
         return $articles->map(fn (ArticleModel $article) => $this->dtoFactory->createArticleDTO($article))->all();
@@ -74,7 +74,7 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
                     ->orWhereRaw('LOWER(content) LIKE ?', [$searchTerm])
                     ->orWhereRaw('LOWER(excerpt) LIKE ?', [$searchTerm]);
             })
-            ->orderBy('published_at', 'desc')
+            ->orderedByPublication()
             ->limit($limit)
             ->get();
 
