@@ -13,8 +13,11 @@ use App\Notifications\InactiveRolesManagerNotification;
 use App\Notifications\InactiveRolesNotification;
 use App\Notifications\Support\EscapesMarkdown;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Testing\Fakes\NotificationFake;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -139,6 +142,38 @@ final class InactiveRoleNotificationsTest extends TestCase
             $this->assertStringNotContainsString('href="https://example.test', $html, $name);
             $this->assertStringContainsString('example.test', $html, $name);
         }
+    }
+
+    public function test_a_recipient_whose_mail_cannot_be_queued_does_not_stop_the_others(): void
+    {
+        $person = $this->person(['socio', 'treasury']);
+        $failing = UserModel::factory()->admin()->create();
+        $other = UserModel::factory()->admin()->create();
+        $fake = new class extends NotificationFake
+        {
+            public ?string $failFor = null;
+
+            public function send($notifiables, $notification): void
+            {
+                foreach (Collection::wrap($notifiables) as $notifiable) {
+                    if ($notifiable instanceof UserModel && $notifiable->id === $this->failFor) {
+                        throw new RuntimeException('queue unavailable');
+                    }
+                }
+
+                parent::send($notifiables, $notification);
+            }
+        };
+        $fake->failFor = (string) $failing->id;
+        Notification::swap($fake);
+        $log = Log::spy();
+
+        $this->authorization->removeRole($person, 'socio');
+
+        $fake->assertSentTo($person, InactiveRolesNotification::class);
+        $fake->assertSentTo($other, InactiveRolesManagerNotification::class);
+        $this->assertFalse($this->authorization->hasRole($person, 'socio'));
+        $log->shouldHaveReceived('error')->once();
     }
 
     public function test_a_rolled_back_removal_sends_nothing(): void

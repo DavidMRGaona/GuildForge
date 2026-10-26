@@ -12,10 +12,14 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\InactiveRolesManagerNotification;
 use App\Notifications\InactiveRolesNotification;
+use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Emails the person whose roles went inactive and every active account that could grant
- * all of those roles (never the person twice, never anonymized accounts).
+ * all of those roles (never the person twice, never anonymized accounts). A mail that cannot
+ * be queued is logged and skipped.
  */
 final readonly class NotifyInactiveRoles
 {
@@ -40,7 +44,7 @@ final readonly class NotifyInactiveRoles
             ->implode(', ');
         $personName = $person->display_name ?? $person->name;
 
-        $person->notify(new InactiveRolesNotification($this->branding->siteName(), $roles));
+        $this->notifySafely($person, new InactiveRolesNotification($this->branding->siteName(), $roles));
 
         $this->holders
             ->usersWhoCan(RoleGrantPolicy::ASSIGN_ROLES_PERMISSION)
@@ -51,7 +55,24 @@ final readonly class NotifyInactiveRoles
             ))
             ->unique('id')
             ->each(function (UserModel $manager) use ($personName, $roles): void {
-                $manager->notify(new InactiveRolesManagerNotification($personName, $roles));
+                $this->notifySafely($manager, new InactiveRolesManagerNotification($personName, $roles));
             });
+    }
+
+    /**
+     * The roles are already taken away when this runs: a mail that cannot be queued is logged,
+     * never allowed to fail the request (or a membership sync) nor to keep the others from going out.
+     */
+    private function notifySafely(UserModel $recipient, Notification $notification): void
+    {
+        try {
+            $recipient->notify($notification);
+        } catch (Throwable $exception) {
+            Log::error('Could not queue the inactive roles mail.', [
+                'notification' => $notification::class,
+                'user_id' => $recipient->getKey(),
+                'exception' => $exception,
+            ]);
+        }
     }
 }
