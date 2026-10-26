@@ -161,7 +161,7 @@ return [
     'errors' => [
         'cannot_delete_base_role' => 'No se puede eliminar «:role»: es el rol base de todas las cuentas.',
         'cannot_restrict_role' => 'El rol «:role» no admite requisito de socio ni máximo de personas.',
-        'role_holder_limit' => ':role ya la tiene :holders. Quítasela antes de dársela a otra persona.',
+        'role_holder_limit' => '[0,1] El rol «:role» ya lo tiene :holders. Quítaselo antes de dárselo a otra persona.|[2,*] El rol «:role» ya lo tienen :holders. Quítaselo a alguien antes de dárselo a otra persona.',
         'role_grant_denied' => 'No puedes dar ni quitar estos roles: :roles.',
     ],
 
