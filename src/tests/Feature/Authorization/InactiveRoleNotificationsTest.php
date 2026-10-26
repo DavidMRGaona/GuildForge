@@ -110,6 +110,37 @@ final class InactiveRoleNotificationsTest extends TestCase
         $this->assertSame('\[x\]\(https://example\.test\)', EscapesMarkdown::escape('[x](https://example.test)'));
     }
 
+    public function test_the_mails_show_quotes_ampersands_and_brackets_as_typed(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+
+        $managerHtml = (string) (new InactiveRolesManagerNotification("Jane O'Brien \"JR\"", 'Gestión de D&D, Rol <b>'))->toMail($admin)->render();
+        $personHtml = (string) (new InactiveRolesNotification('Gremio', 'Gestión de D&D'))->toMail($admin)->render();
+
+        $managerText = html_entity_decode(strip_tags($managerHtml), ENT_QUOTES | ENT_HTML5);
+        $this->assertStringContainsString("Jane O'Brien \"JR\"", $managerText);
+        $this->assertStringContainsString('Gestión de D&D, Rol <b>', $managerText);
+        $this->assertStringNotContainsString('<b>', $managerHtml);
+        $this->assertStringContainsString('Gestión de D&D', html_entity_decode(strip_tags($personHtml), ENT_QUOTES | ENT_HTML5));
+        foreach ([$managerHtml, $personHtml] as $html) {
+            $this->assertStringNotContainsString('&amp;amp;', $html);
+            $this->assertStringNotContainsString('&amp;#039;', $html);
+            $this->assertStringNotContainsString('\\', $html);
+        }
+    }
+
+    public function test_links_in_names_never_become_links(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+
+        foreach (['[x](https://example.test)', '<https://example.test>', '[x]: https://example.test'] as $name) {
+            $html = (string) (new InactiveRolesManagerNotification($name, 'Tesorería'))->toMail($admin)->render();
+
+            $this->assertStringNotContainsString('href="https://example.test', $html, $name);
+            $this->assertStringContainsString('example.test', $html, $name);
+        }
+    }
+
     public function test_a_rolled_back_removal_sends_nothing(): void
     {
         $person = $this->person(['socio', 'treasury']);
