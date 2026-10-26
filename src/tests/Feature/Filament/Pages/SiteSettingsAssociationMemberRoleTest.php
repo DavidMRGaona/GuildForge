@@ -11,6 +11,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Component;
 use Livewire\Livewire;
@@ -230,6 +231,104 @@ final class SiteSettingsAssociationMemberRoleTest extends TestCase
         $component->set('data.'.self::KEY, 'junta');
 
         $this->assertSame('2 personas quedarán con roles inactivos.', $this->select($component->instance())->getHint());
+    }
+
+    public function test_choosing_a_role_that_leaves_nobody_inactive_shows_no_hint(): void
+    {
+        RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta directiva']);
+        $vocal = RoleModel::query()->create(['name' => 'vocal', 'display_name' => 'Vocal', 'requires_association_member' => true]);
+        $junta = RoleModel::query()->where('name', 'junta')->firstOrFail();
+        UserModel::factory()->create()->roles()->attach([$vocal->id, $junta->id]);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $component = Livewire::test(SiteSettings::class)->set('data.'.self::KEY, 'junta');
+
+        $select = $this->select($component->instance());
+        $this->assertNull($select->getHint());
+        $this->assertNull($select->getHintIcon());
+    }
+
+    public function test_a_non_admin_cannot_pick_a_role_whose_holders_hold_roles_beyond_them(): void
+    {
+        $this->associationRoleScenario();
+        $actor = $this->editorWithPermissions(['settings.manage', 'users.assign_roles', 'events.view_any']);
+        $this->actingAs($actor);
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm([self::KEY => 'junta', 'guild_name' => 'Gremio nuevo'])
+            ->call('save')
+            ->assertNotified(
+                Notification::make()
+                    ->danger()
+                    ->title('No puedes elegir este rol de socio')
+                    ->body('Quien lo tiene también tiene roles que requieren ser socio y que tú no puedes dar: Junta de gobierno.'),
+            );
+
+        $this->assertSame('socio', $this->stored());
+        $this->assertNotSame('Gremio nuevo', app(SettingsServiceInterface::class)->get('guild_name'));
+    }
+
+    public function test_a_non_admin_can_pick_it_when_every_role_that_wakes_up_is_grantable(): void
+    {
+        $this->associationRoleScenario(withBoardHolder: false);
+        $actor = $this->editorWithPermissions(['settings.manage', 'users.assign_roles', 'events.view_any']);
+        $this->actingAs($actor);
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm([self::KEY => 'junta'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('junta', $this->stored());
+    }
+
+    public function test_an_admin_can_pick_it_whatever_its_holders_hold(): void
+    {
+        $this->associationRoleScenario();
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm([self::KEY => 'junta'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('junta', $this->stored());
+    }
+
+    /**
+     * Holders of "junta" also hold "vocal" (grantable by the actor) and, unless left out,
+     * "board" (beyond the actor); both require association membership. Deactivated and
+     * anonymized holders of "board" never count.
+     */
+    private function associationRoleScenario(bool $withBoardHolder = true): void
+    {
+        app(SettingsServiceInterface::class)->set(self::KEY, 'socio');
+        $junta = RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta directiva']);
+        $vocal = $this->roleWith('vocal', 'Vocal', 'events.view_any');
+        $board = $this->roleWith('board', 'Junta de gobierno', 'roles.delete');
+
+        UserModel::factory()->create()->roles()->attach([$junta->id, $vocal->id]);
+        UserModel::factory()->create(['anonymized_at' => now()])->roles()->attach([$junta->id, $board->id]);
+        $deleted = UserModel::factory()->create();
+        $deleted->roles()->attach([$junta->id, $board->id]);
+        $deleted->delete();
+
+        if ($withBoardHolder) {
+            UserModel::factory()->create()->roles()->attach([$junta->id, $board->id]);
+        }
+    }
+
+    private function roleWith(string $name, string $displayName, string $permissionKey): RoleModel
+    {
+        $role = RoleModel::query()->create(['name' => $name, 'display_name' => $displayName, 'requires_association_member' => true]);
+        [$resource, $action] = explode('.', $permissionKey, 2);
+        $permission = PermissionModel::query()->firstOrCreate(
+            ['key' => $permissionKey],
+            ['label' => $permissionKey, 'resource' => $resource, 'action' => $action],
+        );
+        $role->permissions()->attach($permission->id);
+
+        return $role;
     }
 
     public function test_a_saved_role_that_now_has_panel_access_shows_the_warning_instead_of_failing(): void
