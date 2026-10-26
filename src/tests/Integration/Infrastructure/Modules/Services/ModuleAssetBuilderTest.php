@@ -408,7 +408,7 @@ final class ModuleAssetBuilderTest extends TestCase
 
         file_put_contents(
             $this->testModulesPath.'/'.$name.'/vite.config.ts',
-            "import { defineModuleConfig } from '../../vite.module.config';\n\nexport default defineModuleConfig({ name: '{$name}', root: __dirname });\n",
+            "import { defineModuleConfig } from '../../vite.module.config.ts';\n\nexport default defineModuleConfig({ name: '{$name}', root: import.meta.dirname });\n",
         );
     }
 

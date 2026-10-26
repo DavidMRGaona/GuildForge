@@ -15,8 +15,8 @@ import {
  * Build configuration of a GuildForge module, with the core's toolchain:
  *
  *     // modules/<name>/vite.config.ts
- *     import { defineModuleConfig } from '../../vite.module.config';
- *     export default defineModuleConfig({ name: '<name>', root: __dirname });
+ *     import { defineModuleConfig } from '../../vite.module.config.ts';
+ *     export default defineModuleConfig({ name: '<name>', root: import.meta.dirname });
  *
  * Run from the core's src/ with `npm run build:module -- <name>`. The shared packages and
  * the public entries of resources/js/public-api.json stay out of the bundle: the page serves
@@ -26,7 +26,7 @@ import {
 export interface ModuleConfigOptions {
     /** The module name, as in module.json */
     name: string;
-    /** The module's directory (`__dirname` in its vite.config.ts) */
+    /** The module's directory (`import.meta.dirname` in its vite.config.ts) */
     root: string;
 }
 

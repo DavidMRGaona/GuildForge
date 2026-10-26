@@ -670,8 +670,10 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $config = self::readFile($this->tempModulesPath.'/blog-posts/vite.config.ts');
 
         // The core's build configuration: entries, output, externals and the public API guard
-        $this->assertStringContainsString("import { defineModuleConfig } from '../../vite.module.config';", $config);
-        $this->assertStringContainsString("defineModuleConfig({ name: 'blog-posts', root: __dirname })", $config);
+        $this->assertStringContainsString("import { defineModuleConfig } from '../../vite.module.config.ts';", $config);
+        $this->assertStringContainsString("defineModuleConfig({ name: 'blog-posts', root: import.meta.dirname })", $config);
+        // Loadable by Vite's native config loader: no __dirname, imports with their extension
+        $this->assertStringNotContainsString('__dirname', $config);
         $this->assertStringNotContainsString('external', $config);
     }
 
@@ -681,8 +683,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $config = self::readFile($this->tempModulesPath.'/blog-posts/vitest.config.ts');
 
-        $this->assertStringContainsString("import { defineModuleTestConfig } from '../../vitest.module.config';", $config);
-        $this->assertStringContainsString('defineModuleTestConfig({ root: __dirname })', $config);
+        $this->assertStringContainsString("import { defineModuleTestConfig } from '../../vitest.module.config.ts';", $config);
+        $this->assertStringContainsString('defineModuleTestConfig({ root: import.meta.dirname })', $config);
+        $this->assertStringNotContainsString('__dirname', $config);
     }
 
     public function test_a_new_module_has_no_package_json(): void
