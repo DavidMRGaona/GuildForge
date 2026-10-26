@@ -22,12 +22,13 @@ final readonly class GalleryQueryService implements GalleryQueryServiceInterface
             ->with([
                 'tags',
                 'photos' => function ($query) use ($photoLimit): void {
-                    $query->orderBy('sort_order')->limit($photoLimit);
+                    $query->limit($photoLimit);
                 },
             ])
             ->where('is_published', true)
             ->orderByDesc('is_featured')
             ->orderByDesc('updated_at')
+            ->orderedByCreation()
             ->first();
 
         return $gallery ? $this->dtoFactory->createGalleryDetailDTO($gallery) : null;
@@ -43,7 +44,7 @@ final readonly class GalleryQueryService implements GalleryQueryServiceInterface
         QueryHelpers::applyTagFilter($query, $tagSlugs);
 
         $galleries = QueryHelpers::applyPagination($query, $page, $perPage)
-            ->orderBy('created_at', 'desc')
+            ->orderedByCreation()
             ->get();
 
         return $galleries->map(fn (GalleryModel $gallery) => $this->dtoFactory->createGalleryDTO($gallery))->all();
