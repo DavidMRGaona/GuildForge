@@ -12,7 +12,7 @@
 // - the app, the shared packages and the public entries reach one chunk per
 //   vendor group (a second Vue, Inertia or FullCalendar would split their state);
 // - the core build contains no module sources: in production module pages, slot
-//   components and translations only come from each module's own build.
+//   components, translations and stylesheets only come from each module's own build.
 //
 // Run after `vite build`.
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -190,7 +190,7 @@ for (const [specifier, entry] of [
 }
 
 // A glob over module sources leaves their paths as string literals in the bundle
-const MODULE_SOURCE = /modules\/[a-z0-9-]+\/resources\/js\//;
+const MODULE_SOURCE = /modules\/[a-z0-9-]+\/resources\/(?:js|css)\//;
 function builtScripts(dir) {
     return readdirSync(dir, { withFileTypes: true }).flatMap((item) => {
         const path = join(dir, item.name);

@@ -577,7 +577,7 @@ Located in `src/resources/js/composables/`.
 - **Parameters**: --
 - **Returns**: `{ moduleSlots, getSlotComponents, hasSlotComponents }`
 - **Dependencies**: Inertia `usePage`, Vue `defineAsyncComponent`
-- **Purpose**: Module slot system. Reads module registrations from Inertia props (`moduleSlots`). Resolves module components as async components: in development uses build-time glob with HMR, in production uses dynamic loading via module Vite manifest. Injects module CSS. Merges static props with Inertia data
+- **Purpose**: Module slot system. Reads module registrations from Inertia props (`moduleSlots`). Resolves module components as async components: in development uses build-time glob with HMR, in production uses dynamic loading via module Vite manifest. Injects module CSS (from the dev server's compilation of the sources in development). Merges static props with Inertia data
 
 ### useCalendarLocale
 
@@ -825,6 +825,8 @@ Located in `src/resources/js/utils/`.
 | Function | Purpose |
 |----------|---------|
 | `attachModuleStylesheet(url)` | Imports a module's compiled stylesheet once, inside the `module-utilities` cascade layer |
+| `attachModuleSourceStylesheet(module)` | Development only: attaches the module's `resources/css/module.css` as the dev server compiles it from the sources, through `attachModuleStylesheet()`; nothing for a module without one |
+| `refreshModuleStylesheets(path, timestamp)` | Imports again the attached sheets served at `path`; wired to the dev server's CSS updates, which Vite's client only applies to `<link>` elements |
 
 ### html.ts
 
@@ -883,13 +885,13 @@ The `ModuleSlot` component (`components/layout/ModuleSlot.vue`) acts as an inser
 Reads slot registrations from Inertia shared props (`moduleSlots`). For each registration, resolves the module Vue component as an async component:
 
 1. **Production**: always uses dynamic loading via module Vite manifest (`/build/modules/{module}/manifest.json`). Injects module CSS
-2. **Development**: tries build-time glob (HMR), fallback to dynamic loading
+2. **Development**: tries build-time glob (HMR) with the module stylesheet compiled from the sources (`attachModuleSourceStylesheet()`), fallback to dynamic loading
 
 ### Module page resolution
 
 `resolveModulePage.ts` allows modules to register their own Inertia pages. The backend sends a prefix-to-module mapping, and the resolver tries to load the page:
 
-1. **Development**: from the module's sources (`app.ts` globs `modules/*/resources/js/pages`, HMR)
+1. **Development**: from the module's sources (`app.ts` globs `modules/*/resources/js/pages`, HMR), with the module stylesheet compiled from the sources
 2. **Production**: always dynamic loading via the module's Vite manifest
 
 ### Module translation loading

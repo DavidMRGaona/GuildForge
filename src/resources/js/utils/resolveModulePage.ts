@@ -1,6 +1,6 @@
 import type { DefineComponent } from 'vue';
 import { getModuleManifest, type ModuleManifest } from '@/utils/moduleManifest';
-import { attachModuleStylesheet } from '@/utils/moduleStyles';
+import { attachModuleSourceStylesheet, attachModuleStylesheet } from '@/utils/moduleStyles';
 
 /**
  * Mapping of page prefixes to module names.
@@ -202,10 +202,12 @@ export function createPageResolver(options: ResolveOptions) {
         const moduleName = getModuleForPage(name);
 
         if (moduleName !== null) {
-            // This is a module page - try its sources first (development only)
+            // This is a module page - try its sources first (development only), with
+            // the module stylesheet the dev server compiles from the same sources
             const modulePath = `../../modules/${moduleName}/resources/js/pages/${name}.vue`;
 
             if (options.modulePages[modulePath]) {
+                attachModuleSourceStylesheet(moduleName);
                 return options.modulePages[modulePath]();
             }
 
@@ -215,6 +217,7 @@ export function createPageResolver(options: ResolveOptions) {
             const alternativePath = `../../modules/${moduleName}/resources/js/pages/${relativeName}.vue`;
 
             if (options.modulePages[alternativePath]) {
+                attachModuleSourceStylesheet(moduleName);
                 return options.modulePages[alternativePath]();
             }
 

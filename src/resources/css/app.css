@@ -10,8 +10,9 @@
      at every width and permanently hid the header navigation, which is exactly
      the bug this ordering exists to prevent.
 
-   Nothing here shows up in development or in the test suite: module stylesheets
-   are only injected from a built asset. */
+   In development the same layer holds the sheet the dev server compiles from
+   each module's sources, so the cascade matches production. Nothing here shows
+   up in the test suite, which loads no module stylesheet. */
 @layer theme, base, components, module-utilities, utilities;
 
 /* Only the @source paths below: automatic detection also scanned Filament's compiled assets and PHP
@@ -42,7 +43,8 @@
    safelisted below, and — for anything outside that vocabulary — a stylesheet
    each module compiles from its own sources and ships in its build manifest
    (see resources/js/utils/resolveModulePage.ts and composables/useModuleSlots.ts,
-   which inject it at runtime). */
+   which inject it at runtime; in development utils/moduleStyles.ts takes it
+   from the dev server instead, compiled from the module's sources). */
 
 /* ==========================================================================
    Module Safelist - Semantic Status Classes

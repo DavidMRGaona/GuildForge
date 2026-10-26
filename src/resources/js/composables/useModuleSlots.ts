@@ -2,7 +2,7 @@ import { computed, defineAsyncComponent, type Component, type ComputedRef } from
 import { usePage } from '@inertiajs/vue3';
 import type { SlotRegistration, SlotPosition } from '@/types/slots';
 import { getModuleManifest } from '@/utils/moduleManifest';
-import { attachModuleStylesheet } from '@/utils/moduleStyles';
+import { attachModuleSourceStylesheet, attachModuleStylesheet } from '@/utils/moduleStyles';
 
 // Glob all module components for dynamic loading
 // These modules are discovered at build time - modules installed after build
@@ -141,8 +141,9 @@ function resolveComponent(module: string, componentPath: string): Component {
  * The build-time glob creates chunks in the main app's output with different content
  * hashes than the module's independent build, causing 404s when builds are out of sync.
  *
- * In development, tries the build-time glob first (HMR support), then falls back
- * to runtime loading.
+ * In development, tries the build-time glob first (HMR support), with the module
+ * stylesheet the dev server compiles from the same sources, then falls back to
+ * runtime loading.
  */
 function createAsyncComponent(module: string, componentPath: string): Component {
     // In production, always use manifest-based loading from the module's own build.
@@ -175,7 +176,10 @@ function createAsyncComponent(module: string, componentPath: string): Component 
     const staticLoader = moduleComponents[globPath];
     if (staticLoader) {
         return defineAsyncComponent({
-            loader: staticLoader,
+            loader: () => {
+                attachModuleSourceStylesheet(module);
+                return staticLoader();
+            },
             delay: 0,
             timeout: 10000,
             onError: (error, _retry, fail, attempts) => {
