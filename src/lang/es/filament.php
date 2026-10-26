@@ -260,7 +260,8 @@ return [
             'association_member_role_help' => 'Los usuarios con este rol son socios de la asociación (no confundir con «member», el rol de cualquier usuario registrado). Los módulos lo usan para el contenido solo para socios, el acceso anticipado y las membresías.',
             'association_member_role_inactive_holders' => '{1} 1 persona quedará con roles inactivos.|[2,*] :count personas quedarán con roles inactivos.',
             'association_member_role_grant_denied_title' => 'No puedes elegir este rol de socio',
-            'association_member_role_grant_denied_body' => 'Quien lo tiene también tiene roles que requieren ser socio y que tú no puedes dar: :roles.',
+            'association_member_role_grant_denied_body' => 'El cambio activaría o pondría en pausa roles que requieren ser socio y que tú no puedes dar ni quitar: :roles.',
+            'association_member_role_grant_denied_hint' => 'No puedes elegir este rol: activaría o pondría en pausa roles que requieren ser socio y que tú no puedes dar ni quitar (:roles).',
             'association_member_role_unavailable' => 'El rol de socio guardado («:role») no existe o no se puede usar: elige otro y guarda.',
         ],
         'maintenance' => [

@@ -663,6 +663,13 @@ final class SiteSettings extends Page implements HasForms
             return null;
         }
 
+        // Told before saving, so the rest of the form is not filled in for nothing
+        $denied = $this->associationRoleChangeDeniedRoles($chosen, $this->currentAssociationMemberRole());
+
+        if ($denied !== []) {
+            return __('filament.settings.auth.association_member_role_grant_denied_hint', ['roles' => implode(', ', $denied)]);
+        }
+
         $count = app(InactiveRoleHolders::class)->count($chosen);
 
         return $count > 0
@@ -671,13 +678,25 @@ final class SiteSettings extends Page implements HasForms
     }
 
     /**
+     * The association member role in force, as AssociationMembershipService reads it: null when
+     * the stored value is forbidden, so nobody is a member.
+     */
+    private function currentAssociationMemberRole(): ?string
+    {
+        return app(AssociationMembershipServiceInterface::class)->roleName();
+    }
+
+    /**
      * Making another role the association member role turns on, for its holders, the roles
-     * they hold that require membership: as if they were granted those roles. Anyone but an
-     * admin may only do it when they could grant every one of them (RoleGrantPolicy).
+     * they hold that require membership: as if they were granted those roles. It also pauses,
+     * for the holders of the old role who lack the new one, the roles they hold that require
+     * membership: as if those roles were taken away. Anyone but an admin may only do it when
+     * they could grant every one of them (RoleGrantPolicy: removing a role needs the same right).
      *
+     * @param  string|null  $oldRoleName  the association member role in force; null when nobody is a member
      * @return list<string> the visible names of the roles the actor could not grant
      */
-    private function associationRoleChangeDeniedRoles(string $newRoleName): array
+    private function associationRoleChangeDeniedRoles(string $newRoleName, ?string $oldRoleName): array
     {
         $actor = auth()->user();
 
@@ -689,9 +708,19 @@ final class SiteSettings extends Page implements HasForms
             return [];
         }
 
+        $holders = app(InactiveRoleHolders::class);
+        $affected = $holders->rolesRequiringMembershipHeldByHoldersOf($newRoleName);
+
+        if ($oldRoleName !== null) {
+            $affected = array_merge($affected, $holders->rolesRequiringMembershipPausedBySwitching($oldRoleName, $newRoleName));
+        }
+
+        $affected = array_unique($affected);
+        sort($affected);
+
         $grantPolicy = app(RoleGrantPolicy::class);
         $denied = array_values(array_filter(
-            app(InactiveRoleHolders::class)->rolesRequiringMembershipHeldByHoldersOf($newRoleName),
+            $affected,
             static fn (string $roleName): bool => ! $grantPolicy->canGrant($actor, $roleName),
         ));
 
@@ -713,12 +742,13 @@ final class SiteSettings extends Page implements HasForms
         $associationRoleBefore = $this->effectiveAssociationMemberRole(
             $settingsService->get(AssociationMembershipServiceInterface::SETTING_KEY)
         );
+        $associationRoleInForce = $this->currentAssociationMemberRole();
 
         if (array_key_exists(AssociationMembershipServiceInterface::SETTING_KEY, $formData)
             && in_array(AssociationMembershipServiceInterface::SETTING_KEY, $this->getSettingsKeys(), true)) {
             $associationRoleChosen = $this->effectiveAssociationMemberRole($formData[AssociationMembershipServiceInterface::SETTING_KEY]);
             $denied = $associationRoleChosen !== $associationRoleBefore
-                ? $this->associationRoleChangeDeniedRoles($associationRoleChosen)
+                ? $this->associationRoleChangeDeniedRoles($associationRoleChosen, $associationRoleInForce)
                 : [];
 
             if ($denied !== []) {
