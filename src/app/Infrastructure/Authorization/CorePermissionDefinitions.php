@@ -289,6 +289,7 @@ final class CorePermissionDefinitions
                 label: __('authorization.permissions.settings.manage'),
                 resource: 'settings',
                 action: 'manage',
+                description: __('authorization.permission_descriptions.settings.manage'),
             ),
             new PermissionDefinitionDTO(
                 key: 'settings.maintenance',
@@ -319,6 +320,48 @@ final class CorePermissionDefinitions
                 action: 'view_stats',
             ),
 
+            // Modules
+            new PermissionDefinitionDTO(
+                key: 'modules.manage',
+                label: __('authorization.permissions.modules.manage'),
+                resource: 'modules',
+                action: 'manage',
+                description: __('authorization.permission_descriptions.modules.manage'),
+            ),
+            new PermissionDefinitionDTO(
+                key: 'modules.configure',
+                label: __('authorization.permissions.modules.configure'),
+                resource: 'modules',
+                action: 'configure',
+                description: __('authorization.permission_descriptions.modules.configure'),
+            ),
+
+            // Dashboard
+            new PermissionDefinitionDTO(
+                key: 'dashboard.configure',
+                label: __('authorization.permissions.dashboard.configure'),
+                resource: 'dashboard',
+                action: 'configure',
+            ),
+
+            // Legal and about pages
+            new PermissionDefinitionDTO(
+                key: 'pages.manage',
+                label: __('authorization.permissions.pages.manage'),
+                resource: 'pages',
+                action: 'manage',
+                description: __('authorization.permission_descriptions.pages.manage'),
+            ),
+
+            // Role assignment
+            new PermissionDefinitionDTO(
+                key: 'users.assign_roles',
+                label: __('authorization.permissions.users.assign_roles'),
+                resource: 'users',
+                action: 'assign_roles',
+                description: __('authorization.permission_descriptions.users.assign_roles'),
+            ),
+
             // Admin panel access
             new PermissionDefinitionDTO(
                 key: 'admin.access',
@@ -326,6 +369,7 @@ final class CorePermissionDefinitions
                 resource: 'admin',
                 action: 'access',
                 defaultRoles: ['editor'],
+                description: __('authorization.permission_descriptions.admin.access'),
             ),
         ];
     }

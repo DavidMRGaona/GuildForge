@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Modules\ModuleLoader;
 use Filament\Actions\Action;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -22,6 +23,7 @@ use Filament\Schemas\Schema;
  */
 final class ModuleSettingsPage extends Page implements HasForms
 {
+    use ChecksPermissions;
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
@@ -69,7 +71,7 @@ final class ModuleSettingsPage extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('modules.configure');
     }
 
     public function mount(string $module): void

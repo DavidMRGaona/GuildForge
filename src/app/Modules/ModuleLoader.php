@@ -231,6 +231,8 @@ final class ModuleLoader
             action: $action,
             module: $dto->module,
             defaultRoles: $dto->roles,
+            description: $dto->description,
+            group: $dto->group,
         );
     }
 

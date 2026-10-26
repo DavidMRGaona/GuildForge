@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Settings;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
@@ -27,6 +28,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  */
 final class AboutPageSettings extends Page implements HasForms
 {
+    use ChecksPermissions;
     use InteractsWithForms;
     use ManagesPageSettings;
 
@@ -58,7 +60,7 @@ final class AboutPageSettings extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('pages.manage');
     }
 
     public function mount(SettingsServiceInterface $settingsService): void

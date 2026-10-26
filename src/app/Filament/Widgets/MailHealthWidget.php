@@ -7,11 +7,14 @@ namespace App\Filament\Widgets;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Mail\Services\MailStatisticsServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Filament\Concerns\ChecksPermissions;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class MailHealthWidget extends StatsOverviewWidget
 {
+    use ChecksPermissions;
+
     protected static ?int $sort = 80;
 
     protected function getColumns(): int
@@ -66,6 +69,6 @@ class MailHealthWidget extends StatsOverviewWidget
 
     public static function canView(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('mail.configure');
     }
 }

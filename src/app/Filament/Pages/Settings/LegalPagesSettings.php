@@ -7,6 +7,7 @@ namespace App\Filament\Pages\Settings;
 use App\Application\Legal\DTOs\LegalMailNoticeDTO;
 use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Actions\Action;
 use Filament\Forms\Components\RichEditor;
@@ -31,6 +32,7 @@ use Livewire\Attributes\Locked;
  */
 final class LegalPagesSettings extends Page implements HasForms
 {
+    use ChecksPermissions;
     use InteractsWithForms;
     use ManagesPageSettings;
 
@@ -73,7 +75,7 @@ final class LegalPagesSettings extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('pages.manage');
     }
 
     public function mount(SettingsServiceInterface $settingsService): void

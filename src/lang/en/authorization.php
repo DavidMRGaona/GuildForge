@@ -16,6 +16,9 @@ return [
         'mail' => 'Email',
         'updates' => 'Updates',
         'admin' => 'Administration',
+        'modules' => 'Modules',
+        'dashboard' => 'Dashboard',
+        'pages' => 'Pages',
     ],
 
     'actions' => [
@@ -30,6 +33,7 @@ return [
         'access' => 'Access',
         'maintenance' => 'Maintenance mode',
         'apply' => 'Apply',
+        'assign_roles' => 'Assign roles',
     ],
 
     'permissions' => [
@@ -60,6 +64,7 @@ return [
             'create' => 'Create user',
             'update' => 'Edit user',
             'delete' => 'Delete user',
+            'assign_roles' => 'Assign roles to users',
         ],
         'roles' => [
             'view_any' => 'View roles list',
@@ -100,6 +105,35 @@ return [
         ],
         'admin' => [
             'access' => 'Access admin panel',
+        ],
+        'modules' => [
+            'manage' => 'Manage modules',
+            'configure' => 'Configure modules',
+        ],
+        'dashboard' => [
+            'configure' => 'Configure the dashboard',
+        ],
+        'pages' => [
+            'manage' => 'Manage legal pages and "About us"',
+        ],
+    ],
+
+    'permission_descriptions' => [
+        'settings' => [
+            'manage' => 'Includes choosing the association member role and email verification.',
+        ],
+        'users' => [
+            'assign_roles' => 'Can only give or remove roles whose permissions they hold.',
+        ],
+        'modules' => [
+            'manage' => 'Install, enable and disable modules.',
+            'configure' => 'Settings of enabled modules. Does not allow installing or disabling them.',
+        ],
+        'pages' => [
+            'manage' => 'Legal notice, privacy policy and "About us".',
+        ],
+        'admin' => [
+            'access' => 'Enter the admin panel.',
         ],
     ],
 

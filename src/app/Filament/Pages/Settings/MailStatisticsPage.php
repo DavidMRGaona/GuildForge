@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Settings;
 
 use App\Domain\Mail\Enums\EmailStatus;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Infrastructure\Persistence\Eloquent\Models\EmailLogModel;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
@@ -15,6 +16,7 @@ use Filament\Tables\Table;
 
 final class MailStatisticsPage extends Page implements HasTable
 {
+    use ChecksPermissions;
     use InteractsWithTable;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar-square';
@@ -40,7 +42,7 @@ final class MailStatisticsPage extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('mail.view_stats');
     }
 
     public function table(Table $table): Table

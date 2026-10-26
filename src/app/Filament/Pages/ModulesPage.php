@@ -19,6 +19,7 @@ use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Filament\Concerns\ChecksPermissions;
 use App\Modules\ModuleLoader;
 use App\View\Modules\CompatibilityIssueFormatter;
 use DateTimeInterface;
@@ -39,6 +40,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  */
 final class ModulesPage extends Page implements HasForms
 {
+    use ChecksPermissions;
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-puzzle-piece';
@@ -112,7 +114,13 @@ final class ModulesPage extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('modules.manage') || self::userCan('modules.configure');
+    }
+
+    /** Enabling, disabling, installing and uninstalling need `modules.manage`; `modules.configure` alone is read-only. */
+    public function canManageModules(): bool
+    {
+        return self::userCan('modules.manage');
     }
 
     private function installRequiresMaintenanceMessage(): string
@@ -150,10 +158,13 @@ final class ModulesPage extends Page implements HasForms
     {
         return [
             Action::make('discover')
+                ->visible(fn (): bool => $this->canManageModules())
                 ->label(__('modules.filament.actions.discover'))
                 ->icon('heroicon-o-magnifying-glass')
                 ->color('gray')
                 ->action(function (ModuleManagerServiceInterface $moduleManager): void {
+                    abort_unless($this->canManageModules(), 403);
+
                     $discovered = $moduleManager->discover();
                     $count = $discovered->count();
 
@@ -171,6 +182,7 @@ final class ModulesPage extends Page implements HasForms
                 }),
 
             Action::make('install')
+                ->visible(fn (): bool => $this->canManageModules())
                 ->label(__('modules.filament.install_form.submit'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('primary')
@@ -192,6 +204,8 @@ final class ModulesPage extends Page implements HasForms
                     ? null
                     : $this->installRequiresMaintenanceMessage())
                 ->action(function (array $data, ModuleInstallerInterface $installer, ModuleManagerServiceInterface $moduleManager): void {
+                    abort_unless($this->canManageModules(), 403);
+
                     try {
                         $uploadedFile = $this->resolveUploadedFile($data['zipFile']);
                     } catch (ModuleInstallationException $e) {
@@ -207,6 +221,8 @@ final class ModulesPage extends Page implements HasForms
 
     private function installPackage(UploadedFile $uploadedFile, ModuleInstallerInterface $installer, ModuleManagerServiceInterface $moduleManager): void
     {
+        abort_unless($this->canManageModules(), 403);
+
         try {
             // Peek at the manifest to determine if this is an install or update
             $manifest = $installer->peekManifest($uploadedFile);
@@ -255,6 +271,8 @@ final class ModulesPage extends Page implements HasForms
 
     public function enableModule(string $name, ModuleManagerServiceInterface $moduleManager): void
     {
+        abort_unless($this->canManageModules(), 403);
+
         $displayName = $name;
 
         try {
@@ -294,6 +312,8 @@ final class ModulesPage extends Page implements HasForms
 
     public function disableModule(string $name, ModuleManagerServiceInterface $moduleManager): void
     {
+        abort_unless($this->canManageModules(), 403);
+
         try {
             // Get display name before disabling
             $module = $moduleManager->find(new ModuleName($name));
@@ -315,6 +335,8 @@ final class ModulesPage extends Page implements HasForms
 
     public function confirmUninstall(string $name): void
     {
+        abort_unless($this->canManageModules(), 403);
+
         $this->confirmingUninstall = $name;
         $this->confirmDeleteData = false;
         $this->dispatch('open-modal', id: 'confirm-uninstall');
@@ -329,6 +351,8 @@ final class ModulesPage extends Page implements HasForms
 
     public function uninstallModule(ModuleManagerServiceInterface $moduleManager): void
     {
+        abort_unless($this->canManageModules(), 403);
+
         $name = $this->confirmingUninstall;
 
         if ($name === null) {

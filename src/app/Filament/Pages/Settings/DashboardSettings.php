@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Settings;
 
 use App\Application\Services\DashboardWidgetConfigServiceInterface;
+use App\Filament\Concerns\ChecksPermissions;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
@@ -23,6 +24,7 @@ use Filament\Widgets\TableWidget;
  */
 final class DashboardSettings extends Page implements HasForms
 {
+    use ChecksPermissions;
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-squares-2x2';
@@ -53,7 +55,7 @@ final class DashboardSettings extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return self::userCan('dashboard.configure');
     }
 
     public function mount(DashboardWidgetConfigServiceInterface $configService): void
