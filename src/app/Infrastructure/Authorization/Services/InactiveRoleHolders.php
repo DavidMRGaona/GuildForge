@@ -6,6 +6,7 @@ namespace App\Infrastructure\Authorization\Services;
 
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -50,7 +51,29 @@ final readonly class InactiveRoleHolders
      */
     public function rolesRequiringMembershipHeldByHoldersOf(string $roleName): array
     {
-        return array_values(DB::table('user_role as candidate')
+        return $this->rolesRequiringMembershipHeldBy($roleName, null);
+    }
+
+    /**
+     * The roles requiring association membership that would pause if the association member
+     * role went from $fromRoleName to $toRoleName: those held by holders of $fromRoleName who
+     * do not hold $toRoleName, as they stop being members. Read from the pivot and leaving out
+     * deactivated and anonymized holders, like rolesRequiringMembershipHeldByHoldersOf().
+     *
+     * @return list<string> role names, sorted
+     */
+    public function rolesRequiringMembershipPausedBySwitching(string $fromRoleName, string $toRoleName): array
+    {
+        return $this->rolesRequiringMembershipHeldBy($fromRoleName, $toRoleName);
+    }
+
+    /**
+     * @param  string|null  $exceptHoldersOf  leave out the holders of this role
+     * @return list<string>
+     */
+    private function rolesRequiringMembershipHeldBy(string $roleName, ?string $exceptHoldersOf): array
+    {
+        $query = DB::table('user_role as candidate')
             ->join('roles as candidate_role', 'candidate_role.id', '=', 'candidate.role_id')
             ->join('users', 'users.id', '=', 'candidate.user_id')
             ->join('user_role as held', 'held.user_id', '=', 'candidate.user_id')
@@ -58,7 +81,19 @@ final readonly class InactiveRoleHolders
             ->where('candidate_role.name', $roleName)
             ->where('roles.requires_association_member', true)
             ->whereNull('users.deleted_at')
-            ->whereNull('users.anonymized_at')
+            ->whereNull('users.anonymized_at');
+
+        if ($exceptHoldersOf !== null) {
+            $query->whereNotExists(static function (QueryBuilder $kept) use ($exceptHoldersOf): void {
+                $kept->selectRaw('1')
+                    ->from('user_role as kept')
+                    ->join('roles as kept_role', 'kept_role.id', '=', 'kept.role_id')
+                    ->whereColumn('kept.user_id', 'candidate.user_id')
+                    ->where('kept_role.name', $exceptHoldersOf);
+            });
+        }
+
+        return array_values($query
             ->distinct()
             ->orderBy('roles.name')
             ->pluck('roles.name')

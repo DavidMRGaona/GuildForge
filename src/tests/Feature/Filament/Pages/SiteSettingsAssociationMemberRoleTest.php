@@ -261,7 +261,7 @@ final class SiteSettingsAssociationMemberRoleTest extends TestCase
                 Notification::make()
                     ->danger()
                     ->title('No puedes elegir este rol de socio')
-                    ->body('Quien lo tiene también tiene roles que requieren ser socio y que tú no puedes dar: Junta de gobierno.'),
+                    ->body('El cambio activaría o pondría en pausa roles que requieren ser socio y que tú no puedes dar ni quitar: Junta de gobierno.'),
             );
 
         $this->assertSame('socio', $this->stored());
@@ -293,6 +293,146 @@ final class SiteSettingsAssociationMemberRoleTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertSame('junta', $this->stored());
+    }
+
+    public function test_a_non_admin_cannot_switch_away_when_the_old_holders_hold_roles_beyond_them(): void
+    {
+        $this->switchAwayScenario();
+        $this->actingAs($this->editorWithPermissions(['settings.manage', 'users.assign_roles', 'events.view_any']));
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm([self::KEY => 'junta', 'guild_name' => 'Gremio nuevo'])
+            ->call('save')
+            ->assertNotified(
+                Notification::make()
+                    ->danger()
+                    ->title('No puedes elegir este rol de socio')
+                    ->body('El cambio activaría o pondría en pausa roles que requieren ser socio y que tú no puedes dar ni quitar: Junta de gobierno.'),
+            );
+
+        $this->assertSame('socio', $this->stored());
+        $this->assertNotSame('Gremio nuevo', app(SettingsServiceInterface::class)->get('guild_name'));
+    }
+
+    public function test_a_non_admin_can_switch_away_when_every_role_that_pauses_is_grantable(): void
+    {
+        $this->switchAwayScenario(withBoardHolder: false);
+        $this->actingAs($this->editorWithPermissions(['settings.manage', 'users.assign_roles', 'events.view_any']));
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm([self::KEY => 'junta'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('junta', $this->stored());
+    }
+
+    public function test_a_non_admin_can_switch_away_when_the_old_holders_keep_membership_through_the_new_role(): void
+    {
+        $this->switchAwayScenario(withBoardHolder: false);
+        $junta = RoleModel::query()->where('name', 'junta')->firstOrFail();
+        $socio = RoleModel::query()->where('name', 'socio')->firstOrFail();
+        // Holds "junta" without any role requiring membership, so nothing of theirs wakes up
+        UserModel::factory()->create()->roles()->attach([$socio->id, $junta->id]);
+        $this->actingAs($this->editorWithPermissions(['settings.manage', 'users.assign_roles', 'events.view_any']));
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm([self::KEY => 'junta'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('junta', $this->stored());
+    }
+
+    public function test_an_admin_can_switch_away_whatever_the_old_holders_hold(): void
+    {
+        $this->switchAwayScenario();
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm([self::KEY => 'junta'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('junta', $this->stored());
+    }
+
+    public function test_a_forbidden_stored_role_made_nobody_a_member_so_switching_pauses_nothing(): void
+    {
+        $member = RoleModel::query()->firstOrCreate(['name' => 'member'], ['display_name' => 'Member']);
+        RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta directiva']);
+        $board = $this->roleWith('board', 'Junta de gobierno', 'roles.delete');
+        UserModel::factory()->create()->roles()->attach([$member->id, $board->id]);
+        app(SettingsServiceInterface::class)->set(self::KEY, 'member');
+        $this->actingAs($this->editorWithPermissions(['settings.manage', 'users.assign_roles']));
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm([self::KEY => 'junta'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('junta', $this->stored());
+    }
+
+    public function test_the_hint_tells_a_non_admin_before_saving_that_the_switch_would_pause_roles_beyond_them(): void
+    {
+        $this->switchAwayScenario();
+        $this->actingAs($this->editorWithPermissions(['settings.manage', 'users.assign_roles', 'events.view_any']));
+
+        $component = Livewire::test(SiteSettings::class)->set('data.'.self::KEY, 'junta');
+
+        $this->assertSame(
+            'No puedes elegir este rol: activaría o pondría en pausa roles que requieren ser socio y que tú no puedes dar ni quitar (Junta de gobierno).',
+            $this->select($component->instance())->getHint(),
+        );
+    }
+
+    public function test_the_hint_tells_a_non_admin_before_saving_that_the_switch_would_wake_roles_beyond_them(): void
+    {
+        $this->associationRoleScenario();
+        $this->actingAs($this->editorWithPermissions(['settings.manage', 'users.assign_roles', 'events.view_any']));
+
+        $component = Livewire::test(SiteSettings::class)->set('data.'.self::KEY, 'junta');
+
+        $this->assertSame(
+            'No puedes elegir este rol: activaría o pondría en pausa roles que requieren ser socio y que tú no puedes dar ni quitar (Junta de gobierno).',
+            $this->select($component->instance())->getHint(),
+        );
+    }
+
+    public function test_an_admin_switching_away_sees_how_many_people_are_left_with_inactive_roles(): void
+    {
+        $this->switchAwayScenario();
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $component = Livewire::test(SiteSettings::class)->set('data.'.self::KEY, 'junta');
+
+        $this->assertSame('2 personas quedarán con roles inactivos.', $this->select($component->instance())->getHint());
+    }
+
+    /**
+     * "socio" is the association member role and "junta" (held by nobody) the one picked.
+     * Holders of "socio" also hold "vocal" (grantable by the actor) and, unless left out,
+     * "board" (beyond the actor); both require association membership, so they pause.
+     * Deactivated and anonymized holders of "board" never count.
+     */
+    private function switchAwayScenario(bool $withBoardHolder = true): void
+    {
+        app(SettingsServiceInterface::class)->set(self::KEY, 'socio');
+        RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta directiva']);
+        $socio = RoleModel::query()->where('name', 'socio')->firstOrFail();
+        $vocal = $this->roleWith('vocal', 'Vocal', 'events.view_any');
+        $board = $this->roleWith('board', 'Junta de gobierno', 'roles.delete');
+
+        UserModel::factory()->create()->roles()->attach([$socio->id, $vocal->id]);
+        UserModel::factory()->create(['anonymized_at' => now()])->roles()->attach([$socio->id, $board->id]);
+        $deleted = UserModel::factory()->create();
+        $deleted->roles()->attach([$socio->id, $board->id]);
+        $deleted->delete();
+
+        if ($withBoardHolder) {
+            UserModel::factory()->create()->roles()->attach([$socio->id, $board->id]);
+        }
     }
 
     /**

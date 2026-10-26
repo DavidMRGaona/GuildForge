@@ -86,6 +86,48 @@ final class InactiveRoleHoldersTest extends TestCase
         $this->assertSame(0, app(InactiveRoleHolders::class)->count('socio'));
     }
 
+    public function test_switching_pauses_the_restricted_roles_of_old_holders_who_lack_the_new_role(): void
+    {
+        $vocal = $this->restrictedRole('vocal');
+        $tesorero = $this->restrictedRole('tesorero');
+        $secretario = $this->restrictedRole('secretario');
+        $tablero = $this->restrictedRole('tablero');
+        $junta = RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta']);
+        $socio = RoleModel::query()->where('name', 'socio')->firstOrFail();
+
+        UserModel::factory()->create()->roles()->attach([$socio->id, $vocal->id]);
+        // Holds the new role too, so stays a member
+        UserModel::factory()->create()->roles()->attach([$socio->id, $junta->id, $tesorero->id]);
+        // Not a holder of the old role: nothing of theirs changes
+        UserModel::factory()->create()->roles()->attach($secretario->id);
+
+        $deleted = UserModel::factory()->create();
+        $deleted->roles()->attach([$socio->id, $tablero->id]);
+        $deleted->delete();
+        UserModel::factory()->create(['anonymized_at' => now()])->roles()->attach([$socio->id, $tablero->id]);
+
+        $holders = app(InactiveRoleHolders::class);
+
+        $this->assertSame(['vocal'], $holders->rolesRequiringMembershipPausedBySwitching('socio', 'junta'));
+        $this->assertSame([], $holders->rolesRequiringMembershipPausedBySwitching('junta', 'socio'));
+    }
+
+    public function test_switching_lists_each_paused_role_once_and_sorted(): void
+    {
+        $vocal = $this->restrictedRole('vocal');
+        $tesorero = $this->restrictedRole('tesorero');
+        $socio = RoleModel::query()->where('name', 'socio')->firstOrFail();
+        RoleModel::query()->create(['name' => 'junta', 'display_name' => 'Junta']);
+
+        UserModel::factory()->create()->roles()->attach([$socio->id, $vocal->id, $tesorero->id]);
+        UserModel::factory()->create()->roles()->attach([$socio->id, $vocal->id]);
+
+        $this->assertSame(
+            ['tesorero', 'vocal'],
+            app(InactiveRoleHolders::class)->rolesRequiringMembershipPausedBySwitching('socio', 'junta'),
+        );
+    }
+
     private function restrictedRole(string $name): RoleModel
     {
         return RoleModel::query()->create([
