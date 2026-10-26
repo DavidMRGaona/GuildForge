@@ -9,6 +9,7 @@ use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use Illuminate\Support\Str;
 
 /**
  * Read-only catalog of the permissions the role editor offers, as tabs of sections of options.
@@ -112,19 +113,35 @@ final readonly class PermissionCatalog
 
             /** @var array<string, list<PermissionOption>> $grouped */
             $grouped = [];
+            /** @var array<string, string> $firstResource */
+            $firstResource = [];
             foreach ($byPrefix[$prefix] as [$definition, $option]) {
-                $grouped[$definition->group ?? $definition->resource][] = $option;
+                $label = $definition->group ?? $definition->resource;
+                $grouped[$label][] = $option;
+                $firstResource[$label] ??= $definition->resource;
             }
 
+            // Keys come from untranslated data (the first resource), never from the label.
             $sections = [];
+            $used = [];
             foreach ($grouped as $label => $options) {
-                $sections[] = new PermissionSection($this->slug((string) $label), (string) $label, $options);
+                $label = (string) $label;
+                $base = Str::slug($firstResource[$label]);
+                if ($base === '') {
+                    $base = 'section-'.(count($sections) + 1);
+                }
+                $key = $base;
+                for ($n = 2; isset($used[$key]); $n++) {
+                    $key = $base.'-'.$n;
+                }
+                $used[$key] = true;
+                $sections[] = new PermissionSection($key, $label, $options);
             }
 
             $tabs[] = new PermissionTab('module-'.$prefix, $module->displayName(), $sections);
         }
 
-        usort($tabs, fn (PermissionTab $a, PermissionTab $b): int => strcasecmp($a->label, $b->label));
+        usort($tabs, fn (PermissionTab $a, PermissionTab $b): int => strcasecmp(Str::ascii($a->label), Str::ascii($b->label)));
 
         return $tabs;
     }
@@ -153,10 +170,5 @@ final readonly class PermissionCatalog
         $label = __($key);
 
         return $label === $key ? $resource : $label;
-    }
-
-    private function slug(string $label): string
-    {
-        return strtolower(trim((string) preg_replace('/[^A-Za-z0-9]+/', '-', $label), '-'));
     }
 }
