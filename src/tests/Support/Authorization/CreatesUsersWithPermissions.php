@@ -18,7 +18,8 @@ trait CreatesUsersWithPermissions
     protected function editorWithPermissions(array $permissionKeys): UserModel
     {
         $role = RoleModel::create([
-            'name' => 'tester_'.uniqid(),
+            // Kebab-case, like every role name the domain accepts (RoleName).
+            'name' => 'tester-'.uniqid(),
             'display_name' => 'Permissions tester',
         ]);
 
