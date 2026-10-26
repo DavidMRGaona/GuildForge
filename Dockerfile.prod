@@ -47,12 +47,11 @@ COPY --from=vendor /filament-css/ vendor/filament/
 # their pages, slot components and translations must load from each module's build here too
 RUN npx vite build && node scripts/verify-build.mjs
 
-# Build module assets. A module on the core's toolchain (defineModuleConfig) builds with the
-# core's Vite, after npm ci of its own runtime libraries when it has a package.json; a module
-# with its own toolchain (Legacy module toolchain, removed once every module is on
-# defineModuleConfig) runs npm ci + build in its directory. Every module repo tracks its
-# lockfile; a module that fails to install or build fails the image. Deployment builds carry no
-# modules (src/modules is not in the host repo), so this loop only does work in prod-local builds.
+# Build module assets with the core's Vite (defineModuleConfig), after npm ci of the module's own
+# runtime libraries when it has a package.json; any other vite.config.ts fails the image. Every
+# module repo tracks its lockfile; a module that fails to install or build fails the image.
+# Deployment builds carry no modules (src/modules is not in the host repo), so this loop only
+# does work in prod-local builds.
 RUN --mount=type=cache,target=/root/.npm \
     for dir in modules/*/; do \
         name=$(basename "$dir"); \
@@ -61,11 +60,8 @@ RUN --mount=type=cache,target=/root/.npm \
                 { [ ! -f "$dir/package.json" ] || (cd "/build/$dir" && npm ci); } \
                     && sh scripts/build-module.sh "$name" \
                     || { echo "Module build failed: $name" >&2; exit 1; } ;; \
-            legacy) echo "Building module: $name"; \
-                (cd "/build/$dir" && npm ci && npm run build) \
-                    || { echo "Module build failed: $name" >&2; exit 1; } ;; \
             none) ;; \
-            *) echo "Module build failed: $name (vite.config.ts on neither toolchain)" >&2; exit 1 ;; \
+            *) echo "Module build failed: $name (vite.config.ts not on defineModuleConfig)" >&2; exit 1 ;; \
         esac; \
     done
 

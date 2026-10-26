@@ -938,9 +938,9 @@ Modules with Vue pages or components ship them compiled. Assets are built in CI 
 `module:make` writes a `vite.config.ts` of three lines; the configuration itself is the core's (`src/vite.module.config.ts`):
 
 ```typescript
-import { defineModuleConfig } from '../../vite.module.config';
+import { defineModuleConfig } from '../../vite.module.config.ts';
 
-export default defineModuleConfig({ name: 'my-module', root: __dirname });
+export default defineModuleConfig({ name: 'my-module', root: import.meta.dirname });
 ```
 
 The path is the same in development (`src/modules/<name>`), in the production image and in the release workflow (`modules/<name>` inside the core). `defineModuleConfig` builds with the core's Vite and plugins, and holds what the core and the release workflow rely on:
@@ -953,7 +953,7 @@ The path is the same in development (`src/modules/<name>`), in the production im
 
 `tsconfig.json` type-checks the module against the core: `@/*` points to the host's `resources/js`, the import map packages resolve to the host's `node_modules` (their types are the host's copies, so `$t` and the Inertia page props are typed) and the host's `resources/js/types` declarations are included. Run it with `docker exec guildforge_node sh -c 'cd modules/my-module && ../../node_modules/.bin/vue-tsc --noEmit -p tsconfig.json'`; the quality checks run it too.
 
-Modules released before core 3.21 keep their own `package.json` with Vite and their own `vite.config.ts` (the legacy module toolchain): the core still builds them with npm in their directory, but that path is deprecated and is removed after at least one minor release. Move a module to `defineModuleConfig` by replacing its `vite.config.ts` (and `vitest.config.ts`, see [Running module tests](#running-module-tests)) with the three-line versions, deleting `package.json` and `package-lock.json` (or keeping only `dependencies`) and requiring the core that ships `defineModuleConfig` in `module.json`.
+Modules released before core 3.21 brought their own `package.json` with Vite and their own `vite.config.ts`. Core 3.25 no longer runs a module's own Vite: a `vite.config.ts` without `defineModuleConfig` fails `module:build`, the quality checks, the release workflow and the production image. Assets already inside an installed module's ZIP keep loading. Move a module to `defineModuleConfig` by replacing its `vite.config.ts` (and `vitest.config.ts`, see [Running module tests](#running-module-tests)) with the three-line versions, deleting `package.json` and `package-lock.json` (or keeping only `dependencies`) and requiring the core that ships `defineModuleConfig` in `module.json`.
 
 ### Building in development
 
@@ -1171,7 +1171,14 @@ Module tests run inside the host application with the module's own `phpunit.xml`
 docker exec guildforge_app vendor/bin/phpunit -c modules/my-module/phpunit.xml
 ```
 
-`module:make` writes `phpunit.xml` as the shipped modules have it: it boots `tests/bootstrap.php`, runs the `tests/Unit`, `tests/Integration` and `tests/Feature` suites on SQLite in memory, and its `APP_CONFIG_CACHE`/`APP_ROUTES_CACHE`/`APP_EVENTS_CACHE` block keeps tests away from the bootstrap caches of the container. Keep that block. The release workflow runs the same file (see [Releasing a module](#releasing-a-module)).
+`module:make` writes `phpunit.xml` as the shipped modules have it: it boots `tests/bootstrap.php`, runs the `tests/Unit`, `tests/Integration` and `tests/Feature` suites on SQLite in memory, and its `APP_CONFIG_CACHE`/`APP_ROUTES_CACHE`/`APP_EVENTS_CACHE` block keeps tests away from the bootstrap caches of the container. Keep that block. The release workflow runs the same file (see [Releasing a module](#releasing-a-module)), but on PostgreSQL, as the sites do: SQLite stores dates as text and takes any value in a UUID column, so some failures only show there. Before publishing changes that touch queries or migrations, run the suite against PostgreSQL too; real variables take precedence over the ones in `phpunit.xml`:
+
+```bash
+docker exec -e DB_CONNECTION=pgsql -e DB_HOST=guildforge_db -e DB_DATABASE=my_module_test \
+    guildforge_app php artisan test --parallel --processes=4 --configuration=modules/my-module/phpunit.xml
+```
+
+Laravel creates one database per process (`my_module_test_test_1`…); drop them when done. Migrations must still work on both databases.
 
 `tests/bootstrap.php` loads the core's test bootstrap (which clears a stale config cache and the compiled views before the suite) and then maps the module's test namespace to `tests/`:
 
@@ -1187,9 +1194,9 @@ The module autoloader only maps `src/`. PHPUnit loads the `*Test.php` files by p
 Vue tests (`tests/js/**/*.spec.ts`) run with the core's Vitest, Vue Test Utils and happy-dom. The `vitest.config.ts` that `module:make` writes is three lines on the core's configuration (`src/vitest.module.config.ts`: the `@` alias to the core's `resources/js`, one Vue copy, `tests/js/setup.ts` when it exists):
 
 ```typescript
-import { defineModuleTestConfig } from '../../vitest.module.config';
+import { defineModuleTestConfig } from '../../vitest.module.config.ts';
 
-export default defineModuleTestConfig({ root: __dirname });
+export default defineModuleTestConfig({ root: import.meta.dirname });
 ```
 
 ```bash

@@ -7,14 +7,14 @@ import { resolve } from 'path';
  * Vitest configuration of a GuildForge module, with the core's toolchain:
  *
  *     // modules/<name>/vitest.config.ts
- *     import { defineModuleTestConfig } from '../../vitest.module.config';
- *     export default defineModuleTestConfig({ root: __dirname });
+ *     import { defineModuleTestConfig } from '../../vitest.module.config.ts';
+ *     export default defineModuleTestConfig({ root: import.meta.dirname });
  *
  * The tests run inside the core, as the build does: components import the core's sources
  * through `@/`, and every package comes from the core's node_modules.
  */
 export interface ModuleTestConfigOptions {
-    /** The module's directory (`__dirname` in its vitest.config.ts) */
+    /** The module's directory (`import.meta.dirname` in its vitest.config.ts) */
     root: string;
 }
 

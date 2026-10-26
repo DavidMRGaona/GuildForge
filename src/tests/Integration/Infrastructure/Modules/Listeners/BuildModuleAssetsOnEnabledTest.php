@@ -7,6 +7,7 @@ namespace Tests\Integration\Infrastructure\Modules\Listeners;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Events\ModuleEnabled;
 use App\Infrastructure\Modules\Listeners\BuildModuleAssetsOnEnabled;
+use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Events\CallQueuedListener;
@@ -23,20 +24,25 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    /** Where the build script runs: it builds <root>/modules/<name> */
+    private string $testBuildRoot;
+
     private string $testModulesPath;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->testModulesPath = sys_get_temp_dir().'/guildforge-test-modules-'.bin2hex(random_bytes(8));
+        $this->testBuildRoot = sys_get_temp_dir().'/guildforge-test-root-'.bin2hex(random_bytes(8));
+        $this->testModulesPath = $this->testBuildRoot.'/modules';
         mkdir($this->testModulesPath, 0755, true);
         config(['modules.path' => $this->testModulesPath]);
+        $this->app->instance(ModuleAssetBuilder::class, new ModuleAssetBuilder($this->testModulesPath, $this->testBuildRoot));
     }
 
     protected function tearDown(): void
     {
-        $this->removeDirectory($this->testModulesPath);
+        $this->removeDirectory($this->testBuildRoot);
         parent::tearDown();
     }
 
@@ -164,11 +170,7 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
     {
         Process::fake();
         config(['module-build.required_vite_env' => []]);
-        $this->createTestModuleWithComponents('test-module');
-        file_put_contents(
-            $this->testModulesPath.'/test-module/vite.config.ts',
-            "import { defineModuleConfig } from '../../vite.module.config';\n\nexport default defineModuleConfig({ name: 'test-module', root: __dirname });\n",
-        );
+        $this->createTestModuleWithComponentsAndConfig('test-module');
         $this->createModuleRecord('test-module');
 
         $this->app->make(BuildModuleAssetsOnEnabled::class)->handle(new ModuleEnabled('fake-id', 'test-module'));
@@ -235,8 +237,10 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
         $this->createTestModuleWithComponents($name);
         $modulePath = $this->testModulesPath.'/'.$name;
 
-        file_put_contents($modulePath.'/package.json', '{}');
-        file_put_contents($modulePath.'/vite.config.ts', 'export default {}');
+        file_put_contents(
+            $modulePath.'/vite.config.ts',
+            "import { defineModuleConfig } from '../../vite.module.config.ts';\n\nexport default defineModuleConfig({ name: '{$name}', root: import.meta.dirname });\n",
+        );
     }
 
     private function removeDirectory(string $path): void

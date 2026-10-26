@@ -38,6 +38,25 @@ jobs:
     defaults:
       run:
         working-directory: src
+
+    # The sites run on PostgreSQL, so the suite does too, as the core's: SQLite stores dates
+    # as text and takes any value in a UUID column, which hides failures. Cache, queue and
+    # session stay as the module's phpunit.xml sets them (array and sync), so no Redis
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: guildforge
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: guildforge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U guildforge"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout host application
         uses: actions/checkout@v7
@@ -72,8 +91,18 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      # Checked out after the host is installed: Composer scripts and key:generate
-      # boot the application without any module, exactly as in the host CI
+      - name: Run migrations
+        run: php artisan migrate --force
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: guildforge_test
+          DB_USERNAME: guildforge
+          DB_PASSWORD: secret
+
+      # Checked out after the host is installed: Composer scripts, key:generate and the
+      # migrations boot the application without any module, exactly as in the host CI
       - name: Checkout module
         uses: actions/checkout@v7
         with:
@@ -81,9 +110,17 @@ jobs:
           # The pull request's code runs here: leave no token behind in .git/config
           persist-credentials: false
 
+      # Real variables win over the sqlite/:memory: of the module's phpunit.xml, which
+      # keeps them as the default for running the suite locally
       - name: Run module tests
         env:
           MODULE_NAME: ${{ inputs.module_name }}
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: guildforge_test
+          DB_USERNAME: guildforge
+          DB_PASSWORD: secret
         run: sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME"
 
   quality:

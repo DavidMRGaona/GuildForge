@@ -53,9 +53,9 @@ if [ "$PART" = php ] || [ "$PART" = all ]; then
         run Rector vendor/bin/rector process --dry-run --no-progress-bar "$DIR/src"
     fi
     run Pint vendor/bin/pint --test "$DIR"
-    # The tests too, so their types do not drift while nobody looks
+    # The tests, factories and seeders too, so their types do not drift while nobody looks
     STAN_PATHS=""
-    for STAN_DIR in "$DIR/src" "$DIR/tests"; do
+    for STAN_DIR in "$DIR/src" "$DIR/tests" "$DIR/database"; do
         if [ -d "$STAN_DIR" ]; then
             STAN_PATHS="$STAN_PATHS $STAN_DIR"
         fi
@@ -89,7 +89,7 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
 
     MODE="$(sh scripts/module-build-mode.sh "$DIR")"
     if [ "$MODE" = invalid ]; then
-        echo "::error::$DIR/vite.config.ts builds with neither the core's toolchain (defineModuleConfig, stubs/modules/module/vite.config.ts.stub) nor its own package.json"
+        echo "::error::$DIR/vite.config.ts does not build with the core's toolchain (defineModuleConfig, stubs/modules/module/vite.config.ts.stub)"
         FAILED="$FAILED Build"
     elif [ "$MODE" = core ]; then
         # Only runtime libraries, never tooling or what the core shares or provides
@@ -107,10 +107,6 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
         if [ -f "$DIR/vitest.config.ts" ] && [ -n "$(find "$DIR/tests/js" -name '*.spec.ts' 2>/dev/null | head -n 1)" ]; then
             run Vitest sh -c "cd '$DIR' && ../../node_modules/.bin/vitest run"
         fi
-    elif [ -f "$DIR/vitest.config.ts" ] && [ -f "$DIR/package-lock.json" ]; then
-        # Legacy module toolchain: the module's own Vitest and test utils. Removed once every
-        # module is on defineModuleConfig
-        run Vitest sh -c "cd '$DIR' && npm ci --no-audit --no-fund && npx vitest run"
     fi
 fi
 
