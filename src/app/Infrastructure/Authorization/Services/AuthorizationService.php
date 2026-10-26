@@ -7,12 +7,15 @@ namespace App\Infrastructure\Authorization\Services;
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Domain\Authorization\Exceptions\RoleHolderLimitReachedException;
+use App\Domain\Events\AssociationRoleLost;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -39,6 +42,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     public function __construct(
         private BaseRoleRule $baseRole = new BaseRoleRule,
         private RoleHolderLimitGuard $holderLimit = new RoleHolderLimitGuard,
+        private ?RoleAuditLoggerInterface $audit = null,
     ) {}
 
     public function can(object $user, string $permissionKey): bool
@@ -148,10 +152,11 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         DB::transaction(function () use ($user, $roleName): void {
             $role = RoleModel::where('name', $roleName)->firstOrFail();
 
-            // Already held: no new holder, nothing to check
+            // Already held: no new holder, nothing to check, nothing to log
             if (! $user->roles()->whereKey($role->id)->exists()) {
                 $this->holderLimit->assertCanHold($user, $role);
                 $user->roles()->attach($role->id);
+                $this->audit()->roleAssigned($user, $role->name);
             }
 
             $this->invalidateCacheFor($user);
@@ -168,8 +173,21 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         $role = RoleModel::where('name', $roleName)->first();
         if ($role !== null) {
             /** @var UserModel $user */
-            $user->roles()->detach($role->id);
-            $this->invalidateCacheFor($user);
+            DB::transaction(function () use ($user, $role): void {
+                // Logged only when the user held it; the entry and the change stand or fall together
+                $detached = false;
+                if ($user->roles()->detach($role->id) > 0) {
+                    $this->audit()->roleRemoved($user, $role->name);
+                    $detached = true;
+                }
+
+                $this->invalidateCacheFor($user);
+
+                // After the cache invalidation, so its listeners never read stale roles
+                if ($detached) {
+                    $this->announceAssociationRoleLost($user, [$role->name]);
+                }
+            });
         }
     }
 
@@ -201,8 +219,52 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 }
             }
 
-            $user->roles()->sync($roles->pluck('id')->all());
+            $namesById = RoleModel::query()->whereIn('id', $currentIds)->pluck('name', 'id')->all()
+                + $roles->pluck('name', 'id')->all();
+            $changes = $user->roles()->sync($roles->pluck('id')->all());
+
+            // Only the real differences: a role kept as it was leaves no entry
+            foreach ($changes['detached'] as $roleId) {
+                $this->audit()->roleRemoved($user, (string) $namesById[$roleId]);
+            }
+
+            foreach ($changes['attached'] as $roleId) {
+                $this->audit()->roleAssigned($user, (string) $namesById[$roleId]);
+            }
+
             $this->invalidateCacheFor($user);
+
+            // After the cache invalidation, so its listeners never read stale roles
+            $this->announceAssociationRoleLost(
+                $user,
+                array_values(array_map(static fn (int|string $roleId): string => (string) $namesById[$roleId], $changes['detached'])),
+            );
+        });
+    }
+
+    /**
+     * After the commit, tells listeners that the account lost the association role while it
+     * still holds roles that require it (read raw, since those are inactive now). Only the
+     * detaches done here count: anonymizing and setting changes never come through.
+     *
+     * @param  list<string>  $detachedRoleNames
+     */
+    private function announceAssociationRoleLost(UserModel $user, array $detachedRoleNames): void
+    {
+        $associationRole = self::associationMemberRoleName();
+        if ($associationRole === null || ! in_array($associationRole, $detachedRoleNames, true)) {
+            return;
+        }
+
+        /** @var list<string> $inactive */
+        $inactive = $user->roles()->where('roles.requires_association_member', true)->pluck('roles.name')->values()->all();
+        if ($inactive === []) {
+            return;
+        }
+
+        $userId = (string) $user->getKey();
+        DB::afterCommit(static function () use ($userId, $inactive): void {
+            Event::dispatch(new AssociationRoleLost($userId, $inactive));
         });
     }
 
@@ -370,6 +432,14 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
 
             return null;
         }
+    }
+
+    /**
+     * Resolved when first needed unless injected: the logger never depends on this service.
+     */
+    private function audit(): RoleAuditLoggerInterface
+    {
+        return $this->audit ?? app(RoleAuditLoggerInterface::class);
     }
 
     private function isAdmin(object $user): bool

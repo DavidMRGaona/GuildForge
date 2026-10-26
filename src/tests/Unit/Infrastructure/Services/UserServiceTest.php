@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Infrastructure\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
@@ -28,6 +29,8 @@ final class UserServiceTest extends TestCase
 
     private SettingsServiceInterface&MockInterface $settingsService;
 
+    private RoleAuditLoggerInterface&MockInterface $audit;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -35,11 +38,13 @@ final class UserServiceTest extends TestCase
         $this->userModelQuery = Mockery::mock(UserModelQueryServiceInterface::class);
         $this->authService = Mockery::mock(AuthorizationServiceInterface::class);
         $this->settingsService = Mockery::mock(SettingsServiceInterface::class);
+        $this->audit = Mockery::mock(RoleAuditLoggerInterface::class);
 
         $this->service = new UserService(
             $this->userModelQuery,
             $this->authService,
-            $this->settingsService
+            $this->settingsService,
+            $this->audit,
         );
     }
 
@@ -132,8 +137,11 @@ final class UserServiceTest extends TestCase
             });
 
         $rolesRelation = Mockery::mock(BelongsToMany::class);
+        $rolesRelation->shouldReceive('pluck')->once()->with('roles.name')->andReturn(collect(['member']));
         $rolesRelation->shouldReceive('detach')->once();
-        $userModel->shouldReceive('roles')->once()->andReturn($rolesRelation);
+        $userModel->shouldReceive('roles')->twice()->andReturn($rolesRelation);
+        // Every role taken away leaves an entry in the role history
+        $this->audit->shouldReceive('roleRemoved')->once()->with($userModel, 'member');
         // Without its roles the user must lose access at once, not when the cache expires
         $this->authService->shouldReceive('invalidateCacheFor')->once()->with($userModel);
 

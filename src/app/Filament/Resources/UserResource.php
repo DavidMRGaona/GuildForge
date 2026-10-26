@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\Authorization\Services\RoleGrantPolicy;
@@ -14,6 +15,8 @@ use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Resources\UserResource\RelationManagers\RoleAuditRelationManager;
+use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Images\AvatarPath;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
@@ -34,6 +37,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -169,17 +173,23 @@ class UserResource extends BaseResource
 
                                 $component->state(array_values(array_unique([...$state ?? [], BaseRoleRule::NAME])));
                             })
-                            ->descriptions(
-                                RoleModel::query()
-                                    ->pluck('description', 'name')
-                                    ->toArray()
-                            ),
+                            ->descriptions(static fn (?UserModel $record): array => self::roleDescriptions($record)),
                     ]),
             ]);
     }
 
     public static function table(Table $table): Table
     {
+        // Read once per table render, on first use: every row asks for it
+        $associationRole = false;
+        $inactiveRoles = static function (UserModel $record) use (&$associationRole): array {
+            if ($associationRole === false) {
+                $associationRole = app(AssociationMembershipServiceInterface::class)->roleName();
+            }
+
+            return self::inactiveRoleDisplayNames($record, $associationRole);
+        };
+
         return $table
             ->columns([
                 ImageColumn::make('avatar_public_id')
@@ -202,11 +212,15 @@ class UserResource extends BaseResource
                     ->label(__('filament.users.fields.roles'))
                     ->badge()
                     ->separator(', ')
-                    ->color(fn (string $state): string => match ($state) {
-                        'Administrator' => 'danger',
-                        'Editor' => 'warning',
+                    ->color(fn (string $state, UserModel $record): string => match (true) {
+                        in_array($state, $inactiveRoles($record), true) => 'gray',
+                        $state === 'Administrator' => 'danger',
+                        $state === 'Editor' => 'warning',
                         default => 'success',
-                    }),
+                    })
+                    ->tooltip(fn (UserModel $record): ?string => $inactiveRoles($record) === []
+                        ? null
+                        : (string) __('filament.users.roleBadges.inactive')),
                 IconColumn::make('email_verified_at')
                     ->label(__('filament.users.fields.emailVerified'))
                     ->boolean()
@@ -245,6 +259,14 @@ class UserResource extends BaseResource
                     ->relationship('roles', 'display_name')
                     ->multiple()
                     ->preload(),
+                Filter::make('inactive_roles')
+                    ->label(__('filament.users.filters.inactiveRoles'))
+                    ->query(static fn (Builder $query): Builder => $query->whereIn(
+                        'users.id',
+                        app(InactiveRoleHolders::class)
+                            ->query(app(AssociationMembershipServiceInterface::class)->roleName())
+                            ->select('users.id'),
+                    )),
                 TrashedFilter::make()
                     ->label(__('filament.users.filters.status'))
                     ->default('with'),
@@ -412,6 +434,13 @@ class UserResource extends BaseResource
             ->defaultSort('created_at', 'desc');
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            RoleAuditRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
@@ -452,6 +481,73 @@ class UserResource extends BaseResource
             ]);
 
         return $query;
+    }
+
+    /**
+     * Description of every role option: the role's own text plus its badges, and for an
+     * existing account that is not a member, whether the role is inactive for it.
+     *
+     * @return array<string, string>
+     */
+    private static function roleDescriptions(?UserModel $record): array
+    {
+        $associationRole = app(AssociationMembershipServiceInterface::class)->roleName();
+        // An anonymized account holds no roles on purpose: nothing is inactive for it
+        $showInactive = $record instanceof UserModel && $record->anonymized_at === null;
+        $isMember = $record instanceof UserModel
+            && $associationRole !== null
+            && $record->roles()->where('name', $associationRole)->exists();
+        $descriptions = [];
+
+        foreach (RoleModel::query()->get(['name', 'description', 'requires_association_member', 'max_holders']) as $role) {
+            $parts = $role->description === null || $role->description === '' ? [] : [$role->description];
+
+            if ($role->requires_association_member) {
+                $parts[] = (string) __('filament.users.roleBadges.requiresMember');
+            }
+
+            if ($role->max_holders !== null) {
+                $parts[] = (string) __('filament.users.roleBadges.maxHolders', ['n' => $role->max_holders]);
+            }
+
+            if ($role->requires_association_member && $showInactive && ! $isMember) {
+                $parts[] = (string) __('filament.users.roleBadges.inactive');
+            }
+
+            if ($parts !== []) {
+                $descriptions[$role->name] = implode(' · ', $parts);
+            }
+        }
+
+        return $descriptions;
+    }
+
+    /**
+     * Display names of the roles that do nothing for this account because it is not a member.
+     *
+     * @return list<string>
+     */
+    private static function inactiveRoleDisplayNames(UserModel $record, ?string $associationRole): array
+    {
+        if ($record->anonymized_at !== null) {
+            return [];
+        }
+
+        $roles = $record->roles;
+
+        if ($associationRole !== null && $roles->contains('name', $associationRole)) {
+            return [];
+        }
+
+        $names = [];
+
+        foreach ($roles as $role) {
+            if ($role->requires_association_member) {
+                $names[] = $role->display_name;
+            }
+        }
+
+        return $names;
     }
 
     private static function actorCanAssignRoles(): bool

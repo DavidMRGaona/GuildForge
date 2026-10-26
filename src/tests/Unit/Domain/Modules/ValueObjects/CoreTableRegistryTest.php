@@ -15,7 +15,7 @@ final class CoreTableRegistryTest extends TestCase
 
         $tables = $registry->all();
 
-        $this->assertCount(32, $tables);
+        $this->assertCount(33, $tables);
     }
 
     public function test_it_identifies_core_table(): void

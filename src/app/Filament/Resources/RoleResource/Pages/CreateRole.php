@@ -5,14 +5,20 @@ declare(strict_types=1);
 namespace App\Filament\Resources\RoleResource\Pages;
 
 use App\Application\Authorization\Services\RoleRestrictionRule;
+use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Filament\Resources\RoleResource;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateRole extends CreateRecord
 {
     use GuardsRolePermissions;
+    use RecordsRoleHistory;
 
     protected static string $resource = RoleResource::class;
+
+    /** The role, its permissions and its history entry are saved together or not at all */
+    protected ?bool $hasDatabaseTransactions = true;
 
     protected function beforeCreate(): void
     {
@@ -30,6 +36,14 @@ class CreateRole extends CreateRecord
         }
 
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        /** @var RoleModel $record */
+        $record = $this->record;
+
+        $this->recordDefinitionChange($record, RoleAuditEvent::RoleCreated);
     }
 
     protected function getRedirectUrl(): string

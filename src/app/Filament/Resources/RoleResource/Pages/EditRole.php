@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\RoleResource\Pages;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Filament\Resources\RoleResource;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Actions\DeleteAction;
@@ -13,8 +14,12 @@ use Filament\Resources\Pages\EditRecord;
 class EditRole extends EditRecord
 {
     use GuardsRolePermissions;
+    use RecordsRoleHistory;
 
     protected static string $resource = RoleResource::class;
+
+    /** The role, its permissions and its history entry are saved together or not at all */
+    protected ?bool $hasDatabaseTransactions = true;
 
     /**
      * @return array<DeleteAction>
@@ -25,9 +30,8 @@ class EditRole extends EditRecord
         $record = $this->record;
 
         return [
-            DeleteAction::make()
-                ->hidden(fn (): bool => RoleResource::isLocked($record))
-                ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
+            RoleResource::deleteAction()
+                ->hidden(fn (): bool => RoleResource::isLocked($record)),
         ];
     }
 
@@ -59,6 +63,8 @@ class EditRole extends EditRecord
         /** @var RoleModel $record */
         $record = $this->record;
 
+        $this->rememberDefinitionBeforeSave($record);
+
         $names = [$record->name];
 
         // A renamed role is checked under its new name too (a locked role keeps its own)
@@ -74,6 +80,11 @@ class EditRole extends EditRecord
 
     protected function afterSave(): void
     {
+        /** @var RoleModel $record */
+        $record = $this->record;
+
+        $this->recordDefinitionChange($record, RoleAuditEvent::RoleUpdated);
+
         // The permissions checkbox list writes the pivot directly: every holder of the role is affected
         app(AuthorizationServiceInterface::class)->invalidateCache();
     }

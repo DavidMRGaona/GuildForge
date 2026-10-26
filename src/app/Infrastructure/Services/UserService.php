@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
@@ -23,6 +24,7 @@ final readonly class UserService implements UserServiceInterface
         private UserModelQueryServiceInterface $userModelQuery,
         private AuthorizationServiceInterface $authService,
         private SettingsServiceInterface $settingsService,
+        private RoleAuditLoggerInterface $audit,
     ) {}
 
     public function canAccessPanel(string $userId): bool
@@ -46,18 +48,21 @@ final readonly class UserService implements UserServiceInterface
 
         $anonymousName = $this->settingsService->get('anonymized_user_name', 'Anónimo');
 
-        // DeletesCloudinaryImages trait auto-deletes old avatar on update
-        $userModel->update([
-            'name' => $anonymousName,
-            'display_name' => null,
-            'email' => 'anonymized_'.$userModel->id.'@anonymous.local',
-            'pending_email' => null,
-            'password' => Hash::make(Str::random(32)),
-            'avatar_public_id' => null,
-            'anonymized_at' => now(),
-        ]);
+        DB::transaction(function () use ($userModel, $anonymousName): void {
+            // DeletesCloudinaryImages trait auto-deletes old avatar on update
+            $userModel->update([
+                'name' => $anonymousName,
+                'display_name' => null,
+                'email' => 'anonymized_'.$userModel->id.'@anonymous.local',
+                'pending_email' => null,
+                'password' => Hash::make(Str::random(32)),
+                'avatar_public_id' => null,
+                'anonymized_at' => now(),
+            ]);
 
-        $userModel->roles()->detach();
+            $this->removeEveryRole($userModel);
+        });
+
         $this->authService->invalidateCacheFor($userModel);
     }
 
@@ -105,10 +110,26 @@ final readonly class UserService implements UserServiceInterface
                 'anonymized_at' => now(),
             ]);
 
-            $userModel->roles()->detach();
+            $this->removeEveryRole($userModel);
         });
 
         $this->authService->invalidateCacheFor($userModel);
+    }
+
+    /**
+     * Anonymizing takes every role away, the base role too: one history entry per role, in the
+     * caller's transaction.
+     */
+    private function removeEveryRole(UserModel $userModel): void
+    {
+        /** @var list<string> $roleNames */
+        $roleNames = $userModel->roles()->pluck('roles.name')->all();
+
+        foreach ($roleNames as $roleName) {
+            $this->audit->roleRemoved($userModel, $roleName);
+        }
+
+        $userModel->roles()->detach();
     }
 
     private function transferUserContent(string $fromUserId, string $toUserId): void

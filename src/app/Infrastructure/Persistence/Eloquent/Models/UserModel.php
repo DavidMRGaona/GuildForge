@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -139,6 +140,14 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
             'user_id',
             'role_id'
         )->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<RoleAuditEntryModel, $this>
+     */
+    public function roleAuditEntries(): HasMany
+    {
+        return $this->hasMany(RoleAuditEntryModel::class, 'user_id');
     }
 
     /**

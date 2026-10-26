@@ -10,15 +10,19 @@ use App\Application\Authorization\DTOs\UpdateRoleDTO;
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
+use App\Application\Authorization\Services\RoleDefinitionChanges;
 use App\Application\Authorization\Services\RoleRestrictionRule;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Entities\Role;
+use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Authorization\Exceptions\RoleNotFoundException;
 use App\Domain\Authorization\Exceptions\RoleProtectedException;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
 use App\Domain\Authorization\ValueObjects\RoleId;
 use App\Domain\Authorization\ValueObjects\RoleName;
+use Illuminate\Support\Facades\DB;
 
 final readonly class RoleService implements RoleServiceInterface
 {
@@ -29,6 +33,8 @@ final readonly class RoleService implements RoleServiceInterface
         private AssociationMemberRoleRule $associationMemberRole,
         private BaseRoleRule $baseRole,
         private RoleRestrictionRule $roleRestriction,
+        private RoleAuditLoggerInterface $audit,
+        private RoleDefinitionChanges $definitionChanges = new RoleDefinitionChanges,
     ) {}
 
     /**
@@ -77,11 +83,26 @@ final readonly class RoleService implements RoleServiceInterface
         );
 
         $this->guardRestrictions($role);
-        $this->roleRepository->save($role);
 
-        // Assign permissions if provided
+        // The role and its history entry stand or fall together
+        DB::transaction(function () use ($role, $dto): void {
+            $this->roleRepository->save($role);
+
+            // Assign permissions if provided
+            if (count($dto->permissionKeys) > 0) {
+                $this->writePermissions($role->id(), $dto->permissionKeys, detach: true);
+            }
+
+            $this->audit->roleChanged($role->id()->value, $role->name()->value, RoleAuditEvent::RoleCreated, $this->definitionChanges->between(
+                [],
+                $this->roleRepository->getPermissionKeys($role->id()),
+                [],
+                $this->fieldsOf($role),
+            ));
+        });
+
         if (count($dto->permissionKeys) > 0) {
-            $this->syncPermissions($role->id()->value, $dto->permissionKeys);
+            $this->authorization->invalidateCache();
         }
 
         return $this->toResponseDTO($role);
@@ -106,11 +127,18 @@ final readonly class RoleService implements RoleServiceInterface
         );
 
         $this->guardRestrictions($role);
-        $this->roleRepository->save($role);
 
-        // Sync permissions if provided (null means don't update)
+        DB::transaction(function () use ($role, $dto): void {
+            $this->roleRepository->save($role);
+
+            // Sync permissions if provided (null means don't update)
+            if ($dto->permissionKeys !== null) {
+                $this->changePermissions($role, $dto->permissionKeys, detach: true);
+            }
+        });
+
         if ($dto->permissionKeys !== null) {
-            $this->syncPermissions($role->id()->value, $dto->permissionKeys);
+            $this->authorization->invalidateCache();
         }
 
         return $this->toResponseDTO($role);
@@ -136,7 +164,15 @@ final readonly class RoleService implements RoleServiceInterface
             throw RoleProtectedException::cannotDeleteAssociationMemberRole($role->name()->value);
         }
 
-        $this->roleRepository->delete($role->id());
+        DB::transaction(function () use ($role): void {
+            // Before deleting: the history also records the role taken from each holder
+            $this->audit->roleChanged($role->id()->value, $role->name()->value, RoleAuditEvent::RoleDeleted, $this->definitionChanges->between(
+                $this->roleRepository->getPermissionKeys($role->id()),
+                [],
+            ));
+            $this->roleRepository->delete($role->id());
+        });
+
         $this->authorization->invalidateCache();
     }
 
@@ -145,8 +181,7 @@ final readonly class RoleService implements RoleServiceInterface
      */
     public function assignPermissions(string $roleId, array $permissionKeys): void
     {
-        $permissionIds = $this->permissionRepository->findIdsByKeys($permissionKeys);
-        $this->roleRepository->attachPermissions(RoleId::fromString($roleId), $permissionIds);
+        $this->changePermissionsOf($roleId, $permissionKeys, detach: false);
         $this->authorization->invalidateCache();
     }
 
@@ -155,9 +190,65 @@ final readonly class RoleService implements RoleServiceInterface
      */
     public function syncPermissions(string $roleId, array $permissionKeys): void
     {
-        $permissionIds = $this->permissionRepository->findIdsByKeys($permissionKeys);
-        $this->roleRepository->syncPermissions(RoleId::fromString($roleId), $permissionIds);
+        $this->changePermissionsOf($roleId, $permissionKeys, detach: true);
         $this->authorization->invalidateCache();
+    }
+
+    /**
+     * @param  array<string>  $permissionKeys
+     */
+    private function changePermissionsOf(string $roleId, array $permissionKeys, bool $detach): void
+    {
+        $role = $this->roleRepository->findById(RoleId::fromString($roleId));
+
+        if (! $role instanceof Role) {
+            // Nothing to change: the repository leaves an unknown role alone too
+            return;
+        }
+
+        DB::transaction(fn () => $this->changePermissions($role, $permissionKeys, $detach));
+    }
+
+    /**
+     * Writes the permissions and, when they changed, the history entry. Run it in a transaction.
+     *
+     * @param  array<string>  $permissionKeys
+     */
+    private function changePermissions(Role $role, array $permissionKeys, bool $detach): void
+    {
+        $before = $this->roleRepository->getPermissionKeys($role->id());
+        $this->writePermissions($role->id(), $permissionKeys, $detach);
+        $changes = $this->definitionChanges->between($before, $this->roleRepository->getPermissionKeys($role->id()));
+
+        if ($changes !== []) {
+            $this->audit->roleChanged($role->id()->value, $role->name()->value, RoleAuditEvent::RoleUpdated, $changes);
+        }
+    }
+
+    /**
+     * @param  array<string>  $permissionKeys
+     */
+    private function writePermissions(RoleId $roleId, array $permissionKeys, bool $detach): void
+    {
+        $permissionIds = $this->permissionRepository->findIdsByKeys($permissionKeys);
+
+        if ($detach) {
+            $this->roleRepository->syncPermissions($roleId, $permissionIds);
+        } else {
+            $this->roleRepository->attachPermissions($roleId, $permissionIds);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function fieldsOf(Role $role): array
+    {
+        return [
+            'name' => $role->name()->value,
+            'requires_association_member' => $role->requiresAssociationMember(),
+            'max_holders' => $role->maxHolders(),
+        ];
     }
 
     private function guardRestrictions(Role $role): void

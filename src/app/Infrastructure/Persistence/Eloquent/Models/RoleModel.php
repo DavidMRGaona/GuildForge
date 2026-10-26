@@ -8,6 +8,7 @@ use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTime
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property string $id
@@ -68,5 +69,13 @@ final class RoleModel extends Model
             'role_id',
             'user_id'
         )->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<RoleAuditEntryModel, $this>
+     */
+    public function auditEntries(): HasMany
+    {
+        return $this->hasMany(RoleAuditEntryModel::class, 'role_id');
     }
 }

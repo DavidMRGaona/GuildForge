@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    'inactive_roles' => [
+        'person_subject' => 'Tus roles en :site están en pausa',
+        'person_body' => 'Has dejado de ser socio, así que estos roles no funcionan por ahora: :roles. Volverán a funcionar en cuanto renueves.',
+        'manager_subject' => ':name tiene roles en pausa',
+        'manager_body' => ':name ha dejado de ser socio y estos roles no funcionan por ahora: :roles. Si hay que nombrar a otra persona, quítaselos antes desde su ficha.',
+    ],
     'resources' => [
         'events' => 'Eventos',
         'articles' => 'Artículos',

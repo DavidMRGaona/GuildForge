@@ -34,6 +34,7 @@ final readonly class CoreTableRegistry
         'roles',
         'role_permission',
         'user_role',
+        'role_audit_log',
         'menu_items',
         'slug_redirects',
         'module_update_history',
