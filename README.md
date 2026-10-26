@@ -69,11 +69,13 @@ Key environment variables to configure:
 | `MAIL_*`                       | Mail configuration (contact form, account emails)                                                                                            |
 | `DB_*`                         | Database connection settings                                                                                                                 |
 | `APP_DISPLAY_TIMEZONE`         | Zone of every date people see and type, and of the scheduler (default `Europe/Madrid`)                                                       |
-| `APP_STORAGE_TIMEZONE_DEFAULT` | Zone the datetime columns are stored in (`Europe/Madrid` or `UTC`) while the site has no `storage_timezone` setting; default `Europe/Madrid` |
+| `APP_STORAGE_TIMEZONE_DEFAULT` | Zone the datetime columns are stored in (`Europe/Madrid` or `UTC`) while the site has no `storage_timezone` setting; default `UTC`           |
 
 ### Storage and display timezones
 
-Dates are stored in the *storage zone* and shown in the *display zone*. The storage zone is the `storage_timezone` setting (`Europe/Madrid` or `UTC`); without it, `APP_STORAGE_TIMEZONE_DEFAULT` applies. Sites that already held data when the setting was introduced get `Europe/Madrid` written by a migration, so changing that variable never reinterprets their dates; a fresh install has no setting and follows the variable. The application refuses to boot when the setting cannot be read.
+Dates are stored in the *storage zone* and shown in the *display zone*. The storage zone is the `storage_timezone` setting (`Europe/Madrid` or `UTC`); without it, `APP_STORAGE_TIMEZONE_DEFAULT` applies. Sites that already held data when the setting was introduced (core 3.22) get `Europe/Madrid` written by a migration. Sites installed later were migrated before their first account and stored in whatever the variable said (`Europe/Madrid` when unset, the default until 3.23); a second migration, in the release that made `UTC` the default, writes that zone for them. Either way, changing the default never reinterprets their dates. A fresh install has no setting and follows the variable, so it stores in UTC from the start and never needs converting. Once a fresh install holds data, leave the variable alone: changing it reinterprets every stored date (use the conversion below instead). The application refuses to boot when the setting cannot be read.
+
+Upgrading a site from a core older than 3.22: deploy a 3.22.x or 3.23.x core first (their default is still `Europe/Madrid`), or keep `APP_STORAGE_TIMEZONE_DEFAULT=Europe/Madrid` until that deploy has run its migrations. The migrations that write `Europe/Madrid` run with the other pending migrations, and anything that runs before them would read the site's Madrid dates as UTC. The same applies to a site installed on 3.22 or 3.23 without a `storage_timezone` setting: run the migrations before anything else.
 
 Moving an existing site to UTC is a maintenance task, PostgreSQL only. Maintenance mode only holds back visitors: the queue worker and the scheduler keep running with the zone they started with, and panel users get past it, so:
 
@@ -92,6 +94,8 @@ Things to know before converting:
 - Once the data is in UTC, log timestamps and the daily log file boundary follow UTC too.
 - The health endpoint (`/up`) stays up while the database is unreachable, because it does not read stored dates; every other request fails closed, since the storage zone is read at boot and guessing it would shift stored dates.
 - Turn maintenance mode on and off through the panel or the settings service. The command reads the setting fresh, so a change made straight in the database is honoured as well.
+
+Going back once a site stores in UTC: run `php artisan timezone:convert-storage --reverse` (same steps as above) or restore the backup taken before converting. Never run a core older than 3.22 on it, and that includes the deployment platform's "redeploy the previous image": those cores do not know the setting, read every UTC date as a Madrid one (everything shows one or two hours early) without any error, and whatever they save from then on is stored in Madrid time next to the UTC data, which no conversion can tell apart afterwards.
 
 ## Commands
 

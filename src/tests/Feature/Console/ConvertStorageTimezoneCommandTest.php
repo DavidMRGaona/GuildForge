@@ -34,7 +34,7 @@ final class ConvertStorageTimezoneCommandTest extends TestCase
     {
         parent::setUp();
 
-        // Pinned so these tests hold when the suite runs with another default (UTC rehearsal)
+        // Pinned so these tests hold when the suite runs with another default (Madrid lane)
         config(['app.storage_timezone_default' => 'Europe/Madrid']);
 
         // A folder of this test only, so modules on the developer's tree never count
