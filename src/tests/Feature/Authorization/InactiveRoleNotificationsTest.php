@@ -11,8 +11,11 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\InactiveRolesManagerNotification;
 use App\Notifications\InactiveRolesNotification;
+use App\Notifications\Support\EscapesMarkdown;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -86,6 +89,44 @@ final class InactiveRoleNotificationsTest extends TestCase
         });
     }
 
+    public function test_markdown_in_names_does_not_become_a_link(): void
+    {
+        $person = $this->person(['socio', 'treasury']);
+        $person->forceFill(['display_name' => '[Pulsa aquí](https://example.test)'])->save();
+        $admin = UserModel::factory()->admin()->create();
+
+        $this->authorization->removeRole($person, 'socio');
+
+        Notification::assertSentTo($admin, InactiveRolesManagerNotification::class, function ($notification) use ($admin): bool {
+            $html = (string) $notification->toMail($admin)->render();
+
+            return ! str_contains($html, 'href="https://example.test')
+                && str_contains($html, '[Pulsa aquí]');
+        });
+    }
+
+    public function test_escape_keeps_the_visible_characters(): void
+    {
+        $this->assertSame('\[x\]\(https://example\.test\)', EscapesMarkdown::escape('[x](https://example.test)'));
+    }
+
+    public function test_a_rolled_back_removal_sends_nothing(): void
+    {
+        $person = $this->person(['socio', 'treasury']);
+        UserModel::factory()->admin()->create();
+
+        try {
+            DB::transaction(function () use ($person): void {
+                $this->authorization->removeRole($person, 'socio');
+
+                throw new RuntimeException('rollback');
+            });
+        } catch (RuntimeException) {
+        }
+
+        Notification::assertNothingSent();
+    }
+
     public function test_nothing_is_sent_without_roles_requiring_membership(): void
     {
         $person = $this->person(['socio']);
@@ -100,7 +141,7 @@ final class InactiveRoleNotificationsTest extends TestCase
     {
         $person = $this->person(['socio', 'treasury']);
         $this->role('board', 'Junta', ['users.assign_roles', 'events.view_any'], requiresMembership: true);
-        $inactiveManager = $this->holderOf('board');
+        $inactiveManager = $this->holderOf('board', isAssociationMember: false);
 
         $this->authorization->removeRole($person, 'socio');
 
@@ -160,10 +201,10 @@ final class InactiveRoleNotificationsTest extends TestCase
         return $user;
     }
 
-    private function holderOf(string $roleName): UserModel
+    private function holderOf(string $roleName, bool $isAssociationMember = true): UserModel
     {
         $user = $this->person([$roleName]);
-        if ($roleName !== 'board') {
+        if ($isAssociationMember) {
             $user->roles()->attach(RoleModel::query()->where('name', 'socio')->value('id'));
         }
 

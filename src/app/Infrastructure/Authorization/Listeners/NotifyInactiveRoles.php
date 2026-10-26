@@ -50,6 +50,8 @@ final readonly class NotifyInactiveRoles
                 fn (string $roleName): bool => $this->grantPolicy->canGrant($manager, $roleName),
             ))
             ->unique('id')
-            ->each(fn (UserModel $manager) => $manager->notify(new InactiveRolesManagerNotification($personName, $roles)));
+            ->each(function (UserModel $manager) use ($personName, $roles): void {
+                $manager->notify(new InactiveRolesManagerNotification($personName, $roles));
+            });
     }
 }

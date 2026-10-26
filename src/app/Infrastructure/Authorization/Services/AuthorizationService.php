@@ -175,12 +175,18 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
             /** @var UserModel $user */
             DB::transaction(function () use ($user, $role): void {
                 // Logged only when the user held it; the entry and the change stand or fall together
+                $detached = false;
                 if ($user->roles()->detach($role->id) > 0) {
                     $this->audit()->roleRemoved($user, $role->name);
-                    $this->announceAssociationRoleLost($user, [$role->name]);
+                    $detached = true;
                 }
 
                 $this->invalidateCacheFor($user);
+
+                // After the cache invalidation, so its listeners never read stale roles
+                if ($detached) {
+                    $this->announceAssociationRoleLost($user, [$role->name]);
+                }
             });
         }
     }
@@ -222,16 +228,17 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 $this->audit()->roleRemoved($user, (string) $namesById[$roleId]);
             }
 
-            $this->announceAssociationRoleLost(
-                $user,
-                array_values(array_map(static fn (int|string $roleId): string => (string) $namesById[$roleId], $changes['detached'])),
-            );
-
             foreach ($changes['attached'] as $roleId) {
                 $this->audit()->roleAssigned($user, (string) $namesById[$roleId]);
             }
 
             $this->invalidateCacheFor($user);
+
+            // After the cache invalidation, so its listeners never read stale roles
+            $this->announceAssociationRoleLost(
+                $user,
+                array_values(array_map(static fn (int|string $roleId): string => (string) $namesById[$roleId], $changes['detached'])),
+            );
         });
     }
 

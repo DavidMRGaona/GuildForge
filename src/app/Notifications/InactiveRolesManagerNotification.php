@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Notifications\Support\EscapesMarkdown;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -35,8 +36,8 @@ final class InactiveRolesManagerNotification extends Notification implements Sho
         return (new MailMessage)
             ->subject(__('authorization.inactive_roles.manager_subject', ['name' => $this->personName]))
             ->line(__('authorization.inactive_roles.manager_body', [
-                'name' => $this->personName,
-                'roles' => $this->roles,
+                'name' => EscapesMarkdown::escape($this->personName),
+                'roles' => EscapesMarkdown::escape($this->roles),
             ]));
     }
 }

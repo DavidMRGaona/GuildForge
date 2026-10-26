@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Notifications\Support\EscapesMarkdown;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -33,6 +34,6 @@ final class InactiveRolesNotification extends Notification implements ShouldQueu
     {
         return (new MailMessage)
             ->subject(__('authorization.inactive_roles.person_subject', ['site' => $this->siteName]))
-            ->line(__('authorization.inactive_roles.person_body', ['roles' => $this->roles]));
+            ->line(__('authorization.inactive_roles.person_body', ['roles' => EscapesMarkdown::escape($this->roles)]));
     }
 }
