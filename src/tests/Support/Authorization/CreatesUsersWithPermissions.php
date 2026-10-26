@@ -11,7 +11,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 trait CreatesUsersWithPermissions
 {
     /**
-     * Panel access is granted by the editor role; an extra role carries the given permissions.
+     * Panel access comes from the editor role's admin.access; an extra role carries the given permissions.
      *
      * @param  array<string>  $permissionKeys
      */
