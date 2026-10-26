@@ -1,5 +1,5 @@
 # The core's PHPStan configuration applied to a module (scripts/check-module-quality.sh
-# passes the module's src/ and tests/ as the paths). The core's ignore patterns need not match there.
+# passes the module's src/, tests/ and database/ as the paths). The core's ignore patterns need not match there.
 includes:
     - phpstan.neon
 

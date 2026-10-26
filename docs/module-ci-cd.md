@@ -190,7 +190,7 @@ Each module's `tests.yml` calls `reusable-module-tests.yml` on every pull reques
 
 - **`test / Test module`**: the module's PHPUnit suite inside the host (see step 3 above).
 - **`test / Quality`**, with `quality: true`: the core's quality tools with the core's configuration from `host_ref` (the module copies none of it), through `src/scripts/check-module-quality.sh`:
-  - Rector (`src/`, dry run), then Pint (the whole module), then PHPStan level 8 (`src/` and `tests/`, `phpstan-modules.neon`, whose `phpstan-modules-bootstrap.php` autoloads `Modules\<Name>\Tests\` and `Modules\<Name>\Database\{Seeders,Factories}\` for PHPStan only)
+  - Rector (`src/`, dry run), then Pint (the whole module), then PHPStan level 8 (`src/`, `tests/` and `database/`, `phpstan-modules.neon`, whose `phpstan-modules-bootstrap.php` autoloads `Modules\<Name>\Tests\` and `Modules\<Name>\Database\{Seeders,Factories}\` for PHPStan only)
   - ESLint and Prettier (`resources/js/`), and `vue-tsc` with the module's `tsconfig.json` (required when the module has TypeScript or Vue files; copy `src/stubs/modules/module/tsconfig.json.stub`), which checks the module against the core's own sources
   - the frontend build (`defineModuleConfig`; any other `vite.config.ts` fails): its `package.json`, if any, declares only runtime libraries (`src/scripts/check-module-package.mjs`); the module builds into a scratch directory, so a runtime import outside the [public frontend API](modules/README.md#public-frontend-api) or an undeclared package fails here; Vitest runs with the core's (`vitest.module.config.ts`) when the module has `vitest.config.ts` and a spec under `tests/js`
 
