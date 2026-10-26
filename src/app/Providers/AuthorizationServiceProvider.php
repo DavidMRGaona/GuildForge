@@ -13,7 +13,9 @@ use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
+use App\Domain\Events\AssociationRoleLost;
 use App\Infrastructure\Authorization\CorePermissionDefinitions;
+use App\Infrastructure\Authorization\Listeners\NotifyInactiveRoles;
 use App\Infrastructure\Authorization\Repositories\EloquentPermissionRepository;
 use App\Infrastructure\Authorization\Repositories\EloquentRoleRepository;
 use App\Infrastructure\Authorization\Services\AssociationMemberRoleWarning;
@@ -65,6 +67,8 @@ class AuthorizationServiceProvider extends ServiceProvider
             [JobProcessed::class, JobExceptionOccurred::class],
             fn () => $this->app->make(RoleAuditSourceResolver::class)->jobFinished(),
         );
+
+        Event::listen(AssociationRoleLost::class, [NotifyInactiveRoles::class, 'handle']);
 
         // Register core permissions in memory (for use in policies and code)
         // The database sync is done by `php artisan permissions:sync` (every deploy), when a

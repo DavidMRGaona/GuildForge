@@ -9,11 +9,13 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Domain\Authorization\Exceptions\RoleHolderLimitReachedException;
+use App\Domain\Events\AssociationRoleLost;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -175,6 +177,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 // Logged only when the user held it; the entry and the change stand or fall together
                 if ($user->roles()->detach($role->id) > 0) {
                     $this->audit()->roleRemoved($user, $role->name);
+                    $this->announceAssociationRoleLost($user, [$role->name]);
                 }
 
                 $this->invalidateCacheFor($user);
@@ -219,11 +222,42 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 $this->audit()->roleRemoved($user, (string) $namesById[$roleId]);
             }
 
+            $this->announceAssociationRoleLost(
+                $user,
+                array_values(array_map(static fn (int|string $roleId): string => (string) $namesById[$roleId], $changes['detached'])),
+            );
+
             foreach ($changes['attached'] as $roleId) {
                 $this->audit()->roleAssigned($user, (string) $namesById[$roleId]);
             }
 
             $this->invalidateCacheFor($user);
+        });
+    }
+
+    /**
+     * After the commit, tells listeners that the account lost the association role while it
+     * still holds roles that require it (read raw, since those are inactive now). Only the
+     * detaches done here count: anonymizing and setting changes never come through.
+     *
+     * @param  list<string>  $detachedRoleNames
+     */
+    private function announceAssociationRoleLost(UserModel $user, array $detachedRoleNames): void
+    {
+        $associationRole = self::associationMemberRoleName();
+        if ($associationRole === null || ! in_array($associationRole, $detachedRoleNames, true)) {
+            return;
+        }
+
+        /** @var list<string> $inactive */
+        $inactive = $user->roles()->where('roles.requires_association_member', true)->pluck('roles.name')->values()->all();
+        if ($inactive === []) {
+            return;
+        }
+
+        $userId = (string) $user->getKey();
+        DB::afterCommit(static function () use ($userId, $inactive): void {
+            Event::dispatch(new AssociationRoleLost($userId, $inactive));
         });
     }
 
