@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
@@ -608,7 +609,20 @@ final class SiteSettings extends Page implements HasForms
     public function save(SettingsServiceInterface $settingsService): void
     {
         $formData = $this->form->getState();
+        $associationRoleBefore = $this->effectiveAssociationMemberRole(
+            $settingsService->get(AssociationMembershipServiceInterface::SETTING_KEY)
+        );
+
         $this->saveSettings($settingsService, $formData);
+
+        // Roles that require association membership turn on or off with the association role
+        $associationRoleAfter = $this->effectiveAssociationMemberRole(
+            $settingsService->get(AssociationMembershipServiceInterface::SETTING_KEY)
+        );
+
+        if ($associationRoleAfter !== $associationRoleBefore) {
+            app(AuthorizationServiceInterface::class)->invalidateCache();
+        }
 
         Notification::make()
             ->title(__('filament.settings.location.saved'))

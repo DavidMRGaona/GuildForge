@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Authorization\Services;
 
+use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -95,13 +97,22 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     }
 
     /**
+     * The permissions of the user's active roles only (see activeRoles()).
+     *
      * @return array<string>
      */
     public function getPermissions(object $user): array
     {
         return $this->cachedLookup('permissions', $user, static function () use ($user): array {
             /** @var UserModel $user */
-            return $user->roles()
+            $activeIds = self::activeRoles($user)->pluck('id')->all();
+
+            if ($activeIds === []) {
+                return [];
+            }
+
+            return RoleModel::query()
+                ->whereIn('id', $activeIds)
                 ->with('permissions')
                 ->get()
                 ->flatMap(fn (RoleModel $role) => $role->permissions->pluck('key'))
@@ -112,13 +123,17 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     }
 
     /**
+     * The user's active roles only (see activeRoles()): the frontend gets this list too, so
+     * an inactive role must not open anything there. Screens that need every role the user
+     * holds read the relationship or RoleRepositoryInterface::getRoleNamesForUser().
+     *
      * @return array<string>
      */
     public function getRoles(object $user): array
     {
         return $this->cachedLookup('roles', $user, static function () use ($user): array {
             /** @var UserModel $user */
-            return $user->roles()->pluck('name')->toArray();
+            return self::activeRoles($user)->pluck('name')->all();
         });
     }
 
@@ -285,6 +300,48 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         }
 
         return array_all($value, fn ($name) => is_string($name));
+    }
+
+    /**
+     * The roles that count for the user. A role that requires association membership is
+     * active only while the user's own roles (unfiltered) include the association member
+     * role; when no association member role is usable (roleName() is null) none of them is.
+     * Every other role is always active.
+     *
+     * The setting is read only when one of the roles carries the requirement. If it cannot
+     * be read, those roles stay inactive: a failure never grants access.
+     *
+     * @return Collection<int, RoleModel>
+     */
+    private static function activeRoles(UserModel $user): Collection
+    {
+        $roles = $user->roles()->get(['roles.id', 'roles.name', 'roles.requires_association_member']);
+        $requiresMembership = static fn (RoleModel $role): bool => $role->requires_association_member === true;
+
+        if (! $roles->contains($requiresMembership)) {
+            return $roles;
+        }
+
+        $associationRole = self::associationMemberRoleName();
+        $isAssociationMember = $associationRole !== null
+            && $roles->contains(fn (RoleModel $role): bool => $role->name === $associationRole);
+
+        return $isAssociationMember ? $roles : $roles->reject($requiresMembership)->values();
+    }
+
+    /**
+     * The membership service is resolved here, not injected: it depends on this service.
+     * roleName() reads only the setting, never this service.
+     */
+    private static function associationMemberRoleName(): ?string
+    {
+        try {
+            return app(AssociationMembershipServiceInterface::class)->roleName();
+        } catch (Throwable $e) {
+            Log::warning("Association member role setting unreadable, roles that require it stay inactive: {$e->getMessage()}");
+
+            return null;
+        }
     }
 
     private function isAdmin(object $user): bool
