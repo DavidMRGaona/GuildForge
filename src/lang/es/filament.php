@@ -435,6 +435,17 @@ return [
         'filters' => [
             'status' => 'Estado',
             'withTrashed' => 'Incluir desactivados',
+            'inactiveRoles' => 'Con roles inactivos',
+        ],
+        'roleBadges' => [
+            'requiresMember' => 'Requiere socio',
+            'maxHolders' => 'Máx. :n',
+            'inactive' => 'Inactivo: no es socio',
+        ],
+        'inactiveWidget' => [
+            'heading' => 'Roles inactivos',
+            'person' => 'Persona',
+            'roles' => 'Roles inactivos',
         ],
     ],
     'menu_items' => [
@@ -705,6 +716,7 @@ return [
         'widgets' => [
             'upcoming_events_widget' => 'Próximos eventos',
             'recent_articles_widget' => 'Artículos recientes',
+            'inactive_roles_widget' => 'Roles inactivos',
             'gallery_stats_widget' => 'Estadísticas de galería',
             'mail_health_widget' => 'Estado del correo',
             'mail_stats_overview_widget' => 'Estadísticas de correo',
