@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console\Commands\Updates;
 
+use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
+use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Updates\DTOs\HealthCheckResultDTO;
 use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -150,6 +153,55 @@ PHP);
         $this->assertDatabaseUntouched();
     }
 
+    public function test_it_syncs_the_permissions_of_the_new_version(): void
+    {
+        $this->healthCheck(passes: true);
+        $this->registerModulePermission();
+
+        $this->finish()->assertExitCode(0);
+
+        $this->assertTrue(PermissionModel::query()->where('key', 'finishmod:items.manage')->where('module', 'finish-mod')->exists());
+    }
+
+    public function test_the_permissions_exist_before_the_migrations_run(): void
+    {
+        // A migration that grants a new permission to a role must find its row
+        $this->healthCheck(passes: true);
+        $this->registerModulePermission();
+        File::put($this->modulesPath.'/finish-mod/database/migrations/2026_10_04_000001_needs_permission.php', <<<'PHP'
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (! DB::table('permissions')->where('key', 'finishmod:items.manage')->exists()) {
+            throw new RuntimeException('permission row missing');
+        }
+    }
+};
+PHP);
+
+        $this->finish()->assertExitCode(0);
+    }
+
+    public function test_a_failed_migration_rolls_back_the_synced_permissions(): void
+    {
+        $this->healthCheck(passes: true);
+        $this->registerModulePermission();
+        File::put(
+            $this->modulesPath.'/finish-mod/database/migrations/2026_10_04_000001_broken.php',
+            "<?php\n\nuse Illuminate\\Database\\Migrations\\Migration;\n\nreturn new class extends Migration\n{\n    public function up(): void\n    {\n        throw new RuntimeException('broken migration');\n    }\n};\n",
+        );
+
+        $this->finish()->assertExitCode(1);
+
+        $this->assertFalse(PermissionModel::query()->where('key', 'finishmod:items.manage')->exists());
+    }
+
     public function test_it_fails_for_an_unknown_module(): void
     {
         $this->artisanCommand('module:finish-update', ['name' => 'missing-mod', 'version' => '1.0.1-beta'])->assertExitCode(1);
@@ -169,6 +221,20 @@ PHP);
         $this->assertFalse(DB::table('migrations')->where('migration', '2026_10_04_000000_create_finish_mod_items_table')->exists());
         $this->assertSame('1.0.0-beta', ModuleModel::query()->where('name', 'finish-mod')->value('version'));
         $this->assertSame([], ModuleSeederHistoryModel::getExecutedSeeders('finish-mod'));
+    }
+
+    /**
+     * What the module's provider registers when the fresh process boots the new version.
+     */
+    private function registerModulePermission(): void
+    {
+        $this->app->make(PermissionRegistryInterface::class)->register(new PermissionDefinitionDTO(
+            key: 'finishmod:items.manage',
+            label: 'Manage items',
+            resource: 'items',
+            action: 'manage',
+            module: 'finish-mod',
+        ));
     }
 
     private function healthCheck(bool $passes): void

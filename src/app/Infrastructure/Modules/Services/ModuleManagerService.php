@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Modules\Services;
 
+use App\Application\Authorization\Services\PermissionSyncRunnerInterface;
 use App\Application\Modules\DTOs\DependencyCheckResultDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
@@ -45,6 +46,7 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private ModuleCompatibilityServiceInterface $compatibility,
         private EnabledModulesResolverInterface $resolver,
         private ModuleSettingsStoreInterface $settingsStore,
+        private PermissionSyncRunnerInterface $permissionSync,
         private ModulePathResolver $paths = new ModulePathResolver,
     ) {}
 
@@ -124,6 +126,9 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
                                     'reasons' => $compatibility->summary(),
                                 ]);
                             } else {
+                                // Before the migrations, which may grant a new permission to a role
+                                $this->permissionSync->sync();
+
                                 try {
                                     $this->migrationRunner->run($existing);
                                     $this->seederRunner->run($existing);

@@ -103,6 +103,7 @@ use App\Infrastructure\Mail\Ses\SnsMessageValidator;
 use App\Infrastructure\Mail\Ses\SnsMessageValidatorInterface;
 use App\Infrastructure\Modules\Listeners\BuildModuleAssetsOnEnabled;
 use App\Infrastructure\Modules\Listeners\ClearCachesOnModuleChange;
+use App\Infrastructure\Modules\Listeners\SyncPermissionsOnModuleChange;
 use App\Infrastructure\Modules\Services\EnabledModulesResolver;
 use App\Infrastructure\Modules\Services\HostEnvironmentProvider;
 use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
@@ -451,6 +452,15 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(
             ModuleUpdated::class,
             ClearCachesOnModuleChange::class,
+        );
+        // New permissions of an enabled or updated module reach the role editor right away
+        Event::listen(
+            ModuleEnabled::class,
+            SyncPermissionsOnModuleChange::class,
+        );
+        Event::listen(
+            ModuleUpdated::class,
+            SyncPermissionsOnModuleChange::class,
         );
         Event::listen(
             ModuleUninstalled::class,

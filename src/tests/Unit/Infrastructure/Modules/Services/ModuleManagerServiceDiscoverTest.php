@@ -28,15 +28,19 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Support\Authorization\FakePermissionSyncRunner;
 use Tests\TestCase;
 
 final class ModuleManagerServiceDiscoverTest extends TestCase
 {
     private string $tempModulesPath;
 
+    private FakePermissionSyncRunner $permissionSync;
+
     protected function setUp(): void
     {
         parent::setUp();
+        $this->permissionSync = new FakePermissionSyncRunner;
         $this->tempModulesPath = sys_get_temp_dir().'/test-modules-'.bin2hex(random_bytes(8));
         mkdir($this->tempModulesPath, 0755, true);
     }
@@ -75,6 +79,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $this->compatibleModules(),
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
             Mockery::mock(ModuleSettingsStoreInterface::class),
+            $this->permissionSync,
         );
 
         $module = $this->createModule('test-module', '1.0.0', ModuleStatus::Enabled, new \DateTimeImmutable);
@@ -115,6 +120,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
 
         // Verify the module version was updated
         $this->assertSame('1.1.0', $module->version()->value());
+        $this->assertSame(1, $this->permissionSync->runs, 'The new version may declare new permissions');
     }
 
     #[Test]
@@ -143,6 +149,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $this->compatibleModules(),
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
             Mockery::mock(ModuleSettingsStoreInterface::class),
+            $this->permissionSync,
         );
 
         $module = $this->createModule('test-module', '1.0.0', ModuleStatus::Disabled, null);
@@ -176,6 +183,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
 
         // Version should still be updated in the entity
         $this->assertSame('1.1.0', $module->version()->value());
+        $this->assertSame(0, $this->permissionSync->runs, 'A disabled module registers no permissions');
     }
 
     #[Test]
@@ -207,6 +215,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             $this->compatibleModules(),
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
             Mockery::mock(ModuleSettingsStoreInterface::class),
+            $this->permissionSync,
         );
 
         // Module entity with a path that does NOT exist on disk
@@ -261,6 +270,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
         $service->discover();
 
         $this->assertSame('1.1.0', $module->version()->value());
+        $this->assertSame(1, $this->permissionSync->runs, 'Permissions are synced before the migrations, whatever they do');
     }
 
     private function createModule(
