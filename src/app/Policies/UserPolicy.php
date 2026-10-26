@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Infrastructure\Authorization\Policies\AuthorizesWithPermissions;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 
@@ -28,21 +29,26 @@ class UserPolicy
 
     public function update(UserModel $user, UserModel $model): bool
     {
-        return $this->authorize($user, 'users.update');
+        return $this->authorize($user, 'users.update') && $this->canManage($user, $model);
     }
 
     public function delete(UserModel $user, UserModel $model): bool
     {
-        return $this->authorize($user, 'users.delete') && $user->id !== $model->id;
+        return $this->authorize($user, 'users.delete') && $user->id !== $model->id && $this->canManage($user, $model);
     }
 
     public function restore(UserModel $user, UserModel $model): bool
     {
-        return $this->authorize($user, 'users.update');
+        return $this->authorize($user, 'users.delete') && $this->canManage($user, $model);
     }
 
     public function forceDelete(UserModel $user, UserModel $model): bool
     {
-        return $this->authorize($user, 'users.delete') && $user->id !== $model->id;
+        return $this->authorize($user, 'users.delete') && $user->id !== $model->id && $this->canManage($user, $model);
+    }
+
+    private function canManage(UserModel $user, UserModel $model): bool
+    {
+        return app(RoleGrantPolicy::class)->canManageAccount($user, $model);
     }
 }

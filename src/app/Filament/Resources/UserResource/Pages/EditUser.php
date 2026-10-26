@@ -50,6 +50,7 @@ class EditUser extends EditRecord
 
         return [
             Action::make('deactivate')
+                ->authorize('delete')
                 ->label(__('filament.users.actions.deactivate'))
                 ->icon('heroicon-o-no-symbol')
                 ->color('warning')
@@ -75,6 +76,7 @@ class EditUser extends EditRecord
                 ->successNotificationTitle(__('filament.users.actions.restored'))
                 ->after(fn (UserModel $record) => UserResource::dropRolesOverLimitAfterRestore($record)),
             Action::make('anonymize')
+                ->authorize('delete')
                 ->label(__('filament.users.actions.anonymize'))
                 ->icon('heroicon-o-eye-slash')
                 ->color('danger')

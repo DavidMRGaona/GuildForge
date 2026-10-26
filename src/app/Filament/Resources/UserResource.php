@@ -238,6 +238,7 @@ class UserResource extends BaseResource
                 EditAction::make(),
                 ActionGroup::make([
                     Action::make('sendVerificationEmail')
+                        ->authorize('update')
                         ->label(__('filament.users.actions.sendVerificationEmail'))
                         ->icon('heroicon-o-envelope')
                         ->color('warning')
@@ -253,6 +254,7 @@ class UserResource extends BaseResource
                                 ->send();
                         }),
                     Action::make('sendPasswordResetEmail')
+                        ->authorize('update')
                         ->label(__('filament.users.actions.sendPasswordResetEmail'))
                         ->icon('heroicon-o-key')
                         ->color('info')
@@ -275,6 +277,7 @@ class UserResource extends BaseResource
                             }
                         }),
                     Action::make('deactivate')
+                        ->authorize('delete')
                         ->label(__('filament.users.actions.deactivate'))
                         ->icon('heroicon-o-no-symbol')
                         ->color('warning')
@@ -306,6 +309,7 @@ class UserResource extends BaseResource
                         ->successNotificationTitle(__('filament.users.actions.restored'))
                         ->after(fn (UserModel $record) => self::dropRolesOverLimitAfterRestore($record)),
                     Action::make('anonymize')
+                        ->authorize('delete')
                         ->label(__('filament.users.actions.anonymize'))
                         ->icon('heroicon-o-eye-slash')
                         ->color('danger')
