@@ -26,6 +26,15 @@ final class RoleProtectedException extends DomainException
         return new self(__('authorization.errors.cannot_delete_base_role', ['role' => $roleName]));
     }
 
+    /**
+     * The administrator, base and association member roles take no association member
+     * requirement and no cap on their holders.
+     */
+    public static function cannotRestrict(string $roleName): self
+    {
+        return new self(__('authorization.errors.cannot_restrict_role', ['role' => $roleName]));
+    }
+
     public static function cannotModify(string $roleName): self
     {
         return new self("Cannot modify protected role: {$roleName}");

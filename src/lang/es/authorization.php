@@ -149,6 +149,7 @@ return [
 
     'errors' => [
         'cannot_delete_base_role' => 'No se puede eliminar «:role»: es el rol base de todas las cuentas.',
+        'cannot_restrict_role' => 'El rol «:role» no admite requisito de socio ni máximo de personas.',
     ],
 
     'member_role' => [

@@ -10,6 +10,7 @@ use App\Application\Authorization\DTOs\UpdateRoleDTO;
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Application\Authorization\Services\RoleRestrictionRule;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Entities\Role;
 use App\Domain\Authorization\Exceptions\RoleNotFoundException;
@@ -27,6 +28,7 @@ final readonly class RoleService implements RoleServiceInterface
         private AuthorizationServiceInterface $authorization,
         private AssociationMemberRoleRule $associationMemberRole,
         private BaseRoleRule $baseRole,
+        private RoleRestrictionRule $roleRestriction,
     ) {}
 
     /**
@@ -74,6 +76,7 @@ final readonly class RoleService implements RoleServiceInterface
             isProtected: $dto->isProtected,
         );
 
+        $this->guardRestrictions($role);
         $this->roleRepository->save($role);
 
         // Assign permissions if provided
@@ -98,8 +101,11 @@ final readonly class RoleService implements RoleServiceInterface
             displayName: $dto->displayName ?? $existingRole->displayName(),
             description: $dto->description ?? $existingRole->description(),
             isProtected: $existingRole->isProtected(),
+            requiresAssociationMember: $existingRole->requiresAssociationMember(),
+            maxHolders: $existingRole->maxHolders(),
         );
 
+        $this->guardRestrictions($role);
         $this->roleRepository->save($role);
 
         // Sync permissions if provided (null means don't update)
@@ -152,6 +158,15 @@ final readonly class RoleService implements RoleServiceInterface
         $permissionIds = $this->permissionRepository->findIdsByKeys($permissionKeys);
         $this->roleRepository->syncPermissions(RoleId::fromString($roleId), $permissionIds);
         $this->authorization->invalidateCache();
+    }
+
+    private function guardRestrictions(Role $role): void
+    {
+        $restricted = $role->requiresAssociationMember() || $role->maxHolders() !== null;
+
+        if ($restricted && ! $this->roleRestriction->canBeRestricted($role->name()->value)) {
+            throw RoleProtectedException::cannotRestrict($role->name()->value);
+        }
     }
 
     private function toResponseDTO(Role $role): RoleResponseDTO
