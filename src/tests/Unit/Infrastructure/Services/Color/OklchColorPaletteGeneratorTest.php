@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Services\Color;
 
-use App\Application\Services\ColorPaletteGeneratorInterface;
-use App\Domain\ValueObjects\ColorPalette;
 use App\Domain\ValueObjects\HexColor;
 use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -20,18 +18,12 @@ final class OklchColorPaletteGeneratorTest extends TestCase
         $this->generator = new OklchColorPaletteGenerator;
     }
 
-    public function test_it_implements_interface(): void
-    {
-        $this->assertInstanceOf(ColorPaletteGeneratorInterface::class, $this->generator);
-    }
-
     public function test_it_generates_palette_with_all_shades(): void
     {
         $baseColor = new HexColor('#D97706');
 
         $palette = $this->generator->generate('primary', $baseColor);
 
-        $this->assertInstanceOf(ColorPalette::class, $palette);
         $this->assertCount(11, $palette->shades());
     }
 
@@ -184,7 +176,6 @@ final class OklchColorPaletteGeneratorTest extends TestCase
         $palette = $this->generator->generate('test', $baseColor);
 
         // Should not throw and should generate valid palette
-        $this->assertInstanceOf(ColorPalette::class, $palette);
         $this->assertCount(11, $palette->shades());
 
         // All shades should be valid hex colors
@@ -249,8 +240,6 @@ final class OklchColorPaletteGeneratorTest extends TestCase
         $accentColor = new HexColor('#0EA5E9');
 
         $neutral = $this->generator->generateNeutral('neutral', $accentColor);
-
-        $this->assertInstanceOf(ColorPalette::class, $neutral);
 
         // Neutral should have very low chroma
         $shade500 = $neutral->shade(500);

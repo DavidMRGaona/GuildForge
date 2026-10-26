@@ -5,24 +5,15 @@ declare(strict_types=1);
 namespace Tests\Unit\Domain\Authorization\ValueObjects;
 
 use App\Domain\Authorization\ValueObjects\RoleId;
-use App\Domain\ValueObjects\EntityId;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 final class RoleIdTest extends TestCase
 {
-    public function test_it_extends_entity_id(): void
-    {
-        $id = RoleId::generate();
-
-        $this->assertInstanceOf(EntityId::class, $id);
-    }
-
     public function test_it_generates_new_id(): void
     {
         $id = RoleId::generate();
 
-        $this->assertInstanceOf(RoleId::class, $id);
         $this->assertNotEmpty((string) $id);
     }
 

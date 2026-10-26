@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
-use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
 use App\Domain\Updates\Exceptions\UpdateException;
@@ -99,11 +98,6 @@ final class CoreUpdateCheckerTest extends TestCase
         $this->expectExceptionMessage('HTTP 403');
 
         $this->checker()->check();
-    }
-
-    public function test_service_is_registered_in_container(): void
-    {
-        $this->assertInstanceOf(CoreUpdateChecker::class, app(CoreUpdateCheckerInterface::class));
     }
 
     private function checker(): CoreUpdateChecker

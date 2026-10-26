@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Modules\Services;
 
-use App\Application\Modules\DTOs\ModuleManifestDTO;
 use App\Infrastructure\Modules\Services\ModuleDiscoveryService;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
@@ -57,7 +56,6 @@ final class ModuleDiscoveryServiceTest extends TestCase
 
         // Assert
         $this->assertCount(1, $modules);
-        $this->assertInstanceOf(ModuleManifestDTO::class, $modules[0]);
         $this->assertEquals('test-module', $modules[0]->name);
         $this->assertEquals('1.0.0', $modules[0]->version);
     }

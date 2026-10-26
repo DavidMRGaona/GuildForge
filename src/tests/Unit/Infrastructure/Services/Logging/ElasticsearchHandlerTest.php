@@ -4,60 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Services\Logging;
 
-use App\Application\Services\LogContextProviderInterface;
 use App\Infrastructure\Services\Logging\ElasticsearchHandler;
 use DateTimeImmutable;
 use Monolog\Level;
 use Monolog\LogRecord;
-use PHPUnit\Framework\MockObject\Stub;
 use Tests\TestCase;
 
 final class ElasticsearchHandlerTest extends TestCase
 {
-    public function test_handler_constructs_without_errors(): void
-    {
-        $handler = new ElasticsearchHandler(
-            host: 'localhost',
-            port: 9200,
-            user: null,
-            password: null,
-            index: 'test-logs',
-            level: Level::Debug,
-        );
-
-        $this->assertInstanceOf(ElasticsearchHandler::class, $handler);
-    }
-
-    public function test_handler_constructs_with_authentication(): void
-    {
-        $handler = new ElasticsearchHandler(
-            host: 'elasticsearch.example.com',
-            port: 9200,
-            user: 'elastic',
-            password: 'password123',
-            index: 'app-logs',
-            level: Level::Info,
-        );
-
-        $this->assertInstanceOf(ElasticsearchHandler::class, $handler);
-    }
-
-    public function test_handler_constructs_with_ssl_enabled(): void
-    {
-        $handler = new ElasticsearchHandler(
-            host: 'elasticsearch.example.com',
-            port: 9243,
-            user: 'elastic',
-            password: 'password123',
-            index: 'app-logs',
-            ssl: true,
-            level: Level::Info,
-        );
-
-        $this->assertInstanceOf(ElasticsearchHandler::class, $handler);
-    }
-
-    public function test_handler_constructs_with_string_level(): void
+    public function test_handler_accepts_a_string_level(): void
     {
         $handler = new ElasticsearchHandler(
             host: 'localhost',
@@ -68,7 +23,7 @@ final class ElasticsearchHandlerTest extends TestCase
             level: 'warning',
         );
 
-        $this->assertInstanceOf(ElasticsearchHandler::class, $handler);
+        $this->assertSame(Level::Warning, $handler->getLevel());
     }
 
     public function test_handler_gracefully_handles_connection_failures(): void
@@ -126,24 +81,6 @@ final class ElasticsearchHandlerTest extends TestCase
 
         // Debug is lower than Warning, should not be handled
         $this->assertFalse($handler->isHandling($debugRecord));
-    }
-
-    public function test_handler_constructs_with_context_provider(): void
-    {
-        /** @var LogContextProviderInterface&Stub $contextProvider */
-        $contextProvider = $this->createStub(LogContextProviderInterface::class);
-        $contextProvider->method('getRequestId')->willReturn('test-request-id-123');
-
-        $handler = new ElasticsearchHandler(
-            host: 'localhost',
-            port: 9200,
-            user: null,
-            password: null,
-            index: 'test-logs',
-            contextProvider: $contextProvider,
-        );
-
-        $this->assertInstanceOf(ElasticsearchHandler::class, $handler);
     }
 
     public function test_handler_works_without_context_provider(): void

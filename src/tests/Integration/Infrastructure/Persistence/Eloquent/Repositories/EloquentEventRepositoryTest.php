@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Domain\Entities\Event;
-use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\ValueObjects\EventId;
 use App\Domain\ValueObjects\Price;
 use App\Domain\ValueObjects\Slug;
@@ -25,11 +24,6 @@ final class EloquentEventRepositoryTest extends TestCase
     {
         parent::setUp();
         $this->repository = new EloquentEventRepository;
-    }
-
-    public function test_it_implements_event_repository_interface(): void
-    {
-        $this->assertInstanceOf(EventRepositoryInterface::class, $this->repository);
     }
 
     public function test_it_finds_event_by_id(): void

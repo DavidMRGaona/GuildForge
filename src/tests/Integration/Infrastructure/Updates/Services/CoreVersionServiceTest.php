@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
-use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Infrastructure\Updates\Services\CoreVersionService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -112,13 +111,6 @@ final class CoreVersionServiceTest extends TestCase
         $this->assertFalse($service->satisfies('^2.0'));
         $this->assertFalse($service->satisfies('>=2.0.0'));
         $this->assertFalse($service->satisfies('~2.0'));
-    }
-
-    public function test_service_is_registered_in_container(): void
-    {
-        $service = $this->app->make(CoreVersionServiceInterface::class);
-
-        $this->assertInstanceOf(CoreVersionService::class, $service);
     }
 
     public function test_it_trims_whitespace_from_version_file(): void

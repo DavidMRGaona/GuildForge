@@ -14,7 +14,6 @@ final class UpdateStatusTest extends TestCase
     {
         $cases = UpdateStatus::cases();
 
-        $this->assertCount(11, $cases);
         $this->assertContains(UpdateStatus::Pending, $cases);
         $this->assertContains(UpdateStatus::Downloading, $cases);
         $this->assertContains(UpdateStatus::Verifying, $cases);

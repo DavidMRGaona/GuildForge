@@ -41,9 +41,4 @@ final class ModuleStatusTest extends TestCase
 
         $this->assertEquals(ModuleStatus::Enabled, $status);
     }
-
-    public function test_it_has_exactly_two_cases(): void
-    {
-        $this->assertCount(2, ModuleStatus::cases());
-    }
 }

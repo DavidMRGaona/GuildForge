@@ -14,7 +14,6 @@ final class UserIdTest extends TestCase
     {
         $id = UserId::generate();
 
-        $this->assertInstanceOf(UserId::class, $id);
         $this->assertNotEmpty((string) $id);
     }
 

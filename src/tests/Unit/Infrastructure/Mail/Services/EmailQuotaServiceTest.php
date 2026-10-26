@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Mail\Services;
 
-use App\Application\Mail\DTOs\Response\QuotaStatusResponseDTO;
-use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
 use App\Infrastructure\Mail\Services\EmailQuotaService;
@@ -31,11 +29,6 @@ final class EmailQuotaServiceTest extends TestCase
             $this->emailLogRepository,
             $this->settingsService,
         );
-    }
-
-    public function test_it_implements_email_quota_service_interface(): void
-    {
-        $this->assertInstanceOf(EmailQuotaServiceInterface::class, $this->service);
     }
 
     public function test_can_send_email_returns_true_when_no_limits_set(): void
@@ -122,7 +115,6 @@ final class EmailQuotaServiceTest extends TestCase
 
         $result = $this->service->getQuotaStatus();
 
-        $this->assertInstanceOf(QuotaStatusResponseDTO::class, $result);
         $this->assertSame(25, $result->dailyUsed);
         $this->assertSame(100, $result->dailyLimit);
         $this->assertSame(200, $result->monthlyUsed);
@@ -146,7 +138,6 @@ final class EmailQuotaServiceTest extends TestCase
 
         $result = $this->service->getQuotaStatus();
 
-        $this->assertInstanceOf(QuotaStatusResponseDTO::class, $result);
         $this->assertSame(85, $result->dailyUsed);
         $this->assertSame(100, $result->dailyLimit);
         $this->assertTrue($result->isWarning);

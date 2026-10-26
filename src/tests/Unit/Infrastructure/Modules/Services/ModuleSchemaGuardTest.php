@@ -52,27 +52,29 @@ final class ModuleSchemaGuardTest extends TestCase
     public function test_it_allows_ddl_on_module_table_when_active(): void
     {
         // Act
-        $result = $this->guard->protect('game-tables', function (): string {
+        $completed = false;
+        $this->guard->protect('game-tables', function () use (&$completed): void {
             $this->guard->assertPermitted('create', 'gametables_games');
 
-            return 'completed';
+            $completed = true;
         });
 
         // Assert
-        $this->assertSame('completed', $result);
+        $this->assertTrue($completed);
     }
 
     public function test_it_allows_ddl_on_module_table_with_underscore_prefix_when_active(): void
     {
         // Act
-        $result = $this->guard->protect('game-tables', function (): string {
+        $completed = false;
+        $this->guard->protect('game-tables', function () use (&$completed): void {
             $this->guard->assertPermitted('create', 'game_tables_sessions');
 
-            return 'completed';
+            $completed = true;
         });
 
         // Assert
-        $this->assertSame('completed', $result);
+        $this->assertTrue($completed);
     }
 
     public function test_it_deactivates_after_protect_completes(): void
@@ -107,10 +109,13 @@ final class ModuleSchemaGuardTest extends TestCase
 
     public function test_it_returns_callback_result(): void
     {
+        // Arrange
+        $value = new \stdClass;
+
         // Act
-        $result = $this->guard->protect('game-tables', fn (): int => 42);
+        $result = $this->guard->protect('game-tables', fn (): \stdClass => $value);
 
         // Assert
-        $this->assertSame(42, $result);
+        $this->assertSame($value, $result);
     }
 }

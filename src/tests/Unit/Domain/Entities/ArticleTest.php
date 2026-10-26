@@ -97,7 +97,6 @@ final class ArticleTest extends TestCase
 
         $this->assertTrue($article->isPublished());
         $this->assertNotNull($article->publishedAt());
-        $this->assertInstanceOf(DateTimeImmutable::class, $article->publishedAt());
     }
 
     public function test_it_unpublishes_article(): void

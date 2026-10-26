@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Mail\Services;
 
-use App\Application\Mail\DTOs\Response\MailStatisticsResponseDTO;
-use App\Application\Mail\Services\MailStatisticsServiceInterface;
 use App\Domain\Mail\Enums\EmailStatus;
 use App\Domain\Mail\Repositories\EmailLogRepositoryInterface;
 use App\Infrastructure\Mail\Services\MailStatisticsService;
@@ -32,13 +30,6 @@ final class MailStatisticsServiceTest extends TestCase
 
         $this->repository = $this->createMock(EmailLogRepositoryInterface::class);
         $this->service = new MailStatisticsService($this->repository);
-    }
-
-    public function test_it_implements_mail_statistics_service_interface(): void
-    {
-        $this->repository->expects($this->never())->method($this->anything());
-
-        $this->assertInstanceOf(MailStatisticsServiceInterface::class, $this->service);
     }
 
     public function test_the_day_and_month_bounds_are_display_zone_midnights_under_utc_storage(): void
@@ -84,7 +75,6 @@ final class MailStatisticsServiceTest extends TestCase
 
         $result = $this->service->getStats();
 
-        $this->assertInstanceOf(MailStatisticsResponseDTO::class, $result);
         $this->assertSame(25, $result->sentToday);
         $this->assertSame(3, $result->failedToday);
 
@@ -113,7 +103,6 @@ final class MailStatisticsServiceTest extends TestCase
 
         $result = $this->service->getStats();
 
-        $this->assertInstanceOf(MailStatisticsResponseDTO::class, $result);
         $this->assertSame(450, $result->sentThisMonth);
         $this->assertSame(12, $result->failedThisMonth);
 
@@ -150,7 +139,6 @@ final class MailStatisticsServiceTest extends TestCase
 
         $result = $this->service->getStats();
 
-        $this->assertInstanceOf(MailStatisticsResponseDTO::class, $result);
         $this->assertSame(90.0, $result->deliveryRate);
 
         Carbon::setTestNow();
@@ -167,7 +155,6 @@ final class MailStatisticsServiceTest extends TestCase
 
         $result = $this->service->getStats();
 
-        $this->assertInstanceOf(MailStatisticsResponseDTO::class, $result);
         $this->assertSame(0, $result->sentToday);
         $this->assertSame(0, $result->sentThisMonth);
         $this->assertSame(0, $result->failedToday);

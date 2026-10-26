@@ -6,7 +6,6 @@ namespace Tests\Unit\Infrastructure\Services\Color;
 
 use App\Application\Services\ColorPaletteGeneratorInterface;
 use App\Application\Services\SettingsServiceInterface;
-use App\Domain\ValueObjects\ColorPalette;
 use App\Domain\ValueObjects\HexColor;
 use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 use App\Infrastructure\Services\ThemeSettingsService;
@@ -169,7 +168,6 @@ final class ThemeSettingsServicePaletteTest extends TestCase
 
         $palette = $this->service->getPrimaryPalette();
 
-        $this->assertInstanceOf(ColorPalette::class, $palette);
         $this->assertEquals('primary', $palette->name());
     }
 
@@ -184,7 +182,6 @@ final class ThemeSettingsServicePaletteTest extends TestCase
 
         $palette = $this->service->getAccentPalette();
 
-        $this->assertInstanceOf(ColorPalette::class, $palette);
         $this->assertEquals('accent', $palette->name());
     }
 
@@ -196,7 +193,6 @@ final class ThemeSettingsServicePaletteTest extends TestCase
 
         $palette = $this->service->getNeutralPalette();
 
-        $this->assertInstanceOf(ColorPalette::class, $palette);
         $this->assertEquals('neutral', $palette->name());
     }
 

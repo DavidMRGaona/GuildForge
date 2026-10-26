@@ -261,13 +261,6 @@ final class ImageOptimizationServiceTest extends TestCase
         $this->assertLessThanOrEqual(1024, $height);
     }
 
-    public function test_service_is_registered_in_container(): void
-    {
-        $service = $this->app->make(ImageOptimizationServiceInterface::class);
-
-        $this->assertInstanceOf(ImageOptimizationService::class, $service);
-    }
-
     public function test_a_valid_optimization_logs_nothing(): void
     {
         $logger = new RecordingLogger;

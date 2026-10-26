@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Services;
 
-use App\Application\DTOs\Response\LocationSettingsDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use App\Infrastructure\Services\SettingsService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -99,7 +98,6 @@ final class SettingsServiceTest extends TestCase
 
         $result = $this->settingsService->getLocationSettings();
 
-        $this->assertInstanceOf(LocationSettingsDTO::class, $result);
         $this->assertEquals('Test HQ', $result->name);
         $this->assertEquals('Test Address, City', $result->address);
         $this->assertEquals(42.5956, $result->lat);

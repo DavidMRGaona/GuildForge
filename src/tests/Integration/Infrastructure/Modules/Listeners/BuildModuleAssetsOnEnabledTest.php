@@ -9,11 +9,15 @@ use App\Domain\Modules\Events\ModuleEnabled;
 use App\Infrastructure\Modules\Listeners\BuildModuleAssetsOnEnabled;
 use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\Queue as QueueContract;
+use Illuminate\Events\CallQueuedListener;
+use Illuminate\Events\Dispatcher;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Process\PendingProcess;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 final class BuildModuleAssetsOnEnabledTest extends TestCase
@@ -42,11 +46,32 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_listener_implements_should_queue(): void
+    public function test_listener_is_queued_outside_tests(): void
     {
-        $listener = $this->app->make(BuildModuleAssetsOnEnabled::class);
+        // Dispatched on its own dispatcher: the app's other ModuleEnabled listeners would
+        // rebuild the framework caches once the environment is no longer "testing"
+        Queue::fake();
+        $dispatcher = (new Dispatcher($this->app))->setQueueResolver(fn (): QueueContract => Queue::connection());
+        $dispatcher->listen(ModuleEnabled::class, BuildModuleAssetsOnEnabled::class);
+        $this->app['env'] = 'production';
 
-        $this->assertInstanceOf(ShouldQueue::class, $listener);
+        try {
+            $dispatcher->dispatch(new ModuleEnabled('fake-id', 'test-module'));
+        } finally {
+            $this->app['env'] = 'testing';
+        }
+
+        Queue::assertPushed(
+            CallQueuedListener::class,
+            fn (CallQueuedListener $job): bool => $job->class === BuildModuleAssetsOnEnabled::class,
+        );
+    }
+
+    public function test_listener_is_registered_for_module_enabled(): void
+    {
+        Event::fake();
+
+        Event::assertListening(ModuleEnabled::class, BuildModuleAssetsOnEnabled::class);
     }
 
     public function test_listener_has_correct_timeout(): void

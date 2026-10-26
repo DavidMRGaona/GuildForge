@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Domain\Modules\Exceptions;
 
 use App\Domain\Modules\Exceptions\ModuleMigrationViolationException;
-use DomainException;
 use PHPUnit\Framework\TestCase;
 
 final class ModuleMigrationViolationExceptionTest extends TestCase
@@ -21,7 +20,6 @@ final class ModuleMigrationViolationExceptionTest extends TestCase
             ]
         );
 
-        $this->assertInstanceOf(DomainException::class, $exception);
         $this->assertStringContainsString('game-tables', $exception->getMessage());
         $this->assertStringContainsString('2024_01_15_create_game_tables.php', $exception->getMessage());
         $this->assertStringContainsString('Uses DB::statement() with raw SQL', $exception->getMessage());

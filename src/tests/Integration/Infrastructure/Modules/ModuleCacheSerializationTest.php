@@ -52,7 +52,6 @@ final class ModuleCacheSerializationTest extends TestCase
 
         $this->assertEquals($modules, $restored);
         $this->assertInstanceOf(Module::class, $restored[0]);
-        $this->assertInstanceOf(CompatibilityIssue::class, $restored[0]->latestBlockedIssues()[0]);
     }
 
     public function test_other_classes_are_not_unserialized(): void

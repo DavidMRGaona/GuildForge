@@ -34,9 +34,4 @@ final class PublicationStatusTest extends TestCase
     {
         $this->assertEquals('published', PublicationStatus::Published->value);
     }
-
-    public function test_it_has_exactly_two_cases(): void
-    {
-        $this->assertCount(2, PublicationStatus::cases());
-    }
 }

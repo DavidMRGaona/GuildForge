@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Services;
 
-use App\Application\DTOs\Response\TagHierarchyDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -51,7 +50,6 @@ final class TagQueryServiceTest extends TestCase
         $result = $this->service->getAllInHierarchicalOrder();
 
         $this->assertCount(2, $result);
-        $this->assertInstanceOf(TagHierarchyDTO::class, $result[0]);
         $this->assertEquals('Parent', $result[0]->name);
         $this->assertEquals(0, $result[0]->depth);
         $this->assertEquals('Child', $result[1]->name);

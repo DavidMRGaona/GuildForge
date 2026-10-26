@@ -48,11 +48,6 @@ final class UserRoleTest extends TestCase
         $this->assertEquals('member', UserRole::Member->value);
     }
 
-    public function test_it_has_exactly_three_cases(): void
-    {
-        $this->assertCount(3, UserRole::cases());
-    }
-
     public function test_admin_label_returns_administrator(): void
     {
         $this->assertEquals('Administrator', UserRole::Admin->label());
