@@ -85,6 +85,20 @@ final class RoleGrantPolicyTest extends TestCase
         $this->assertNotContains('admin', $policy->grantableRoleNames($actor));
     }
 
+    public function test_admin_role_is_never_manageable_by_a_non_admin_even_with_every_permission(): void
+    {
+        $permissions = ['roles.update', 'users.view_any', 'settings.manage'];
+        $this->attach(RoleModel::query()->firstOrCreate(['name' => 'admin'], ['display_name' => 'Administrator']), $permissions);
+        $actor = $this->userWith('presidencia', $permissions);
+        $admin = UserModel::factory()->admin()->create();
+
+        $policy = $this->policy();
+
+        $this->assertFalse($policy->canManageRole($actor, 'admin'));
+        $this->assertTrue($policy->canManageRole($actor, 'presidencia'));
+        $this->assertTrue($policy->canManageRole($admin, 'admin'));
+    }
+
     public function test_removing_needs_the_same_right_as_granting(): void
     {
         $this->role('contenido', ['articles.view_any']);
