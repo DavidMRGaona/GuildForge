@@ -8,11 +8,14 @@ use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
+use App\Application\Authorization\Services\RoleRestrictionRule;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
+use App\Filament\Resources\RoleResource\RoleRequirementImpact;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
@@ -20,6 +23,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -69,6 +73,22 @@ class RoleResource extends BaseResource
                             ->label(__('filament.roles.fields.description'))
                             ->rows(3)
                             ->maxLength(500),
+                        Toggle::make('requires_association_member')
+                            ->label(__('filament.roles.fields.requiresAssociationMember'))
+                            ->live()
+                            ->disabled(fn (?RoleModel $record): bool => ! self::canBeRestricted($record))
+                            ->hint(fn (?RoleModel $record): ?string => self::canBeRestricted($record) ? null : (string) __('filament.roles.fields.restrictionLockedHint'))
+                            ->hintIcon(fn (?RoleModel $record): ?string => self::canBeRestricted($record) ? null : 'heroicon-o-lock-closed')
+                            ->hintColor('warning')
+                            ->helperText(fn (Get $get, ?RoleModel $record): string => self::requirementHelp((bool) $get('requires_association_member'), $record)),
+                        TextInput::make('max_holders')
+                            ->label(__('filament.roles.fields.maxHolders'))
+                            ->integer()
+                            ->minValue(1)
+                            ->nullable()
+                            ->dehydrateStateUsing(static fn (mixed $state): ?int => blank($state) ? null : (int) $state)
+                            ->disabled(fn (?RoleModel $record): bool => ! self::canBeRestricted($record))
+                            ->helperText(fn (?RoleModel $record): string => self::maxHoldersHelp($record)),
                         Toggle::make('is_protected')
                             ->label(__('filament.roles.fields.isProtected'))
                             ->helperText(__('filament.roles.fields.isProtectedHelp'))
@@ -116,6 +136,9 @@ class RoleResource extends BaseResource
                     ->counts('users')
                     ->badge()
                     ->color('info'),
+                IconColumn::make('requires_association_member')
+                    ->label(__('filament.roles.fields.requiresAssociationMemberShort'))
+                    ->boolean(),
                 IconColumn::make('is_protected')
                     ->label(__('filament.roles.fields.isProtected'))
                     ->boolean()
@@ -136,6 +159,46 @@ class RoleResource extends BaseResource
                     ->hidden(fn (RoleModel $record): bool => self::isLocked($record))
                     ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache()),
             ]);
+    }
+
+    /**
+     * Whether the role may carry the association member requirement and a holder cap. A role
+     * that is not saved yet can always be (the name it gets is checked when saving).
+     */
+    public static function canBeRestricted(?RoleModel $record): bool
+    {
+        return ! $record instanceof RoleModel
+            || app(RoleRestrictionRule::class)->canBeRestricted($record->name);
+    }
+
+    private static function requirementHelp(bool $requires, ?RoleModel $record): string
+    {
+        $help = (string) __('filament.roles.fields.requiresAssociationMemberHelp');
+
+        if (! $requires || ! $record instanceof RoleModel || $record->requires_association_member) {
+            return $help;
+        }
+
+        $count = app(RoleRequirementImpact::class)->inactiveHolderCount($record);
+
+        return $count > 0
+            ? $help.' '.__('filament.roles.fields.requirementImpact', ['count' => $count])
+            : $help;
+    }
+
+    private static function maxHoldersHelp(?RoleModel $record): string
+    {
+        $help = (string) __('filament.roles.fields.maxHoldersHelp');
+
+        if (! $record instanceof RoleModel || $record->max_holders !== 1) {
+            return $help;
+        }
+
+        $holder = $record->users()->orderBy('users.name')->first();
+
+        return $holder instanceof UserModel
+            ? $help.' '.__('filament.roles.fields.maxHoldersCurrent', ['name' => $holder->name])
+            : $help;
     }
 
     /**

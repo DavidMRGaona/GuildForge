@@ -45,6 +45,10 @@ class EditRole extends EditRecord
             unset($data['name']);
         }
 
+        if (! RoleResource::canBeRestricted($record)) {
+            unset($data['requires_association_member'], $data['max_holders']);
+        }
+
         return $data;
     }
 
