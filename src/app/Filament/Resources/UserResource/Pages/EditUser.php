@@ -72,7 +72,8 @@ class EditUser extends EditRecord
                 ->visible(fn (): bool => $record->trashed() && $record->anonymized_at === null)
                 ->modalHeading(__('filament.users.actions.restore'))
                 ->modalDescription(__('filament.users.actions.restoreConfirm'))
-                ->successNotificationTitle(__('filament.users.actions.restored')),
+                ->successNotificationTitle(__('filament.users.actions.restored'))
+                ->after(fn (UserModel $record) => UserResource::dropRolesOverLimitAfterRestore($record)),
             Action::make('anonymize')
                 ->label(__('filament.users.actions.anonymize'))
                 ->icon('heroicon-o-eye-slash')

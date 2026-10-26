@@ -149,6 +149,8 @@ return [
 
     'errors' => [
         'cannot_delete_base_role' => 'Cannot delete ":role": it is the base role of every account.',
+        'cannot_restrict_role' => 'The ":role" role does not accept an association member requirement or a maximum number of people.',
+        'role_holder_limit' => ':role is already held by :holders. Take it from them before giving it to someone else.',
     ],
 
     'member_role' => [

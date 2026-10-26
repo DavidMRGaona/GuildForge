@@ -9,6 +9,7 @@ use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
 use App\Domain\Authorization\ValueObjects\RoleId;
 use App\Domain\Authorization\ValueObjects\RoleName;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
+use Illuminate\Support\Facades\DB;
 
 final readonly class EloquentRoleRepository implements RoleRepositoryInterface
 {
@@ -89,6 +90,18 @@ final readonly class EloquentRoleRepository implements RoleRepositoryInterface
         return $roleModel->permissions()->pluck('key')->toArray();
     }
 
+    /**
+     * @return array<string>
+     */
+    public function getRoleNamesForUser(string $userId): array
+    {
+        /** @var array<string> */
+        return RoleModel::query()
+            ->whereIn('id', DB::table('user_role')->where('user_id', $userId)->select('role_id'))
+            ->pluck('name')
+            ->all();
+    }
+
     private function toDomain(RoleModel $model): Role
     {
         return new Role(
@@ -97,6 +110,8 @@ final readonly class EloquentRoleRepository implements RoleRepositoryInterface
             displayName: $model->display_name,
             description: $model->description,
             isProtected: $model->is_protected,
+            requiresAssociationMember: $model->requires_association_member,
+            maxHolders: $model->max_holders,
         );
     }
 
@@ -111,6 +126,8 @@ final readonly class EloquentRoleRepository implements RoleRepositoryInterface
             'display_name' => $role->displayName(),
             'description' => $role->description(),
             'is_protected' => $role->isProtected(),
+            'requires_association_member' => $role->requiresAssociationMember(),
+            'max_holders' => $role->maxHolders(),
         ];
     }
 }
