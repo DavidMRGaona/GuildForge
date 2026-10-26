@@ -105,16 +105,6 @@ final readonly class EloquentPermissionRepository implements PermissionRepositor
         }
     }
 
-    public function delete(PermissionId $id): void
-    {
-        PermissionModel::query()->where('id', $id->value)->delete();
-    }
-
-    public function deleteByModule(string $module): void
-    {
-        PermissionModel::query()->where('module', $module)->delete();
-    }
-
     /**
      * @param  array<string>  $keys
      * @return array<string>

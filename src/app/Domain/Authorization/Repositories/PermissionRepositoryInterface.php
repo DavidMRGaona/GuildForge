@@ -36,9 +36,8 @@ interface PermissionRepositoryInterface
      */
     public function saveMany(array $permissions): void;
 
-    public function delete(PermissionId $id): void;
-
-    public function deleteByModule(string $module): void;
+    // No delete: removing a row takes the permission from every role through the
+    // role_permission cascade, with no entry in the role history and no cache invalidation
 
     /**
      * Find permission IDs by their keys.
