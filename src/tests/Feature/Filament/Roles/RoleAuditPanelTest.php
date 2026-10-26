@@ -116,9 +116,10 @@ final class RoleAuditPanelTest extends TestCase
     {
         $user = UserModel::factory()->create();
         $at = now()->subDay()->startOfSecond();
-        $first = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
-        $second = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
-        $third = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
+        // Explicit ids, ordered as UUIDv7 would be: within one millisecond their order is not guaranteed
+        $first = $this->entry(['id' => '019a0000-0000-7000-8000-000000000001', 'user_id' => $user->id, 'created_at' => $at]);
+        $third = $this->entry(['id' => '019a0000-0000-7000-8000-000000000003', 'user_id' => $user->id, 'created_at' => $at]);
+        $second = $this->entry(['id' => '019a0000-0000-7000-8000-000000000002', 'user_id' => $user->id, 'created_at' => $at]);
 
         Livewire::test(UserHistory::class, ['ownerRecord' => $user, 'pageClass' => EditUser::class])
             ->assertCanSeeTableRecords([$third, $second, $first], inOrder: true);
