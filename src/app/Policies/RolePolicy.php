@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Domain\Enums\UserRole;
 use App\Infrastructure\Authorization\Policies\AuthorizesWithPermissions;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -31,7 +33,23 @@ class RolePolicy
 
     public function update(UserModel $user, RoleModel $role): bool
     {
-        return $this->authorize($user, 'roles.update');
+        if (! $this->authorize($user, 'roles.update')) {
+            return false;
+        }
+
+        // Whoever is not an admin cannot open a role that goes beyond their own permissions
+        $authorization = app(AuthorizationServiceInterface::class);
+
+        if ($authorization->hasRole($user, UserRole::Admin->value)) {
+            return true;
+        }
+
+        $held = $authorization->getPermissions($user);
+
+        return array_all(
+            $role->permissions()->pluck('permissions.key')->all(),
+            static fn (string $key): bool => in_array($key, $held, true),
+        );
     }
 
     public function delete(UserModel $user, RoleModel $role): bool

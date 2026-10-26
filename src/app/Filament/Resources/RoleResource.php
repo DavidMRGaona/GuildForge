@@ -59,6 +59,8 @@ class RoleResource extends BaseResource
                             ->label(__('filament.roles.fields.name'))
                             ->required()
                             ->maxLength(50)
+                            ->regex('/^[a-z0-9]+(-[a-z0-9]+)*$/')
+                            ->validationMessages(['regex' => __('filament.roles.fields.nameFormat')])
                             ->unique(ignoreRecord: true)
                             ->disabled(fn (?RoleModel $record): bool => $record instanceof RoleModel && self::isLocked($record))
                             ->hint(fn (?RoleModel $record): ?string => self::lockedNameHint($record))

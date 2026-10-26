@@ -484,6 +484,10 @@ return [
         ],
     ],
     'roles' => [
+        'notifications' => [
+            'permissionsBeyondYours' => 'No puedes añadir ni quitar permisos que no tienes.',
+            'associationRoleNoPanel' => 'El rol de socio no puede tener acceso al panel de administración.',
+        ],
         'label' => 'rol',
         'pluralLabel' => 'Roles',
         'sections' => [
@@ -493,6 +497,7 @@ return [
         ],
         'fields' => [
             'name' => 'Nombre',
+            'nameFormat' => 'Solo minúsculas, números y guiones, sin espacios.',
             'nameHelp' => 'Identificador interno del rol (no se puede cambiar en roles protegidos).',
             'displayName' => 'Nombre para mostrar',
             'description' => 'Descripción',

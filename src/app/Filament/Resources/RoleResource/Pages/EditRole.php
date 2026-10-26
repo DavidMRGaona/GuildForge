@@ -12,6 +12,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditRole extends EditRecord
 {
+    use GuardsRolePermissions;
+
     protected static string $resource = RoleResource::class;
 
     /**
@@ -50,6 +52,17 @@ class EditRole extends EditRecord
         }
 
         return $data;
+    }
+
+    protected function beforeSave(): void
+    {
+        /** @var RoleModel $record */
+        $record = $this->record;
+
+        $this->guardSubmittedPermissions(
+            $record->name,
+            array_values($record->permissions()->pluck('permissions.id')->map(strval(...))->all()),
+        );
     }
 
     protected function afterSave(): void
