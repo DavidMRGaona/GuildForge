@@ -287,6 +287,33 @@ final class RolePermissionTabsTest extends TestCase
         $this->assertEqualsCanonicalizing(['events.view_any', 'events.create'], $this->keys($role));
     }
 
+    public function test_bulk_toggle_only_on_sections_without_locked_boxes(): void
+    {
+        $eventKeys = PermissionModel::query()->where('key', 'like', 'events.%')->pluck('key')->map(strval(...))->all();
+        $this->assertNotSame([], $eventKeys);
+
+        $actor = $this->editorWithPermissions(['admin.access', 'roles.view_any', 'roles.update', 'events.view_any']);
+        $this->actingAs($actor);
+        $role = $this->role();
+
+        // Mixed section (some boxes locked) and fully locked section: no bulk toggle
+        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
+            ->assertFormFieldExists('permissions_by_section.content.events', 'form', fn (CheckboxList $field): bool => ! $field->isBulkToggleable())
+            ->assertFormFieldExists('permissions_by_section.users.users', 'form', fn (CheckboxList $field): bool => ! $field->isBulkToggleable());
+
+        // A section the actor can edit entirely keeps it
+        $full = $this->editorWithPermissions(['admin.access', 'roles.view_any', 'roles.update', ...$eventKeys]);
+        $this->actingAs($full);
+        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
+            ->assertFormFieldExists('permissions_by_section.content.events', 'form', fn (CheckboxList $field): bool => $field->isBulkToggleable());
+
+        // Admin keeps it everywhere
+        $this->actingAs(UserModel::factory()->admin()->create());
+        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
+            ->assertFormFieldExists('permissions_by_section.users.users', 'form', fn (CheckboxList $field): bool => $field->isBulkToggleable())
+            ->assertFormFieldExists('permissions_by_section.content.events', 'form', fn (CheckboxList $field): bool => $field->isBulkToggleable());
+    }
+
     public function test_create_role_with_tabs(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());

@@ -418,7 +418,9 @@ class RoleResource extends BaseResource
                     // Filament only accepts enabled options by default, which would reject a
                     // ticked disabled box: the server check decides on those
                     ->in(static fn (CheckboxList $component): array => array_keys($component->getOptions()))
-                    ->bulkToggleable()
+                    // Filament labels the toggle from "all boxes ticked", which a locked box never is:
+                    // with one in the section the button would alternately untick what the actor holds
+                    ->bulkToggleable($editable === null || array_diff($keys, $editable) === [])
                     ->selectAllAction(static fn (Action $action): Action => $action->label(__('filament.roles.fields.selectAllPermissions')))
                     ->deselectAllAction(static fn (Action $action): Action => $action->label(__('filament.roles.fields.deselectAllPermissions')))
                     ->columns(2)
