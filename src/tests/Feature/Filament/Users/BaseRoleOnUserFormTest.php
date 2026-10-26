@@ -46,7 +46,7 @@ final class BaseRoleOnUserFormTest extends TestCase
             'admin' => ['admin'],
             'editor' => ['editor'],
             'socio' => ['socio'],
-            'custom role' => ['game_master'],
+            'custom role' => ['game-master'],
         ];
     }
 
@@ -57,7 +57,7 @@ final class BaseRoleOnUserFormTest extends TestCase
         $user = $this->userWithMember();
 
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
-            ->fillForm(['roles' => [$this->member()->id, $role->id]])
+            ->fillForm(['roles' => ['member', $role->name]])
             ->call('save')
             ->assertHasNoFormErrors();
 
@@ -73,7 +73,7 @@ final class BaseRoleOnUserFormTest extends TestCase
         $this->authorization()->invalidateCache();
 
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
-            ->fillForm(['roles' => [$this->member()->id]])
+            ->fillForm(['roles' => ['member']])
             ->call('save')
             ->assertHasNoFormErrors();
 
@@ -107,9 +107,9 @@ final class BaseRoleOnUserFormTest extends TestCase
         $page = Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
             ->assertSee(__('filament.users.fields.rolesHelp'));
 
-        $this->assertContains($member->id, $page->get('data.roles'));
-        $this->assertTrue($this->rolesField($page)->isOptionDisabled($member->id, $member->display_name));
-        $this->assertFalse($this->rolesField($page)->isOptionDisabled($editor->id, $editor->display_name));
+        $this->assertContains($member->name, $page->get('data.roles'));
+        $this->assertTrue($this->rolesField($page)->isOptionDisabled($member->name, $member->display_name));
+        $this->assertFalse($this->rolesField($page)->isOptionDisabled($editor->name, $editor->display_name));
     }
 
     public function test_the_create_form_shows_the_base_role_ticked_and_disabled(): void
@@ -119,8 +119,8 @@ final class BaseRoleOnUserFormTest extends TestCase
         $page = Livewire::test(CreateUser::class)
             ->assertSee(__('filament.users.fields.rolesHelp'));
 
-        $this->assertContains($member->id, $page->get('data.roles'));
-        $this->assertTrue($this->rolesField($page)->isOptionDisabled($member->id, $member->display_name));
+        $this->assertContains($member->name, $page->get('data.roles'));
+        $this->assertTrue($this->rolesField($page)->isOptionDisabled($member->name, $member->display_name));
     }
 
     public function test_an_account_without_the_base_role_sees_it_ticked_and_gets_it_on_save(): void
@@ -129,7 +129,7 @@ final class BaseRoleOnUserFormTest extends TestCase
 
         $page = Livewire::test(EditUser::class, ['record' => $user->getRouteKey()]);
 
-        $this->assertContains($this->member()->id, $page->get('data.roles'));
+        $this->assertContains('member', $page->get('data.roles'));
         $page->call('save')->assertHasNoFormErrors();
         $this->assertSame(['member'], $this->authorization()->getRoles($user));
     }
@@ -153,7 +153,7 @@ final class BaseRoleOnUserFormTest extends TestCase
         $user->roles()->attach($editor->id);
 
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
-            ->fillForm(['roles' => [$editor->id]])
+            ->fillForm(['roles' => [$editor->name]])
             ->call('save')
             ->assertHasNoFormErrors();
 
@@ -180,7 +180,7 @@ final class BaseRoleOnUserFormTest extends TestCase
         $user = $this->userWithMember();
 
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
-            ->set('data.roles', [$editor->id])
+            ->set('data.roles', [$editor->name])
             ->call('save')
             ->assertHasNoFormErrors();
 

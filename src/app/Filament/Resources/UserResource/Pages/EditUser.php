@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\UserResource\Pages;
 
-use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource;
+use App\Filament\Resources\UserResource\Concerns\SavesRolesThroughTheGrantRule;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -18,26 +18,52 @@ use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
 class EditUser extends EditRecord
 {
+    use SavesRolesThroughTheGrantRule;
+
     protected static string $resource = UserResource::class;
 
-    protected function afterSave(): void
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
     {
         /** @var UserModel $user */
         $user = $this->record;
 
-        // The roles checkbox list syncs the pivot with the submitted state and does not keep its
-        // disabled base role: give it back if a forged state left it out. Anonymized accounts
-        // hold no roles on purpose.
-        if ($user->anonymized_at === null) {
-            app(MemberRoleServiceInterface::class)->assignTo($user);
+        // Every role the account holds, inactive ones included
+        $data['roles'] = $user->roles()->pluck('roles.name')->all();
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        /** @var UserModel $record */
+        $submittedRoles = $data['roles'] ?? [];
+        unset($data['roles']);
+
+        $saved = $this->saveAccountWithRoles($record, $submittedRoles, static function () use ($record, $data): UserModel {
+            $record->update($data);
+
+            return $record;
+        });
+
+        // Without users.assign_roles the roles are left as they are: an account that lost its
+        // base role still gets it back. Anonymized accounts hold no roles on purpose.
+        if ($saved->anonymized_at === null) {
+            app(MemberRoleServiceInterface::class)->assignTo($saved);
         }
 
-        // The roles checkbox list writes the pivot directly: drop this user's cached roles and permissions
-        app(AuthorizationServiceInterface::class)->invalidateCacheFor($user);
+        return $saved;
     }
 
     /**

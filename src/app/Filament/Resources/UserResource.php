@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
@@ -65,7 +67,9 @@ class UserResource extends BaseResource
 
     public static function form(Schema $schema): Schema
     {
-        $baseRoleId = self::baseRoleId();
+        $baseRoleExists = RoleModel::query()->where('name', BaseRoleRule::NAME)->exists();
+        // Read once per form, on first use: every option asks for it
+        $grantableRoleNames = null;
 
         return $schema
             ->components([
@@ -129,34 +133,45 @@ class UserResource extends BaseResource
                         CheckboxList::make('roles')
                             ->label(__('filament.users.fields.roles'))
                             // Only where the base role is ticked: never on an anonymized account
-                            ->helperText(static fn (?UserModel $record): ?string => $baseRoleId !== null && $record?->anonymized_at === null
+                            ->helperText(static fn (?UserModel $record): ?string => $baseRoleExists && $record?->anonymized_at === null
                                 ? (string) __('filament.users.fields.rolesHelp')
                                 : null)
-                            ->relationship(
-                                name: 'roles',
-                                titleAttribute: 'display_name',
-                            )
+                            // Not a relationship: EditUser and CreateUser save the role names
+                            // through the grant rule and the authorization service
+                            ->options(static fn (): array => RoleModel::query()
+                                ->orderBy('display_name')
+                                ->pluck('display_name', 'name')
+                                ->all())
                             ->columns(2)
                             ->searchable()
                             ->bulkToggleable()
-                            // The base role of every account: always ticked and never unticked
-                            // ("Deselect all" skips disabled options); EditUser and CreateUser
-                            // give it back after saving should a forged state leave it out
-                            ->disableOptionWhen(static fn (string $value): bool => $value === $baseRoleId)
+                            // Without users.assign_roles the list is read-only, and the pages
+                            // ignore whatever roles are submitted
+                            ->disabled(static fn (): bool => ! self::actorCanAssignRoles())
+                            ->dehydrated()
+                            // The base role of every account is always ticked and never unticked
+                            // ("Deselect all" skips disabled options); a role the actor cannot
+                            // grant cannot be ticked or unticked either. The pages enforce both
+                            // on the server should a forged state change them
+                            ->disableOptionWhen(static function (string $value) use (&$grantableRoleNames): bool {
+                                $grantableRoleNames ??= self::grantableRoleNames();
+
+                                return $value === BaseRoleRule::NAME || ! in_array($value, $grantableRoleNames, true);
+                            })
                             // Filament only accepts enabled options by default, which would reject
                             // the ticked base role: validate against every role instead
                             ->in(static fn (CheckboxList $component): array => array_keys($component->getOptions()))
-                            ->afterStateHydrated(static function (CheckboxList $component, ?array $state, ?UserModel $record) use ($baseRoleId): void {
+                            ->afterStateHydrated(static function (CheckboxList $component, ?array $state, ?UserModel $record) use ($baseRoleExists): void {
                                 // Anonymized accounts hold no roles on purpose
-                                if ($baseRoleId === null || $record?->anonymized_at !== null) {
+                                if (! $baseRoleExists || $record?->anonymized_at !== null) {
                                     return;
                                 }
 
-                                $component->state(array_values(array_unique([...$state ?? [], $baseRoleId])));
+                                $component->state(array_values(array_unique([...$state ?? [], BaseRoleRule::NAME])));
                             })
                             ->descriptions(
                                 RoleModel::query()
-                                    ->pluck('description', 'id')
+                                    ->pluck('description', 'name')
                                     ->toArray()
                             ),
                     ]),
@@ -439,13 +454,21 @@ class UserResource extends BaseResource
         return $query;
     }
 
-    /**
-     * Null when the role does not exist (an install without seeders): nothing is locked then.
-     */
-    private static function baseRoleId(): ?string
+    private static function actorCanAssignRoles(): bool
     {
-        $id = RoleModel::query()->where('name', BaseRoleRule::NAME)->value('id');
+        $actor = Auth::user();
 
-        return is_string($id) ? $id : null;
+        return $actor !== null
+            && app(AuthorizationServiceInterface::class)->can($actor, RoleGrantPolicy::ASSIGN_ROLES_PERMISSION);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function grantableRoleNames(): array
+    {
+        $actor = Auth::user();
+
+        return $actor === null ? [] : app(RoleGrantPolicy::class)->grantableRoleNames($actor);
     }
 }

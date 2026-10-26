@@ -71,7 +71,7 @@ final class MemberRoleOnAccountCreationTest extends TestCase
                 'name' => 'nuevo',
                 'email' => 'nuevo@example.com',
                 'password' => 'secret-password',
-                'roles' => [$editor->id],
+                'roles' => [$editor->name],
             ])
             ->call('create')
             ->assertHasNoFormErrors();

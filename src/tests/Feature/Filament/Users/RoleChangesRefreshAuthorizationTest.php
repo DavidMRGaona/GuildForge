@@ -51,7 +51,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $this->assertFalse($this->authorization->can($user, 'events.create'));
 
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
-            ->fillForm(['roles' => [$role->id]])
+            ->fillForm(['roles' => [$role->name]])
             ->call('save')
             ->assertHasNoFormErrors();
 
@@ -328,7 +328,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $this->assertFalse($this->authorization->can($other, 'events.create'));
 
         Livewire::test(EditUser::class, ['record' => $changed->getRouteKey()])
-            ->fillForm(['roles' => [$role->id]])
+            ->fillForm(['roles' => [$role->name]])
             ->call('save')
             ->assertHasNoFormErrors();
 
@@ -488,7 +488,7 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
     private function roleWith(string $permissionKey): RoleModel
     {
         [$resource, $action] = explode('.', $permissionKey, 2);
-        $role = RoleModel::query()->create(['name' => 'role_'.uniqid(), 'display_name' => 'Tester']);
+        $role = RoleModel::query()->create(['name' => 'role-'.uniqid(), 'display_name' => 'Tester']);
         $permission = PermissionModel::query()->firstOrCreate(['key' => $permissionKey], ['label' => $permissionKey, 'resource' => $resource, 'action' => $action]);
         $role->permissions()->attach($permission->id);
 
