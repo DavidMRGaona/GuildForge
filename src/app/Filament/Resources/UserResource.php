@@ -14,6 +14,7 @@ use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Resources\UserResource\RelationManagers\RoleAuditRelationManager;
 use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Images\AvatarPath;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
@@ -410,6 +411,13 @@ class UserResource extends BaseResource
                 ])->icon('heroicon-m-ellipsis-vertical'),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RoleAuditRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

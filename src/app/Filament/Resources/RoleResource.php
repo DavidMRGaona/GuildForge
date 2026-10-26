@@ -16,6 +16,7 @@ use App\Domain\Authorization\ValueObjects\RoleName;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
+use App\Filament\Resources\RoleResource\RelationManagers\RoleAuditRelationManager;
 use App\Filament\Resources\RoleResource\RoleRequirementImpact;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
@@ -297,6 +298,13 @@ class RoleResource extends BaseResource
     {
         return $record instanceof RoleModel
             && app(AssociationMemberRoleRule::class)->isAssociationMemberRoleName($record->name);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RoleAuditRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

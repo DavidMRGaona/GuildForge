@@ -7,6 +7,7 @@ namespace App\Infrastructure\Persistence\Eloquent\Models;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
@@ -41,6 +42,26 @@ final class RoleAuditEntryModel extends Model
         'actor_id',
         'source',
     ];
+
+    /**
+     * The account that made the change; trashed and anonymized accounts stay readable.
+     *
+     * @return BelongsTo<UserModel, $this>
+     */
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(UserModel::class, 'actor_id')->withTrashed();
+    }
+
+    /**
+     * The account that received or lost the role.
+     *
+     * @return BelongsTo<UserModel, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(UserModel::class, 'user_id')->withTrashed();
+    }
 
     /**
      * @return array<string, string>
