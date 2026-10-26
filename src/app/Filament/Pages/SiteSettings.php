@@ -9,6 +9,7 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
@@ -24,9 +25,11 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -509,8 +512,9 @@ final class SiteSettings extends Page implements HasForms
                                             ->options(fn (): array => $this->associationMemberRoleOptions())
                                             // Server-side guard against a forged Livewire state (base roles, missing roles)
                                             ->in(fn (): array => array_keys($this->associationMemberRoleOptions()))
-                                            ->hint(fn (): ?string => $this->associationMemberRoleWarning())
-                                            ->hintIcon(fn (): ?string => $this->associationMemberRoleWarning() !== null ? 'heroicon-o-exclamation-triangle' : null)
+                                            ->live()
+                                            ->hint(fn (Get $get): ?string => $this->associationMemberRoleHint($get(AssociationMembershipServiceInterface::SETTING_KEY)))
+                                            ->hintIcon(fn (Get $get): ?string => $this->associationMemberRoleHint($get(AssociationMembershipServiceInterface::SETTING_KEY)) !== null ? 'heroicon-o-exclamation-triangle' : null)
                                             ->hintColor('warning')
                                             ->native(false)
                                             ->required(),
@@ -566,7 +570,18 @@ final class SiteSettings extends Page implements HasForms
 
         $options = [];
 
-        foreach (RoleModel::query()->orderBy('display_name')->get(['name', 'display_name']) as $role) {
+        // Roles with panel access, a membership requirement or a holder cap contradict (or would
+        // escalate) a role handed out automatically to every paying member
+        $roles = RoleModel::query()
+            ->where('requires_association_member', false)
+            ->whereNull('max_holders')
+            ->whereDoesntHave('permissions', static function (Builder $permissions): void {
+                $permissions->where('key', 'admin.access');
+            })
+            ->orderBy('display_name')
+            ->get(['name', 'display_name']);
+
+        foreach ($roles as $role) {
             if (! in_array(mb_strtolower($role->name), AssociationMembershipServiceInterface::FORBIDDEN_ROLES, true)) {
                 $options[$role->name] = $role->display_name;
             }
@@ -604,6 +619,32 @@ final class SiteSettings extends Page implements HasForms
         }
 
         return __('filament.settings.auth.association_member_role_unavailable', ['role' => $roleName]);
+    }
+
+    /**
+     * The warning for an unusable saved role or, when another role is picked, how many people
+     * would be left with inactive roles.
+     */
+    private function associationMemberRoleHint(mixed $selected): ?string
+    {
+        $warning = $this->associationMemberRoleWarning();
+
+        if ($warning !== null) {
+            return $warning;
+        }
+
+        $saved = $this->effectiveAssociationMemberRole(
+            app(SettingsServiceInterface::class)->get(AssociationMembershipServiceInterface::SETTING_KEY)
+        );
+        $chosen = is_string($selected) ? trim($selected) : '';
+
+        if ($chosen === '' || $chosen === $saved || $this->usableAssociationMemberRole($chosen) === null) {
+            return null;
+        }
+
+        $count = app(InactiveRoleHolders::class)->count($chosen);
+
+        return trans_choice('filament.settings.auth.association_member_role_inactive_holders', $count, ['count' => $count]);
     }
 
     public function save(SettingsServiceInterface $settingsService): void
