@@ -64,6 +64,16 @@ final class RoleAuditEntryModel extends Model
     }
 
     /**
+     * The role while it still exists; entries keep its name once it is deleted.
+     *
+     * @return BelongsTo<RoleModel, $this>
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(RoleModel::class, 'role_id');
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
