@@ -9,6 +9,11 @@ return [
         'manager_subject' => ':name tiene roles en pausa',
         'manager_body' => ':name ha dejado de ser socio y estos roles no funcionan por ahora: :roles. Si hay que nombrar a otra persona, quítaselos antes desde su ficha.',
     ],
+    'tabs' => [
+        'content' => 'Contenido',
+        'users' => 'Usuarios y roles',
+        'site' => 'Sitio',
+    ],
     'resources' => [
         'events' => 'Eventos',
         'articles' => 'Artículos',

@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'tabs' => [
+        'content' => 'Content',
+        'users' => 'Users and roles',
+        'site' => 'Site',
+    ],
     'resources' => [
         'events' => 'Events',
         'articles' => 'Articles',
