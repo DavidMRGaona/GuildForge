@@ -10,6 +10,7 @@ use App\Filament\Resources\RoleResource\RoleRequirementImpact;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -119,6 +120,65 @@ final class RoleRequirementFieldsTest extends TestCase
         $deleted->delete();
 
         $this->assertSame(1, app(RoleRequirementImpact::class)->inactiveHolderCount($junta));
+    }
+
+    public function test_turning_the_requirement_on_tells_how_many_holders_go_inactive(): void
+    {
+        $junta = $this->role('junta');
+        $this->role('socio');
+        UserModel::factory()->create()->roles()->attach($junta->id);
+
+        Livewire::test(EditRole::class, ['record' => $junta->getRouteKey()])
+            ->set('data.requires_association_member', true)
+            ->assertSee('1 persona quedará con este rol inactivo hasta que sea socia.')
+            ->assertDontSee('1 personas');
+
+        UserModel::factory()->create()->roles()->attach($junta->id);
+
+        Livewire::test(EditRole::class, ['record' => $junta->getRouteKey()])
+            ->set('data.requires_association_member', true)
+            ->assertSee('2 personas quedarán con este rol inactivo hasta que sean socias.');
+    }
+
+    public function test_a_limit_below_the_current_holders_warns_and_removes_nobody(): void
+    {
+        $junta = $this->role('junta');
+        $junta->update(['requires_association_member' => true]);
+        $holders = UserModel::factory()->count(3)->create();
+        foreach ($holders as $holder) {
+            // Not association members: the role is inactive for them, yet they still count
+            $holder->roles()->attach($junta->id);
+        }
+        UserModel::factory()->create(['anonymized_at' => now()])->roles()->attach($junta->id);
+        $deleted = UserModel::factory()->create();
+        $deleted->roles()->attach($junta->id);
+        $deleted->delete();
+        $warning = 'Ahora lo tienen 3 personas: nadie lo pierde, pero no se podrá dar a nadie más hasta que lo tengan menos de 2.';
+
+        Livewire::test(EditRole::class, ['record' => $junta->getRouteKey()])
+            ->assertDontSee('Ahora lo tienen')
+            ->set('data.max_holders', 3)
+            ->assertDontSee('Ahora lo tienen')
+            ->set('data.max_holders', 2)
+            ->assertSee($warning)
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(2, $junta->refresh()->max_holders);
+        foreach ($holders as $holder) {
+            $this->assertTrue($holder->roles()->whereKey($junta->id)->exists());
+        }
+        $this->assertSame(5, DB::table('user_role')->where('role_id', $junta->id)->count());
+    }
+
+    public function test_a_single_place_role_names_its_holder_by_display_name(): void
+    {
+        $junta = $this->role('junta');
+        $junta->update(['max_holders' => 1]);
+        UserModel::factory()->create(['name' => 'jroe', 'display_name' => 'Jane Roe'])->roles()->attach($junta->id);
+
+        Livewire::test(EditRole::class, ['record' => $junta->getRouteKey()])
+            ->assertSee('Ahora lo tiene Jane Roe.');
     }
 
     private function role(string $name): RoleModel

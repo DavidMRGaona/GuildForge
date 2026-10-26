@@ -84,6 +84,14 @@ final readonly class RoleHolderLimitGuard
         });
     }
 
+    /**
+     * How many accounts take a place in the role now, counted as the limit counts them.
+     */
+    public function holderCount(RoleModel $role): int
+    {
+        return $this->holders($role)->count();
+    }
+
     private function lockRole(RoleModel $role): ?RoleModel
     {
         return RoleModel::query()
@@ -99,17 +107,25 @@ final readonly class RoleHolderLimitGuard
      */
     private function otherHolders(UserModel $user, RoleModel $role): Collection
     {
+        return $this->holders($role)
+            ->whereKeyNot($user->getKey())
+            ->orderBy('users.name')
+            ->get(['users.id', 'users.name', 'users.display_name']);
+    }
+
+    /**
+     * @return Builder<UserModel>
+     */
+    private function holders(RoleModel $role): Builder
+    {
         return UserModel::query()
             // Explicit about who counts: deactivated and anonymized accounts never do
             ->withTrashed()
             ->whereNull('users.deleted_at')
             ->whereNull('users.anonymized_at')
-            ->whereKeyNot($user->getKey())
             ->whereHas('roles', static function (Builder $query) use ($role): void {
                 $query->whereKey($role->getKey());
-            })
-            ->orderBy('users.name')
-            ->get(['users.id', 'users.name', 'users.display_name']);
+            });
     }
 
     private function roleDisplayName(RoleModel $role): string

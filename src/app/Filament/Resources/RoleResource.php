@@ -22,6 +22,7 @@ use App\Filament\Resources\RoleResource\PermissionSection;
 use App\Filament\Resources\RoleResource\PermissionTab;
 use App\Filament\Resources\RoleResource\RelationManagers\RoleAuditRelationManager;
 use App\Filament\Resources\RoleResource\RoleRequirementImpact;
+use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
@@ -58,6 +59,9 @@ class RoleResource extends BaseResource
     /** @var WeakMap<object, list<PermissionTab>>|null */
     private static ?WeakMap $permissionTabsByPage = null;
 
+    /** @var WeakMap<object, int>|null */
+    private static ?WeakMap $holderCountByPage = null;
+
     public static function getModelLabel(): string
     {
         return __('filament.roles.label');
@@ -70,7 +74,8 @@ class RoleResource extends BaseResource
 
     public static function form(Schema $schema): Schema
     {
-        $permissionTabs = self::permissionTabs($schema->getLivewire());
+        $livewire = $schema->getLivewire();
+        $permissionTabs = self::permissionTabs($livewire);
         $editable = self::editablePermissionKeys();
 
         return $schema
@@ -119,7 +124,11 @@ class RoleResource extends BaseResource
                             ->minValue(1)
                             ->nullable()
                             ->dehydrateStateUsing(static fn (mixed $state): ?int => blank($state) ? null : (int) $state)
+                            ->live(onBlur: true)
                             ->disabled(fn (?RoleModel $record): bool => ! self::canBeRestricted($record))
+                            ->hint(fn (Get $get, ?RoleModel $record): ?string => self::maxHoldersWarning($livewire, $get('max_holders'), $record))
+                            ->hintIcon(fn (Get $get, ?RoleModel $record): ?string => self::maxHoldersWarning($livewire, $get('max_holders'), $record) !== null ? 'heroicon-o-exclamation-triangle' : null)
+                            ->hintColor('warning')
                             ->helperText(fn (?RoleModel $record): string => self::maxHoldersHelp($record)),
                         Toggle::make('is_protected')
                             ->label(__('filament.roles.fields.isProtected'))
@@ -255,7 +264,7 @@ class RoleResource extends BaseResource
         $count = app(RoleRequirementImpact::class)->inactiveHolderCount($record);
 
         return $count > 0
-            ? $help.' '.__('filament.roles.fields.requirementImpact', ['count' => $count])
+            ? $help.' '.trans_choice('filament.roles.fields.requirementImpact', $count, ['count' => $count])
             : $help;
     }
 
@@ -267,11 +276,36 @@ class RoleResource extends BaseResource
             return $help;
         }
 
-        $holder = $record->users()->orderBy('users.name')->first();
+        $holder = $record->users()->whereNull('users.anonymized_at')->orderBy('users.name')->first();
 
         return $holder instanceof UserModel
-            ? $help.' '.__('filament.roles.fields.maxHoldersCurrent', ['name' => $holder->name])
+            ? $help.' '.__('filament.roles.fields.maxHoldersCurrent', ['name' => $holder->display_name ?? $holder->name])
             : $help;
+    }
+
+    /**
+     * Lowering the limit below the current holders removes nobody, it only stops new ones:
+     * the form says so while the typed limit is below the count.
+     */
+    private static function maxHoldersWarning(object $livewire, mixed $maxHolders, ?RoleModel $record): ?string
+    {
+        if (! $record instanceof RoleModel || ! self::canBeRestricted($record)) {
+            return null;
+        }
+
+        $max = filter_var($maxHolders, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+        if ($max === false) {
+            return null;
+        }
+
+        // Counted once per request: the hint and its icon both ask
+        self::$holderCountByPage ??= new WeakMap;
+        $count = self::$holderCountByPage[$livewire] ??= app(RoleHolderLimitGuard::class)->holderCount($record);
+
+        return $count > $max
+            ? trans_choice('filament.roles.fields.maxHoldersOverLimit', $count, ['count' => $count, 'max' => $max])
+            : null;
     }
 
     /**
