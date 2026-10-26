@@ -332,6 +332,77 @@ final class RolePermissionTabsTest extends TestCase
         $this->assertEqualsCanonicalizing(['events.view_any', self::MODULE_KEY, 'admin.access'], $entry->changes['permissions_added'] ?? []);
     }
 
+    public function test_the_permission_search_sits_above_the_tabs_and_is_not_form_state(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $role = $this->role(['events.view_any']);
+
+        $html = (string) $this->get(EditRole::getUrl(['record' => $role]))
+            ->assertOk()
+            ->assertSee(__('filament.roles.permissionSearch.label'))
+            ->assertSee(__('filament.roles.permissionSearch.placeholder'))
+            ->assertSee(__('filament.roles.permissionSearch.noResults'))
+            ->getContent();
+
+        // Inside the permissions section, before its tabs
+        $section = strpos($html, (string) __('filament.roles.sections.permissionsDescription'));
+        $search = strpos($html, 'data-permission-search');
+        $tabs = strpos($html, 'data-permission-tabs="');
+        $this->assertIsInt($section);
+        $this->assertIsInt($search);
+        $this->assertIsInt($tabs);
+        $this->assertTrue($section < $search && $search < $tabs);
+
+        // Browser-only: never bound to Livewire, so it is neither sent, validated nor saved
+        $this->assertStringNotContainsString('wire:model', substr($html, $search, $tabs - $search));
+
+        $page = Livewire::test(EditRole::class, ['record' => $role->getRouteKey()]);
+        $data = $page->get('data');
+        $this->assertIsArray($data);
+        $this->assertSame([], array_values(array_filter(array_map(strval(...), array_keys($data)), static fn (string $key): bool => str_contains($key, 'search'))));
+
+        $page->set('data.permissions_by_section.content.events', [$this->id('events.view_any'), $this->id('events.create')])
+            ->call('save')
+            ->assertHasNoFormErrors();
+        $this->assertEqualsCanonicalizing(['events.view_any', 'events.create'], $this->keys($role));
+    }
+
+    public function test_the_permission_search_indexes_every_option_with_its_shown_text(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $editor = RoleModel::query()->firstOrCreate(['name' => 'editor'], ['display_name' => 'Editor']);
+
+        $html = (string) $this->get(EditRole::getUrl(['record' => $editor]))->assertOk()->getContent();
+
+        $this->assertSame(1, preg_match('/data-permission-index="([^"]*)"/', $html, $match));
+        $index = json_decode(html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertIsArray($index);
+
+        $tabs = array_values(array_filter(
+            app(PermissionCatalog::class)->tabs(),
+            static fn (PermissionTab $tab): bool => $tab->sections !== [],
+        ));
+        $this->assertSame(
+            array_map(static fn (PermissionTab $tab): string => 'permission-tab-'.$tab->key, $tabs),
+            array_column($index, 'tab'),
+        );
+
+        $module = array_first(array_filter($index, static fn (array $tab): bool => $tab['tab'] === 'permission-tab-'.self::MODULE_TAB));
+        $this->assertSame(self::MODULE_TAB.'.registrations', $module['sections'][0]['key']);
+        $this->assertSame(
+            [
+                $this->id(self::MODULE_KEY) => 'Ver inscripciones Consultar quién se ha inscrito · Sugerido para este rol',
+                $this->id('event-registrations:registrations.manage') => 'Gestionar inscripciones Aceptar y cancelar inscripciones',
+            ],
+            array_column($module['sections'][0]['options'], 'text', 'id'),
+        );
+
+        // Hooks the script uses: one per section, and the tabs container
+        $this->assertStringContainsString('data-permission-section="'.self::MODULE_TAB.'.registrations"', $html);
+        $this->assertStringContainsString('data-permission-section="content.events"', $html);
+        $this->assertSame(1, substr_count($html, 'data-permission-tabs="'));
+    }
+
     /**
      * @param  list<string>  $keys
      */

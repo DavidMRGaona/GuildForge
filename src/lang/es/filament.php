@@ -581,6 +581,15 @@ return [
             'usersCount' => 'Usuarios',
             'createdAt' => 'Creado',
         ],
+        'permissionSearch' => [
+            'label' => 'Buscar permisos',
+            'placeholder' => 'Buscar permiso…',
+            'noResults' => 'Ningún permiso coincide con la búsqueda.',
+            'resultsOne' => ':count permiso coincide con la búsqueda.',
+            'resultsMany' => ':count permisos coinciden con la búsqueda.',
+            'tabMatchesOne' => ':count coincidencia',
+            'tabMatchesMany' => ':count coincidencias',
+        ],
     ],
 
     'updates' => [

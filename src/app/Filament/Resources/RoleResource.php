@@ -39,6 +39,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -162,12 +163,17 @@ class RoleResource extends BaseResource
                 Section::make(__('filament.roles.sections.permissions'))
                     ->description(__('filament.roles.sections.permissionsDescription'))
                     ->schema([
+                        // Filters the tabs in the browser only: it holds no form state
+                        View::make('filament.resources.roles.permission-search')
+                            ->viewData(['index' => self::permissionSearchIndex($permissionTabs, $schema->getRecord())])
+                            ->hidden($permissionTabs === []),
                         Tabs::make(__('filament.roles.fields.permissions'))
                             ->tabs(array_map(
                                 static fn (PermissionTab $tab): Tab => self::permissionTab($tab, $editable),
                                 $permissionTabs,
                             ))
                             ->activeTab(fn (Get $get): int => self::firstTabWithPermissions($get, $permissionTabs))
+                            ->extraAttributes(['data-permission-tabs' => true])
                             ->hidden($permissionTabs === []),
                     ]),
             ]);
@@ -405,6 +411,7 @@ class RoleResource extends BaseResource
         }
 
         return Fieldset::make($section->label)
+            ->extraAttributes(['data-permission-section' => "{$tab->key}.{$section->key}"])
             ->columns(1)
             ->schema([
                 CheckboxList::make("permissions_by_section.{$tab->key}.{$section->key}")
@@ -453,6 +460,34 @@ class RoleResource extends BaseResource
         }
 
         return $descriptions;
+    }
+
+    /**
+     * What the permission search matches: every option of every tab, with the text shown for it
+     * (label and description). The keys are the hooks the search finds in the page: the tab
+     * buttons, the sections and the boxes' values.
+     *
+     * @param  list<PermissionTab>  $tabs
+     * @return list<array{tab: string, sections: list<array{key: string, options: list<array{id: string, text: string}>}>}>
+     */
+    private static function permissionSearchIndex(array $tabs, mixed $record): array
+    {
+        $record = $record instanceof RoleModel ? $record : null;
+
+        return array_map(static fn (PermissionTab $tab): array => [
+            'tab' => 'permission-tab-'.$tab->key,
+            'sections' => array_map(static function (PermissionSection $section) use ($tab, $record): array {
+                $descriptions = self::permissionDescriptions($section, $record);
+
+                return [
+                    'key' => "{$tab->key}.{$section->key}",
+                    'options' => array_map(static fn (PermissionOption $option): array => [
+                        'id' => $option->id,
+                        'text' => trim($option->label.' '.($descriptions[$option->id] ?? '')),
+                    ], $section->permissions),
+                ];
+            }, $tab->sections),
+        ], $tabs);
     }
 
     /**
