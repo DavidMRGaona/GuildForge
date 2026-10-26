@@ -48,22 +48,24 @@ run() {
 }
 
 if [ "$PART" = php ] || [ "$PART" = all ]; then
-    # Same order as the core: Rector's output is not Pint-clean
-    if [ -d "$DIR/src" ]; then
-        run Rector vendor/bin/rector process --dry-run --no-progress-bar "$DIR/src"
-    fi
-    run Pint vendor/bin/pint --test "$DIR"
-    # The tests, factories and seeders too, so their types do not drift while nobody looks
-    STAN_PATHS=""
-    for STAN_DIR in "$DIR/src" "$DIR/tests" "$DIR/database"; do
-        if [ -d "$STAN_DIR" ]; then
-            STAN_PATHS="$STAN_PATHS $STAN_DIR"
+    # The tests, factories and seeders too, so they do not drift while nobody looks;
+    # rector.php skips migrations and fixtures by pattern, as in the core
+    PHP_PATHS=""
+    for PHP_DIR in "$DIR/src" "$DIR/tests" "$DIR/database"; do
+        if [ -d "$PHP_DIR" ]; then
+            PHP_PATHS="$PHP_PATHS $PHP_DIR"
         fi
     done
-    if [ -n "$STAN_PATHS" ]; then
-        # Word splitting is wanted: the paths have no spaces (the module name is checked above)
+    # Word splitting is wanted below: the paths have no spaces (the module name is checked above)
+    # Same order as the core: Rector's output is not Pint-clean
+    if [ -n "$PHP_PATHS" ]; then
         # shellcheck disable=SC2086
-        run PHPStan vendor/bin/phpstan analyse --no-progress --memory-limit=2G --configuration=phpstan-modules.neon $STAN_PATHS
+        run Rector vendor/bin/rector process --dry-run --no-progress-bar $PHP_PATHS
+    fi
+    run Pint vendor/bin/pint --test "$DIR"
+    if [ -n "$PHP_PATHS" ]; then
+        # shellcheck disable=SC2086
+        run PHPStan vendor/bin/phpstan analyse --no-progress --memory-limit=2G --configuration=phpstan-modules.neon $PHP_PATHS
     fi
 fi
 

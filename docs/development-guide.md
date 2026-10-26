@@ -411,7 +411,7 @@ PHP tools run in this order: **Rector → Pint → PHPStan**. Rector's output is
 
 ### Rector (PHP refactoring)
 
-Uses `src/rector.php` over `app/`: PHP 8.5 syntax, dead code and code quality sets. A rule that does not fit the project is skipped there with `withSkip()` and a comment, rather than worked around in the code. CI fails if Rector would change anything:
+Uses `src/rector.php` over `app/`, `database/` and `tests/` (migrations and `tests/Fixtures` are skipped by pattern, so the same skips hold for a module's `database/` and `tests/`): PHP 8.5 syntax, dead code and code quality sets. A rule that does not fit the project is skipped there with `withSkip()` and a comment, rather than worked around in the code. CI fails if Rector would change anything:
 
 ```bash
 make rector       # Check (dry-run)

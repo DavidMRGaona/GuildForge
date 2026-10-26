@@ -14,9 +14,10 @@ return RectorConfig::configure()
     ->withPhpSets(php85: true)
     ->withPreparedSets(deadCode: true, codeQuality: true)
     ->withSkip([
-        // Migrations already ran on live sites, and fixtures are inputs kept exactly as written
-        __DIR__.'/database/migrations',
-        __DIR__.'/tests/Fixtures',
+        // Migrations already ran on live sites, and fixtures are inputs kept exactly as written.
+        // Plain patterns, so they also match a module's database/ and tests/ (scripts/check-module-quality.sh).
+        '*/database/migrations/*',
+        '*/tests/Fixtures/*',
         // The test builds this module class at runtime, so ::class would name a class static analysis cannot find
         StringClassNameToClassConstantRector::class => [__DIR__.'/tests/Feature/Modules/ModuleTestCaseRouteLookupTest.php'],
         // Adding #[\Override] to every overridden property would churn about 100 files for no runtime gain.
