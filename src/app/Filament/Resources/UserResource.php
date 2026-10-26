@@ -12,6 +12,7 @@ use App\Application\Services\UserServiceInterface;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Images\AvatarPath;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -302,7 +303,8 @@ class UserResource extends BaseResource
                         ->label(__('filament.users.actions.restore'))
                         ->modalHeading(__('filament.users.actions.restore'))
                         ->modalDescription(__('filament.users.actions.restoreConfirm'))
-                        ->successNotificationTitle(__('filament.users.actions.restored')),
+                        ->successNotificationTitle(__('filament.users.actions.restored'))
+                        ->after(fn (UserModel $record) => self::dropRolesOverLimitAfterRestore($record)),
                     Action::make('anonymize')
                         ->label(__('filament.users.actions.anonymize'))
                         ->icon('heroicon-o-eye-slash')
@@ -398,6 +400,25 @@ class UserResource extends BaseResource
             'create' => CreateUser::route('/create'),
             'edit' => EditUser::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * A restored account comes back without the roles that filled up while it was away
+     * (holder limit); the person restoring it is told which ones.
+     */
+    public static function dropRolesOverLimitAfterRestore(UserModel $record): void
+    {
+        $dropped = app(RoleHolderLimitGuard::class)->dropRolesOverLimit($record);
+
+        if ($dropped === []) {
+            return;
+        }
+
+        Notification::make()
+            ->title(__('filament.users.actions.restoredWithoutRoles', ['roles' => implode(', ', $dropped)]))
+            ->warning()
+            ->persistent()
+            ->send();
     }
 
     /**

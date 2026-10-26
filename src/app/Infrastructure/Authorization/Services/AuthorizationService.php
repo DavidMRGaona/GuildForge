@@ -7,6 +7,7 @@ namespace App\Infrastructure\Authorization\Services;
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
+use App\Domain\Authorization\Exceptions\RoleHolderLimitReachedException;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Collection;
@@ -37,6 +38,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
 
     public function __construct(
         private BaseRoleRule $baseRole = new BaseRoleRule,
+        private RoleHolderLimitGuard $holderLimit = new RoleHolderLimitGuard,
     ) {}
 
     public function can(object $user, string $permissionKey): bool
@@ -137,12 +139,23 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         });
     }
 
+    /**
+     * @throws RoleHolderLimitReachedException when the role is full and the user does not hold it yet
+     */
     public function assignRole(object $user, string $roleName): void
     {
-        $role = RoleModel::where('name', $roleName)->firstOrFail();
         /** @var UserModel $user */
-        $user->roles()->syncWithoutDetaching([$role->id]);
-        $this->invalidateCacheFor($user);
+        DB::transaction(function () use ($user, $roleName): void {
+            $role = RoleModel::where('name', $roleName)->firstOrFail();
+
+            // Already held: no new holder, nothing to check
+            if (! $user->roles()->whereKey($role->id)->exists()) {
+                $this->holderLimit->assertCanHold($user, $role);
+                $user->roles()->attach($role->id);
+            }
+
+            $this->invalidateCacheFor($user);
+        });
     }
 
     public function removeRole(object $user, string $roleName): void
@@ -161,21 +174,36 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     }
 
     /**
+     * Checks the holder limit of every role the user does not hold yet before writing: when
+     * one is full, nothing changes.
+     *
      * @param  array<string>  $roleNames
+     *
+     * @throws RoleHolderLimitReachedException
      */
     public function syncRoles(object $user, array $roleNames): void
     {
-        // Read from the database, not the cache: a user who has the base role of every account keeps it
         /** @var UserModel $user */
-        $hasBaseRole = $user->roles()->where('roles.name', BaseRoleRule::NAME)->exists();
+        DB::transaction(function () use ($user, $roleNames): void {
+            // Read from the database, not the cache: a user who has the base role of every account keeps it
+            $currentIds = $user->roles()->pluck('roles.id')->all();
+            $hasBaseRole = $user->roles()->where('roles.name', BaseRoleRule::NAME)->exists();
 
-        if ($hasBaseRole && ! in_array(BaseRoleRule::NAME, $roleNames, true)) {
-            $roleNames[] = BaseRoleRule::NAME;
-        }
+            if ($hasBaseRole && ! in_array(BaseRoleRule::NAME, $roleNames, true)) {
+                $roleNames[] = BaseRoleRule::NAME;
+            }
 
-        $roleIds = RoleModel::whereIn('name', $roleNames)->pluck('id')->toArray();
-        $user->roles()->sync($roleIds);
-        $this->invalidateCacheFor($user);
+            $roles = RoleModel::whereIn('name', $roleNames)->get();
+
+            foreach ($roles as $role) {
+                if (! in_array($role->id, $currentIds, true)) {
+                    $this->holderLimit->assertCanHold($user, $role);
+                }
+            }
+
+            $user->roles()->sync($roles->pluck('id')->all());
+            $this->invalidateCacheFor($user);
+        });
     }
 
     public function invalidateCache(): void

@@ -407,6 +407,7 @@ return [
             'restore' => 'Restaurar',
             'restoreConfirm' => '¿Estás seguro de que deseas restaurar este usuario?',
             'restored' => 'Usuario restaurado',
+            'restoredWithoutRoles' => 'Cuenta restaurada sin estos roles, que ya tienen el máximo de personas: :roles.',
             'anonymize' => 'Anonimizar (GDPR)',
             'anonymizeConfirm' => '¿Estás seguro de que deseas anonimizar este usuario? Esta acción es IRREVERSIBLE. Se eliminarán todos sus datos personales pero se mantendrá su contenido.',
             'anonymized' => 'Usuario anonimizado',
