@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Users;
 
+use App\Application\Services\DashboardWidgetConfigServiceInterface;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
@@ -107,6 +108,62 @@ final class InactiveRolesVisibilityTest extends TestCase
             ->assertCanSeeTableRecords([$holder])
             ->assertSee(UserResource::getUrl('edit', ['record' => $holder]), false)
             ->assertSee($board->display_name);
+    }
+
+    public function test_widget_needs_the_right_to_see_users(): void
+    {
+        $board = $this->role('board', requiresMember: true, permissions: ['events.create']);
+        $this->holder([$board]);
+
+        $this->actingAs($this->editorWithPermissions(['users.assign_roles', 'events.create']));
+
+        $this->assertFalse(InactiveRolesWidget::canView());
+    }
+
+    public function test_widget_shows_only_the_roles_the_viewer_can_grant(): void
+    {
+        $grantable = $this->role('board', requiresMember: true, permissions: ['events.create']);
+        $beyond = $this->role('treasury', requiresMember: true, permissions: ['events.unheld_permission']);
+        $holder = $this->holder([$grantable, $beyond]);
+        $this->actingAs($this->editorWithPermissions(self::PERMISSIONS));
+
+        Livewire::test(InactiveRolesWidget::class)
+            ->assertCanSeeTableRecords([$holder])
+            ->assertSee('Board')
+            ->assertDontSee('Treasury');
+    }
+
+    public function test_widget_does_not_link_a_user_the_viewer_cannot_edit(): void
+    {
+        $board = $this->role('board', requiresMember: true, permissions: ['events.create']);
+        $holder = $this->holder([$board]);
+        $this->actingAs($this->editorWithPermissions(['users.view_any', 'users.assign_roles', 'events.create']));
+
+        Livewire::test(InactiveRolesWidget::class)
+            ->assertCanSeeTableRecords([$holder])
+            ->assertDontSee(UserResource::getUrl('edit', ['record' => $holder]), false);
+    }
+
+    public function test_dashboard_settings_know_the_widget(): void
+    {
+        $this->actingAs($this->editorWithPermissions(self::PERMISSIONS));
+
+        $this->assertArrayHasKey(
+            InactiveRolesWidget::class,
+            app(DashboardWidgetConfigServiceInterface::class)->getDefaults(),
+        );
+    }
+
+    public function test_form_does_not_mark_roles_inactive_on_an_anonymized_account(): void
+    {
+        $this->actingAs($this->editorWithPermissions(self::PERMISSIONS));
+        $board = $this->role('board', requiresMember: true);
+        $holder = $this->holder([$board]);
+        $holder->forceFill(['anonymized_at' => now()])->save();
+
+        $field = $this->rolesField(Livewire::test(EditUser::class, ['record' => $holder->getRouteKey()]));
+
+        $this->assertSame('Requiere socio', $field->getDescription('board'));
     }
 
     /**

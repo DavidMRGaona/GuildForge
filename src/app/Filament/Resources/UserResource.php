@@ -492,6 +492,8 @@ class UserResource extends BaseResource
     private static function roleDescriptions(?UserModel $record): array
     {
         $associationRole = app(AssociationMembershipServiceInterface::class)->roleName();
+        // An anonymized account holds no roles on purpose: nothing is inactive for it
+        $showInactive = $record instanceof UserModel && $record->anonymized_at === null;
         $isMember = $record instanceof UserModel
             && $associationRole !== null
             && $record->roles()->where('name', $associationRole)->exists();
@@ -508,7 +510,7 @@ class UserResource extends BaseResource
                 $parts[] = (string) __('filament.users.roleBadges.maxHolders', ['n' => $role->max_holders]);
             }
 
-            if ($role->requires_association_member && $record instanceof UserModel && ! $isMember) {
+            if ($role->requires_association_member && $showInactive && ! $isMember) {
                 $parts[] = (string) __('filament.users.roleBadges.inactive');
             }
 

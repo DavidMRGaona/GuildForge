@@ -32,7 +32,7 @@ class InactiveRolesWidget extends TableWidget
     {
         $actor = Auth::user();
 
-        if ($actor === null) {
+        if ($actor === null || ! UserResource::canViewAny()) {
             return false;
         }
 
@@ -61,7 +61,7 @@ class InactiveRolesWidget extends TableWidget
             ->getLimit(static::class, 5);
         $associationRole = app(AssociationMembershipServiceInterface::class)->roleName();
         $actor = Auth::user();
-        $grantable = $actor === null ? [] : self::grantableInactiveRoleNames($actor);
+        $grantable = $actor === null || ! UserResource::canViewAny() ? [] : self::grantableInactiveRoleNames($actor);
 
         return $table
             ->query(
@@ -81,6 +81,7 @@ class InactiveRolesWidget extends TableWidget
                     ->label(__('filament.users.inactiveWidget.roles'))
                     ->state(static fn (UserModel $record): array => $record->roles
                         ->where('requires_association_member', true)
+                        ->filter(static fn (RoleModel $role): bool => in_array($role->name, $grantable, true))
                         ->pluck('display_name')
                         ->values()
                         ->all())
