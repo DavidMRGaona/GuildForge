@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\GalleryModelFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,6 +27,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Collection<int, PhotoModel> $photos
  * @property-read Collection<int, TagModel> $tags
+ *
+ * @method static Builder<GalleryModel> orderedByCreation()
  */
 final class GalleryModel extends Model
 {
@@ -76,15 +79,18 @@ final class GalleryModel extends Model
      */
     public function photos(): HasMany
     {
-        return $this->hasMany(PhotoModel::class, 'gallery_id')->orderBy('sort_order');
+        return $this->hasMany(PhotoModel::class, 'gallery_id')
+            ->orderBy('sort_order')
+            ->orderBy('created_at')
+            ->orderBy('id');
     }
 
     /**
-     * Get cover image from the first photo by sort_order.
+     * Get cover image from the first photo, in the photos relation's order.
      */
     public function getCoverImagePublicIdAttribute(): ?string
     {
-        return $this->photos()->orderBy('sort_order')->first()?->image_public_id;
+        return $this->photos()->first()?->image_public_id;
     }
 
     /**
@@ -95,5 +101,16 @@ final class GalleryModel extends Model
         return $this->belongsToMany(TagModel::class, 'gallery_tag', 'gallery_id', 'tag_id')
             ->withTimestamps()
             ->ordered();
+    }
+
+    /**
+     * Scope to order galleries newest first, with a stable order for galleries created at the same time.
+     *
+     * @param  Builder<GalleryModel>  $query
+     * @return Builder<GalleryModel>
+     */
+    public function scopeOrderedByCreation(Builder $query): Builder
+    {
+        return $query->orderByDesc('created_at')->orderByDesc('id');
     }
 }

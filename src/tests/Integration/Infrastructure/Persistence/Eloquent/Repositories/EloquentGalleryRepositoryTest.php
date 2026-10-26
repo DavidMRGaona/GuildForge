@@ -86,6 +86,30 @@ final class EloquentGalleryRepositoryTest extends TestCase
         });
     }
 
+    /**
+     * Inserted in the reverse of the expected order, so ties only come out right when the query breaks them.
+     */
+    public function test_published_galleries_break_ties_by_creation_then_id(): void
+    {
+        $createdAt = '2026-02-02 09:00:00';
+
+        GalleryModel::factory()->published()->create(['title' => 'Tie oldest', 'created_at' => '2026-02-01 09:00:00']);
+        GalleryModel::factory()->published()->create([
+            'id' => '11111111-1111-4111-8111-111111111111',
+            'title' => 'Tie low id',
+            'created_at' => $createdAt,
+        ]);
+        GalleryModel::factory()->published()->create([
+            'id' => 'ffffffff-ffff-4fff-bfff-ffffffffffff',
+            'title' => 'Tie high id',
+            'created_at' => $createdAt,
+        ]);
+
+        $titles = $this->repository->findPublished()->map(fn (Gallery $gallery): string => $gallery->title())->all();
+
+        $this->assertSame(['Tie high id', 'Tie low id', 'Tie oldest'], $titles);
+    }
+
     public function test_it_finds_all_galleries(): void
     {
         GalleryModel::factory()->published()->count(3)->create();

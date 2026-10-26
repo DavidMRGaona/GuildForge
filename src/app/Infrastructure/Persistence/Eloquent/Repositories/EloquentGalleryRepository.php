@@ -40,7 +40,7 @@ final readonly class EloquentGalleryRepository implements GalleryRepositoryInter
     {
         return GalleryModel::query()
             ->where('is_published', true)
-            ->orderBy('created_at', 'desc')
+            ->orderedByCreation()
             ->get()
             ->map(fn (GalleryModel $model): Gallery => $this->toDomain($model));
     }
@@ -48,7 +48,7 @@ final readonly class EloquentGalleryRepository implements GalleryRepositoryInter
     public function findAll(): Collection
     {
         return GalleryModel::query()
-            ->orderBy('created_at', 'desc')
+            ->orderedByCreation()
             ->get()
             ->map(fn (GalleryModel $model): Gallery => $this->toDomain($model));
     }
