@@ -526,7 +526,7 @@ return [
             'no' => 'no',
             'system' => 'Sistema',
             'anonymizedActor' => 'Cuenta anonimizada',
-            'unknownAccount' => 'Cuenta eliminada',
+            'unknownAccount' => 'Oculto',
             'empty' => 'Sin movimientos',
         ],
         'label' => 'rol',

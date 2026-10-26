@@ -9,11 +9,13 @@ use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Authorization\Enums\RoleAuditSource;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleAuditEntryModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use DateTimeInterface;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * The read-only role history shown on the user and role edit pages.
@@ -32,6 +34,8 @@ trait ListsRoleAuditEntries
 
     public function table(Table $table): Table
     {
+        $reveal = $this->revealsAccountNames();
+
         $columns = [
             TextColumn::make('created_at')
                 ->label(__('filament.roles.audit.columns.date'))
@@ -49,19 +53,20 @@ trait ListsRoleAuditEntries
         if ($this->showsAffectedAccount()) {
             $columns[] = TextColumn::make('user_id')
                 ->label(__('filament.roles.audit.columns.account'))
-                ->state(fn (RoleAuditEntryModel $record): string => self::accountLabel($record->user_id, $record->user));
+                ->state(fn (RoleAuditEntryModel $record): string => self::accountLabel($record->user_id, $record->user, $reveal));
         }
 
         $columns[] = TextColumn::make('changes')
             ->label(__('filament.roles.audit.columns.changes'))
-            ->state(fn (RoleAuditEntryModel $record): string => self::summarize($record->changes ?? []))
+            ->state(fn (RoleAuditEntryModel $record): array => self::summarize($record->changes ?? []))
+            ->listWithLineBreaks()
             ->placeholder('—')
             ->wrap();
         $columns[] = TextColumn::make('actor_id')
             ->label(__('filament.roles.audit.columns.actor'))
             ->state(fn (RoleAuditEntryModel $record): string => $record->actor_id === null
                 ? __('filament.roles.audit.system')
-                : self::accountLabel($record->actor_id, $record->actor));
+                : self::accountLabel($record->actor_id, $record->actor, $reveal));
         $columns[] = TextColumn::make('source')
             ->label(__('filament.roles.audit.columns.source'))
             ->formatStateUsing(fn (string $state): string => self::sourceLabel($state));
@@ -69,7 +74,7 @@ trait ListsRoleAuditEntries
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['actor', 'user']))
             ->columns($columns)
-            ->defaultSort('created_at', 'desc')
+            ->defaultSort(fn (Builder $query): Builder => $query->orderByDesc('created_at')->orderByDesc('id'))
             ->emptyStateHeading(__('filament.roles.audit.empty'))
             ->paginated([10, 25, 50]);
     }
@@ -93,10 +98,29 @@ trait ListsRoleAuditEntries
         return $case === null ? $source : __('filament.roles.audit.sources.'.$case->value);
     }
 
-    private static function accountLabel(?string $id, ?Model $account): string
+    /**
+     * The role page is open to whoever may view roles, who need not be able to see accounts: they get no
+     * names there. The user page is only open to someone who can view that very account.
+     */
+    private function revealsAccountNames(): bool
+    {
+        if (! $this->showsAffectedAccount()) {
+            return true;
+        }
+
+        $viewer = Auth::user();
+
+        return $viewer instanceof UserModel && $viewer->can('viewAny', UserModel::class);
+    }
+
+    private static function accountLabel(?string $id, ?Model $account, bool $reveal): string
     {
         if ($id === null) {
             return '—';
+        }
+
+        if (! $reveal) {
+            return __('filament.roles.audit.unknownAccount');
         }
 
         if (! $account instanceof Model || $account->getAttribute('anonymized_at') !== null) {
@@ -110,8 +134,9 @@ trait ListsRoleAuditEntries
 
     /**
      * @param  array{permissions_added?: list<string>, permissions_removed?: list<string>, fields?: array<string, array{from: mixed, to: mixed}>}  $changes
+     * @return list<string>
      */
-    private static function summarize(array $changes): string
+    private static function summarize(array $changes): array
     {
         $lines = [];
 
@@ -130,7 +155,7 @@ trait ListsRoleAuditEntries
             $lines[] = $label.': '.self::formatValue($change['from'] ?? null).' → '.self::formatValue($change['to'] ?? null);
         }
 
-        return implode("\n", $lines);
+        return $lines;
     }
 
     /**

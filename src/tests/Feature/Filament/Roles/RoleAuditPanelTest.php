@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Roles;
 
+use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Authorization\Enums\RoleAuditSource;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
@@ -13,6 +14,8 @@ use App\Filament\Resources\UserResource\RelationManagers\RoleAuditRelationManage
 use App\Infrastructure\Persistence\Eloquent\Models\RoleAuditEntryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
@@ -100,13 +103,57 @@ final class RoleAuditPanelTest extends TestCase
         $named = UserModel::factory()->create(['name' => 'Jane Roe', 'display_name' => null]);
         $this->entry(['user_id' => $user->id, 'actor_id' => $anonymized->id, 'created_at' => now()->subDays(3)]);
         $this->entry(['user_id' => $user->id, 'actor_id' => $named->id, 'created_at' => now()->subDays(2)]);
-        $this->entry(['user_id' => $user->id, 'actor_id' => null, 'source' => RoleAuditSource::Command->value, 'created_at' => now()->subDay()]);
+        $system = $this->entry(['user_id' => $user->id, 'actor_id' => null, 'source' => RoleAuditSource::Command->value, 'created_at' => now()->subDay()]);
 
         Livewire::test(UserHistory::class, ['ownerRecord' => $user, 'pageClass' => EditUser::class])
+            ->assertTableColumnStateSet('actor_id', 'Sistema', $system)
             ->assertSee('Cuenta anonimizada')
             ->assertSee('Jane Roe')
-            ->assertSee('Sistema')
             ->assertSee('Comando');
+    }
+
+    public function test_entries_of_the_same_second_keep_a_stable_newest_first_order(): void
+    {
+        $user = UserModel::factory()->create();
+        $at = now()->subDay()->startOfSecond();
+        $first = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
+        $second = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
+        $third = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
+
+        Livewire::test(UserHistory::class, ['ownerRecord' => $user, 'pageClass' => EditUser::class])
+            ->assertCanSeeTableRecords([$third, $second, $first], inOrder: true);
+    }
+
+    public function test_date_is_shown_in_the_display_zone(): void
+    {
+        config(['app.display_timezone' => 'Asia/Tokyo']);
+        $user = UserModel::factory()->create();
+        $storage = app(TimezoneServiceInterface::class)->storageTimezone();
+        $instant = new DateTimeImmutable('2026-03-10 12:00:00', $storage);
+        $this->entry(['user_id' => $user->id, 'created_at' => $instant]);
+        $expected = $instant->setTimezone(new DateTimeZone('Asia/Tokyo'))->format('d/m/Y H:i');
+
+        Livewire::test(UserHistory::class, ['ownerRecord' => $user, 'pageClass' => EditUser::class])
+            ->assertSee($expected);
+    }
+
+    public function test_role_history_hides_account_names_from_those_who_cannot_see_users(): void
+    {
+        $role = RoleModel::create(['name' => 'hidden-role', 'display_name' => 'Hidden']);
+        $holder = UserModel::factory()->create(['name' => 'Holder Person', 'display_name' => null]);
+        $actor = UserModel::factory()->create(['name' => 'Actor Person', 'display_name' => null]);
+        $this->entry(['user_id' => $holder->id, 'role_id' => $role->id, 'actor_id' => $actor->id]);
+
+        $this->actingAs($this->editorWithPermissions(['roles.view']));
+        Livewire::test(RoleHistory::class, ['ownerRecord' => $role, 'pageClass' => EditRole::class])
+            ->assertSee('Oculto')
+            ->assertDontSee('Holder Person')
+            ->assertDontSee('Actor Person');
+
+        $this->actingAs($this->editorWithPermissions(['roles.view', 'users.view_any']));
+        Livewire::test(RoleHistory::class, ['ownerRecord' => $role, 'pageClass' => EditRole::class])
+            ->assertSee('Holder Person')
+            ->assertSee('Actor Person');
     }
 
     /**
