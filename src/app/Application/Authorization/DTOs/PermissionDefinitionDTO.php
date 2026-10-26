@@ -16,10 +16,12 @@ final readonly class PermissionDefinitionDTO
         public string $action,
         public ?string $module = null,
         public array $defaultRoles = [],
+        public ?string $description = null,
+        public ?string $group = null,
     ) {}
 
     /**
-     * @param  array{key: string, label: string, resource: string, action: string, module?: string|null, default_roles?: array<string>}  $data
+     * @param  array{key: string, label: string, resource: string, action: string, module?: string|null, default_roles?: array<string>, description?: string|null, group?: string|null}  $data
      */
     public static function fromArray(array $data): self
     {
@@ -30,11 +32,13 @@ final readonly class PermissionDefinitionDTO
             action: $data['action'],
             module: $data['module'] ?? null,
             defaultRoles: $data['default_roles'] ?? [],
+            description: $data['description'] ?? null,
+            group: $data['group'] ?? null,
         );
     }
 
     /**
-     * @return array{key: string, label: string, resource: string, action: string, module: string|null, default_roles: array<string>}
+     * @return array{key: string, label: string, resource: string, action: string, module: string|null, default_roles: array<string>, description: string|null, group: string|null}
      */
     public function toArray(): array
     {
@@ -45,6 +49,8 @@ final readonly class PermissionDefinitionDTO
             'action' => $this->action,
             'module' => $this->module,
             'default_roles' => $this->defaultRoles,
+            'description' => $this->description,
+            'group' => $this->group,
         ];
     }
 

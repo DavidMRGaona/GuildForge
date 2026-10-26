@@ -16,6 +16,9 @@ return [
         'mail' => 'Correo electrónico',
         'updates' => 'Actualizaciones',
         'admin' => 'Administración',
+        'modules' => 'Módulos',
+        'dashboard' => 'Escritorio',
+        'pages' => 'Páginas',
     ],
 
     'actions' => [
@@ -30,6 +33,7 @@ return [
         'access' => 'Acceder',
         'maintenance' => 'Modo mantenimiento',
         'apply' => 'Aplicar',
+        'assign_roles' => 'Asignar roles',
     ],
 
     'permissions' => [
@@ -60,6 +64,7 @@ return [
             'create' => 'Crear usuario',
             'update' => 'Editar usuario',
             'delete' => 'Eliminar usuario',
+            'assign_roles' => 'Asignar roles a usuarios',
         ],
         'roles' => [
             'view_any' => 'Ver listado de roles',
@@ -100,6 +105,35 @@ return [
         ],
         'admin' => [
             'access' => 'Acceder al panel de administración',
+        ],
+        'modules' => [
+            'manage' => 'Gestionar módulos',
+            'configure' => 'Configurar módulos',
+        ],
+        'dashboard' => [
+            'configure' => 'Configurar el escritorio',
+        ],
+        'pages' => [
+            'manage' => 'Gestionar páginas legales y «Sobre nosotros»',
+        ],
+    ],
+
+    'permission_descriptions' => [
+        'settings' => [
+            'manage' => 'Incluye elegir el rol de socio y la verificación de correo.',
+        ],
+        'users' => [
+            'assign_roles' => 'Solo puede dar o quitar roles cuyos permisos tenga.',
+        ],
+        'modules' => [
+            'manage' => 'Instalar, habilitar y deshabilitar módulos.',
+            'configure' => 'Ajustes de los módulos habilitados. No permite instalarlos ni deshabilitarlos.',
+        ],
+        'pages' => [
+            'manage' => 'Aviso legal, política de privacidad y «Sobre nosotros».',
+        ],
+        'admin' => [
+            'access' => 'Entrar en el panel de administración.',
         ],
     ],
 
