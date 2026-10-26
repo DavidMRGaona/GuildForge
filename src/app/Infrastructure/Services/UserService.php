@@ -49,7 +49,10 @@ final readonly class UserService implements UserServiceInterface
         $anonymousName = $this->settingsService->get('anonymized_user_name', 'Anónimo');
 
         DB::transaction(function () use ($userModel, $anonymousName): void {
-            // DeletesCloudinaryImages trait auto-deletes old avatar on update
+            // Before the update: DeletesCloudinaryImages deletes the old avatar right away, so a
+            // failed history write must stop the anonymization while the image still exists
+            $this->removeEveryRole($userModel);
+
             $userModel->update([
                 'name' => $anonymousName,
                 'display_name' => null,
@@ -59,8 +62,6 @@ final readonly class UserService implements UserServiceInterface
                 'avatar_public_id' => null,
                 'anonymized_at' => now(),
             ]);
-
-            $this->removeEveryRole($userModel);
         });
 
         $this->authService->invalidateCacheFor($userModel);
@@ -99,7 +100,10 @@ final readonly class UserService implements UserServiceInterface
 
             $anonymousName = $this->settingsService->get('anonymized_user_name', 'Anónimo');
 
-            // DeletesCloudinaryImages trait auto-deletes old avatar on update
+            // Before the update: DeletesCloudinaryImages deletes the old avatar right away, so a
+            // failed history write must stop the anonymization while the image still exists
+            $this->removeEveryRole($userModel);
+
             $userModel->update([
                 'name' => $anonymousName,
                 'display_name' => null,
@@ -109,8 +113,6 @@ final readonly class UserService implements UserServiceInterface
                 'avatar_public_id' => null,
                 'anonymized_at' => now(),
             ]);
-
-            $this->removeEveryRole($userModel);
         });
 
         $this->authService->invalidateCacheFor($userModel);
