@@ -69,9 +69,14 @@ final readonly class RoleGrantPolicy
     }
 
     /**
-     * Whether the actor may turn the target's roles from $fromRoleNames into $toRoleNames:
-     * every role added or removed must be grantable. Adding the association member role also
-     * wakes up the target's roles that require it, so each of those must be grantable too.
+     * Whether the actor may turn the target's roles into $toRoleNames: every role added or
+     * removed must be grantable. Adding the association member role also wakes up the target's
+     * roles that require it, so each of those must be grantable too.
+     *
+     * The starting roles are the ones the target holds in the database whenever it has an id:
+     * $fromRoleNames is then ignored, so a forged or stale "before" state cannot hide a
+     * removal. Only for an account not saved yet (no id) is $fromRoleNames the starting point,
+     * and it is taken to hold no roles in the database.
      *
      * @param  array<string>  $fromRoleNames
      * @param  array<string>  $toRoleNames
@@ -102,10 +107,15 @@ final readonly class RoleGrantPolicy
     }
 
     /**
-     * Whether the actor may act on the account (edit it, deactivate, restore, anonymize or
-     * delete it): an admin always may; anyone else only when every role the account holds,
-     * active or not, is grantable by them, leaving out the base role and the association
-     * member role. An account with "admin" is therefore managed by admins only.
+     * Whether the actor may act on the account (edit it, change its email or password,
+     * deactivate, restore, anonymize or delete it). Whoever controls an account gets what its
+     * roles give, so: an admin always may; anyone else only when the account does not hold
+     * "admin" and every permission of every role it holds is among the actor's effective
+     * permissions. Every role counts: inactive ones, the base role and the association member
+     * role included. A role that cannot be read makes the account unmanageable (fails closed).
+     *
+     * It does not need users.assign_roles: that is for granting roles, while acting on an
+     * account is gated by its own permissions (UserPolicy).
      */
     public function canManageAccount(object $actor, object $target): bool
     {
@@ -113,15 +123,25 @@ final readonly class RoleGrantPolicy
             return true;
         }
 
-        $associationRole = $this->associationRoleName();
+        $roleNames = $this->persistedRoleNames($target) ?? [];
 
-        foreach ($this->roles->getRoleNamesForUser($this->userId($target)) as $roleName) {
-            if ($this->baseRoleRule->isBaseRoleName($roleName) || $roleName === $associationRole) {
-                continue;
+        if (in_array(UserRole::Admin->value, $roleNames, true)) {
+            return false;
+        }
+
+        $actorPermissions = $this->authorization->getPermissions($actor);
+
+        foreach ($roleNames as $roleName) {
+            $role = $this->findRole($roleName);
+
+            if (! $role instanceof Role) {
+                return false;
             }
 
-            if (! $this->canGrant($actor, $roleName)) {
-                return false;
+            foreach ($this->roles->getPermissionKeys($role->id()) as $key) {
+                if (! in_array($key, $actorPermissions, true)) {
+                    return false;
+                }
             }
         }
 
@@ -168,14 +188,17 @@ final readonly class RoleGrantPolicy
      */
     private function deniedRoleNames(object $actor, object $target, array $fromRoleNames, array $toRoleNames): array
     {
-        $added = array_values(array_unique(array_diff($toRoleNames, $fromRoleNames)));
-        $removed = array_values(array_unique(array_diff($fromRoleNames, $toRoleNames)));
+        $persisted = $this->persistedRoleNames($target);
+        $from = $persisted ?? $fromRoleNames;
+
+        $added = array_values(array_unique(array_diff($toRoleNames, $from)));
+        $removed = array_values(array_unique(array_diff($from, $toRoleNames)));
 
         $toCheck = array_merge($added, $removed);
 
         if ($added !== [] && $this->addsAssociationRole($added)) {
             $toCheck = array_merge($toCheck, $this->rolesRequiringMembership(
-                array_merge($this->roles->getRoleNamesForUser($this->userId($target)), $toRoleNames),
+                array_merge($persisted ?? [], $toRoleNames),
             ));
         }
 
@@ -212,19 +235,6 @@ final readonly class RoleGrantPolicy
     }
 
     /**
-     * Null when there is no usable association member role or it cannot be read: then no role
-     * is left out of the account check, which only makes it stricter.
-     */
-    private function associationRoleName(): ?string
-    {
-        try {
-            return $this->associationMembership->roleName();
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    /**
      * A role that cannot be read is kept too (fails closed): it is checked, and refused.
      *
      * @param  array<string>  $roleNames
@@ -256,11 +266,29 @@ final readonly class RoleGrantPolicy
     }
 
     /**
-     * The user's key, read the way AuthorizationService reads it: the id property, else getKey().
+     * Every role the user holds in the database, inactive ones included; null for an account
+     * not saved yet (no id).
+     *
+     * @return array<string>|null
      */
-    private function userId(object $user): string
+    private function persistedRoleNames(object $user): ?array
+    {
+        $id = $this->userId($user);
+
+        return $id === null ? null : $this->roles->getRoleNamesForUser($id);
+    }
+
+    /**
+     * The user's key, read the way AuthorizationService reads it: the id property, else getKey().
+     * Null when there is none yet.
+     */
+    private function userId(object $user): ?string
     {
         $id = $user->id ?? (method_exists($user, 'getKey') ? $user->getKey() : null);
+
+        if ($id === null) {
+            return null;
+        }
 
         if (! is_int($id) && ! is_string($id)) {
             throw new InvalidArgumentException('The user has no readable id.');

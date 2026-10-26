@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Authorization;
 
+use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Domain\Authorization\Exceptions\RoleGrantDeniedException;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -88,12 +91,13 @@ final class RoleGrantPolicyTest extends TestCase
         $this->role('tesoreria', ['settings.manage']);
         $actor = $this->userWith('secretaria', ['users.assign_roles', 'articles.view_any']);
         $target = $this->userWith('tesoreria', []);
+        $plain = UserModel::factory()->create();
 
         $policy = $this->policy();
 
         $this->assertTrue($policy->canChangeRoles($actor, $target, ['member', 'tesoreria'], ['member', 'tesoreria', 'contenido']));
         $this->assertFalse($policy->canChangeRoles($actor, $target, ['member', 'tesoreria'], ['member']));
-        $this->assertFalse($policy->canChangeRoles($actor, $target, ['member'], ['member', 'tesoreria']));
+        $this->assertFalse($policy->canChangeRoles($actor, $plain, ['member'], ['member', 'tesoreria']));
         $this->assertTrue($policy->canChangeRoles($actor, $target, ['member', 'tesoreria'], ['tesoreria', 'member']));
 
         try {
@@ -157,15 +161,150 @@ final class RoleGrantPolicyTest extends TestCase
         $this->assertTrue($policy->canManageAccount($adminActor, $treasurer));
     }
 
-    public function test_member_and_association_role_do_not_block_managing_an_account(): void
+    public function test_an_account_whose_roles_give_only_what_the_actor_holds_is_manageable(): void
     {
-        $actor = $this->userWith('secretaria', ['users.assign_roles', 'articles.view_any']);
+        $actor = $this->userWith('secretaria', ['users.update', 'articles.view_any', 'events.view_any']);
+        $target = UserModel::factory()->create();
+        $this->grant($target, 'member', ['events.view_any']);
+        $this->grant($target, 'socio', ['articles.view_any']);
+        $this->grant($target, 'contenido', ['articles.view_any']);
+
+        $policy = $this->policy();
+
+        $this->assertTrue($policy->canManageAccount($actor, $target));
+        $this->assertTrue($policy->canManageAccount($actor, UserModel::factory()->create()));
+    }
+
+    public function test_an_account_whose_association_role_gives_more_than_the_actor_holds_is_not_manageable(): void
+    {
+        $actor = $this->userWith('secretaria', ['users.update', 'users.assign_roles', 'articles.view_any']);
         $target = UserModel::factory()->create();
         $this->grant($target, 'member');
         $this->grant($target, 'socio', ['settings.manage']);
-        $this->grant($target, 'contenido', ['articles.view_any']);
 
-        $this->assertTrue($this->policy()->canManageAccount($actor, $target));
+        $this->assertFalse($this->policy()->canManageAccount($actor, $target));
+    }
+
+    public function test_an_account_whose_base_role_gives_more_than_the_actor_holds_is_not_manageable(): void
+    {
+        $actor = $this->userWith('secretaria', ['users.update', 'articles.view_any']);
+        $target = UserModel::factory()->create();
+        $this->grant($target, 'member', ['settings.manage']);
+
+        $this->assertFalse($this->policy()->canManageAccount($actor, $target));
+    }
+
+    public function test_an_admin_account_is_never_manageable_by_a_non_admin(): void
+    {
+        $adminRole = RoleModel::query()->firstOrCreate(['name' => 'admin'], ['display_name' => 'Administrator']);
+        $adminRole->permissions()->detach();
+        $admin = UserModel::factory()->create();
+        $admin->roles()->attach($adminRole->id);
+        $actor = $this->userWith('presidencia', ['users.update', 'users.assign_roles', 'users.view_any', 'settings.manage']);
+
+        $this->assertFalse($this->policy()->canManageAccount($actor, $admin));
+    }
+
+    public function test_an_account_with_an_unreadable_role_is_not_manageable(): void
+    {
+        $actor = $this->userWith('secretaria', ['users.update', 'articles.view_any']);
+        $target = UserModel::factory()->create();
+        $this->grant($target, 'legacy_role');
+
+        $this->assertFalse($this->policy()->canManageAccount($actor, $target));
+    }
+
+    public function test_removals_are_computed_from_the_persisted_roles(): void
+    {
+        $this->role('tesoreria', ['settings.manage']);
+        $actor = $this->userWith('secretaria', ['users.assign_roles', 'articles.view_any']);
+        $target = $this->userWith('tesoreria', []);
+
+        $policy = $this->policy();
+
+        // A forged "before" state without tesoreria cannot hide that it is being taken away.
+        $this->assertFalse($policy->canChangeRoles($actor, $target, ['member'], ['member']));
+        $this->assertFalse($policy->canChangeRoles($actor, $target, [], []));
+        // A forged "before" state with tesoreria cannot make it look already held.
+        $this->assertFalse($policy->canChangeRoles($actor, UserModel::factory()->create(), ['tesoreria'], ['tesoreria']));
+    }
+
+    public function test_an_unsaved_account_starts_from_the_given_roles(): void
+    {
+        $this->role('contenido', ['articles.view_any']);
+        $this->role('tesoreria', ['settings.manage']);
+        $actor = $this->userWith('secretaria', ['users.assign_roles', 'articles.view_any']);
+        $unsaved = UserModel::factory()->make();
+
+        $policy = $this->policy();
+
+        $this->assertTrue($policy->canChangeRoles($actor, $unsaved, ['member'], ['member', 'contenido']));
+        $this->assertFalse($policy->canChangeRoles($actor, $unsaved, ['member'], ['member', 'tesoreria']));
+        $this->assertTrue($policy->canChangeRoles($actor, $unsaved, ['member'], ['member', 'socio']));
+    }
+
+    public function test_an_unreadable_role_blocks_granting_the_association_role(): void
+    {
+        $actor = $this->userWith('secretaria', ['users.assign_roles', 'articles.view_any']);
+        $target = UserModel::factory()->create();
+        $this->grant($target, 'legacy_role');
+
+        $policy = $this->policy();
+
+        $this->assertFalse($policy->canChangeRoles($actor, $target, ['legacy_role'], ['legacy_role', 'socio']));
+
+        $this->expectException(RoleGrantDeniedException::class);
+        $this->expectExceptionMessage('legacy_role');
+
+        $policy->assertCanChangeRoles($actor, $target, ['legacy_role'], ['legacy_role', 'socio']);
+    }
+
+    public function test_an_unreadable_association_role_setting_checks_the_dormant_roles_on_any_addition(): void
+    {
+        $this->role('contenido', ['articles.view_any']);
+        $this->role('presidencia', ['settings.manage'], requiresAssociationMember: true);
+        $actor = $this->userWith('secretaria', ['users.assign_roles', 'articles.view_any']);
+        $dormant = $this->userWith('presidencia', []);
+        $plain = UserModel::factory()->create();
+        $this->breakAssociationMembership();
+
+        $policy = $this->policy();
+
+        $this->assertFalse($policy->canChangeRoles($actor, $dormant, ['presidencia'], ['presidencia', 'contenido']));
+        $this->assertFalse($policy->canChangeRoles($actor, $dormant, ['presidencia'], ['presidencia', 'socio']));
+        $this->assertTrue($policy->canChangeRoles($actor, $plain, [], ['contenido']));
+    }
+
+    public function test_an_unreadable_association_role_setting_keeps_account_management_closed(): void
+    {
+        $actor = $this->userWith('secretaria', ['users.update', 'articles.view_any']);
+        $target = UserModel::factory()->create();
+        $this->grant($target, 'socio', ['settings.manage']);
+        $plain = UserModel::factory()->create();
+        $this->grant($plain, 'contenido', ['articles.view_any']);
+        $this->breakAssociationMembership();
+
+        $policy = $this->policy();
+
+        $this->assertFalse($policy->canManageAccount($actor, $target));
+        $this->assertTrue($policy->canManageAccount($actor, $plain));
+    }
+
+    private function breakAssociationMembership(): void
+    {
+        Log::spy();
+        $this->app->instance(AssociationMembershipServiceInterface::class, new class implements AssociationMembershipServiceInterface
+        {
+            public function roleName(): ?string
+            {
+                throw new RuntimeException('Settings unreadable.');
+            }
+
+            public function isAssociationMember(object $user): bool
+            {
+                throw new RuntimeException('Settings unreadable.');
+            }
+        });
     }
 
     private function policy(): RoleGrantPolicy
