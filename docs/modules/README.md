@@ -938,9 +938,9 @@ Modules with Vue pages or components ship them compiled. Assets are built in CI 
 `module:make` writes a `vite.config.ts` of three lines; the configuration itself is the core's (`src/vite.module.config.ts`):
 
 ```typescript
-import { defineModuleConfig } from '../../vite.module.config';
+import { defineModuleConfig } from '../../vite.module.config.ts';
 
-export default defineModuleConfig({ name: 'my-module', root: __dirname });
+export default defineModuleConfig({ name: 'my-module', root: import.meta.dirname });
 ```
 
 The path is the same in development (`src/modules/<name>`), in the production image and in the release workflow (`modules/<name>` inside the core). `defineModuleConfig` builds with the core's Vite and plugins, and holds what the core and the release workflow rely on:
@@ -1194,9 +1194,9 @@ The module autoloader only maps `src/`. PHPUnit loads the `*Test.php` files by p
 Vue tests (`tests/js/**/*.spec.ts`) run with the core's Vitest, Vue Test Utils and happy-dom. The `vitest.config.ts` that `module:make` writes is three lines on the core's configuration (`src/vitest.module.config.ts`: the `@` alias to the core's `resources/js`, one Vue copy, `tests/js/setup.ts` when it exists):
 
 ```typescript
-import { defineModuleTestConfig } from '../../vitest.module.config';
+import { defineModuleTestConfig } from '../../vitest.module.config.ts';
 
-export default defineModuleTestConfig({ root: __dirname });
+export default defineModuleTestConfig({ root: import.meta.dirname });
 ```
 
 ```bash
