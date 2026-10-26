@@ -8,6 +8,7 @@ use App\Application\Authorization\Services\AssociationMembershipServiceInterface
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
+use App\Application\Authorization\Services\PermissionSyncRunnerInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
@@ -20,6 +21,7 @@ use App\Infrastructure\Authorization\Services\AuthorizationCacheVersion;
 use App\Infrastructure\Authorization\Services\AuthorizationService;
 use App\Infrastructure\Authorization\Services\MemberRoleService;
 use App\Infrastructure\Authorization\Services\PermissionRegistry;
+use App\Infrastructure\Authorization\Services\ProcessPermissionSyncRunner;
 use App\Infrastructure\Authorization\Services\RoleService;
 use Illuminate\Support\ServiceProvider;
 
@@ -37,6 +39,7 @@ class AuthorizationServiceProvider extends ServiceProvider
         $this->app->scoped(AuthorizationCacheVersion::class);
         $this->app->singleton(RoleServiceInterface::class, RoleService::class);
         $this->app->singleton(PermissionRegistryInterface::class, PermissionRegistry::class);
+        $this->app->singleton(PermissionSyncRunnerInterface::class, ProcessPermissionSyncRunner::class);
         $this->app->singleton(AssociationMembershipServiceInterface::class, AssociationMembershipService::class);
         // Per request or job, so a forbidden association member role is logged once per lifecycle
         $this->app->scoped(AssociationMemberRoleWarning::class);
@@ -46,7 +49,8 @@ class AuthorizationServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Register core permissions in memory (for use in policies and code)
-        // The actual database sync is done via `php artisan permissions:sync`
+        // The database sync is done by `php artisan permissions:sync` (every deploy), when a
+        // module is enabled or updated (PermissionSyncRunnerInterface) and in module:finish-update
         $this->app->booted(function () {
             /** @var PermissionRegistryInterface $registry */
             $registry = $this->app->make(PermissionRegistryInterface::class);

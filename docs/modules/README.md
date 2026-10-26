@@ -463,7 +463,7 @@ public function registerPermissions(): array
 
 - Policies check the full key: `$this->authorize($user, 'my-module:games.view_any')` with the `AuthorizesWithPermissions` trait. The policies made by `module:make-filament-resource` check `<module>:<plural>.view_any|view|create|update|delete`; declare those five names.
 - Admins pass every check. Other roles need the permission, granted from the role editor in the panel. `roles` lists the roles the module suggests it for: from core 3.16 the role editor marks it *Sugerido para este rol* on those roles, but nobody gets it until an admin ticks it.
-- `php artisan permissions:sync` stores the definitions in the database (the production container runs it on every start).
+- `php artisan permissions:sync` stores the definitions in the database (the production container runs it on every start). From the core release with #184 the core also syncs them when the module is enabled or updated, so a new permission shows up in the role editor right away.
 
 ### Registered users and association members
 
@@ -485,7 +485,7 @@ $isMember = $this->associationMembership->isAssociationMember($user);
 
 `roleName()` returns the configured role name (for queries such as "users with the role") and `null` when the setting holds a role that cannot be used; handle `null` as "nobody".
 
-**Granting a permission to `member` from a migration.** From core 3.8.0 a core migration creates `member` when it is missing, so the role exists once the core is migrated, also on a new install before the seeders run. Module updates run migrations but not `permissions:sync`, so create the permission row if needed, skip the grant on a site without the role, and invalidate the authorization cache, since the pivot is written directly:
+**Granting a permission to `member` from a migration.** From core 3.8.0 a core migration creates `member` when it is missing, so the role exists once the core is migrated, also on a new install before the seeders run. The permission row may not exist when the migration runs (when the module is enabled for the first time, on a ZIP update, and on cores before the release with #184), so create it if needed, skip the grant on a site without the role, and invalidate the authorization cache, since the pivot is written directly:
 
 ```php
 $permission = PermissionModel::query()->firstOrCreate(

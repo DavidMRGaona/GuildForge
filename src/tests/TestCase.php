@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Application\Authorization\Services\PermissionSyncRunnerInterface;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Testing\PendingCommand;
 use Illuminate\Testing\TestResponse;
@@ -12,6 +13,7 @@ use LogicException;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\AssertionFailedError;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Support\Authorization\FakePermissionSyncRunner;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -38,6 +40,8 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->withoutVite();
+
+        $this->app->instance(PermissionSyncRunnerInterface::class, new FakePermissionSyncRunner);
 
         // Override Inertia's assertInertia macro to preserve float types in JSON round-trip.
         // Inertia 3 omits encryptHistory and clearHistory when they are false.

@@ -651,7 +651,7 @@ Authorization is based on a role system with granular permissions:
 **Flow**:
 1. Permissions are defined in `CorePermissionDefinitions` and in each module via `registerPermissions()`
 2. They are registered in memory through `PermissionRegistry` during boot
-3. They are synchronized with the database via `php artisan permissions:sync`
+3. They are synchronized with the database via `php artisan permissions:sync`, which the production container runs on every start. From the core release with #184 a module's permissions are also synced when it is enabled, updated from the panel (in `module:finish-update`, before its migrations), updated from a ZIP, or found with a new version by `module:discover`. Enabling and ZIP updates run the sync in a new PHP process, because the process that changed the module still has the previous providers loaded. The sync never removes permissions and never grants one to a role
 4. Policies verify permissions through `AuthorizationService`
 
 **Permission format**: `resource.action` (example: `events.create`, `articles.update`, `admin.access`)

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Updates;
 
+use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
 use App\Domain\Modules\Entities\Module;
@@ -27,8 +28,8 @@ use RuntimeException;
  * old and new code. A new process boots with the new version only.
  *
  * The health check only inspects code, so it runs first. Everything that changes
- * the database (migrations, seeders and the recorded version) then runs in one
- * transaction: PostgreSQL rolls DDL back too, so a failure at any point leaves the
+ * the database (permissions, migrations, seeders and the recorded version) then runs
+ * in one transaction: PostgreSQL rolls DDL back too, so a failure at any point leaves the
  * database as it was and the updater can safely restore the previous files. The
  * commit is the point of no return.
  */
@@ -48,6 +49,7 @@ final class FinishModuleUpdateCommand extends Command
         ModuleSeederRunner $seederRunner,
         ModuleHealthCheckerInterface $healthChecker,
         ModulePathResolver $paths,
+        PermissionRegistryInterface $permissions,
     ): int {
         try {
             /** @var MigrationRepositoryInterface $migrationRepository */
@@ -73,7 +75,11 @@ final class FinishModuleUpdateCommand extends Command
                 }
             }
 
-            $report = DB::transaction(function () use ($module, $modules, $version, $schemaGuard, $seederRunner, $migrationRepository, $paths): PostUpdateReportDTO {
+            $report = DB::transaction(function () use ($module, $modules, $version, $schemaGuard, $seederRunner, $migrationRepository, $paths, $permissions): PostUpdateReportDTO {
+                // This process booted the new provider, so the registry holds the new version's
+                // permissions; before the migrations, which may grant one to a role
+                $permissions->syncToDatabase();
+
                 $migrations = [];
                 $migrationsPath = $paths->resolve($module).'/database/migrations';
 
