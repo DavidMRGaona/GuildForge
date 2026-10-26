@@ -2,12 +2,13 @@ name: Reusable project sync
 
 # Keeps the roadmap project in step with the calling repository:
 # - a new issue nobody is assigned to is assigned to the maintainer
-# - a new issue is added with its Módulo, its Tipo (from the label) and status «Pendiente»;
+# - a new issue is added with its Módulo, its Tipo (from the label) and status «Todo»;
 #   issues from people without write access wait until someone adds the label «approved»
-# - a pull request that closes issues («Closes #12», also across repositories) moves them to «En curso»
-# - an issue closed as completed goes to «Hecho»; a reopened one back to «Pendiente»
+# - a pull request that closes issues («Closes #12», also across repositories) moves them to «Review»,
+#   or to «In progress» while it is a draft
+# - an issue closed as completed goes to «Done»; a reopened one back to «Todo»
 # - when the last open issue of a Hito is closed, a project status update reports it (once per Hito)
-# Only issues already in the project are moved. «En diseño» is set by hand.
+# Only issues already in the project are moved. «Design» and «Blocked» are set by hand.
 
 on:
   workflow_call:
@@ -64,6 +65,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           STATE_REASON: ${{ github.event.issue.state_reason }}
           PR_ID: ${{ github.event.pull_request.node_id }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           set -euo pipefail
 
@@ -140,9 +142,9 @@ jobs:
                   if [ -z "$item" ]; then
                     echo "The issue is not in the project"
                   elif [ "$ACTION" = "reopened" ]; then
-                    set_option "$item" Status Pendiente
+                    set_option "$item" Status Todo
                   elif [ "$STATE_REASON" = "completed" ]; then
-                    set_option "$item" Status Hecho
+                    set_option "$item" Status Done
                   fi
                   ;;
                 *)
@@ -159,16 +161,16 @@ jobs:
                   set_option "$item" Módulo "$MODULE"
                   # Tipo comes from the labels while it is empty; afterwards only adding «technical» changes it
                   if [ "$LABEL" = "technical" ]; then
-                    set_option "$item" Tipo Técnico
+                    set_option "$item" Tipo Technical
                   elif [ -z "$(value_of "$item" Tipo)" ]; then
                     if jq -e 'index("technical")' <<<"$ISSUE_LABELS" >/dev/null; then
-                      set_option "$item" Tipo Técnico
+                      set_option "$item" Tipo Technical
                     elif jq -e 'index("bug") or index("enhancement")' <<<"$ISSUE_LABELS" >/dev/null; then
-                      set_option "$item" Tipo Funcional
+                      set_option "$item" Tipo Functional
                     fi
                   fi
                   if [ -z "$(value_of "$item" Status)" ]; then
-                    set_option "$item" Status Pendiente
+                    set_option "$item" Status Todo
                   fi
                   ;;
               esac
@@ -178,15 +180,20 @@ jobs:
                 query($pr: ID!) {
                   node(id: $pr) { ... on PullRequest { closingIssuesReferences(first: 20) { nodes { id } } } }
                 }' -f pr="$PR_ID" --jq '.data.node.closingIssuesReferences.nodes[].id')
+              target=Review
+              if [ "$PR_DRAFT" = "true" ]; then
+                target="In progress"
+              fi
               for issue in $issues; do
                 item=$(project_item "$issue")
                 if [ -z "$item" ]; then
                   continue
                 fi
-                current=$(value_of "$item" Status)
-                if [ "$current" != "Hecho" ] && [ "$current" != "En curso" ]; then
-                  set_option "$item" Status "En curso"
-                fi
+                # Never back from Done, nor from Review to In progress when a reviewed pull request is edited as a draft
+                case "$(value_of "$item" Status)" in
+                  Done|Review|"$target") ;;
+                  *) set_option "$item" Status "$target" ;;
+                esac
               done
               ;;
           esac
