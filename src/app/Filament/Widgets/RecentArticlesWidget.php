@@ -17,6 +17,11 @@ class RecentArticlesWidget extends TableWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public static function canView(): bool
+    {
+        return ArticleResource::canViewAny();
+    }
+
     public function getTableHeading(): string
     {
         return __('Artículos recientes');
@@ -38,7 +43,9 @@ class RecentArticlesWidget extends TableWidget
                 TextColumn::make('title')
                     ->label(__('Título'))
                     ->limit(50)
-                    ->url(fn (ArticleModel $record): string => ArticleResource::getUrl('edit', ['record' => $record])),
+                    ->url(fn (ArticleModel $record): ?string => ArticleResource::canEdit($record)
+                        ? ArticleResource::getUrl('edit', ['record' => $record])
+                        : null),
                 TextColumn::make('author.display_name')
                     ->label(__('Autor')),
                 TextColumn::make('published_at')

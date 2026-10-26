@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\GalleryResource;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use Filament\Widgets\StatsOverviewWidget;
@@ -12,6 +13,11 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class GalleryStatsWidget extends StatsOverviewWidget
 {
     protected static ?int $sort = 3;
+
+    public static function canView(): bool
+    {
+        return GalleryResource::canViewAny();
+    }
 
     protected function getColumns(): int
     {
