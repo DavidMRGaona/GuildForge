@@ -12,7 +12,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { user, isAdmin, isEditor } = useAuth();
+const { user, can } = useAuth();
 const routes = useRoutes();
 
 const isOpen = ref(false);
@@ -84,9 +84,9 @@ onUnmounted(() => {
                     {{ t('auth.userMenu.profile') }}
                 </Link>
 
-                <!-- Admin panel link (only for admins/editors) -->
+                <!-- Admin panel link: same rule as the server, admin.access from any role -->
                 <a
-                    v-if="isAdmin || isEditor"
+                    v-if="can('admin.access')"
                     :href="routes.admin"
                     class="flex w-full items-center px-4 py-2 text-sm text-base-primary hover:bg-muted"
                     role="menuitem"

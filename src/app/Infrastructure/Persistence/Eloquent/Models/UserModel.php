@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use App\Notifications\Contracts\NamesMailRecipient;
@@ -95,9 +96,13 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
         ];
     }
 
+    /**
+     * The panel opens for admin.access from any role, never for a role name: Filament, the
+     * maintenance bypass and UserService::canAccessPanel() must give the same answer.
+     */
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->roles()->whereIn('name', ['admin', 'editor'])->exists();
+        return app(AuthorizationServiceInterface::class)->can($this, 'admin.access');
     }
 
     /**

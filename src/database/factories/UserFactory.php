@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -72,7 +73,8 @@ class UserFactory extends Factory
     }
 
     /**
-     * Indicate that the user is an editor.
+     * Indicate that the user is an editor. The panel opens through admin.access, not the role
+     * name, so the role carries it even when RolesSeeder has not run.
      */
     public function editor(): static
     {
@@ -81,6 +83,11 @@ class UserFactory extends Factory
                 ['name' => 'editor'],
                 ['display_name' => 'Editor']
             );
+            $panelAccess = PermissionModel::firstOrCreate(
+                ['key' => 'admin.access'],
+                ['label' => 'admin.access', 'resource' => 'admin', 'action' => 'access']
+            );
+            $role->permissions()->syncWithoutDetaching([$panelAccess->id]);
             $user->roles()->syncWithoutDetaching([$role->id]);
         });
     }

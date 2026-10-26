@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Middleware;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -63,6 +65,24 @@ final class EnsureSiteIsNotInMaintenanceTest extends TestCase
     {
         $this->enableMaintenance();
         $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get('/')->assertOk();
+    }
+
+    public function test_custom_role_with_panel_access_sees_the_site_during_maintenance(): void
+    {
+        $this->enableMaintenance();
+        $role = RoleModel::create(['name' => 'treasury', 'display_name' => 'Treasury']);
+        $permission = PermissionModel::create([
+            'key' => 'admin.access',
+            'label' => 'admin.access',
+            'resource' => 'admin',
+            'action' => 'access',
+        ]);
+        $role->permissions()->attach($permission->id);
+        $user = UserModel::factory()->create();
+        $user->roles()->attach($role->id);
+        $this->actingAs($user);
 
         $this->get('/')->assertOk();
     }
