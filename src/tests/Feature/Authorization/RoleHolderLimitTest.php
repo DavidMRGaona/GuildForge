@@ -52,7 +52,7 @@ final class RoleHolderLimitTest extends TestCase
             $this->fail('A full role must not take another holder.');
         } catch (RoleHolderLimitReachedException $e) {
             $this->assertSame(
-                'Tesorería ya la tiene Ana López. Quítasela antes de dársela a otra persona.',
+                'El rol «Tesorería» ya lo tiene Ana López. Quítaselo antes de dárselo a otra persona.',
                 $e->getMessage(),
             );
         }
@@ -72,7 +72,7 @@ final class RoleHolderLimitTest extends TestCase
         $this->assertFalse($this->authorization->hasRole($holder, 'treasurer'), 'The role is inactive for a non-member.');
 
         $this->expectException(RoleHolderLimitReachedException::class);
-        $this->expectExceptionMessage('Tesorería ya la tiene Ana López.');
+        $this->expectExceptionMessage('El rol «Tesorería» ya lo tiene Ana López.');
 
         $this->authorization->assignRole($this->person('Bea Ruiz', ['socio']), 'treasurer');
     }
@@ -190,7 +190,7 @@ final class RoleHolderLimitTest extends TestCase
         $this->assertTrue($this->holds($second, 'treasurer'));
 
         $this->expectException(RoleHolderLimitReachedException::class);
-        $this->expectExceptionMessage('Tesorería ya la tiene Ana López, Bea Ruiz.');
+        $this->expectExceptionMessage('El rol «Tesorería» ya lo tienen Ana López, Bea Ruiz. Quítaselo a alguien antes de dárselo a otra persona.');
 
         $this->authorization->assignRole($this->person('Carlos Gil'), 'treasurer');
     }

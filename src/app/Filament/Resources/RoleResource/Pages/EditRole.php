@@ -7,6 +7,7 @@ namespace App\Filament\Resources\RoleResource\Pages;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Filament\Resources\RoleResource;
+use App\Filament\Resources\RoleResource\Concerns\SyncsPermissionTabs;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -15,6 +16,7 @@ class EditRole extends EditRecord
 {
     use GuardsRolePermissions;
     use RecordsRoleHistory;
+    use SyncsPermissionTabs;
 
     protected static string $resource = RoleResource::class;
 
@@ -33,6 +35,18 @@ class EditRole extends EditRecord
             RoleResource::deleteAction()
                 ->hidden(fn (): bool => RoleResource::isLocked($record)),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        /** @var RoleModel $record */
+        $record = $this->record;
+
+        return [...$data, ...$this->fillPermissionTabs($record)];
     }
 
     /**
@@ -55,6 +69,9 @@ class EditRole extends EditRecord
             unset($data['requires_association_member'], $data['max_holders']);
         }
 
+        // Synced after saving (afterSave), never written to the role itself
+        unset($data['permissions_by_section'], $data['panel_access']);
+
         return $data;
     }
 
@@ -72,10 +89,10 @@ class EditRole extends EditRecord
             $names[] = $this->data['name'];
         }
 
-        $this->guardSubmittedPermissions(
-            $names,
-            array_values($record->permissions()->pluck('permissions.id')->map(strval(...))->all()),
-        );
+        $ids = $this->collectPermissionIds($this->data ?? [], $record);
+
+        $this->guardSubmittedPermissions($names, $this->currentPermissionIds($record), $ids);
+        $this->rememberPermissionIdsToSync($ids);
     }
 
     protected function afterSave(): void
@@ -83,9 +100,10 @@ class EditRole extends EditRecord
         /** @var RoleModel $record */
         $record = $this->record;
 
+        $this->syncPermissionTabs($record);
         $this->recordDefinitionChange($record, RoleAuditEvent::RoleUpdated);
 
-        // The permissions checkbox list writes the pivot directly: every holder of the role is affected
+        // Every holder of the role is affected by its permissions
         app(AuthorizationServiceInterface::class)->invalidateCache();
     }
 

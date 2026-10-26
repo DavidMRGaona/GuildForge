@@ -172,8 +172,9 @@ final readonly class RoleGrantPolicy
 
     /**
      * Whether the actor may open, edit or delete the role: an admin always may (any role that
-     * exists); anyone else only when the role is readable and every permission it holds is among
-     * the actor's effective permissions, because editing or deleting it changes what every holder gets.
+     * exists); anyone else never "admin", and any other role only when it is readable and every
+     * permission it holds is among the actor's effective permissions, because editing or deleting
+     * it changes what every holder gets.
      */
     public function canManageRole(object $actor, string $roleName): bool
     {
@@ -183,7 +184,7 @@ final readonly class RoleGrantPolicy
             return $role instanceof Role || in_array($roleName, $this->roles->allNames(), true);
         }
 
-        if (! $role instanceof Role) {
+        if (! $role instanceof Role || $roleName === UserRole::Admin->value) {
             return false;
         }
 

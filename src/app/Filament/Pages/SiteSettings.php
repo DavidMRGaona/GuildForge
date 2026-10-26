@@ -6,7 +6,9 @@ namespace App\Filament\Pages;
 
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Application\Services\SettingsServiceInterface;
+use App\Domain\Enums\UserRole;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
@@ -115,6 +117,13 @@ final class SiteSettings extends Page implements HasForms
      * @var array<string, string>|null
      */
     private ?array $associationMemberRoleOptions = null;
+
+    /**
+     * The association role hint, worked out once per request for each picked value.
+     *
+     * @var array<string, string|null>
+     */
+    private array $associationMemberRoleHints = [];
 
     public static function getNavigationLabel(): string
     {
@@ -623,9 +632,21 @@ final class SiteSettings extends Page implements HasForms
 
     /**
      * The warning for an unusable saved role or, when another role is picked, how many people
-     * would be left with inactive roles.
+     * would be left with inactive roles (nothing when nobody would). The hint and its icon both
+     * ask, so it is worked out once per request.
      */
     private function associationMemberRoleHint(mixed $selected): ?string
+    {
+        $key = is_scalar($selected) ? (string) $selected : '';
+
+        if (! array_key_exists($key, $this->associationMemberRoleHints)) {
+            $this->associationMemberRoleHints[$key] = $this->buildAssociationMemberRoleHint($selected);
+        }
+
+        return $this->associationMemberRoleHints[$key];
+    }
+
+    private function buildAssociationMemberRoleHint(mixed $selected): ?string
     {
         $warning = $this->associationMemberRoleWarning();
 
@@ -644,7 +665,46 @@ final class SiteSettings extends Page implements HasForms
 
         $count = app(InactiveRoleHolders::class)->count($chosen);
 
-        return trans_choice('filament.settings.auth.association_member_role_inactive_holders', $count, ['count' => $count]);
+        return $count > 0
+            ? trans_choice('filament.settings.auth.association_member_role_inactive_holders', $count, ['count' => $count])
+            : null;
+    }
+
+    /**
+     * Making another role the association member role turns on, for its holders, the roles
+     * they hold that require membership: as if they were granted those roles. Anyone but an
+     * admin may only do it when they could grant every one of them (RoleGrantPolicy).
+     *
+     * @return list<string> the visible names of the roles the actor could not grant
+     */
+    private function associationRoleChangeDeniedRoles(string $newRoleName): array
+    {
+        $actor = auth()->user();
+
+        if ($actor === null) {
+            return [$newRoleName];
+        }
+
+        if (app(AuthorizationServiceInterface::class)->hasRole($actor, UserRole::Admin->value)) {
+            return [];
+        }
+
+        $grantPolicy = app(RoleGrantPolicy::class);
+        $denied = array_values(array_filter(
+            app(InactiveRoleHolders::class)->rolesRequiringMembershipHeldByHoldersOf($newRoleName),
+            static fn (string $roleName): bool => ! $grantPolicy->canGrant($actor, $roleName),
+        ));
+
+        if ($denied === []) {
+            return [];
+        }
+
+        $displayNames = RoleModel::query()->whereIn('name', $denied)->pluck('display_name', 'name')->all();
+
+        return array_map(
+            static fn (string $roleName): string => (string) ($displayNames[$roleName] ?? $roleName),
+            $denied,
+        );
     }
 
     public function save(SettingsServiceInterface $settingsService): void
@@ -654,7 +714,28 @@ final class SiteSettings extends Page implements HasForms
             $settingsService->get(AssociationMembershipServiceInterface::SETTING_KEY)
         );
 
+        if (array_key_exists(AssociationMembershipServiceInterface::SETTING_KEY, $formData)
+            && in_array(AssociationMembershipServiceInterface::SETTING_KEY, $this->getSettingsKeys(), true)) {
+            $associationRoleChosen = $this->effectiveAssociationMemberRole($formData[AssociationMembershipServiceInterface::SETTING_KEY]);
+            $denied = $associationRoleChosen !== $associationRoleBefore
+                ? $this->associationRoleChangeDeniedRoles($associationRoleChosen)
+                : [];
+
+            if ($denied !== []) {
+                // Nothing is saved: the other fields stay in the form to try again
+                Notification::make()
+                    ->danger()
+                    ->title(__('filament.settings.auth.association_member_role_grant_denied_title'))
+                    ->body(__('filament.settings.auth.association_member_role_grant_denied_body', ['roles' => implode(', ', $denied)]))
+                    ->send();
+
+                return;
+            }
+        }
+
         $this->saveSettings($settingsService, $formData);
+        // The saved role changed what the hint compares against
+        $this->associationMemberRoleHints = [];
 
         // Roles that require association membership turn on or off with the association role
         $associationRoleAfter = $this->effectiveAssociationMemberRole(

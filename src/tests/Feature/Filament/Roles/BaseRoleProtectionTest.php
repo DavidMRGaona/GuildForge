@@ -15,6 +15,7 @@ use Filament\Actions\DeleteAction;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use ReflectionMethod;
+use Tests\Support\Authorization\FillsRolePermissionTabs;
 use Tests\TestCase;
 
 /**
@@ -24,6 +25,7 @@ use Tests\TestCase;
  */
 final class BaseRoleProtectionTest extends TestCase
 {
+    use FillsRolePermissionTabs;
     use LazilyRefreshDatabase;
 
     private UserModel $admin;
@@ -61,10 +63,11 @@ final class BaseRoleProtectionTest extends TestCase
             'action' => 'create',
         ]);
 
-        Livewire::test(EditRole::class, ['record' => $member->getRouteKey()])
+        $page = Livewire::test(EditRole::class, ['record' => $member->getRouteKey()])
             ->assertFormFieldIsEnabled('display_name')
-            ->assertFormFieldIsEnabled('permissions')
-            ->fillForm(['display_name' => 'Usuario registrado', 'permissions' => [$permission->id]])
+            ->assertFormFieldIsEnabled('permissions_by_section.content.events')
+            ->fillForm(['display_name' => 'Usuario registrado']);
+        $this->tickPermissions($page, [$permission->id])
             ->call('save')
             ->assertHasNoFormErrors();
 

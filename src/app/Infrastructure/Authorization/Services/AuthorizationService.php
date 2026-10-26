@@ -211,7 +211,9 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 $roleNames[] = BaseRoleRule::NAME;
             }
 
-            $roles = RoleModel::whereIn('name', $roleNames)->get();
+            // In a fixed order: the holder limit locks each capped role, and two syncs at the
+            // same time must take those locks in the same order or they could deadlock
+            $roles = RoleModel::whereIn('name', $roleNames)->orderBy('name')->get();
 
             foreach ($roles as $role) {
                 if (! in_array($role->id, $currentIds, true)) {

@@ -17,7 +17,7 @@ final class RoleHolderLimitReachedException extends DomainException
      */
     public static function forRole(string $roleDisplayName, array $holderNames): self
     {
-        return new self(__('authorization.errors.role_holder_limit', [
+        return new self(trans_choice('authorization.errors.role_holder_limit', count($holderNames), [
             'role' => $roleDisplayName,
             'holders' => implode(', ', $holderNames),
         ]));

@@ -49,6 +49,20 @@ final class RoleAuditPanelTest extends TestCase
             ->assertSee('Rol asignado');
     }
 
+    public function test_history_shows_the_display_name_of_an_existing_role_and_the_stored_name_of_a_deleted_one(): void
+    {
+        $role = RoleModel::create(['name' => 'tesoreria', 'display_name' => 'Tesorería del club']);
+        $alive = $this->entry(['role_id' => $role->id, 'role_name' => 'tesoreria']);
+        $gone = $this->entry(['role_id' => null, 'role_name' => 'borrado']);
+        $user = UserModel::factory()->create();
+        $alive->forceFill(['user_id' => $user->id])->save();
+        $gone->forceFill(['user_id' => $user->id])->save();
+
+        Livewire::test(UserHistory::class, ['ownerRecord' => $user, 'pageClass' => EditUser::class])
+            ->assertSee('Tesorería del club')
+            ->assertSee('borrado');
+    }
+
     public function test_role_page_lists_its_history(): void
     {
         $role = RoleModel::create(['name' => 'history-role', 'display_name' => 'History role']);
@@ -116,9 +130,10 @@ final class RoleAuditPanelTest extends TestCase
     {
         $user = UserModel::factory()->create();
         $at = now()->subDay()->startOfSecond();
-        $first = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
-        $second = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
-        $third = $this->entry(['user_id' => $user->id, 'created_at' => $at]);
+        // Explicit ids, ordered as UUIDv7 would be: within one millisecond their order is not guaranteed
+        $first = $this->entry(['id' => '019a0000-0000-7000-8000-000000000001', 'user_id' => $user->id, 'created_at' => $at]);
+        $third = $this->entry(['id' => '019a0000-0000-7000-8000-000000000003', 'user_id' => $user->id, 'created_at' => $at]);
+        $second = $this->entry(['id' => '019a0000-0000-7000-8000-000000000002', 'user_id' => $user->id, 'created_at' => $at]);
 
         Livewire::test(UserHistory::class, ['ownerRecord' => $user, 'pageClass' => EditUser::class])
             ->assertCanSeeTableRecords([$third, $second, $first], inOrder: true);

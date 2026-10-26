@@ -16,11 +16,13 @@ use Filament\Actions\DeleteAction;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
+use Tests\Support\Authorization\FillsRolePermissionTabs;
 use Tests\TestCase;
 
 final class RoleEditorGrantRuleTest extends TestCase
 {
     use CreatesUsersWithPermissions;
+    use FillsRolePermissionTabs;
     use LazilyRefreshDatabase;
 
     public function test_non_admin_cannot_add_a_permission_they_lack(): void
@@ -30,8 +32,7 @@ final class RoleEditorGrantRuleTest extends TestCase
         $forbidden = $this->permission('users.delete');
         $this->actingAs($actor);
 
-        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-            ->set('data.permissions', [...$this->ids($role), $forbidden->id])
+        $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $role->getRouteKey()]), [...$this->ids($role), $forbidden->id])
             ->call('save')
             ->assertNotified();
 
@@ -61,8 +62,7 @@ final class RoleEditorGrantRuleTest extends TestCase
         $role = $this->roleWith(['events.view_any']);
         $this->actingAs($actor);
 
-        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-            ->set('data.permissions', [...$this->ids($role), $this->permission('events.create')->id])
+        $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $role->getRouteKey()]), [...$this->ids($role), $this->permission('events.create')->id])
             ->call('save')
             ->assertHasNoFormErrors();
 
@@ -85,8 +85,7 @@ final class RoleEditorGrantRuleTest extends TestCase
         $socio = RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
         $this->actingAs($admin);
 
-        Livewire::test(EditRole::class, ['record' => $socio->getRouteKey()])
-            ->set('data.permissions', [$this->permission('admin.access')->id])
+        $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $socio->getRouteKey()]), [$this->permission('admin.access')->id])
             ->call('save')
             ->assertNotified();
 
@@ -98,8 +97,7 @@ final class RoleEditorGrantRuleTest extends TestCase
         $this->actingAs(UserModel::factory()->admin()->create());
         $member = RoleModel::query()->firstOrCreate(['name' => 'member'], ['display_name' => 'Miembro']);
 
-        Livewire::test(EditRole::class, ['record' => $member->getRouteKey()])
-            ->set('data.permissions', [$this->permission('admin.access')->id])
+        $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $member->getRouteKey()]), [$this->permission('admin.access')->id])
             ->call('save')
             ->assertNotified();
 
@@ -128,7 +126,8 @@ final class RoleEditorGrantRuleTest extends TestCase
         $role = $this->roleWith(['events.view_any']);
 
         Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-            ->set('data.permissions', [...$this->ids($role), '00000000-0000-4000-8000-000000000000'])
+            // A forged id that no box offers
+            ->set('data.permissions_by_section.content.events', [...$this->ids($role), '00000000-0000-4000-8000-000000000000'])
             ->call('save')
             ->assertHasErrors();
 
@@ -140,8 +139,9 @@ final class RoleEditorGrantRuleTest extends TestCase
         $this->actingAs($this->editorWithPermissions(['admin.access', 'roles.view_any', 'roles.create', 'events.view_any']));
         $forbidden = $this->permission('users.delete');
 
-        Livewire::test(CreateRole::class)
-            ->fillForm(['name' => 'nuevo-rol', 'display_name' => 'Nuevo', 'permissions' => [$forbidden->id]])
+        $page = Livewire::test(CreateRole::class)
+            ->fillForm(['name' => 'nuevo-rol', 'display_name' => 'Nuevo']);
+        $this->tickPermissions($page, [$forbidden->id])
             ->call('create')
             ->assertNotified();
 
@@ -185,8 +185,9 @@ final class RoleEditorGrantRuleTest extends TestCase
         $this->actingAs(UserModel::factory()->admin()->create());
         app(SettingsServiceInterface::class)->set(AssociationMembershipServiceInterface::SETTING_KEY, 'junta');
 
-        Livewire::test(CreateRole::class)
-            ->fillForm(['name' => 'junta', 'display_name' => 'Junta', 'permissions' => [$this->permission('admin.access')->id]])
+        $page = Livewire::test(CreateRole::class)
+            ->fillForm(['name' => 'junta', 'display_name' => 'Junta']);
+        $this->tickPermissions($page, [$this->permission('admin.access')->id])
             ->call('create')
             ->assertNotified();
 
@@ -198,8 +199,7 @@ final class RoleEditorGrantRuleTest extends TestCase
         $this->actingAs(UserModel::factory()->admin()->create());
         $role = $this->roleWith(['events.view_any']);
 
-        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-            ->set('data.permissions', [$this->permission('users.delete')->id])
+        $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $role->getRouteKey()]), [$this->permission('users.delete')->id])
             ->call('save')
             ->assertHasNoFormErrors();
 

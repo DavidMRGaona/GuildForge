@@ -47,7 +47,9 @@ trait ListsRoleAuditEntries
                 ->label(__('filament.roles.audit.columns.event'))
                 ->formatStateUsing(fn (string $state): string => self::eventLabel($state)),
             TextColumn::make('role_name')
-                ->label(__('filament.roles.audit.columns.role')),
+                ->label(__('filament.roles.audit.columns.role'))
+                // The current display name while the role exists; the stored name once it is gone
+                ->state(fn (RoleAuditEntryModel $record): string => $record->role?->display_name ?: $record->role_name),
         ];
 
         if ($this->showsAffectedAccount()) {
@@ -72,7 +74,7 @@ trait ListsRoleAuditEntries
             ->formatStateUsing(fn (string $state): string => self::sourceLabel($state));
 
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['actor', 'user']))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['actor', 'user', 'role']))
             ->columns($columns)
             ->defaultSort(fn (Builder $query): Builder => $query->orderByDesc('created_at')->orderByDesc('id'))
             ->emptyStateHeading(__('filament.roles.audit.empty'))

@@ -26,6 +26,7 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Livewire\LivewireManager;
+use Tests\Support\Authorization\FillsRolePermissionTabs;
 use Tests\TestCase;
 use Throwable;
 
@@ -36,6 +37,7 @@ use Throwable;
  */
 final class RoleAuditLogTest extends TestCase
 {
+    use FillsRolePermissionTabs;
     use LazilyRefreshDatabase;
 
     private AuthorizationServiceInterface $authorization;
@@ -134,8 +136,7 @@ final class RoleAuditLogTest extends TestCase
         $role->permissions()->attach([$this->permission('events.view_any')->id, $this->permission('events.create')->id]);
         $update = $this->permission('events.update');
 
-        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-            ->set('data.permissions', [$this->permission('events.view_any')->id, $update->id])
+        $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $role->getRouteKey()]), [$this->permission('events.view_any')->id, $update->id])
             ->set('data.max_holders', 2)
             ->set('data.name', 'game-master-lead')
             ->call('save')
@@ -161,13 +162,13 @@ final class RoleAuditLogTest extends TestCase
         $this->assertCount(1, $this->definitionEntries($role->id));
 
         // A new role from the panel
-        Livewire::test(CreateRole::class)
+        $page = Livewire::test(CreateRole::class)
             ->fillForm([
                 'name' => 'librarian',
                 'display_name' => 'Biblioteca',
-                'permissions' => [$update->id],
                 'requires_association_member' => true,
-            ])
+            ]);
+        $this->tickPermissions($page, [$update->id])
             ->call('create')
             ->assertHasNoFormErrors();
 
@@ -299,8 +300,7 @@ final class RoleAuditLogTest extends TestCase
         Schema::drop('role_audit_log');
 
         try {
-            Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-                ->set('data.permissions', [$this->permission('events.view_any')->id, $added->id])
+            $this->tickPermissions(Livewire::test(EditRole::class, ['record' => $role->getRouteKey()]), [$this->permission('events.view_any')->id, $added->id])
                 ->set('data.max_holders', 3)
                 ->call('save');
             $this->fail('A role change that cannot be logged must not be saved.');

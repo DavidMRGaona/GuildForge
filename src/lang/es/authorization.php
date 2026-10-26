@@ -9,6 +9,11 @@ return [
         'manager_subject' => ':name tiene roles en pausa',
         'manager_body' => ':name ha dejado de ser socio y estos roles no funcionan por ahora: :roles. Si hay que nombrar a otra persona, quítaselos antes desde su ficha.',
     ],
+    'tabs' => [
+        'content' => 'Contenido',
+        'users' => 'Usuarios y roles',
+        'site' => 'Sitio',
+    ],
     'resources' => [
         'events' => 'Eventos',
         'articles' => 'Artículos',
@@ -156,7 +161,7 @@ return [
     'errors' => [
         'cannot_delete_base_role' => 'No se puede eliminar «:role»: es el rol base de todas las cuentas.',
         'cannot_restrict_role' => 'El rol «:role» no admite requisito de socio ni máximo de personas.',
-        'role_holder_limit' => ':role ya la tiene :holders. Quítasela antes de dársela a otra persona.',
+        'role_holder_limit' => '[0,1] El rol «:role» ya lo tiene :holders. Quítaselo antes de dárselo a otra persona.|[2,*] El rol «:role» ya lo tienen :holders. Quítaselo a alguien antes de dárselo a otra persona.',
         'role_grant_denied' => 'No puedes dar ni quitar estos roles: :roles.',
     ],
 
