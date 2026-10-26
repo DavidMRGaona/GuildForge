@@ -244,6 +244,30 @@ final class PermissionCatalogTest extends TestCase
         $this->assertSame(['section-1'], $this->sectionKeys($this->tab($this->tabs(), 'module-cookieconsent')));
     }
 
+    public function test_tab_and_section_keys_never_hold_a_dot(): void
+    {
+        // Keys are parts of the form state path: a dot would split it
+        app(PermissionRegistryInterface::class)->register(new PermissionDefinitionDTO('odd.thing.view', 'Ver cosas raras', 'odd.thing', 'view'));
+        PermissionModel::query()->create(['key' => 'odd.thing.view', 'label' => 'odd.thing.view', 'resource' => 'odd.thing', 'action' => 'view']);
+        app(PermissionRegistryInterface::class)->register(new PermissionDefinitionDTO('odd-thing.view', 'Ver cosas', 'odd-thing', 'view'));
+        PermissionModel::query()->create(['key' => 'odd-thing.view', 'label' => 'odd-thing.view', 'resource' => 'odd-thing', 'action' => 'view']);
+        $this->register('venuebookings:rooms.v2.view', 'Ver salas v2', 'rooms.v2', 'venuebookings');
+        $this->modules(['venue-bookings' => 'Reservas de salas']);
+
+        $tabs = $this->tabs();
+        foreach ($tabs as $tab) {
+            $this->assertStringNotContainsString('.', $tab->key);
+            foreach ($tab->sections as $section) {
+                $this->assertStringNotContainsString('.', $section->key);
+            }
+        }
+
+        $siteKeys = $this->sectionKeys($this->tab($tabs, 'site'));
+        $this->assertContains('odd-thing', $siteKeys);
+        $this->assertContains('odd-thing-2', $siteKeys);
+        $this->assertContains('roomsv2', $this->sectionKeys($this->tab($tabs, 'module-venuebookings')));
+    }
+
     public function test_module_tabs_sort_ignoring_accents(): void
     {
         $this->modules(['venue-bookings' => 'Zonas', 'game-tables' => 'Álbumes']);

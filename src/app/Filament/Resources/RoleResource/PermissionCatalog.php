@@ -85,9 +85,11 @@ final readonly class PermissionCatalog
             }
 
             $sections = [];
+            $used = [];
             foreach ($resources as $resource) {
                 if (isset($byResource[$resource])) {
-                    $sections[] = new PermissionSection($resource, $this->resourceLabel($resource), $byResource[$resource]);
+                    $key = $this->uniqueKey($this->stateKey($resource, 'section-'.(count($sections) + 1)), $used);
+                    $sections[] = new PermissionSection($key, $this->resourceLabel($resource), $byResource[$resource]);
                 }
             }
 
@@ -104,6 +106,7 @@ final readonly class PermissionCatalog
     private function moduleTabs(array $byPrefix): array
     {
         $tabs = [];
+        $usedTabs = [];
 
         foreach ($this->modules->enabled()->all() as $module) {
             $prefix = $this->matchingPrefix($module, array_map(strval(...), array_keys($byPrefix)));
@@ -126,19 +129,12 @@ final readonly class PermissionCatalog
             $used = [];
             foreach ($grouped as $label => $options) {
                 $label = (string) $label;
-                $base = Str::slug($firstResource[$label]);
-                if ($base === '') {
-                    $base = 'section-'.(count($sections) + 1);
-                }
-                $key = $base;
-                for ($n = 2; isset($used[$key]); $n++) {
-                    $key = $base.'-'.$n;
-                }
-                $used[$key] = true;
+                $key = $this->uniqueKey($this->stateKey(Str::slug($firstResource[$label]), 'section-'.(count($sections) + 1)), $used);
                 $sections[] = new PermissionSection($key, $label, $options);
             }
 
-            $tabs[] = new PermissionTab('module-'.$prefix, $module->displayName(), $sections);
+            $tabKey = $this->uniqueKey('module-'.$this->stateKey($prefix, (string) (count($tabs) + 1)), $usedTabs);
+            $tabs[] = new PermissionTab($tabKey, $module->displayName(), $sections);
         }
 
         usort($tabs, fn (PermissionTab $a, PermissionTab $b): int => strcasecmp(Str::ascii($a->label), Str::ascii($b->label)));
@@ -162,6 +158,31 @@ final readonly class PermissionCatalog
         }
 
         return null;
+    }
+
+    /**
+     * Tab and section keys are parts of the form state path (`permissions_by_section.<tab>.<section>`),
+     * so they hold only letters, digits, hyphens and underscores: never a dot.
+     */
+    private function stateKey(string $raw, string $fallback): string
+    {
+        $key = trim((string) preg_replace('/[^A-Za-z0-9_-]+/', '-', $raw), '-');
+
+        return $key === '' ? $fallback : $key;
+    }
+
+    /**
+     * @param  array<string, true>  $used
+     */
+    private function uniqueKey(string $base, array &$used): string
+    {
+        $key = $base;
+        for ($n = 2; isset($used[$key]); $n++) {
+            $key = $base.'-'.$n;
+        }
+        $used[$key] = true;
+
+        return $key;
     }
 
     private function resourceLabel(string $resource): string

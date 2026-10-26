@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\RoleResource\Concerns;
 
-use App\Application\Authorization\Services\RoleGrantPolicy;
-use App\Filament\Resources\RoleResource\PermissionCatalog;
+use App\Filament\Resources\RoleResource;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 
@@ -22,6 +21,9 @@ trait SyncsPermissionTabs
     /** @var list<string>|null ids to sync once the role is saved, set by the check before saving */
     private ?array $permissionIdsToSync = null;
 
+    /** admin.access id, read once per page instance (false: not read yet) */
+    private string|false|null $adminAccessId = false;
+
     /**
      * Initial state of the tabs and of the panel access switch for the role.
      *
@@ -32,7 +34,7 @@ trait SyncsPermissionTabs
         $held = $this->currentPermissionIds($role);
         $state = [];
 
-        foreach (app(PermissionCatalog::class)->tabs() as $tab) {
+        foreach (RoleResource::permissionTabs($this) as $tab) {
             foreach ($tab->sections as $section) {
                 $state[$tab->key][$section->key] = array_values(array_filter(
                     array_map(static fn ($option): string => $option->id, $section->permissions),
@@ -119,7 +121,7 @@ trait SyncsPermissionTabs
     private function permissionIdsOutsideTheForm(RoleModel $role, ?string $adminAccessId): array
     {
         $shown = [];
-        foreach (app(PermissionCatalog::class)->tabs() as $tab) {
+        foreach (RoleResource::permissionTabs($this) as $tab) {
             foreach ($tab->sections as $section) {
                 foreach ($section->permissions as $option) {
                     $shown[$option->id] = $option->key;
@@ -130,9 +132,8 @@ trait SyncsPermissionTabs
             $shown[$adminAccessId] = self::ADMIN_ACCESS;
         }
 
-        $actor = auth()->user();
         // Without a signed-in actor nothing may be edited: everything the role holds stays
-        $editable = $actor !== null ? app(RoleGrantPolicy::class)->editablePermissionKeys($actor) : [];
+        $editable = RoleResource::editablePermissionKeys();
 
         return array_values(array_filter(
             $this->currentPermissionIds($role),
@@ -143,8 +144,11 @@ trait SyncsPermissionTabs
 
     private function adminAccessId(): ?string
     {
-        $id = PermissionModel::query()->where('key', self::ADMIN_ACCESS)->value('id');
+        if ($this->adminAccessId === false) {
+            $id = PermissionModel::query()->where('key', self::ADMIN_ACCESS)->value('id');
+            $this->adminAccessId = is_scalar($id) ? (string) $id : null;
+        }
 
-        return is_scalar($id) ? (string) $id : null;
+        return $this->adminAccessId;
     }
 }

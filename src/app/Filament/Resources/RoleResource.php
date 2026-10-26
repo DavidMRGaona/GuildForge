@@ -43,6 +43,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
+use WeakMap;
 
 class RoleResource extends BaseResource
 {
@@ -53,6 +54,9 @@ class RoleResource extends BaseResource
     protected static string|\UnitEnum|null $navigationGroup = 'Administración';
 
     protected static ?int $navigationSort = 2;
+
+    /** @var WeakMap<object, list<PermissionTab>>|null */
+    private static ?WeakMap $permissionTabsByPage = null;
 
     public static function getModelLabel(): string
     {
@@ -66,10 +70,7 @@ class RoleResource extends BaseResource
 
     public static function form(Schema $schema): Schema
     {
-        $permissionTabs = array_values(array_filter(
-            app(PermissionCatalog::class)->tabs(),
-            static fn (PermissionTab $tab): bool => $tab->sections !== [],
-        ));
+        $permissionTabs = self::permissionTabs($schema->getLivewire());
         $editable = self::editablePermissionKeys();
 
         return $schema
@@ -131,9 +132,10 @@ class RoleResource extends BaseResource
                             ->label(__('filament.roles.fields.panelAccess'))
                             ->helperText(__('filament.roles.fields.panelAccessHelp'))
                             ->live()
-                            ->disabled(fn (?RoleModel $record): bool => self::isPanelAccessLocked($record)
+                            // On those roles it can be turned off (a legacy admin.access), never on
+                            ->disabled(fn (Get $get, ?RoleModel $record): bool => (self::isPanelAccessLocked($record) && ! (bool) $get('panel_access'))
                                 || ($editable !== null && ! in_array('admin.access', $editable, true)))
-                            ->hint(fn (?RoleModel $record): ?string => self::isPanelAccessLocked($record) ? (string) __('filament.roles.fields.panelAccessLockedHint') : null)
+                            ->hint(fn (Get $get, ?RoleModel $record): ?string => self::panelAccessHint((bool) $get('panel_access'), $record))
                             ->hintIcon(fn (?RoleModel $record): ?string => self::isPanelAccessLocked($record) ? 'heroicon-o-lock-closed' : null)
                             ->hintColor('warning'),
                         Callout::make(fn (Get $get): string => trans_choice(
@@ -156,7 +158,7 @@ class RoleResource extends BaseResource
                                 static fn (PermissionTab $tab): Tab => self::permissionTab($tab, $editable),
                                 $permissionTabs,
                             ))
-                            ->activeTab(fn (?RoleModel $record): int => self::firstTabWithPermissions($permissionTabs, $record))
+                            ->activeTab(fn (Get $get): int => self::firstTabWithPermissions($get, $permissionTabs))
                             ->hidden($permissionTabs === []),
                     ]),
             ]);
@@ -299,17 +301,44 @@ class RoleResource extends BaseResource
         return self::isBaseRole($record) || self::isAssociationMemberRole($record);
     }
 
+    private static function panelAccessHint(bool $panelAccess, ?RoleModel $record): ?string
+    {
+        if (! self::isPanelAccessLocked($record)) {
+            return null;
+        }
+
+        return $panelAccess
+            ? (string) __('filament.roles.fields.panelAccessLegacyHint')
+            : (string) __('filament.roles.fields.panelAccessLockedHint');
+    }
+
     /**
-     * The permission keys the signed-in user may tick or untick (null: all of them). Without a
-     * signed-in user, none.
+     * The permission keys the signed-in user may tick or untick in the role editor (null: all of
+     * them). Without a signed-in user, none.
      *
      * @return list<string>|null
      */
-    private static function editablePermissionKeys(): ?array
+    public static function editablePermissionKeys(): ?array
     {
         $actor = auth()->user();
 
         return $actor !== null ? app(RoleGrantPolicy::class)->editablePermissionKeys($actor) : [];
+    }
+
+    /**
+     * The catalog tabs that have something to tick, built once per page instance (one Livewire
+     * request): the form, its live updates and the save all read the same tabs.
+     *
+     * @return list<PermissionTab>
+     */
+    public static function permissionTabs(object $livewire): array
+    {
+        self::$permissionTabsByPage ??= new WeakMap;
+
+        return self::$permissionTabsByPage[$livewire] ??= array_values(array_filter(
+            app(PermissionCatalog::class)->tabs(),
+            static fn (PermissionTab $tab): bool => $tab->sections !== [],
+        ));
     }
 
     /**
@@ -413,26 +442,17 @@ class RoleResource extends BaseResource
     }
 
     /**
-     * The tab to open: the first one where the role holds something (1-based, as Filament
-     * counts them), or the first one.
+     * The tab to open: the first one with something ticked (1-based, as Filament counts them),
+     * or the first one. Read from the form state, which the page fills from the role: only the
+     * first render matters, the browser keeps the open tab afterwards.
      *
      * @param  list<PermissionTab>  $tabs
      */
-    private static function firstTabWithPermissions(array $tabs, ?RoleModel $record): int
+    private static function firstTabWithPermissions(Get $get, array $tabs): int
     {
-        if (! $record instanceof RoleModel) {
-            return 1;
-        }
-
-        $held = $record->permissions()->pluck('permissions.id')->map(strval(...))->all();
-
         foreach ($tabs as $index => $tab) {
-            foreach ($tab->sections as $section) {
-                foreach ($section->permissions as $option) {
-                    if (in_array($option->id, $held, true)) {
-                        return $index + 1;
-                    }
-                }
+            if (self::tickedCount($get, [$tab]) > 0) {
+                return $index + 1;
             }
         }
 

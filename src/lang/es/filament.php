@@ -570,6 +570,7 @@ return [
             'panelAccess' => 'Puede entrar en el panel',
             'panelAccessHelp' => 'Quien tenga este rol podrá entrar en el panel de administración y usar en él los permisos marcados.',
             'panelAccessLockedHint' => 'El rol de socio y el rol base no pueden entrar en el panel.',
+            'panelAccessLegacyHint' => 'El rol de socio y el rol base no pueden entrar en el panel: desactívalo para poder guardar.',
             'permissionsWithoutPanel' => '{1} Este rol tiene :count permiso del panel, pero no puede entrar en él.|[2,*] Este rol tiene :count permisos del panel, pero no puede entrar en él.',
             'selectAllPermissions' => 'Marcar todos',
             'deselectAllPermissions' => 'Desmarcar todos',

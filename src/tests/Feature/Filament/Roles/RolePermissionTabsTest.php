@@ -148,6 +148,29 @@ final class RolePermissionTabsTest extends TestCase
         }
     }
 
+    public function test_a_legacy_panel_access_on_the_base_role_can_be_turned_off(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $member = RoleModel::query()->firstOrCreate(['name' => 'member'], ['display_name' => 'Miembro']);
+        // Given before the switch was locked on this role
+        $member->permissions()->attach([$this->id('admin.access'), $this->id('events.view_any')]);
+
+        Livewire::test(EditRole::class, ['record' => $member->getRouteKey()])
+            ->assertSchemaStateSet(['panel_access' => true])
+            ->assertFormFieldIsEnabled('panel_access')
+            ->assertSee(__('filament.roles.fields.panelAccessLegacyHint'))
+            ->set('data.panel_access', false)
+            ->assertFormFieldIsDisabled('panel_access')
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(['events.view_any'], $this->keys($member));
+
+        $entry = RoleAuditEntryModel::query()->where('role_id', $member->id)->where('event', 'role_updated')->firstOrFail();
+        $this->assertSame(['admin.access'], $entry->changes['permissions_removed'] ?? null);
+        $this->assertArrayNotHasKey('permissions_added', $entry->changes);
+    }
+
     public function test_permissions_of_disabled_modules_survive_a_save(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());
