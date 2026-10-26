@@ -9,6 +9,8 @@ use Stringable;
 
 final readonly class RoleName implements Stringable
 {
+    public const string PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
+
     private const int MIN_LENGTH = 2;
 
     private const int MAX_LENGTH = 50;
@@ -53,7 +55,7 @@ final readonly class RoleName implements Stringable
             );
         }
 
-        if (! preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $value)) {
+        if (! preg_match(self::PATTERN, $value)) {
             throw new InvalidArgumentException('Role name must be in kebab-case format');
         }
     }

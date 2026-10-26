@@ -59,8 +59,15 @@ class EditRole extends EditRecord
         /** @var RoleModel $record */
         $record = $this->record;
 
+        $names = [$record->name];
+
+        // A renamed role is checked under its new name too (a locked role keeps its own)
+        if (! RoleResource::isLocked($record) && is_string($this->data['name'] ?? null)) {
+            $names[] = $this->data['name'];
+        }
+
         $this->guardSubmittedPermissions(
-            $record->name,
+            $names,
             array_values($record->permissions()->pluck('permissions.id')->map(strval(...))->all()),
         );
     }

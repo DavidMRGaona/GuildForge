@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
-use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
-use App\Domain\Enums\UserRole;
+use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Infrastructure\Authorization\Policies\AuthorizesWithPermissions;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -38,18 +37,7 @@ class RolePolicy
         }
 
         // Whoever is not an admin cannot open a role that goes beyond their own permissions
-        $authorization = app(AuthorizationServiceInterface::class);
-
-        if ($authorization->hasRole($user, UserRole::Admin->value)) {
-            return true;
-        }
-
-        $held = $authorization->getPermissions($user);
-
-        return array_all(
-            $role->permissions()->pluck('permissions.key')->all(),
-            static fn (string $key): bool => in_array($key, $held, true),
-        );
+        return app(RoleGrantPolicy::class)->canManageRole($user, $role->name);
     }
 
     public function delete(UserModel $user, RoleModel $role): bool
@@ -60,7 +48,8 @@ class RolePolicy
             return false;
         }
 
-        return $this->authorize($user, 'roles.delete');
+        return $this->authorize($user, 'roles.delete')
+            && app(RoleGrantPolicy::class)->canManageRole($user, $role->name);
     }
 
     public function restore(UserModel $user, RoleModel $role): bool
@@ -74,7 +63,8 @@ class RolePolicy
             return false;
         }
 
-        return $this->authorize($user, 'roles.delete');
+        return $this->authorize($user, 'roles.delete')
+            && app(RoleGrantPolicy::class)->canManageRole($user, $role->name);
     }
 
     private function isUndeletable(RoleModel $role): bool

@@ -9,6 +9,7 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Authorization\Services\RoleRestrictionRule;
+use App\Domain\Authorization\ValueObjects\RoleName;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
@@ -16,6 +17,7 @@ use App\Filament\Resources\RoleResource\RoleRequirementImpact;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Closure;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
@@ -59,8 +61,16 @@ class RoleResource extends BaseResource
                             ->label(__('filament.roles.fields.name'))
                             ->required()
                             ->maxLength(50)
-                            ->regex('/^[a-z0-9]+(-[a-z0-9]+)*$/')
-                            ->validationMessages(['regex' => __('filament.roles.fields.nameFormat')])
+                            ->rule(static fn (?RoleModel $record): Closure => static function (string $attribute, mixed $value, Closure $fail) use ($record): void {
+                                // A legacy name that is kept as it is must not block other edits
+                                if ($record instanceof RoleModel && $value === $record->name) {
+                                    return;
+                                }
+
+                                if (! is_string($value) || preg_match(RoleName::PATTERN, $value) !== 1) {
+                                    $fail((string) __('filament.roles.fields.nameFormat'));
+                                }
+                            })
                             ->unique(ignoreRecord: true)
                             ->disabled(fn (?RoleModel $record): bool => $record instanceof RoleModel && self::isLocked($record))
                             ->hint(fn (?RoleModel $record): ?string => self::lockedNameHint($record))

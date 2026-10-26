@@ -16,7 +16,7 @@ class CreateRole extends CreateRecord
 
     protected function beforeCreate(): void
     {
-        $this->guardSubmittedPermissions((string) ($this->data['name'] ?? ''), []);
+        $this->guardSubmittedPermissions([(string) ($this->data['name'] ?? '')], []);
     }
 
     /**

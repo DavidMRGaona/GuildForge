@@ -486,7 +486,8 @@ return [
     'roles' => [
         'notifications' => [
             'permissionsBeyondYours' => 'No puedes añadir ni quitar permisos que no tienes.',
-            'associationRoleNoPanel' => 'El rol de socio no puede tener acceso al panel de administración.',
+            'associationRoleNoPanel' => 'El rol de socio y el rol base no pueden tener acceso al panel de administración.',
+            'unknownPermission' => 'Alguno de los permisos enviados no existe.',
         ],
         'label' => 'rol',
         'pluralLabel' => 'Roles',
