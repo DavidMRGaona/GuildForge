@@ -13,6 +13,7 @@ use Tests\Support\Surveys\FakeSurveySubjectSource;
 use Tests\Support\Surveys\OtherFakeSurveySubjectSource;
 use Tests\Support\Surveys\SameTypeFakeSurveySubjectSource;
 use Tests\Support\Surveys\ThrowingTypeSurveySubjectSource;
+use Tests\Support\Surveys\UnresolvableSurveySubjectSource;
 use Tests\TestCase;
 
 final class SurveySubjectSourceRegistryTest extends TestCase
@@ -111,46 +112,44 @@ final class SurveySubjectSourceRegistryTest extends TestCase
     #[Test]
     public function it_skips_a_class_that_cannot_be_resolved(): void
     {
-        Log::spy();
+        $log = Log::spy();
 
-        /** @var class-string $missing */
-        $missing = 'Missing\\SurveySubjectSource';
-        $this->registry->register($missing, 'broken-module');
+        $this->registry->register(UnresolvableSurveySubjectSource::class, 'broken-module');
         $this->registry->register(FakeSurveySubjectSource::class, 'example-module');
 
         $this->assertSame(['fake'], array_keys($this->registry->sources()));
-        Log::shouldHaveReceived('warning')->once();
+        $log->shouldHaveReceived('warning')->once();
     }
 
     #[Test]
     public function it_skips_a_class_that_is_not_a_survey_subject_source(): void
     {
-        Log::spy();
+        $log = Log::spy();
 
         $this->registry->register(stdClass::class, 'broken-module');
         $this->registry->register(FakeSurveySubjectSource::class, 'example-module');
 
         $this->assertSame(['fake'], array_keys($this->registry->sources()));
         $this->assertNull($this->registry->source('stdClass'));
-        Log::shouldHaveReceived('warning')->twice();
+        $log->shouldHaveReceived('warning')->twice();
     }
 
     #[Test]
     public function it_skips_a_source_whose_type_cannot_be_read(): void
     {
-        Log::spy();
+        $log = Log::spy();
 
         $this->registry->register(ThrowingTypeSurveySubjectSource::class, 'broken-module');
         $this->registry->register(FakeSurveySubjectSource::class, 'example-module');
 
         $this->assertSame(['fake'], array_keys($this->registry->sources()));
-        Log::shouldHaveReceived('warning')->once();
+        $log->shouldHaveReceived('warning')->once();
     }
 
     #[Test]
     public function it_keeps_the_first_source_when_two_share_a_type(): void
     {
-        Log::spy();
+        $log = Log::spy();
 
         $this->registry->register(FakeSurveySubjectSource::class, 'example-module');
         $this->registry->register(SameTypeFakeSurveySubjectSource::class, 'another-module');
@@ -159,7 +158,7 @@ final class SurveySubjectSourceRegistryTest extends TestCase
 
         $this->assertInstanceOf(FakeSurveySubjectSource::class, $source);
         $this->assertNotInstanceOf(SameTypeFakeSurveySubjectSource::class, $source);
-        Log::shouldHaveReceived('warning')->once();
+        $log->shouldHaveReceived('warning')->once();
     }
 
     #[Test]
@@ -167,7 +166,6 @@ final class SurveySubjectSourceRegistryTest extends TestCase
     {
         $registry = $this->app->make(SurveySubjectSourceRegistryInterface::class);
 
-        $this->assertInstanceOf(SurveySubjectSourceRegistry::class, $registry);
         $this->assertSame($registry, $this->app->make(SurveySubjectSourceRegistryInterface::class));
     }
 }

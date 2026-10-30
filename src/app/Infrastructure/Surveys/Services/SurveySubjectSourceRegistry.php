@@ -52,9 +52,13 @@ final class SurveySubjectSourceRegistry implements SurveySubjectSourceRegistryIn
         foreach ($this->sources as $sourceClass => $module) {
             $source = $this->resolve($sourceClass, $module);
 
-            $sourceType = $source === null ? null : $this->sourceType($source, $module);
+            if (! $source instanceof SurveySubjectSourceInterface) {
+                continue;
+            }
 
-            if ($source === null || $sourceType === null) {
+            $sourceType = $this->sourceType($source, $module);
+
+            if ($sourceType === null) {
                 continue;
             }
 
