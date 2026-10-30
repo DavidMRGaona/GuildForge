@@ -78,7 +78,7 @@ final class StorageTimezoneBootOrderTest extends TestCase
     {
         // The marker says UTC while the default says Madrid: only reading the row gives UTC
         $this->setStorageDefault('Europe/Madrid');
-        $this->databaseFile = tempnam(sys_get_temp_dir(), 'gf-marker-').'.sqlite';
+        $this->databaseFile = sys_get_temp_dir().'/gf-marker-'.bin2hex(random_bytes(8)).'.sqlite';
         $pdo = new PDO('sqlite:'.$this->databaseFile);
         $pdo->exec('CREATE TABLE settings (id TEXT PRIMARY KEY, "key" TEXT, value TEXT, created_at TEXT, updated_at TEXT)');
         $pdo->exec("INSERT INTO settings (id, \"key\", value) VALUES ('1', 'storage_timezone', 'UTC')");

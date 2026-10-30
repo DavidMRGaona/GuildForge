@@ -18,6 +18,9 @@ final class ModulePackageInstallerTest extends TestCase
 
     private ModulePackageInstaller $installer;
 
+    /** @var list<string> */
+    private array $zips = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -35,6 +38,7 @@ final class ModulePackageInstallerTest extends TestCase
     {
         File::deleteDirectory($this->modulesPath);
         File::delete(dirname($this->modulesPath).'/evil.php');
+        File::delete($this->zips);
         parent::tearDown();
     }
 
@@ -196,6 +200,7 @@ final class ModulePackageInstallerTest extends TestCase
     private function zipWith(array $entries): string
     {
         $path = sys_get_temp_dir().'/gf-release-'.bin2hex(random_bytes(8)).'.zip';
+        $this->zips[] = $path;
         $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
