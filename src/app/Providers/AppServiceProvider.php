@@ -57,6 +57,7 @@ use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
@@ -173,6 +174,7 @@ use App\Infrastructure\Services\UserModelQueryService;
 use App\Infrastructure\Services\UserService;
 use App\Infrastructure\Storage\Cloudinary\CloudinaryPathMapper;
 use App\Infrastructure\Storage\Cloudinary\CloudinaryStorageAdapter;
+use App\Infrastructure\Surveys\Services\SurveySubjectSourceRegistry;
 use App\Infrastructure\Time\StorageTimezoneConverter;
 use App\Infrastructure\Updates\Services\CoreUpdateChecker;
 use App\Infrastructure\Updates\Services\CoreVersionService;
@@ -355,6 +357,9 @@ class AppServiceProvider extends ServiceProvider
         // Calendar system bindings
         $this->app->singleton(CalendarSourceRegistryInterface::class, CalendarSourceRegistry::class);
         $this->app->singleton(CalendarAggregatorServiceInterface::class, CalendarAggregatorService::class);
+
+        // Survey subject sources offered by modules
+        $this->app->singleton(SurveySubjectSourceRegistryInterface::class, SurveySubjectSourceRegistry::class);
 
         // Navigation system bindings
         $this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);

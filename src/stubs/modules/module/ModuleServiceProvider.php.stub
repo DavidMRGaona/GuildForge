@@ -10,6 +10,7 @@ use App\Application\Modules\DTOs\NavigationItemDTO;
 use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
+use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use App\Modules\ModuleServiceProvider;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
@@ -258,6 +259,17 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      * @return array<class-string<CalendarEntrySourceInterface>>
      */
     public function registerCalendarSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register survey subject sources provided by this module.
+     * Allows module records to be surveyed when the surveys module is installed.
+     *
+     * @return array<class-string<SurveySubjectSourceInterface>>
+     */
+    public function registerSurveySubjectSources(): array
     {
         return [];
     }

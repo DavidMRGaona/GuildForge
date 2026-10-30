@@ -749,7 +749,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertStringNotContainsString('mergeConfigFrom', $provider);
         $this->assertStringContainsString("new PagePrefixDTO(prefix: 'BlogPosts', module: \$this->moduleName(), usesCoreLayout: true)", $provider);
-        foreach (['registerPolicies', 'registerPermissions', 'registerFilamentWidgets', 'registerFilamentPages', 'registerCalendarSources', 'registerPagePrefixes'] as $hook) {
+        foreach (['registerPolicies', 'registerPermissions', 'registerFilamentWidgets', 'registerFilamentPages', 'registerCalendarSources', 'registerSurveySubjectSources', 'registerPagePrefixes'] as $hook) {
             $this->assertStringContainsString("public function {$hook}(): array", $provider);
         }
         $this->assertStringContainsString('RepositoryInterface::class', $provider);

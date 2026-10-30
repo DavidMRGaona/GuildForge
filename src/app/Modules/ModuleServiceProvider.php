@@ -11,6 +11,7 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
+use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
 use Illuminate\Support\Facades\Gate;
@@ -256,6 +257,17 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<CalendarEntrySourceInterface>>
      */
     public function registerCalendarSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register survey subject sources provided by this module.
+     * Allows module records (tables, tournaments…) to be surveyed by the surveys module.
+     *
+     * @return array<class-string<SurveySubjectSourceInterface>>
+     */
+    public function registerSurveySubjectSources(): array
     {
         return [];
     }
