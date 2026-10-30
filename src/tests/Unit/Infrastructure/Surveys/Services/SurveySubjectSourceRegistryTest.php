@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
 use stdClass;
 use Tests\Support\Surveys\FakeSurveySubjectSource;
+use Tests\Support\Surveys\InvalidTypeSurveySubjectSource;
 use Tests\Support\Surveys\OtherFakeSurveySubjectSource;
 use Tests\Support\Surveys\SameTypeFakeSurveySubjectSource;
 use Tests\Support\Surveys\ThrowingTypeSurveySubjectSource;
@@ -140,6 +141,18 @@ final class SurveySubjectSourceRegistryTest extends TestCase
         $log = Log::spy();
 
         $this->registry->register(ThrowingTypeSurveySubjectSource::class, 'broken-module');
+        $this->registry->register(FakeSurveySubjectSource::class, 'example-module');
+
+        $this->assertSame(['fake'], array_keys($this->registry->sources()));
+        $log->shouldHaveReceived('warning')->once();
+    }
+
+    #[Test]
+    public function it_skips_a_source_whose_type_is_not_kebab_case(): void
+    {
+        $log = Log::spy();
+
+        $this->registry->register(InvalidTypeSurveySubjectSource::class, 'broken-module');
         $this->registry->register(FakeSurveySubjectSource::class, 'example-module');
 
         $this->assertSame(['fake'], array_keys($this->registry->sources()));

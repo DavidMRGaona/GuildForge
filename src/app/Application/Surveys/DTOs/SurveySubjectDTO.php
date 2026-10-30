@@ -11,10 +11,17 @@ use InvalidArgumentException;
  * Snapshot of something a survey is about (a game table, a tournament, an event…).
  *
  * A survey stores it when it opens, so its data outlives the subject. Organizers are
- * carried by user id only: their names are resolved when shown.
+ * carried by user id (the account UUID) only: their names are resolved when shown. They
+ * feed statistics ("by organizer"); who may manage the subject's surveys is asked live
+ * through SurveySubjectSourceInterface::canManage().
+ *
+ * Dates are instants (compared as such, whatever their timezone); either may be null.
  */
 final readonly class SurveySubjectDTO
 {
+    /** Stable kebab-case type, as returned by SurveySubjectSourceInterface::sourceType(). */
+    public const string SOURCE_TYPE_PATTERN = '/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/';
+
     /** @var list<string> */
     public array $organizerIds;
 
@@ -36,6 +43,18 @@ final readonly class SurveySubjectDTO
         array $attributes = [],
         public ?string $url = null,
     ) {
+        if (preg_match(self::SOURCE_TYPE_PATTERN, $sourceType) !== 1) {
+            throw new InvalidArgumentException("Survey subject source type '{$sourceType}' must be kebab-case.");
+        }
+
+        if (trim($subjectId) === '') {
+            throw new InvalidArgumentException('A survey subject needs an id.');
+        }
+
+        if ($startsAt instanceof DateTimeImmutable && $endsAt instanceof DateTimeImmutable && $endsAt < $startsAt) {
+            throw new InvalidArgumentException("Survey subject '{$subjectId}' ends before it starts.");
+        }
+
         $keys = [];
 
         foreach ($attributes as $attribute) {

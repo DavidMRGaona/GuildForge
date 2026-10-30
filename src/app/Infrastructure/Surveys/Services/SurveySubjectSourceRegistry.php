@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Surveys\Services;
 
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
+use App\Application\Surveys\DTOs\SurveySubjectDTO;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Facades\Log;
@@ -129,7 +130,7 @@ final class SurveySubjectSourceRegistry implements SurveySubjectSourceRegistryIn
     private function sourceType(SurveySubjectSourceInterface $source, ?string $module): ?string
     {
         try {
-            return $source->sourceType();
+            $sourceType = $source->sourceType();
         } catch (Throwable $exception) {
             Log::warning('[SurveySubjectSourceRegistry] Failed to read survey subject type', [
                 'source' => $source::class,
@@ -139,5 +140,17 @@ final class SurveySubjectSourceRegistry implements SurveySubjectSourceRegistryIn
 
             return null;
         }
+
+        if (preg_match(SurveySubjectDTO::SOURCE_TYPE_PATTERN, $sourceType) !== 1) {
+            Log::warning('[SurveySubjectSourceRegistry] Survey subject type is not kebab-case, source skipped', [
+                'source' => $source::class,
+                'module' => $module,
+                'sourceType' => $sourceType,
+            ]);
+
+            return null;
+        }
+
+        return $sourceType;
     }
 }

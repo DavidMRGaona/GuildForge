@@ -47,6 +47,41 @@ final class SurveySubjectDTOTest extends TestCase
         ]);
     }
 
+    public function test_the_source_type_must_be_kebab_case(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new SurveySubjectDTO('Example Thing', 'subject-1', 'Example thing', null, null);
+    }
+
+    public function test_the_subject_id_cannot_be_blank(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new SurveySubjectDTO('example-thing', ' ', 'Example thing', null, null);
+    }
+
+    public function test_it_cannot_end_before_it_starts(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new SurveySubjectDTO(
+            'example-thing',
+            'subject-1',
+            'Example thing',
+            new DateTimeImmutable('2026-11-01 22:00:00'),
+            new DateTimeImmutable('2026-11-01 18:00:00'),
+        );
+    }
+
+    public function test_dates_are_optional(): void
+    {
+        $subject = new SurveySubjectDTO('example-thing', 'subject-1', 'Example thing', null, null);
+
+        $this->assertNull($subject->startsAt);
+        $this->assertNull($subject->endsAt);
+    }
+
     /**
      * @param  list<string>  $organizerIds
      * @param  list<SurveySubjectAttributeDTO>  $attributes
