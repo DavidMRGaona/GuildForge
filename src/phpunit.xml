@@ -30,6 +30,9 @@
         <env name="APP_ROUTES_CACHE" value="bootstrap/cache/testing-routes.php"/>
         <env name="APP_EVENTS_CACHE" value="bootstrap/cache/testing-events.php"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <!-- Modules checked out in modules/ are absent in CI: their migrations would run on the
+             test database. Tests that need a module point modules.path at a fixture -->
+        <env name="MODULES_PATH" value="storage/framework/testing/modules" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
