@@ -6,8 +6,147 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
+  # Skips the suite only when it would repeat a result already obtained: a push to main whose
+  # tree is the one its pull request's CI tested, or a pull request that only changes
+  # src/VERSION on top of a main that passed CI. Anything else, an error included, runs it all.
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+
+    outputs:
+      reuse: ${{ steps.decide.outputs.reuse }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      # Only the literal reuse=true skips the suite; continue-on-error keeps a failure here from
+      # failing the run, and the jobs below still run because the output is missing then
+      - name: Decide whether the suite has to run
+        id: decide
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -uo pipefail
+
+          reason=""
+          reused=""
+
+          # The pull request merged as this commit, and a successful CI run of it that tested
+          # this same tree (its merge commit, recorded in the ci-tested-tree artifact)
+          reuse_pull_request_result() {
+            local pr number head runs run_id run_url artifact_id dir tested
+            pr="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" --jq "
+              map(select(.merged_at != null and .base.ref == \"main\" and .merge_commit_sha == \"${GITHUB_SHA}\"))
+              | if length == 1 then .[0] | \"\(.number) \(.head.sha)\" else empty end")" \
+              || { reason="could not list the pull requests of ${GITHUB_SHA}"; return 1; }
+            if [ -z "${pr}" ]; then
+              reason="no single pull request was merged as ${GITHUB_SHA}"
+              return 1
+            fi
+            read -r number head <<< "${pr}"
+
+            runs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?event=pull_request&head_sha=${head}&status=success&per_page=20" \
+              --jq '.workflow_runs[] | "\(.id) \(.html_url)"')" \
+              || { reason="could not list the CI runs of pull request #${number}"; return 1; }
+            if [ -z "${runs}" ]; then
+              reason="pull request #${number} has no successful CI run for ${head}"
+              return 1
+            fi
+
+            # Every attempt of a run tests the same commit, so the newest record of the run will do
+            while read -r run_id run_url; do
+              artifact_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?name=ci-tested-tree" \
+                --jq '[.artifacts[] | select(.expired | not)] | if length > 0 then max_by(.created_at).id else empty end' < /dev/null)" || continue
+              [ -n "${artifact_id}" ] || continue
+              dir="$(mktemp -d)"
+              gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${dir}/artifact.zip" < /dev/null || continue
+              unzip -q "${dir}/artifact.zip" -d "${dir}" || continue
+              tested="$(sed -n 's/^tree=//p' "${dir}/tested-tree" 2> /dev/null)"
+              if [ -n "${tested}" ] && [ "${tested}" = "${tree}" ]; then
+                reused="run ${run_url} of pull request #${number} tested tree ${tree}"
+                return 0
+              fi
+            done <<< "${runs}"
+
+            reason="no successful CI run of pull request #${number} tested tree ${tree} (main moved after it ran, or its record expired)"
+            return 1
+          }
+
+          # A release: only src/VERSION changes, on top of a base whose CI on main passed
+          version_only_on_tested_base() {
+            local base files count
+            if ! base="$(git rev-parse --verify 'HEAD^1')" || ! git rev-parse --verify --quiet 'HEAD^2' > /dev/null; then
+              reason="HEAD is not the merge commit of the pull request"
+              return 1
+            fi
+            files="$(git diff --name-only "${base}" HEAD)" \
+              || { reason="could not diff against the base ${base}"; return 1; }
+            if [ "${files}" != "src/VERSION" ]; then
+              reason="the pull request changes more than src/VERSION"
+              return 1
+            fi
+            count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?event=push&branch=main&head_sha=${base}&status=success" \
+              --jq '.total_count')" \
+              || { reason="could not list the CI runs of the base ${base}"; return 1; }
+            if ! [[ "${count}" =~ ^[0-9]+$ ]] || [ "${count}" -eq 0 ]; then
+              reason="only src/VERSION changes, but CI on main has not passed (yet) for the base ${base}"
+              return 1
+            fi
+            reused="only src/VERSION changes, on top of ${base}, whose CI on main passed"
+            return 0
+          }
+
+          if ! tree="$(git rev-parse --verify 'HEAD^{tree}')" || [ "$(git rev-parse HEAD)" != "${GITHUB_SHA}" ]; then
+            reason="could not read the tree of ${GITHUB_SHA}"
+          elif [ "${EVENT}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            reuse_pull_request_result
+          elif [ "${EVENT}" = "pull_request" ]; then
+            version_only_on_tested_base
+          else
+            reason="event ${EVENT} on ${GITHUB_REF}"
+          fi
+
+          if [ "${EVENT}" = "pull_request" ] && [ -n "${tree:-}" ]; then
+            mode="full"
+            if [ -n "${reused}" ]; then mode="version-only"; fi
+            printf 'tree=%s\nmerge_sha=%s\nmode=%s\n' "${tree}" "${GITHUB_SHA}" "${mode}" > "${RUNNER_TEMP}/tested-tree"
+          fi
+
+          if [ -n "${reused}" ]; then
+            echo "reuse=true" >> "${GITHUB_OUTPUT}"
+            echo "Suite skipped: ${reused}" | tee -a "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "reuse=false" >> "${GITHUB_OUTPUT}"
+            echo "Full suite: ${reason}" | tee -a "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      # The tree this run tests, so the push to main after merging can tell whether it is the same
+      - name: Record the tested tree
+        if: ${{ github.event_name == 'pull_request' && steps.decide.outcome == 'success' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-tested-tree
+          path: ${{ runner.temp }}/tested-tree
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
+
   test:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.reuse != 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -108,6 +247,8 @@ jobs:
 
   test-madrid:
     name: test (Madrid storage)
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.reuse != 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -201,6 +342,8 @@ jobs:
           REDIS_PORT: 6379
 
   lint:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.reuse != 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
