@@ -38,7 +38,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
         run: |
-          set -uo pipefail
+          # The runner sets -e, which would end the script at the first check that says "run the
+          # suite"; every error is handled where it happens instead
+          set +e -uo pipefail
 
           reason=""
           reused=""
