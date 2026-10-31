@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Surveys\DTOs;
 
+use App\Application\Surveys\Enums\SurveySubjectStatus;
 use DateTimeImmutable;
 use InvalidArgumentException;
 
@@ -32,6 +33,7 @@ final readonly class SurveySubjectDTO
      * @param  list<string>  $organizerIds
      * @param  list<SurveySubjectAttributeDTO>  $attributes
      * @param  string|null  $url  Public page of the subject, if it has one
+     * @param  SurveySubjectStatus  $status  Whether it has ended, live: never part of the snapshot
      */
     public function __construct(
         public string $sourceType,
@@ -42,6 +44,7 @@ final readonly class SurveySubjectDTO
         array $organizerIds = [],
         array $attributes = [],
         public ?string $url = null,
+        public SurveySubjectStatus $status = SurveySubjectStatus::Active,
     ) {
         if (preg_match(self::SOURCE_TYPE_PATTERN, $sourceType) !== 1) {
             throw new InvalidArgumentException("Survey subject source type '{$sourceType}' must be kebab-case.");

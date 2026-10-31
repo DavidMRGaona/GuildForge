@@ -11,11 +11,13 @@ use App\Application\Surveys\DTOs\SurveySubjectDTO;
  * Offers a module's records (game tables, tournaments, events…) as survey subjects.
  *
  * Modules return their implementations from ModuleServiceProvider::registerSurveySubjectSources()
- * and dispatch SurveySubjectEnded when a subject ends. Nothing here depends on the surveys
- * module: without it, registered sources are simply never asked.
+ * and dispatch SurveySubjectEnded when a subject ends (SurveySubjectCancelled when it never
+ * will). Nothing here depends on the surveys module: without it, registered sources are simply
+ * never asked.
  *
  * Subjects are never listed or searched: the surveys module learns about one from
- * SurveySubjectEnded or from a link on the module's own page carrying (type, id).
+ * SurveySubjectEnded or from a link on the module's own page carrying (type, id), which
+ * SurveySubjectLinksInterface gives.
  * User ids are account UUIDs.
  */
 interface SurveySubjectSourceInterface
@@ -33,7 +35,8 @@ interface SurveySubjectSourceInterface
 
     /**
      * Snapshot of the subject, or null when it does not exist or this source does not offer it.
-     * The DTO's sourceType must equal sourceType().
+     * The DTO's sourceType must equal sourceType(); its status says, live, whether the subject
+     * has ended or was cancelled (a survey prepared before the end waits while it is active).
      */
     public function find(string $subjectId): ?SurveySubjectDTO;
 

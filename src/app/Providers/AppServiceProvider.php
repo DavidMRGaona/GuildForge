@@ -57,6 +57,7 @@ use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Application\Surveys\Contracts\SurveySubjectLinksInterface;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
@@ -174,6 +175,7 @@ use App\Infrastructure\Services\UserModelQueryService;
 use App\Infrastructure\Services\UserService;
 use App\Infrastructure\Storage\Cloudinary\CloudinaryPathMapper;
 use App\Infrastructure\Storage\Cloudinary\CloudinaryStorageAdapter;
+use App\Infrastructure\Surveys\Services\NullSurveySubjectLinks;
 use App\Infrastructure\Surveys\Services\SurveySubjectSourceRegistry;
 use App\Infrastructure\Time\StorageTimezoneConverter;
 use App\Infrastructure\Updates\Services\CoreUpdateChecker;
@@ -360,6 +362,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Survey subject sources offered by modules
         $this->app->singleton(SurveySubjectSourceRegistryInterface::class, SurveySubjectSourceRegistry::class);
+        // No links from a subject's page until the surveys module binds its own, whichever registers first
+        $this->app->singletonIf(SurveySubjectLinksInterface::class, NullSurveySubjectLinks::class);
 
         // Navigation system bindings
         $this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);
