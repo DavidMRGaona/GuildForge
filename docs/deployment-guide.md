@@ -186,17 +186,28 @@ The project uses two main workflows and one reusable workflow:
 
 #### 1. CI (`ci.yml`)
 
-Runs on every push or pull request to `main`.
+Runs on every push or pull request to `main`. The ruleset of `main` requires the `test` and `lint` checks.
+
+**Job `gate`:**
+- Runs first and decides whether the suite has to run; `test`, `test (Madrid storage)` and `lint` are skipped only when it answers exactly `reuse=true`, so any failure of `gate` runs everything
+- On a pull request it records the tree of the merge commit it tests (`refs/pull/N/merge`) in the `ci-tested-tree` artifact (kept 30 days), since the runs API only gives the head of the pull request
+- On a push to `main` it skips the suite when the commit is the merge commit of a pull request and a successful CI run of that pull request tested the same tree. When another pull request was merged in between, the tree differs and the suite runs
+- On a pull request that only changes `src/VERSION` (a release) it skips the suite when CI of the base commit on `main` passed; while that run is still going, or after it failed, the suite runs
+- The run summary says which result was reused, or why the suite runs
+- Skipped jobs report `skipped`, which counts as passed for the required checks, and the run ends in `success`, so `deploy.yml` starts as usual
 
 **Job `test`:**
 - Services: PostgreSQL 17, Redis 7.2
-- Steps: checkout, setup PHP 8.5, composer install, Rector (`vendor/bin/rector process --dry-run`), Pint (`vendor/bin/pint --test`), PHPStan (`vendor/bin/phpstan analyse`), setup Node 24, npm ci, build assets, check the module import map (`npm run verify:build`), prepare `.env`, run migrations, run tests (serially, on PostgreSQL)
+- Steps: checkout, setup PHP 8.5, composer install, Rector (`vendor/bin/rector process --dry-run`), Pint (`vendor/bin/pint --test`), PHPStan (`vendor/bin/phpstan analyse`), setup Node 24, npm ci, build assets, check the module import map (`npm run verify:build`), prepare `.env`, run migrations, run tests (`php artisan test --parallel`, on PostgreSQL, instants stored in UTC)
+
+**Job `test (Madrid storage)`:**
+- Runs in parallel with `test`: the same suite, without the static checks, with `APP_STORAGE_TIMEZONE_DEFAULT=Europe/Madrid` (sites not converted to UTC yet)
 
 > **Note on PostgreSQL versions:** CI, development and prod-local use PostgreSQL 17, the major version production runs. Migrations use Laravel's schema builder, so they also run on SQLite (local tests); CI runs migrations and tests on PostgreSQL 17.
 
 **Job `lint`:**
 - Runs in parallel with `test`
-- Steps: checkout, setup Node 24, npm ci, TypeScript type checking, ESLint
+- Steps: checkout, actionlint (with shellcheck) on the workflows, setup Node 24, npm ci, TypeScript type checking, public API report (`npm run check:public-api`), ESLint, Prettier, Vitest
 
 #### 2. Deploy (`deploy.yml`)
 
@@ -221,9 +232,11 @@ Runs automatically when the CI workflow of a push to `main` completes successful
 ```
 Push to main
     ↓
-CI: test (PHP + PostgreSQL + Redis)    ←── in parallel ──→    CI: lint (TypeScript + ESLint)
+CI: gate (same tree as its pull request's CI? then skip the rest)
+    ↓
+CI: test, test (Madrid storage)    ←── in parallel ──→    CI: lint (TypeScript + ESLint)
     ↓                                                              ↓
-    +──────────────── Both succeed ────────────────────────────────+
+    +──────────── All succeed (or skipped by gate) ────────────────+
                               ↓
                 Deploy (canary): deploy, wait for "finished",
                 5 consecutive 200s from CANARY_HEALTH_URL
