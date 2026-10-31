@@ -1184,13 +1184,15 @@ All live in `App\Domain\Modules\Events`.
 Module tests run inside the host application with the module's own `phpunit.xml`; `php artisan test` only runs the host's suites and never the modules'.
 
 ```bash
-docker exec guildforge_app vendor/bin/phpunit -c modules/my-module/phpunit.xml
+docker exec -e XDEBUG_MODE=off guildforge_app vendor/bin/phpunit -c modules/my-module/phpunit.xml
 ```
+
+The core's test bootstrap stops the run when Xdebug is in `develop` mode (the container's default): there, Xdebug keeps the local variables of recent exceptions, and a Filament action test can pass without running the action, depending on the tests that ran before. CI does not load Xdebug.
 
 `module:make` writes `phpunit.xml` as the shipped modules have it: it boots `tests/bootstrap.php`, runs the `tests/Unit`, `tests/Integration` and `tests/Feature` suites on SQLite in memory, and its `APP_CONFIG_CACHE`/`APP_ROUTES_CACHE`/`APP_EVENTS_CACHE` block keeps tests away from the bootstrap caches of the container. Keep that block. The release workflow runs the same file (see [Releasing a module](#releasing-a-module)), but on PostgreSQL, as the sites do: SQLite stores dates as text and takes any value in a UUID column, so some failures only show there. Before publishing changes that touch queries or migrations, run the suite against PostgreSQL too; real variables take precedence over the ones in `phpunit.xml`:
 
 ```bash
-docker exec -e DB_CONNECTION=pgsql -e DB_HOST=guildforge_db -e DB_DATABASE=my_module_test \
+docker exec -e XDEBUG_MODE=off -e DB_CONNECTION=pgsql -e DB_HOST=guildforge_db -e DB_DATABASE=my_module_test \
     guildforge_app php artisan test --parallel --processes=4 --configuration=modules/my-module/phpunit.xml
 ```
 

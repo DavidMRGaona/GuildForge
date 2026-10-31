@@ -387,8 +387,10 @@ make test-coverage    # Generates HTML report in src/coverage/
 `make test` runs only the core suite (`src/tests`). Module tests live in each module and run with the module's own `phpunit.xml`:
 
 ```bash
-docker exec guildforge_app vendor/bin/phpunit -c modules/game-tables/phpunit.xml
+docker exec -e XDEBUG_MODE=off guildforge_app vendor/bin/phpunit -c modules/game-tables/phpunit.xml
 ```
+
+`tests/bootstrap.php` (which the module suites load too) stops the run when Xdebug is in `develop` mode, the container's default: in that mode a Filament action test can pass without running the action, depending on the tests that ran before. The `make test*` targets already pass `XDEBUG_MODE=off` (`test-coverage` passes `XDEBUG_MODE=coverage`); pass it yourself when calling PHPUnit directly, also on the host.
 
 ### PHPUnit configuration
 
