@@ -134,6 +134,33 @@ final class StorageTimezoneResolverTest extends TestCase
         $this->assertSame('Europe/Madrid', app(StorageTimezoneResolver::class)->resolve(consoleCommand: 'package:discover'));
     }
 
+    #[DataProvider('moduleCommandProvider')]
+    public function test_the_module_generators_run_while_the_database_is_unreachable(string $command, bool $survives): void
+    {
+        $this->makeDatabaseUnreachable();
+
+        if (! $survives) {
+            $this->expectException(StorageTimezoneUnavailableException::class);
+        }
+
+        $this->assertSame('Europe/Madrid', app(StorageTimezoneResolver::class)->resolve(consoleCommand: $command));
+    }
+
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function moduleCommandProvider(): array
+    {
+        return [
+            'module' => ['module:make', true],
+            'entity' => ['module:make-entity', true],
+            'notification' => ['module:make-notification', true],
+            'migrate' => ['module:migrate', false],
+            'enable' => ['module:enable', false],
+            'prefix of another command' => ['module:makeover', false],
+        ];
+    }
+
     public function test_the_display_zone_comes_from_the_environment_default(): void
     {
         $this->assertSame('Europe/Madrid', config('app.display_timezone'));
