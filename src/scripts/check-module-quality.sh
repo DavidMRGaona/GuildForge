@@ -70,6 +70,16 @@ if [ "$PART" = php ] || [ "$PART" = all ]; then
 fi
 
 if [ "$PART" = js ] || [ "$PART" = all ]; then
+    MODE="$(sh scripts/module-build-mode.sh "$DIR")"
+    if [ "$MODE" = core ]; then
+        # Only runtime libraries, never tooling or what the core shares or provides; installed
+        # first, so ESLint and vue-tsc resolve what the module imports
+        run Package node scripts/check-module-package.mjs "$DIR"
+        if [ -f "$DIR/package.json" ]; then
+            run "npm ci" sh -c "cd '$DIR' && npm ci --no-audit --no-fund"
+        fi
+    fi
+
     if [ -d "$DIR/resources/js" ]; then
         run ESLint npx eslint "$DIR/resources/js"
         run Prettier npx prettier --check --no-error-on-unmatched-pattern "$DIR/resources/js/**/*.{ts,vue}"
@@ -89,16 +99,10 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
         echo "::notice::$MODULE has no resources/js, skipping ESLint and Prettier"
     fi
 
-    MODE="$(sh scripts/module-build-mode.sh "$DIR")"
     if [ "$MODE" = invalid ]; then
         echo "::error::$DIR/vite.config.ts does not build with the core's toolchain (defineModuleConfig, stubs/modules/module/vite.config.ts.stub)"
         FAILED="$FAILED Build"
     elif [ "$MODE" = core ]; then
-        # Only runtime libraries, never tooling or what the core shares or provides
-        run Package node scripts/check-module-package.mjs "$DIR"
-        if [ -f "$DIR/package.json" ]; then
-            run "npm ci" sh -c "cd '$DIR' && npm ci --no-audit --no-fund"
-        fi
         # The release build, into a scratch directory: a private import of the core or an
         # undeclared package fails here (vite.module.config.ts), not when publishing
         BUILD_OUT="$(mktemp -d)"
