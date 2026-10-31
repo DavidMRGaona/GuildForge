@@ -1,7 +1,7 @@
 {
     "name": "{{ moduleName }}",
     "displayName": "{{ moduleDisplayNameJson }}",
-    "version": "1.0.0",{{ moduleRepositoryJson }}
+    "version": "0.0.0",{{ moduleRepositoryJson }}
     "namespace": "{{ moduleNamespaceJson }}",
     "provider": "{{ moduleNameStudly }}ServiceProvider",
     "description": "{{ moduleDescriptionJson }}",

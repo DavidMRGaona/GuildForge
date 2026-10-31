@@ -20,7 +20,12 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         'laravel', 'vendor', 'public', 'storage',
     ];
 
+    // A caret on a minor or a patch: "^3.28", "^3.28.1"
+    private const string CORE_CONSTRAINT_PATTERN = '/^\^\d+\.\d+(\.\d+)?$/D';
+
     private const string TRANSLATE_LABELS = 'Translate the labels written to lang/es/filament.php: they are derived from the class name';
+
+    private const string TRANSLATE_EMAILS = 'Write the texts added to lang/es/emails.php: they are placeholders derived from the class name';
 
     private string $modulesPath;
 
@@ -40,9 +45,11 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         ?string $author = null,
         ?string $displayName = null,
         ?string $repository = null,
+        ?string $coreConstraint = null,
+        bool $intoExisting = false,
     ): ScaffoldResultDTO {
         // Validate module name
-        $validation = $this->validateModuleName($name);
+        $validation = $this->validateModuleName($name, $intoExisting);
         if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
@@ -54,10 +61,17 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             );
         }
 
+        if ($coreConstraint !== null && preg_match(self::CORE_CONSTRAINT_PATTERN, $coreConstraint) !== 1) {
+            return ScaffoldResultDTO::failure(
+                "Invalid core constraint '{$coreConstraint}'.",
+                ["The core constraint must name a minor, like '^3.28' or '^3.28.1'."]
+            );
+        }
+
         $modulePath = $this->modulesPath.'/'.$name;
         $displayName ??= Str::ucfirst(str_replace('-', ' ', $name));
         $variables = $this->stubRenderer->getModuleVariables($name, $description, $author);
-        $variables['coreConstraint'] = $this->coreConstraint();
+        $variables['coreConstraint'] = $coreConstraint ?? $this->coreConstraint();
         $variables['moduleDisplayNamePhp'] = addcslashes($displayName, "'\\");
         $variables['moduleDisplayNameJson'] = $this->jsonString($displayName);
         // vue-i18n reads @ { } | as message syntax: write them as literal interpolations
@@ -67,6 +81,9 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         $variables['moduleRepositoryJson'] = $repository !== null
             ? "\n    \"repository\": \"{$repository}\","
             : '';
+        $variables['moduleDisplayName'] = $displayName;
+        $variables['moduleReadmeDescription'] = ($description ?? '') !== '' ? (string) $description : 'Módulo de GuildForge.';
+        $variables['moduleReadmeRepository'] = $repository !== null ? " de `{$repository}` en GitHub" : '';
         $files = [];
         $warnings = [];
 
@@ -87,10 +104,15 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             'module/module.css.stub' => 'resources/css/module.css',
             'module/phpunit.xml.stub' => 'phpunit.xml',
             'module/test-bootstrap.php.stub' => 'tests/bootstrap.php',
+            'test/permission-suggestions.php.stub' => 'tests/Unit/PermissionSuggestionsTest.php',
+            'module/vitest-setup.ts.stub' => 'tests/js/setup.ts',
+            'module/vitest-page.ts.stub' => 'tests/js/support/page.ts',
             'module/gitignore.stub' => '.gitignore',
+            'module/readme.md.stub' => 'README.md',
             'module/release.yml.stub' => '.github/workflows/release.yml',
             'module/tests.yml.stub' => '.github/workflows/tests.yml',
             'module/locale.ts.stub' => 'resources/js/locales/es.ts',
+            'module/locales-index.ts.stub' => 'resources/js/locales/index.ts',
         ];
 
         foreach ($fileMap as $stub => $destination) {
@@ -136,16 +158,25 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
 
         $createdCount = count(array_filter($files, fn (string $s): bool => $s === ScaffoldResultDTO::STATUS_CREATED));
 
+        // Only a cloned repository has files of its own: the generated ones never replace them
+        $kept = array_keys(array_filter($files, fn (string $s): bool => $s === ScaffoldResultDTO::STATUS_SKIPPED));
+        if ($kept !== []) {
+            $warnings[] = 'Kept the existing files: '.implode(', ', $kept);
+        }
+
         $nextSteps = [
             'Check "displayName" in module.json and "title" in lang/es/messages.php: both are shown in the admin panel',
             'Run php artisan module:discover to register the module',
             "Run php artisan module:enable {$name} to enable it",
         ];
+        if ($coreConstraint === null) {
+            $nextSteps[] = "It requires core {$variables['coreConstraint']}, the version of this checkout (src/VERSION): raise it in module.json to the core release with the contracts the module uses (or generate with --core=^X.Y)";
+        }
         if ($repository === null) {
             $nextSteps[] = "Set \"repository\" (owner/repo) in module.json, or run php artisan module:set-source {$name} owner/repo once installed, so updates are found";
         }
         $nextSteps[] = $this->buildAssetsStep($name);
-        $nextSteps[] = "Run its tests with vendor/bin/phpunit -c modules/{$name}/phpunit.xml";
+        $nextSteps[] = "Run its tests with XDEBUG_MODE=off vendor/bin/phpunit -c modules/{$name}/phpunit.xml";
 
         return ScaffoldResultDTO::success(
             "Module '{$name}' created successfully with {$createdCount} files.",
@@ -511,7 +542,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
 
-        $nextSteps = ["Run the module tests with vendor/bin/phpunit -c modules/{$module}/phpunit.xml"];
+        $nextSteps = ["Run the module tests with XDEBUG_MODE=off vendor/bin/phpunit -c modules/{$module}/phpunit.xml"];
         if ($type === 'feature') {
             $nextSteps[] = "It fits controllers made without --resource or --invokable, and requests the route module:make-controller prints: Route::get('{$variables['namePluralKebab']}', [{$variables['nameStudly']}Controller::class, 'index'])->name('{$variables['namePluralSnake']}.index'); in routes/web.php";
         }
@@ -550,6 +581,10 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         $typesDestPath = $modulePath.'/'.$typesDestination;
         $typesResult = $this->renderStub('vue/types.ts.stub', $typesDestPath, $typesVariables);
         $files[$typesDestination] = $typesResult;
+
+        // Mounted with tests/js/setup.ts (module:make): the core's texts and the module's, Inertia mocked
+        $specDestination = "tests/js/{$variables['nameStudly']}.spec.ts";
+        $files[$specDestination] = $this->renderStub('vue/page.spec.ts.stub', $modulePath.'/'.$specDestination, $variables);
 
         $renderedAs = "Inertia::render('{$variables['moduleNameStudly']}/{$variables['nameStudly']}')";
 
@@ -592,7 +627,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         );
     }
 
-    private function validateModuleName(string $name): ?ScaffoldResultDTO
+    private function validateModuleName(string $name, bool $intoExisting): ?ScaffoldResultDTO
     {
         // Check for reserved names
         if (in_array(strtolower($name), self::RESERVED_NAMES, true)) {
@@ -624,10 +659,17 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
 
         // Check if module already exists
         $modulePath = $this->modulesPath.'/'.$name;
-        if (is_dir($modulePath)) {
+        if (is_dir($modulePath) && ! $intoExisting) {
             return ScaffoldResultDTO::failure(
                 "Module '{$name}' already exists.",
-                ["Directory '{$modulePath}' already exists."]
+                ["Directory '{$modulePath}' already exists. To add the missing files to a cloned module repository, use --into-existing."]
+            );
+        }
+
+        if (file_exists($modulePath.'/module.json')) {
+            return ScaffoldResultDTO::failure(
+                "Module '{$name}' already exists.",
+                ["'{$modulePath}/module.json' is there: the folder holds a module already."]
             );
         }
 
@@ -986,6 +1028,9 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         return ScaffoldResultDTO::success(
             "Domain event '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                'Give it what its listeners need through a constructor with readonly properties',
+            ],
         );
     }
 
@@ -1057,6 +1102,11 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         return ScaffoldResultDTO::success(
             "Notification '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                'Pass what the mail shows through a constructor with readonly properties: the notification is queued (ShouldQueue), so they are serialized',
+                'If its links carry a secret (a guest link, a token), also implement ShouldBeEncrypted so the queue does not store it in clear',
+                self::TRANSLATE_EMAILS,
+            ],
         );
     }
 

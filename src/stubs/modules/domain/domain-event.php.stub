@@ -11,10 +11,4 @@ final class {{ nameStudly }}
 {
     use Dispatchable;
     use SerializesModels;
-
-    public function __construct(
-        // TODO: Add event-specific readonly properties
-        // public readonly string $aggregateId,
-        // public readonly string $userId,
-    ) {}
 }

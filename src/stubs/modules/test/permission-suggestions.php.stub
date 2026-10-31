@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ moduleNamespace }}\Tests\Unit;
+
+use App\Application\Modules\DTOs\PermissionDTO;
+use {{ moduleNamespace }}\{{ moduleNameStudly }}ServiceProvider;
+use Tests\TestCase;
+
+final class PermissionSuggestionsTest extends TestCase
+{
+    /**
+     * editor is the core's content role: the module's permissions go to the roles each
+     * association creates, so none is marked as suggested for editor.
+     */
+    public function test_no_permission_is_suggested_to_the_content_role(): void
+    {
+        $suggested = array_filter(
+            (new {{ moduleNameStudly }}ServiceProvider($this->app))->registerPermissions(),
+            fn (PermissionDTO $permission): bool => in_array('editor', $permission->roles, true),
+        );
+
+        $this->assertSame([], array_values(array_map(fn (PermissionDTO $permission): string => $permission->name, $suggested)));
+    }
+}

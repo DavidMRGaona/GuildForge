@@ -38,10 +38,14 @@ Commands run in the development containers: `php artisan` and PHPUnit in `guildf
 Use `module:make` to create a module with the standard directory structure:
 
 ```bash
-docker exec guildforge_app php artisan module:make my-module --display-name="Mi módulo" --description="Gestión de partidas" --author="GuildForge" --repository=owner/guildforge-my-module
+docker exec guildforge_app php artisan module:make my-module --display-name="Mi módulo" --description="Gestión de partidas" --author="GuildForge" --repository=owner/guildforge-my-module --core=^3.28
 ```
 
-The name must be kebab-case, must not exist yet under `modules/` and must not be a reserved name (`core`, `app`, `admin`, `system`, `modules`, `api`, `web`, `auth`, `user`, `filament`, `laravel`, `vendor`, `public`, `storage`). `--display-name` is the name shown in the panel, in Spanish (default: the name in sentence case); `--repository` (`owner/repo`) is where the updater looks for releases.
+The name must be kebab-case, must not exist yet under `modules/` and must not be a reserved name (`core`, `app`, `admin`, `system`, `modules`, `api`, `web`, `auth`, `user`, `filament`, `laravel`, `vendor`, `public`, `storage`). `--display-name` is the name shown in the panel, in Spanish (default: the name in sentence case); `--repository` (`owner/repo`) is where the updater looks for releases; `--core` is the core version the module requires (`^major.minor` or `^major.minor.patch`; default: the minor of the checkout you generate from, see [Module manifest](#module-manifest-modulejson)).
+
+When the module's repository already exists (created on GitHub with its README, issue templates and roadmap workflow) and is cloned into `modules/my-module`, add `--into-existing`: the command fills the folder, never overwrites a file that is there and lists the ones it kept. A folder that already holds a `module.json` is refused.
+
+The generators (`module:make` and every `module:make-*`) only write files, so they run without a database, for instance outside the containers.
 
 The command creates `modules/my-module/` with:
 - `module.json`, the service provider and `config/module.php`
@@ -49,6 +53,9 @@ The command creates `modules/my-module/` with:
 - `lang/es/messages.php` and `resources/js/locales/{es,en}.ts`
 - `vite.config.ts` and `vitest.config.ts` (three lines each, on the core's `defineModuleConfig` and `defineModuleTestConfig`), `tsconfig.json` and `resources/css/module.css`, the same build setup the shipped modules use; no `package.json`, since modules build and test with the core's toolchain (see [Build configuration](#build-configuration))
 - `phpunit.xml`, `.gitignore`, `.github/workflows/release.yml` and `.github/workflows/tests.yml` (PHPUnit and the quality checks on every pull request, see [module CI/CD](../module-ci-cd.md#pull-request-checks))
+- `README.md` with the requirements, installation, tests, quality checks and releases
+- `tests/Unit/PermissionSuggestionsTest.php`, which fails if a permission is suggested to the `editor` role (see [Registering permissions](#registering-permissions))
+- `tests/js/setup.ts`, `tests/js/support/page.ts` and `resources/js/locales/index.ts`, so a Vitest spec can mount the module's pages (see [Running module tests](#running-module-tests))
 - the directory structure for all layers
 
 It ends by printing the next steps. Every `module:make-*` generator does the same: it lists what is left to wire by hand (bindings, routes, policies, widgets…).
@@ -90,6 +97,7 @@ Entries marked `*` are created by `module:make`; the rest come from the generato
 ```
 modules/my-module/
 ├── module.json              * Module manifest
+├── README.md                * Requirements, installation, tests, releases
 ├── vite.config.ts           * Build configuration (the core's defineModuleConfig)
 ├── vitest.config.ts         * Vitest configuration (the core's defineModuleTestConfig) for tests/js
 ├── package.json               Only for runtime libraries the core does not bring (dependencies only)
@@ -132,9 +140,10 @@ modules/my-module/
 │   ├── Filament/            * Resources/ (+ RelationManagers/, Widgets/, Pages/)
 │   └── Policies/            *
 └── tests/
-    ├── Unit/                *
+    ├── Unit/                * (with PermissionSuggestionsTest.php)
     ├── Integration/         *
-    └── Feature/             *
+    ├── Feature/             *
+    └── js/                  * setup.ts, support/page.ts and the Vitest specs
 ```
 
 ### Module manifest (module.json)
@@ -164,12 +173,13 @@ modules/my-module/
 
 - `name`, `version`, `namespace` and `provider` are required. `name` is the directory name. `namespace` must be `Modules\<StudlyName>` and `provider` `<StudlyName>ServiceProvider`: the panel and the autoloader derive both from the directory name.
 - `displayName` is the name shown in the panel.
+- `version` is the released version. `module:make` writes `0.0.0`: nothing is published yet, and the first release raises it (see [Releasing a module](#releasing-a-module)).
 - `repository` (`owner/repo`) is where updates come from; `module:discover` copies it to the module's record. A module installed without it needs `php artisan module:set-source <name> <owner/repo>` once.
 - `requires.modules` and `requires.extensions`, when present, must be lists of strings.
 - `storesUtc` (boolean, default `false`) declares that the module stores instants correctly when the core stores UTC (see [Dates and timezones](#dates-and-timezones)). Once the site stores UTC, a module without it is incompatible and the panel lists the reason. `module:make` writes it.
 - Other keys (some shipped modules carry a `provides` block) are ignored by the core.
 
-`requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). `module:make` writes the running core's `^major.minor` (`^3.6` on core 3.6.x): lower it to the oldest core minor you tested against.
+`requires.core` is required: it is the range of GuildForge core versions the module supports, and sites refuse to load, enable, install or update a module whose requirements they do not meet. See [Compatibility requirements](../module-ci-cd.md#compatibility-requirements) for the syntax. The core version (`src/VERSION`) changes whenever the contract modules depend on changes: a minor version for compatible additions, a major one for breaking changes (core classes modules import, `BaseResource`, `ModuleServiceProvider`, or a major version of Filament, Livewire, Laravel or PHP). `module:make` writes the `^major.minor` of the checkout it runs in (`^3.6` on core 3.6.x), or the value of `--core`. The next steps say which one it used: a checkout behind the latest release gives an older minor than the contracts the module uses, so raise it to the core release that brought them, or lower it to the oldest core minor you tested against.
 
 The core may also declare a minimum version for a module (`App\Domain\Modules\CoreModuleMinimumVersions`) when older releases of it would break on that core; releases below it are rejected the same way, pre-releases of the minimum included (`2.2.0-rc.1` is older than `2.2.0`). Extend core models from the module (`EventModel::resolveRelationUsing()` in the service provider), never by asking the core to reference module classes: the core must not import anything from `Modules\`.
 
@@ -265,7 +275,8 @@ docker exec guildforge_app php artisan module:make-listener my-module SendRegist
 # Queued (async) event listener
 docker exec guildforge_app php artisan module:make-listener my-module ProcessHeavyTask --event=RegistrationCreated --queued
 
-# Notification (src/Notifications/) and its keys in lang/es/emails.php
+# Queued notification (src/Notifications/, ShouldQueue) and its keys in lang/es/emails.php;
+# one whose links carry a secret also implements ShouldBeEncrypted
 docker exec guildforge_app php artisan module:make-notification my-module RegistrationConfirmation
 ```
 
@@ -411,7 +422,6 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
                 label: __('my-module::messages.permissions.games.view_any'),
                 group: __('my-module::messages.title'),
                 module: 'my-module',
-                roles: ['editor'],
             ),
             // games.view, games.create, games.update, games.delete…
         ];
@@ -455,14 +465,14 @@ public function registerPermissions(): array
             group: __('my-module::messages.title'),
             description: null,
             module: 'my-module',
-            roles: ['editor'],
+            roles: ['organizacion-de-partidas'],               // suggested, never granted
         ),
     ];
 }
 ```
 
 - Policies check the full key: `$this->authorize($user, 'my-module:games.view_any')` with the `AuthorizesWithPermissions` trait. The policies made by `module:make-filament-resource` check `<module>:<plural>.view_any|view|create|update|delete`; declare those five names.
-- Admins pass every check. Other roles need the permission, granted from the role editor in the panel. `roles` lists the roles the module suggests it for: from core 3.16 the role editor marks it *Sugerido para este rol* on those roles, but nobody gets it until an admin ticks it.
+- Admins pass every check. Other roles need the permission, granted from the role editor in the panel. `roles` lists the roles the module suggests it for: from core 3.16 the role editor marks it *Sugerido para este rol* on those roles, but nobody gets it until an admin ticks it. Never suggest one to `editor`: since core 3.26 it is the core's content role, and module permissions go to the roles each association creates. The `PermissionSuggestionsTest` that `module:make` writes checks it.
 - `php artisan permissions:sync` stores the definitions in the database (the production container runs it on every start). From the core release with #184 the core also syncs them when the module is enabled or updated, so a new permission shows up in the role editor right away.
 
 ### Registered users and association members
@@ -1220,6 +1230,8 @@ export default defineModuleTestConfig({ root: import.meta.dirname });
 ```bash
 docker exec guildforge_node sh -c 'cd modules/my-module && ../../node_modules/.bin/vitest run'
 ```
+
+`module:make` also writes `tests/js/setup.ts`: it loads the core's texts with the module's on top (`resources/js/locales/index.ts`), mocks Inertia (`usePage()` returns the page in `tests/js/support/page.ts`, whose `signIn()` adds a user; the router and `Link` are spies and anchors) and renders only the slot of the site layout. `module:make-vue-page` writes a spec next to each page (`tests/js/<Page>.spec.ts`) that mounts it and checks its title.
 
 The quality checks run it too once `tests/js` has a spec (`make check MODULE=my-module`), after building the module into a scratch directory, so a private import of the core fails in the module's pull request.
 
@@ -2042,6 +2054,8 @@ final class Registration
 ---
 
 ## Releasing a module
+
+A module starts at `version` `0.0.0`; its first release is the one that sets `1.0.0` (raise `version` in `module.json` and push the `v1.0.0` tag).
 
 Releases are built by the reusable workflow in the host repository, which `.github/workflows/release.yml` (written by `module:make`) calls when a `v*.*.*` tag is pushed. It validates `module.json`, runs the module's tests inside the host, builds the assets with `MODULE_STANDALONE_OUTPUT=true` and publishes the ZIP, its checksum and `module.json`. See [CI/CD for module distribution](../module-ci-cd.md).
 

@@ -41,6 +41,9 @@ final class StorageTimezoneResolver
         'filament:optimize-clear', 'vendor:publish', 'filament:upgrade', 'list', 'key:generate', 'test', 'analyse', 'analyze',
     ];
 
+    /** Module generators (module:make, module:make-*) only write files from the stubs. */
+    private const string GENERATOR_COMMAND = 'module:make';
+
     /** Health route path; bootstrap/app.php registers the route from it. */
     public const string HEALTH_PATH = '/up';
 
@@ -59,7 +62,7 @@ final class StorageTimezoneResolver
                 return $default;
             }
 
-            if ($consoleCommand !== null && in_array($consoleCommand, self::BUILD_COMMANDS, true)) {
+            if ($consoleCommand !== null && $this->runsWithoutDatabase($consoleCommand)) {
                 return $default;
             }
 
@@ -124,6 +127,13 @@ final class StorageTimezoneResolver
         }
 
         return null;
+    }
+
+    private function runsWithoutDatabase(string $command): bool
+    {
+        return in_array($command, self::BUILD_COMMANDS, true)
+            || $command === self::GENERATOR_COMMAND
+            || str_starts_with($command, self::GENERATOR_COMMAND.'-');
     }
 
     /** Request URI without its query string or fragment. */

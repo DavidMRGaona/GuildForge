@@ -76,6 +76,65 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertTrue($manifest['storesUtc'] ?? null);
     }
 
+    public function test_a_new_module_declares_no_released_version_yet(): void
+    {
+        $this->service->createModule('blog');
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode(self::readFile($this->tempModulesPath.'/blog/module.json'), true);
+
+        // The first release (1.0.0) raises it: a module that starts at 1.0.0 has nothing to raise
+        $this->assertSame('0.0.0', $manifest['version'] ?? null);
+    }
+
+    public function test_the_core_constraint_can_be_given(): void
+    {
+        $result = $this->service->createModule('blog', coreConstraint: '^3.30');
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode(self::readFile($this->tempModulesPath.'/blog/module.json'), true);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('^3.30', $manifest['requires']['core'] ?? null);
+        $this->assertNull(Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, '--core')));
+    }
+
+    #[DataProvider('invalidCoreConstraintProvider')]
+    public function test_an_invalid_core_constraint_is_refused(string $constraint): void
+    {
+        $result = $this->service->createModule('blog', coreConstraint: $constraint);
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Invalid core constraint '{$constraint}'", $result->message);
+        $this->assertDirectoryDoesNotExist($this->tempModulesPath.'/blog');
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function invalidCoreConstraintProvider(): array
+    {
+        return [
+            'bare version' => ['3.28'],
+            'lower bound' => ['>=3.28'],
+            'major only' => ['^3'],
+            'empty' => [''],
+            'trailing text' => ['^3.28 || ^4.0'],
+            'trailing newline' => ["^3.28\n"],
+        ];
+    }
+
+    public function test_the_next_steps_say_where_the_core_constraint_comes_from(): void
+    {
+        $result = $this->service->createModule('blog');
+
+        $step = Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, '--core'));
+
+        $this->assertIsString($step);
+        $this->assertStringContainsString('^2.6', $step);
+        $this->assertStringContainsString('src/VERSION', $step);
+    }
+
     public function test_it_creates_module_with_correct_structure(): void
     {
         $result = $this->service->createModule('shop');
@@ -139,6 +198,85 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertTrue($result2->isFailure());
         $this->assertStringContainsString("Module 'forum' already exists", $result2->message);
         $this->assertCount(1, $result2->errors);
+        $this->assertStringContainsString('--into-existing', $result2->errors[0]);
+    }
+
+    public function test_it_fills_a_cloned_repository_without_touching_its_files(): void
+    {
+        $clone = $this->tempModulesPath.'/forum';
+        mkdir($clone.'/.github/workflows', 0755, true);
+        file_put_contents($clone.'/README.md', "# Forum\n\nWritten by hand.\n");
+        file_put_contents($clone.'/.gitignore', "/custom\n");
+        file_put_contents($clone.'/.github/workflows/project.yml', "name: Roadmap project\n");
+
+        $result = $this->service->createModule('forum', intoExisting: true);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame("# Forum\n\nWritten by hand.\n", self::readFile($clone.'/README.md'));
+        $this->assertSame("/custom\n", self::readFile($clone.'/.gitignore'));
+        $this->assertSame("name: Roadmap project\n", self::readFile($clone.'/.github/workflows/project.yml'));
+        $this->assertSame(ScaffoldResultDTO::STATUS_SKIPPED, $result->files['README.md']);
+        $this->assertSame(ScaffoldResultDTO::STATUS_SKIPPED, $result->files['.gitignore']);
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files['module.json']);
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files['.github/workflows/tests.yml']);
+        $this->assertSame(['Kept the existing files: .gitignore, README.md'], $result->warnings);
+    }
+
+    public function test_into_existing_also_creates_a_missing_folder(): void
+    {
+        $result = $this->service->createModule('forum', intoExisting: true);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame([], $result->warnings);
+        $this->assertFileExists($this->tempModulesPath.'/forum/module.json');
+    }
+
+    public function test_into_existing_refuses_a_folder_that_already_holds_a_module(): void
+    {
+        $this->service->createModule('forum');
+        $manifest = self::readFile($this->tempModulesPath.'/forum/module.json');
+
+        $result = $this->service->createModule('forum', intoExisting: true);
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Module 'forum' already exists", $result->message);
+        $this->assertStringContainsString('module.json', $result->errors[0]);
+        $this->assertSame($manifest, self::readFile($this->tempModulesPath.'/forum/module.json'));
+    }
+
+    public function test_a_new_module_has_a_readme(): void
+    {
+        $this->service->createModule(
+            'blog-posts',
+            'Entradas del blog para la asociación',
+            displayName: 'Entradas del blog',
+            repository: 'acme/guildforge-blog-posts',
+            coreConstraint: '^3.30',
+        );
+
+        $readme = self::readFile($this->tempModulesPath.'/blog-posts/README.md');
+
+        $this->assertStringStartsWith("# Entradas del blog\n", $readme);
+        $this->assertStringContainsString('Entradas del blog para la asociación', $readme);
+        $this->assertStringContainsString('GuildForge core `^3.30`', $readme);
+        $this->assertStringContainsString('`acme/guildforge-blog-posts`', $readme);
+        $this->assertStringContainsString('blog-posts-X.Y.Z.zip', $readme);
+        $this->assertStringContainsString('php artisan module:enable blog-posts', $readme);
+        $this->assertStringContainsString('XDEBUG_MODE=off vendor/bin/phpunit -c modules/blog-posts/phpunit.xml', $readme);
+        $this->assertStringContainsString('cd modules/blog-posts && ../../node_modules/.bin/vitest run', $readme);
+        $this->assertStringContainsString('make check MODULE=blog-posts', $readme);
+    }
+
+    public function test_the_readme_of_a_module_without_repository_names_no_repository(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $readme = self::readFile($this->tempModulesPath.'/blog-posts/README.md');
+
+        $this->assertStringStartsWith("# Blog posts\n", $readme);
+        $this->assertStringContainsString('GuildForge core `^2.6`', $readme);
+        $this->assertStringContainsString("Módulo de GuildForge.\n", $readme);
+        $this->assertStringContainsString('`blog-posts-X.Y.Z.zip` de la última release.', $readme);
     }
 
     public function test_it_rejects_invalid_module_name_format(): void
@@ -516,6 +654,10 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('use Dispatchable;', $content);
         $this->assertStringContainsString('use SerializesModels;', $content);
         $this->assertStringNotContainsString('final readonly class', $content);
+        $this->assertStringNotContainsString('TODO', $content);
+        // An empty constructor is removed by Rector: the properties go in the next steps
+        $this->assertStringNotContainsString('__construct', $content);
+        $this->assertNotNull(Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, 'readonly')));
     }
 
     public function test_it_creates_domain_event_validates_module_exists(): void
@@ -590,6 +732,70 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('public function toMail(', $content);
     }
 
+    public function test_a_generated_notification_is_queued_and_has_no_todo(): void
+    {
+        $this->service->createModule('comms');
+
+        $result = $this->service->createNotification('comms', 'WelcomeNotification');
+
+        $content = self::readFile($this->tempModulesPath.'/comms/src/Notifications/WelcomeNotification.php');
+        $this->assertStringContainsString('use Illuminate\Contracts\Queue\ShouldQueue;', $content);
+        $this->assertStringContainsString('final class WelcomeNotification extends Notification implements ShouldQueue', $content);
+        $this->assertStringNotContainsString('TODO', $content);
+        $this->assertStringNotContainsString('__construct', $content);
+        $this->assertNotNull(Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, 'readonly')));
+        $this->assertNotNull(Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, 'ShouldBeEncrypted')));
+    }
+
+    public function test_the_provider_suggests_no_permission_to_the_editor_role(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $provider = self::readFile($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+
+        $this->assertStringNotContainsString("'editor'", $provider);
+        $this->assertStringContainsString('never granted', $provider);
+    }
+
+    public function test_a_new_module_checks_that_no_permission_is_suggested_to_the_editor_role(): void
+    {
+        $result = $this->service->createModule('blog-posts');
+
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Unit/PermissionSuggestionsTest.php'] ?? null);
+        $test = self::readFile($this->tempModulesPath.'/blog-posts/tests/Unit/PermissionSuggestionsTest.php');
+        $this->assertStringContainsString('namespace Modules\BlogPosts\Tests\Unit;', $test);
+        $this->assertStringContainsString('use Modules\BlogPosts\BlogPostsServiceProvider;', $test);
+        $this->assertStringContainsString("in_array('editor', \$permission->roles, true)", $test);
+    }
+
+    public function test_a_new_module_can_mount_its_pages_in_vitest(): void
+    {
+        $result = $this->service->createModule('blog-posts');
+
+        foreach (['tests/js/setup.ts', 'tests/js/support/page.ts', 'resources/js/locales/index.ts'] as $file) {
+            $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$file] ?? null, $file);
+        }
+
+        $setup = self::readFile($this->tempModulesPath.'/blog-posts/tests/js/setup.ts');
+        $this->assertStringContainsString("vi.mock('@inertiajs/vue3'", $setup);
+        $this->assertStringContainsString("vi.mock('@/layouts/DefaultLayout.vue'", $setup);
+        $this->assertStringContainsString("import moduleLocales from '../../resources/js/locales';", $setup);
+        $this->assertStringContainsString('{ ...coreEs, ...moduleLocales.es }', $setup);
+    }
+
+    public function test_a_page_comes_with_a_spec_that_mounts_it(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createVuePage('blog-posts', 'Archive');
+
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/js/Archive.spec.ts'] ?? null);
+        $spec = self::readFile($this->tempModulesPath.'/blog-posts/tests/js/Archive.spec.ts');
+        $this->assertStringContainsString("import Archive from '../../resources/js/pages/BlogPosts/Archive.vue';", $spec);
+        $this->assertStringContainsString('mount(Archive)', $spec);
+        $this->assertStringContainsString('es.blogPosts.title', $spec);
+    }
+
     public function test_it_creates_notification_validates_module_exists(): void
     {
         $result = $this->service->createNotification('nonexistent', 'SomeNotification');
@@ -661,6 +867,17 @@ final class ModuleScaffoldingServiceTest extends TestCase
             $this->assertSame(['../../node_modules/'.$package], $paths[$package], $package);
         }
         $this->assertContains('../../resources/js/types/**/*.d.ts', $tsconfig['include']);
+    }
+
+    public function test_the_tsconfig_knows_the_template_translation_helper_before_any_file_imports_vue_i18n(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        /** @var array{compilerOptions: array{types: list<string>}} $tsconfig */
+        $tsconfig = json_decode(self::readFile($this->tempModulesPath.'/blog-posts/tsconfig.json'), true, flags: JSON_THROW_ON_ERROR);
+
+        // vue-i18n declares $t for templates: without it, a page that only uses $t fails vue-tsc
+        $this->assertContains('vue-i18n', $tsconfig['compilerOptions']['types']);
     }
 
     public function test_the_vite_config_builds_like_the_release_workflow_expects(): void

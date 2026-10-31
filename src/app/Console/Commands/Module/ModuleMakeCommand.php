@@ -22,7 +22,9 @@ final class ModuleMakeCommand extends Command
         {--description= : A description for the module}
         {--author= : The author of the module}
         {--display-name= : The name shown in the admin panel, in Spanish (e.g. "Mesas de rol")}
-        {--repository= : The GitHub repository (owner/repo) the updater reads releases from}';
+        {--repository= : The GitHub repository (owner/repo) the updater reads releases from}
+        {--core= : The core version the module requires (e.g. "^3.28"); defaults to this checkout\'s minor}
+        {--into-existing : Fill a module repository already cloned into the folder, keeping its files}';
 
     /**
      * The console command description.
@@ -52,10 +54,13 @@ final class ModuleMakeCommand extends Command
         $displayName = $this->option('display-name');
         /** @var string|null $repository */
         $repository = $this->option('repository');
+        /** @var string|null $coreConstraint */
+        $coreConstraint = $this->option('core');
+        $intoExisting = (bool) $this->option('into-existing');
 
         $this->info("Creating module '{$name}'...");
 
-        $result = $this->scaffoldingService->createModule($name, $description, $author, $displayName, $repository);
+        $result = $this->scaffoldingService->createModule($name, $description, $author, $displayName, $repository, $coreConstraint, $intoExisting);
 
         return $this->outputResult($result);
     }

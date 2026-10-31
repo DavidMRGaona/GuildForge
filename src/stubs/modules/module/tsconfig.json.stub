@@ -18,7 +18,7 @@
             "@inertiajs/vue3": ["../../node_modules/@inertiajs/vue3"],
             "@unhead/vue": ["../../node_modules/@unhead/vue"]
         },
-        "types": ["vite/client"]
+        "types": ["vite/client", "vue-i18n"]
     },
     "include": [
         "resources/js/**/*.ts",

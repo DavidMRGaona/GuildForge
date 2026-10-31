@@ -55,6 +55,29 @@ final class ModuleMakeCommandTest extends TestCase
         $this->assertSame('acme/guildforge-blog-posts', $manifest['repository']);
     }
 
+    public function test_it_passes_the_core_constraint_to_the_manifest(): void
+    {
+        $this->artisanCommand('module:make', ['name' => 'blog-posts', '--core' => '^3.30'])->assertSuccessful();
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode(self::readFile($this->modulesPath.'/blog-posts/module.json'), true);
+
+        $this->assertSame('^3.30', $manifest['requires']['core']);
+    }
+
+    public function test_it_fills_a_cloned_repository_when_asked(): void
+    {
+        File::makeDirectory($this->modulesPath.'/blog-posts');
+        File::put($this->modulesPath.'/blog-posts/README.md', "# Blog\n");
+
+        $this->artisanCommand('module:make', ['name' => 'blog-posts', '--into-existing' => true])
+            ->expectsOutputToContain('Kept the existing files: README.md')
+            ->assertSuccessful();
+
+        $this->assertSame("# Blog\n", self::readFile($this->modulesPath.'/blog-posts/README.md'));
+        $this->assertFileExists($this->modulesPath.'/blog-posts/module.json');
+    }
+
     public function test_it_lists_the_steps_a_new_module_still_needs(): void
     {
         $this->artisanCommand('module:make', ['name' => 'blog-posts'])

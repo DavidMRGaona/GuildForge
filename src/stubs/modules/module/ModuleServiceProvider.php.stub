@@ -171,9 +171,13 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      *             label: __('{{ moduleName }}::messages.permissions.items.view_any'),
      *             group: __('{{ moduleName }}::messages.title'),
      *             module: '{{ moduleName }}',
-     *             roles: ['editor'],
      *         ),
      *     ];
+     *
+     * Admins pass every check; other roles only get a permission when an admin ticks it in
+     * the role editor. "roles" only marks it as suggested there for those roles: it is
+     * never granted on its own. Leave out "editor", the core's content role: module
+     * permissions go to the roles each association creates (tests/Unit/PermissionSuggestionsTest.php).
      *
      * @return array<PermissionDTO>
      */

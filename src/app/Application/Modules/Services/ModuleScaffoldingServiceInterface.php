@@ -13,6 +13,8 @@ interface ModuleScaffoldingServiceInterface
      *
      * @param  string|null  $displayName  Name shown in the admin panel (defaults to the module name in sentence case)
      * @param  string|null  $repository  GitHub repository in "owner/repo" form the updater reads releases from
+     * @param  string|null  $coreConstraint  Core version the module requires ("^3.28"); defaults to this checkout's minor
+     * @param  bool  $intoExisting  Fill a folder that already exists (a cloned module repository), keeping its files
      */
     public function createModule(
         string $name,
@@ -20,6 +22,8 @@ interface ModuleScaffoldingServiceInterface
         ?string $author = null,
         ?string $displayName = null,
         ?string $repository = null,
+        ?string $coreConstraint = null,
+        bool $intoExisting = false,
     ): ScaffoldResultDTO;
 
     /**

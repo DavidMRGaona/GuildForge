@@ -5,16 +5,13 @@ declare(strict_types=1);
 namespace {{ moduleNamespace }}\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-final class {{ nameStudly }} extends Notification
+final class {{ nameStudly }} extends Notification implements ShouldQueue
 {
     use Queueable;
-
-    public function __construct(
-        // TODO: Add notification-specific readonly properties
-    ) {}
 
     /** @return array<int, string> */
     public function via(object $notifiable): array

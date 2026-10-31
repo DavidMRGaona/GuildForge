@@ -1,0 +1,12 @@
+import { describe, expect, it } from 'vitest';
+import { mount } from '@vue/test-utils';
+import {{ nameStudly }} from '../../resources/js/pages/{{ moduleNameStudly }}/{{ nameStudly }}.vue';
+import es from '../../resources/js/locales/es';
+
+describe('{{ nameStudly }}', () => {
+    it('shows the module title', () => {
+        const wrapper = mount({{ nameStudly }});
+
+        expect(wrapper.find('h1').text()).toBe(es.{{ moduleNameCamel }}.title);
+    });
+});
