@@ -6,6 +6,7 @@ namespace Tests\Unit\Application\Surveys\DTOs;
 
 use App\Application\Surveys\DTOs\SurveySubjectAttributeDTO;
 use App\Application\Surveys\DTOs\SurveySubjectDTO;
+use App\Application\Surveys\Enums\SurveySubjectStatus;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
@@ -80,6 +81,20 @@ final class SurveySubjectDTOTest extends TestCase
 
         $this->assertNull($subject->startsAt);
         $this->assertNull($subject->endsAt);
+    }
+
+    public function test_a_source_that_does_not_say_reports_an_active_subject(): void
+    {
+        $subject = new SurveySubjectDTO('example-thing', 'subject-1', 'Example thing', null, null);
+
+        $this->assertSame(SurveySubjectStatus::Active, $subject->status);
+    }
+
+    public function test_it_carries_the_live_status(): void
+    {
+        $subject = new SurveySubjectDTO('example-thing', 'subject-1', 'Example thing', null, null, status: SurveySubjectStatus::Ended);
+
+        $this->assertSame(SurveySubjectStatus::Ended, $subject->status);
     }
 
     /**
