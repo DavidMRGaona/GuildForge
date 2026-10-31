@@ -69,6 +69,22 @@ final class BuildModuleAssetsOnEnabled implements ShouldQueue
                 return;
             }
 
+            // A release ZIP brings its build, which the installer publishes before enabling
+            if ($this->assetBuilder->hasBuiltAssets($module)) {
+                Log::info("BuildModuleAssetsOnEnabled: Module {$event->moduleName} already has built assets");
+
+                return;
+            }
+
+            if (! $this->assetBuilder->canBuild()) {
+                Log::warning(
+                    "BuildModuleAssetsOnEnabled: Node is not available here to build the assets of {$event->moduleName}; "
+                    .'build them in the Node container: '.ModuleAssetBuilder::manualBuildCommand($event->moduleName)
+                );
+
+                return;
+            }
+
             $success = $this->assetBuilder->build($module);
 
             if ($success) {

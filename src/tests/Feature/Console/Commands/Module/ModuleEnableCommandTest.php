@@ -8,6 +8,7 @@ use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
 
 final class ModuleEnableCommandTest extends TestCase
@@ -49,6 +50,36 @@ final class ModuleEnableCommandTest extends TestCase
 
         $module->refresh();
         $this->assertNotNull($module->enabled_at);
+    }
+
+    public function test_it_says_how_to_build_the_assets_when_node_is_missing(): void
+    {
+        Process::fake(['*npx*--version*' => Process::result(exitCode: 127)]);
+        $this->moduleOnDisk('test-module');
+        $this->withVueComponents('test-module');
+        ModuleModel::factory()->disabled()->create([
+            'name' => 'test-module',
+            'path' => "{$this->modulesPath}/test-module",
+        ]);
+
+        $this->artisanCommand('module:enable', ['module' => 'test-module'])
+            ->expectsOutputToContain('docker exec guildforge_node npm run build:module -- test-module')
+            ->assertExitCode(0);
+    }
+
+    public function test_it_says_nothing_about_assets_when_node_can_build_them(): void
+    {
+        Process::fake();
+        $this->moduleOnDisk('test-module');
+        $this->withVueComponents('test-module');
+        ModuleModel::factory()->disabled()->create([
+            'name' => 'test-module',
+            'path' => "{$this->modulesPath}/test-module",
+        ]);
+
+        $this->artisanCommand('module:enable', ['module' => 'test-module'])
+            ->doesntExpectOutputToContain('build:module')
+            ->assertExitCode(0);
     }
 
     public function test_it_fails_when_module_not_found(): void
@@ -99,6 +130,16 @@ final class ModuleEnableCommandTest extends TestCase
             ->assertExitCode(1);
 
         $this->assertDatabaseHas('modules', ['name' => 'test-module', 'status' => 'disabled']);
+    }
+
+    private function withVueComponents(string $name): void
+    {
+        File::ensureDirectoryExists("{$this->modulesPath}/{$name}/resources/js/pages");
+        File::put("{$this->modulesPath}/{$name}/resources/js/pages/Index.vue", '<template><div /></template>');
+        File::put(
+            "{$this->modulesPath}/{$name}/vite.config.ts",
+            "import { defineModuleConfig } from '../../vite.module.config.ts';\n\nexport default defineModuleConfig({ root: import.meta.dirname });\n",
+        );
     }
 
     /**
