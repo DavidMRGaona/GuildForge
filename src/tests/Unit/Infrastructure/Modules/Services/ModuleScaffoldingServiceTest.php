@@ -76,6 +76,65 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertTrue($manifest['storesUtc'] ?? null);
     }
 
+    public function test_a_new_module_declares_no_released_version_yet(): void
+    {
+        $this->service->createModule('blog');
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode(self::readFile($this->tempModulesPath.'/blog/module.json'), true);
+
+        // The first release (1.0.0) raises it: a module that starts at 1.0.0 has nothing to raise
+        $this->assertSame('0.0.0', $manifest['version'] ?? null);
+    }
+
+    public function test_the_core_constraint_can_be_given(): void
+    {
+        $result = $this->service->createModule('blog', coreConstraint: '^3.30');
+
+        /** @var array<string, mixed> $manifest */
+        $manifest = json_decode(self::readFile($this->tempModulesPath.'/blog/module.json'), true);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame('^3.30', $manifest['requires']['core'] ?? null);
+        $this->assertNull(Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, '--core')));
+    }
+
+    #[DataProvider('invalidCoreConstraintProvider')]
+    public function test_an_invalid_core_constraint_is_refused(string $constraint): void
+    {
+        $result = $this->service->createModule('blog', coreConstraint: $constraint);
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Invalid core constraint '{$constraint}'", $result->message);
+        $this->assertDirectoryDoesNotExist($this->tempModulesPath.'/blog');
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function invalidCoreConstraintProvider(): array
+    {
+        return [
+            'bare version' => ['3.28'],
+            'lower bound' => ['>=3.28'],
+            'major only' => ['^3'],
+            'empty' => [''],
+            'trailing text' => ['^3.28 || ^4.0'],
+            'trailing newline' => ["^3.28\n"],
+        ];
+    }
+
+    public function test_the_next_steps_say_where_the_core_constraint_comes_from(): void
+    {
+        $result = $this->service->createModule('blog');
+
+        $step = Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, '--core'));
+
+        $this->assertIsString($step);
+        $this->assertStringContainsString('^2.6', $step);
+        $this->assertStringContainsString('src/VERSION', $step);
+    }
+
     public function test_it_creates_module_with_correct_structure(): void
     {
         $result = $this->service->createModule('shop');

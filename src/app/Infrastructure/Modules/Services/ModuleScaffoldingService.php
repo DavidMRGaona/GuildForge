@@ -20,6 +20,9 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         'laravel', 'vendor', 'public', 'storage',
     ];
 
+    // A caret on a minor or a patch: "^3.28", "^3.28.1"
+    private const string CORE_CONSTRAINT_PATTERN = '/^\^\d+\.\d+(\.\d+)?$/D';
+
     private const string TRANSLATE_LABELS = 'Translate the labels written to lang/es/filament.php: they are derived from the class name';
 
     private string $modulesPath;
@@ -40,6 +43,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         ?string $author = null,
         ?string $displayName = null,
         ?string $repository = null,
+        ?string $coreConstraint = null,
     ): ScaffoldResultDTO {
         // Validate module name
         $validation = $this->validateModuleName($name);
@@ -54,10 +58,17 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             );
         }
 
+        if ($coreConstraint !== null && preg_match(self::CORE_CONSTRAINT_PATTERN, $coreConstraint) !== 1) {
+            return ScaffoldResultDTO::failure(
+                "Invalid core constraint '{$coreConstraint}'.",
+                ["The core constraint must name a minor, like '^3.28' or '^3.28.1'."]
+            );
+        }
+
         $modulePath = $this->modulesPath.'/'.$name;
         $displayName ??= Str::ucfirst(str_replace('-', ' ', $name));
         $variables = $this->stubRenderer->getModuleVariables($name, $description, $author);
-        $variables['coreConstraint'] = $this->coreConstraint();
+        $variables['coreConstraint'] = $coreConstraint ?? $this->coreConstraint();
         $variables['moduleDisplayNamePhp'] = addcslashes($displayName, "'\\");
         $variables['moduleDisplayNameJson'] = $this->jsonString($displayName);
         // vue-i18n reads @ { } | as message syntax: write them as literal interpolations
@@ -141,6 +152,9 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             'Run php artisan module:discover to register the module',
             "Run php artisan module:enable {$name} to enable it",
         ];
+        if ($coreConstraint === null) {
+            $nextSteps[] = "It requires core {$variables['coreConstraint']}, the version of this checkout (src/VERSION): raise it in module.json to the core release with the contracts the module uses (or generate with --core=^X.Y)";
+        }
         if ($repository === null) {
             $nextSteps[] = "Set \"repository\" (owner/repo) in module.json, or run php artisan module:set-source {$name} owner/repo once installed, so updates are found";
         }
