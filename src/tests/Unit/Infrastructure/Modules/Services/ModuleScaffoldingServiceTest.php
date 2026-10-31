@@ -655,6 +655,9 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('use SerializesModels;', $content);
         $this->assertStringNotContainsString('final readonly class', $content);
         $this->assertStringNotContainsString('TODO', $content);
+        // An empty constructor is removed by Rector: the properties go in the next steps
+        $this->assertStringNotContainsString('__construct', $content);
+        $this->assertNotNull(Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, 'readonly')));
     }
 
     public function test_it_creates_domain_event_validates_module_exists(): void
@@ -864,6 +867,17 @@ final class ModuleScaffoldingServiceTest extends TestCase
             $this->assertSame(['../../node_modules/'.$package], $paths[$package], $package);
         }
         $this->assertContains('../../resources/js/types/**/*.d.ts', $tsconfig['include']);
+    }
+
+    public function test_the_tsconfig_knows_the_template_translation_helper_before_any_file_imports_vue_i18n(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        /** @var array{compilerOptions: array{types: list<string>}} $tsconfig */
+        $tsconfig = json_decode(self::readFile($this->tempModulesPath.'/blog-posts/tsconfig.json'), true, flags: JSON_THROW_ON_ERROR);
+
+        // vue-i18n declares $t for templates: without it, a page that only uses $t fails vue-tsc
+        $this->assertContains('vue-i18n', $tsconfig['compilerOptions']['types']);
     }
 
     public function test_the_vite_config_builds_like_the_release_workflow_expects(): void

@@ -176,7 +176,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             $nextSteps[] = "Set \"repository\" (owner/repo) in module.json, or run php artisan module:set-source {$name} owner/repo once installed, so updates are found";
         }
         $nextSteps[] = $this->buildAssetsStep($name);
-        $nextSteps[] = "Run its tests with vendor/bin/phpunit -c modules/{$name}/phpunit.xml";
+        $nextSteps[] = "Run its tests with XDEBUG_MODE=off vendor/bin/phpunit -c modules/{$name}/phpunit.xml";
 
         return ScaffoldResultDTO::success(
             "Module '{$name}' created successfully with {$createdCount} files.",
@@ -542,7 +542,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         $result = $this->renderStub($stub, $destPath, $variables);
         $files[$destination] = $result;
 
-        $nextSteps = ["Run the module tests with vendor/bin/phpunit -c modules/{$module}/phpunit.xml"];
+        $nextSteps = ["Run the module tests with XDEBUG_MODE=off vendor/bin/phpunit -c modules/{$module}/phpunit.xml"];
         if ($type === 'feature') {
             $nextSteps[] = "It fits controllers made without --resource or --invokable, and requests the route module:make-controller prints: Route::get('{$variables['namePluralKebab']}', [{$variables['nameStudly']}Controller::class, 'index'])->name('{$variables['namePluralSnake']}.index'); in routes/web.php";
         }
@@ -1028,6 +1028,9 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         return ScaffoldResultDTO::success(
             "Domain event '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                'Give it what its listeners need through a constructor with readonly properties',
+            ],
         );
     }
 
