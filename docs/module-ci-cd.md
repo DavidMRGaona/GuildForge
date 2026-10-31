@@ -196,6 +196,8 @@ Each module's `tests.yml` calls `reusable-module-tests.yml` on every pull reques
 
 Every tool runs even when an earlier one fails, so one run lists everything. A module turns `quality` on in the pull request that leaves its code passing them, and the check then becomes required in its `main` protection, like `test / Test module`. Any quality tool added to the core goes into the script as well.
 
+**Release pull requests skip both checks.** A `test / Gate` job runs first. On a pull request whose only change is the `version` in `module.json` (what `gf-flow release` opens), it skips `Test module` and `Quality`: they end as `skipped`, which counts as passed for the required checks. Running them there would repeat the feature pull request's run, and the tag runs `Test module` again before anything is published (the release job needs it to succeed). Any other change to `module.json`, any other file, the tag and weekly runs, and any error in `Gate` run both checks; the run summary says why. If the tag's tests fail, the version is already in `main` but nothing is published: fix it in a pull request and release a new version.
+
 ```yaml
 jobs:
   test:
