@@ -3,7 +3,8 @@ name: Reusable module tests
 # Runs a module's PHPUnit suite inside the host application and, with quality: true, the
 # core's quality tools on it (src/scripts/check-module-quality.sh, also behind
 # `make check MODULE=<name>`). Called by each module's tests.yml on every pull request and
-# by reusable-module-release.yml before a release.
+# by reusable-module-release.yml before a release. A pull request that only bumps the version
+# in module.json skips both (gate job), since the tag runs the tests before publishing.
 
 on:
   workflow_call:
@@ -32,8 +33,63 @@ permissions:
   contents: read
 
 jobs:
+  # A release pull request only bumps the version in module.json, and the tag runs the tests
+  # again before anything is published, so its run is skipped. Anything else, an error
+  # included, runs it all
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+
+    outputs:
+      skip: ${{ steps.decide.outputs.skip }}
+
+    steps:
+      - name: Checkout module
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      # Only the literal skip=true skips the jobs below; continue-on-error keeps a failure here
+      # from failing the run, and they still run because the output is missing then
+      - name: Decide whether the tests have to run
+        id: decide
+        continue-on-error: true
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          # The runner sets -e, which would end the script at the first check that says "run the
+          # tests"; every error is handled where it happens instead
+          set +e -uo pipefail
+
+          reason=""
+          if [ "${EVENT}" != "pull_request" ]; then
+            reason="event ${EVENT}"
+          elif [ "$(git rev-parse HEAD)" != "${GITHUB_SHA}" ] || ! git rev-parse --verify --quiet 'HEAD^2' > /dev/null; then
+            reason="HEAD is not the merge commit of the pull request"
+          elif ! files="$(git diff --name-only 'HEAD^1' HEAD)"; then
+            reason="could not diff against the base"
+          elif [ "${files}" != "module.json" ]; then
+            reason="the pull request changes more than module.json"
+          elif ! before="$(git show 'HEAD^1:module.json' | jq -S 'del(.version)')" \
+            || ! after="$(git show 'HEAD:module.json' | jq -S 'del(.version)')"; then
+            reason="could not read module.json"
+          elif [ "${before}" != "${after}" ]; then
+            reason="module.json changes more than its version"
+          fi
+
+          if [ -z "${reason}" ]; then
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            echo "Tests skipped: only the version in module.json changes; the tag runs them before publishing" | tee -a "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "skip=false" >> "${GITHUB_OUTPUT}"
+            echo "Tests run: ${reason}" | tee -a "${GITHUB_STEP_SUMMARY}"
+          fi
+
   test:
     name: Test module
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -125,7 +181,8 @@ jobs:
 
   quality:
     name: Quality
-    if: inputs.quality
+    needs: gate
+    if: ${{ inputs.quality && !cancelled() && needs.gate.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
