@@ -198,6 +198,85 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertTrue($result2->isFailure());
         $this->assertStringContainsString("Module 'forum' already exists", $result2->message);
         $this->assertCount(1, $result2->errors);
+        $this->assertStringContainsString('--into-existing', $result2->errors[0]);
+    }
+
+    public function test_it_fills_a_cloned_repository_without_touching_its_files(): void
+    {
+        $clone = $this->tempModulesPath.'/forum';
+        mkdir($clone.'/.github/workflows', 0755, true);
+        file_put_contents($clone.'/README.md', "# Forum\n\nWritten by hand.\n");
+        file_put_contents($clone.'/.gitignore', "/custom\n");
+        file_put_contents($clone.'/.github/workflows/project.yml', "name: Roadmap project\n");
+
+        $result = $this->service->createModule('forum', intoExisting: true);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame("# Forum\n\nWritten by hand.\n", self::readFile($clone.'/README.md'));
+        $this->assertSame("/custom\n", self::readFile($clone.'/.gitignore'));
+        $this->assertSame("name: Roadmap project\n", self::readFile($clone.'/.github/workflows/project.yml'));
+        $this->assertSame(ScaffoldResultDTO::STATUS_SKIPPED, $result->files['README.md']);
+        $this->assertSame(ScaffoldResultDTO::STATUS_SKIPPED, $result->files['.gitignore']);
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files['module.json']);
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files['.github/workflows/tests.yml']);
+        $this->assertSame(['Kept the existing files: .gitignore, README.md'], $result->warnings);
+    }
+
+    public function test_into_existing_also_creates_a_missing_folder(): void
+    {
+        $result = $this->service->createModule('forum', intoExisting: true);
+
+        $this->assertTrue($result->isSuccess());
+        $this->assertSame([], $result->warnings);
+        $this->assertFileExists($this->tempModulesPath.'/forum/module.json');
+    }
+
+    public function test_into_existing_refuses_a_folder_that_already_holds_a_module(): void
+    {
+        $this->service->createModule('forum');
+        $manifest = self::readFile($this->tempModulesPath.'/forum/module.json');
+
+        $result = $this->service->createModule('forum', intoExisting: true);
+
+        $this->assertTrue($result->isFailure());
+        $this->assertStringContainsString("Module 'forum' already exists", $result->message);
+        $this->assertStringContainsString('module.json', $result->errors[0]);
+        $this->assertSame($manifest, self::readFile($this->tempModulesPath.'/forum/module.json'));
+    }
+
+    public function test_a_new_module_has_a_readme(): void
+    {
+        $this->service->createModule(
+            'blog-posts',
+            'Entradas del blog para la asociación',
+            displayName: 'Entradas del blog',
+            repository: 'acme/guildforge-blog-posts',
+            coreConstraint: '^3.30',
+        );
+
+        $readme = self::readFile($this->tempModulesPath.'/blog-posts/README.md');
+
+        $this->assertStringStartsWith("# Entradas del blog\n", $readme);
+        $this->assertStringContainsString('Entradas del blog para la asociación', $readme);
+        $this->assertStringContainsString('GuildForge core `^3.30`', $readme);
+        $this->assertStringContainsString('`acme/guildforge-blog-posts`', $readme);
+        $this->assertStringContainsString('blog-posts-X.Y.Z.zip', $readme);
+        $this->assertStringContainsString('php artisan module:enable blog-posts', $readme);
+        $this->assertStringContainsString('XDEBUG_MODE=off vendor/bin/phpunit -c modules/blog-posts/phpunit.xml', $readme);
+        $this->assertStringContainsString('cd modules/blog-posts && ../../node_modules/.bin/vitest run', $readme);
+        $this->assertStringContainsString('make check MODULE=blog-posts', $readme);
+    }
+
+    public function test_the_readme_of_a_module_without_repository_names_no_repository(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $readme = self::readFile($this->tempModulesPath.'/blog-posts/README.md');
+
+        $this->assertStringStartsWith("# Blog posts\n", $readme);
+        $this->assertStringContainsString('GuildForge core `^2.6`', $readme);
+        $this->assertStringContainsString("Módulo de GuildForge.\n", $readme);
+        $this->assertStringContainsString('`blog-posts-X.Y.Z.zip` de la última release.', $readme);
     }
 
     public function test_it_rejects_invalid_module_name_format(): void

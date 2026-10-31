@@ -44,9 +44,10 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         ?string $displayName = null,
         ?string $repository = null,
         ?string $coreConstraint = null,
+        bool $intoExisting = false,
     ): ScaffoldResultDTO {
         // Validate module name
-        $validation = $this->validateModuleName($name);
+        $validation = $this->validateModuleName($name, $intoExisting);
         if ($validation instanceof ScaffoldResultDTO) {
             return $validation;
         }
@@ -78,6 +79,9 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         $variables['moduleRepositoryJson'] = $repository !== null
             ? "\n    \"repository\": \"{$repository}\","
             : '';
+        $variables['moduleDisplayName'] = $displayName;
+        $variables['moduleReadmeDescription'] = ($description ?? '') !== '' ? (string) $description : 'Módulo de GuildForge.';
+        $variables['moduleReadmeRepository'] = $repository !== null ? " de `{$repository}` en GitHub" : '';
         $files = [];
         $warnings = [];
 
@@ -99,6 +103,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             'module/phpunit.xml.stub' => 'phpunit.xml',
             'module/test-bootstrap.php.stub' => 'tests/bootstrap.php',
             'module/gitignore.stub' => '.gitignore',
+            'module/readme.md.stub' => 'README.md',
             'module/release.yml.stub' => '.github/workflows/release.yml',
             'module/tests.yml.stub' => '.github/workflows/tests.yml',
             'module/locale.ts.stub' => 'resources/js/locales/es.ts',
@@ -146,6 +151,12 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         }
 
         $createdCount = count(array_filter($files, fn (string $s): bool => $s === ScaffoldResultDTO::STATUS_CREATED));
+
+        // Only a cloned repository has files of its own: the generated ones never replace them
+        $kept = array_keys(array_filter($files, fn (string $s): bool => $s === ScaffoldResultDTO::STATUS_SKIPPED));
+        if ($kept !== []) {
+            $warnings[] = 'Kept the existing files: '.implode(', ', $kept);
+        }
 
         $nextSteps = [
             'Check "displayName" in module.json and "title" in lang/es/messages.php: both are shown in the admin panel',
@@ -606,7 +617,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         );
     }
 
-    private function validateModuleName(string $name): ?ScaffoldResultDTO
+    private function validateModuleName(string $name, bool $intoExisting): ?ScaffoldResultDTO
     {
         // Check for reserved names
         if (in_array(strtolower($name), self::RESERVED_NAMES, true)) {
@@ -638,10 +649,17 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
 
         // Check if module already exists
         $modulePath = $this->modulesPath.'/'.$name;
-        if (is_dir($modulePath)) {
+        if (is_dir($modulePath) && ! $intoExisting) {
             return ScaffoldResultDTO::failure(
                 "Module '{$name}' already exists.",
-                ["Directory '{$modulePath}' already exists."]
+                ["Directory '{$modulePath}' already exists. To add the missing files to a cloned module repository, use --into-existing."]
+            );
+        }
+
+        if (file_exists($modulePath.'/module.json')) {
+            return ScaffoldResultDTO::failure(
+                "Module '{$name}' already exists.",
+                ["'{$modulePath}/module.json' is there: the folder holds a module already."]
             );
         }
 
