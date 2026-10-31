@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Console\Commands\Module;
 
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
+use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Infrastructure\Modules\Services\ModuleAssetBuilder;
 use App\View\Modules\CompatibilityIssueFormatter;
 use Illuminate\Console\Command;
 
@@ -35,6 +38,8 @@ final class ModuleEnableCommand extends Command
     public function __construct(
         private readonly ModuleManagerServiceInterface $moduleManager,
         private readonly CompatibilityIssueFormatter $formatter,
+        private readonly ModuleRepositoryInterface $moduleRepository,
+        private readonly ModuleAssetBuilder $assetBuilder,
     ) {
         parent::__construct();
     }
@@ -61,6 +66,7 @@ final class ModuleEnableCommand extends Command
 
             $this->moduleManager->enable($name);
             $this->info("Module \"{$moduleName}\" has been enabled.");
+            $this->warnWhenAssetsCannotBeBuilt($name);
 
             // Run migrations if --migrate flag is passed
             if ($this->option('migrate')) {
@@ -104,5 +110,27 @@ final class ModuleEnableCommand extends Command
 
             return self::FAILURE;
         }
+    }
+
+    /**
+     * Enabling queues the asset build, which needs Node: say how to build them when it is missing here.
+     */
+    private function warnWhenAssetsCannotBeBuilt(ModuleName $name): void
+    {
+        try {
+            $module = $this->moduleRepository->findByName($name);
+
+            if (! $module instanceof Module
+                || ! $this->assetBuilder->hasComponents($module)
+                || ! $this->assetBuilder->hasBuildConfig($module)
+                || $this->assetBuilder->hasBuiltAssets($module)
+                || $this->assetBuilder->canBuild()) {
+                return;
+            }
+        } catch (ModuleNotFoundException) {
+            return;
+        }
+
+        $this->warn('Its Vue assets are not built and Node is not available here. Build them in the Node container: '.ModuleAssetBuilder::manualBuildCommand($name->value));
     }
 }

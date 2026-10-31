@@ -15,6 +15,7 @@ use Illuminate\Events\Dispatcher;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -176,6 +177,47 @@ final class BuildModuleAssetsOnEnabledTest extends TestCase
         $this->app->make(BuildModuleAssetsOnEnabled::class)->handle(new ModuleEnabled('fake-id', 'test-module'));
 
         Process::assertRan(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']);
+    }
+
+    public function test_handle_skips_a_module_whose_assets_are_already_built(): void
+    {
+        // A release ZIP brings its build: the installer copies it to public/build/modules/<name>
+        Process::fake();
+        $name = 'built-'.bin2hex(random_bytes(4));
+        $this->createTestModuleWithComponentsAndConfig($name);
+        $this->createModuleRecord($name);
+        $manifest = public_path("build/modules/{$name}/manifest.json");
+        File::ensureDirectoryExists(dirname($manifest));
+        File::put($manifest, '{}');
+        $log = Log::spy();
+
+        try {
+            $this->app->make(BuildModuleAssetsOnEnabled::class)->handle(new ModuleEnabled('fake-id', $name));
+        } finally {
+            File::deleteDirectory(dirname($manifest));
+        }
+
+        Process::assertNothingRan();
+        $log->shouldHaveReceived('info', ["BuildModuleAssetsOnEnabled: Module {$name} already has built assets"]);
+        $log->shouldNotHaveReceived('error');
+    }
+
+    public function test_handle_warns_with_the_manual_build_command_when_node_is_missing(): void
+    {
+        // The application and queue containers run PHP only
+        Process::fake(['*npx*--version*' => Process::result(exitCode: 127)]);
+        $this->createTestModuleWithComponentsAndConfig('test-module');
+        $this->createModuleRecord('test-module');
+        $log = Log::spy();
+
+        $this->app->make(BuildModuleAssetsOnEnabled::class)->handle(new ModuleEnabled('fake-id', 'test-module'));
+
+        Process::assertDidntRun(fn (PendingProcess $process): bool => $process->command === ['sh', 'scripts/build-module.sh', 'test-module']);
+        $log->shouldHaveReceived('warning')
+            ->once()
+            ->withArgs(fn (string $message): bool => str_contains($message, 'test-module')
+                && str_contains($message, 'docker exec guildforge_node npm run build:module -- test-module'));
+        $log->shouldNotHaveReceived('error');
     }
 
     public function test_handle_catches_exceptions_and_logs_error(): void

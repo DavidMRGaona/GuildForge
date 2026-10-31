@@ -859,7 +859,7 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
      */
     private function buildAssetsStep(string $module): string
     {
-        return "Build its Vue assets in the Node container: docker exec guildforge_node npm run build:module -- {$module}; releases build them in the release workflow";
+        return 'Build its Vue assets in the Node container: '.ModuleAssetBuilder::manualBuildCommand($module).'; releases build them in the release workflow';
     }
 
     /**

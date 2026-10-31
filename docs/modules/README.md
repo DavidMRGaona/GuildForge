@@ -80,6 +80,12 @@ docker exec guildforge_app php artisan module:seed my-module
 
 Enabling checks the module's requirements first (see [Module manifest](#module-manifest-modulejson)): an incompatible module cannot be enabled.
 
+Enabling a module with Vue components also queues the build of its assets. A module installed from a release ZIP brings them already built, so nothing is built. The application and queue containers have no Node: in development, a module cloned or generated without a build is not built there. The log gets a warning, `module:enable` prints the command, and you build it in the Node container:
+
+```bash
+docker exec guildforge_node npm run build:module -- my-module
+```
+
 ### Listing modules
 
 ```bash

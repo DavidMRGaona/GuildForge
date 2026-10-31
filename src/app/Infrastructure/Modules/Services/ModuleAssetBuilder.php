@@ -8,6 +8,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Throwable;
 
 final readonly class ModuleAssetBuilder
 {
@@ -55,6 +56,27 @@ final readonly class ModuleAssetBuilder
         $manifestPath = public_path('build/modules/'.$module->name()->value.'/manifest.json');
 
         return file_exists($manifestPath);
+    }
+
+    /**
+     * Whether Node is available here to build module assets. The application and queue
+     * containers run PHP only; in development the Node container builds them.
+     */
+    public function canBuild(): bool
+    {
+        try {
+            return Process::timeout(30)->run(['npx', '--version'])->successful();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * The command that builds a module's assets in the development Node container.
+     */
+    public static function manualBuildCommand(string $moduleName): string
+    {
+        return "docker exec guildforge_node npm run build:module -- {$moduleName}";
     }
 
     /**
