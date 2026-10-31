@@ -25,6 +25,8 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
 
     private const string TRANSLATE_LABELS = 'Translate the labels written to lang/es/filament.php: they are derived from the class name';
 
+    private const string TRANSLATE_EMAILS = 'Write the texts added to lang/es/emails.php: they are placeholders derived from the class name';
+
     private string $modulesPath;
 
     public function __construct(
@@ -102,11 +104,15 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
             'module/module.css.stub' => 'resources/css/module.css',
             'module/phpunit.xml.stub' => 'phpunit.xml',
             'module/test-bootstrap.php.stub' => 'tests/bootstrap.php',
+            'test/permission-suggestions.php.stub' => 'tests/Unit/PermissionSuggestionsTest.php',
+            'module/vitest-setup.ts.stub' => 'tests/js/setup.ts',
+            'module/vitest-page.ts.stub' => 'tests/js/support/page.ts',
             'module/gitignore.stub' => '.gitignore',
             'module/readme.md.stub' => 'README.md',
             'module/release.yml.stub' => '.github/workflows/release.yml',
             'module/tests.yml.stub' => '.github/workflows/tests.yml',
             'module/locale.ts.stub' => 'resources/js/locales/es.ts',
+            'module/locales-index.ts.stub' => 'resources/js/locales/index.ts',
         ];
 
         foreach ($fileMap as $stub => $destination) {
@@ -575,6 +581,10 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         $typesDestPath = $modulePath.'/'.$typesDestination;
         $typesResult = $this->renderStub('vue/types.ts.stub', $typesDestPath, $typesVariables);
         $files[$typesDestination] = $typesResult;
+
+        // Mounted with tests/js/setup.ts (module:make): the core's texts and the module's, Inertia mocked
+        $specDestination = "tests/js/{$variables['nameStudly']}.spec.ts";
+        $files[$specDestination] = $this->renderStub('vue/page.spec.ts.stub', $modulePath.'/'.$specDestination, $variables);
 
         $renderedAs = "Inertia::render('{$variables['moduleNameStudly']}/{$variables['nameStudly']}')";
 
@@ -1089,6 +1099,11 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         return ScaffoldResultDTO::success(
             "Notification '{$name}' created for module '{$module}'.",
             $files,
+            nextSteps: [
+                'Pass what the mail shows through a constructor with readonly properties: the notification is queued (ShouldQueue), so they are serialized',
+                'If its links carry a secret (a guest link, a token), also implement ShouldBeEncrypted so the queue does not store it in clear',
+                self::TRANSLATE_EMAILS,
+            ],
         );
     }
 

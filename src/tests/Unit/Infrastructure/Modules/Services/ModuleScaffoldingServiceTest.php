@@ -654,6 +654,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('use Dispatchable;', $content);
         $this->assertStringContainsString('use SerializesModels;', $content);
         $this->assertStringNotContainsString('final readonly class', $content);
+        $this->assertStringNotContainsString('TODO', $content);
     }
 
     public function test_it_creates_domain_event_validates_module_exists(): void
@@ -726,6 +727,70 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->assertStringContainsString('extends Notification', $content);
         $this->assertStringContainsString('use Queueable;', $content);
         $this->assertStringContainsString('public function toMail(', $content);
+    }
+
+    public function test_a_generated_notification_is_queued_and_has_no_todo(): void
+    {
+        $this->service->createModule('comms');
+
+        $result = $this->service->createNotification('comms', 'WelcomeNotification');
+
+        $content = self::readFile($this->tempModulesPath.'/comms/src/Notifications/WelcomeNotification.php');
+        $this->assertStringContainsString('use Illuminate\Contracts\Queue\ShouldQueue;', $content);
+        $this->assertStringContainsString('final class WelcomeNotification extends Notification implements ShouldQueue', $content);
+        $this->assertStringNotContainsString('TODO', $content);
+        $this->assertStringNotContainsString('__construct', $content);
+        $this->assertNotNull(Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, 'readonly')));
+        $this->assertNotNull(Arr::first($result->nextSteps, fn (string $step): bool => str_contains($step, 'ShouldBeEncrypted')));
+    }
+
+    public function test_the_provider_suggests_no_permission_to_the_editor_role(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $provider = self::readFile($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+
+        $this->assertStringNotContainsString("'editor'", $provider);
+        $this->assertStringContainsString('never granted', $provider);
+    }
+
+    public function test_a_new_module_checks_that_no_permission_is_suggested_to_the_editor_role(): void
+    {
+        $result = $this->service->createModule('blog-posts');
+
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/Unit/PermissionSuggestionsTest.php'] ?? null);
+        $test = self::readFile($this->tempModulesPath.'/blog-posts/tests/Unit/PermissionSuggestionsTest.php');
+        $this->assertStringContainsString('namespace Modules\BlogPosts\Tests\Unit;', $test);
+        $this->assertStringContainsString('use Modules\BlogPosts\BlogPostsServiceProvider;', $test);
+        $this->assertStringContainsString("in_array('editor', \$permission->roles, true)", $test);
+    }
+
+    public function test_a_new_module_can_mount_its_pages_in_vitest(): void
+    {
+        $result = $this->service->createModule('blog-posts');
+
+        foreach (['tests/js/setup.ts', 'tests/js/support/page.ts', 'resources/js/locales/index.ts'] as $file) {
+            $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files[$file] ?? null, $file);
+        }
+
+        $setup = self::readFile($this->tempModulesPath.'/blog-posts/tests/js/setup.ts');
+        $this->assertStringContainsString("vi.mock('@inertiajs/vue3'", $setup);
+        $this->assertStringContainsString("vi.mock('@/layouts/DefaultLayout.vue'", $setup);
+        $this->assertStringContainsString("import moduleLocales from '../../resources/js/locales';", $setup);
+        $this->assertStringContainsString('{ ...coreEs, ...moduleLocales.es }', $setup);
+    }
+
+    public function test_a_page_comes_with_a_spec_that_mounts_it(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $result = $this->service->createVuePage('blog-posts', 'Archive');
+
+        $this->assertSame(ScaffoldResultDTO::STATUS_CREATED, $result->files['tests/js/Archive.spec.ts'] ?? null);
+        $spec = self::readFile($this->tempModulesPath.'/blog-posts/tests/js/Archive.spec.ts');
+        $this->assertStringContainsString("import Archive from '../../resources/js/pages/BlogPosts/Archive.vue';", $spec);
+        $this->assertStringContainsString('mount(Archive)', $spec);
+        $this->assertStringContainsString('es.blogPosts.title', $spec);
     }
 
     public function test_it_creates_notification_validates_module_exists(): void

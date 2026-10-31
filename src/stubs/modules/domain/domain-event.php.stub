@@ -13,7 +13,7 @@ final class {{ nameStudly }}
     use SerializesModels;
 
     public function __construct(
-        // TODO: Add event-specific readonly properties
+        // What its listeners need, as readonly properties:
         // public readonly string $aggregateId,
         // public readonly string $userId,
     ) {}
