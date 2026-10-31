@@ -134,25 +134,26 @@ db-restore: ## Restore from latest backup
 
 # =============================================================================
 # TESTING (all tests run in parallel with 8 processes)
+# Never in Xdebug's develop mode, which tests/bootstrap.php refuses (see XdebugDevelopModeGuard)
 # =============================================================================
 
 test: ## Run all tests (parallel)
-	docker exec $(PHP_CONTAINER) php -d memory_limit=512M artisan test --parallel --processes=8
+	docker exec -e XDEBUG_MODE=off $(PHP_CONTAINER) php -d memory_limit=512M artisan test --parallel --processes=8
 
 test-unit: ## Run unit tests only (parallel)
-	docker exec $(PHP_CONTAINER) php artisan test --testsuite=Unit --parallel --processes=8
+	docker exec -e XDEBUG_MODE=off $(PHP_CONTAINER) php artisan test --testsuite=Unit --parallel --processes=8
 
 test-feature: ## Run feature tests only (parallel)
-	docker exec $(PHP_CONTAINER) php artisan test --testsuite=Feature --parallel --processes=8
+	docker exec -e XDEBUG_MODE=off $(PHP_CONTAINER) php artisan test --testsuite=Feature --parallel --processes=8
 
 test-coverage: ## Run tests with coverage report (parallel)
-	docker exec $(PHP_CONTAINER) php artisan test --parallel --processes=8 --coverage --coverage-html=coverage
+	docker exec -e XDEBUG_MODE=coverage $(PHP_CONTAINER) php artisan test --parallel --processes=8 --coverage --coverage-html=coverage
 
 test-filter: ## Run specific test (usage: make test-filter FILTER=EventTest)
-	docker exec $(PHP_CONTAINER) php artisan test --filter=$(FILTER)
+	docker exec -e XDEBUG_MODE=off $(PHP_CONTAINER) php artisan test --filter=$(FILTER)
 
 test-serial: ## Run all tests without parallelization
-	docker exec $(PHP_CONTAINER) php artisan test
+	docker exec -e XDEBUG_MODE=off $(PHP_CONTAINER) php artisan test
 
 # =============================================================================
 # CODE QUALITY
@@ -216,7 +217,7 @@ check-q: ## Check with minimal output
 	@docker exec $(NODE_CONTAINER) npm run type-check --silent && echo "✓ Types" || echo "✗ Types"
 
 test-q: ## Tests with compact output (parallel)
-	@docker exec $(PHP_CONTAINER) php artisan test --parallel --processes=8 --compact
+	@docker exec -e XDEBUG_MODE=off $(PHP_CONTAINER) php artisan test --parallel --processes=8 --compact
 
 lint: check ## Alias for check
 

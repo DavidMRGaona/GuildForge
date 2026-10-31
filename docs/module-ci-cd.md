@@ -271,7 +271,7 @@ jobs:
 
 ### Tests fail
 
-- Run the suite locally before tagging: `docker exec guildforge_app vendor/bin/phpunit -c modules/<module>/phpunit.xml`
+- Run the suite locally before tagging: `docker exec -e XDEBUG_MODE=off guildforge_app vendor/bin/phpunit -c modules/<module>/phpunit.xml` (the test bootstrap refuses Xdebug's `develop` mode)
 - CI uses a fresh clone: files that are not committed (and empty test directories) do not exist there
 - The module's `phpunit.xml` must keep the `APP_*_CACHE` environment block so tests never read the bootstrap caches
 - To release while a fix is pending, pass `run_tests: false` in the module's `release.yml` and revert it afterwards
