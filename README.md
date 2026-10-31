@@ -233,8 +233,10 @@ The project uses GitHub Actions for CI/CD:
 
 ### CI jobs
 
-- **test**: PHP 8.5, PostgreSQL 17, Redis 7.2. Checks Rector (`vendor/bin/rector process --dry-run`), PHP style (`vendor/bin/pint --test`) and static analysis (`vendor/bin/phpstan analyse`, PHPStan level 8), builds the assets, checks the module import map (`npm run verify:build`), then runs the migrations and the test suite (serially, on PostgreSQL).
-- **lint**: TypeScript type-check, ESLint, Prettier (`npm run format:check`) and Vitest.
+- **gate**: runs first and skips the jobs below only when they would repeat a result already obtained: a push to `main` whose tree its pull request's CI tested, or a release pull request that only changes `src/VERSION` on top of a `main` whose CI passed. Anything else runs them; the run summary says why. Details in the [deployment guide](docs/deployment-guide.md#1-ci-ciyml).
+- **test**: PHP 8.5, PostgreSQL 17, Redis 7.2. Checks Rector (`vendor/bin/rector process --dry-run`), PHP style (`vendor/bin/pint --test`) and static analysis (`vendor/bin/phpstan analyse`, PHPStan level 8), builds the assets, checks the module import map (`npm run verify:build`), then runs the migrations and the test suite (`--parallel`, on PostgreSQL, instants stored in UTC).
+- **test (Madrid storage)**: the same suite, in parallel, with instants stored in `Europe/Madrid`.
+- **lint**: actionlint on the workflows, TypeScript type-check, public API report (`npm run check:public-api`), ESLint, Prettier (`npm run format:check`) and Vitest.
 
 ### Required secrets
 
