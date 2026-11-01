@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { ChevronDown, User, Settings, LogOut } from '@lucide/vue';
@@ -16,6 +16,7 @@ const { user, can } = useAuth();
 const routes = useRoutes();
 
 const isOpen = ref(false);
+const userName = computed(() => user.value?.displayName || user.value?.name);
 const dropdownRef = ref<HTMLElement | null>(null);
 
 function toggleDropdown(): void {
@@ -59,7 +60,7 @@ onUnmounted(() => {
             @click="toggleDropdown"
         >
             <span class="sr-only">{{ t('auth.userMenu.openMenu') }}</span>
-            <span>{{ user?.displayName || user?.name }}</span>
+            <span class="max-w-40 truncate" :title="userName">{{ userName }}</span>
             <ChevronDown
                 class="h-4 w-4 transition-transform"
                 :class="{ 'rotate-180': isOpen }"

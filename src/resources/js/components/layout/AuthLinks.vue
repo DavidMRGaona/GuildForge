@@ -51,7 +51,7 @@ function handleNavigate(): void {
 
     <!-- Desktop layout -->
     <template v-else>
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2 whitespace-nowrap">
             <Link
                 v-if="authSettings.registrationEnabled"
                 :href="routes.auth.register"
