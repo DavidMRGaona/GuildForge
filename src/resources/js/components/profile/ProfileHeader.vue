@@ -71,7 +71,7 @@ function uploadAvatar(): void {
 </script>
 
 <template>
-    <div class="bg-neutral-100 py-8 dark:bg-muted sm:py-12">
+    <div class="bg-muted py-8 sm:py-12">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
                 <!-- Avatar (clickable) -->
@@ -132,7 +132,7 @@ function uploadAvatar(): void {
                         {{ user.email }}
                     </p>
                     <p
-                        class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-neutral-200 px-3 py-1 text-sm text-base-secondary dark:bg-neutral-700"
+                        class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-default bg-surface px-3 py-1 text-sm text-base-secondary"
                     >
                         <Calendar class="h-4 w-4" aria-hidden="true" />
                         {{ t('auth.profile.memberSince', { date: memberSinceDate }) }}
