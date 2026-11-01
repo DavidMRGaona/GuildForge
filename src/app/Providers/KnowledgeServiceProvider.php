@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Application\Knowledge\Services\GuideConditionEvaluatorInterface;
+use App\Application\Knowledge\Services\GuideRendererInterface;
 use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCatalogSynchronizerInterface;
@@ -15,6 +16,7 @@ use App\Infrastructure\Knowledge\Capabilities\EmailVerificationRequiredCapabilit
 use App\Infrastructure\Knowledge\Catalog\KnowledgeCatalogSynchronizer;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeSourceLocator;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Repositories\EloquentGuideRepository;
+use App\Infrastructure\Knowledge\Rendering\GuideMarkdownRenderer;
 use App\Infrastructure\Knowledge\Services\GuideConditionEvaluator;
 use App\Infrastructure\Knowledge\Services\GuideVisibilityService;
 use App\Infrastructure\Knowledge\Services\KnowledgeCapabilityRegistry;
@@ -31,6 +33,8 @@ class KnowledgeServiceProvider extends ServiceProvider
         $this->app->bind(KnowledgeLocaleResolverInterface::class, KnowledgeLocaleResolver::class);
         $this->app->scoped(GuideConditionEvaluatorInterface::class, GuideConditionEvaluator::class);
         $this->app->scoped(GuideVisibilityServiceInterface::class, GuideVisibilityService::class);
+
+        $this->app->bind(GuideRendererInterface::class, GuideMarkdownRenderer::class);
 
         $this->app->bind(KnowledgeSourceLocator::class, fn (Application $app): KnowledgeSourceLocator => new KnowledgeSourceLocator(
             $app->make(EnabledModulesResolverInterface::class),

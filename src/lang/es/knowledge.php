@@ -19,4 +19,12 @@ return [
         'modules' => 'Módulos y actualizaciones',
         'activities' => 'Actividades',
     ],
+    'callouts' => [
+        'tip' => 'Consejo',
+        'important' => 'Importante',
+        'warning' => 'Ojo',
+    ],
+    'placeholders' => [
+        'association_role_fallback' => 'socio',
+    ],
 ];

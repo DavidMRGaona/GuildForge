@@ -6,6 +6,7 @@ namespace App\Infrastructure\Knowledge\Catalog;
 
 use App\Application\Knowledge\DTOs\KnowledgeSyncReportDTO;
 use App\Application\Knowledge\DTOs\ParsedGuideDTO;
+use App\Application\Knowledge\Services\GuideRendererInterface;
 use App\Application\Knowledge\Services\KnowledgeCatalogSynchronizerInterface;
 use App\Domain\Knowledge\Entities\KnowledgeCategory;
 use App\Domain\Knowledge\Enums\GuideAudience;
@@ -26,6 +27,7 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
     public function __construct(
         private KnowledgeSourceLocator $locator,
         private GuideDocumentParser $parser,
+        private GuideRendererInterface $renderer,
     ) {}
 
     public function sync(): KnowledgeSyncReportDTO
@@ -162,7 +164,7 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
             'keywords' => $parsed->keywords,
             'body_format' => GuideBodyFormat::Markdown->value,
             'body' => $parsed->body,
-            'body_text' => $parsed->body,
+            'body_text' => $this->renderer->toPlainText($parsed->body),
             'conditions' => $parsed->conditions->toArray(),
             'related' => array_map(static fn ($id): string => $id->value(), $parsed->related),
             'featured' => $parsed->featured,
