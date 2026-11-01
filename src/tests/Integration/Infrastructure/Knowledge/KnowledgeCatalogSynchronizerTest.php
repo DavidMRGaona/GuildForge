@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Knowledge;
 
+use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeCategoryModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideAliasModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
@@ -76,6 +77,28 @@ final class KnowledgeCatalogSynchronizerTest extends TestCase
         $this->assertNotNull($guide->content_changed_at);
         $this->assertStringContainsString('Después.', $guide->body);
         $this->assertStringContainsString('Después.', $guide->body_text);
+    }
+
+    public function test_plain_text_follows_placeholder_settings_without_touching_content_timestamps(): void
+    {
+        $settings = $this->app->make(SettingsServiceInterface::class);
+        $settings->set('guild_name', 'Primer nombre');
+        $this->writeCoreGuide('a.md', 'account.one', body: 'Antes.');
+        $this->syncKnowledge();
+        $this->writeCoreGuide('a.md', 'account.one', body: 'Bienvenido a {{site_name}}.');
+        $this->syncKnowledge();
+        $changedAt = $this->guide('account.one')->content_changed_at;
+        $this->assertNotNull($changedAt);
+        $this->assertStringContainsString('Primer nombre', $this->guide('account.one')->body_text);
+
+        $settings->set('guild_name', 'Segundo nombre');
+        $report = $this->syncKnowledge();
+
+        $guide = $this->guide('account.one');
+        $this->assertStringContainsString('Segundo nombre', $guide->body_text);
+        $this->assertStringNotContainsString('Primer nombre', $guide->body_text);
+        $this->assertTrue($changedAt->equalTo($guide->content_changed_at));
+        $this->assertSame(0, $report->updated);
     }
 
     public function test_unchanged_content_keeps_timestamps(): void

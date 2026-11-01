@@ -195,6 +195,12 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
             || ! $existing->active;
 
         if (! $changed) {
+            // The plain text embeds settings-dependent placeholders, so it is refreshed on every run;
+            // this is not a content change and is not counted as an update.
+            if ($existing->body_text !== $attributes['body_text']) {
+                $existing->update(['body_text' => $attributes['body_text']]);
+            }
+
             return 'unchanged';
         }
 
