@@ -14,12 +14,14 @@ use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Infrastructure\Knowledge\Jobs\SyncKnowledgeCatalogJob;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\TestCase;
 
 final class SyncKnowledgeOnModuleChangeTest extends TestCase
@@ -55,7 +57,7 @@ final class SyncKnowledgeOnModuleChangeTest extends TestCase
         $job = new SyncKnowledgeCatalogJob;
 
         $this->assertContains(ShouldQueue::class, class_implements($job));
-        $this->assertContains(ShouldBeUnique::class, class_implements($job));
+        $this->assertContains(ShouldBeUniqueUntilProcessing::class, class_implements($job));
         $this->assertSame(300, $job->uniqueFor);
     }
 
@@ -78,5 +80,18 @@ final class SyncKnowledgeOnModuleChangeTest extends TestCase
         (new SyncKnowledgeCatalogJob)->handle($synchronizer, $indexer);
 
         $this->assertSame(['sync', 'reindex'], $order);
+    }
+
+    #[DataProvider('moduleEvents')]
+    public function test_a_failing_sync_does_not_break_the_module_event(object $event): void
+    {
+        config(['queue.default' => 'sync']);
+        $synchronizer = Mockery::mock(KnowledgeCatalogSynchronizerInterface::class);
+        $synchronizer->shouldReceive('sync')->andThrow(new RuntimeException('broken guide'));
+        $this->app->instance(KnowledgeCatalogSynchronizerInterface::class, $synchronizer);
+        Log::shouldReceive('warning')->once();
+
+        event($event);
+
     }
 }

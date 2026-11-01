@@ -783,7 +783,7 @@ final class SiteSettings extends Page implements HasForms
         // The guides' plain text carries the site name and the association role name
         if (app(SiteBrandingServiceInterface::class)->siteName() !== $siteNameBefore
             || app(AssociationMembershipServiceInterface::class)->roleName() !== $associationRoleNameBefore) {
-            SyncKnowledgeCatalogJob::dispatch();
+            SyncKnowledgeCatalogJob::dispatchSafely();
         }
 
         Notification::make()

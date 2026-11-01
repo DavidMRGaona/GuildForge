@@ -4,15 +4,20 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Settings;
 
+use App\Application\Knowledge\Services\KnowledgeCatalogSynchronizerInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Pages\SiteSettings;
 use App\Infrastructure\Knowledge\Jobs\SyncKnowledgeCatalogJob;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Filament\Notifications\Notification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use Mockery;
+use RuntimeException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
 
@@ -77,5 +82,23 @@ final class SiteSettingsKnowledgeSyncTest extends TestCase
 
         $this->assertSame('socio', app(SettingsServiceInterface::class)->get('association_member_role'));
         Queue::assertNotPushed(SyncKnowledgeCatalogJob::class);
+    }
+
+    public function test_a_failing_sync_does_not_break_the_save(): void
+    {
+        config(['queue.default' => 'sync']);
+        $synchronizer = Mockery::mock(KnowledgeCatalogSynchronizerInterface::class);
+        $synchronizer->shouldReceive('sync')->andThrow(new RuntimeException('broken guide'));
+        $this->app->instance(KnowledgeCatalogSynchronizerInterface::class, $synchronizer);
+        Log::shouldReceive('warning')->once();
+        app(SettingsServiceInterface::class)->set('guild_name', 'Gremio viejo');
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm(['guild_name' => 'Gremio nuevo'])
+            ->call('save')
+            ->assertNotified(Notification::make()->title(__('filament.settings.location.saved'))->success());
+
+        $this->assertSame('Gremio nuevo', app(SettingsServiceInterface::class)->get('guild_name'));
     }
 }

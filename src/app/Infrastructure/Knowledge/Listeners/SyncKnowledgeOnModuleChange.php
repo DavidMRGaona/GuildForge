@@ -13,6 +13,6 @@ final class SyncKnowledgeOnModuleChange
 {
     public function handle(object $event): void
     {
-        SyncKnowledgeCatalogJob::dispatch();
+        SyncKnowledgeCatalogJob::dispatchSafely();
     }
 }
