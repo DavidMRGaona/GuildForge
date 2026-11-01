@@ -18,7 +18,7 @@ final readonly class EndSurveyChoiceDTO
      * @param  string|null  $ownValue  The option that prepares a survey of the subject's own
      * @param  list<EndSurveyOptionDTO>  $baseTemplates  What the own survey can start from
      * @param  string|null  $lockedReason  Why it can no longer change, already translated
-     * @param  string|null  $editUrl  Where the subject's end survey is edited, when there is one
+     * @param  string|null  $editUrl  Where the subject's end survey is edited (only seen, once locked), when there is one
      */
     public function __construct(
         public array $options,

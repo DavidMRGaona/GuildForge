@@ -59,7 +59,9 @@ final class EndSurveyField
                     ?? __('filament.end_survey.helper'))
                 ->hintAction(
                     Action::make('editEndSurvey')
-                        ->label(__('filament.end_survey.edit'))
+                        ->label(static fn (Select $component): string => $lookup->for($component)?->locked === true
+                            ? __('filament.end_survey.view')
+                            : __('filament.end_survey.edit'))
                         ->icon('heroicon-o-pencil-square')
                         ->url(static fn (Select $component): ?string => $lookup->for($component)?->editUrl)
                         ->visible(static fn (Select $component): bool => $lookup->for($component)?->editUrl !== null),

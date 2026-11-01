@@ -145,6 +145,8 @@ final class EndSurveyFieldTest extends TestCase
         Livewire::test(EditEvent::class, ['record' => $this->event()->getRouteKey()])
             ->assertFormFieldIsDisabled('end_survey')
             ->assertSee('Ya se ha enviado.')
+            ->assertSee(__('filament.end_survey.view'))
+            ->assertDontSee(__('filament.end_survey.edit'))
             ->assertSee('https://example.com/encuestas/1/editar')
             ->set('data.end_survey', 'none')
             ->call('save')
