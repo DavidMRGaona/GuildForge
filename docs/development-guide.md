@@ -446,7 +446,7 @@ make phpstan
 
 ### ESLint (TypeScript/Vue)
 
-Checks `.ts` and `.vue` files in `resources/js/`:
+Checks `.ts` and `.vue` files in `resources/js/`; a warning fails like an error (`--max-warnings=0`), in CI and in modules' `test / Quality` alike:
 
 ```bash
 make lint-js       # Check

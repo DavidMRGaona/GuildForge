@@ -12,7 +12,7 @@
         "preview": "vite preview",
         "type-check": "vue-tsc --noEmit && vue-tsc --noEmit -p tsconfig.node.json",
         "test:unit": "vitest run",
-        "lint": "eslint resources/js scripts *.config.ts --ext .ts,.vue,.mjs",
+        "lint": "eslint resources/js scripts *.config.ts --ext .ts,.vue,.mjs --max-warnings=0",
         "lint:fix": "eslint resources/js scripts *.config.ts --ext .ts,.vue,.mjs --fix",
         "format": "prettier --write \"resources/js/**/*.{ts,vue}\" \"scripts/**/*.{mjs,ts,vue}\" \"*.config.ts\"",
         "format:check": "prettier --check \"resources/js/**/*.{ts,vue}\" \"scripts/**/*.{mjs,ts,vue}\" \"*.config.ts\"",
