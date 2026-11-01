@@ -97,7 +97,7 @@ final class KnowledgeCatalogSynchronizerTest extends TestCase
         $guide = $this->guide('account.one');
         $this->assertStringContainsString('Segundo nombre', $guide->body_text);
         $this->assertStringNotContainsString('Primer nombre', $guide->body_text);
-        $this->assertTrue($changedAt->equalTo($guide->content_changed_at));
+        $this->assertEquals($changedAt, $guide->content_changed_at);
         $this->assertSame(0, $report->updated);
     }
 
