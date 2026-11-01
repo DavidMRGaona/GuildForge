@@ -51,6 +51,12 @@ final class EndSurveyField
                 ->dehydrated(false)
                 ->options(static fn (Select $component): array => self::options($lookup->for($component)->options ?? []))
                 ->default(static fn (Select $component): ?string => $lookup->for($component)?->selected)
+                // A form filled with its own data (no defaults then) starts from the choice in force too
+                ->afterStateHydrated(static function (Select $component, ?string $state) use ($lookup): void {
+                    if ($state === null) {
+                        $component->state($lookup->for($component)?->selected);
+                    }
+                })
                 ->loadStateFromRelationshipsUsing(static function (Select $component) use ($lookup): void {
                     $component->state($lookup->for($component)?->selected);
                 })
