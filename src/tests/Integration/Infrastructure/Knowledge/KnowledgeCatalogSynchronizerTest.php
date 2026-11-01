@@ -231,4 +231,36 @@ PHP);
         $this->assertCount(1, $report->errors);
         $this->assertSame(0, KnowledgeCategoryModel::query()->where('category_id', 'broken')->count());
     }
+
+    public function test_a_guide_whose_file_becomes_invalid_stays_active_with_its_old_content(): void
+    {
+        $this->writeCoreGuide('a.md', 'account.one', 'Original');
+        $this->writeCoreGuide('b.md', 'account.two');
+        $this->syncKnowledge();
+
+        $this->writeFile($this->corePath().'/es/a.md', "broken\n");
+        $this->deleteCoreFile('b.md');
+        $report = $this->syncKnowledge();
+
+        $this->assertCount(1, $report->errors);
+        $this->assertSame(0, $report->deactivated);
+        $this->assertTrue($this->guide('account.one')->active);
+        $this->assertSame('Original', $this->guide('account.one')->title);
+        $this->assertTrue($this->guide('account.two')->active);
+    }
+
+    public function test_a_broken_file_does_not_protect_guides_of_other_sources(): void
+    {
+        $this->writeCoreGuide('a.md', 'account.one');
+        $this->writeModuleGuide('alpha', 'x.md', 'alpha.guide');
+        $this->syncKnowledge();
+
+        $this->writeFile($this->corePath().'/es/a.md', "broken\n");
+        unlink($this->knowledgeSandbox.'/modules/alpha/resources/knowledge/es/x.md');
+        $report = $this->syncKnowledge();
+
+        $this->assertSame(1, $report->deactivated);
+        $this->assertTrue($this->guide('account.one')->active);
+        $this->assertFalse($this->guide('alpha.guide')->active);
+    }
 }

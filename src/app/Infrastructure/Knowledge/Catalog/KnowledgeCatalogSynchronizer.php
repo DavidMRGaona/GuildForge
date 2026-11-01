@@ -40,8 +40,9 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
             $inserted = 0;
             $updated = 0;
             $seen = [];
+            $failedSources = [];
 
-            foreach ($this->collect($roots, $errors) as $entry) {
+            foreach ($this->collect($roots, $errors, $failedSources) as $entry) {
                 $key = $entry['parsed']->id->value().'|'.$entry['locale'];
                 if (isset($seen[$key])) {
                     $errors[] = sprintf(
@@ -63,7 +64,7 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
                 $this->syncAliases($entry['parsed']);
             }
 
-            $deactivated = $this->deactivateMissing($seen);
+            $deactivated = $this->deactivateMissing($seen, $failedSources);
 
             return new KnowledgeSyncReportDTO($inserted, $updated, $deactivated, $errors);
         });
@@ -72,9 +73,10 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
     /**
      * @param  list<array{path: string, module: ?string}>  $roots
      * @param  list<string>  $errors
+     * @param  array<string, true>  $failedSources  sources (module name, or '' for the core) with an unreadable or invalid file
      * @return list<array{parsed: ParsedGuideDTO, locale: string, module: ?string, file: string}>
      */
-    private function collect(array $roots, array &$errors): array
+    private function collect(array $roots, array &$errors, array &$failedSources): array
     {
         $entries = [];
 
@@ -84,6 +86,7 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
                     $contents = file_get_contents($file);
                     if ($contents === false) {
                         $errors[] = $file.': could not be read';
+                        $failedSources[$root['module'] ?? ''] = true;
 
                         continue;
                     }
@@ -92,6 +95,7 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
                         $parsed = $this->parser->parse($file, $contents);
                     } catch (InvalidGuideDocumentException $e) {
                         $errors[] = $e->getMessage();
+                        $failedSources[$root['module'] ?? ''] = true;
 
                         continue;
                     }
@@ -211,12 +215,18 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
     }
 
     /**
+     * Guides of a source with a broken file keep their stored content: the file still exists, so they are not missing.
+     *
      * @param  array<string, string>  $seen
+     * @param  array<string, true>  $failedSources
      */
-    private function deactivateMissing(array $seen): int
+    private function deactivateMissing(array $seen, array $failedSources): int
     {
         $deactivated = 0;
         foreach (KnowledgeGuideModel::query()->where('active', true)->get() as $guide) {
+            if (isset($failedSources[$guide->module ?? ''])) {
+                continue;
+            }
             if (! isset($seen[$guide->guide_id.'|'.$guide->locale])) {
                 $guide->update(['active' => false]);
                 $deactivated++;
