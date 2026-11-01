@@ -4,26 +4,55 @@
         "FormCheckboxGroup",
         "FormCheckboxWithTooltip",
         "FormCombobox",
+        "FormDatePicker",
         "FormNumberInput",
         "FormRadioGroup",
         "FormSelect",
         "FormTagsInput",
+        "FormTimePicker",
         "FormToggle",
         "FormTooltip"
     ],
-    "@/components/layout/ModuleSlot.vue": ["default"],
-    "@/components/ui/BaseButton.vue": ["default"],
-    "@/components/ui/BaseCard.vue": ["default"],
-    "@/components/ui/ConfirmDialog.vue": ["default"],
-    "@/components/ui/EmptyState.vue": ["default"],
-    "@/components/ui/LoadingSpinner.vue": ["default"],
-    "@/composables/useAuth": ["useAuth"],
-    "@/composables/useCalendarLocale": ["useCalendarLocale"],
-    "@/composables/useFlashMessages": ["useFlashMessages"],
-    "@/composables/useGridLayout": ["useGridLayout"],
-    "@/composables/useNotifications": ["useNotifications"],
-    "@/composables/usePagination": ["usePagination"],
-    "@/composables/useRoutes": ["routes", "useRoutes"],
+    "@/components/layout/ModuleSlot.vue": [
+        "default"
+    ],
+    "@/components/ui/BaseButton.vue": [
+        "default"
+    ],
+    "@/components/ui/BaseCard.vue": [
+        "default"
+    ],
+    "@/components/ui/ConfirmDialog.vue": [
+        "default"
+    ],
+    "@/components/ui/EmptyState.vue": [
+        "default"
+    ],
+    "@/components/ui/LoadingSpinner.vue": [
+        "default"
+    ],
+    "@/composables/useAuth": [
+        "useAuth"
+    ],
+    "@/composables/useCalendarLocale": [
+        "useCalendarLocale"
+    ],
+    "@/composables/useFlashMessages": [
+        "useFlashMessages"
+    ],
+    "@/composables/useGridLayout": [
+        "useGridLayout"
+    ],
+    "@/composables/useNotifications": [
+        "useNotifications"
+    ],
+    "@/composables/usePagination": [
+        "usePagination"
+    ],
+    "@/composables/useRoutes": [
+        "routes",
+        "useRoutes"
+    ],
     "@/composables/useVerificationGate": [
         "VERIFICATION_REQUIRED_ERROR",
         "VERIFICATION_REQUIRED_HEADER",
@@ -34,7 +63,11 @@
         "notifyCookieConsentChanged",
         "registerCookieConsentProvider"
     ],
-    "@/utils/calendarTheme": ["calendarClassOptions", "calendarThemePlugin", "eventTimeRange"],
+    "@/utils/calendarTheme": [
+        "calendarClassOptions",
+        "calendarThemePlugin",
+        "eventTimeRange"
+    ],
     "@/utils/cloudinary": [
         "buildAvatarUrl",
         "buildCardImageUrl",
@@ -48,6 +81,13 @@
         "isAnimatedAvatar",
         "setCloudinaryConfig"
     ],
-    "@/utils/csrf": ["csrfHeaders", "isCsrfFailure"],
-    "@/utils/datetime": ["VENUE_TIMEZONE", "addVenueDays", "venueDayKey"]
+    "@/utils/csrf": [
+        "csrfHeaders",
+        "isCsrfFailure"
+    ],
+    "@/utils/datetime": [
+        "VENUE_TIMEZONE",
+        "addVenueDays",
+        "venueDayKey"
+    ]
 }

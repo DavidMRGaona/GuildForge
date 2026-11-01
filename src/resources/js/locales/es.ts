@@ -31,6 +31,20 @@ export default {
         moreInfo: 'Más información',
         removeTag: 'Quitar {tag}',
         addTag: 'Añadir etiqueta',
+        datePicker: {
+            open: 'Elegir una fecha',
+            previousMonth: 'Mes anterior',
+            nextMonth: 'Mes siguiente',
+            invalid: 'Escribe una fecha como {example}.',
+            day: 'dd',
+            month: 'mm',
+            year: 'aaaa',
+        },
+        timePicker: {
+            open: 'Elegir una hora',
+            invalid: 'Escribe una hora como {example}.',
+            placeholder: 'hh:mm',
+        },
     },
     events: {
         title: 'Eventos',

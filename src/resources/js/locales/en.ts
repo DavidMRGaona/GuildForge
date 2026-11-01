@@ -31,6 +31,20 @@ export default {
         moreInfo: 'More information',
         removeTag: 'Remove {tag}',
         addTag: 'Add tag',
+        datePicker: {
+            open: 'Choose a date',
+            previousMonth: 'Previous month',
+            nextMonth: 'Next month',
+            invalid: 'Type a date like {example}.',
+            day: 'dd',
+            month: 'mm',
+            year: 'yyyy',
+        },
+        timePicker: {
+            open: 'Choose a time',
+            invalid: 'Type a time like {example}.',
+            placeholder: 'hh:mm',
+        },
     },
     events: {
         title: 'Events',

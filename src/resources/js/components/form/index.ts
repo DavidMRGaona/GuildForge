@@ -8,6 +8,8 @@ export { default as FormTagsInput } from './FormTagsInput.vue';
 export { default as FormTooltip } from './FormTooltip.vue';
 export { default as FormToggle } from './FormToggle.vue';
 export { default as FormNumberInput } from './FormNumberInput.vue';
+export { default as FormDatePicker } from './FormDatePicker.vue';
+export { default as FormTimePicker } from './FormTimePicker.vue';
 
 export type { CheckboxOption, CheckboxGroup } from './FormCheckboxGroup.vue';
 export type { RadioOption } from './FormRadioGroup.vue';
