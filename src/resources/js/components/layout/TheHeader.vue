@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, useTemplateRef } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { Search, Sun, Moon, Monitor, Menu, X } from '@lucide/vue';
@@ -8,6 +8,7 @@ import type { ThemeMode } from '@/stores/useAppStore';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
 import { useOnNavigate } from '@/composables/useOnNavigate';
+import { useFitsWithoutOverflow } from '@/composables/useFitsWithoutOverflow';
 import TheNavigation from './TheNavigation.vue';
 import UserDropdown from './UserDropdown.vue';
 import AuthLinks from './AuthLinks.vue';
@@ -20,6 +21,15 @@ const appStore = useAppStore();
 
 const isMobileMenuOpen = ref(false);
 const isThemeMenuOpen = ref(false);
+
+// How wide the full bar is depends on the site's links and the user's name, so no breakpoint
+// fits every site: below md, or whenever the bar overflows, the header uses the menu button
+const headerRow = useTemplateRef<HTMLElement>('headerRow');
+const fitsFullBar = useFitsWithoutOverflow(headerRow, () => [
+    page.props.navigation,
+    page.props.auth,
+    appStore.isThemeToggleVisible,
+]);
 
 useOnNavigate(() => {
     isMobileMenuOpen.value = false;
@@ -59,7 +69,7 @@ function selectTheme(mode: ThemeMode): void {
 <template>
     <header class="bg-surface shadow-sm dark:shadow-neutral-800/50">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex h-16 items-center justify-between">
+            <div ref="headerRow" class="flex h-16 items-center justify-between">
                 <!-- Logo -->
                 <div class="shrink-0">
                     <Link :href="routes.home" class="flex items-center">
@@ -71,7 +81,9 @@ function selectTheme(mode: ThemeMode): void {
                 </div>
 
                 <!-- Desktop Navigation -->
-                <div class="hidden md:flex md:items-center md:space-x-4">
+                <div
+                    :class="fitsFullBar ? 'hidden md:flex md:items-center md:space-x-4' : 'hidden'"
+                >
                     <TheNavigation />
 
                     <!-- Search button -->
@@ -161,9 +173,10 @@ function selectTheme(mode: ThemeMode): void {
                 </div>
 
                 <!-- Mobile menu button -->
-                <div class="md:hidden">
+                <div :class="{ 'md:hidden': fitsFullBar }">
                     <button
                         type="button"
+                        aria-controls="mobile-menu"
                         class="inline-flex items-center justify-center rounded-md p-2 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                         :aria-expanded="isMobileMenuOpen"
                         @click="toggleMobileMenu"
@@ -179,7 +192,12 @@ function selectTheme(mode: ThemeMode): void {
         </div>
 
         <!-- Mobile menu -->
-        <div v-if="isMobileMenuOpen" class="border-t border-default md:hidden">
+        <div
+            v-if="isMobileMenuOpen"
+            id="mobile-menu"
+            class="border-t border-default"
+            :class="{ 'md:hidden': fitsFullBar }"
+        >
             <div class="space-y-1 px-4 py-3">
                 <TheNavigation mobile @navigate="closeMobileMenu" />
 

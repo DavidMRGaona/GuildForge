@@ -56,6 +56,15 @@ describe('UserDropdown', () => {
         expect(wrapper.find('a[href="/admin"]').exists()).toBe(true);
     });
 
+    it('caps the width of a long name and keeps it whole for hover and screen readers', async () => {
+        const longName = 'Bartholomew Montgomery-Fitzwilliam';
+        const wrapper = await openMenuFor({ ...userWith(['member'], []), displayName: longName });
+
+        const name = wrapper.get(`[title="${longName}"]`);
+        expect(name.text()).toBe(longName);
+        expect(name.classes()).toEqual(expect.arrayContaining(['max-w-40', 'truncate']));
+    });
+
     it('hides the panel link from an editor role without admin.access', async () => {
         const wrapper = await openMenuFor(userWith(['member', 'editor'], ['events.create']));
 

@@ -60,7 +60,7 @@ function handleKeydown(event: KeyboardEvent): void {
             type="button"
             :class="[
                 'flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-page',
-                mobile ? 'w-full justify-between' : '',
+                mobile ? 'w-full justify-between' : 'whitespace-nowrap',
                 isParentActive()
                     ? 'bg-primary-100 text-primary dark:bg-primary-900/30'
                     : 'text-base-secondary hover:bg-muted hover:text-base-primary',
