@@ -91,6 +91,7 @@ RUN apk add --no-cache \
     freetype \
     libzip \
     icu-libs \
+    icu-data-full \
     oniguruma \
     imagemagick
 
@@ -140,6 +141,11 @@ RUN --mount=type=cache,target=/var/cache/apk \
 # with zend_extension. Fail the build if the CLI or the FPM binary comes without it
 RUN php -m | grep -qx 'Zend OPcache' \
     && php-fpm -m | grep -qx 'Zend OPcache'
+
+# icu-libs only brings English locale data (icu-data-en): without icu-data-full ICU
+# silently falls back to the root locale ("1.36" instead of "1,36" in Spanish,
+# English month names). Fail the build if it is missing
+RUN php -r 'exit((new NumberFormatter("es", NumberFormatter::DECIMAL))->format(1.5) === "1,5" ? 0 : 1);'
 
 # Install Composer
 COPY --from=composer:2.10 /usr/bin/composer /usr/bin/composer
