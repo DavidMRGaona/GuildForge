@@ -15,4 +15,17 @@ final readonly class KnowledgeSearchHitDTO
         public string $categoryId,
         public array $snippet,
     ) {}
+
+    /**
+     * @return array{id: string, title: string, categoryId: string, snippet: list<array{text: string, match: bool}>}
+     */
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'categoryId' => $this->categoryId,
+            'snippet' => $this->snippet,
+        ];
+    }
 }

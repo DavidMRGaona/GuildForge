@@ -28,12 +28,7 @@ final class KnowledgeSearchController extends Controller
 
         return response()->json([
             'results' => array_map(
-                static fn (KnowledgeSearchHitDTO $hit): array => [
-                    'id' => $hit->id,
-                    'title' => $hit->title,
-                    'categoryId' => $hit->categoryId,
-                    'snippet' => $hit->snippet,
-                ],
+                static fn (KnowledgeSearchHitDTO $hit): array => $hit->toArray(),
                 $hits,
             ),
         ]);

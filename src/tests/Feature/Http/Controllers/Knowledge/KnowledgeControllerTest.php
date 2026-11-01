@@ -168,14 +168,22 @@ final class KnowledgeControllerTest extends TestCase
         $this->get('/ayuda/core.old')->assertStatus(301)->assertRedirect('/ayuda/core.new');
     }
 
-    public function test_an_old_id_whose_target_is_not_visible_ends_in_404(): void
+    public function test_an_old_id_whose_target_is_not_visible_is_404_without_redirect(): void
     {
         $this->knowledgeGuide('core.new', ['conditions' => ['permissions' => ['any' => ['no.such_permission']]]]);
         $this->knowledgeAlias('core.old', 'core.new');
         $this->actingAs(UserModel::factory()->create());
 
-        $this->get('/ayuda/core.old')->assertStatus(301);
+        $this->get('/ayuda/core.old')->assertNotFound();
         $this->get('/ayuda/core.new')->assertNotFound();
+    }
+
+    public function test_an_alias_pointing_to_itself_never_loops(): void
+    {
+        $this->knowledgeAlias('core.loop', 'core.loop');
+        $this->actingAs(UserModel::factory()->create());
+
+        $this->get('/ayuda/core.loop')->assertNotFound();
     }
 
     public function test_panel_guides_are_not_served_on_the_site(): void

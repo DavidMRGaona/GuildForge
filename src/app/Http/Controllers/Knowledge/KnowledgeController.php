@@ -38,12 +38,7 @@ final class KnowledgeController extends Controller
         if ($query !== '') {
             $results = $request->isSearchable()
                 ? array_map(
-                    static fn (KnowledgeSearchHitDTO $hit): array => [
-                        'id' => $hit->id,
-                        'title' => $hit->title,
-                        'categoryId' => $hit->categoryId,
-                        'snippet' => $hit->snippet,
-                    ],
+                    static fn (KnowledgeSearchHitDTO $hit): array => $hit->toArray(),
                     $this->knowledge->search($user, GuideAudience::Site, $query, self::SEARCH_LIMIT),
                 )
                 : [];
@@ -81,9 +76,11 @@ final class KnowledgeController extends Controller
 
         if (! $response instanceof KnowledgeGuideResponseDTO) {
             $current = $this->knowledge->resolveAlias($id);
-            abort_if(! $current instanceof GuideId, 404);
+            abort_if(! $current instanceof GuideId || $current->equals($id), 404);
 
-            // The new id is checked for visibility when it is requested
+            // Redirect only to a guide this user may see: a hidden target must look like a missing id
+            abort_if(! $this->knowledge->guide($user, GuideAudience::Site, $current) instanceof KnowledgeGuideResponseDTO, 404);
+
             return redirect()->route('knowledge.show', ['guide' => $current->value()], 301);
         }
 
