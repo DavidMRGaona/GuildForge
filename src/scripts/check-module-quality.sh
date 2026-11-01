@@ -64,8 +64,11 @@ if [ "$PART" = php ] || [ "$PART" = all ]; then
     fi
     run Pint vendor/bin/pint --test "$DIR"
     if [ -n "$PHP_PATHS" ]; then
+        # Larastan boots the application, which boots the modules enabled in the database: with
+        # the development one, app(SomeInterface::class) resolves to the module's class and the
+        # result differs from CI, which has no database. Without one here either, both agree
         # shellcheck disable=SC2086
-        run PHPStan vendor/bin/phpstan analyse --no-progress --memory-limit=2G --configuration=phpstan-modules.neon $PHP_PATHS
+        run PHPStan env DB_CONNECTION=sqlite DB_DATABASE=:memory: vendor/bin/phpstan analyse --no-progress --memory-limit=2G --configuration=phpstan-modules.neon $PHP_PATHS
     fi
 fi
 
