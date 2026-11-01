@@ -1593,6 +1593,31 @@ if (hasCookieConsent('preferences')) {
 - The cookie consent module is the provider: it calls `registerCookieConsentProvider({ hasConsent })` once its configuration is known and `notifyCookieConsentChanged()` after the visitor saves a choice. A later registration replaces the earlier one.
 - In Vitest the contract resolves to the core's source through the `@` alias of `defineModuleTestConfig`: register a provider in the test instead of faking globals.
 
+## Announcing general surveys
+
+When a general survey (one not about a module's record) opens and whoever made it asked to announce it, the surveys module dispatches the core event `App\Domain\Surveys\Events\GeneralSurveyOpened` (core ^3.30) once the opening has committed. A module that posts to external channels listens to it; neither side imports the other, and with no listener nothing happens.
+
+```php
+use App\Domain\Surveys\Events\GeneralSurveyOpened;
+use Illuminate\Support\Facades\Event;
+
+// In boot()
+Event::listen(GeneralSurveyOpened::class, AnnounceGeneralSurvey::class);
+
+final readonly class AnnounceGeneralSurvey
+{
+    public function handle(GeneralSurveyOpened $event): void
+    {
+        // $event->surveyId, $event->title, $event->description (?string), $event->isPoll,
+        // $event->closesAt (?DateTimeImmutable, an instant), $event->url (absolute http(s))
+    }
+}
+```
+
+- It is dispatched only the first time the survey opens: reopening after a review does not announce it again.
+- `url` is the survey's public link when it has one, otherwise the page that asks to sign in, where only the audience may answer.
+- It carries nothing personal (no author, no audience), so it can be posted publicly as it is. Show `closesAt` in the display timezone through `TimezoneServiceInterface`.
+
 ---
 
 ## Extending core functionality
