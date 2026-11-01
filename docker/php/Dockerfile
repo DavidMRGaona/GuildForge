@@ -12,6 +12,7 @@ RUN apk add --no-cache \
     zip \
     unzip \
     icu-dev \
+    icu-data-full \
     oniguruma-dev \
     libpq-dev \
     linux-headers \
@@ -69,6 +70,11 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
 # OPcache is compiled into PHP 8.5 (no docker-php-ext-install, no zend_extension):
 # fail the build if the CLI or the FPM binary comes without it
 RUN php -m | grep -qx 'Zend OPcache' && php-fpm -m | grep -qx 'Zend OPcache'
+
+# icu-libs only brings English locale data (icu-data-en): without icu-data-full ICU
+# silently falls back to the root locale ("1.36" instead of "1,36" in Spanish).
+# Fail the build if it is missing, as in Dockerfile.prod
+RUN php -r 'exit((new NumberFormatter("es", NumberFormatter::DECIMAL))->format(1.5) === "1,5" ? 0 : 1);'
 
 # PHP configuration
 RUN echo "memory_limit=512M" >> /usr/local/etc/php/conf.d/custom.ini \
