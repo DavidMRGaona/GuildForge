@@ -78,18 +78,18 @@ final class GuideDocumentParserTest extends TestCase
         $base = "id: core.a\ntitle: T\nsummary: S\ncategory: c\naudience: site\n";
 
         return [
-            'no front matter' => ["Solo texto\n", 'front matter'],
-            'invalid yaml' => ["---\nid: [unclosed\n---\nx\n", 'front matter'],
-            'missing title' => ["---\nid: core.a\nsummary: S\ncategory: c\naudience: site\n---\nx", 'title'],
-            'missing id' => ["---\ntitle: T\nsummary: S\ncategory: c\naudience: site\n---\nx", 'id'],
-            'bad audience' => ["---\n".str_replace('audience: site', 'audience: admin', $base)."---\nx", 'audience'],
-            'bad id' => ["---\n".str_replace('core.a', 'Bad Id', $base)."---\nx", 'id'],
-            'bad related id' => ["---\n".$base."related: [Bad Id]\n---\nx", 'related'],
-            'bad previous id' => ["---\n".$base."previous_ids: [nodots]\n---\nx", 'previous_ids'],
-            'order not integer' => ["---\n".$base."order: soon\n---\nx", 'order'],
-            'keywords not list' => ["---\n".$base."keywords: abc\n---\nx", 'keywords'],
-            'featured not bool' => ["---\n".$base."featured: maybe\n---\nx", 'featured'],
-            'unknown condition' => ["---\n".$base."conditions:\n  roles: [admin]\n---\nx", 'conditions'],
+            'no front matter' => ["Solo texto\n", "'front matter'"],
+            'invalid yaml' => ["---\nid: [unclosed\n---\nx\n", "'front matter'"],
+            'missing title' => ["---\nid: core.a\nsummary: S\ncategory: c\naudience: site\n---\nx", "'title'"],
+            'missing id' => ["---\ntitle: T\nsummary: S\ncategory: c\naudience: site\n---\nx", "'id'"],
+            'bad audience' => ["---\n".str_replace('audience: site', 'audience: admin', $base)."---\nx", "'audience'"],
+            'bad id' => ["---\n".str_replace('core.a', 'Bad Id', $base)."---\nx", "'id'"],
+            'bad related id' => ["---\n".$base."related: [Bad Id]\n---\nx", "'related'"],
+            'bad previous id' => ["---\n".$base."previous_ids: [nodots]\n---\nx", "'previous_ids'"],
+            'order not integer' => ["---\n".$base."order: soon\n---\nx", "'order'"],
+            'keywords not list' => ["---\n".$base."keywords: abc\n---\nx", "'keywords'"],
+            'featured not bool' => ["---\n".$base."featured: maybe\n---\nx", "'featured'"],
+            'unknown condition' => ["---\n".$base."conditions:\n  roles: [admin]\n---\nx", "'conditions'"],
         ];
     }
 }
