@@ -244,6 +244,7 @@ export default {
         articlesFound: '{count} artículo encontrado | {count} artículos encontrados',
     },
     knowledge: {
+        contextualHelp: 'Ayuda sobre esta sección',
         title: 'Centro de ayuda',
         heroTitle: '¿En qué podemos ayudarte?',
         searchLabel: 'Buscar en la ayuda',

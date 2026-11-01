@@ -243,6 +243,7 @@ export default {
         articlesFound: '{count} article found | {count} articles found',
     },
     knowledge: {
+        contextualHelp: 'Help on this section',
         title: 'Help centre',
         heroTitle: 'How can we help you?',
         searchLabel: 'Search the help',

@@ -13,6 +13,9 @@
         "FormToggle",
         "FormTooltip"
     ],
+    "@/components/knowledge/HelpLink.vue": [
+        "default"
+    ],
     "@/components/layout/ModuleSlot.vue": [
         "default"
     ],
@@ -42,6 +45,10 @@
     ],
     "@/composables/useGridLayout": [
         "useGridLayout"
+    ],
+    "@/composables/useKnowledgeVisibility": [
+        "resetKnowledgeVisibility",
+        "useKnowledgeVisibility"
     ],
     "@/composables/useNotifications": [
         "useNotifications"

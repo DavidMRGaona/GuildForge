@@ -24,6 +24,7 @@ return [
         'important' => 'Importante',
         'warning' => 'Ojo',
     ],
+    'contextual_help' => 'Ayuda sobre esta pantalla',
     'search_block' => 'Ayuda',
     'placeholders' => [
         'association_role_fallback' => 'socio',

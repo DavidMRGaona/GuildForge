@@ -28,6 +28,7 @@ export interface RouteDefinitions {
     knowledge: {
         index: string;
         search: string;
+        visible: string;
         category: (id: string) => string;
         show: (id: string) => string;
         vote: (id: string) => string;
@@ -87,6 +88,7 @@ const routes: RouteDefinitions = {
     knowledge: {
         index: '/ayuda',
         search: '/ayuda/buscar',
+        visible: '/ayuda/visibles',
         category: (id: string) => `/ayuda/categoria/${id}`,
         show: (id: string) => `/ayuda/${id}`,
         vote: (id: string) => `/ayuda/${id}/voto`,
