@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Knowledge\Services\GuideConditionEvaluatorInterface;
 use App\Application\Knowledge\Services\GuideRendererInterface;
 use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
@@ -15,6 +16,7 @@ use App\Application\Knowledge\Services\KnowledgeMetricsServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Domain\Knowledge\Repositories\GuideRepositoryInterface;
 use App\Domain\Modules\Events\ModuleDisabled;
@@ -25,7 +27,9 @@ use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Infrastructure\Knowledge\Capabilities\EmailVerificationRequiredCapability;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeCatalogSynchronizer;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeSourceLocator;
+use App\Infrastructure\Knowledge\Lint\KnowledgeLinter;
 use App\Infrastructure\Knowledge\Listeners\SyncKnowledgeOnModuleChange;
+use App\Infrastructure\Knowledge\Parsing\GuideDocumentParser;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Repositories\EloquentGuideRepository;
 use App\Infrastructure\Knowledge\Rendering\GuideMarkdownRenderer;
 use App\Infrastructure\Knowledge\Search\DatabaseKnowledgeSearch;
@@ -66,6 +70,13 @@ class KnowledgeServiceProvider extends ServiceProvider
             resource_path('knowledge'),
         ));
         $this->app->bind(KnowledgeCatalogSynchronizerInterface::class, KnowledgeCatalogSynchronizer::class);
+        $this->app->bind(KnowledgeLinter::class, fn (Application $app, array $parameters): KnowledgeLinter => new KnowledgeLinter(
+            is_string($parameters['corePath'] ?? null) ? $parameters['corePath'] : resource_path('knowledge'),
+            $parameters['modules'] ?? $app->make(ModuleManagerServiceInterface::class),
+            $app->make(GuideDocumentParser::class),
+            $app->make(PermissionRegistryInterface::class),
+            $app->make(KnowledgeCapabilityRegistryInterface::class),
+        ));
 
         $this->registerSearch();
         $this->registerMeilisearchClient();
