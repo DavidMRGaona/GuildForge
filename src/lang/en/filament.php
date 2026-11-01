@@ -391,4 +391,14 @@ return [
     'time_picker' => [
         'invalid' => 'Type the time as HH:MM, for example 10:00.',
     ],
+    'end_survey' => [
+        'label' => 'Survey when it ends',
+        'helper' => 'The survey that goes out when this ends. By default, its type\'s template.',
+        'base' => 'Start from',
+        'edit' => 'Edit the survey',
+        'view' => 'See the survey',
+        'not_allowed' => 'The end survey was not saved: you may not choose it here. Its type\'s survey will be used.',
+        'released_as_draft' => 'The survey you had prepared was kept as a draft.',
+        'locked' => 'The end survey can no longer change.',
+    ],
 ];

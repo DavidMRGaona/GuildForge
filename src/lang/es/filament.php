@@ -753,4 +753,14 @@ return [
     'time_picker' => [
         'invalid' => 'Escribe la hora como HH:MM, por ejemplo 10:00.',
     ],
+    'end_survey' => [
+        'label' => 'Encuesta al terminar',
+        'helper' => 'La encuesta que sale cuando esto termina. Por defecto, la plantilla de su tipo.',
+        'base' => 'Partir de',
+        'edit' => 'Editar la encuesta',
+        'view' => 'Ver la encuesta',
+        'not_allowed' => 'No se ha guardado la encuesta al terminar: no puedes elegirla aquí. Se usará la de su tipo.',
+        'released_as_draft' => 'La encuesta que habías preparado se ha guardado como borrador.',
+        'locked' => 'La encuesta al terminar ya no se puede cambiar.',
+    ],
 ];
