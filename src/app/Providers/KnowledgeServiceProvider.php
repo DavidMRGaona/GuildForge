@@ -14,9 +14,15 @@ use App\Application\Knowledge\Services\KnowledgeLocaleResolverInterface;
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Domain\Knowledge\Repositories\GuideRepositoryInterface;
+use App\Domain\Modules\Events\ModuleDisabled;
+use App\Domain\Modules\Events\ModuleEnabled;
+use App\Domain\Modules\Events\ModuleUninstalled;
+use App\Domain\Modules\Events\ModuleUpdated;
+use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Infrastructure\Knowledge\Capabilities\EmailVerificationRequiredCapability;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeCatalogSynchronizer;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeSourceLocator;
+use App\Infrastructure\Knowledge\Listeners\SyncKnowledgeOnModuleChange;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Repositories\EloquentGuideRepository;
 use App\Infrastructure\Knowledge\Rendering\GuideMarkdownRenderer;
 use App\Infrastructure\Knowledge\Search\DatabaseKnowledgeSearch;
@@ -30,6 +36,7 @@ use App\Infrastructure\Knowledge\Services\KnowledgeCapabilityRegistry;
 use App\Infrastructure\Knowledge\Services\KnowledgeLocaleResolver;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Meilisearch\Client as MeilisearchClient;
 use Psr\Log\LoggerInterface;
@@ -104,5 +111,9 @@ class KnowledgeServiceProvider extends ServiceProvider
     {
         $this->app->make(KnowledgeCapabilityRegistryInterface::class)
             ->register(EmailVerificationRequiredCapability::class);
+
+        foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {
+            Event::listen($event, SyncKnowledgeOnModuleChange::class);
+        }
     }
 }

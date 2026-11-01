@@ -8,10 +8,12 @@ use App\Application\Authorization\Services\AssociationMembershipServiceInterface
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Domain\Enums\UserRole;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\ManagesPageSettings;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
+use App\Infrastructure\Knowledge\Jobs\SyncKnowledgeCatalogJob;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
@@ -743,6 +745,8 @@ final class SiteSettings extends Page implements HasForms
             $settingsService->get(AssociationMembershipServiceInterface::SETTING_KEY)
         );
         $associationRoleInForce = $this->currentAssociationMemberRole();
+        $siteNameBefore = app(SiteBrandingServiceInterface::class)->siteName();
+        $associationRoleNameBefore = app(AssociationMembershipServiceInterface::class)->roleName();
 
         if (array_key_exists(AssociationMembershipServiceInterface::SETTING_KEY, $formData)
             && in_array(AssociationMembershipServiceInterface::SETTING_KEY, $this->getSettingsKeys(), true)) {
@@ -774,6 +778,12 @@ final class SiteSettings extends Page implements HasForms
 
         if ($associationRoleAfter !== $associationRoleBefore) {
             app(AuthorizationServiceInterface::class)->invalidateCache();
+        }
+
+        // The guides' plain text carries the site name and the association role name
+        if (app(SiteBrandingServiceInterface::class)->siteName() !== $siteNameBefore
+            || app(AssociationMembershipServiceInterface::class)->roleName() !== $associationRoleNameBefore) {
+            SyncKnowledgeCatalogJob::dispatch();
         }
 
         Notification::make()
