@@ -400,5 +400,6 @@ return [
         'not_allowed' => 'The end survey was not saved: you may not choose it here. Its type\'s survey will be used.',
         'released_as_draft' => 'The survey you had prepared was kept as a draft.',
         'locked' => 'The end survey can no longer change.',
+        'deferred' => 'This does not take surveys yet, so the own survey could not be prepared. Its template to start from was kept, and is what goes out when it ends.',
     ],
 ];

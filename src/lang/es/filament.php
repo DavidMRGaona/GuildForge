@@ -762,5 +762,6 @@ return [
         'not_allowed' => 'No se ha guardado la encuesta al terminar: no puedes elegirla aquí. Se usará la de su tipo.',
         'released_as_draft' => 'La encuesta que habías preparado se ha guardado como borrador.',
         'locked' => 'La encuesta al terminar ya no se puede cambiar.',
+        'deferred' => 'Esto aún no admite encuestas, así que la encuesta propia no se ha podido preparar. Se ha guardado su plantilla de partida, que es la que saldrá al terminar.',
     ],
 ];
