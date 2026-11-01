@@ -9,6 +9,7 @@ import SearchInput from '@/components/search/SearchInput.vue';
 import EventCard from '@/components/events/EventCard.vue';
 import ArticleCard from '@/components/articles/ArticleCard.vue';
 import KnowledgeSnippet from '@/components/knowledge/KnowledgeSnippet.vue';
+import HelpLink from '@/components/knowledge/HelpLink.vue';
 
 interface Props {
     query: string;
@@ -34,9 +35,12 @@ function pluralize(count: number, key: string): string {
 <template>
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <!-- Page Title -->
-        <h1 class="mb-6 text-3xl font-bold text-base-primary">
-            {{ t('search.title') }}
-        </h1>
+        <div class="mb-6 flex items-center gap-3">
+            <h1 class="text-3xl font-bold text-base-primary">
+                {{ t('search.title') }}
+            </h1>
+            <HelpLink guide="core.search.site-search" />
+        </div>
 
         <!-- Search Input -->
         <div class="mb-8">

@@ -33,7 +33,7 @@ function mountPage(sources: SearchSource[]): ReturnType<typeof mount> {
         props: { query: 'apuntarse', events: [], articles: [], sources, error: null },
         global: {
             plugins: [createI18n({ legacy: false, locale: 'es', messages: { es, en } })],
-            stubs: { SearchInput: true },
+            stubs: { SearchInput: true, HelpLink: true },
         },
     });
 }
@@ -61,6 +61,12 @@ describe('Search/Index extra sources', () => {
         const wrapper = mountPage([helpSource]);
 
         expect(wrapper.text()).not.toContain('No se encontraron resultados');
+    });
+
+    it('links the search guide next to the page title', () => {
+        const link = mountPage([]).get('h1 + help-link-stub');
+
+        expect(link.attributes('guide')).toBe('core.search.site-search');
     });
 
     it('shows the no results message when nothing matches anywhere', () => {
