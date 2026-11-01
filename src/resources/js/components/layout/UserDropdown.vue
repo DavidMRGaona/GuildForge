@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { ChevronDown, User, Settings, LogOut } from '@lucide/vue';
+import { ChevronDown, User, Settings, LogOut, CircleHelp } from '@lucide/vue';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
 import { useOnNavigate } from '@/composables/useOnNavigate';
@@ -82,6 +82,17 @@ onUnmounted(() => {
                 >
                     <User class="mr-3 h-4 w-4" aria-hidden="true" />
                     {{ t('auth.userMenu.profile') }}
+                </Link>
+
+                <!-- Help centre -->
+                <Link
+                    :href="routes.knowledge.index"
+                    class="flex w-full items-center px-4 py-2 text-sm text-base-primary hover:bg-muted"
+                    role="menuitem"
+                    @click="closeDropdown"
+                >
+                    <CircleHelp class="mr-3 h-4 w-4" aria-hidden="true" />
+                    {{ t('auth.userMenu.help') }}
                 </Link>
 
                 <!-- Admin panel link: same rule as the server, admin.access from any role -->

@@ -24,6 +24,14 @@ export interface RouteDefinitions {
     };
     calendar: string;
 
+    // Help centre
+    knowledge: {
+        index: string;
+        search: string;
+        category: (id: string) => string;
+        show: (id: string) => string;
+    };
+
     // Legal pages (route legal.show): link these, never a hand-written URL
     legal: {
         privacy: string;
@@ -73,6 +81,14 @@ const routes: RouteDefinitions = {
         show: (slug: string) => `/galeria/${slug}`,
     },
     calendar: '/calendario',
+
+    // Help centre
+    knowledge: {
+        index: '/ayuda',
+        search: '/ayuda/buscar',
+        category: (id: string) => `/ayuda/categoria/${id}`,
+        show: (id: string) => `/ayuda/${id}`,
+    },
 
     // Legal pages
     legal: {
