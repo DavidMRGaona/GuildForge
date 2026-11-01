@@ -646,6 +646,12 @@ export interface RouteDefinitions {
         show: (slug: string) => string;
     };
     calendar: string;
+    knowledge: {
+        index: string;
+        search: string;
+        category: (id: string) => string;
+        show: (id: string) => string;
+    };
     legal: {
         privacy: string;
         notice: string;
