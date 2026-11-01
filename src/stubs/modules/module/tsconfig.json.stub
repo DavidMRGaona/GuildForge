@@ -23,6 +23,7 @@
     "include": [
         "resources/js/**/*.ts",
         "resources/js/**/*.vue",
+        "tests/js/**/*.ts",
         "../../resources/js/types/**/*.d.ts"
     ]
 }
