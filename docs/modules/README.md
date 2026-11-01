@@ -1634,6 +1634,7 @@ EndSurveyField::forSubject(fn (Get $get): string => filled($get('parent_id')) ? 
 
 - The field saves itself once the record exists (on create, right after the record is created), so the pages need no hook. A form saved by hand, such as a relation manager with its own `save()`, calls `$this->form->model($record)->saveRelationships()` after saving the record.
 - Saving the subject never fails because of it: someone who may not choose gets a warning and the type's survey is used, and a choice that can no longer change (the survey already went out) is shown disabled with the reason and a link to the survey.
+- A subject the module does not offer as a survey subject yet (an unpublished event, say) can still keep a template or none; an own survey cannot be prepared for it, so its template to start from is kept instead and the field says so.
 - Its fields (`end_survey`, `end_survey_base`) are not dehydrated, so they never reach the model.
 
 ---

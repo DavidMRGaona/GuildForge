@@ -15,6 +15,7 @@ use App\Filament\Resources\EventResource\Pages\EditEvent;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -199,6 +200,26 @@ final class EndSurveyFieldTest extends TestCase
             ->call('save')
             ->assertHasNoFormErrors()
             ->assertNotified(__('filament.end_survey.locked'));
+    }
+
+    public function test_an_own_survey_that_cannot_be_prepared_yet_is_announced(): void
+    {
+        $this->fake($this->choice(), outcome: EndSurveyChoiceOutcome::Deferred);
+
+        Livewire::test(EditEvent::class, ['record' => $this->event()->getRouteKey()])
+            ->fillForm(['end_survey' => 'own'])
+            ->call('save')
+            ->assertHasNoFormErrors()
+            ->assertNotified(__('filament.end_survey.deferred'));
+    }
+
+    public function test_the_choice_cannot_be_emptied(): void
+    {
+        $this->fake($this->choice());
+
+        Livewire::test(EditEvent::class, ['record' => $this->event()->getRouteKey()])
+            ->assertFormFieldExists('end_survey', static fn (Select $field): bool => ! $field->canSelectPlaceholder())
+            ->assertFormFieldExists('end_survey_base', static fn (Select $field): bool => ! $field->canSelectPlaceholder());
     }
 
     public function test_the_subject_type_can_depend_on_the_form(): void

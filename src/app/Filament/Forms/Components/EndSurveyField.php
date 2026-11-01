@@ -45,6 +45,8 @@ final class EndSurveyField
             Select::make(self::FIELD)
                 ->label(__('filament.end_survey.label'))
                 ->native(false)
+                // Always one of the options: the type's template stands for "nothing chosen"
+                ->selectablePlaceholder(false)
                 ->live()
                 ->dehydrated(false)
                 ->options(static fn (Select $component): array => self::options($lookup->for($component)->options ?? []))
@@ -72,6 +74,7 @@ final class EndSurveyField
             Select::make(self::BASE_FIELD)
                 ->label(__('filament.end_survey.base'))
                 ->native(false)
+                ->selectablePlaceholder(false)
                 ->dehydrated(false)
                 ->options(static fn (Select $component): array => self::options($lookup->for($component)->baseTemplates ?? []))
                 ->default(static fn (Select $component): ?string => self::firstBaseTemplate($lookup, $component))
@@ -127,6 +130,7 @@ final class EndSurveyField
         match ($outcome) {
             EndSurveyChoiceOutcome::ReleasedAsDraft => Notification::make()->warning()->title(__('filament.end_survey.released_as_draft'))->send(),
             EndSurveyChoiceOutcome::Locked => Notification::make()->warning()->title(__('filament.end_survey.locked'))->send(),
+            EndSurveyChoiceOutcome::Deferred => Notification::make()->warning()->title(__('filament.end_survey.deferred'))->send(),
             EndSurveyChoiceOutcome::Saved, EndSurveyChoiceOutcome::Unchanged => null,
         };
     }

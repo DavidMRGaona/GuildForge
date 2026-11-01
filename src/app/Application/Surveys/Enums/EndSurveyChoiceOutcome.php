@@ -18,6 +18,12 @@ enum EndSurveyChoiceOutcome: string
     /** Saved, and the end survey prepared before had been edited, so it was kept as a draft. */
     case ReleasedAsDraft = 'released_as_draft';
 
+    /**
+     * An own survey was asked for a subject that does not take surveys yet (an event not
+     * published, say): its template to start from is kept instead, and goes out on the end.
+     */
+    case Deferred = 'deferred';
+
     /** The end survey already went its way meanwhile, so the choice can no longer change. */
     case Locked = 'locked';
 }
