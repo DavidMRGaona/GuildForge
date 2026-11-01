@@ -17,6 +17,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Knowledge\KnowledgeController;
+use App\Http\Controllers\Knowledge\KnowledgeFeedbackController;
 use App\Http\Controllers\Knowledge\KnowledgeSearchController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\SearchController;
@@ -100,6 +101,10 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:60,1')
         ->name('knowledge.search');
     Route::get('/ayuda/categoria/{category}', [KnowledgeController::class, 'category'])->name('knowledge.category');
+    Route::post('/ayuda/{guide}/voto', KnowledgeFeedbackController::class)
+        ->where('guide', '[a-z0-9.-]+')
+        ->middleware('throttle:10,1')
+        ->name('knowledge.vote');
     Route::get('/ayuda/{guide}', [KnowledgeController::class, 'show'])
         ->where('guide', '[a-z0-9.-]+')
         ->name('knowledge.show');

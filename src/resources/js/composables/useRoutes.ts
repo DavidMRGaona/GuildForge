@@ -30,6 +30,7 @@ export interface RouteDefinitions {
         search: string;
         category: (id: string) => string;
         show: (id: string) => string;
+        vote: (id: string) => string;
     };
 
     // Legal pages (route legal.show): link these, never a hand-written URL
@@ -88,6 +89,7 @@ const routes: RouteDefinitions = {
         search: '/ayuda/buscar',
         category: (id: string) => `/ayuda/categoria/${id}`,
         show: (id: string) => `/ayuda/${id}`,
+        vote: (id: string) => `/ayuda/${id}/voto`,
     },
 
     // Legal pages

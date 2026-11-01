@@ -263,6 +263,12 @@ export default {
         sidebar: 'Guías de la categoría',
         currentGuide: 'Guía actual',
         emptyCategory: 'Esta categoría no tiene guías todavía.',
+        feedback: {
+            question: '¿Te ha sido útil?',
+            yes: 'Sí',
+            no: 'No',
+            thanks: 'Gracias por tu opinión.',
+        },
         badge: {
             new: 'Nueva',
             updated: 'Actualizada',

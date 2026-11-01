@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Knowledge;
 use App\Application\Knowledge\DTOs\Response\KnowledgeCategoryPageResponseDTO;
 use App\Application\Knowledge\DTOs\Response\KnowledgeGuideResponseDTO;
 use App\Application\Knowledge\DTOs\Response\KnowledgeSearchHitDTO;
+use App\Application\Knowledge\Services\KnowledgeMetricsServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
@@ -27,6 +28,7 @@ final class KnowledgeController extends Controller
     public function __construct(
         private readonly KnowledgeQueryServiceInterface $knowledge,
         private readonly SeoMetadataFactoryInterface $seo,
+        private readonly KnowledgeMetricsServiceInterface $metrics,
     ) {}
 
     public function index(KnowledgeSearchRequest $request): Response
@@ -42,6 +44,10 @@ final class KnowledgeController extends Controller
                     $this->knowledge->search($user, GuideAudience::Site, $query, self::SEARCH_LIMIT),
                 )
                 : [];
+
+            if ($request->isSearchable() && $results === []) {
+                $this->metrics->recordMiss($query, GuideAudience::Site);
+            }
         }
 
         return Inertia::render('Knowledge/Index', [

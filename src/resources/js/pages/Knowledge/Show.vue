@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import KnowledgeGuideBadge from '@/components/knowledge/KnowledgeGuideBadge.vue';
+import KnowledgeFeedback from '@/components/knowledge/KnowledgeFeedback.vue';
 import KnowledgeGuideBody from '@/components/knowledge/KnowledgeGuideBody.vue';
 import KnowledgeSearchBox from '@/components/knowledge/KnowledgeSearchBox.vue';
 import { useRoutes } from '@/composables/useRoutes';
@@ -60,6 +61,8 @@ const others = computed(() =>
                 </header>
 
                 <KnowledgeGuideBody :html="guide.html" />
+
+                <KnowledgeFeedback :guide-id="guide.id" />
 
                 <section
                     v-if="guide.related.length > 0"

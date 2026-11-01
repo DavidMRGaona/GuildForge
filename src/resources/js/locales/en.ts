@@ -262,6 +262,12 @@ export default {
         sidebar: 'Guides in this category',
         currentGuide: 'Current guide',
         emptyCategory: 'This category has no guides yet.',
+        feedback: {
+            question: 'Was this helpful?',
+            yes: 'Yes',
+            no: 'No',
+            thanks: 'Thanks for your feedback.',
+        },
         badge: {
             new: 'New',
             updated: 'Updated',

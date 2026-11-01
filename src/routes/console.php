@@ -21,3 +21,8 @@ Schedule::job(new CheckModuleUpdatesJob)
 Schedule::command('queue:prune-failed --hours=336')
     ->daily()
     ->withoutOverlapping();
+
+// Anonymous help centre metrics only matter for a while: drop old votes and failed searches
+Schedule::command('knowledge:prune-metrics')
+    ->daily()
+    ->withoutOverlapping();

@@ -651,6 +651,7 @@ export interface RouteDefinitions {
         search: string;
         category: (id: string) => string;
         show: (id: string) => string;
+        vote: (id: string) => string;
     };
     legal: {
         privacy: string;
