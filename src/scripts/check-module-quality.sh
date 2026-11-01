@@ -83,10 +83,28 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
         fi
     fi
 
-    if [ -d "$DIR/resources/js" ]; then
-        run ESLint npx eslint "$DIR/resources/js"
-        run Prettier npx prettier --check --no-error-on-unmatched-pattern "$DIR/resources/js/**/*.{ts,vue}"
+    # The Vitest specs too, with the same configuration as the core's own specs; a warning
+    # fails like an error, or warnings pile up while nobody looks
+    JS_PATHS=""
+    for JS_DIR in "$DIR/resources/js" "$DIR/tests/js"; do
+        if [ -d "$JS_DIR" ]; then
+            JS_PATHS="$JS_PATHS $JS_DIR"
+        fi
+    done
+    if [ -n "$JS_PATHS" ]; then
+        # shellcheck disable=SC2086
+        run ESLint npx eslint --max-warnings=0 $JS_PATHS
+        # One quoted pattern per directory, so the shell leaves the globs to Prettier
+        set --
+        for JS_DIR in $JS_PATHS; do
+            set -- "$@" "$JS_DIR/**/*.{ts,vue}"
+        done
+        run Prettier npx prettier --check --no-error-on-unmatched-pattern "$@"
+    else
+        echo "::notice::$MODULE has no resources/js or tests/js, skipping ESLint and Prettier"
+    fi
 
+    if [ -d "$DIR/resources/js" ]; then
         # Types against the core's own sources and the core's copies of the import map
         # packages (stubs/modules/module/tsconfig.json.stub), so a changed core prop or
         # composable fails here instead of in the browser
@@ -98,8 +116,6 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
                 FAILED="$FAILED vue-tsc"
             fi
         fi
-    else
-        echo "::notice::$MODULE has no resources/js, skipping ESLint and Prettier"
     fi
 
     if [ "$MODE" = invalid ]; then
