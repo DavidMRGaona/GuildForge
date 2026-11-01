@@ -28,6 +28,10 @@ final readonly class ActionLinkResolver
                 return null;
             }
 
+            if (! $this->evaluator->passes($user, new GuideConditions, $module)) {
+                return null;
+            }
+
             if ($condition !== null && ! $this->conditionPasses($condition, $module, $user)) {
                 return null;
             }
@@ -47,7 +51,7 @@ final readonly class ActionLinkResolver
         }
 
         if ($this->permissions->has($key)) {
-            $holds = $this->evaluator->passes($user, new GuideConditions(permissionsAll: [$key]), $module);
+            $holds = $this->evaluator->passes($user, new GuideConditions(permissionsAll: [$key]), null);
 
             return $negated ? ! $holds : $holds;
         }

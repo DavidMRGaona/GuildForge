@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Knowledge;
 
+use App\Application\Knowledge\Services\GuideConditionEvaluatorInterface;
 use App\Application\Knowledge\Services\GuideRendererInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Knowledge\Entities\Guide;
 use App\Domain\Knowledge\Enums\GuideAudience;
@@ -17,6 +19,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Route;
+use Mockery;
 use Tests\Support\Knowledge\DeniedKnowledgeCapability;
 use Tests\Support\Knowledge\FakeKnowledgeCapability;
 use Tests\TestCase;
@@ -195,9 +198,24 @@ final class GuideMarkdownRendererTest extends TestCase
         $this->assertStringContainsString('Un consejo.', $text);
         $this->assertStringContainsString('Ver los eventos', $text);
         $this->assertStringNotContainsString('[!TIP]', $text);
+        $this->assertStringNotContainsString('Consejo', $text);
         $this->assertStringNotContainsString('<', $text);
         $this->assertStringNotContainsString("\n", $text);
         $this->assertStringContainsString('Título Bienvenido', $text);
         $this->assertDoesNotMatchRegularExpression('/\s{2,}/', $text);
+    }
+
+    public function test_negated_permission_condition_fails_closed_for_a_disabled_module(): void
+    {
+        $outsider = UserModel::factory()->create();
+        $resolver = Mockery::mock(EnabledModulesResolverInterface::class);
+        $resolver->shouldReceive('names')->andReturn([]);
+        $this->app->instance(EnabledModulesResolverInterface::class, $resolver);
+        $this->app->forgetInstance(GuideConditionEvaluatorInterface::class);
+        $renderer = $this->app->make(GuideRendererInterface::class);
+
+        $html = $renderer->toHtml($this->guide('[[action:events.index|Ver|if=!events.view_any]]', 'some-module'), $outsider);
+
+        $this->assertStringNotContainsString('kb-action', $html);
     }
 }

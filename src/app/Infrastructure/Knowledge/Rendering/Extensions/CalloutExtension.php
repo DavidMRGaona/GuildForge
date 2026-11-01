@@ -16,14 +16,17 @@ use League\CommonMark\Node\Node;
 /**
  * Turns `> [!TIP]`, `> [!IMPORTANT]` and `> [!WARNING]` block quotes into callouts.
  */
-final class CalloutExtension implements ExtensionInterface
+final readonly class CalloutExtension implements ExtensionInterface
 {
+    /** @param bool $withTitle false for the plain-text path, where the translated title would pollute the index */
+    public function __construct(private bool $withTitle = true) {}
+
     private const string MARKER = '/^\[!(TIP|IMPORTANT|WARNING)\]$/';
 
     public function register(EnvironmentBuilderInterface $environment): void
     {
         $environment->addEventListener(DocumentParsedEvent::class, $this->process(...));
-        $environment->addRenderer(Callout::class, new CalloutRenderer);
+        $environment->addRenderer(Callout::class, new CalloutRenderer($this->withTitle));
     }
 
     private function process(DocumentParsedEvent $event): void

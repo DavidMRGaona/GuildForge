@@ -44,7 +44,7 @@ final readonly class GuideMarkdownRenderer implements GuideRendererInterface
         $environment->addExtension(new CommonMarkCoreExtension);
         $environment->addExtension(new TableExtension);
         $environment->addExtension(new AutolinkExtension);
-        $environment->addExtension(new CalloutExtension);
+        $environment->addExtension(new CalloutExtension($actions instanceof ActionLinkResolver));
         $environment->addExtension(new ActionButtonExtension($actions, $user, $module));
         $environment->addExtension(new PlaceholderExtension($this->placeholders->values()));
 

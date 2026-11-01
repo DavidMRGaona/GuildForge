@@ -17,6 +17,7 @@ use App\Infrastructure\Knowledge\Parsing\GuideDocumentParser;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeCategoryModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideAliasModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -164,7 +165,7 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
             'keywords' => $parsed->keywords,
             'body_format' => GuideBodyFormat::Markdown->value,
             'body' => $parsed->body,
-            'body_text' => $this->renderer->toPlainText($parsed->body),
+            'body_text' => $this->plainText($parsed->body, $entry['locale']),
             'conditions' => $parsed->conditions->toArray(),
             'related' => array_map(static fn ($id): string => $id->value(), $parsed->related),
             'featured' => $parsed->featured,
@@ -210,6 +211,21 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
         $existing->update($attributes);
 
         return 'updated';
+    }
+
+    /**
+     * Plain text in the guide's own locale, so translated fallbacks do not depend on the sync process.
+     */
+    private function plainText(string $body, string $locale): string
+    {
+        $previous = App::getLocale();
+        App::setLocale($locale);
+
+        try {
+            return $this->renderer->toPlainText($body);
+        } finally {
+            App::setLocale($previous);
+        }
     }
 
     private function syncAliases(ParsedGuideDTO $parsed): void

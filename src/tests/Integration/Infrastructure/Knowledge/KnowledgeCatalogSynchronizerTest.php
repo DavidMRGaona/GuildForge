@@ -101,6 +101,24 @@ final class KnowledgeCatalogSynchronizerTest extends TestCase
         $this->assertSame(0, $report->updated);
     }
 
+    public function test_plain_text_is_built_in_the_guide_locale_without_callout_titles(): void
+    {
+        $this->app->make(SettingsServiceInterface::class)->set('association_member_role', 'rol-inexistente');
+        $this->writeCoreGuide('a.md', 'account.one', body: "> [!WARNING]\n> Careful.\n\nYou are {{association_role}}.", locale: 'en');
+        $this->writeCoreGuide('b.md', 'account.one', body: "> [!WARNING]\n> Cuidado.\n\nEres {{association_role}}.", locale: 'es');
+
+        app()->setLocale('es');
+        $this->syncKnowledge();
+
+        $en = $this->guide('account.one', 'en')->body_text;
+        $this->assertStringContainsString('You are member', $en);
+        $this->assertStringNotContainsString('Ojo', $en);
+        $this->assertStringNotContainsString('Warning', $en);
+        $this->assertStringContainsString('Eres socio', $this->guide('account.one', 'es')->body_text);
+        $this->assertStringNotContainsString('Ojo', $this->guide('account.one', 'es')->body_text);
+        $this->assertSame('es', app()->getLocale());
+    }
+
     public function test_unchanged_content_keeps_timestamps(): void
     {
         $this->writeCoreGuide('a.md', 'account.one');

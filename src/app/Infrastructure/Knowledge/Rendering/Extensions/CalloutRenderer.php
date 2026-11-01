@@ -12,16 +12,20 @@ use Stringable;
 
 final readonly class CalloutRenderer implements NodeRendererInterface
 {
+    public function __construct(private bool $withTitle = true) {}
+
     public function render(Node $node, ChildNodeRendererInterface $childRenderer): Stringable
     {
         assert($node instanceof Callout);
 
-        $title = new HtmlElement('p', ['class' => 'kb-callout__title'], htmlspecialchars((string) __('knowledge.callouts.'.$node->type), ENT_QUOTES));
+        $title = $this->withTitle
+            ? new HtmlElement('p', ['class' => 'kb-callout__title'], htmlspecialchars((string) __('knowledge.callouts.'.$node->type), ENT_QUOTES))."\n"
+            : '';
 
         return new HtmlElement(
             'aside',
             ['class' => 'kb-callout kb-callout--'.$node->type, 'role' => 'note'],
-            $title."\n".$childRenderer->renderNodes($node->children())."\n",
+            $title.$childRenderer->renderNodes($node->children())."\n",
         );
     }
 }
