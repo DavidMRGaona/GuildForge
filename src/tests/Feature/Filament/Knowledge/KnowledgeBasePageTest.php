@@ -124,6 +124,33 @@ final class KnowledgeBasePageTest extends TestCase
         $this->assertSame(0, DB::table('knowledge_search_misses')->count());
     }
 
+    public function test_opening_a_guide_from_search_results_shows_the_guide(): void
+    {
+        $this->signIn();
+
+        Livewire::test(KnowledgeBasePage::class)
+            ->set('search', 'panel')
+            ->assertSee(__('knowledge.panel.results'))
+            ->call('openGuide', 'core.panel-guide')
+            ->assertSet('search', '')
+            ->assertSet('guide', 'core.panel-guide')
+            ->assertSeeHtml('<strong>panel</strong>')
+            ->assertDontSee(__('knowledge.panel.results'));
+    }
+
+    public function test_show_home_clears_guide_and_search(): void
+    {
+        $this->signIn();
+
+        Livewire::test(KnowledgeBasePage::class)
+            ->set('guide', 'core.panel-guide')
+            ->set('search', 'panel')
+            ->call('showHome')
+            ->assertSet('guide', null)
+            ->assertSet('search', '')
+            ->assertDontSeeHtml('<strong>panel</strong>');
+    }
+
     public function test_users_without_panel_access_cannot_open_the_page(): void
     {
         $this->actingAs(UserModel::factory()->create());

@@ -56,6 +56,7 @@ final class KnowledgeBasePage extends Page
     public function openGuide(string $guideId): void
     {
         $this->guide = $guideId;
+        $this->search = '';
     }
 
     public function showHome(): void
