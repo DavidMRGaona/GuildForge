@@ -24,6 +24,7 @@ return [
         'important' => 'Important',
         'warning' => 'Warning',
     ],
+    'search_block' => 'Help',
     'placeholders' => [
         'association_role_fallback' => 'member',
     ],

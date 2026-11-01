@@ -24,6 +24,7 @@ return [
         'important' => 'Importante',
         'warning' => 'Ojo',
     ],
+    'search_block' => 'Ayuda',
     'placeholders' => [
         'association_role_fallback' => 'socio',
     ],

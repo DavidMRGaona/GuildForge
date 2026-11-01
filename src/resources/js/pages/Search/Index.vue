@@ -2,23 +2,29 @@
 import { Info, Search } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { Link } from '@inertiajs/vue3';
 import type { Event, Article } from '@/types';
+import type { SearchSource } from '@/types/search';
 import SearchInput from '@/components/search/SearchInput.vue';
 import EventCard from '@/components/events/EventCard.vue';
 import ArticleCard from '@/components/articles/ArticleCard.vue';
+import KnowledgeSnippet from '@/components/knowledge/KnowledgeSnippet.vue';
 
 interface Props {
     query: string;
     events: Event[];
     articles: Article[];
+    sources?: SearchSource[];
     error?: string | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { sources: () => [], error: null });
 
 const { t } = useI18n();
 
-const hasResults = computed(() => props.events.length > 0 || props.articles.length > 0);
+const hasResults = computed(
+    () => props.events.length > 0 || props.articles.length > 0 || props.sources.length > 0
+);
 
 function pluralize(count: number, key: string): string {
     return count === 1 ? t(key, { count }, 1) : t(key, { count }, 2);
@@ -81,6 +87,41 @@ function pluralize(count: number, key: string): string {
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <ArticleCard v-for="article in articles" :key="article.id" :article="article" />
             </div>
+        </section>
+
+        <!-- Extra sources (help centre, ...) -->
+        <section
+            v-for="source in sources"
+            :key="source.key"
+            class="mb-12"
+            :aria-labelledby="`search-source-${source.key}`"
+        >
+            <h2
+                :id="`search-source-${source.key}`"
+                class="mb-4 text-2xl font-bold text-base-primary"
+            >
+                {{ source.label }}
+            </h2>
+            <ul class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <li v-for="result in source.results" :key="result.url">
+                    <Link
+                        :href="result.url"
+                        class="block rounded-lg border border-default bg-surface p-4 transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    >
+                        <span class="block font-semibold text-base-primary">{{
+                            result.title
+                        }}</span>
+                        <span v-if="result.context" class="block text-sm text-base-secondary">
+                            {{ result.context }}
+                        </span>
+                        <KnowledgeSnippet
+                            v-if="result.snippet.length > 0"
+                            :segments="result.snippet"
+                            class="mt-2 block text-sm text-base-secondary"
+                        />
+                    </Link>
+                </li>
+            </ul>
         </section>
     </div>
 </template>
