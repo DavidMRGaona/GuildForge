@@ -22,6 +22,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
+use Tests\Support\Filament\EndSurveyFieldFixturePage;
 use Tests\Support\Surveys\FakeSubjectEndSurveyChoice;
 use Tests\TestCase;
 
@@ -220,6 +221,15 @@ final class EndSurveyFieldTest extends TestCase
         Livewire::test(EditEvent::class, ['record' => $this->event()->getRouteKey()])
             ->assertFormFieldExists('end_survey', static fn (Select $field): bool => ! $field->canSelectPlaceholder())
             ->assertFormFieldExists('end_survey_base', static fn (Select $field): bool => ! $field->canSelectPlaceholder());
+    }
+
+    public function test_a_form_filled_with_its_own_data_starts_from_the_choice_in_force(): void
+    {
+        $this->app->instance(SubjectEndSurveyChoiceInterface::class, new FakeSubjectEndSurveyChoice($this->choice()));
+
+        Livewire::test(EndSurveyFieldFixturePage::class)
+            ->assertSet('data.end_survey', 'type-default')
+            ->assertSet('data.end_survey_base', 'template:1');
     }
 
     public function test_the_subject_type_can_depend_on_the_form(): void
