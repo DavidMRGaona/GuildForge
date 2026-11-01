@@ -14,6 +14,10 @@ use App\Domain\Knowledge\Exceptions\InvalidGuideDocumentException;
 use App\Domain\Modules\Entities\Module;
 use App\Infrastructure\Knowledge\Catalog\CoreKnowledgeCategories;
 use App\Infrastructure\Knowledge\Parsing\GuideDocumentParser;
+use App\Infrastructure\Knowledge\Rendering\ActionCondition;
+use App\Infrastructure\Knowledge\Rendering\ActionLinkResolver;
+use App\Infrastructure\Knowledge\Rendering\Extensions\ActionButtonParser;
+use App\Infrastructure\Knowledge\Rendering\KnowledgePlaceholders;
 use Illuminate\Support\Facades\Route;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -25,10 +29,6 @@ use Throwable;
 final readonly class KnowledgeLinter
 {
     private const string LOCALE_PATTERN = '/^[a-z]{2}(_[A-Z]{2})?$/';
-
-    private const string BUTTON_PATTERN = '/\[\[action:([^\]|]+)\|([^\]|]+)(?:\|if=([^\]|]+))?\]\]/';
-
-    private const array MARKERS = ['site_name', 'association_role'];
 
     public function __construct(
         private string $corePath,
@@ -345,20 +345,22 @@ final readonly class KnowledgeLinter
         $text = $this->withoutCode($body);
         $issues = [];
 
-        if (preg_match('/<[A-Za-z\/]/', $text) === 1) {
+        // CommonMark autolinks (<https://…>, <user@host>) are not raw HTML.
+        $html = preg_replace(['/<[A-Za-z][A-Za-z0-9+.\-]{1,31}:[^\s<>]*>/', '/<[A-Za-z0-9.!#$%&\'*+\/=?^_`{|}~-]+@[A-Za-z0-9.-]+>/'], '', $text) ?? $text;
+        if (preg_match('/<[A-Za-z\/]/', $html) === 1) {
             $issues[] = new KnowledgeLintIssueDTO($file, 'the body contains raw HTML');
         }
 
         preg_match_all('/\{\{([^{}]*)\}\}/', $text, $markers);
         foreach (array_unique($markers[1]) as $marker) {
-            if (! in_array($marker, self::MARKERS, true)) {
+            if (! in_array($marker, KnowledgePlaceholders::NAMES, true)) {
                 $issues[] = new KnowledgeLintIssueDTO($file, sprintf("unknown marker '{{%s}}'", $marker));
             }
         }
 
         preg_match_all('/\[\[action:[^\]]*\]\]/', $text, $buttons);
         foreach ($buttons[0] as $button) {
-            if (preg_match(self::BUTTON_PATTERN, $button, $parts) !== 1 || $parts[0] !== $button) {
+            if (preg_match('/'.ActionButtonParser::PATTERN.'/', $button, $parts) !== 1 || $parts[0] !== $button) {
                 $issues[] = new KnowledgeLintIssueDTO($file, sprintf("malformed action button '%s'", $button));
 
                 continue;
@@ -379,13 +381,15 @@ final readonly class KnowledgeLinter
 
         if ($route === null) {
             $issues[] = new KnowledgeLintIssueDTO($file, sprintf("route '%s' of an action button does not exist", $routeName));
-        } elseif (preg_match('/\{[^}?]+\}/', $route->uri()) === 1) {
+        } elseif (ActionLinkResolver::hasRequiredParameters($route)) {
             $issues[] = new KnowledgeLintIssueDTO($file, sprintf("route '%s' of an action button has required parameters", $routeName));
         }
 
         if ($condition !== null) {
-            $key = str_starts_with($condition, '!') ? substr($condition, 1) : $condition;
-            if ($key === '' || (! $this->permissions->has($key) && ! in_array($key, $this->capabilities->keys(), true))) {
+            $key = ActionCondition::parse($condition)['key'];
+            $known = ActionCondition::kind($key, $this->permissions) === 'permission'
+                || in_array($key, $this->capabilities->keys(), true);
+            if ($key === '' || ! $known) {
                 $issues[] = new KnowledgeLintIssueDTO($file, sprintf("condition '%s' of an action button is neither a permission nor a capability", $key));
             }
         }

@@ -7,6 +7,7 @@ namespace App\Infrastructure\Knowledge\Rendering;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Knowledge\Services\GuideConditionEvaluatorInterface;
 use App\Domain\Knowledge\ValueObjects\GuideConditions;
+use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 use Throwable;
 
@@ -24,7 +25,7 @@ final readonly class ActionLinkResolver
     {
         try {
             $route = Route::getRoutes()->getByName($routeName);
-            if ($route === null || preg_match('/\{[^}?]+\}/', $route->uri()) === 1) {
+            if ($route === null || self::hasRequiredParameters($route)) {
                 return null;
             }
 
@@ -42,15 +43,19 @@ final readonly class ActionLinkResolver
         }
     }
 
+    public static function hasRequiredParameters(RoutingRoute $route): bool
+    {
+        return preg_match('/\{[^}?]+\}/', $route->uri()) === 1;
+    }
+
     private function conditionPasses(string $condition, ?string $module, object $user): bool
     {
-        $negated = str_starts_with($condition, '!');
-        $key = $negated ? substr($condition, 1) : $condition;
+        ['negated' => $negated, 'key' => $key] = ActionCondition::parse($condition);
         if ($key === '') {
             return false;
         }
 
-        if ($this->permissions->has($key)) {
+        if (ActionCondition::kind($key, $this->permissions) === 'permission') {
             $holds = $this->evaluator->passes($user, new GuideConditions(permissionsAll: [$key]), null);
 
             return $negated ? ! $holds : $holds;

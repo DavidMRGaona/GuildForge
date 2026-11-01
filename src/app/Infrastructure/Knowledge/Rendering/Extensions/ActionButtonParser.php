@@ -13,9 +13,12 @@ use League\CommonMark\Parser\InlineParserContext;
  */
 final class ActionButtonParser implements InlineParserInterface
 {
+    /** Delimiters-free pattern, shared with the linter. */
+    public const string PATTERN = '\[\[action:([^\]|]+)\|([^\]|]+)(?:\|if=([^\]|]+))?\]\]';
+
     public function getMatchDefinition(): InlineParserMatch
     {
-        return InlineParserMatch::regex('\[\[action:([^\]|]+)\|([^\]|]+)(?:\|if=([^\]|]+))?\]\]');
+        return InlineParserMatch::regex(self::PATTERN);
     }
 
     public function parse(InlineParserContext $inlineContext): bool

@@ -7,12 +7,21 @@ namespace Tests\Integration\Infrastructure\Knowledge;
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Knowledge\DTOs\KnowledgeLintIssueDTO;
+use App\Application\Knowledge\Services\GuideRendererInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
+use App\Domain\Knowledge\Entities\Guide;
+use App\Domain\Knowledge\Enums\GuideAudience;
+use App\Domain\Knowledge\Enums\GuideBodyFormat;
+use App\Domain\Knowledge\Enums\GuideSource;
+use App\Domain\Knowledge\ValueObjects\GuideConditions;
+use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Domain\Modules\Entities\Module;
 use App\Infrastructure\Knowledge\Lint\KnowledgeLinter;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Route;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Knowledge\FakeKnowledgeCapability;
 use Tests\Support\Knowledge\KnowledgeFixtures;
 use Tests\TestCase;
@@ -344,5 +353,75 @@ final class KnowledgeLinterTest extends TestCase
 
         $this->writeCoreGuide('b.md', 'account.two');
         $this->artisanCommand('knowledge:lint')->assertFailed();
+    }
+
+    public function test_autolinks_are_not_raw_html(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: 'Visita <https://example.com/a?b=1> o escribe a <alguien@example.com>.');
+
+        $this->assertSame([], $this->lint());
+    }
+
+    public function test_autolink_does_not_hide_real_html(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: 'Visita <https://example.com> y <b>esto</b>.');
+
+        $this->assertIssue($this->lint(), 'raw HTML');
+    }
+
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function buttonSamples(): array
+    {
+        return [
+            'plain' => ['[[action:lint.plain|Ir]]', true],
+            'spaces around the route' => ['[[action: lint.plain |Ir]]', true],
+            'optional parameter and capability' => ['[[action:lint.optional|Ir|if=fake.can_do_it]]', true],
+            'spaces around the condition' => ['[[action:lint.plain|Ir|if= fake.can_do_it ]]', true],
+            'missing route' => ['[[action:no.such.route|Ir]]', false],
+            'required parameter' => ['[[action:lint.param|Ir]]', false],
+            'unknown condition' => ['[[action:lint.plain|Ir|if=ghost.key]]', false],
+            'empty negated condition' => ['[[action:lint.plain|Ir|if=!]]', false],
+            'missing label' => ['[[action:lint.plain]]', false],
+        ];
+    }
+
+    #[DataProvider('buttonSamples')]
+    public function test_linter_and_renderer_agree_on_buttons(string $button, bool $valid): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: $button);
+        $linterAccepts = $this->lint() === [];
+
+        $html = $this->app->make(GuideRendererInterface::class)->toHtml($this->parsedAsGuide($button), UserModel::factory()->create());
+        $rendererAccepts = str_contains($html, 'kb-action');
+
+        $this->assertSame($valid, $linterAccepts, 'linter verdict');
+        $this->assertSame($valid, $rendererAccepts, 'renderer verdict');
+    }
+
+    private function parsedAsGuide(string $body): Guide
+    {
+        return new Guide(
+            GuideId::fromString('core.one'),
+            GuideSource::Core,
+            null,
+            'es',
+            GuideAudience::Site,
+            'getting-started',
+            1,
+            'Título',
+            'Resumen',
+            [],
+            GuideBodyFormat::Markdown,
+            $body,
+            $body,
+            new GuideConditions,
+            [],
+            false,
+            false,
+            null,
+            null,
+        );
     }
 }

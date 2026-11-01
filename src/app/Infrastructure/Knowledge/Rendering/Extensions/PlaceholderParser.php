@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Knowledge\Rendering\Extensions;
 
+use App\Infrastructure\Knowledge\Rendering\KnowledgePlaceholders;
 use League\CommonMark\Node\Inline\Text;
 use League\CommonMark\Parser\Inline\InlineParserInterface;
 use League\CommonMark\Parser\Inline\InlineParserMatch;
@@ -21,7 +22,7 @@ final readonly class PlaceholderParser implements InlineParserInterface
 
     public function getMatchDefinition(): InlineParserMatch
     {
-        return InlineParserMatch::regex('\{\{([a-z_]+)\}\}');
+        return InlineParserMatch::regex(KnowledgePlaceholders::MARKER_PATTERN);
     }
 
     public function parse(InlineParserContext $inlineContext): bool

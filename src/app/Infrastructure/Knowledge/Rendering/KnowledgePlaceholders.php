@@ -13,6 +13,12 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
  */
 final readonly class KnowledgePlaceholders
 {
+    /** Marker names a guide body may use. */
+    public const array NAMES = ['site_name', 'association_role'];
+
+    /** Delimiters-free pattern of a well-formed marker, shared with the renderer. */
+    public const string MARKER_PATTERN = '\{\{([a-z_]+)\}\}';
+
     public function __construct(
         private SiteBrandingServiceInterface $branding,
         private AssociationMembershipServiceInterface $membership,
