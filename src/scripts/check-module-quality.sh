@@ -109,7 +109,15 @@ if [ "$PART" = js ] || [ "$PART" = all ]; then
         # packages (stubs/modules/module/tsconfig.json.stub), so a changed core prop or
         # composable fails here instead of in the browser
         if [ -n "$(find "$DIR/resources/js" \( -name '*.ts' -o -name '*.vue' \) 2>/dev/null | head -n 1)" ]; then
-            if [ -f "$DIR/tsconfig.json" ]; then
+            if [ -f "$DIR/tsconfig.json" ] && [ -d "$DIR/tests/js" ]; then
+                # The Vitest specs too, whatever the module's tsconfig.json includes: a
+                # throwaway configuration that extends it, removed even if the run is cut short
+                SPECS_TSCONFIG="$DIR/.tsconfig.quality-specs.json"
+                trap 'rm -f "$SPECS_TSCONFIG"' EXIT
+                trap 'exit 130' INT TERM
+                run vue-tsc sh -c "node scripts/module-specs-tsconfig.mjs '$DIR' > /dev/null && cd '$DIR' && ../../node_modules/.bin/vue-tsc --noEmit -p .tsconfig.quality-specs.json"
+                rm -f "$SPECS_TSCONFIG"
+            elif [ -f "$DIR/tsconfig.json" ]; then
                 run vue-tsc sh -c "cd '$DIR' && ../../node_modules/.bin/vue-tsc --noEmit -p tsconfig.json"
             else
                 echo "::error::$MODULE has TypeScript or Vue files but no tsconfig.json: copy stubs/modules/module/tsconfig.json.stub"
