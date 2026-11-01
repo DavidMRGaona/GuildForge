@@ -16,8 +16,10 @@
         "intervention/image": "^4.3",
         "laravel/framework": "^13.35",
         "laravel/tinker": "^3.0",
+        "league/commonmark": "^2.10",
         "mews/purifier": "^3.4",
-        "resend/resend-laravel": "^1.1"
+        "resend/resend-laravel": "^1.1",
+        "symfony/yaml": "^8.1"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",
