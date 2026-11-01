@@ -356,7 +356,6 @@ export default {
                 'We sent the link to {email}, the new address you entered. Confirming it also verifies your account.',
             wrongEmail: 'Wrong email address?',
             changeEmail: 'Change it in your profile',
-            help: 'Ayuda',
             logout: 'Sign out',
         },
         verificationBanner: {
@@ -419,6 +418,7 @@ export default {
             openMenu: 'Open user menu',
             profile: 'My profile',
             admin: 'Admin panel',
+            help: 'Help',
             logout: 'Sign out',
         },
     },

@@ -61,4 +61,13 @@ describe('UserDropdown', () => {
 
         expect(wrapper.find('a[href="/admin"]').exists()).toBe(false);
     });
+
+    it('links to the help centre with a translated label', async () => {
+        const wrapper = await openMenuFor(userWith(['member'], []));
+
+        expect(wrapper.text()).toContain('Ayuda');
+        expect(wrapper.text()).not.toContain('auth.userMenu.help');
+        expect(wrapper.find('a[href="/ayuda"]').exists()).toBe(true);
+        expect(en.auth.userMenu.help).toBe('Help');
+    });
 });

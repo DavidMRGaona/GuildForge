@@ -357,7 +357,6 @@ export default {
                 'Enviamos el enlace a {email}, la nueva dirección que indicaste. Al confirmarla, tu cuenta quedará verificada.',
             wrongEmail: '¿El correo no es correcto?',
             changeEmail: 'Cámbialo en tu perfil',
-            help: 'Ayuda',
             logout: 'Cerrar sesión',
         },
         verificationBanner: {
@@ -423,6 +422,7 @@ export default {
             openMenu: 'Abrir menú de usuario',
             profile: 'Mi perfil',
             admin: 'Panel de administración',
+            help: 'Ayuda',
             logout: 'Cerrar sesión',
         },
     },

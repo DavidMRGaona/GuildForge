@@ -55,6 +55,7 @@ async function search(term: string): Promise<void> {
             signal: current.signal,
         });
         if (!response.ok) {
+            results.value = [];
             return;
         }
         const body = (await response.json()) as { results?: KnowledgeSearchHit[] };
