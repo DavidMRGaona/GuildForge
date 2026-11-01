@@ -1618,6 +1618,24 @@ final readonly class AnnounceGeneralSurvey
 - `url` is the survey's public link when it has one, otherwise the page that asks to sign in, where only the audience may answer.
 - It carries nothing personal (no author, no audience), so it can be posted publicly as it is. Show `closesAt` in the display timezone through `TimezoneServiceInterface`.
 
+## Choosing the end survey in a subject's form
+
+A module that offers survey subjects can let the panel form of each subject choose which survey goes out when it ends: its type's template (the default), another template, a survey of its own prepared from a template, or none. The module only adds the core's field (core ^3.31); the options and the stored choice belong to the surveys module, through `App\Application\Surveys\Contracts\SubjectEndSurveyChoiceInterface`. The core binds a default that offers nothing, so without the surveys module the field stays hidden.
+
+```php
+use App\Filament\Forms\Components\EndSurveyField;
+
+// In the resource form, for a type the module offers as a survey subject
+EndSurveyField::forSubject('example-thing'),
+
+// When the type depends on the form
+EndSurveyField::forSubject(fn (Get $get): string => filled($get('parent_id')) ? 'example-part' : 'example-thing'),
+```
+
+- The field saves itself once the record exists (on create, right after the record is created), so the pages need no hook. A form saved by hand, such as a relation manager with its own `save()`, calls `$this->form->model($record)->saveRelationships()` after saving the record.
+- Saving the subject never fails because of it: someone who may not choose gets a warning and the type's survey is used, and a choice that can no longer change (the survey already went out) is shown disabled with the reason and a link to the survey.
+- Its fields (`end_survey`, `end_survey_base`) are not dehydrated, so they never reach the model.
+
 ---
 
 ## Extending core functionality
