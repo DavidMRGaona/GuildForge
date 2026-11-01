@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Knowledge\Services\GuideConditionEvaluatorInterface;
+use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCatalogSynchronizerInterface;
+use App\Application\Knowledge\Services\KnowledgeLocaleResolverInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Domain\Knowledge\Repositories\GuideRepositoryInterface;
 use App\Infrastructure\Knowledge\Capabilities\EmailVerificationRequiredCapability;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeCatalogSynchronizer;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeSourceLocator;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Repositories\EloquentGuideRepository;
+use App\Infrastructure\Knowledge\Services\GuideConditionEvaluator;
+use App\Infrastructure\Knowledge\Services\GuideVisibilityService;
 use App\Infrastructure\Knowledge\Services\KnowledgeCapabilityRegistry;
+use App\Infrastructure\Knowledge\Services\KnowledgeLocaleResolver;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +28,9 @@ class KnowledgeServiceProvider extends ServiceProvider
     {
         $this->app->singleton(KnowledgeCapabilityRegistryInterface::class, KnowledgeCapabilityRegistry::class);
         $this->app->bind(GuideRepositoryInterface::class, EloquentGuideRepository::class);
+        $this->app->bind(KnowledgeLocaleResolverInterface::class, KnowledgeLocaleResolver::class);
+        $this->app->scoped(GuideConditionEvaluatorInterface::class, GuideConditionEvaluator::class);
+        $this->app->scoped(GuideVisibilityServiceInterface::class, GuideVisibilityService::class);
 
         $this->app->bind(KnowledgeSourceLocator::class, fn (Application $app): KnowledgeSourceLocator => new KnowledgeSourceLocator(
             $app->make(EnabledModulesResolverInterface::class),
