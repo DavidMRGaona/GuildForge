@@ -31,7 +31,15 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
         private GuideRendererInterface $renderer,
     ) {}
 
+    /**
+     * Writes the catalog without touching the search index: indexing is the indexer's job.
+     */
     public function sync(): KnowledgeSyncReportDTO
+    {
+        return KnowledgeGuideModel::withoutSyncingToSearch(fn (): KnowledgeSyncReportDTO => $this->syncCatalog());
+    }
+
+    private function syncCatalog(): KnowledgeSyncReportDTO
     {
         return DB::transaction(function (): KnowledgeSyncReportDTO {
             $errors = [];

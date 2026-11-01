@@ -52,6 +52,10 @@ php artisan module:discover || echo "Warning: Module discovery had issues (check
 echo "Syncing permissions..."
 php artisan permissions:sync || echo "Warning: Permission sync had issues (check logs)"
 
+# Guides from the core and the enabled modules; the search index is refreshed too, and a failure never stops the deploy
+echo "Syncing knowledge base..."
+php artisan knowledge:sync || echo "Warning: Knowledge sync had issues (check logs)"
+
 echo "Caching configuration..."
 php artisan config:cache || record_failure "Config cache failed (see the container logs)"
 php artisan route:clear

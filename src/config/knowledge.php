@@ -12,9 +12,21 @@ return [
     // Locale used when a guide has no translation for the requested one
     'fallback_locale' => 'es',
 
-    // Global search synonyms: term => equivalent terms
-    'synonyms' => [],
+    // Global search synonyms: each group lists words or phrases that mean the same (both ways)
+    'synonyms' => [
+        ['partida', 'mesa'],
+        ['apuntarse', 'apuntarme', 'inscribirse', 'inscribirme'],
+        ['darse de baja', 'cancelar', 'desapuntarse'],
+        ['socio', 'miembro'],
+        ['cuota', 'pago'],
+        ['contraseña', 'clave'],
+        ['correo', 'email'],
+        ['campaña', 'crónica'],
+    ],
 
     // Words ignored by the search
-    'stop_words' => [],
+    'stop_words' => [
+        'de', 'del', 'la', 'las', 'el', 'los', 'un', 'una', 'unos', 'unas', 'y', 'o', 'en', 'a', 'al',
+        'para', 'por', 'con', 'que', 'mi', 'mis', 'me', 'se', 'lo', 'como',
+    ],
 ];

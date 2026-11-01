@@ -9,6 +9,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Laravel\Scout\Searchable;
 
 /**
  * @property string $id
@@ -38,6 +39,7 @@ use Illuminate\Support\Carbon;
 final class KnowledgeGuideModel extends Model
 {
     use HasUuids;
+    use Searchable;
     use StoresInstantsInStorageTimezone;
 
     protected $table = 'knowledge_guides';
@@ -80,6 +82,26 @@ final class KnowledgeGuideModel extends Model
             'active' => 'boolean',
             'first_seen_at' => 'immutable_datetime',
             'content_changed_at' => 'immutable_datetime',
+        ];
+    }
+
+    /**
+     * Only active guides are pushed by the indexer; `active` stays in the document so the filter can require it.
+     *
+     * @return array{id: string, guide_id: string, locale: string, audience: string, active: bool, title: string, keywords: string, summary: string, body_text: string}
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'guide_id' => $this->guide_id,
+            'locale' => $this->locale,
+            'audience' => $this->audience,
+            'active' => $this->active,
+            'title' => $this->title,
+            'keywords' => implode(' ', $this->keywords),
+            'summary' => $this->summary,
+            'body_text' => $this->body_text,
         ];
     }
 }

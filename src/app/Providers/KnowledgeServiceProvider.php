@@ -9,7 +9,9 @@ use App\Application\Knowledge\Services\GuideRendererInterface;
 use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCatalogSynchronizerInterface;
+use App\Application\Knowledge\Services\KnowledgeIndexerInterface;
 use App\Application\Knowledge\Services\KnowledgeLocaleResolverInterface;
+use App\Application\Knowledge\Services\KnowledgeSearchInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Domain\Knowledge\Repositories\GuideRepositoryInterface;
 use App\Infrastructure\Knowledge\Capabilities\EmailVerificationRequiredCapability;
@@ -17,12 +19,20 @@ use App\Infrastructure\Knowledge\Catalog\KnowledgeCatalogSynchronizer;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeSourceLocator;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Repositories\EloquentGuideRepository;
 use App\Infrastructure\Knowledge\Rendering\GuideMarkdownRenderer;
+use App\Infrastructure\Knowledge\Search\DatabaseKnowledgeSearch;
+use App\Infrastructure\Knowledge\Search\FallbackKnowledgeSearch;
+use App\Infrastructure\Knowledge\Search\MeilisearchKnowledgeSearch;
+use App\Infrastructure\Knowledge\Search\NullKnowledgeIndexer;
+use App\Infrastructure\Knowledge\Search\ScoutKnowledgeIndexer;
 use App\Infrastructure\Knowledge\Services\GuideConditionEvaluator;
 use App\Infrastructure\Knowledge\Services\GuideVisibilityService;
 use App\Infrastructure\Knowledge\Services\KnowledgeCapabilityRegistry;
 use App\Infrastructure\Knowledge\Services\KnowledgeLocaleResolver;
+use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Meilisearch\Client as MeilisearchClient;
+use Psr\Log\LoggerInterface;
 
 class KnowledgeServiceProvider extends ServiceProvider
 {
@@ -41,6 +51,53 @@ class KnowledgeServiceProvider extends ServiceProvider
             resource_path('knowledge'),
         ));
         $this->app->bind(KnowledgeCatalogSynchronizerInterface::class, KnowledgeCatalogSynchronizer::class);
+
+        $this->registerSearch();
+        $this->registerMeilisearchClient();
+    }
+
+    /**
+     * Meilisearch when Scout is configured for it (falling back to the database search on any failure), otherwise the database search.
+     */
+    private function registerSearch(): void
+    {
+        $this->app->bind(KnowledgeSearchInterface::class, fn (Application $app): KnowledgeSearchInterface => $this->usesMeilisearch($app)
+            ? new FallbackKnowledgeSearch(
+                $app->make(MeilisearchKnowledgeSearch::class),
+                $app->make(DatabaseKnowledgeSearch::class),
+                $app->make(LoggerInterface::class),
+            )
+            : $app->make(DatabaseKnowledgeSearch::class));
+
+        $this->app->bind(KnowledgeIndexerInterface::class, fn (Application $app): KnowledgeIndexerInterface => $this->usesMeilisearch($app)
+            ? $app->make(ScoutKnowledgeIndexer::class)
+            : $app->make(NullKnowledgeIndexer::class));
+    }
+
+    /**
+     * Replaces Scout's client with one that gives up quickly, so a hung Meilisearch cannot hold a request or a deploy.
+     */
+    private function registerMeilisearchClient(): void
+    {
+        $this->app->singleton(MeilisearchClient::class, function (Application $app): MeilisearchClient {
+            $config = $app->make('config');
+            $host = $config->get('scout.meilisearch.host');
+            $key = $config->get('scout.meilisearch.key');
+
+            return new MeilisearchClient(
+                is_string($host) ? $host : '',
+                is_string($key) && $key !== '' ? $key : null,
+                new HttpClient([
+                    'timeout' => (float) $config->get('scout.meilisearch.timeout', 5),
+                    'connect_timeout' => (float) $config->get('scout.meilisearch.connect_timeout', 2),
+                ]),
+            );
+        });
+    }
+
+    private function usesMeilisearch(Application $app): bool
+    {
+        return $app->make('config')->get('scout.driver') === 'meilisearch';
     }
 
     public function boot(): void
