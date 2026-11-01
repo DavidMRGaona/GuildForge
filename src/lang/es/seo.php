@@ -19,6 +19,7 @@ return [
         'gallery' => 'Galería',
         'calendar' => 'Calendario de eventos',
         'search' => 'Buscar',
+        'knowledge' => 'Centro de ayuda',
         'about' => 'Sobre :name',
         'login' => 'Iniciar sesión',
         'register' => 'Crear cuenta',

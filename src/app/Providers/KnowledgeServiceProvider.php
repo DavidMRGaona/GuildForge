@@ -11,6 +11,7 @@ use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCatalogSynchronizerInterface;
 use App\Application\Knowledge\Services\KnowledgeIndexerInterface;
 use App\Application\Knowledge\Services\KnowledgeLocaleResolverInterface;
+use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Domain\Knowledge\Repositories\GuideRepositoryInterface;
@@ -34,6 +35,7 @@ use App\Infrastructure\Knowledge\Services\GuideConditionEvaluator;
 use App\Infrastructure\Knowledge\Services\GuideVisibilityService;
 use App\Infrastructure\Knowledge\Services\KnowledgeCapabilityRegistry;
 use App\Infrastructure\Knowledge\Services\KnowledgeLocaleResolver;
+use App\Infrastructure\Knowledge\Services\KnowledgeQueryService;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Event;
@@ -52,6 +54,7 @@ class KnowledgeServiceProvider extends ServiceProvider
         $this->app->scoped(GuideVisibilityServiceInterface::class, GuideVisibilityService::class);
 
         $this->app->bind(GuideRendererInterface::class, GuideMarkdownRenderer::class);
+        $this->app->bind(KnowledgeQueryServiceInterface::class, KnowledgeQueryService::class);
 
         $this->app->bind(KnowledgeSourceLocator::class, fn (Application $app): KnowledgeSourceLocator => new KnowledgeSourceLocator(
             $app->make(EnabledModulesResolverInterface::class),
