@@ -393,7 +393,7 @@ return [
     ],
     'end_survey' => [
         'label' => 'Survey when it ends',
-        'helper' => 'The survey that goes out when this ends. By default, its type\'s template.',
+        'helper' => 'The survey that goes out when this ends. By default, its game system\'s template or, if it has none, its type\'s.',
         'base' => 'Start from',
         'edit' => 'Edit the survey',
         'view' => 'See the survey',

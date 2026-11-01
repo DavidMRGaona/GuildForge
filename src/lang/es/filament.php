@@ -755,7 +755,7 @@ return [
     ],
     'end_survey' => [
         'label' => 'Encuesta al terminar',
-        'helper' => 'La encuesta que sale cuando esto termina. Por defecto, la plantilla de su tipo.',
+        'helper' => 'La encuesta que sale cuando esto termina. Por defecto, la plantilla de su sistema de juego o, si no tiene, la de su tipo.',
         'base' => 'Partir de',
         'edit' => 'Editar la encuesta',
         'view' => 'Ver la encuesta',
