@@ -1,7 +1,7 @@
 ---
 id: core.account.verify-email
 title: Por qué te pedimos verificar el email
-summary: Confirmar tu correo nos asegura que es tuyo y te deja usar todo lo que necesita tu cuenta.
+summary: Confirmar tu correo nos asegura que es tuyo y te deja usar todo lo que pide tener cuenta.
 category: account
 audience: site
 order: 40
@@ -12,11 +12,11 @@ conditions:
 ---
 {{site_name}} pide que confirmes el correo electrónico de tu cuenta. Así sabemos que la dirección es tuya y que te llegarán los avisos y el correo para recuperar la contraseña.
 
-Las cuentas creadas antes de que se pidiera no tienen que hacerlo.
+Algunas cuentas antiguas no tienen que hacerlo.
 
 ## Qué pasa mientras no lo verificas
 
-Puedes ver las páginas públicas y tu perfil. Lo demás que necesita tu cuenta queda en espera: inscribirte, enviar formularios, cambiar la contraseña o abrir esta ayuda. Arriba de la página verás un aviso con tu dirección.
+Puedes ver las páginas públicas y tu perfil. Lo que pide tener cuenta queda en espera: por ejemplo, inscribirte, enviar formularios o cambiar la contraseña. Arriba de la página verás un aviso con tu dirección.
 
 ## Cómo verificarlo
 
@@ -33,4 +33,4 @@ Puedes ver las páginas públicas y tu perfil. Lo demás que necesita tu cuenta 
 > [!TIP]
 > El enlace caduca en una hora: si ha caducado, pide otro. Si pides varios seguidos, espera un minuto antes de volver a intentarlo.
 
-[[action:verification.notice|Ver la página de verificación]]
+[[action:profile.show|Ir a mi perfil]]

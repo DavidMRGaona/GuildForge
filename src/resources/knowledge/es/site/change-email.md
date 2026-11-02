@@ -28,4 +28,7 @@ Verás el aviso «Tu correo electrónico ha sido actualizado correctamente». De
 - **Has cambiado de idea**: vuelve a poner tu email de antes y guarda.
 - **Sale un error al guardar**: puede que esa dirección ya la use otra cuenta.
 
+> [!WARNING]
+> Mientras el cambio está pendiente, el campo **Correo electrónico** muestra tu email de antes. Si guardas el perfil así, el cambio pendiente se cancela. También pasa al cambiar tu nombre o tu foto: después, vuelve a escribir la nueva dirección y guarda.
+
 [[action:profile.show|Ir a mi perfil]]

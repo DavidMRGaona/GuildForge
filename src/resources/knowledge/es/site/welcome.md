@@ -16,7 +16,7 @@ Te damos la bienvenida a {{site_name}}. Esto es lo que tienes a mano.
 - **Calendario**: los eventos y actividades, mes a mes.
 - **Eventos**: la lista de eventos, con su fecha, su lugar y su precio.
 - **Artículos**: las noticias y los artículos publicados.
-- **Galería**: las fotos de los eventos.
+- **Galería**: las galerías de fotos.
 - **Buscar**: la lupa de la cabecera busca a la vez en eventos, artículos y esta ayuda.
 
 Estas secciones están en el menú principal. En el móvil, ábrelo con el botón del menú. Sus nombres y su orden pueden cambiar de una web a otra.
