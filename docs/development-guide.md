@@ -46,14 +46,15 @@ This brings up all the services defined in `docker-compose.yml`:
 - **db** - PostgreSQL 17 (port 5432)
 - **node** - Node.js 24 with Vite HMR (port 5173)
 - **queue** - Laravel queue worker
+- **scheduler** - Laravel scheduler (`schedule:work`), runs the scheduled tasks of the core and the modules
 - **mailpit** - development mail server (web 8025, SMTP 1025)
 - **redis** - Redis 7.2, unused until `src/.env` points cache, sessions or queues at it (port 6379)
 - **elasticsearch** - log storage (port 9200)
 - **kibana** - log visualization (port 5601)
 
-`make up` does not rebuild existing images. After a change to `docker/php/Dockerfile` (for example a PHP upgrade), rebuild the two containers that use it: `docker compose build app queue && docker compose up -d app queue`. With an older image the application does not start: Composer's platform check stops it with "Composer detected issues in your platform".
+`make up` does not rebuild existing images. After a change to `docker/php/Dockerfile` (for example a PHP upgrade), rebuild the three containers that use it: `docker compose build app queue scheduler && docker compose up -d app queue scheduler`. With an older image the application does not start: Composer's platform check stops it with "Composer detected issues in your platform".
 
-Composer dependencies live in `src/vendor`, shared by the `app` and `queue` containers. After pulling a change to `src/composer.lock`, or switching to a branch with a different one, run `docker exec guildforge_app composer install` and `docker compose restart queue`. Until then `bootstrap/cache/packages.php` can still list service providers of packages that are gone, and the application does not boot.
+Composer dependencies live in `src/vendor`, shared by the `app`, `queue` and `scheduler` containers. After pulling a change to `src/composer.lock`, or switching to a branch with a different one, run `docker exec guildforge_app composer install` and `docker compose restart queue scheduler`. Until then `bootstrap/cache/packages.php` can still list service providers of packages that are gone, and the application does not boot.
 
 ### 3. Full initial setup
 
@@ -215,7 +216,7 @@ These wrap Laravel's generators, which write to their default locations: move ge
 | `make knowledge-sync` | Sync the help guides of the core and the enabled modules (and the search index) |
 | `make knowledge-lint` | Lint the help guides (`MODULE=<name>`: that module's too) |
 
-The development stack has no scheduler, so run `make knowledge-sync` after editing a guide to see it in `/ayuda`.
+The `scheduler` container syncs the guides once a day; run `make knowledge-sync` after editing a guide to see it in `/ayuda` right away.
 
 ### Git hooks
 
@@ -289,6 +290,12 @@ php artisan queue:work --sleep=3 --tries=3 --max-time=3600
 ```
 
 The worker processes queued jobs (email sending, asynchronous tasks, etc.) and restarts automatically if it fails.
+
+### Scheduler
+
+The `scheduler` container runs `php artisan schedule:work`, as the production image does: every minute it runs the tasks that are due (`php artisan schedule:list` shows them). Status changes, survey closing, guest registration expiry, reminders and the daily jobs of the core and the modules run on their own, as in production. Reminders and notices go to Mailpit, so nothing reaches real inboxes. The module update check queries GitHub once a day; without `GITHUB_TOKEN` it uses GitHub's anonymous rate limit, enough for the few calls each module needs.
+
+Each run starts a fresh `schedule:run`, so code changes apply from the next minute without restarting the container. To run the tasks without it (`docker compose stop scheduler`), use `docker exec guildforge_app php artisan schedule:run` or the task's own command.
 
 ### Database management
 
