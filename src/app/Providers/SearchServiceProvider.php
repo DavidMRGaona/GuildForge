@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Search\Services\SearchAudienceResolverInterface;
 use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Application\Search\Services\SearchIndexerInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Search\Services\SearchSyncRunnerInterface;
+use App\Application\Search\Services\SiteSearchInterface;
 use App\Domain\Modules\Events\ModuleDisabled;
 use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Modules\Events\ModuleUninstalled;
@@ -24,7 +26,9 @@ use App\Infrastructure\Search\Listeners\SyncSearchOnModuleChange;
 use App\Infrastructure\Search\Observers\RefreshSearchDocumentObserver;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use App\Infrastructure\Search\Persistence\SearchDocumentStore;
+use App\Infrastructure\Search\Search\DatabaseSiteSearch;
 use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
+use App\Infrastructure\Search\Services\SearchAudienceResolver;
 use App\Infrastructure\Search\Services\SearchIndexer;
 use App\Infrastructure\Search\Sources\ArticleSearchSource;
 use App\Infrastructure\Search\Sources\EventSearchSource;
@@ -41,6 +45,8 @@ final class SearchServiceProvider extends ServiceProvider
         $this->app->bind(SearchDocumentStoreInterface::class, SearchDocumentStore::class);
         $this->app->bind(SearchIndexerInterface::class, SearchIndexer::class);
         $this->app->bind(SearchSyncRunnerInterface::class, ProcessSearchSyncRunner::class);
+        $this->app->bind(SearchAudienceResolverInterface::class, SearchAudienceResolver::class);
+        $this->app->bind(SiteSearchInterface::class, DatabaseSiteSearch::class);
 
         // Meilisearch when Scout is configured for it, otherwise nothing: the database search reads the table
         $this->app->bind(SearchIndexWriterInterface::class, fn (Application $app): SearchIndexWriterInterface => $app->make('config')->get('scout.driver') === 'meilisearch'
