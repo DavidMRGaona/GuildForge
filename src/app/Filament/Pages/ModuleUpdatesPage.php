@@ -15,6 +15,7 @@ use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -37,6 +38,7 @@ use Throwable;
 final class ModuleUpdatesPage extends Page implements HasTable
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithTable;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-path';
@@ -201,6 +203,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
                     || $this->queuedModules !== []
                     || ! $this->isMaintenanceModeEnabled())
                 ->tooltip(fn (): ?string => $this->isMaintenanceModeEnabled() ? null : $this->maintenanceRequiredMessage()),
+            ...array_filter([$this->knowledgeGuideAction('core.panel.updates')]),
         ];
     }
 

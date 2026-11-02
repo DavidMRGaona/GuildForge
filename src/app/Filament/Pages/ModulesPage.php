@@ -20,6 +20,7 @@ use App\Domain\Modules\Exceptions\ModuleInstallationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Modules\ModuleLoader;
 use App\View\Modules\CompatibilityIssueFormatter;
 use DateTimeInterface;
@@ -41,6 +42,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 final class ModulesPage extends Page implements HasForms
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-puzzle-piece';
@@ -216,6 +218,7 @@ final class ModulesPage extends Page implements HasForms
 
                     $this->installPackage($uploadedFile, $installer, $moduleManager);
                 }),
+            ...array_filter([$this->knowledgeGuideAction('core.panel.modules')]),
         ];
     }
 

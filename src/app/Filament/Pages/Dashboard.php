@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Application\Services\DashboardWidgetConfigServiceInterface;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
+use Filament\Actions\Action;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Widgets\Widget;
 use Filament\Widgets\WidgetConfiguration;
 
 final class Dashboard extends BaseDashboard
 {
+    use HasKnowledgeGuideAction;
+
     /**
      * Get the widgets for the dashboard, filtered and sorted by admin configuration.
      *
@@ -48,5 +52,13 @@ final class Dashboard extends BaseDashboard
         });
 
         return $widgets;
+    }
+
+    /**
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return array_filter([$this->knowledgeGuideAction('core.panel.tour')]);
     }
 }

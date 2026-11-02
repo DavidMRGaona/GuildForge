@@ -6,10 +6,12 @@ use App\Infrastructure\Mail\Providers\DynamicMailServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthorizationServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
+use App\Providers\KnowledgeServiceProvider;
 
 return [
     AppServiceProvider::class,
     AuthorizationServiceProvider::class,
     DynamicMailServiceProvider::class,
     AdminPanelProvider::class,
+    KnowledgeServiceProvider::class,
 ];

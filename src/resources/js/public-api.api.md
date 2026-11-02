@@ -377,6 +377,18 @@ export type { CheckboxOption, CheckboxGroup } from './FormCheckboxGroup.vue';
 export type { RadioOption } from './FormRadioGroup.vue';
 ```
 
+## resources/js/components/knowledge/HelpLink.vue
+
+```ts
+type __VLS_Props = {
+    guide: string;
+    label?: string;
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+```
+
 ## resources/js/components/layout/ModuleSlot.vue
 
 ```ts
@@ -580,6 +592,19 @@ export declare function useGridLayout(columns: MaybeRefOrGetter<GridColumns>): U
 export {};
 ```
 
+## resources/js/composables/useKnowledgeVisibility.ts
+
+```ts
+import { type Ref } from 'vue';
+interface KnowledgeVisibility {
+    isVisible: (id: string) => boolean;
+    ready: Ref<boolean>;
+}
+export declare function resetKnowledgeVisibility(): void;
+export declare function useKnowledgeVisibility(): KnowledgeVisibility;
+export {};
+```
+
 ## resources/js/composables/useNotifications.ts
 
 ```ts
@@ -646,6 +671,14 @@ export interface RouteDefinitions {
         show: (slug: string) => string;
     };
     calendar: string;
+    knowledge: {
+        index: string;
+        search: string;
+        visible: string;
+        category: (id: string) => string;
+        show: (id: string) => string;
+        vote: (id: string) => string;
+    };
     legal: {
         privacy: string;
         notice: string;

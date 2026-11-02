@@ -10,6 +10,7 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePermissionRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Infrastructure\Knowledge\Lint\KnowledgeLinter;
 use App\Modules\ModuleLoader;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Translation\Translator;
@@ -220,6 +221,25 @@ abstract class ModuleTestCase extends TestCase
         $this->assertFalse(
             $this->permissionRegistry()->has($name),
             "Permission '{$name}' should not be registered."
+        );
+    }
+
+    /**
+     * Assert the module's knowledge base guides pass `knowledge:lint` (enables the module first when needed).
+     */
+    protected function assertModuleKnowledgeGuidesAreValid(string $moduleName): void
+    {
+        if (! $this->findModule($moduleName)?->isEnabled()) {
+            $this->discoverModules();
+            $this->enableModule($moduleName);
+        }
+
+        $issues = app(KnowledgeLinter::class)->lint($moduleName);
+
+        $this->assertSame(
+            [],
+            array_map(static fn ($issue): string => $issue->file.': '.$issue->message, $issues),
+            "Module '{$moduleName}' has invalid knowledge base guides.",
         );
     }
 }

@@ -33,6 +33,7 @@ use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuItemHrefResolverInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Navigation\Services\RouteRegistryInterface;
+use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
@@ -150,6 +151,7 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepositor
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentPhotoRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentSlugRedirectRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
+use App\Infrastructure\Search\Services\SearchSourceRegistry;
 use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
 use App\Infrastructure\Seo\SeoDescriptionBuilder;
 use App\Infrastructure\Seo\SeoMetadataFactory;
@@ -368,6 +370,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singletonIf(SurveySubjectLinksInterface::class, NullSurveySubjectLinks::class);
         // Nor an end survey to choose in a subject's form
         $this->app->singletonIf(SubjectEndSurveyChoiceInterface::class, NullSubjectEndSurveyChoice::class);
+
+        // Extra places the site search looks in (the help centre registers its own)
+        $this->app->singleton(SearchSourceRegistryInterface::class, SearchSourceRegistry::class);
 
         // Navigation system bindings
         $this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);

@@ -6,7 +6,9 @@ namespace App\Filament\Pages\Settings;
 
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
@@ -29,6 +31,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 final class AboutPageSettings extends Page implements HasForms
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithForms;
     use ManagesPageSettings;
 
@@ -379,5 +382,13 @@ final class AboutPageSettings extends Page implements HasForms
     public function getLocationLng(): string
     {
         return (string) ($this->data['location_lng'] ?? '');
+    }
+
+    /**
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return array_filter([$this->knowledgeGuideAction('core.panel.legal-pages')]);
     }
 }

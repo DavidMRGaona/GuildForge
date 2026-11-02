@@ -153,6 +153,21 @@ services:
       elasticsearch:
         condition: service_healthy
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.56.0
+    container_name: guildforge_meilisearch
+    restart: unless-stopped
+    ports:
+      - "${MEILISEARCH_PORT:-7700}:7700"
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY:-guildforge-dev-master-key}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - guildforge_meilisearch_data:/meili_data
+    networks:
+      - guildforge
+
 networks:
   guildforge:
     driver: bridge
@@ -163,4 +178,6 @@ volumes:
   guildforge_redis_data:
     driver: local
   guildforge_elasticsearch_data:
+    driver: local
+  guildforge_meilisearch_data:
     driver: local

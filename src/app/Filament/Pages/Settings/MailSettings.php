@@ -8,6 +8,7 @@ use App\Application\Mail\Services\MailConfigurationServiceInterface;
 use App\Application\Mail\Services\MailTestServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -31,6 +32,7 @@ use Filament\Schemas\Schema;
 final class MailSettings extends Page implements HasForms
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithForms;
     use ManagesPageSettings;
 
@@ -450,5 +452,13 @@ final class MailSettings extends Page implements HasForms
                 ->danger()
                 ->send();
         }
+    }
+
+    /**
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return array_filter([$this->knowledgeGuideAction('core.panel.mail')]);
     }
 }
