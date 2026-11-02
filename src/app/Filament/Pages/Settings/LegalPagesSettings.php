@@ -8,6 +8,7 @@ use App\Application\Legal\DTOs\LegalMailNoticeDTO;
 use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
 use Filament\Actions\Action;
 use Filament\Forms\Components\RichEditor;
@@ -33,6 +34,7 @@ use Livewire\Attributes\Locked;
 final class LegalPagesSettings extends Page implements HasForms
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithForms;
     use ManagesPageSettings;
 
@@ -655,5 +657,13 @@ Datos registrales: {{registro}}</p>
 <h2>11. Legislación aplicable y jurisdicción</h2>
 <p>Las presentes condiciones se rigen por la legislación española. Para la resolución de cualquier controversia derivada del uso de este sitio web, {{nombre}} y el usuario se someten a los Juzgados y Tribunales del domicilio del usuario, siempre que este tenga la condición de consumidor. En caso contrario, ambas partes se someten a los Juzgados y Tribunales correspondientes al domicilio de la asociación.</p>
 HTML;
+    }
+
+    /**
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return array_filter([$this->knowledgeGuideAction('core.panel.legal-pages')]);
     }
 }

@@ -85,7 +85,7 @@ final class CoreVersionServiceTest extends TestCase
 
     public function test_it_prefers_the_commit_injected_by_the_deployment(): void
     {
-        // Coolify exposes the deployed SHA as SOURCE_COMMIT; the image has no .git
+        // The deployment platform injects the deployed SHA as SOURCE_COMMIT; the image has no .git
         config(['updates.core.commit' => 'abc123def4567890abc123def4567890abc12345']);
 
         $this->assertSame('abc123def4567890abc123def4567890abc12345', $this->service->getCurrentCommit());

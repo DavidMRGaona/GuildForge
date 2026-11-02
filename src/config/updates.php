@@ -55,9 +55,9 @@ return [
     'core' => [
         'owner' => env('CORE_GITHUB_OWNER', 'DavidMRGaona'),
         'repo' => env('CORE_GITHUB_REPO', 'guildforge'),
-        // Branch deployments are built from; Coolify exposes it as COOLIFY_BRANCH
-        'branch' => env('CORE_GITHUB_BRANCH', env('COOLIFY_BRANCH', 'main')),
-        // Deployed commit: Coolify exposes it as SOURCE_COMMIT (the image has no .git)
+        // Branch deployments are built from
+        'branch' => env('CORE_GITHUB_BRANCH', 'main'),
+        // Deployed commit: the deployment platform injects SOURCE_COMMIT (the image has no .git)
         'commit' => env('SOURCE_COMMIT', env('GIT_COMMIT')),
     ],
 

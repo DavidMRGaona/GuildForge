@@ -22,6 +22,7 @@ use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryMo
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\Files\ReadsFiles;
 use Tests\TestCase;
@@ -202,6 +203,8 @@ final class ModuleManagerServiceTest extends TestCase
 
     public function test_enabling_disabling_and_uninstalling_forget_the_cached_module_list(): void
     {
+        // The sync queued by the module events would run inline and warm the cache again
+        Queue::fake();
         config(['modules.cache.enabled' => true, 'modules.cache.key' => 'modules.discovered']);
         $this->createTestModule('test-module');
 

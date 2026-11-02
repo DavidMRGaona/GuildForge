@@ -6,9 +6,200 @@
    plus `app/Filament` and `resources/views/filament`.
 
    Modules are not scanned: src/modules is not in the host repository and is
-   absent from Coolify builds. Module panel code uses Filament components and
-   their props (badge, color, icon), never Tailwind classes of its own. */
+   absent from the production container builds. Module panel code uses Filament
+   components and their props (badge, color, icon), never Tailwind classes of
+   its own. */
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+
+/* Guide body (server-rendered HTML from the knowledge renderer). Plain CSS on
+   Filament's colour variables, so it follows the light and dark panel themes. */
+.kb-prose {
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.dark .kb-prose {
+    color: var(--gray-300);
+}
+
+.kb-prose > :first-child {
+    margin-top: 0;
+}
+
+.kb-prose h1,
+.kb-prose h2,
+.kb-prose h3,
+.kb-prose h4 {
+    margin: 1.5rem 0 0.5rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--gray-950);
+}
+
+.dark .kb-prose h1,
+.dark .kb-prose h2,
+.dark .kb-prose h3,
+.dark .kb-prose h4 {
+    color: #fff;
+}
+
+.kb-prose h1 { font-size: 1.5rem; }
+.kb-prose h2 { font-size: 1.25rem; }
+.kb-prose h3 { font-size: 1.0625rem; }
+
+.kb-prose p,
+.kb-prose ul,
+.kb-prose ol,
+.kb-prose blockquote,
+.kb-prose pre,
+.kb-prose table {
+    margin: 0.75rem 0;
+}
+
+.kb-prose ul { list-style: disc; padding-inline-start: 1.5rem; }
+.kb-prose ol { list-style: decimal; padding-inline-start: 1.5rem; }
+.kb-prose li + li { margin-top: 0.25rem; }
+
+.kb-prose a:not(.kb-action) {
+    color: var(--primary-600);
+    text-decoration: underline;
+}
+
+.dark .kb-prose a:not(.kb-action) {
+    color: var(--primary-400);
+}
+
+.kb-prose code {
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    background-color: var(--gray-100);
+    font-size: 0.8125rem;
+}
+
+.dark .kb-prose code {
+    background-color: rgb(255 255 255 / 0.1);
+}
+
+.kb-prose pre {
+    overflow-x: auto;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--gray-100);
+}
+
+.dark .kb-prose pre {
+    background-color: rgb(255 255 255 / 0.05);
+}
+
+.kb-prose pre code {
+    padding: 0;
+    background: none;
+}
+
+.kb-prose blockquote {
+    padding-inline-start: 1rem;
+    border-inline-start: 3px solid var(--gray-300);
+    color: var(--gray-600);
+}
+
+.dark .kb-prose blockquote {
+    border-inline-start-color: var(--gray-600);
+    color: var(--gray-400);
+}
+
+.kb-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+}
+
+.kb-prose table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+}
+
+.kb-prose th,
+.kb-prose td {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--gray-200);
+    text-align: start;
+}
+
+.dark .kb-prose th,
+.dark .kb-prose td {
+    border-color: rgb(255 255 255 / 0.1);
+}
+
+.kb-prose .kb-callout {
+    margin: 1.25rem 0;
+    padding: 0.75rem 1rem;
+    border-inline-start: 4px solid var(--info-600);
+    border-radius: 0.5rem;
+    background-color: var(--info-50);
+    color: var(--gray-900);
+}
+
+.dark .kb-prose .kb-callout {
+    border-inline-start-color: var(--info-400);
+    background-color: rgb(255 255 255 / 0.05);
+    color: var(--gray-100);
+}
+
+.kb-prose .kb-callout > :first-child { margin-top: 0; }
+.kb-prose .kb-callout > :last-child { margin-bottom: 0; }
+
+.kb-prose .kb-callout--important {
+    border-inline-start-color: var(--primary-600);
+    background-color: var(--primary-50);
+}
+
+.dark .kb-prose .kb-callout--important {
+    border-inline-start-color: var(--primary-400);
+}
+
+.kb-prose .kb-callout--warning {
+    border-inline-start-color: var(--warning-600);
+    background-color: var(--warning-50);
+}
+
+.dark .kb-prose .kb-callout--warning {
+    border-inline-start-color: var(--warning-400);
+}
+
+.kb-prose a.kb-action {
+    display: inline-block;
+    margin: 0.5rem 0;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--primary-600);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.kb-prose a.kb-action:hover {
+    background-color: var(--primary-500);
+}
+
+.kb-prose a.kb-action:focus-visible {
+    outline: 2px solid var(--primary-600);
+    outline-offset: 2px;
+}
+
+.dark .kb-prose a.kb-action {
+    background-color: var(--primary-500);
+    color: #fff;
+}
+
+@media (max-width: 639px) {
+    .kb-prose a.kb-action {
+        display: block;
+        text-align: center;
+    }
+}

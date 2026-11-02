@@ -17,6 +17,7 @@
 - [Development guide](./development-guide.md) — Installation, commands, testing
 - [Deployment guide](./deployment-guide.md) — Docker, CI/CD, environment variables, monitoring
 - [Module development guide](./modules/README.md) — Structure, SDK, scaffolding, testing
+- [Writing knowledge guides](./modules/knowledge-guides.md) — In-app help guides for modules
 - [Module CI/CD](./module-ci-cd.md) — Release pipeline with GitHub Actions
 
 ## Module documentation

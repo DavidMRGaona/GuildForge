@@ -151,6 +151,7 @@ The `docker/prod/entrypoint.sh` script runs when the container starts:
 6. Opens the deployment log entry (`php artisan core:record-deployment start`)
 7. Runs pending migrations (`php artisan migrate --force`); on failure it records `fail` and stops
 8. Discovers modules (`php artisan module:discover`) and syncs permissions (`php artisan permissions:sync`)
+   - then syncs the knowledge base (`php artisan knowledge:sync`); a failure only logs a warning and never stops the start
 9. Caches configuration, clears routes and caches views; on failure it records `fail` and stops
 10. Closes the deployment log entry (`php artisan core:record-deployment finish`)
 11. Starts Supervisord
@@ -322,7 +323,8 @@ To add a target, add its secret and a line to `WEBHOOKS` in `deploy.yml`; it is 
 | `MODULES_PATH` | Module path relative to the application | `modules` |
 | `GITHUB_TOKEN` | GitHub token for update checks (`config/updates.php`; 60 requests/hour without it, 5000 with it) | `ghp_…` |
 | `RESEND_API_KEY` | Resend API key when `MAIL_MAILER=resend` | (secret) |
-| `SOURCE_COMMIT` and the branch variable | Injected by the deployment platform; do not set by hand (see `config/updates.php`) | - |
+| `SOURCE_COMMIT` | Deployed commit, injected by the deployment platform; do not set by hand (see `config/updates.php`) | - |
+| `CORE_GITHUB_BRANCH` | Branch the application deploys from, compared on the core updates page | `main` |
 
 > **Note on Redis vs database:** the default configuration uses `database` for cache, queues, and sessions, which simplifies deployment and does not require Redis to be available. For better performance in production, you can switch to `redis` for all three variables (`CACHE_STORE`, `QUEUE_CONNECTION`, `SESSION_DRIVER`), since Redis is part of the production stack.
 
@@ -447,6 +449,25 @@ make es-test       # Connection test and test log submission
 make es-health     # Cluster health
 make es-indices    # Index list
 ```
+
+### Knowledge base search (Meilisearch)
+
+The in-app help (knowledge base) searches its guides with [Meilisearch](https://www.meilisearch.com) when it is configured. It is optional: without it the built-in fallback searches the guides in PHP and everything works, only with simpler ranking and without typo tolerance.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SCOUT_DRIVER` | `meilisearch` to use the search service, `null` (default) for the built-in fallback | `meilisearch` |
+| `SCOUT_PREFIX` | Prefix of the index names; unique per site when several share one Meilisearch | `site1_` |
+| `MEILISEARCH_HOST` | URL of the Meilisearch service | `http://meilisearch:7700` |
+| `MEILISEARCH_KEY` | API key of the site | (secret) |
+
+**One key per site.** Do not give a site the master key. Create an API key for each site restricted to its prefix (`indexes: ["site1_*"]`) with the actions the site needs (documents, indexes and settings, search). A key limited to its prefix cannot read or delete another site's indexes.
+
+**Indexing.** `knowledge:sync` runs on every container start (see [Production entrypoint](#production-entrypoint)): it loads the guides of the core and the enabled modules into the database and refreshes the index. Run it by hand after changing the search variables.
+
+**The index can be rebuilt.** It is derived from the guides and the database, so it needs no backup: if the volume is lost, start Meilisearch again and run `php artisan knowledge:sync`.
+
+**Failures never reach visitors.** If Meilisearch is down or the key is wrong, searches fall back to the built-in search and a warning is logged; the deploy does not fail either.
 
 ### Redis
 
@@ -676,7 +697,7 @@ The automatic deployment flow is:
 4. The platform builds `Dockerfile.prod` and starts a new container; the image carries no modules, which stay in the bind mount
 5. The entrypoint records the deployment, runs migrations, discovers modules, syncs permissions and caches configuration (see [Production entrypoint](#production-entrypoint))
 
-The deployment platform injects `SOURCE_COMMIT` (deployed commit) and a branch variable (branch the application deploys from) into the container environment; the image does not set them, and the variable names the code reads are in `config/updates.php`. `core:record-deployment` and the core updates page (`CoreUpdatesPage`) read them through that file: without `SOURCE_COMMIT` (or `GIT_COMMIT`) the deployment is not recorded and the page shows an error; the page compares the deployed commit with the deployed branch (`CORE_GITHUB_BRANCH` overrides it, `main` by default).
+The deployment platform injects `SOURCE_COMMIT` (deployed commit) into the container environment; the image does not set it. `core:record-deployment` and the core updates page (`CoreUpdatesPage`) read it through `config/updates.php`: without `SOURCE_COMMIT` (or `GIT_COMMIT`) the deployment is not recorded and the page shows an error. The page compares the deployed commit with the branch the application deploys from, `CORE_GITHUB_BRANCH` (`main` by default); set it when deploying from another branch.
 
 Required settings for each instance on the deployment platform:
 

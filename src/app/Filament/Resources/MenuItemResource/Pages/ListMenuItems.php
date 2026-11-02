@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\MenuItemResource\Pages;
 
 use App\Domain\Navigation\Enums\MenuLocation;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Resources\MenuItemResource;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -13,15 +15,18 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListMenuItems extends ListRecords
 {
+    use HasKnowledgeGuideAction;
+
     protected static string $resource = MenuItemResource::class;
 
     /**
-     * @return array<CreateAction>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
         return [
             CreateAction::make(),
+            ...array_filter([$this->knowledgeGuideAction('core.panel.menu')]),
         ];
     }
 
