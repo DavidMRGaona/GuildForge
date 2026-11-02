@@ -15,6 +15,14 @@ use Tests\TestCase;
 
 final class ModuleLoaderSearchSourcesTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // The core's own sources are registered at boot; these tests look at module sources only
+        $this->app->make(SearchSourceRegistryInterface::class)->clear();
+    }
+
     public function test_registers_module_search_sources_with_the_module_name(): void
     {
         $provider = new class($this->app) extends ModuleServiceProvider

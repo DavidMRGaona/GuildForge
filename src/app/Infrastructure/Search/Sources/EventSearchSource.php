@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Search\Sources;
+
+use App\Application\Search\Contracts\IndexedSearchSourceInterface;
+use App\Application\Search\DTOs\SearchDocumentDTO;
+use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Search\Support\PlainText;
+
+final class EventSearchSource implements IndexedSearchSourceInterface
+{
+    public function type(): string
+    {
+        return 'events';
+    }
+
+    public function label(): string
+    {
+        return __('search.sources.events.label');
+    }
+
+    public function itemLabel(): string
+    {
+        return __('search.sources.events.item');
+    }
+
+    public function pastLabel(): string
+    {
+        return __('search.sources.events.past');
+    }
+
+    public function document(string $id): ?SearchDocumentDTO
+    {
+        $event = EventModel::query()->with('tags')->whereKey($id)->where('is_published', true)->first();
+
+        return $event instanceof EventModel ? $this->toDocument($event) : null;
+    }
+
+    /**
+     * @return iterable<SearchDocumentDTO>
+     */
+    public function documents(): iterable
+    {
+        foreach (EventModel::query()->with('tags')->where('is_published', true)->lazyById(200) as $event) {
+            yield $this->toDocument($event);
+        }
+    }
+
+    private function toDocument(EventModel $event): SearchDocumentDTO
+    {
+        $keywords = $event->tags->pluck('name')->implode(' ');
+
+        return new SearchDocumentDTO(
+            id: $event->id,
+            title: $event->title,
+            body: PlainText::from($event->description),
+            url: route('events.show', $event->slug),
+            keywords: $keywords !== '' ? $keywords : null,
+            meta: $event->location,
+            imagePublicId: $event->image_public_id,
+            startsAt: $event->start_date->toImmutable(),
+            endsAt: $event->end_date->toImmutable(),
+            finished: $event->end_date->isPast(),
+        );
+    }
+}
