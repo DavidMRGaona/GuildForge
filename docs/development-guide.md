@@ -208,6 +208,15 @@ These wrap Laravel's generators, which write to their default locations: move ge
 
 `src/.env.example` ships with Elasticsearch logging off. To send logs to the `elasticsearch` container, set `ELASTICSEARCH_ENABLED=true`, `ELASTICSEARCH_HOST=elasticsearch` and add `elasticsearch` to `LOG_CHANNELS` (e.g. `LOG_CHANNELS=daily,elasticsearch`).
 
+### Knowledge base
+
+| Command | Description |
+|---------|-------------|
+| `make knowledge-sync` | Sync the help guides of the core and the enabled modules (and the search index) |
+| `make knowledge-lint` | Lint the help guides (`MODULE=<name>`: that module's too) |
+
+The development stack has no scheduler, so run `make knowledge-sync` after editing a guide to see it in `/ayuda`.
+
 ### Git hooks
 
 | Command | Description |

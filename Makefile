@@ -1,7 +1,7 @@
 # GuildForge - Makefile
 
 .PHONY: help up down build restart recreate logs ps shell shell-node shell-db \
-        es-test es-logs es-health es-indices \
+        es-test es-logs es-health es-indices knowledge-sync knowledge-lint \
         install setup fresh migrate migrate-rollback seed db-backup db-restore \
         test test-unit test-feature test-coverage test-filter test-serial \
         check check-fix cs cs-fix phpstan lint-js lint-js-fix types \
@@ -391,6 +391,16 @@ es-health: ## Check Elasticsearch cluster health
 
 es-indices: ## List all Elasticsearch indices
 	@curl -s http://localhost:9200/_cat/indices?v
+
+# =============================================================================
+# KNOWLEDGE BASE
+# =============================================================================
+
+knowledge-sync: ## Sync help guides (core + enabled modules) and the search index
+	docker exec $(PHP_CONTAINER) php artisan knowledge:sync
+
+knowledge-lint: ## Lint help guides (MODULE=<name>: that module's too)
+	docker exec $(PHP_CONTAINER) php artisan knowledge:lint $(if $(MODULE),--module=$(MODULE))
 
 # =============================================================================
 # GIT HOOKS
