@@ -31,6 +31,8 @@ Commands run in the development containers: `php artisan` and PHPUnit in `guildf
 
 Knowledge base guides for a module's features are covered in [Writing knowledge guides](./knowledge-guides.md).
 
+Making a module's records searchable from the site search is covered in [Search sources](./search-sources.md).
+
 ---
 
 ## Getting started
