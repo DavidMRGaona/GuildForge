@@ -38,7 +38,12 @@ final class SearchIndexAfterTagSyncTest extends TestCase
 
     public function test_tags_saved_from_the_event_page_reach_the_index(): void
     {
-        $event = EventModel::factory()->create(['is_published' => true]);
+        // Explicit dates: the factory may end an event when it starts, which the form rejects
+        $event = EventModel::factory()->create([
+            'is_published' => true,
+            'start_date' => now()->addWeek()->setTime(18, 0),
+            'end_date' => now()->addWeek()->setTime(22, 0),
+        ]);
         $category = TagModel::factory()->create(['name' => 'Categoría']);
         $tag = TagModel::factory()->create(['name' => 'Escaramuza', 'parent_id' => $category->id]);
         $this->assertNull($this->keywords('events', $event->id));
