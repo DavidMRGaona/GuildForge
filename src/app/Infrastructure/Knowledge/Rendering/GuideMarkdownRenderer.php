@@ -30,7 +30,13 @@ final readonly class GuideMarkdownRenderer implements GuideRendererInterface
     public function toPlainText(string $markdown): string
     {
         $html = $this->convert($markdown, null, null, null);
-        $text = html_entity_decode(strip_tags(str_replace('<', ' <', $html)), ENT_QUOTES | ENT_HTML5);
+        // Space only at block boundaries: inline tags (strong, em, a) sit inside words and sentences
+        $spaced = (string) preg_replace(
+            '#(</(?:p|li|h[1-6]|td|th|tr|blockquote|aside|pre|ul|ol)>|<(?:br|hr)\s*/?>)#i',
+            '$1 ',
+            $html,
+        );
+        $text = html_entity_decode(strip_tags($spaced), ENT_QUOTES | ENT_HTML5);
 
         return trim((string) preg_replace('/\s+/u', ' ', $text));
     }

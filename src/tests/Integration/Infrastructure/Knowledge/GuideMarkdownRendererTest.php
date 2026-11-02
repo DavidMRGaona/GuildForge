@@ -205,6 +205,14 @@ final class GuideMarkdownRendererTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/\s{2,}/', $text);
     }
 
+    public function test_plain_text_adds_no_space_inside_a_sentence_but_separates_blocks(): void
+    {
+        $text = $this->renderer->toPlainText("Elige **Mi perfil**.\n\nLuego pulsa *Guardar*, y listo.\n\n| A | B |\n|---|---|\n| uno | dos |");
+
+        $this->assertStringContainsString('Elige Mi perfil. Luego pulsa Guardar, y listo.', $text);
+        $this->assertStringContainsString('uno dos', $text);
+    }
+
     public function test_negated_permission_condition_fails_closed_for_a_disabled_module(): void
     {
         $outsider = UserModel::factory()->create();
