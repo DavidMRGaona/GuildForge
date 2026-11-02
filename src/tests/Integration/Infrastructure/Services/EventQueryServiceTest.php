@@ -63,6 +63,41 @@ final class EventQueryServiceTest extends TestCase
         );
     }
 
+    public function test_published_paginated_upcoming_events_break_start_ties_by_creation_then_id(): void
+    {
+        $this->createTiedEvents('2099-05-01 18:00:00', otherStart: '2099-04-30 18:00:00', direction: 'asc');
+
+        $this->assertSame(
+            ['Campaign other', 'Campaign tie oldest', 'Campaign tie low id', 'Campaign tie high id'],
+            $this->titles($this->service->getPublishedEventsPaginated()),
+        );
+    }
+
+    public function test_published_paginated_events_list_upcoming_soonest_first_then_past_latest_first(): void
+    {
+        $this->travelTo('2026-06-15 12:00:00');
+
+        foreach ([
+            'Past old' => '2026-01-10 18:00:00',
+            'Upcoming far' => '2026-12-01 18:00:00',
+            'Past recent' => '2026-06-14 18:00:00',
+            'Upcoming tomorrow' => '2026-06-16 18:00:00',
+            'Upcoming next month' => '2026-07-20 18:00:00',
+            'Started an hour ago' => '2026-06-15 11:00:00',
+        ] as $title => $start) {
+            EventModel::factory()->published()->create(['title' => $title, 'start_date' => $start, 'end_date' => $start]);
+        }
+
+        $this->assertSame(
+            ['Upcoming tomorrow', 'Upcoming next month', 'Upcoming far', 'Started an hour ago', 'Past recent', 'Past old'],
+            $this->titles($this->service->getPublishedEventsPaginated()),
+        );
+        $this->assertSame(
+            ['Upcoming far', 'Started an hour ago'],
+            $this->titles($this->service->getPublishedEventsPaginated(page: 2, perPage: 2)),
+        );
+    }
+
     public function test_search_breaks_start_ties_by_creation_then_id(): void
     {
         $this->createTiedEvents('2020-05-01 18:00:00', otherStart: '2020-05-02 18:00:00', direction: 'desc');
