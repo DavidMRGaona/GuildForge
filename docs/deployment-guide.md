@@ -322,7 +322,8 @@ To add a target, add its secret and a line to `WEBHOOKS` in `deploy.yml`; it is 
 | `MODULES_PATH` | Module path relative to the application | `modules` |
 | `GITHUB_TOKEN` | GitHub token for update checks (`config/updates.php`; 60 requests/hour without it, 5000 with it) | `ghp_…` |
 | `RESEND_API_KEY` | Resend API key when `MAIL_MAILER=resend` | (secret) |
-| `SOURCE_COMMIT` and the branch variable | Injected by the deployment platform; do not set by hand (see `config/updates.php`) | - |
+| `SOURCE_COMMIT` | Deployed commit, injected by the deployment platform; do not set by hand (see `config/updates.php`) | - |
+| `CORE_GITHUB_BRANCH` | Branch the application deploys from, compared on the core updates page | `main` |
 
 > **Note on Redis vs database:** the default configuration uses `database` for cache, queues, and sessions, which simplifies deployment and does not require Redis to be available. For better performance in production, you can switch to `redis` for all three variables (`CACHE_STORE`, `QUEUE_CONNECTION`, `SESSION_DRIVER`), since Redis is part of the production stack.
 
@@ -676,7 +677,7 @@ The automatic deployment flow is:
 4. The platform builds `Dockerfile.prod` and starts a new container; the image carries no modules, which stay in the bind mount
 5. The entrypoint records the deployment, runs migrations, discovers modules, syncs permissions and caches configuration (see [Production entrypoint](#production-entrypoint))
 
-The deployment platform injects `SOURCE_COMMIT` (deployed commit) and a branch variable (branch the application deploys from) into the container environment; the image does not set them, and the variable names the code reads are in `config/updates.php`. `core:record-deployment` and the core updates page (`CoreUpdatesPage`) read them through that file: without `SOURCE_COMMIT` (or `GIT_COMMIT`) the deployment is not recorded and the page shows an error; the page compares the deployed commit with the deployed branch (`CORE_GITHUB_BRANCH` overrides it, `main` by default).
+The deployment platform injects `SOURCE_COMMIT` (deployed commit) into the container environment; the image does not set it. `core:record-deployment` and the core updates page (`CoreUpdatesPage`) read it through `config/updates.php`: without `SOURCE_COMMIT` (or `GIT_COMMIT`) the deployment is not recorded and the page shows an error. The page compares the deployed commit with the branch the application deploys from, `CORE_GITHUB_BRANCH` (`main` by default); set it when deploying from another branch.
 
 Required settings for each instance on the deployment platform:
 
