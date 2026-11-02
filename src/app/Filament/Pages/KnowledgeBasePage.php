@@ -51,6 +51,7 @@ final class KnowledgeBasePage extends Page
 
     public static function canAccess(): bool
     {
+        // Signing in is enough here: the panel itself already requires admin.access
         return auth()->check();
     }
 
