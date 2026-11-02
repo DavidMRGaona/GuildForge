@@ -59,7 +59,7 @@ Every page also receives `seo: SeoProps` (`types/seo.ts`), built on the server b
 
 | Page | Route | Props | Composables | Features |
 |------|-------|-------|-------------|----------|
-| `Search/Index.vue` | `/buscar` | `query: string`, `events: Event[]`, `articles: Article[]`, `error?: string \| null` | -- | Global search with debounced input, results grouped by section (events and articles), empty states, minimum character warning. Meta `noindex,nofollow` |
+| `Search/Index.vue` | `/buscar` | `query: string`, `type?: string \| null`, `tabs?: SearchTab[]`, `results?: SearchHit[]`, `total?: number`, `page?: number`, `hasMore?: boolean`, `error?: 'minChars' \| null` | -- | Site search: one list ordered by relevance with a tab per type («Todo» first, each with its count), rows of the same shape for every type (`SearchResultItem`), «Ver más resultados» appends the next page (`pagina`, merged prop), empty and minimum-length states, retry when a page fails to load. Meta `noindex,nofollow` |
 
 ### Legal
 
@@ -461,6 +461,16 @@ Located in `src/resources/js/components/`.
 - **File**: `search/SearchInput.vue`
 - **Props**: `initialQuery?: string`, `autoFocus?: boolean`
 - **Features**: Search input with icon, 300ms debounce, automatic search on typing (min. 2 characters), submit with Enter. Navigates with Inertia preserving state
+
+#### SearchPanel
+
+- **File**: `search/SearchPanel.vue`
+- **Props**: `open: boolean` (`v-model:open`), `returnFocus?: (opener) => HTMLElement | null`
+- **Features**: Header search panel (full screen on mobile) opened by the magnifier or the `/` key. Asks `GET /buscar/sugerencias` after 200 ms from 2 characters, shows up to 6 suggestions (`SearchSuggestionList`, combobox with arrow keys), Enter opens the active suggestion or `/buscar`
+
+#### SearchTabs, SearchResultItem, SearchSuggestionList
+
+- **Files**: `search/SearchTabs.vue` (`tabs`, `active`, `query`: plain links, a tab always opens its first page), `search/SearchResultItem.vue` (`hit: SearchHit`: type, title, date and meta line, past mark, highlighted snippet), `search/SearchSuggestionList.vue` (listbox of the panel's suggestions)
 
 ---
 

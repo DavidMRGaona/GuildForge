@@ -453,7 +453,7 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
 
 Register dynamic relationships on core models in `register()`, not `boot()` (see [Extending core functionality](#extending-core-functionality)).
 
-The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()` and `registerNavigation()`. The panel reads `registerNavigationGroups()`, `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
+The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerKnowledgeCapabilities()` and `registerNavigation()`. The panel reads `registerNavigationGroups()`, `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
 
 `onEnable()` and `onDisable()` are declared on the base class, but the core never calls them: set up data in migrations and seeders, which run when the module is first enabled.
 
@@ -2190,6 +2190,9 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerPagePrefixes()` | `PagePrefixDTO[]` | Inertia page prefixes of the module |
 | `registerSlots()` | `SlotRegistrationDTO[]` | Slot component registrations |
 | `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Sources of public calendar entries; fill `details` with `description`, `location`, `imagePublicId` and `meta` rows (`icon`, `label`, `value`, translated) so the detail panel is as complete as an event's |
+| `registerSearchSources()` | `class-string<IndexedSearchSourceInterface>[]` | Indexed sources of the site search; types prefixed with the module (see [Search sources](./search-sources.md)) |
+| `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
+| `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |
 | `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |
 | `registerNavigationGroups()` | `array` | Filament navigation groups |
 | `registerFilamentPages()` | `class-string<Page>[]` | Filament pages |

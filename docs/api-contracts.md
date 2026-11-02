@@ -46,6 +46,7 @@ GuildForge is an Inertia application: most public URLs return an Inertia page (H
 | `GET` | `/galeria` | `GalleryController@index` | Inertia `Gallery/Index` | No | `galleries.index` |
 | `GET` | `/galeria/{slug}` | `GalleryController@show` | Inertia `Gallery/Show` | No | `galleries.show` |
 | `GET` | `/buscar` | `SearchController` (invokable) | Inertia `Search/Index` | No | `search` |
+| `GET` | `/buscar/sugerencias` | `SearchSuggestionsController` (invokable), `throttle:search-suggestions` | JSON | No | `search.suggestions` |
 | `GET` | `/sitemap.xml` | `SitemapController` (invokable) | XML (`application/xml`, `Cache-Control: public, max-age=3600`) | No | `sitemap` |
 | `GET` | `/{slug}` | `LegalPageController@show` | Inertia `Legal/Show` | No | `legal.show` |
 
@@ -64,7 +65,7 @@ GuildForge is an Inertia application: most public URLs return an Inertia page (H
 | `Articles/Show` | `article` (`ArticleResource`) |
 | `Gallery/Index` | `galleries` (paginated `GalleryResource`, 12 per page), `tags`, `currentTags` |
 | `Gallery/Show` | `gallery` (`GalleryWithPhotosResource`) |
-| `Search/Index` | `query` (string), `events` (`EventResource[]`, up to 12), `articles` (`ArticleResource[]`, up to 12), `error` (`'minChars'` when the query is shorter than 2 characters, else `null`); an empty query returns empty lists |
+| `Search/Index` | `query` (string), `type` (the tab on show, `null` for «Todo»), `tabs` (`{key: string \| null, label: string, count: number}[]`, «Todo» first, then each type with matches), `results` (`SiteSearchHitResource` rows, 20 per page; a merged prop: a later page is appended), `total`, `page`, `hasMore`, `error` (`'minChars'` when the query is shorter than 2 characters, else `null`); an empty query, or a search that failed (logged), returns empty lists. Parameters: `q`, `tipo` (tab), `pagina` (page, 1-50) |
 | `Legal/Show` | `title`, `content` (HTML), `lastUpdated` (ISO 8601 or `null`) |
 
 Listing query parameters (`/eventos`, `/articulos`, `/galeria`): `page` (integer, default 1) and `tags` (comma-separated tag slugs).
@@ -188,6 +189,20 @@ Public JSON endpoint in `routes/web.php` (`web` middleware). `CalendarAggregator
 **Query parameters** (`CalendarRequest`): `start` (required, date), `end` (required, date).
 
 **Response**: `200`, a JSON array of `CalendarEntryResource` (see [§8.1](#calendarentryresource)).
+
+### `GET /buscar/sugerencias`
+
+Public JSON endpoint for the header search panel (route `search.suggestions`, `web` middleware, `throttle:search-suggestions`). Runs the same search as `/buscar` (same audiences, help rows only for whoever may see them) over every type and returns the first 6 hits.
+
+**Query parameters** (`SearchSuggestionsRequest`): `q`. A query shorter than 2 or longer than 100 characters answers an empty list, never a validation error.
+
+**Response**: `200`:
+
+```typescript
+{ results: SiteSearchHitResource[]; total: number }
+```
+
+`total` counts every match, not only the 6 returned. A failed search answers `{ results: [], total: 0 }`.
 
 ### `POST /api/webhooks/ses`
 
@@ -397,7 +412,8 @@ Module routes exist only while the module is enabled. All of them are in `routes
 | FormRequest | Route | Rules |
 |-------------|-------|-------|
 | `ContactFormRequest` | `POST /contacto` | `name`: required, string, max:255; `email`: required, email; `message`: required, string, max:5000 |
-| `SearchRequest` | `GET /buscar` | `q`: nullable, string, max:100 (queries under 2 characters return `error: 'minChars'`) |
+| `SearchRequest` | `GET /buscar` | `q`: nullable, string, max:100 (queries under 2 characters return `error: 'minChars'`); `tipo`: optional tab (a search type; an unknown one falls back to «Todo»); `pagina`: optional page from 1 to 50 (anything else reads as the first page) |
+| `SearchSuggestionsRequest` | `GET /buscar/sugerencias` | `q`: no validation error; a query outside 2-100 characters answers an empty list |
 | `TagFilterRequest` | `GET /eventos`, `/articulos`, `/galeria` | `tags`: nullable, string (comma-separated slugs); `page`: nullable, integer, min:1 |
 | `Api\CalendarRequest` | `GET /eventos/calendario` | `start`: required, date; `end`: required, date |
 | `Auth\RegisterRequest` | `POST /registro` | `name`: required, string, max:255; `email`: required, string, email, max:255, unique:users,email; `password`: required, confirmed, `Password::min(8)` |
@@ -630,6 +646,24 @@ Built from `GalleryDetailResponseDTO`.
   imagePublicId: string;
   isActive: boolean;
   sortOrder: number;
+}
+```
+
+#### `SiteSearchHitResource`
+
+One row of the site search (`/buscar` results and `/buscar/sugerencias`), the same shape for every type:
+
+```typescript
+{
+  type: string;            // search type ('events', 'articles', 'galleries', a module type, or 'help')
+  typeLabel: string;       // singular label («Evento»)
+  title: string;
+  url: string;             // relative to the site («/eventos/torneo»)
+  meta: string | null;     // short line such as the venue
+  image: string | null;    // Cloudinary public id
+  date: string | null;     // start with time («sáb 15 nov · 10:00») or publication day («15 nov 2026»), display zone
+  pastLabel: string | null; // set only for past results («Celebrado»)
+  snippet: { text: string; match: boolean }[];
 }
 ```
 
@@ -873,8 +907,9 @@ Because the first four are in the `web` group, `/api/*` responses get no Inertia
 | `throttle:5,1` | 5 per minute | IP | `POST /registro`, `POST /olvide-contrasena` |
 | `throttle:6,1` | 6 per minute | user | `POST /verificar-email/reenviar` |
 | `throttle:6,1,profile` | 6 per minute | user | `POST /perfil` |
+| `search-suggestions` | 60 per minute | IP | `GET /buscar/sugerencias` |
 
-The `login` and `contact` limiters are defined in `AppServiceProvider` (`RateLimiter::for()`). Exceeding a limit answers `429`.
+The `login`, `contact` and `search-suggestions` limiters are defined in `AppServiceProvider` (`RateLimiter::for()`). Exceeding a limit answers `429`.
 
 ---
 
