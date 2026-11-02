@@ -17,16 +17,20 @@ A source implements `App\Application\Search\Contracts\IndexedSearchSourceInterfa
 
 | Method | Returns |
 |--------|---------|
-| `type()` | Stable identifier of the kind of record (`tables`), unique across every source. Stored with each document: never rename it |
+| `type()` | Stable identifier of the kind of record, prefixed with the module (`<module>.<things>`, such as `gametables.tables`) and unique across every source. Stored with each document: never rename it |
 | `label()` | Plural, user-facing name of the group («Partidas»), translated |
 | `itemLabel()` | Singular name of one record («Partida»), translated |
 | `pastLabel()` | Tag for records that are over («Pasada»), or `null` when the type has no such notion |
 | `document(string $id)` | The `SearchDocumentDTO` of one record, or `null` when it must not be searchable |
 | `documents()` | Every searchable record, as an `iterable<SearchDocumentDTO>` |
 
+Prefix the type with the module: the registry keeps the first source registered for a type and skips (and logs) any later one, and modules register before the core. A module type called `events` would take the place of the core events, and two modules using `tables` would hide one another. The prefix also keeps the type readable in `search:sync --type` and in the logs.
+
 `SearchDocumentDTO` carries `id` (the record's key, a string), `title` and `url` (both required: an empty one throws), `body` (plain text), and optionally `keywords`, `meta` (a short line such as the venue), `imagePublicId`, `startsAt`, `endsAt`, `publishedAt`, `finished`, `audience` and `locale`.
 
-- Dates are `DateTimeImmutable` instants. Results that have not ended yet rank ahead of finished ones (with Meilisearch, past results weigh half), so set `finished` for records that are over.
+- Dates are `DateTimeImmutable` instants. A result is past when its `endsAt` (its `startsAt` when it has no end) is before the moment of the search: this is worked out when searching, not when indexing, so a record becomes past without being reindexed. Give the dates and let them do the work.
+- Set `finished` only for records that are over by status rather than by date, such as a completed campaign or a closed tournament whose dates are still ahead. Never set it from a date comparison: the document would keep the value it had when it was indexed.
+- Upcoming results have an advantage, not a barrier: at the same relevance they come before past ones (with Meilisearch, past results weigh half), but a past result that matches much better can still come first.
 - Turn rich text into plain text before it goes into `body` (`App\Infrastructure\Search\Support\PlainText::from()` is available to code inside the core; a module strips tags itself).
 - `audience` is `SearchAudience::Public` (default), `Authenticated` (any signed-in user) or `Members` (association members). The core filters by the visitor's audiences; a visitor never receives a document above their level.
 
@@ -53,7 +57,7 @@ To rebuild by hand:
 
 ```bash
 php artisan search:sync               # every type
-php artisan search:sync --type=tables # one type
+php artisan search:sync --type=mymodule.tables # one type
 ```
 
 `search:sync` also runs when a module is enabled, disabled, updated or uninstalled, so a module's documents appear and disappear with it. The stored query counters are pruned daily by `search:prune-metrics`.
@@ -77,7 +81,7 @@ final class TableSearchSource implements IndexedSearchSourceInterface
 {
     public function type(): string
     {
-        return 'tables';
+        return 'mymodule.tables';
     }
 
     public function label(): string
@@ -113,10 +117,10 @@ final class TableSearchSource implements IndexedSearchSourceInterface
         }
     }
 
-    // The same conditions as the public listing; cancelled and draft tables are not in it
+    // The same conditions as the public listing (open and closed tables); cancelled and draft tables are not in it
     private function listed(): Builder
     {
-        return TableModel::query()->where('status', 'published');
+        return TableModel::query()->whereIn('status', ['published', 'closed']);
     }
 
     private function toDocument(TableModel $table): SearchDocumentDTO
@@ -127,7 +131,9 @@ final class TableSearchSource implements IndexedSearchSourceInterface
             body: strip_tags($table->description),
             url: route('my-module.tables.show', $table->slug),
             startsAt: $table->starts_at->toImmutable(),
-            finished: $table->starts_at->isPast(),
+            endsAt: $table->ends_at->toImmutable(),
+            // Over by status (a table closed early); being over by date comes from the dates above
+            finished: $table->status === 'closed',
         );
     }
 }
@@ -147,6 +153,6 @@ Keep it current from the provider's `boot()`:
 ```php
 use App\Application\Search\Services\SearchIndexerInterface;
 
-TableModel::saved(fn (TableModel $table) => resolve(SearchIndexerInterface::class)->refresh('tables', (string) $table->getKey()));
-TableModel::deleted(fn (TableModel $table) => resolve(SearchIndexerInterface::class)->forget('tables', (string) $table->getKey()));
+TableModel::saved(fn (TableModel $table) => resolve(SearchIndexerInterface::class)->refresh('mymodule.tables', (string) $table->getKey()));
+TableModel::deleted(fn (TableModel $table) => resolve(SearchIndexerInterface::class)->forget('mymodule.tables', (string) $table->getKey()));
 ```
