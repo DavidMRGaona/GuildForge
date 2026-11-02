@@ -33,6 +33,7 @@ return [
         'unavailable' => 'This guide is not available',
         'unavailable_hint' => 'It may have moved, or you may not have access to it.',
         'home' => 'Help home',
+        'index' => 'Contents',
         'related' => 'Related guides',
         'siblings' => 'In this category',
         'featured' => 'Featured',

@@ -68,6 +68,29 @@ final class KnowledgeBasePageTest extends TestCase
             ->assertSeeHtml('<strong>panel</strong>');
     }
 
+    public function test_index_folds_behind_a_toggle_on_small_screens(): void
+    {
+        $this->signIn();
+
+        Livewire::test(KnowledgeBasePage::class)
+            ->assertSeeHtml('data-kb-index-toggle')
+            ->assertSeeHtml('aria-controls="kb-index"')
+            // Folded until opened; the theme hides a folded index below the lg breakpoint only
+            ->assertSeeHtml('id="kb-index"')
+            ->assertSeeHtml('data-open="false"')
+            // Choosing a guide folds it again, so the guide is what comes next
+            ->assertSeeHtml('indexOpen = false');
+    }
+
+    public function test_index_toggle_names_the_open_guide(): void
+    {
+        $this->signIn();
+
+        Livewire::test(KnowledgeBasePage::class)
+            ->set('guide', 'core.panel-guide')
+            ->assertSeeHtmlInOrder(['data-kb-index-toggle', 'El panel', 'Panel guide title', 'id="kb-index"']);
+    }
+
     public function test_guide_is_read_from_the_url(): void
     {
         $this->signIn();

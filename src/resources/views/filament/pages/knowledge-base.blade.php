@@ -18,7 +18,18 @@
     @endif
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside class="flex flex-col gap-4 lg:border-e lg:border-gray-950/10 lg:pe-6 dark:lg:border-white/10">
+        {{-- Below lg the index folds behind a bar that says where you are, so the guide is not pushed
+             under a list that grows with every guide. Choosing a guide folds it and goes back to the top. --}}
+        <aside
+            class="flex flex-col gap-4 lg:border-e lg:border-gray-950/10 lg:pe-6 dark:lg:border-white/10"
+            x-data="{
+                indexOpen: false,
+                chose() {
+                    this.indexOpen = false
+                    if (window.innerWidth < 1024) window.scrollTo({ top: 0 })
+                },
+            }"
+        >
             <form wire:submit="submitSearch" role="search">
                 <label for="kb-search" class="sr-only">{{ __('knowledge.panel.search_label') }}</label>
                 <x-filament::input.wrapper prefix-icon="heroicon-m-magnifying-glass">
@@ -26,16 +37,49 @@
                         id="kb-search"
                         type="search"
                         wire:model.live.debounce.300ms="search"
+                        {{-- The results are what comes next, not the index above them --}}
+                        x-on:input="indexOpen = false"
                         :placeholder="__('knowledge.panel.search_placeholder')"
                         autocomplete="off"
                     />
                 </x-filament::input.wrapper>
             </form>
 
-            <nav aria-label="{{ __('knowledge.panel.categories') }}" class="flex flex-col gap-5">
+            <button
+                type="button"
+                data-kb-index-toggle
+                aria-controls="kb-index"
+                aria-expanded="false"
+                x-bind:aria-expanded="indexOpen"
+                x-on:click="indexOpen = ! indexOpen"
+                class="flex w-full items-center gap-2 rounded-lg bg-white px-3 py-2 text-start text-sm shadow-xs ring-1 ring-gray-950/10 lg:hidden dark:bg-white/5 dark:ring-white/20"
+            >
+                <x-filament::icon icon="heroicon-o-book-open" class="size-5 shrink-0 text-gray-400 dark:text-gray-500" />
+                <span class="min-w-0 flex-1 truncate">
+                    <span class="font-semibold text-gray-950 dark:text-white">{{ __('knowledge.panel.index') }}</span>
+                    @if($selectedGuide !== null)
+                        <span class="text-gray-500 dark:text-gray-400">· {{ $selectedGuide->category->label }} › {{ $selectedGuide->title }}</span>
+                    @endif
+                </span>
+                <x-filament::icon
+                    icon="heroicon-m-chevron-down"
+                    class="size-5 shrink-0 text-gray-400 transition-transform dark:text-gray-500"
+                    x-bind:class="indexOpen && 'rotate-180'"
+                />
+            </button>
+
+            <nav
+                id="kb-index"
+                aria-label="{{ __('knowledge.panel.categories') }}"
+                class="kb-index flex flex-col gap-5"
+                data-open="false"
+                x-bind:data-open="indexOpen ? 'true' : 'false'"
+                wire:ignore.self
+            >
                 <button
                     type="button"
                     wire:click="showHome"
+                    x-on:click="chose()"
                     class="text-start text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
                 >
                     {{ __('knowledge.panel.home') }}
@@ -53,6 +97,7 @@
                                     <button
                                         type="button"
                                         wire:click="openGuide(@js($item->id))"
+                                        x-on:click="chose()"
                                         @if($selectedGuide !== null && $selectedGuide->id === $item->id) aria-current="page" @endif
                                         @class([
                                             '-ms-px w-full rounded-e-lg border-s-2 py-1.5 ps-3 pe-2 text-start text-sm transition',
