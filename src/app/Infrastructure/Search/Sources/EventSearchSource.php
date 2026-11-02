@@ -68,7 +68,6 @@ final class EventSearchSource implements IndexedSearchSourceInterface
             imagePublicId: $event->image_public_id,
             startsAt: $event->start_date->toImmutable(),
             endsAt: $event->end_date->toImmutable(),
-            finished: $event->end_date->isPast(),
         );
     }
 }

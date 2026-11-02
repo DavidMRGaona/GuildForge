@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Search\Sources;
 
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
+use App\Application\Search\DTOs\SiteSearchQueryDTO;
+use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Domain\Search\Enums\SearchAudience;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
+use App\Infrastructure\Search\Search\DatabaseSiteSearch;
 use App\Infrastructure\Search\Sources\ArticleSearchSource;
 use App\Infrastructure\Search\Sources\EventSearchSource;
 use App\Infrastructure\Search\Sources\GallerySearchSource;
@@ -91,15 +94,35 @@ final class CoreSearchSourcesTest extends TestCase
         $this->assertSame('Celebrado', $source->pastLabel());
     }
 
-    public function test_past_event_is_finished(): void
+    public function test_past_event_is_past_by_its_dates_not_by_finished(): void
     {
         $event = EventModel::factory()->create([
+            'title' => 'Liga de invierno',
             'start_date' => now()->subDays(3),
             'end_date' => now()->subDays(2),
             'is_published' => true,
         ]);
 
-        $this->assertTrue($this->app->make(EventSearchSource::class)->document($event->id)?->finished);
+        $document = $this->app->make(EventSearchSource::class)->document($event->id);
+
+        // Dates make a result past when searching; finished is only for records over by status
+        $this->assertNotNull($document);
+        $this->assertFalse($document->finished);
+
+        $this->app->make(SearchDocumentStoreInterface::class)->upsert('events', null, $document);
+        $hits = $this->app->make(DatabaseSiteSearch::class)->search(new SiteSearchQueryDTO(
+            query: 'invierno',
+            audiences: [SearchAudience::Public],
+            types: ['events'],
+            type: null,
+            offset: 0,
+            limit: 20,
+            user: null,
+            includeHelp: false,
+        ))->hits;
+
+        $this->assertCount(1, $hits);
+        $this->assertTrue($hits[0]->past);
     }
 
     public function test_article_body_has_no_html(): void
