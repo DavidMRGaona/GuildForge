@@ -14,7 +14,7 @@ final class ProcessSearchSyncRunner implements SearchSyncRunnerInterface
 {
     private const int TIMEOUT_SECONDS = 300;
 
-    public function sync(?string $type = null): void
+    public function sync(?string $type = null): bool
     {
         $command = [ProcessModulePostUpdateRunner::phpBinary(), base_path('artisan'), 'search:sync', '--no-interaction'];
 
@@ -35,8 +35,12 @@ final class ProcessSearchSyncRunner implements SearchSyncRunnerInterface
                     'error' => trim($output) !== '' ? trim($output) : "exit code {$result->exitCode()}",
                 ]);
             }
+
+            return $result->successful();
         } catch (Throwable $e) {
             Log::warning('[Search] Could not run the search documents sync.', ['type' => $type, 'error' => $e->getMessage()]);
+
+            return false;
         }
     }
 }

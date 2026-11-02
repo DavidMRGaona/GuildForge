@@ -24,6 +24,11 @@ interface SearchDocumentStoreInterface
     public function delete(string $type, string $sourceId): ?string;
 
     /**
+     * Module that stored the document, or null for a core document (or when there is none).
+     */
+    public function moduleOf(string $type, string $sourceId): ?string;
+
+    /**
      * Removes the documents of the type whose source id is not listed.
      *
      * @param  list<string>  $keepSourceIds

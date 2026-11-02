@@ -55,6 +55,16 @@ final class SearchDocumentStore implements SearchDocumentStoreInterface
         return (string) $id;
     }
 
+    public function moduleOf(string $type, string $sourceId): ?string
+    {
+        $module = SearchDocumentModel::query()
+            ->where('type', $type)
+            ->where('source_id', $sourceId)
+            ->value('module');
+
+        return is_string($module) ? $module : null;
+    }
+
     public function deleteExcept(string $type, array $keepSourceIds): array
     {
         // The difference is computed here: a NOT IN with every kept id would exceed the bindings a query accepts

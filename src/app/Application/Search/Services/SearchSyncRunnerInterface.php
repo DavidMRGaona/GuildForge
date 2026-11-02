@@ -13,7 +13,8 @@ namespace App\Application\Search\Services;
 interface SearchSyncRunnerInterface
 {
     /**
-     * Never throws: a failure is logged, and the nightly search:sync catches up.
+     * Whether the sync ran and finished without problems. Never throws: a failure is logged, and the
+     * nightly search:sync catches up.
      */
-    public function sync(?string $type = null): void;
+    public function sync(?string $type = null): bool;
 }

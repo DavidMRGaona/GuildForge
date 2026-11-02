@@ -9,6 +9,7 @@ use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Application\Search\Services\SearchIndexerInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
+use App\Application\Search\Services\SearchSyncRunnerInterface;
 use App\Infrastructure\Search\Index\NullSearchIndexWriter;
 use App\Infrastructure\Search\Index\ScoutSearchIndexWriter;
 use App\Infrastructure\Search\Index\SearchIndexWriterInterface;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use RuntimeException;
+use Tests\Support\Search\FakeSearchSyncRunner;
 use Tests\Support\Search\InMemoryIndexedSearchSource;
 use Tests\Support\Search\RecordingSearchIndexWriter;
 use Tests\Support\Search\SecondInMemoryIndexedSearchSource;
@@ -152,6 +154,23 @@ final class SearchIndexerTest extends TestCase
         $this->assertSame([], $this->sourceIds('game_table'));
         $this->assertSame(['e'], $this->sourceIds('event'));
         $this->assertSame([$orphan], $this->writer->removed);
+    }
+
+    public function test_sync_removes_an_enabled_module_type_that_no_source_owns_once_every_source_loads(): void
+    {
+        // The module is still enabled but no longer offers this type
+        $orphan = $this->store->upsert('sample.retired', 'sample', $this->document('a'));
+        $this->enabledModules = ['sample'];
+        $this->source('event', [$this->document('e')]);
+
+        $this->assertNull($this->indexer()->sync()->error);
+        $this->assertSame([], $this->sourceIds('sample.retired'));
+        $this->assertSame([$orphan], $this->writer->removed);
+
+        $other = $this->store->upsert('sample.retired', 'sample', $this->document('b'));
+        $this->assertNull($this->indexer()->sync('sample.retired')->error);
+        $this->assertSame([], $this->sourceIds('sample.retired'));
+        $this->assertSame([$orphan, $other], $this->writer->removed);
     }
 
     public function test_sync_removes_the_documents_of_a_module_no_longer_enabled(): void
@@ -355,6 +374,11 @@ final class SearchIndexerTest extends TestCase
                 return $this->store->deleteExcept($type, $keepSourceIds);
             }
 
+            public function moduleOf(string $type, string $sourceId): ?string
+            {
+                return $this->store->moduleOf($type, $sourceId);
+            }
+
             public function deleteType(string $type): array
             {
                 return $this->store->deleteType($type);
@@ -405,6 +429,8 @@ final class SearchIndexerTest extends TestCase
     public function test_refresh_of_an_unknown_type_forgets_the_document(): void
     {
         $row = $this->store->upsert('orphan', null, $this->document('a'));
+        // Core rows never belong to an enabled module
+        $this->enabledModules = ['new-module'];
 
         $this->indexer()->refresh('orphan', 'a');
 
@@ -412,15 +438,110 @@ final class SearchIndexerTest extends TestCase
         $this->assertSame([$row], $this->writer->removed);
     }
 
-    public function test_refresh_keeps_the_row_when_a_source_cannot_be_loaded(): void
+    public function test_refresh_without_source_hands_an_enabled_module_type_to_a_fresh_process(): void
     {
+        // A worker started before the module was enabled has no source for its type: a fresh process has it
+        $row = $this->store->upsert('newmodule.tables', 'new-module', $this->document('t'));
+        $this->enabledModules = ['new-module'];
+        $runner = new FakeSearchSyncRunner;
+        $this->app->instance(SearchSyncRunnerInterface::class, $runner);
+
+        $this->indexer()->refresh('newmodule.tables', 't');
+
+        $this->assertSame(['newmodule.tables'], $runner->runs);
+        $this->assertNotNull(SearchDocumentModel::query()->find($row));
+        $this->assertSame([], $this->writer->removed);
+    }
+
+    public function test_refresh_without_source_removes_the_row_when_the_fresh_process_fails(): void
+    {
+        // Hiding wins over showing what may have been unpublished or cancelled
+        $row = $this->store->upsert('newmodule.tables', 'new-module', $this->document('t'));
+        $this->enabledModules = ['new-module'];
+        $runner = new FakeSearchSyncRunner(succeeds: false);
+        $this->app->instance(SearchSyncRunnerInterface::class, $runner);
+        $log = Log::spy();
+
+        $this->indexer()->refresh('newmodule.tables', 't');
+
+        $this->assertSame(['newmodule.tables'], $runner->runs);
+        $this->assertNull(SearchDocumentModel::query()->find($row));
+        $this->assertSame([$row], $this->writer->removed);
+        $log->shouldHaveReceived('warning')->once();
+    }
+
+    public function test_refresh_without_source_removes_the_row_when_the_fresh_process_throws(): void
+    {
+        $row = $this->store->upsert('newmodule.tables', 'new-module', $this->document('t'));
+        $this->enabledModules = ['new-module'];
+        $runner = Mockery::mock(SearchSyncRunnerInterface::class);
+        $runner->shouldReceive('sync')->with('newmodule.tables')->andThrow(new RuntimeException('cannot fork'));
+        $this->app->instance(SearchSyncRunnerInterface::class, $runner);
+
+        $this->indexer()->refresh('newmodule.tables', 't');
+
+        $this->assertNull(SearchDocumentModel::query()->find($row));
+        $this->assertSame([$row], $this->writer->removed);
+    }
+
+    public function test_refresh_without_source_removes_the_row_of_a_module_no_longer_enabled(): void
+    {
+        $row = $this->store->upsert('oldmodule.tables', 'old-module', $this->document('t'));
+        $this->enabledModules = ['new-module'];
+        $runner = new FakeSearchSyncRunner;
+        $this->app->instance(SearchSyncRunnerInterface::class, $runner);
+
+        $this->indexer()->refresh('oldmodule.tables', 't');
+
+        $this->assertSame([], $runner->runs);
+        $this->assertNull(SearchDocumentModel::query()->find($row));
+        $this->assertSame([$row], $this->writer->removed);
+    }
+
+    public function test_refresh_hands_the_type_to_a_fresh_process_when_a_source_cannot_be_loaded(): void
+    {
+        // The type may belong to the source that failed here: a fresh process tries again and decides
         $row = $this->store->upsert('game_table', null, $this->document('g'));
         $this->registry->register(UnresolvableIndexedSearchSource::class);
+        $runner = new FakeSearchSyncRunner;
+        $this->app->instance(SearchSyncRunnerInterface::class, $runner);
 
         $this->indexer()->refresh('game_table', 'g');
 
+        $this->assertSame(['game_table'], $runner->runs);
         $this->assertNotNull(SearchDocumentModel::query()->find($row));
         $this->assertSame([], $this->writer->removed);
+    }
+
+    public function test_refresh_removes_the_row_when_a_source_cannot_be_loaded_and_the_fresh_process_fails(): void
+    {
+        $row = $this->store->upsert('game_table', null, $this->document('g'));
+        $this->registry->register(UnresolvableIndexedSearchSource::class);
+        $runner = new FakeSearchSyncRunner(succeeds: false);
+        $this->app->instance(SearchSyncRunnerInterface::class, $runner);
+        $log = Log::spy();
+
+        $this->indexer()->refresh('game_table', 'g');
+
+        $this->assertSame(['game_table'], $runner->runs);
+        $this->assertNull(SearchDocumentModel::query()->find($row));
+        $this->assertSame([$row], $this->writer->removed);
+        $log->shouldHaveReceived('warning')->withArgs(
+            static fn (string $message): bool => str_contains($message, 'fresh sync'),
+        )->once();
+    }
+
+    public function test_refresh_removes_a_disabled_module_row_without_a_fresh_process_even_when_a_source_cannot_be_loaded(): void
+    {
+        $row = $this->store->upsert('oldmodule.tables', 'old-module', $this->document('t'));
+        $this->registry->register(UnresolvableIndexedSearchSource::class);
+        $runner = new FakeSearchSyncRunner;
+        $this->app->instance(SearchSyncRunnerInterface::class, $runner);
+
+        $this->indexer()->refresh('oldmodule.tables', 't');
+
+        $this->assertSame([], $runner->runs);
+        $this->assertNull(SearchDocumentModel::query()->find($row));
     }
 
     public function test_forget_removes_the_document_whatever_the_source_says(): void

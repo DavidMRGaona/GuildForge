@@ -15,8 +15,12 @@ final class FakeSearchSyncRunner implements SearchSyncRunnerInterface
     /** @var list<string|null> */
     public array $runs = [];
 
-    public function sync(?string $type = null): void
+    public function __construct(private readonly bool $succeeds = true) {}
+
+    public function sync(?string $type = null): bool
     {
         $this->runs[] = $type;
+
+        return $this->succeeds;
     }
 }

@@ -138,8 +138,8 @@ final class SearchSyncCommandTest extends TestCase
         // The process that enabled a module booted without its provider, so its sources are unknown here
         Process::fake();
 
-        $this->app->make(ProcessSearchSyncRunner::class)->sync();
-        $this->app->make(ProcessSearchSyncRunner::class)->sync('event');
+        $this->assertTrue($this->app->make(ProcessSearchSyncRunner::class)->sync());
+        $this->assertTrue($this->app->make(ProcessSearchSyncRunner::class)->sync('event'));
 
         Process::assertRan(fn (PendingProcess $process): bool => is_array($process->command)
             && $process->command[1] === base_path('artisan')
@@ -155,7 +155,7 @@ final class SearchSyncCommandTest extends TestCase
         $log = Log::spy();
         Process::fake(['*' => Process::result(output: 'Indexed: 0', errorOutput: 'Type "event" not synced: boom', exitCode: 1)]);
 
-        $this->app->make(ProcessSearchSyncRunner::class)->sync();
+        $this->assertFalse($this->app->make(ProcessSearchSyncRunner::class)->sync());
 
         $log->shouldHaveReceived('warning')->once()->withArgs(
             fn (string $message, array $context): bool => str_contains((string) ($context['error'] ?? ''), 'boom'),
@@ -167,7 +167,7 @@ final class SearchSyncCommandTest extends TestCase
         $log = Log::spy();
         Process::fake(fn (): never => throw new RuntimeException('cannot fork'));
 
-        $this->app->make(ProcessSearchSyncRunner::class)->sync();
+        $this->assertFalse($this->app->make(ProcessSearchSyncRunner::class)->sync());
 
         $log->shouldHaveReceived('warning')->once();
     }
