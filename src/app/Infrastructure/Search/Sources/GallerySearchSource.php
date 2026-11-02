@@ -9,6 +9,7 @@ use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Search\Support\PlainText;
+use Illuminate\Support\Str;
 
 final class GallerySearchSource implements IndexedSearchSourceInterface
 {
@@ -34,6 +35,11 @@ final class GallerySearchSource implements IndexedSearchSourceInterface
 
     public function document(string $id): ?SearchDocumentDTO
     {
+        // Keys are uuids: anything else matches no row, and PostgreSQL rejects it in the query
+        if (! Str::isUuid($id)) {
+            return null;
+        }
+
         $gallery = GalleryModel::query()->with(['photos', 'tags'])->whereKey($id)->where('is_published', true)->first();
 
         return $gallery instanceof GalleryModel ? $this->toDocument($gallery) : null;

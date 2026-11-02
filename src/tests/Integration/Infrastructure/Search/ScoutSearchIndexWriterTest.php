@@ -11,6 +11,7 @@ use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Str;
 use Laravel\Scout\Contracts\UpdatesIndexSettings;
 use Laravel\Scout\EngineManager;
 use Laravel\Scout\Engines\Engine;
@@ -48,7 +49,7 @@ final class ScoutSearchIndexWriterTest extends TestCase
                 && $models->pluck('id')->sort()->values()->all() === collect([$a, $b])->sort()->values()->all(),
         ));
 
-        $this->writerWith($engine)->put([$a, $b, 'missing-row']);
+        $this->writerWith($engine)->put([$a, $b, (string) Str::uuid()]);
     }
 
     public function test_remove_sends_the_keys_of_deleted_rows(): void

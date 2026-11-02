@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Search\Sources;
 
+use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Domain\Search\Enums\SearchAudience;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
@@ -14,6 +15,8 @@ use App\Infrastructure\Search\Sources\ArticleSearchSource;
 use App\Infrastructure\Search\Sources\EventSearchSource;
 use App\Infrastructure\Search\Sources\GallerySearchSource;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class CoreSearchSourcesTest extends TestCase
@@ -25,7 +28,28 @@ final class CoreSearchSourcesTest extends TestCase
         $event = EventModel::factory()->create(['is_published' => false]);
 
         $this->assertNull($this->app->make(EventSearchSource::class)->document($event->id));
-        $this->assertNull($this->app->make(EventSearchSource::class)->document('missing'));
+        $this->assertNull($this->app->make(EventSearchSource::class)->document((string) Str::uuid()));
+    }
+
+    /**
+     * @param  class-string<IndexedSearchSourceInterface>  $source
+     */
+    #[DataProvider('coreSources')]
+    public function test_non_uuid_id_has_no_document(string $source): void
+    {
+        $this->assertNull($this->app->make($source)->document('not-a-uuid'));
+    }
+
+    /**
+     * @return array<string, array{class-string<IndexedSearchSourceInterface>}>
+     */
+    public static function coreSources(): array
+    {
+        return [
+            'events' => [EventSearchSource::class],
+            'articles' => [ArticleSearchSource::class],
+            'galleries' => [GallerySearchSource::class],
+        ];
     }
 
     public function test_event_document_carries_dates_tags_and_location(): void

@@ -8,6 +8,7 @@ use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Search\Support\PlainText;
+use Illuminate\Support\Str;
 
 final class ArticleSearchSource implements IndexedSearchSourceInterface
 {
@@ -33,6 +34,11 @@ final class ArticleSearchSource implements IndexedSearchSourceInterface
 
     public function document(string $id): ?SearchDocumentDTO
     {
+        // Keys are uuids: anything else matches no row, and PostgreSQL rejects it in the query
+        if (! Str::isUuid($id)) {
+            return null;
+        }
+
         $article = ArticleModel::query()->with('tags')->whereKey($id)->where('is_published', true)->first();
 
         return $article instanceof ArticleModel ? $this->toDocument($article) : null;
