@@ -45,7 +45,7 @@ final class PanelCreateMenu
         }
 
         $groups = [];
-        foreach (self::orderedGroupLabels(array_keys($byGroup), $panel->getNavigationGroups()) as $label) {
+        foreach (self::orderedGroupLabels(array_keys($byGroup), $panel->getNavigation()) as $label) {
             $items = $byGroup[$label];
             usort($items, static fn (array $a, array $b): int => [$a['sort'], $a['label']] <=> [$b['sort'], $b['label']]);
 
@@ -96,17 +96,19 @@ final class PanelCreateMenu
     }
 
     /**
-     * The sidebar's group order first, then any other group, and ungrouped resources last.
+     * The sidebar's group order first, then any other group, and ungrouped resources last. The
+     * order comes from the built navigation, not the declared groups: a module group that only
+     * its resources name is never declared, yet the sidebar still places it.
      *
      * @param  list<string>  $labels
-     * @param  array<int|string, NavigationGroup|string>  $navigationGroups
+     * @param  array<NavigationGroup>  $navigation
      * @return list<string>
      */
-    private static function orderedGroupLabels(array $labels, array $navigationGroups): array
+    private static function orderedGroupLabels(array $labels, array $navigation): array
     {
         $order = [];
-        foreach ($navigationGroups as $key => $group) {
-            $order[] = $group instanceof NavigationGroup ? (string) $group->getLabel() : (is_string($key) ? $key : $group);
+        foreach ($navigation as $group) {
+            $order[] = (string) $group->getLabel();
         }
 
         usort($labels, static function (string $a, string $b) use ($order): int {
