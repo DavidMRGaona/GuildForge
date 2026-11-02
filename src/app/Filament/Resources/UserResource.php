@@ -42,6 +42,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
@@ -58,6 +59,8 @@ class UserResource extends BaseResource
     protected static string|\UnitEnum|null $navigationGroup = 'Administración';
 
     protected static ?int $navigationSort = 1;
+
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function getModelLabel(): string
     {
@@ -467,6 +470,22 @@ class UserResource extends BaseResource
             ->warning()
             ->persistent()
             ->send();
+    }
+
+    /**
+     * @return array<string>
+     */
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'display_name', 'email'];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return $record instanceof UserModel ? [__('Correo electrónico') => $record->email] : [];
     }
 
     /**

@@ -46,6 +46,8 @@ class EventResource extends BaseResource
 
     protected static ?int $navigationSort = 1;
 
+    protected static ?string $recordTitleAttribute = 'title';
+
     public static function getModelLabel(): string
     {
         return __('evento');

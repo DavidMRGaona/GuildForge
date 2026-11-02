@@ -28,6 +28,23 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         $this->assertStringContainsString('/upload/e_trim/w_1200,', $url);
     }
 
+    public function test_avatar_url_matches_the_client_side_avatar_preset(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'guildforge');
+
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_64,h_64,c_fill,g_face,q_auto,f_auto/guildforge/avatars/abc',
+            $builder->avatar('avatars/abc.jpg', 64),
+        );
+    }
+
+    public function test_animated_avatar_keeps_its_animation(): void
+    {
+        $url = (string) (new CloudinaryImageUrlBuilder('demo', ''))->avatar('avatars/abc-animated.gif', 64);
+
+        $this->assertStringContainsString('q_auto,f_auto,fl_animated/avatars/abc-animated', $url);
+    }
+
     public function test_dark_logo_is_padded_on_black(): void
     {
         $builder = new CloudinaryImageUrlBuilder('demo', 'guildforge');

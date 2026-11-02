@@ -32,14 +32,21 @@ Si el menú se puede plegar, el botón de la barra superior, a la izquierda, lo 
 
 Es la primera página al entrar. Muestra resúmenes, como los próximos eventos o los artículos recientes. Cada resumen solo sale si tienes permiso para ver su contenido.
 
+## La barra superior
+
+- **Buscar**: encuentra eventos, artículos, galerías y usuarios por su nombre. Sale con ⌘K en Mac o Ctrl+K en Windows y Linux. Solo encuentra lo que puedes abrir.
+- **Crear**: crea contenido nuevo sin pasar por su lista. Solo muestra lo que puedes crear.
+- **?**: abre la guía de la pantalla en la que estás o, si no tiene, la portada de la ayuda.
+- **Ver sitio web**: abre la web en otra pestaña.
+
 ## La ayuda
 
 - **Ayuda**, en el menú lateral, reúne todas las guías del panel que puedes usar.
 - Muchas pantallas tienen arriba el botón **Ayuda sobre esta pantalla**. Abre la guía de esa pantalla.
 
-## Volver a la web
+## Tu menú
 
-Pulsa tu avatar, arriba a la derecha, y elige **Visitar sitio**. En ese mismo menú cambias entre el modo claro y el oscuro y cierras sesión.
+Pulsa tu avatar, arriba a la derecha. Desde ahí vas a **Mi perfil** de la web (la imagen que subas allí es la de tu avatar), a **Visitar sitio** y a **Ayuda**, cambias entre el modo claro y el oscuro y cierras sesión.
 
 > [!TIP]
 > Si te falta una sección que necesitas, pide a quien gestiona los roles que te dé el permiso.

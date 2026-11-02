@@ -7,9 +7,11 @@ namespace App\Infrastructure\Persistence\Eloquent\Models;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
+use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
 use App\Notifications\Contracts\NamesMailRecipient;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -37,7 +39,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
+class UserModel extends Authenticatable implements FilamentUser, HasAvatar, MustVerifyEmail
 {
     use DeletesCloudinaryImages;
 
@@ -48,6 +50,8 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
     use Notifiable;
     use SoftDeletes;
     use StoresInstantsInStorageTimezone;
+
+    private const int PANEL_AVATAR_SIZE = 64;
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['avatar_public_id'];
@@ -104,6 +108,19 @@ class UserModel extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function canAccessPanel(Panel $panel): bool
     {
         return app(AuthorizationServiceInterface::class)->can($this, 'admin.access');
+    }
+
+    /**
+     * The panel shows the picture uploaded in the public profile; without one Filament draws
+     * the initials. 64px covers the 32px avatar of the top bar on high-density screens.
+     */
+    public function getFilamentAvatarUrl(): ?string
+    {
+        if ($this->avatar_public_id === null || $this->avatar_public_id === '') {
+            return null;
+        }
+
+        return app(CloudinaryImageUrlBuilder::class)->avatar($this->avatar_public_id, self::PANEL_AVATAR_SIZE);
     }
 
     /**

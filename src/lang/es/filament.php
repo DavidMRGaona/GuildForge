@@ -14,6 +14,14 @@ return [
     ],
     'user_menu' => [
         'visit_site' => 'Visitar sitio',
+        'profile' => 'Mi perfil',
+        'help' => 'Ayuda',
+    ],
+    'topbar' => [
+        'create' => 'Crear',
+        'create_tooltip' => 'Crear contenido',
+        'help' => 'Ayuda',
+        'site' => 'Ver sitio web',
     ],
     'pages' => [
         'about' => [
