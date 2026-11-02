@@ -6,6 +6,7 @@ namespace App\Infrastructure\Knowledge\Jobs;
 
 use App\Application\Knowledge\Services\KnowledgeCatalogSynchronizerInterface;
 use App\Application\Knowledge\Services\KnowledgeIndexerInterface;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -38,8 +39,13 @@ final class SyncKnowledgeCatalogJob implements ShouldBeUniqueUntilProcessing, Sh
         }
     }
 
-    public function handle(KnowledgeCatalogSynchronizerInterface $synchronizer, KnowledgeIndexerInterface $indexer): void
-    {
+    public function handle(
+        KnowledgeCatalogSynchronizerInterface $synchronizer,
+        KnowledgeIndexerInterface $indexer,
+        EnabledModulesResolverInterface $modules,
+    ): void {
+        // A long-lived worker memoized the enabled modules at boot: read them again so a module enabled since then counts
+        $modules->reset();
         $synchronizer->sync();
         $indexer->reindex();
     }
