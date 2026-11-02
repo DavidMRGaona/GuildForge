@@ -65,6 +65,11 @@ interface AuthServiceInterface
     public function updateProfile(string $userId, UpdateUserDTO $dto): UserResponseDTO;
 
     /**
+     * Replace the user's avatar, leaving the other profile fields and any pending email change alone.
+     */
+    public function updateAvatar(string $userId, string $avatarPublicId): UserResponseDTO;
+
+    /**
      * Change the user's password.
      */
     public function changePassword(string $userId, string $currentPassword, string $newPassword): bool;

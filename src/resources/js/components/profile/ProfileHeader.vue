@@ -33,10 +33,8 @@ const memberSinceDate = computed(() => {
     });
 });
 
-const avatarForm = useForm<UpdateProfileFormData>({
-    name: props.user.name,
-    display_name: props.user.displayName,
-    email: props.user.email,
+// The photo goes alone: sending the account fields with it cancelled a pending email change
+const avatarForm = useForm<Pick<UpdateProfileFormData, 'avatar'>>({
     avatar: null,
 });
 

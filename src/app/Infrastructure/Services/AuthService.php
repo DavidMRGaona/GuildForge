@@ -170,14 +170,13 @@ final readonly class AuthService implements AuthServiceInterface
     {
         $userModel = $this->getUserModelOrFail($userId);
 
-        // Handle avatar cleanup if avatar is being changed
-        if ($dto->avatarPublicId !== null && $userModel->avatar_public_id !== null && $userModel->avatar_public_id !== $dto->avatarPublicId) {
-            Storage::disk('images')->delete($userModel->avatar_public_id);
+        if ($dto->avatarPublicId !== null) {
+            $this->deleteReplacedAvatar($userModel, $dto->avatarPublicId);
         }
 
-        // Check if email is being changed
-        $emailIsChanging = $dto->email !== $userModel->email;
-        $pendingEmail = $emailIsChanging ? $dto->email : null;
+        // The current email cancels a pending change; the pending one keeps it without a new link
+        $requestsNewEmail = $dto->email !== $userModel->email && $dto->email !== $userModel->pending_email;
+        $pendingEmail = $dto->email === $userModel->email ? null : $dto->email;
 
         $userModel->update([
             'name' => $dto->name,
@@ -186,10 +185,25 @@ final readonly class AuthService implements AuthServiceInterface
             'avatar_public_id' => $dto->avatarPublicId ?? $userModel->avatar_public_id,
         ]);
 
-        // Send verification email if email is changing
-        if ($emailIsChanging) {
+        if ($requestsNewEmail) {
             $userModel->notify(new VerifyPendingEmailNotification($dto->email));
         }
+
+        Event::dispatch(new UserProfileUpdated((string) $userModel->id));
+
+        /** @var UserModel $freshUser */
+        $freshUser = $userModel->fresh();
+
+        return $this->dtoFactory->createUserDTO($freshUser);
+    }
+
+    public function updateAvatar(string $userId, string $avatarPublicId): UserResponseDTO
+    {
+        $userModel = $this->getUserModelOrFail($userId);
+
+        $this->deleteReplacedAvatar($userModel, $avatarPublicId);
+
+        $userModel->update(['avatar_public_id' => $avatarPublicId]);
 
         Event::dispatch(new UserProfileUpdated((string) $userModel->id));
 
@@ -276,6 +290,13 @@ final readonly class AuthService implements AuthServiceInterface
         $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
         return $userModel instanceof UserModel && $userModel->hasVerifiedEmail();
+    }
+
+    private function deleteReplacedAvatar(UserModel $userModel, string $newAvatarPublicId): void
+    {
+        if ($userModel->avatar_public_id !== null && $userModel->avatar_public_id !== $newAvatarPublicId) {
+            Storage::disk('images')->delete($userModel->avatar_public_id);
+        }
     }
 
     /**

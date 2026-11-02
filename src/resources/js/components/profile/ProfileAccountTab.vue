@@ -24,7 +24,8 @@ const passwordBlockedId = 'password-verification-required';
 const profileForm = useForm<Omit<UpdateProfileFormData, 'avatar'>>({
     name: props.user.name,
     display_name: props.user.displayName,
-    email: props.user.email,
+    // The pending email, if any: saving the other fields keeps that change, typing the current one cancels it
+    email: props.user.pendingEmail ?? props.user.email,
 });
 
 const updateProfile = () => {

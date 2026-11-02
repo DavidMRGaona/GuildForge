@@ -54,8 +54,16 @@ final class ProfileController extends Controller
             );
         }
 
-        /** @var array{name: string, email: string, display_name?: string|null} $validated */
+        /** @var array{name?: string, email?: string, display_name?: string|null} $validated */
         $validated = $request->validated();
+
+        if (! isset($validated['name'], $validated['email'])) {
+            if ($avatarPublicId !== null) {
+                $this->authService->updateAvatar((string) $user->id, $avatarPublicId);
+            }
+
+            return back()->with('success', __('auth.profile_updated'));
+        }
 
         $dto = UpdateUserDTO::fromArray([
             'name' => $validated['name'],
