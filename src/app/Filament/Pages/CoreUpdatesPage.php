@@ -10,6 +10,7 @@ use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
 use DateTimeInterface;
 use Filament\Actions\Action;
@@ -32,6 +33,7 @@ use Throwable;
 final class CoreUpdatesPage extends Page implements HasTable
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithTable;
 
     private const string LAST_CHECK_CACHE_KEY = 'updates.core.last_check';
@@ -137,6 +139,7 @@ final class CoreUpdatesPage extends Page implements HasTable
                 ->label(__('filament.updates.core.actions.check'))
                 ->icon('heroicon-o-magnifying-glass')
                 ->action('checkForUpdates'),
+            ...array_filter([$this->knowledgeGuideAction('core.panel.updates')]),
         ];
     }
 
