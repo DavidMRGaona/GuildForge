@@ -58,6 +58,24 @@ final class DatabaseKnowledgeSearchTest extends TestCase
         $this->assertSame([], $this->ids($this->search->search('inscripción contraseña', $this->candidates, 10)));
     }
 
+    public function test_a_term_matches_through_the_configured_synonyms(): void
+    {
+        $this->assertContains(['apuntarse', 'apuntarme', 'inscribirse', 'inscribirme'], config('knowledge.synonyms'));
+        $events = KnowledgeGuides::make('core.events', title: 'Eventos', bodyText: 'Para inscribirse en un evento, pulsa el botón.');
+
+        $hits = $this->search->search('apuntarme evento', [...$this->candidates, $events], 10);
+
+        $this->assertSame(['core.events'], $this->ids($hits));
+        $this->assertContains(['text' => 'inscribirse', 'match' => true], $hits[0]->snippet);
+    }
+
+    public function test_a_synonym_phrase_matches_a_single_word_query(): void
+    {
+        $leave = KnowledgeGuides::make('core.leave', title: 'Salir de una partida', bodyText: 'Puedes darse de baja hasta el inicio.');
+
+        $this->assertSame(['core.leave'], $this->ids($this->search->search('Cancelar', [...$this->candidates, $leave], 10)));
+    }
+
     public function test_keywords_are_searched(): void
     {
         $candidates = [KnowledgeGuides::make('core.fees', title: 'Pagos', keywords: ['cuota anual'])];
