@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Knowledge;
 
+use App\Application\Knowledge\Services\KnowledgeMetricsServiceInterface;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Livewire\Livewire;
+use Mockery;
+use RuntimeException;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
 use Tests\TestCase;
 
@@ -99,6 +103,23 @@ final class KnowledgeBasePageTest extends TestCase
         $component->call('submitSearch');
 
         $this->assertSame(1, DB::table('knowledge_search_misses')->where('audience', 'panel')->count());
+    }
+
+    public function test_a_failing_metrics_store_does_not_break_submitting_a_search(): void
+    {
+        Exceptions::fake();
+        $metrics = Mockery::mock(KnowledgeMetricsServiceInterface::class);
+        $metrics->shouldReceive('recordMiss')->once()->andThrow(new RuntimeException('metrics down'));
+        $this->app->instance(KnowledgeMetricsServiceInterface::class, $metrics);
+        $this->signIn();
+
+        Livewire::test(KnowledgeBasePage::class)
+            ->set('search', 'zzzzzzqq')
+            ->call('submitSearch')
+            ->assertOk()
+            ->assertSee(__('knowledge.panel.no_results'));
+
+        Exceptions::assertReported(RuntimeException::class);
     }
 
     public function test_submitting_a_search_with_results_or_too_short_records_nothing(): void

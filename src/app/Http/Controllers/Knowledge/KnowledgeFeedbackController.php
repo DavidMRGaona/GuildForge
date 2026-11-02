@@ -13,6 +13,7 @@ use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Knowledge\KnowledgeFeedbackRequest;
 use Illuminate\Http\Response;
+use Throwable;
 
 final class KnowledgeFeedbackController extends Controller
 {
@@ -36,8 +37,13 @@ final class KnowledgeFeedbackController extends Controller
         // One vote per guide and session: a repeat is acknowledged but not counted
         $key = 'knowledge.voted.'.$id->value();
         if (! $request->session()->has($key)) {
-            $this->metrics->recordVote($id, $request->isHelpful());
-            $request->session()->put($key, true);
+            // The vote is acknowledged even when the metrics store fails: the reader has nothing to fix
+            try {
+                $this->metrics->recordVote($id, $request->isHelpful());
+                $request->session()->put($key, true);
+            } catch (Throwable $e) {
+                report($e);
+            }
         }
 
         return response()->noContent();

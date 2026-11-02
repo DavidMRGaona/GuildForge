@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\Knowledge;
 
+use App\Application\Knowledge\Services\KnowledgeMetricsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
+use Mockery;
+use RuntimeException;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
 use Tests\TestCase;
 
@@ -85,6 +89,21 @@ final class KnowledgeFeedbackControllerTest extends TestCase
         }
 
         $this->postJson('/ayuda/core.signup/voto', ['helpful' => true])->assertTooManyRequests();
+    }
+
+    public function test_a_failing_metrics_store_does_not_break_votes_or_results(): void
+    {
+        Exceptions::fake();
+        $metrics = Mockery::mock(KnowledgeMetricsServiceInterface::class);
+        $metrics->shouldReceive('recordVote')->once()->andThrow(new RuntimeException('metrics down'));
+        $metrics->shouldReceive('recordMiss')->once()->andThrow(new RuntimeException('metrics down'));
+        $this->app->instance(KnowledgeMetricsServiceInterface::class, $metrics);
+        $this->actingAs(UserModel::factory()->create());
+
+        $this->postJson('/ayuda/core.signup/voto', ['helpful' => true])->assertNoContent();
+        $this->get('/ayuda?q=Zzzqx')->assertOk();
+
+        Exceptions::assertReported(RuntimeException::class);
     }
 
     public function test_searching_does_not_spend_the_voting_allowance(): void

@@ -14,6 +14,7 @@ use App\Domain\Knowledge\Exceptions\InvalidGuideIdException;
 use App\Domain\Knowledge\ValueObjects\GuideId;
 use Filament\Pages\Page;
 use Livewire\Attributes\Url;
+use Throwable;
 
 /**
  * The «Ayuda» page of the panel: documentation-style reader for the panel guides.
@@ -81,7 +82,12 @@ final class KnowledgeBasePage extends Page
         }
 
         if ($this->queries()->search($user, GuideAudience::Panel, $query, self::SEARCH_LIMIT) === []) {
-            app(KnowledgeMetricsServiceInterface::class)->recordMiss($query, GuideAudience::Panel);
+            // Counting a miss is a side note: a broken metrics store must not break the search
+            try {
+                app(KnowledgeMetricsServiceInterface::class)->recordMiss($query, GuideAudience::Panel);
+            } catch (Throwable $e) {
+                report($e);
+            }
         }
     }
 

@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 final class KnowledgeController extends Controller
 {
@@ -46,7 +47,12 @@ final class KnowledgeController extends Controller
                 : [];
 
             if ($request->isSearchable() && $results === []) {
-                $this->metrics->recordMiss($query, GuideAudience::Site);
+                // Counting a miss is a side note: a broken metrics store must not take the results page down
+                try {
+                    $this->metrics->recordMiss($query, GuideAudience::Site);
+                } catch (Throwable $e) {
+                    report($e);
+                }
             }
         }
 
