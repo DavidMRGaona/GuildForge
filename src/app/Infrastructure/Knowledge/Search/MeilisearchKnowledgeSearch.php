@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Infrastructure\Knowledge\Search;
 
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
+use App\Domain\Knowledge\Entities\Guide;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
+use App\Infrastructure\Search\Search\MeilisearchFilter;
 use Meilisearch\Endpoints\Indexes;
 
 /**
@@ -29,15 +31,8 @@ final readonly class MeilisearchKnowledgeSearch implements KnowledgeSearchInterf
             return [];
         }
 
-        $first = $candidates[0];
-        $ids = array_map(fn ($guide): string => $this->quote($guide->id->value()), $candidates);
         $options = [
-            'filter' => sprintf(
-                'active = true AND locale = %s AND audience = %s AND guide_id IN [%s]',
-                $this->quote($first->locale),
-                $this->quote($first->audience->value),
-                implode(', ', $ids),
-            ),
+            'filter' => $this->filterFor($candidates),
             'limit' => $limit,
             'attributesToRetrieve' => ['guide_id', 'locale'],
             'attributesToHighlight' => ['body_text', 'summary'],
@@ -55,8 +50,21 @@ final readonly class MeilisearchKnowledgeSearch implements KnowledgeSearchInterf
         return $this->mapper->map(is_array($raw) ? $raw : [], $candidates, $limit);
     }
 
-    private function quote(string $value): string
+    /**
+     * The filter that limits a search of the guides index to the candidates; the site search uses it too.
+     *
+     * @param  non-empty-list<Guide>  $candidates
+     * @return non-empty-string
+     */
+    public function filterFor(array $candidates): string
     {
-        return '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $value).'"';
+        $first = $candidates[0];
+
+        return sprintf(
+            'active = true AND locale = %s AND audience = %s AND %s',
+            MeilisearchFilter::quote($first->locale),
+            MeilisearchFilter::quote($first->audience->value),
+            MeilisearchFilter::in('guide_id', array_map(static fn (Guide $guide): string => $guide->id->value(), $candidates)),
+        );
     }
 }

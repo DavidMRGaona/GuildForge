@@ -27,6 +27,8 @@ use App\Infrastructure\Search\Observers\RefreshSearchDocumentObserver;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use App\Infrastructure\Search\Persistence\SearchDocumentStore;
 use App\Infrastructure\Search\Search\DatabaseSiteSearch;
+use App\Infrastructure\Search\Search\FallbackSiteSearch;
+use App\Infrastructure\Search\Search\MeilisearchSiteSearch;
 use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
 use App\Infrastructure\Search\Services\SearchAudienceResolver;
 use App\Infrastructure\Search\Services\SearchIndexer;
@@ -37,6 +39,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Psr\Log\LoggerInterface;
 
 final class SearchServiceProvider extends ServiceProvider
 {
@@ -46,10 +49,17 @@ final class SearchServiceProvider extends ServiceProvider
         $this->app->bind(SearchIndexerInterface::class, SearchIndexer::class);
         $this->app->bind(SearchSyncRunnerInterface::class, ProcessSearchSyncRunner::class);
         $this->app->bind(SearchAudienceResolverInterface::class, SearchAudienceResolver::class);
-        $this->app->bind(SiteSearchInterface::class, DatabaseSiteSearch::class);
+        // Meilisearch when Scout is configured for it (falling back to the database search on any failure), otherwise the database search
+        $this->app->bind(SiteSearchInterface::class, fn (Application $app): SiteSearchInterface => $this->usesMeilisearch($app)
+            ? new FallbackSiteSearch(
+                $app->make(MeilisearchSiteSearch::class),
+                $app->make(DatabaseSiteSearch::class),
+                $app->make(LoggerInterface::class),
+            )
+            : $app->make(DatabaseSiteSearch::class));
 
         // Meilisearch when Scout is configured for it, otherwise nothing: the database search reads the table
-        $this->app->bind(SearchIndexWriterInterface::class, fn (Application $app): SearchIndexWriterInterface => $app->make('config')->get('scout.driver') === 'meilisearch'
+        $this->app->bind(SearchIndexWriterInterface::class, fn (Application $app): SearchIndexWriterInterface => $this->usesMeilisearch($app)
             ? $app->make(ScoutSearchIndexWriter::class)
             : $app->make(NullSearchIndexWriter::class));
     }
@@ -85,6 +95,11 @@ final class SearchServiceProvider extends ServiceProvider
         foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {
             Event::listen($event, SyncSearchOnModuleChange::class);
         }
+    }
+
+    private function usesMeilisearch(Application $app): bool
+    {
+        return $app->make('config')->get('scout.driver') === 'meilisearch';
     }
 
     /**

@@ -84,9 +84,11 @@ final class MeilisearchHitMapper
     }
 
     /**
+     * Splits a highlighted Meilisearch field into plain text segments.
+     *
      * @return list<array{text: string, match: bool}>
      */
-    private function segments(string $formatted): array
+    public function segments(string $formatted): array
     {
         $parts = preg_split('/('.self::HIGHLIGHT_PRE_TAG.'|'.self::HIGHLIGHT_POST_TAG.')/u', $formatted, -1, PREG_SPLIT_DELIM_CAPTURE);
 
