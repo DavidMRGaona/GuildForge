@@ -42,7 +42,7 @@ final class KnowledgeCatalogSynchronizerTest extends TestCase
         $engine = Mockery::mock(Engine::class);
         $engine->shouldNotReceive('update');
         $engine->shouldNotReceive('delete');
-        $this->app->make(EngineManager::class)->extend('spy', static fn (): Engine => $engine);
+        $this->app->make(EngineManager::class)->extend('spy', fn (): Engine => $engine);
         config(['scout.driver' => 'spy']);
         $this->writeCoreGuide('a.md', 'account.one');
 
