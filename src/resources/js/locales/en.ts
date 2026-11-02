@@ -239,10 +239,10 @@ export default {
         resultsFor: 'Results for "{query}"',
         noResults: 'No results found for "{query}"',
         minCharsWarning: 'Type at least 2 characters to search',
-        tabAll: 'All',
         tabsLabel: 'Result types',
         resultsCount: '{count} result | {count} results',
         showMore: 'Show more results',
+        loadMoreError: 'More results could not be loaded. Please try again.',
     },
     knowledge: {
         contextualHelp: 'Help on this section',

@@ -11,6 +11,9 @@ interface ReloadOptions {
     only?: string[];
     preserveUrl?: boolean;
     onSuccess?: () => void;
+    onError?: () => void;
+    onHttpException?: () => boolean | void;
+    onNetworkError?: () => boolean | void;
     onFinish?: () => void;
 }
 
@@ -90,15 +93,16 @@ describe('Search/Index', () => {
         wrapper.unmount();
     });
 
-    it('renders the tabs and a row per result inside the tab panel', () => {
+    it('renders the tabs and a row per result', () => {
         const wrapper = mountPage({ type: 'events' });
 
-        expect(wrapper.findAll('[role="tab"]')).toHaveLength(3);
-        const panel = wrapper.get('[role="tabpanel"]');
-        expect(panel.attributes('aria-labelledby')).toBe('search-tab-events');
-        expect(panel.findAll('li')).toHaveLength(2);
-        expect(panel.text()).toContain('Partida 1');
-        expect(wrapper.get('[role="status"]').text()).toBe('3 resultados');
+        expect(wrapper.findAll('nav a')).toHaveLength(3);
+        expect(wrapper.get('nav a[aria-current="page"]').text()).toContain('Eventos');
+        const list = wrapper.get('[data-testid="search-results"]');
+        expect(list.findAll('li')).toHaveLength(2);
+        expect(list.text()).toContain('Partida 1');
+        expect(wrapper.get('[data-testid="search-results-count"]').text()).toBe('3 resultados');
+        expect(wrapper.find('[role="tabpanel"]').exists()).toBe(false);
 
         wrapper.unmount();
     });
@@ -125,13 +129,58 @@ describe('Search/Index', () => {
         options.onFinish?.();
         await flushPromises();
 
-        const rows = wrapper.findAll('[role="tabpanel"] li');
+        const rows = wrapper.findAll('[data-testid="search-results"] li');
         expect(rows).toHaveLength(3);
         const firstNewRow = rows[2];
         expect(firstNewRow?.text()).toContain('Partida 3');
         // The focus goes to the first new row, so a keyboard user carries on from there
         expect(document.activeElement).toBe(firstNewRow?.get('a').element);
         expect(wrapper.find('[data-testid="search-show-more"]').exists()).toBe(false);
+
+        wrapper.unmount();
+    });
+
+    it('re-enables show more and says so when the next page fails', async () => {
+        routerReload.mockClear();
+        const wrapper = mountPage();
+        const button = (): ReturnType<typeof wrapper.get> =>
+            wrapper.get('[data-testid="search-show-more"]');
+        const message = (): string => wrapper.get('[data-testid="search-show-more-error"]').text();
+
+        expect(wrapper.get('[data-testid="search-show-more-error"]').attributes('role')).toBe(
+            'status'
+        );
+        expect(message()).toBe('');
+
+        // A server error: the handler keeps Inertia's error dialog away
+        await button().trigger('click');
+        const options = routerReload.mock.calls[0]?.[0] ?? {};
+        expect(options.onHttpException?.()).toBe(false);
+        options.onFinish?.();
+        await flushPromises();
+
+        expect(button().attributes('disabled')).toBeUndefined();
+        expect(message()).toBe('No se han podido cargar más resultados. Inténtalo de nuevo.');
+        expect(wrapper.findAll('[data-testid="search-results"] li')).toHaveLength(2);
+
+        // Trying again clears the message; a network error brings it back
+        await button().trigger('click');
+        expect(message()).toBe('');
+        const retry = routerReload.mock.calls[1]?.[0] ?? {};
+        expect(retry.onNetworkError?.()).toBe(false);
+        await flushPromises();
+        expect(message()).toBe('No se han podido cargar más resultados. Inténtalo de nuevo.');
+
+        // Validation errors take the same path
+        await button().trigger('click');
+        routerReload.mock.calls[2]?.[0]?.onError?.();
+        await flushPromises();
+        expect(button().attributes('disabled')).toBeUndefined();
+        expect(message()).toBe('No se han podido cargar más resultados. Inténtalo de nuevo.');
+
+        // A new query starts clean
+        await wrapper.setProps({ query: 'dados' });
+        expect(message()).toBe('');
 
         wrapper.unmount();
     });
@@ -148,7 +197,7 @@ describe('Search/Index', () => {
 
         expect(wrapper.text()).toContain('Escribe al menos 2 caracteres para buscar');
         expect(wrapper.text()).not.toContain('No se encontraron resultados');
-        expect(wrapper.find('[role="tablist"]').exists()).toBe(false);
+        expect(wrapper.find('nav').exists()).toBe(false);
 
         wrapper.unmount();
     });
@@ -157,7 +206,7 @@ describe('Search/Index', () => {
         const wrapper = mountPage({ tabs: [], results: [], total: 0, hasMore: false });
 
         expect(wrapper.text()).toContain('No se encontraron resultados para "partida"');
-        expect(wrapper.find('[role="tablist"]').exists()).toBe(false);
+        expect(wrapper.find('nav').exists()).toBe(false);
         expect(wrapper.find('[data-testid="search-show-more"]').exists()).toBe(false);
 
         wrapper.unmount();
@@ -167,7 +216,7 @@ describe('Search/Index', () => {
         const wrapper = mountPage({ query: '', tabs: [], results: [], total: 0, hasMore: false });
 
         expect(wrapper.text()).not.toContain('No se encontraron resultados');
-        expect(wrapper.find('[role="tablist"]').exists()).toBe(false);
+        expect(wrapper.find('nav').exists()).toBe(false);
 
         wrapper.unmount();
     });

@@ -240,10 +240,10 @@ export default {
         resultsFor: 'Resultados para "{query}"',
         noResults: 'No se encontraron resultados para "{query}"',
         minCharsWarning: 'Escribe al menos 2 caracteres para buscar',
-        tabAll: 'Todo',
         tabsLabel: 'Tipos de resultado',
         resultsCount: '{count} resultado | {count} resultados',
         showMore: 'Ver más resultados',
+        loadMoreError: 'No se han podido cargar más resultados. Inténtalo de nuevo.',
     },
     knowledge: {
         contextualHelp: 'Ayuda sobre esta sección',

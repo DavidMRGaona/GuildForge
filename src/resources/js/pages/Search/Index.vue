@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Info, Search } from '@lucide/vue';
-import { computed, nextTick, ref } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { router } from '@inertiajs/vue3';
 import type { SearchError, SearchHit, SearchTab } from '@/types/search';
@@ -31,18 +31,27 @@ const props = withDefaults(defineProps<Props>(), {
     error: null,
 });
 
-const PANEL_ID = 'search-results';
-
 const { t } = useI18n();
 
-const panel = ref<HTMLElement | null>(null);
+const list = ref<HTMLElement | null>(null);
 const isLoadingMore = ref(false);
+const loadMoreFailed = ref(false);
 
-const activeTabId = computed(() =>
-    props.tabs.some((tab) => tab.key === props.type)
-        ? `search-tab-${props.type ?? 'all'}`
-        : undefined
+// Tabs and new queries keep the page mounted: an old failure must not linger
+watch(
+    () => [props.query, props.type],
+    () => {
+        loadMoreFailed.value = false;
+    }
 );
+
+/** Re-enables the button and says so; returning false keeps Inertia's error dialog away. */
+function failLoadingMore(): false {
+    isLoadingMore.value = false;
+    loadMoreFailed.value = true;
+
+    return false;
+}
 
 /**
  * Appends the next page: `results` is a merge prop, so a partial reload adds to it. The address
@@ -51,6 +60,7 @@ const activeTabId = computed(() =>
 function showMore(): void {
     const firstNewRow = props.results.length;
     isLoadingMore.value = true;
+    loadMoreFailed.value = false;
 
     router.reload({
         data: { pagina: props.page + 1 },
@@ -59,11 +69,14 @@ function showMore(): void {
         onSuccess: () => {
             // Keyboard users carry on from the first row they have not seen yet
             void nextTick(() => {
-                panel.value
-                    ?.querySelectorAll<HTMLElement>(':scope > ul > li > a')
-                    [firstNewRow]?.focus();
+                list.value?.querySelectorAll<HTMLElement>(':scope > li > a')[firstNewRow]?.focus();
             });
         },
+        onError: () => {
+            failLoadingMore();
+        },
+        onHttpException: failLoadingMore,
+        onNetworkError: failLoadingMore,
         onFinish: () => {
             isLoadingMore.value = false;
         },
@@ -104,31 +117,24 @@ function showMore(): void {
             </p>
         </div>
 
-        <SearchTabs
-            v-if="!error && tabs.length > 0"
-            :tabs="tabs"
-            :active="type"
-            :query="query"
-            :controls="PANEL_ID"
-        />
+        <SearchTabs v-if="!error && tabs.length > 0" :tabs="tabs" :active="type" :query="query" />
 
         <!-- Kept in the page while there is a query, so a screen reader hears each new count -->
         <p
             v-if="query && !error"
             role="status"
+            data-testid="search-results-count"
             :class="results.length > 0 ? 'mb-2 mt-4 text-sm text-base-muted' : 'sr-only'"
         >
             {{ t('search.resultsCount', { count: total }, total) }}
         </p>
 
-        <div
-            v-if="!error && results.length > 0"
-            :id="PANEL_ID"
-            ref="panel"
-            :role="tabs.length > 0 ? 'tabpanel' : undefined"
-            :aria-labelledby="activeTabId"
-        >
-            <ul class="-mx-3 divide-y divide-[var(--color-border)] sm:-mx-4">
+        <div v-if="!error && results.length > 0">
+            <ul
+                ref="list"
+                data-testid="search-results"
+                class="-mx-3 divide-y divide-[var(--color-border)] sm:-mx-4"
+            >
                 <li v-for="hit in results" :key="`${hit.type}:${hit.url}`" class="py-1">
                     <SearchResultItem :hit="hit" />
                 </li>
@@ -145,6 +151,14 @@ function showMore(): void {
                     {{ t('search.showMore') }}
                 </BaseButton>
             </div>
+
+            <p
+                role="status"
+                data-testid="search-show-more-error"
+                class="mt-3 text-center text-sm text-base-secondary"
+            >
+                <template v-if="loadMoreFailed">{{ t('search.loadMoreError') }}</template>
+            </p>
         </div>
     </div>
 </template>
