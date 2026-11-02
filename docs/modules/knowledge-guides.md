@@ -89,7 +89,7 @@ conditions:
 - `capabilities`: keys of registered [capabilities](#capabilities). Prefix with `!` to require that the capability does NOT pass (quote the value in YAML: `'!my-module.is_blocked'`).
 - `permissions`: a map with `all` (the user needs every permission) and/or `any` (at least one). Use the keys exactly as registered: core keys look like `settings.manage`, module keys like `<module>:<name>`. The lint fails if a permission is not registered.
 - `association_member`: `true` for members of the association only, `false` for people who are not. Membership is decided by the core (`AssociationMembershipServiceInterface`), never by a role name.
-- `modules`: module names that must be enabled.
+- `modules`: module names that must be enabled. A module's guides may only name the module itself: modules do not depend on each other, and the lint fails on any other name.
 
 An unreachable or failing capability never grants access: it counts as not passing.
 
@@ -138,6 +138,7 @@ public function registerKnowledgeCapabilities(): array
 Rules:
 
 - Keys are `<module>.<name>` (core capabilities use `core.`), for example `core.email_verification_required`.
+- A module's guides and action buttons may use core capabilities and the module's own, never another module's (the lint fails).
 - The class is resolved from the container, so constructor dependencies are injected.
 - Do not reimplement permissions or membership: ask `AuthorizationServiceInterface`, `AssociationMembershipServiceInterface` or your own domain service.
 - When a module is disabled, its capabilities are unregistered. A guide that depends on them should also list the module in `conditions.modules`.

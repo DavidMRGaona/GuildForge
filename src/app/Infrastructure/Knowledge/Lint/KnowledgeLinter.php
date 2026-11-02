@@ -101,8 +101,8 @@ final readonly class KnowledgeLinter
                 ...$this->checkCategory($parsed, $file, $categories),
                 ...$this->checkAliases($parsed, $file, $ids, $claimed),
                 ...$this->checkRelated($parsed, $file, $ids + $coreIds),
-                ...$this->checkConditions($parsed, $file),
-                ...$this->checkBody($parsed->body, $file),
+                ...$this->checkConditions($parsed, $file, $module),
+                ...$this->checkBody($parsed->body, $file, $module),
             );
         }
 
@@ -316,7 +316,7 @@ final readonly class KnowledgeLinter
     /**
      * @return list<KnowledgeLintIssueDTO>
      */
-    private function checkConditions(ParsedGuideDTO $parsed, string $file): array
+    private function checkConditions(ParsedGuideDTO $parsed, string $file, ?string $module): array
     {
         $issues = [];
         $conditions = $parsed->conditions;
@@ -332,15 +332,44 @@ final readonly class KnowledgeLinter
             if (! in_array($capability, $registered, true)) {
                 $issues[] = new KnowledgeLintIssueDTO($file, sprintf("capability '%s' is not registered", $capability));
             }
+            array_push($issues, ...$this->checkCapabilityOwner($capability, $module, $file));
+        }
+
+        // Modules do not depend on each other: a module guide may only name its own module
+        if ($module !== null) {
+            foreach ($conditions->modules as $required) {
+                if ($required !== $module) {
+                    $issues[] = new KnowledgeLintIssueDTO($file, sprintf("module '%s' is another module: module guides cannot depend on it", $required));
+                }
+            }
         }
 
         return $issues;
     }
 
     /**
+     * In a module guide, only core capabilities and the module's own are allowed.
+     *
      * @return list<KnowledgeLintIssueDTO>
      */
-    private function checkBody(string $body, string $file): array
+    private function checkCapabilityOwner(string $capability, ?string $module, string $file): array
+    {
+        if ($module === null) {
+            return [];
+        }
+
+        $prefix = explode('.', $capability, 2)[0];
+        if ($prefix === 'core' || $prefix === $module) {
+            return [];
+        }
+
+        return [new KnowledgeLintIssueDTO($file, sprintf("capability '%s' belongs to another module: module guides may use core capabilities and their own", $capability))];
+    }
+
+    /**
+     * @return list<KnowledgeLintIssueDTO>
+     */
+    private function checkBody(string $body, string $file, ?string $module): array
     {
         $text = $this->withoutCode($body);
         $issues = [];
@@ -365,7 +394,7 @@ final readonly class KnowledgeLinter
 
                 continue;
             }
-            array_push($issues, ...$this->checkButton(trim($parts[1]), isset($parts[3]) ? trim($parts[3]) : null, $file));
+            array_push($issues, ...$this->checkButton(trim($parts[1]), isset($parts[3]) ? trim($parts[3]) : null, $file, $module));
         }
 
         return $issues;
@@ -374,7 +403,7 @@ final readonly class KnowledgeLinter
     /**
      * @return list<KnowledgeLintIssueDTO>
      */
-    private function checkButton(string $routeName, ?string $condition, string $file): array
+    private function checkButton(string $routeName, ?string $condition, string $file, ?string $module): array
     {
         $issues = [];
         $route = Route::getRoutes()->getByName($routeName);
@@ -387,10 +416,12 @@ final readonly class KnowledgeLinter
 
         if ($condition !== null) {
             $key = ActionCondition::parse($condition)['key'];
-            $known = ActionCondition::kind($key, $this->permissions) === 'permission'
-                || in_array($key, $this->capabilities->keys(), true);
+            $isPermission = ActionCondition::kind($key, $this->permissions) === 'permission';
+            $known = $isPermission || in_array($key, $this->capabilities->keys(), true);
             if ($key === '' || ! $known) {
                 $issues[] = new KnowledgeLintIssueDTO($file, sprintf("condition '%s' of an action button is neither a permission nor a capability", $key));
+            } elseif (! $isPermission) {
+                array_push($issues, ...$this->checkCapabilityOwner($key, $module, $file));
             }
         }
 

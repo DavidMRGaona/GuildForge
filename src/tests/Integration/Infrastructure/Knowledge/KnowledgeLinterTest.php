@@ -201,6 +201,41 @@ final class KnowledgeLinterTest extends TestCase
         $this->assertIssue($this->lint(), "capability 'ghost.cap'");
     }
 
+    public function test_module_guide_may_use_core_and_its_own_capabilities_and_module(): void
+    {
+        $this->writeModuleGuide('fake', 'a.md', 'fake.one', body: '[[action:lint.plain|A|if=!fake.can_do_it]]', extra: "conditions:\n  capabilities: [fake.can_do_it, '!core.email_verification_required']\n  modules: [fake]\n");
+
+        $this->assertSame([], $this->lint('fake'));
+    }
+
+    public function test_module_guide_must_not_use_another_modules_capability(): void
+    {
+        $this->writeModuleGuide('demo', 'a.md', 'demo.one', extra: "conditions:\n  capabilities: ['!fake.can_do_it']\n");
+
+        $this->assertIssue($this->lint('demo'), "capability 'fake.can_do_it' belongs to another module");
+    }
+
+    public function test_module_button_must_not_use_another_modules_capability(): void
+    {
+        $this->writeModuleGuide('demo', 'a.md', 'demo.one', body: '[[action:lint.plain|A|if=fake.can_do_it]]');
+
+        $this->assertIssue($this->lint('demo'), "capability 'fake.can_do_it' belongs to another module");
+    }
+
+    public function test_module_guide_must_not_require_another_module(): void
+    {
+        $this->writeModuleGuide('demo', 'a.md', 'demo.one', extra: "conditions:\n  modules: [event-registrations]\n");
+
+        $this->assertIssue($this->lint('demo'), "module 'event-registrations' is another module");
+    }
+
+    public function test_core_guides_may_use_module_capabilities_and_modules(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: '[[action:lint.plain|A|if=fake.can_do_it]]', extra: "conditions:\n  capabilities: [fake.can_do_it]\n  modules: [fake]\n");
+
+        $this->assertSame([], $this->lint());
+    }
+
     public function test_unknown_button_route_is_reported(): void
     {
         $this->writeCoreGuide('a.md', 'core.one', body: '[[action:no.such.route|Ir]]');
