@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Search\Services;
 
+use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\Contracts\SearchSourceInterface;
 
 interface SearchSourceRegistryInterface
@@ -23,9 +24,22 @@ interface SearchSourceRegistryInterface
     public function clear(): void;
 
     /**
-     * Resolved sources in registration order; classes that fail to resolve are logged and left out.
+     * Resolved live sources in registration order; classes that fail to resolve are logged and left out.
+     * Live sources owned by a module are logged and left out too: modules offer indexed sources only.
      *
      * @return list<SearchSourceInterface>
      */
     public function sources(): array;
+
+    /**
+     * Resolved indexed sources in registration order, one per type().
+     *
+     * @return list<IndexedSearchSourceInterface>
+     */
+    public function indexedSources(): array;
+
+    /**
+     * Module that registered the indexed source of this type, or null for core (or an unknown type).
+     */
+    public function moduleOf(string $type): ?string;
 }

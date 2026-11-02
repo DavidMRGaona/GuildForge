@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Search\Services;
 
+use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\Contracts\SearchSourceInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use Illuminate\Contracts\Container\Container;
@@ -61,19 +62,23 @@ final class SearchSourceRegistry implements SearchSourceRegistryInterface
                 continue;
             }
 
-            $key = $this->key($source, $module);
+            if ($module !== null) {
+                Log::warning('[SearchSourceRegistry] Modules can only offer indexed search sources, live source skipped', [
+                    'source' => $sourceClass,
+                    'module' => $module,
+                ]);
+
+                continue;
+            }
+
+            $key = $this->read(static fn (): string => $source->key(), $source, $module);
 
             if ($key === null) {
                 continue;
             }
 
             if (isset($resolved[$key])) {
-                Log::warning('[SearchSourceRegistry] Search source key already taken, source skipped', [
-                    'source' => $sourceClass,
-                    'module' => $module,
-                    'key' => $key,
-                    'takenBy' => $resolved[$key]::class,
-                ]);
+                $this->warnTaken($sourceClass, $module, $key, $resolved[$key]::class);
 
                 continue;
             }
@@ -84,7 +89,56 @@ final class SearchSourceRegistry implements SearchSourceRegistryInterface
         return array_values($resolved);
     }
 
-    private function resolve(string $sourceClass, ?string $module): ?SearchSourceInterface
+    /**
+     * @return list<IndexedSearchSourceInterface>
+     */
+    public function indexedSources(): array
+    {
+        $resolved = [];
+
+        foreach ($this->sources as $sourceClass => $module) {
+            $source = $this->resolve($sourceClass, $module);
+
+            if (! $source instanceof IndexedSearchSourceInterface) {
+                continue;
+            }
+
+            $type = $this->read(static fn (): string => $source->type(), $source, $module);
+
+            if ($type === null) {
+                continue;
+            }
+
+            if (isset($resolved[$type])) {
+                $this->warnTaken($sourceClass, $module, $type, $resolved[$type]::class);
+
+                continue;
+            }
+
+            $resolved[$type] = $source;
+        }
+
+        return array_values($resolved);
+    }
+
+    public function moduleOf(string $type): ?string
+    {
+        foreach ($this->sources as $sourceClass => $module) {
+            $source = $this->resolve($sourceClass, $module);
+
+            if (! $source instanceof IndexedSearchSourceInterface) {
+                continue;
+            }
+
+            if ($this->read(static fn (): string => $source->type(), $source, $module) === $type) {
+                return $module;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolve(string $sourceClass, ?string $module): SearchSourceInterface|IndexedSearchSourceInterface|null
     {
         try {
             $source = $this->container->make($sourceClass);
@@ -98,7 +152,7 @@ final class SearchSourceRegistry implements SearchSourceRegistryInterface
             return null;
         }
 
-        if (! $source instanceof SearchSourceInterface) {
+        if (! $source instanceof SearchSourceInterface && ! $source instanceof IndexedSearchSourceInterface) {
             Log::warning('[SearchSourceRegistry] Registered class is not a search source', [
                 'source' => $sourceClass,
                 'module' => $module,
@@ -110,10 +164,13 @@ final class SearchSourceRegistry implements SearchSourceRegistryInterface
         return $source;
     }
 
-    private function key(SearchSourceInterface $source, ?string $module): ?string
+    /**
+     * @param  callable(): string  $read
+     */
+    private function read(callable $read, object $source, ?string $module): ?string
     {
         try {
-            return $source->key();
+            return $read();
         } catch (Throwable $exception) {
             Log::warning('[SearchSourceRegistry] Failed to read search source key', [
                 'source' => $source::class,
@@ -123,5 +180,15 @@ final class SearchSourceRegistry implements SearchSourceRegistryInterface
 
             return null;
         }
+    }
+
+    private function warnTaken(string $sourceClass, ?string $module, string $key, string $takenBy): void
+    {
+        Log::warning('[SearchSourceRegistry] Search source key already taken, source skipped', [
+            'source' => $sourceClass,
+            'module' => $module,
+            'key' => $key,
+            'takenBy' => $takenBy,
+        ]);
     }
 }
