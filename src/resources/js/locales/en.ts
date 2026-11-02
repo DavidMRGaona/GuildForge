@@ -247,7 +247,7 @@ export default {
         title: 'Help centre',
         heroTitle: 'How can we help you?',
         searchLabel: 'Search the help',
-        searchPlaceholder: 'Search: "join a game", "pay the fee"…',
+        searchPlaceholder: 'Search: "change the password", "find an event"…',
         searchResultsLabel: 'Search results',
         gettingStarted: 'Getting started',
         categories: 'Categories',

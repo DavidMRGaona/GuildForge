@@ -248,7 +248,7 @@ export default {
         title: 'Centro de ayuda',
         heroTitle: '¿En qué podemos ayudarte?',
         searchLabel: 'Buscar en la ayuda',
-        searchPlaceholder: 'Busca: «apuntarme a una partida», «pagar la cuota»…',
+        searchPlaceholder: 'Busca: «cambiar la contraseña», «buscar un evento»…',
         searchResultsLabel: 'Resultados de la búsqueda',
         gettingStarted: 'Para empezar',
         categories: 'Categorías',
