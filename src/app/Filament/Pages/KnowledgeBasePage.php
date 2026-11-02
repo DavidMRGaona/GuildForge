@@ -60,12 +60,14 @@ final class KnowledgeBasePage extends Page
     {
         $this->guide = $guideId;
         $this->search = '';
+        $this->scrollToContent();
     }
 
     public function showHome(): void
     {
         $this->guide = null;
         $this->search = '';
+        $this->scrollToContent();
     }
 
     /**
@@ -77,6 +79,19 @@ final class KnowledgeBasePage extends Page
 
         return $panel !== null
             && ($panel->isSidebarCollapsibleOnDesktop() || $panel->isSidebarFullyCollapsibleOnDesktop());
+    }
+
+    /**
+     * A guide opened from far down the page (a related guide, a search hit) starts at its top, not
+     * where the previous one was being read. Runs once the new content is on the page; when its
+     * start is already in view (below the sticky top bar), the page stays where it is.
+     */
+    private function scrollToContent(): void
+    {
+        $this->js(<<<'JS'
+            const content = document.getElementById('kb-content')
+            if (content && content.getBoundingClientRect().top < 96) content.scrollIntoView({ block: 'start' })
+            JS);
     }
 
     /**

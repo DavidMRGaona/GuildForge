@@ -14,6 +14,18 @@
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 
+/* On desktop the sidebar shares the page background, so a thin rule in the site's border colour
+   (stone-200 light, #44403c dark) tells it from the content, folded to icons or not */
+@media (min-width: 1024px) {
+    .fi-main-sidebar {
+        border-inline-end: 1px solid var(--gray-200);
+    }
+
+    .dark .fi-main-sidebar {
+        border-inline-end-color: var(--gray-700);
+    }
+}
+
 /* The global search shortcut hint is no use on a phone and leaves the field a few letters wide */
 @media (max-width: 639px) {
     .fi-global-search-field .fi-input-wrp-suffix {
