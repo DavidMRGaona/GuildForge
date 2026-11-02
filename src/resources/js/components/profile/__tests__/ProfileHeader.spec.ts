@@ -6,12 +6,15 @@ import en from '@/locales/en';
 import es from '@/locales/es';
 import type { User } from '@/types/models';
 
+const forms = vi.hoisted(() => ({ created: [] as Record<string, unknown>[] }));
+
 vi.mock('@inertiajs/vue3', () => ({
-    useForm: <T extends object>(data: T): T & { processing: boolean; post: () => void } => ({
-        ...data,
-        processing: false,
-        post: vi.fn(),
-    }),
+    useForm: <T extends object>(data: T): T & { processing: boolean; post: () => void } => {
+        const form = { ...data, processing: false, post: vi.fn() };
+        forms.created.push(form);
+
+        return form;
+    },
 }));
 
 const user: User = {
@@ -19,7 +22,7 @@ const user: User = {
     name: 'John Doe',
     displayName: null,
     email: 'john@example.com',
-    pendingEmail: null,
+    pendingEmail: 'new@example.com',
     avatarPublicId: null,
     emailVerified: true,
     createdAt: '2026-01-01T00:00:00Z',
@@ -61,5 +64,24 @@ describe('ProfileHeader', () => {
         expect(classesOf(header).filter((name) => /^(dark:bg-|bg-neutral-)/.test(name))).toEqual(
             []
         );
+    });
+
+    // Sending the account fields with the photo cancelled a pending email change (#279)
+    it('uploads the photo without the name or the email', async () => {
+        forms.created.length = 0;
+        const wrapper = mountHeader();
+        const input = wrapper.get('input[type="file"]');
+        const file = new File(['image'], 'avatar.png', { type: 'image/png' });
+        Object.defineProperty(input.element, 'files', { value: [file] });
+        URL.createObjectURL = vi.fn(() => 'blob:avatar');
+
+        await input.trigger('change');
+
+        const form = forms.created.at(-1);
+        expect(form?.post).toHaveBeenCalledWith('/perfil', expect.anything());
+        expect(form).toMatchObject({ avatar: file });
+        expect(form).not.toHaveProperty('email');
+        expect(form).not.toHaveProperty('name');
+        expect(form).not.toHaveProperty('display_name');
     });
 });

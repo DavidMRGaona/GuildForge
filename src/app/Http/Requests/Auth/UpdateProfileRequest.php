@@ -25,10 +25,11 @@ final class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            // The avatar may come alone (the profile header), so a pending email change is not touched
+            'name' => ['required_without:avatar', 'string', 'max:255'],
             'display_name' => ['nullable', 'string', 'max:255'],
             'email' => [
-                'required',
+                'required_with:name',
                 'string',
                 'email',
                 'max:255',
