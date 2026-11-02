@@ -246,6 +246,7 @@ export default {
         loadMoreError: 'No se han podido cargar más resultados. Inténtalo de nuevo.',
         panelLabel: 'Buscar en la web',
         seeAll: 'Ver todos los resultados ({count})',
+        suggestionsLabel: 'Sugerencias',
         suggestionsCount: 'Sin sugerencias | {count} sugerencia | {count} sugerencias',
     },
     knowledge: {

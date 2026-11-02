@@ -4,7 +4,8 @@ import { useRoutes } from '@/composables/useRoutes';
 import type { SearchHit } from '@/types/search';
 
 const DEBOUNCE_MS = 200;
-const MIN_CHARS = 2;
+/** Shorter queries get no suggestions; Enter still goes to the results page. */
+export const MIN_CHARS = 2;
 
 export interface UseSearchSuggestionsReturn {
     query: Ref<string>;

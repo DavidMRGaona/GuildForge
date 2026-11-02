@@ -45,6 +45,7 @@ vi.mock('@inertiajs/vue3', () => ({
 }));
 
 vi.mock('@/composables/useSearchSuggestions', () => ({
+    MIN_CHARS: 2,
     useSearchSuggestions: (): typeof suggestions => suggestions,
 }));
 
@@ -311,6 +312,96 @@ describe('SearchPanel', () => {
 
         await combobox().trigger('keydown', { key: 'Tab', shiftKey: true });
         expect(document.activeElement).toBe(seeAll.element);
+    });
+
+    it('typing clears the active option', async () => {
+        suggestions.query.value = 'dra';
+        suggestions.results.value = [makeHit('Uno'), makeHit('Dos')];
+        suggestions.total.value = 2;
+        mountPanel();
+
+        await combobox().trigger('keydown', { key: 'ArrowDown' });
+        expect(combobox().attributes('aria-activedescendant')).toBeDefined();
+
+        // The old suggestions are still listed while the new ones are on their way
+        await combobox().setValue('orcos');
+        expect(combobox().attributes('aria-activedescendant')).toBeUndefined();
+
+        await combobox().trigger('keydown', { key: 'Enter' });
+
+        expect(mocks.visit).toHaveBeenCalledWith('/buscar?q=orcos');
+    });
+
+    it('names the suggestion list', () => {
+        suggestions.query.value = 'dra';
+        suggestions.results.value = [makeHit('Uno')];
+        mountPanel();
+
+        expect(dom().get('[role="listbox"]').attributes('aria-label')).toBe('Sugerencias');
+    });
+
+    it('keeps tab inside after a click on the panel itself', async () => {
+        suggestions.query.value = 'dragón';
+        suggestions.results.value = [makeHit('Uno')];
+        suggestions.total.value = 1;
+        mountPanel();
+        await nextTick();
+        const dialog = dom().get('[role="dialog"]');
+        expect(dialog.attributes('tabindex')).toBe('-1');
+
+        (dialog.element as HTMLElement).focus();
+        await dialog.trigger('keydown', { key: 'Tab' });
+        expect(document.activeElement).toBe(combobox().element);
+
+        (dialog.element as HTMLElement).focus();
+        await dialog.trigger('keydown', { key: 'Tab', shiftKey: true });
+        expect(document.activeElement).toBe(
+            dom().get('[data-testid="search-panel-see-all"]').element
+        );
+    });
+
+    it('returns focus after slash to what was focused before', async () => {
+        mountHeader();
+        const outside = document.createElement('button');
+        document.body.append(outside);
+        const magnifier = dom().get('button[aria-label="Buscar"]');
+
+        // Opened with the magnifier first: that trigger must not be reused afterwards
+        (magnifier.element as HTMLElement).focus();
+        await magnifier.trigger('click');
+        await nextTick();
+        await combobox().trigger('keydown', { key: 'Escape' });
+        await nextTick();
+
+        outside.focus();
+        pressSlash(outside);
+        await nextTick();
+        await nextTick();
+        await combobox().trigger('keydown', { key: 'Escape' });
+        await nextTick();
+        expect(document.activeElement).toBe(outside);
+
+        outside.blur();
+        expect(document.activeElement).toBe(document.body);
+        pressSlash(document.body);
+        await nextTick();
+        await nextTick();
+        await combobox().trigger('keydown', { key: 'Escape' });
+        await nextTick();
+        expect(document.activeElement).toBe(magnifier.element);
+    });
+
+    it('slash does nothing while another modal dialog is open', () => {
+        mountPanel(false);
+        const other = document.createElement('div');
+        other.setAttribute('role', 'dialog');
+        other.setAttribute('aria-modal', 'true');
+        document.body.append(other);
+
+        const event = pressSlash(document.body);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(mocks.calls).toEqual([]);
     });
 
     it('closes when another page is visited', async () => {

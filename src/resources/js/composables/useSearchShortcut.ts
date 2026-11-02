@@ -1,9 +1,11 @@
 import { onBeforeUnmount, onMounted } from 'vue';
 
 const TYPING_TARGETS = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
+const OPEN_MODALS = '[aria-modal="true"], dialog[open]';
 
 /**
- * Calls `open` when «/» is pressed while the person is not typing in a field.
+ * Calls `open` when «/» is pressed while the person is not typing in a field and no other
+ * modal dialog is open.
  *
  * Shift is allowed: on a Spanish keyboard «/» is Shift+7. The key is only swallowed when it
  * opens the search, so pages and fields that use it keep working.
@@ -17,6 +19,9 @@ export function useSearchShortcut(open: () => void, isOpen: () => boolean): void
             return;
         }
         if (event.target instanceof Element && event.target.closest(TYPING_TARGETS)) {
+            return;
+        }
+        if (document.querySelector(OPEN_MODALS)) {
             return;
         }
         event.preventDefault();

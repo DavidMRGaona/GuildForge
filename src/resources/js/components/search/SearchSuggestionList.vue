@@ -1,11 +1,8 @@
 <script setup lang="ts">
+import type { SearchHit } from '@/types/search';
+
 /** One suggestion of the header panel: title, type and date when it has one. */
-interface SuggestionOption {
-    title: string;
-    url: string;
-    typeLabel: string;
-    date: string | null;
-}
+type SuggestionOption = Pick<SearchHit, 'title' | 'url' | 'typeLabel' | 'date'>;
 
 defineProps<{
     id: string;

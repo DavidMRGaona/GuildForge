@@ -245,6 +245,7 @@ export default {
         loadMoreError: 'More results could not be loaded. Please try again.',
         panelLabel: 'Search the site',
         seeAll: 'See all results ({count})',
+        suggestionsLabel: 'Suggestions',
         suggestionsCount: 'No suggestions | {count} suggestion | {count} suggestions',
     },
     knowledge: {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef, watch } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { Search, Sun, Moon, Monitor, Menu, X } from '@lucide/vue';
@@ -39,7 +39,14 @@ const fitsFullBar = useFitsWithoutOverflow(headerRow, () => [
 useOnNavigate(() => {
     isMobileMenuOpen.value = false;
     isThemeMenuOpen.value = false;
-    searchTrigger = null;
+});
+
+// Read when the panel closes (focus return) and forgotten afterwards, so a later «/» does not
+// send focus to a button that did not open it
+watch(isSearchOpen, (isOpen) => {
+    if (!isOpen) {
+        searchTrigger = null;
+    }
 });
 
 const appName = computed(() => page.props.appName as string);
@@ -71,10 +78,16 @@ function openSearch(event: MouseEvent): void {
     isSearchOpen.value = true;
 }
 
-/** The button that opened the panel, or the visible magnifier (or menu button) after «/». */
-function searchReturnFocus(): HTMLElement | null {
+/**
+ * The button that opened the panel; after «/», whatever was focused before, or the visible
+ * magnifier (menu button when the bar is collapsed) when that was the page itself.
+ */
+function searchReturnFocus(opener: HTMLElement | null): HTMLElement | null {
     if (searchTrigger?.isConnected) {
         return searchTrigger;
+    }
+    if (opener?.isConnected) {
+        return opener;
     }
     const fullBarShown = fitsFullBar.value && window.matchMedia('(min-width: 768px)').matches;
     return (fullBarShown ? searchButton.value : menuButton.value) ?? null;

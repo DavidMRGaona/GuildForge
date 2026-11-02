@@ -6,20 +6,22 @@ import { Search, X } from '@lucide/vue';
 import { useOnNavigate } from '@/composables/useOnNavigate';
 import { useRoutes } from '@/composables/useRoutes';
 import { useSearchShortcut } from '@/composables/useSearchShortcut';
-import { useSearchSuggestions } from '@/composables/useSearchSuggestions';
+import { MIN_CHARS, useSearchSuggestions } from '@/composables/useSearchSuggestions';
 import SearchSuggestionList from './SearchSuggestionList.vue';
 
 const props = defineProps<{
     open: boolean;
-    /** Where focus goes when the person closes the panel; the element focused before, otherwise. */
-    returnFocus?: () => HTMLElement | null;
+    /**
+     * Where focus goes when the person closes the panel, given the element focused before it
+     * opened (null when that was the body). Without it, focus goes back to that element.
+     */
+    returnFocus?: (opener: HTMLElement | null) => HTMLElement | null;
 }>();
 
 const emit = defineEmits<{
     'update:open': [value: boolean];
 }>();
 
-const MIN_CHARS = 2;
 const FOCUSABLE = 'input, button:not([disabled]), a[href]';
 
 const { t } = useI18n();
@@ -65,7 +67,7 @@ function close(restoreFocus = true): void {
     }
     emit('update:open', false);
     if (restoreFocus) {
-        const target = props.returnFocus?.() ?? opener;
+        const target = props.returnFocus ? props.returnFocus(opener) : opener;
         void nextTick(() => target?.focus());
     }
 }
@@ -125,18 +127,30 @@ function onDialogKeydown(event: KeyboardEvent): void {
     if (event.key !== 'Tab') {
         return;
     }
-    // Keeps Tab inside the panel while it is open
-    const focusable = dialogRef.value?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [];
-    const edge = event.shiftKey ? focusable[0] : focusable[focusable.length - 1];
-    if (document.activeElement === edge) {
+    // Keeps Tab inside the panel while it is open, also from the panel itself (after a click on
+    // a spot that takes no focus)
+    const focusable = Array.from(dialogRef.value?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const current = focusable.indexOf(document.activeElement as HTMLElement);
+    if (current === -1 || document.activeElement === (event.shiftKey ? first : last)) {
         event.preventDefault();
-        (event.shiftKey ? focusable[focusable.length - 1] : focusable[0])?.focus();
+        (event.shiftKey ? last : first)?.focus();
     }
 }
 
+// New suggestions, or a query they no longer answer: nothing stays marked. Synchronous, so an
+// Enter right after typing never opens a suggestion for the previous query
 watch(results, () => {
     activeIndex.value = -1;
 });
+watch(
+    query,
+    () => {
+        activeIndex.value = -1;
+    },
+    { flush: 'sync' }
+);
 
 watch(
     () => props.open,
@@ -174,6 +188,7 @@ onBeforeUnmount(() => setScrollLocked(false));
                 ref="dialogRef"
                 role="dialog"
                 aria-modal="true"
+                tabindex="-1"
                 :aria-label="t('search.panelLabel')"
                 class="flex h-full flex-col bg-elevated md:mx-auto md:h-auto md:max-h-[calc(100dvh-8rem)] md:max-w-2xl md:rounded-lg md:border md:border-default md:shadow-xl dark:shadow-neutral-900/50"
                 @keydown="onDialogKeydown"
@@ -213,7 +228,7 @@ onBeforeUnmount(() => setScrollLocked(false));
                     <SearchSuggestionList
                         v-show="isExpanded"
                         :id="`${uid}-listbox`"
-                        :label="t('search.panelLabel')"
+                        :label="t('search.suggestionsLabel')"
                         :options="results"
                         :active-index="activeIndex"
                         :option-id="optionId"
