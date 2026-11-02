@@ -138,7 +138,6 @@ final readonly class GuideConditions
             }
         }
 
-        /** @var list<string> $value */
         return $value;
     }
 }
