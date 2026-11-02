@@ -53,7 +53,7 @@ final readonly class EventQueryService implements EventQueryServiceInterface
         QueryHelpers::applyTagFilter($query, $tagSlugs);
 
         $events = QueryHelpers::applyPagination($query, $page, $perPage)
-            ->orderedByStart('desc')
+            ->orderedUpcomingFirst(now())
             ->get();
 
         return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();

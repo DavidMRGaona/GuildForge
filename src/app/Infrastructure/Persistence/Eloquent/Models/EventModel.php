@@ -8,6 +8,7 @@ use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\HasSlug;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\EventModelFactory;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -34,6 +35,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, TagModel> $tags
  *
  * @method static Builder<EventModel> orderedByStart(string $direction = 'asc')
+ * @method static Builder<EventModel> orderedUpcomingFirst(DateTimeInterface $now)
  */
 final class EventModel extends Model
 {
@@ -106,6 +108,27 @@ final class EventModel extends Model
     public function scopeOrderedByStart(Builder $query, string $direction = 'asc'): Builder
     {
         return $query->orderBy('start_date', $direction)->orderBy('created_at', $direction)->orderBy('id', $direction);
+    }
+
+    /**
+     * Scope to order events not started yet soonest first, followed by the rest latest first.
+     *
+     * Past events get NULL in the upcoming keys, so they tie there and fall through to the
+     * descending order; ties only compare NULL with NULL, which SQLite and PostgreSQL agree on.
+     *
+     * @param  Builder<EventModel>  $query
+     * @return Builder<EventModel>
+     */
+    public function scopeOrderedUpcomingFirst(Builder $query, DateTimeInterface $now): Builder
+    {
+        $upcoming = 'CASE WHEN start_date >= ? THEN %s END';
+
+        return $query
+            ->orderByRaw('CASE WHEN start_date >= ? THEN 0 ELSE 1 END', [$now])
+            ->orderByRaw(sprintf($upcoming, 'start_date'), [$now])
+            ->orderByRaw(sprintf($upcoming, 'created_at'), [$now])
+            ->orderByRaw(sprintf($upcoming, 'id'), [$now])
+            ->orderedByStart('desc');
     }
 
     /**

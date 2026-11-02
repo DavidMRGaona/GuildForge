@@ -32,6 +32,6 @@ Cada día muestra sus actividades con la hora de inicio y de fin. Debajo del cal
 
 ## La lista de eventos
 
-Si prefieres una lista, abre **Eventos**. Los que empiezan más tarde salen primero, y puedes filtrarlos con **Filtrar por etiqueta**. La página de cada evento indica si es un evento próximo o pasado.
+Si prefieres una lista, abre **Eventos**. Primero salen los próximos, del más cercano al más lejano, y después los pasados, del más reciente al más antiguo. Puedes filtrarlos con **Filtrar por etiqueta**. La página de cada evento indica si es un evento próximo o pasado.
 
 [[action:calendar|Abrir el calendario]]
