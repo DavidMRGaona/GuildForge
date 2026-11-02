@@ -150,6 +150,7 @@ The `docker/prod/entrypoint.sh` script runs when the container starts:
 6. Opens the deployment log entry (`php artisan core:record-deployment start`)
 7. Runs pending migrations (`php artisan migrate --force`); on failure it records `fail` and stops
 8. Discovers modules (`php artisan module:discover`) and syncs permissions (`php artisan permissions:sync`)
+   - then syncs the knowledge base (`php artisan knowledge:sync`); a failure only logs a warning and never stops the start
 9. Caches configuration, clears routes and caches views; on failure it records `fail` and stops
 10. Closes the deployment log entry (`php artisan core:record-deployment finish`)
 11. Starts Supervisord
@@ -446,6 +447,25 @@ make es-test       # Connection test and test log submission
 make es-health     # Cluster health
 make es-indices    # Index list
 ```
+
+### Knowledge base search (Meilisearch)
+
+The in-app help (knowledge base) searches its guides with [Meilisearch](https://www.meilisearch.com) when it is configured. It is optional: without it the built-in fallback searches the guides in PHP and everything works, only with simpler ranking and without typo tolerance.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SCOUT_DRIVER` | `meilisearch` to use the search service, `null` (default) for the built-in fallback | `meilisearch` |
+| `SCOUT_PREFIX` | Prefix of the index names; unique per site when several share one Meilisearch | `site1_` |
+| `MEILISEARCH_HOST` | URL of the Meilisearch service | `http://meilisearch:7700` |
+| `MEILISEARCH_KEY` | API key of the site | (secret) |
+
+**One key per site.** Do not give a site the master key. Create an API key for each site restricted to its prefix (`indexes: ["site1_*"]`) with the actions the site needs (documents, indexes and settings, search). A key limited to its prefix cannot read or delete another site's indexes.
+
+**Indexing.** `knowledge:sync` runs on every container start (see [Production entrypoint](#production-entrypoint)): it loads the guides of the core and the enabled modules into the database and refreshes the index. Run it by hand after changing the search variables.
+
+**The index can be rebuilt.** It is derived from the guides and the database, so it needs no backup: if the volume is lost, start Meilisearch again and run `php artisan knowledge:sync`.
+
+**Failures never reach visitors.** If Meilisearch is down or the key is wrong, searches fall back to the built-in search and a warning is logged; the deploy does not fail either.
 
 ### Redis
 
