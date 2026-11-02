@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Application\Search\Services\SearchAudienceResolverInterface;
 use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Application\Search\Services\SearchIndexerInterface;
+use App\Application\Search\Services\SearchMetricsServiceInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Search\Services\SearchSyncRunnerInterface;
 use App\Application\Search\Services\SiteSearchInterface;
@@ -32,6 +33,7 @@ use App\Infrastructure\Search\Search\MeilisearchSiteSearch;
 use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
 use App\Infrastructure\Search\Services\SearchAudienceResolver;
 use App\Infrastructure\Search\Services\SearchIndexer;
+use App\Infrastructure\Search\Services\SearchMetricsService;
 use App\Infrastructure\Search\Sources\ArticleSearchSource;
 use App\Infrastructure\Search\Sources\EventSearchSource;
 use App\Infrastructure\Search\Sources\GallerySearchSource;
@@ -47,6 +49,7 @@ final class SearchServiceProvider extends ServiceProvider
     {
         $this->app->bind(SearchDocumentStoreInterface::class, SearchDocumentStore::class);
         $this->app->bind(SearchIndexerInterface::class, SearchIndexer::class);
+        $this->app->bind(SearchMetricsServiceInterface::class, SearchMetricsService::class);
         $this->app->bind(SearchSyncRunnerInterface::class, ProcessSearchSyncRunner::class);
         $this->app->bind(SearchAudienceResolverInterface::class, SearchAudienceResolver::class);
         // Meilisearch when Scout is configured for it (falling back to the database search on any failure), otherwise the database search

@@ -24,6 +24,7 @@ return [
         'tags' => 'Etiquetas',
         'menu_items' => 'Menú de navegación',
         'settings' => 'Configuración',
+        'search' => 'Búsqueda',
         'mail' => 'Correo electrónico',
         'updates' => 'Actualizaciones',
         'admin' => 'Administración',
@@ -109,6 +110,9 @@ return [
         ],
         'updates' => [
             'apply' => 'Aplicar actualizaciones',
+        ],
+        'search' => [
+            'view_stats' => 'Ver estadísticas de búsqueda',
         ],
         'mail' => [
             'configure' => 'Configurar correo electrónico',
