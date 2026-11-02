@@ -83,7 +83,7 @@ conditions:
     all: [my-module:tables.create]
     any: [my-module:tables.update, my-module:tables.delete]
   association_member: true
-  modules: [event-registrations]
+  modules: [my-module]
 ```
 
 - `capabilities`: keys of registered [capabilities](#capabilities). Prefix with `!` to require that the capability does NOT pass (quote the value in YAML: `'!my-module.is_blocked'`).
