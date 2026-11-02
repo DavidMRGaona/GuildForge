@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers;
 
 use App\Application\Search\Services\SearchSourceRegistryInterface;
+use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia as Assert;
+use Mockery;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
 use Tests\Support\Search\FakeSearchSource;
 use Tests\Support\Search\ThrowingSearchSource;
@@ -275,6 +277,20 @@ final class SearchControllerTest extends TestCase
     public function test_guests_get_no_help_block(): void
     {
         $this->seedHelpGuides();
+
+        $this->get('/buscar?q=apuntarse')->assertInertia(
+            fn (Assert $page) => $page->where('sources', [])
+        );
+    }
+
+    public function test_users_who_must_verify_their_email_get_no_help_block(): void
+    {
+        $this->seedHelpGuides();
+        $user = UserModel::factory()->unverified()->create();
+        $policy = Mockery::mock(EmailVerificationPolicyInterface::class);
+        $policy->shouldReceive('mustVerify')->andReturnTrue();
+        $this->app->instance(EmailVerificationPolicyInterface::class, $policy);
+        $this->actingAs($user);
 
         $this->get('/buscar?q=apuntarse')->assertInertia(
             fn (Assert $page) => $page->where('sources', [])

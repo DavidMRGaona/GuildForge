@@ -9,6 +9,7 @@ use App\Application\Knowledge\DTOs\Response\KnowledgeSearchHitDTO;
 use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Application\Search\Contracts\SearchSourceInterface;
 use App\Application\Search\DTOs\SearchResultDTO;
+use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Domain\Knowledge\Enums\GuideAudience;
 
 /**
@@ -16,7 +17,10 @@ use App\Domain\Knowledge\Enums\GuideAudience;
  */
 final readonly class KnowledgeSearchSource implements SearchSourceInterface
 {
-    public function __construct(private KnowledgeQueryServiceInterface $knowledge) {}
+    public function __construct(
+        private KnowledgeQueryServiceInterface $knowledge,
+        private EmailVerificationPolicyInterface $emailVerification,
+    ) {}
 
     public function key(): string
     {
@@ -30,7 +34,8 @@ final readonly class KnowledgeSearchSource implements SearchSourceInterface
 
     public function search(string $query, ?object $user, int $limit): array
     {
-        if ($user === null) {
+        // The help centre is closed to accounts that must verify their email first: its search block is too
+        if ($user === null || $this->emailVerification->mustVerify($user)) {
             return [];
         }
 
