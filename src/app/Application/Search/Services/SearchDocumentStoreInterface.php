@@ -37,6 +37,14 @@ interface SearchDocumentStoreInterface
     public function deleteType(string $type): array;
 
     /**
+     * Removes the documents of the type that belong to a module not listed (core documents stay).
+     *
+     * @param  list<string>  $enabledModules
+     * @return list<string> uuids of the removed rows
+     */
+    public function deleteTypeOfDisabledModules(string $type, array $enabledModules): array;
+
+    /**
      * Every type with at least one stored document.
      *
      * @return list<string>

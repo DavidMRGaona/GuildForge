@@ -170,4 +170,16 @@ final class SearchDocumentStoreTest extends TestCase
 
         $this->assertSame(['article', 'event'], $types);
     }
+
+    public function test_delete_type_of_disabled_modules_keeps_core_and_enabled_module_rows(): void
+    {
+        $core = $this->store->upsert('page', null, $this->document('core'));
+        $enabled = $this->store->upsert('page', 'enabled-module', $this->document('enabled'));
+        $disabled = $this->store->upsert('page', 'disabled-module', $this->document('disabled'));
+        $this->store->upsert('other', 'disabled-module', $this->document('other'));
+
+        $this->assertSame([$disabled], $this->store->deleteTypeOfDisabledModules('page', ['enabled-module']));
+        $this->assertEqualsCanonicalizing([$core, $enabled], SearchDocumentModel::query()->where('type', 'page')->pluck('id')->all());
+        $this->assertSame(1, SearchDocumentModel::query()->where('type', 'other')->count());
+    }
 }

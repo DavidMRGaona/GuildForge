@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Search\Jobs;
 
-use App\Application\Modules\Services\EnabledModulesResolverInterface;
-use App\Application\Search\Services\SearchIndexerInterface;
+use App\Application\Search\Services\SearchSyncRunnerInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -16,6 +15,9 @@ use Throwable;
 
 /**
  * Rebuilds the search documents of one type, or of every type, after modules change.
+ *
+ * The sync runs in a fresh PHP process: this one (a request or a long-lived worker) booted with the previous
+ * set of modules, so its source registry lacks the sources of a module enabled since.
  */
 final class SyncSearchIndexJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -47,14 +49,8 @@ final class SyncSearchIndexJob implements ShouldBeUniqueUntilProcessing, ShouldQ
         }
     }
 
-    public function handle(SearchIndexerInterface $indexer, EnabledModulesResolverInterface $modules): void
+    public function handle(SearchSyncRunnerInterface $runner): void
     {
-        // A long-lived worker memoized the enabled modules at boot: read them again so a module disabled since then counts
-        $modules->reset();
-        $result = $indexer->sync($this->type);
-
-        if ($result->error !== null) {
-            Log::warning('[Search] The search documents sync had problems.', ['type' => $this->type, 'error' => $result->error]);
-        }
+        $runner->sync($this->type);
     }
 }

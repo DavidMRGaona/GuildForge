@@ -24,6 +24,8 @@ use RuntimeException;
 use Tests\Support\Search\InMemoryIndexedSearchSource;
 use Tests\Support\Search\RecordingSearchIndexWriter;
 use Tests\Support\Search\SecondInMemoryIndexedSearchSource;
+use Tests\Support\Search\ThrowingTypeIndexedSearchSource;
+use Tests\Support\Search\UnresolvableIndexedSearchSource;
 use Tests\TestCase;
 
 final class SearchIndexerTest extends TestCase
@@ -100,6 +102,14 @@ final class SearchIndexerTest extends TestCase
     private function rowId(string $type, string $sourceId): string
     {
         return SearchDocumentModel::query()->where('type', $type)->where('source_id', $sourceId)->firstOrFail()->id;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function pendingRemovals(): array
+    {
+        return array_values(DB::table('search_pending_removals')->orderBy('id')->pluck('id')->map(static fn (mixed $id): string => (string) $id)->all());
     }
 
     public function test_sync_upserts_documents_and_removes_missing_ones(): void
@@ -214,6 +224,163 @@ final class SearchIndexerTest extends TestCase
         $this->assertSame(['a'], $this->sourceIds('event'));
     }
 
+    public function test_a_failed_engine_removal_is_replayed_by_the_next_sync(): void
+    {
+        $gone = $this->store->upsert('event', null, $this->document('gone'));
+        $source = $this->source('event', [$this->document('a')]);
+        $this->writer->failOn = 'remove';
+
+        $first = $this->indexer()->sync();
+
+        $this->assertNotNull($first->error);
+        $this->assertSame(['a'], $this->sourceIds('event'));
+        $this->assertSame([$gone], $this->pendingRemovals());
+
+        $this->writer->failOn = null;
+        $source->documents = [$this->document('a')];
+        $second = $this->indexer()->sync();
+
+        $this->assertNull($second->error);
+        $this->assertSame([$gone], $this->writer->removed);
+        $this->assertSame([], $this->pendingRemovals());
+    }
+
+    public function test_removals_skipped_after_an_engine_failure_are_recorded(): void
+    {
+        $orphan = $this->store->upsert('orphan', null, $this->document('o'));
+        $gone = $this->store->upsert('event', null, $this->document('gone'));
+        $this->source('event', []);
+        // The settings fail first, so the run never calls the engine again
+        $this->writer->failOn = 'syncSettings';
+
+        $this->indexer()->sync();
+
+        $this->assertSame([], $this->writer->removed);
+        $this->assertEqualsCanonicalizing([$orphan, $gone], $this->pendingRemovals());
+    }
+
+    public function test_a_type_sync_replays_every_pending_removal(): void
+    {
+        DB::table('search_pending_removals')->insert(['id' => 'f3d1c6d0-0000-4000-8000-000000000001', 'created_at' => now()]);
+        $this->source('event', []);
+
+        $this->indexer()->sync('event');
+
+        $this->assertSame(['f3d1c6d0-0000-4000-8000-000000000001'], $this->writer->removed);
+        $this->assertSame([], $this->pendingRemovals());
+    }
+
+    public function test_the_refresh_job_replays_pending_removals_before_its_own(): void
+    {
+        DB::table('search_pending_removals')->insert(['id' => 'f3d1c6d0-0000-4000-8000-000000000001', 'created_at' => now()]);
+        $row = $this->store->upsert('event', null, $this->document('a'));
+        $this->source('event', []);
+
+        $this->indexer()->refresh('event', 'a');
+
+        $this->assertSame(['f3d1c6d0-0000-4000-8000-000000000001', $row], $this->writer->removed);
+        $this->assertSame([], $this->pendingRemovals());
+    }
+
+    public function test_nothing_is_recorded_without_a_search_engine(): void
+    {
+        $this->app->instance(SearchIndexWriterInterface::class, new NullSearchIndexWriter);
+        $this->store->upsert('event', null, $this->document('gone'));
+        $this->store->upsert('orphan', null, $this->document('o'));
+        $this->source('event', [$this->document('a')]);
+
+        $result = $this->indexer()->sync();
+        $this->indexer()->forget('event', 'a');
+
+        $this->assertNull($result->error);
+        $this->assertSame(2, $result->removed);
+        $this->assertSame([], $this->pendingRemovals());
+    }
+
+    public function test_a_source_that_cannot_be_loaded_keeps_orphan_rows_and_reports_it(): void
+    {
+        $this->enabledModules = ['kept-module'];
+        $unloaded = $this->store->upsert('game_table', 'kept-module', $this->document('g'));
+        $core = $this->store->upsert('page', null, $this->document('p'));
+        $disabled = $this->store->upsert('campaign', 'disabled-module', $this->document('c'));
+        $this->registry->register(UnresolvableIndexedSearchSource::class, 'kept-module');
+        $this->source('event', [$this->document('e')]);
+
+        $result = $this->indexer()->sync();
+
+        $this->assertNotNull($result->error);
+        $this->assertStringContainsString(UnresolvableIndexedSearchSource::class, $result->error);
+        $this->assertNotNull(SearchDocumentModel::query()->find($unloaded));
+        $this->assertNotNull(SearchDocumentModel::query()->find($core));
+        // Rows of a module that is not enabled are still removed in the same run
+        $this->assertNull(SearchDocumentModel::query()->find($disabled));
+        $this->assertSame([$disabled], $this->writer->removed);
+        $this->assertSame(['e'], $this->sourceIds('event'));
+    }
+
+    public function test_a_type_sync_keeps_its_rows_when_a_source_cannot_be_loaded(): void
+    {
+        $row = $this->store->upsert('game_table', null, $this->document('g'));
+        $this->registry->register(ThrowingTypeIndexedSearchSource::class);
+
+        $result = $this->indexer()->sync('game_table');
+
+        $this->assertNotNull($result->error);
+        $this->assertNotNull(SearchDocumentModel::query()->find($row));
+    }
+
+    public function test_a_store_failure_in_one_type_does_not_stop_the_others(): void
+    {
+        $real = $this->store;
+        $this->app->instance(SearchDocumentStoreInterface::class, new readonly class($real) implements SearchDocumentStoreInterface
+        {
+            public function __construct(private SearchDocumentStoreInterface $store) {}
+
+            public function upsert(string $type, ?string $module, SearchDocumentDTO $doc): string
+            {
+                return $this->store->upsert($type, $module, $doc);
+            }
+
+            public function delete(string $type, string $sourceId): ?string
+            {
+                return $this->store->delete($type, $sourceId);
+            }
+
+            public function deleteExcept(string $type, array $keepSourceIds): array
+            {
+                if ($type === 'event') {
+                    throw new RuntimeException('database hiccup');
+                }
+
+                return $this->store->deleteExcept($type, $keepSourceIds);
+            }
+
+            public function deleteType(string $type): array
+            {
+                return $this->store->deleteType($type);
+            }
+
+            public function deleteTypeOfDisabledModules(string $type, array $enabledModules): array
+            {
+                return $this->store->deleteTypeOfDisabledModules($type, $enabledModules);
+            }
+
+            public function types(): array
+            {
+                return $this->store->types();
+            }
+        });
+        $this->store->upsert('article', null, $this->document('gone'));
+        $this->source('event', [$this->document('e')]);
+        $this->secondSource('article', [$this->document('x')]);
+
+        $result = $this->indexer()->sync();
+
+        $this->assertNotNull($result->error);
+        $this->assertStringContainsString('Type "event" not synced: database hiccup', $result->error);
+        $this->assertSame(['x'], $this->sourceIds('article'));
+    }
+
     public function test_refresh_upserts_the_document(): void
     {
         $this->source('event', [$this->document('a')]);
@@ -243,6 +410,17 @@ final class SearchIndexerTest extends TestCase
 
         $this->assertSame([], $this->sourceIds('orphan'));
         $this->assertSame([$row], $this->writer->removed);
+    }
+
+    public function test_refresh_keeps_the_row_when_a_source_cannot_be_loaded(): void
+    {
+        $row = $this->store->upsert('game_table', null, $this->document('g'));
+        $this->registry->register(UnresolvableIndexedSearchSource::class);
+
+        $this->indexer()->refresh('game_table', 'g');
+
+        $this->assertNotNull(SearchDocumentModel::query()->find($row));
+        $this->assertSame([], $this->writer->removed);
     }
 
     public function test_forget_removes_the_document_whatever_the_source_says(): void
@@ -300,7 +478,16 @@ final class SearchIndexerTest extends TestCase
         $this->source('event', [$this->document('a')]);
 
         $this->indexer()->refresh('event', 'a');
+        $this->assertSame(['a'], $this->sourceIds('event'));
+
+        $this->source('event', [$this->document('a', 'Título nuevo')]);
+        $this->indexer()->refresh('event', 'a');
+        $this->assertSame('Título nuevo', SearchDocumentModel::query()->findOrFail($this->rowId('event', 'a'))->title);
+
+        $row = $this->rowId('event', 'a');
         $this->indexer()->forget('event', 'a');
+        $this->assertSame([], $this->sourceIds('event'));
+        $this->assertSame([$row], $this->pendingRemovals());
 
         $log->shouldHaveReceived('warning')->atLeast()->once();
     }

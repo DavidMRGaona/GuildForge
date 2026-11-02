@@ -8,6 +8,8 @@ use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
+use App\Infrastructure\Search\Index\PendingSearchRemovals;
+use App\Infrastructure\Search\Index\SearchIndexMirror;
 use App\Infrastructure\Search\Index\SearchIndexWriterInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +23,9 @@ use Throwable;
  * does not (or when the record is forgotten, or no source owns the type any more).
  *
  * A failing source or engine is logged and the job ends: with the sync queue it runs at commit time, where
- * an exception would reach the request, and the nightly sync puts either right.
+ * an exception would reach the request. A source failure leaves the row as it was and the nightly sync
+ * settles it; an engine failure is handled by SearchIndexMirror (puts are redone by every sync, removals are
+ * recorded and replayed).
  */
 final class RefreshSearchDocumentJob implements ShouldQueue
 {
@@ -39,7 +43,9 @@ final class RefreshSearchDocumentJob implements ShouldQueue
         SearchSourceRegistryInterface $registry,
         SearchDocumentStoreInterface $store,
         SearchIndexWriterInterface $writer,
+        PendingSearchRemovals $pending,
     ): void {
+        $mirror = new SearchIndexMirror($writer, $pending);
         $document = null;
         $module = null;
 
@@ -50,6 +56,14 @@ final class RefreshSearchDocumentJob implements ShouldQueue
                 if ($source instanceof IndexedSearchSourceInterface) {
                     $document = $source->document($this->sourceId);
                     $module = $registry->moduleOf($this->type);
+                } elseif ($registry->unresolved() !== []) {
+                    // The type may belong to a source that could not be loaded: never drop its row for that
+                    Log::warning('[Search] No source could be found for a search document while some could not be loaded; it was left as it was.', [
+                        'type' => $this->type,
+                        'source_id' => $this->sourceId,
+                    ]);
+
+                    return;
                 }
             } catch (Throwable $e) {
                 $this->warn('[Search] A search source failed; the document was left as it was.', $e);
@@ -62,18 +76,14 @@ final class RefreshSearchDocumentJob implements ShouldQueue
             $removed = $store->delete($this->type, $this->sourceId);
 
             if ($removed !== null) {
-                $this->mirror(static function () use ($writer, $removed): void {
-                    $writer->remove([$removed]);
-                });
+                $mirror->replayPendingRemovals();
+                $mirror->remove([$removed]);
             }
 
             return;
         }
 
-        $row = $store->upsert($this->type, $module, $document);
-        $this->mirror(static function () use ($writer, $row): void {
-            $writer->put([$row]);
-        });
+        $mirror->put([$store->upsert($this->type, $module, $document)]);
     }
 
     private function sourceOf(SearchSourceRegistryInterface $registry): ?IndexedSearchSourceInterface
@@ -85,18 +95,6 @@ final class RefreshSearchDocumentJob implements ShouldQueue
         }
 
         return null;
-    }
-
-    /**
-     * @param  callable(): void  $write
-     */
-    private function mirror(callable $write): void
-    {
-        try {
-            $write();
-        } catch (Throwable $e) {
-            $this->warn('[Search] The search index could not be updated.', $e);
-        }
     }
 
     private function warn(string $message, Throwable $e): void

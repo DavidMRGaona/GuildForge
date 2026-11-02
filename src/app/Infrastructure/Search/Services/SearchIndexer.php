@@ -10,6 +10,8 @@ use App\Application\Search\DTOs\SearchSyncResultDTO;
 use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Application\Search\Services\SearchIndexerInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
+use App\Infrastructure\Search\Index\PendingSearchRemovals;
+use App\Infrastructure\Search\Index\SearchIndexMirror;
 use App\Infrastructure\Search\Index\SearchIndexWriterInterface;
 use App\Infrastructure\Search\Jobs\RefreshSearchDocumentJob;
 use Illuminate\Contracts\Bus\Dispatcher;
@@ -17,11 +19,12 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * The table is written first and is the source of truth; the engine mirrors the rows that changed.
+ * The table is written first and is the source of truth; the engine mirrors the rows that changed
+ * (see SearchIndexMirror for what happens when it is unreachable).
  *
- * A broken source never costs documents: its rows stay as they were until it works again. An unreachable
- * engine never stops the table from being rebuilt: after the first failure the engine is left alone for the
- * rest of the run (so one outage is one timeout, not one per chunk) and the next sync puts it right.
+ * A broken source never costs documents: when its documents() fails its rows stay as they were, and when a
+ * registered source cannot even be loaded no type is treated as orphaned, except the rows of modules that
+ * are not enabled.
  */
 final readonly class SearchIndexer implements SearchIndexerInterface
 {
@@ -31,6 +34,7 @@ final readonly class SearchIndexer implements SearchIndexerInterface
         private SearchSourceRegistryInterface $registry,
         private SearchDocumentStoreInterface $store,
         private SearchIndexWriterInterface $writer,
+        private PendingSearchRemovals $pending,
         private EnabledModulesResolverInterface $modules,
         private Dispatcher $bus,
     ) {}
@@ -51,20 +55,22 @@ final readonly class SearchIndexer implements SearchIndexerInterface
         $removed = 0;
         /** @var list<string> $errors */
         $errors = [];
-        $engineUp = true;
-        $this->mirror(function (): void {
-            $this->writer->syncSettings();
-        }, $errors, $engineUp);
+        $mirror = new SearchIndexMirror($this->writer, $this->pending);
 
         try {
-            $sources = $this->sourcesByType();
+            $mirror->syncSettings();
+            $mirror->replayPendingRemovals();
+
+            $enabled = $this->modules->names();
+            $sources = $this->sourcesByType($enabled);
+            $unresolved = $this->registry->unresolved();
 
             foreach ($sources as $sourceType => [$source, $module]) {
                 if ($type !== null && $sourceType !== $type) {
                     continue;
                 }
 
-                [$written, $deleted] = $this->syncSource($sourceType, $source, $module, $errors, $engineUp);
+                [$written, $deleted] = $this->syncSource($sourceType, $source, $module, $mirror, $errors);
                 $indexed += $written;
                 $removed += $deleted;
             }
@@ -74,28 +80,32 @@ final readonly class SearchIndexer implements SearchIndexerInterface
                 ? array_diff($this->store->types(), array_keys($sources))
                 : (isset($sources[$type]) ? [] : [$type]);
 
+            foreach ($unresolved as $sourceClass) {
+                $errors[] = sprintf('Search source %s could not be loaded; orphan types kept.', $sourceClass);
+            }
+
             foreach ($orphans as $orphan) {
-                $ids = $this->store->deleteType($orphan);
-                $removed += count($ids);
-                $this->remove($ids, $errors, $engineUp);
+                $removed += $this->removeOrphan($orphan, $unresolved === [], $enabled, $mirror, $errors);
             }
         } catch (Throwable $e) {
             Log::warning('[Search] The search documents could not be synced.', ['exception' => $e]);
             $errors[] = 'Search documents not synced: '.$e->getMessage();
         }
 
+        $errors = [...$errors, ...$mirror->errors()];
+
         return new SearchSyncResultDTO($indexed, $removed, $errors === [] ? null : implode('; ', $errors));
     }
 
     /**
-     * Indexed sources by type with their module; sources of a module no longer enabled are left out, so a
-     * long-lived worker that booted with that module empties its types instead of rebuilding them.
+     * Indexed sources by type with their module; sources of a module no longer enabled are left out, so their
+     * types are emptied like any other orphan.
      *
+     * @param  list<string>  $enabled
      * @return array<string, array{IndexedSearchSourceInterface, ?string}>
      */
-    private function sourcesByType(): array
+    private function sourcesByType(array $enabled): array
     {
-        $enabled = $this->modules->names();
         $sources = [];
 
         // The registry resolves every class on each call: ask it once per sync and once per type, never per document
@@ -117,7 +127,7 @@ final readonly class SearchIndexer implements SearchIndexerInterface
      * @param  list<string>  $errors
      * @return array{int, int} documents written and removed
      */
-    private function syncSource(string $type, IndexedSearchSourceInterface $source, ?string $module, array &$errors, bool &$engineUp): array
+    private function syncSource(string $type, IndexedSearchSourceInterface $source, ?string $module, SearchIndexMirror $mirror, array &$errors): array
     {
         /** @var array<string, true> $keep */
         $keep = [];
@@ -130,14 +140,22 @@ final readonly class SearchIndexer implements SearchIndexerInterface
                 $keep[$document->id] = true;
 
                 if (count($pending) >= self::CHUNK) {
-                    $this->put($pending, $errors, $engineUp);
+                    $mirror->put($pending);
                     $pending = [];
                 }
             }
+
+            $mirror->put($pending);
+            $pending = [];
+
+            $removed = $this->store->deleteExcept($type, array_map(strval(...), array_keys($keep)));
+            $mirror->remove($removed);
+
+            return [count($keep), count($removed)];
         } catch (Throwable $e) {
-            // What was already written is mirrored, and nothing is removed for a source that did not finish
-            $this->put($pending, $errors, $engineUp);
-            Log::warning('[Search] A search source failed; its documents were left as they were.', [
+            // What was already written is mirrored, and nothing is removed for a type that did not finish
+            $mirror->put($pending);
+            Log::warning('[Search] A search type could not be synced; its documents were left as they were.', [
                 'type' => $type,
                 'module' => $module,
                 'exception' => $e,
@@ -146,59 +164,29 @@ final readonly class SearchIndexer implements SearchIndexerInterface
 
             return [count($keep), 0];
         }
-
-        $this->put($pending, $errors, $engineUp);
-
-        $removed = $this->store->deleteExcept($type, array_map(strval(...), array_keys($keep)));
-        $this->remove($removed, $errors, $engineUp);
-
-        return [count($keep), count($removed)];
     }
 
     /**
-     * @param  list<string>  $rowIds
-     * @param  list<string>  $errors
-     */
-    private function put(array $rowIds, array &$errors, bool &$engineUp): void
-    {
-        if ($rowIds !== []) {
-            $this->mirror(function () use ($rowIds): void {
-                $this->writer->put($rowIds);
-            }, $errors, $engineUp);
-        }
-    }
-
-    /**
-     * @param  list<string>  $rowIds
-     * @param  list<string>  $errors
-     */
-    private function remove(array $rowIds, array &$errors, bool &$engineUp): void
-    {
-        if ($rowIds !== []) {
-            $this->mirror(function () use ($rowIds): void {
-                $this->writer->remove($rowIds);
-            }, $errors, $engineUp);
-        }
-    }
-
-    /**
-     * Runs a write to the engine unless an earlier one failed during this run.
+     * Empties an orphan type, or, while some registered source could not be loaded (it may own the type),
+     * only removes the rows of modules that are not enabled.
      *
-     * @param  callable(): void  $write
+     * @param  list<string>  $enabled
      * @param  list<string>  $errors
      */
-    private function mirror(callable $write, array &$errors, bool &$engineUp): void
+    private function removeOrphan(string $type, bool $allSourcesLoaded, array $enabled, SearchIndexMirror $mirror, array &$errors): int
     {
-        if (! $engineUp) {
-            return;
-        }
-
         try {
-            $write();
+            $ids = $allSourcesLoaded
+                ? $this->store->deleteType($type)
+                : $this->store->deleteTypeOfDisabledModules($type, $enabled);
+            $mirror->remove($ids);
+
+            return count($ids);
         } catch (Throwable $e) {
-            $engineUp = false;
-            Log::warning('[Search] The search index could not be updated.', ['exception' => $e]);
-            $errors[] = 'Search index not updated: '.$e->getMessage();
+            Log::warning('[Search] The documents of a search type without source could not be removed.', ['type' => $type, 'exception' => $e]);
+            $errors[] = sprintf('Type "%s" not removed: %s', $type, $e->getMessage());
+
+            return 0;
         }
     }
 

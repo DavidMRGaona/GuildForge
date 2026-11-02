@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Application\Search\Services\SearchIndexerInterface;
+use App\Application\Search\Services\SearchSyncRunnerInterface;
 use App\Domain\Modules\Events\ModuleDisabled;
 use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Modules\Events\ModuleUninstalled;
@@ -17,6 +18,7 @@ use App\Infrastructure\Search\Index\SearchIndexWriterInterface;
 use App\Infrastructure\Search\Listeners\SyncSearchOnModuleChange;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use App\Infrastructure\Search\Persistence\SearchDocumentStore;
+use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
 use App\Infrastructure\Search\Services\SearchIndexer;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Event;
@@ -28,6 +30,7 @@ final class SearchServiceProvider extends ServiceProvider
     {
         $this->app->bind(SearchDocumentStoreInterface::class, SearchDocumentStore::class);
         $this->app->bind(SearchIndexerInterface::class, SearchIndexer::class);
+        $this->app->bind(SearchSyncRunnerInterface::class, ProcessSearchSyncRunner::class);
 
         // Meilisearch when Scout is configured for it, otherwise nothing: the database search reads the table
         $this->app->bind(SearchIndexWriterInterface::class, fn (Application $app): SearchIndexWriterInterface => $app->make('config')->get('scout.driver') === 'meilisearch'

@@ -94,10 +94,35 @@ final class SearchSourceRegistry implements SearchSourceRegistryInterface
      */
     public function indexedSources(): array
     {
+        return $this->resolveIndexed()[0];
+    }
+
+    /**
+     * @return list<class-string>
+     */
+    public function unresolved(): array
+    {
+        return $this->resolveIndexed()[1];
+    }
+
+    /**
+     * The indexed sources and, from the same pass, the classes that could not be loaded.
+     *
+     * @return array{list<IndexedSearchSourceInterface>, list<class-string>}
+     */
+    private function resolveIndexed(): array
+    {
         $resolved = [];
+        $unresolved = [];
 
         foreach ($this->sources as $sourceClass => $module) {
             $source = $this->resolve($sourceClass, $module);
+
+            if ($source === null) {
+                $unresolved[] = $sourceClass;
+
+                continue;
+            }
 
             if (! $source instanceof IndexedSearchSourceInterface) {
                 continue;
@@ -106,6 +131,8 @@ final class SearchSourceRegistry implements SearchSourceRegistryInterface
             $type = $this->read(static fn (): string => $source->type(), $source, $module);
 
             if ($type === null) {
+                $unresolved[] = $sourceClass;
+
                 continue;
             }
 
@@ -118,7 +145,7 @@ final class SearchSourceRegistry implements SearchSourceRegistryInterface
             $resolved[$type] = $source;
         }
 
-        return array_values($resolved);
+        return [array_values($resolved), $unresolved];
     }
 
     public function moduleOf(string $type): ?string

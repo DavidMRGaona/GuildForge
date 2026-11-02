@@ -39,6 +39,14 @@ interface SearchSourceRegistryInterface
     public function indexedSources(): array;
 
     /**
+     * Registered classes that may own an indexed type but could not be loaded: they failed to resolve,
+     * are no search source, or their type() threw. Live sources left out on purpose are not listed.
+     *
+     * @return list<class-string>
+     */
+    public function unresolved(): array;
+
+    /**
      * Module that registered the indexed source of this type, or null for core (or an unknown type).
      */
     public function moduleOf(string $type): ?string;

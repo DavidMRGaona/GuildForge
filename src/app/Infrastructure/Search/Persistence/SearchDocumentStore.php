@@ -85,6 +85,21 @@ final class SearchDocumentStore implements SearchDocumentStoreInterface
         return $ids;
     }
 
+    public function deleteTypeOfDisabledModules(string $type, array $enabledModules): array
+    {
+        $ids = array_values(SearchDocumentModel::query()
+            ->where('type', $type)
+            ->whereNotNull('module')
+            ->when($enabledModules !== [], static fn ($query) => $query->whereNotIn('module', $enabledModules))
+            ->pluck('id')
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->all());
+
+        $this->deleteIds($ids);
+
+        return $ids;
+    }
+
     public function types(): array
     {
         return array_values(SearchDocumentModel::query()

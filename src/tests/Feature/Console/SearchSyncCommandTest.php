@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Search\DTOs\SearchSyncResultDTO;
 use App\Application\Search\Services\SearchIndexerInterface;
 use App\Domain\Modules\Events\ModuleDisabled;
@@ -13,17 +12,21 @@ use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Infrastructure\Search\Jobs\SyncSearchIndexJob;
+use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Tests\Support\Search\FakeSearchSyncRunner;
 use Tests\TestCase;
 
 final class SearchSyncCommandTest extends TestCase
@@ -120,23 +123,53 @@ final class SearchSyncCommandTest extends TestCase
         $this->assertNotSame($job->uniqueId(), (new SyncSearchIndexJob('event'))->uniqueId());
     }
 
-    public function test_the_sync_job_reads_the_enabled_modules_again_before_syncing(): void
+    public function test_the_sync_job_hands_the_sync_to_the_runner(): void
     {
-        $order = [];
-        $modules = Mockery::mock(EnabledModulesResolverInterface::class);
-        $modules->shouldReceive('reset')->once()->andReturnUsing(function () use (&$order): void {
-            $order[] = 'reset';
-        });
-        $indexer = Mockery::mock(SearchIndexerInterface::class);
-        $indexer->shouldReceive('sync')->once()->with('event')->andReturnUsing(function () use (&$order): SearchSyncResultDTO {
-            $order[] = 'sync';
+        $runner = new FakeSearchSyncRunner;
 
-            return new SearchSyncResultDTO(0, 0, null);
-        });
+        (new SyncSearchIndexJob('event'))->handle($runner);
+        (new SyncSearchIndexJob)->handle($runner);
 
-        (new SyncSearchIndexJob('event'))->handle($indexer, $modules);
+        $this->assertSame(['event', null], $runner->runs);
+    }
 
-        $this->assertSame(['reset', 'sync'], $order);
+    public function test_the_runner_syncs_in_a_fresh_php_process(): void
+    {
+        // The process that enabled a module booted without its provider, so its sources are unknown here
+        Process::fake();
+
+        $this->app->make(ProcessSearchSyncRunner::class)->sync();
+        $this->app->make(ProcessSearchSyncRunner::class)->sync('event');
+
+        Process::assertRan(fn (PendingProcess $process): bool => is_array($process->command)
+            && $process->command[1] === base_path('artisan')
+            && in_array('search:sync', $process->command, true)
+            && ! in_array('--type=event', $process->command, true)
+            && $process->timeout === 300);
+        Process::assertRan(fn (PendingProcess $process): bool => is_array($process->command)
+            && in_array('--type=event', $process->command, true));
+    }
+
+    public function test_the_runner_logs_a_failed_sync_and_never_throws(): void
+    {
+        $log = Log::spy();
+        Process::fake(['*' => Process::result(output: 'Indexed: 0', errorOutput: 'Type "event" not synced: boom', exitCode: 1)]);
+
+        $this->app->make(ProcessSearchSyncRunner::class)->sync();
+
+        $log->shouldHaveReceived('warning')->once()->withArgs(
+            fn (string $message, array $context): bool => str_contains((string) ($context['error'] ?? ''), 'boom'),
+        );
+    }
+
+    public function test_the_runner_survives_a_process_that_cannot_start(): void
+    {
+        $log = Log::spy();
+        Process::fake(fn (): never => throw new RuntimeException('cannot fork'));
+
+        $this->app->make(ProcessSearchSyncRunner::class)->sync();
+
+        $log->shouldHaveReceived('warning')->once();
     }
 
     public function test_dispatch_safely_never_fails_the_caller(): void

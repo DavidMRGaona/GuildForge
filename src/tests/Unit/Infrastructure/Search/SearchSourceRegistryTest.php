@@ -12,8 +12,11 @@ use stdClass;
 use Tests\Support\Search\FakeIndexedSearchSource;
 use Tests\Support\Search\FakeSearchSource;
 use Tests\Support\Search\OtherFakeIndexedSearchSource;
+use Tests\Support\Search\OtherFakeSearchSource;
 use Tests\Support\Search\SameKeyFakeSearchSource;
 use Tests\Support\Search\SameTypeFakeIndexedSearchSource;
+use Tests\Support\Search\ThrowingTypeIndexedSearchSource;
+use Tests\Support\Search\UnresolvableIndexedSearchSource;
 use Tests\Support\Search\UnresolvableSearchSource;
 use Tests\TestCase;
 
@@ -171,5 +174,31 @@ final class SearchSourceRegistryTest extends TestCase
             $this->app->make(SearchSourceRegistryInterface::class),
             $this->app->make(SearchSourceRegistryInterface::class),
         );
+    }
+
+    #[Test]
+    public function it_reports_indexed_sources_that_cannot_be_loaded(): void
+    {
+        $this->registry->register(FakeIndexedSearchSource::class);
+        $this->registry->register(UnresolvableIndexedSearchSource::class, 'sample');
+        $this->registry->register(ThrowingTypeIndexedSearchSource::class);
+
+        $this->assertSame(
+            [UnresolvableIndexedSearchSource::class, ThrowingTypeIndexedSearchSource::class],
+            $this->registry->unresolved(),
+        );
+        $this->assertCount(1, $this->registry->indexedSources());
+    }
+
+    #[Test]
+    public function live_sources_and_taken_types_are_not_load_failures(): void
+    {
+        $this->registry->register(OtherFakeSearchSource::class);
+        $this->registry->register(FakeSearchSource::class, 'sample');
+        $this->registry->register(FakeIndexedSearchSource::class);
+        $this->registry->register(SameTypeFakeIndexedSearchSource::class);
+
+        // A module's live source is dropped on purpose, and a taken type is owned by another source
+        $this->assertSame([], $this->registry->unresolved());
     }
 }
