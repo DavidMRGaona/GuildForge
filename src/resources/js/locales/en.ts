@@ -235,12 +235,14 @@ export default {
     },
     search: {
         title: 'Search',
-        placeholder: 'Search events, articles...',
+        placeholder: 'Search events, tables, articles…',
         resultsFor: 'Results for "{query}"',
         noResults: 'No results found for "{query}"',
         minCharsWarning: 'Type at least 2 characters to search',
-        eventsFound: '{count} event found | {count} events found',
-        articlesFound: '{count} article found | {count} articles found',
+        tabAll: 'All',
+        tabsLabel: 'Result types',
+        resultsCount: '{count} result | {count} results',
+        showMore: 'Show more results',
     },
     knowledge: {
         contextualHelp: 'Help on this section',

@@ -236,12 +236,14 @@ export default {
     },
     search: {
         title: 'Buscar',
-        placeholder: 'Buscar eventos, artículos...',
+        placeholder: 'Buscar eventos, mesas, artículos…',
         resultsFor: 'Resultados para "{query}"',
         noResults: 'No se encontraron resultados para "{query}"',
         minCharsWarning: 'Escribe al menos 2 caracteres para buscar',
-        eventsFound: '{count} evento encontrado | {count} eventos encontrados',
-        articlesFound: '{count} artículo encontrado | {count} artículos encontrados',
+        tabAll: 'Todo',
+        tabsLabel: 'Tipos de resultado',
+        resultsCount: '{count} resultado | {count} resultados',
+        showMore: 'Ver más resultados',
     },
     knowledge: {
         contextualHelp: 'Ayuda sobre esta sección',
