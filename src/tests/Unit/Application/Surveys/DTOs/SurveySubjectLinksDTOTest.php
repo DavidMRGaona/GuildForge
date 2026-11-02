@@ -46,6 +46,21 @@ final class SurveySubjectLinksDTOTest extends TestCase
         new SurveySubjectLinksDTO(manageUrl: ' ');
     }
 
+    public function test_it_keeps_the_guide_without_counting_it_as_a_link(): void
+    {
+        $links = new SurveySubjectLinksDTO(guideId: 'surveys.answer-survey');
+
+        $this->assertSame('surveys.answer-survey', $links->guideId);
+        $this->assertTrue($links->isEmpty());
+    }
+
+    public function test_a_blank_guide_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new SurveySubjectLinksDTO(guideId: ' ');
+    }
+
     public function test_a_survey_link_needs_a_title(): void
     {
         $this->expectException(InvalidArgumentException::class);

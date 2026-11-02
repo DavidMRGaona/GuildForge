@@ -9,6 +9,7 @@ use App\Application\Surveys\DTOs\EndSurveyChoiceDTO;
 use App\Application\Surveys\DTOs\EndSurveyOptionDTO;
 use App\Application\Surveys\Enums\EndSurveyChoiceOutcome;
 use App\Filament\Forms\Components\EndSurveyField;
+use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Resources\EventResource;
 use App\Filament\Resources\EventResource\Pages\CreateEvent;
 use App\Filament\Resources\EventResource\Pages\EditEvent;
@@ -166,6 +167,26 @@ final class EndSurveyFieldTest extends TestCase
             ->assertSee('https://example.com/encuestas/1/editar');
     }
 
+    public function test_the_help_link_opens_the_guide_in_a_new_tab_when_the_person_may_see_it(): void
+    {
+        $this->artisanCommand('knowledge:sync')->assertSuccessful()->run();
+        $this->fake($this->choice(guideId: 'core.panel.manage-events'));
+
+        Livewire::test(EditEvent::class, ['record' => $this->event()->getRouteKey()])
+            ->assertSeeHtml(e(KnowledgeBasePage::getUrl(['guia' => 'core.panel.manage-events'])))
+            ->assertSeeHtml('target="_blank"');
+    }
+
+    public function test_no_help_link_for_a_guide_the_person_cannot_see(): void
+    {
+        $this->artisanCommand('knowledge:sync')->assertSuccessful()->run();
+        $this->fake($this->choice(guideId: 'core.panel.no-such-guide'));
+
+        Livewire::test(EditEvent::class, ['record' => $this->event()->getRouteKey()])
+            ->assertFormFieldIsVisible('end_survey')
+            ->assertDontSeeHtml(e(KnowledgeBasePage::getUrl(['guia' => 'core.panel.no-such-guide'])));
+    }
+
     public function test_a_person_who_may_not_choose_still_saves_the_subject(): void
     {
         $fake = $this->fake($this->choice(), failure: new AuthorizationException);
@@ -267,6 +288,7 @@ final class EndSurveyFieldTest extends TestCase
         bool $locked = false,
         ?string $lockedReason = null,
         ?string $editUrl = null,
+        ?string $guideId = null,
     ): EndSurveyChoiceDTO {
         return new EndSurveyChoiceDTO(
             options: [
@@ -284,6 +306,7 @@ final class EndSurveyFieldTest extends TestCase
             locked: $locked,
             lockedReason: $lockedReason,
             editUrl: $editUrl,
+            guideId: $guideId,
         );
     }
 

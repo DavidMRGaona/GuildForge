@@ -9,6 +9,7 @@ use App\Application\Surveys\DTOs\EndSurveyChoiceDTO;
 use App\Application\Surveys\DTOs\EndSurveyOptionDTO;
 use App\Application\Surveys\DTOs\EndSurveySelection;
 use App\Application\Surveys\Enums\EndSurveyChoiceOutcome;
+use App\Filament\Support\PanelGuideUrl;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -65,7 +66,7 @@ final class EndSurveyField
                 ->required(static fn (Select $component): bool => $lookup->for($component)?->locked === false)
                 ->helperText(static fn (Select $component): string => $lookup->for($component)->lockedReason
                     ?? __('filament.end_survey.helper'))
-                ->hintAction(
+                ->hintActions([
                     Action::make('editEndSurvey')
                         ->label(static fn (Select $component): string => $lookup->for($component)?->locked === true
                             ? __('filament.end_survey.view')
@@ -73,7 +74,16 @@ final class EndSurveyField
                         ->icon('heroicon-o-pencil-square')
                         ->url(static fn (Select $component): ?string => $lookup->for($component)?->editUrl)
                         ->visible(static fn (Select $component): bool => $lookup->for($component)?->editUrl !== null),
-                )
+                    // The guide the surveys module names, in a new tab so the form being filled is kept
+                    Action::make('endSurveyHelp')
+                        ->label(__('knowledge.contextual_help'))
+                        ->icon('heroicon-o-question-mark-circle')
+                        ->iconButton()
+                        ->color('gray')
+                        ->url(static fn (Select $component): ?string => self::helpUrl($lookup, $component))
+                        ->openUrlInNewTab()
+                        ->visible(static fn (Select $component): bool => self::helpUrl($lookup, $component) !== null),
+                ])
                 ->saveRelationshipsUsing(static function (Select $component, Model $record, Get $get) use ($lookup): void {
                     self::save($lookup, $component, $record, $get);
                 }),
@@ -98,6 +108,13 @@ final class EndSurveyField
                 ->disabled(static fn (Select $component): bool => $lookup->for($component)?->locked === true)
                 ->required(),
         ]);
+    }
+
+    private static function helpUrl(EndSurveyChoiceLookup $lookup, Select $component): ?string
+    {
+        $guideId = $lookup->for($component)?->guideId;
+
+        return $guideId === null ? null : PanelGuideUrl::for($guideId);
     }
 
     /**

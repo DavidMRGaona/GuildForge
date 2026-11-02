@@ -21,11 +21,16 @@ final readonly class ActionLinkResolver
         private PermissionRegistryInterface $permissions,
     ) {}
 
-    public function resolve(string $routeName, ?string $condition, ?string $module, object $user): ?string
+    /**
+     * @param  string  $target  A route name, optionally followed by `?key=value&…`
+     */
+    public function resolve(string $target, ?string $condition, ?string $module, object $user): ?string
     {
         try {
+            ['route' => $routeName, 'query' => $query] = ActionTarget::split($target);
+            $parameters = ActionTarget::parameters($query);
             $route = Route::getRoutes()->getByName($routeName);
-            if ($route === null || self::hasRequiredParameters($route)) {
+            if ($route === null || $parameters === null || self::hasRequiredParameters($route)) {
                 return null;
             }
 
@@ -37,7 +42,7 @@ final readonly class ActionLinkResolver
                 return null;
             }
 
-            return route($routeName, [], false);
+            return route($routeName, $parameters, false);
         } catch (Throwable $e) {
             // Hidden, not broken: the guide still renders without the button, and the cause is not lost
             report($e);

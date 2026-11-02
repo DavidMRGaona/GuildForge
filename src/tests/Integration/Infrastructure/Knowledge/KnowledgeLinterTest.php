@@ -257,6 +257,27 @@ final class KnowledgeLinterTest extends TestCase
         $this->assertSame([], $this->lint());
     }
 
+    public function test_button_query_parameters_are_fine(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: '[[action:lint.plain?tab=surveys|Ir]]');
+
+        $this->assertSame([], $this->lint());
+    }
+
+    public function test_button_with_a_malformed_query_is_reported(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: '[[action:lint.plain?tab|Ir]]');
+
+        $this->assertIssue($this->lint(), "malformed query 'tab'");
+    }
+
+    public function test_button_route_with_a_query_must_exist(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: '[[action:no.such.route?tab=a|Ir]]');
+
+        $this->assertIssue($this->lint(), "route 'no.such.route'");
+    }
+
     public function test_malformed_button_is_reported(): void
     {
         $this->writeCoreGuide('a.md', 'core.one', body: '[[action:lint.plain]]');

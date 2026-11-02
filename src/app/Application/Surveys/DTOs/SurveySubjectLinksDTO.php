@@ -15,13 +15,19 @@ final readonly class SurveySubjectLinksDTO
     /**
      * @param  string|null  $manageUrl  The subject's surveys page, only for whoever manages the subject
      * @param  list<SurveyLinkDTO>  $surveys
+     * @param  string|null  $guideId  The help guide for this person (answering or managing), shown by the page next to its surveys
      */
     public function __construct(
         public ?string $manageUrl = null,
         public array $surveys = [],
+        public ?string $guideId = null,
     ) {
         if ($manageUrl !== null && trim($manageUrl) === '') {
             throw new InvalidArgumentException('A survey subject manage URL cannot be blank.');
+        }
+
+        if ($guideId !== null && trim($guideId) === '') {
+            throw new InvalidArgumentException('A survey subject guide id cannot be blank.');
         }
     }
 

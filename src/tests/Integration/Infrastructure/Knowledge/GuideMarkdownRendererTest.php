@@ -109,6 +109,19 @@ final class GuideMarkdownRendererTest extends TestCase
         $this->assertStringContainsString('Ver los &lt;eventos&gt;</a>', $html);
     }
 
+    public function test_action_button_carries_its_query_parameters(): void
+    {
+        $html = $this->html('[[action:events.index?tab=next&view=list|Ver]]');
+
+        $this->assertStringContainsString('/eventos?tab=next&amp;view=list"', $html);
+    }
+
+    public function test_action_button_with_a_malformed_query_is_omitted(): void
+    {
+        $this->assertStringNotContainsString('kb-action', $this->html('[[action:events.index?tab|Ver]]'));
+        $this->assertStringNotContainsString('kb-action', $this->html('[[action:events.index?tab=<x>|Ver]]'));
+    }
+
     public function test_action_button_is_omitted_for_missing_route(): void
     {
         $html = $this->html('Antes [[action:no.such.route|Ir]] después');
