@@ -10,6 +10,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
+use App\Filament\Support\PanelSidebarMode;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Http\Middleware\Authenticate;
@@ -36,6 +37,26 @@ use Throwable;
 
 class AdminPanelProvider extends PanelProvider
 {
+    /**
+     * The public site's warm greys (resources/css/app.css): stone in light mode, and the
+     * page (950), surface (900) and elevated (800) backgrounds of its dark mode.
+     *
+     * @var array<int, string>
+     */
+    private const array GRAY_PALETTE = [
+        50 => '#fafaf9',
+        100 => '#f5f5f4',
+        200 => '#e7e5e4',
+        300 => '#d6d3d1',
+        400 => '#a8a29e',
+        500 => '#78716c',
+        600 => '#57534e',
+        700 => '#44403c',
+        800 => '#3d3936',
+        900 => '#302d2a',
+        950 => '#252220',
+    ];
+
     /**
      * Cache for enabled module names to avoid multiple repository calls.
      *
@@ -72,8 +93,11 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(fn (): string => $this->getFavicon())
             ->colors([
                 'primary' => $this->getPrimaryColor(),
+                'gray' => self::GRAY_PALETTE,
             ])
             ->darkMode(true)
+            ->sidebarCollapsibleOnDesktop(fn (): bool => $this->getSidebarMode() === PanelSidebarMode::Icons)
+            ->sidebarFullyCollapsibleOnDesktop(fn (): bool => $this->getSidebarMode() === PanelSidebarMode::Hidden)
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->navigationGroups($this->getNavigationGroups())
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
@@ -280,6 +304,17 @@ class AdminPanelProvider extends PanelProvider
         } catch (Throwable) {
             // Fallback to amber if settings are unavailable
             return Color::Amber;
+        }
+    }
+
+    private function getSidebarMode(): PanelSidebarMode
+    {
+        try {
+            return PanelSidebarMode::fromSetting(
+                app(SettingsServiceInterface::class)->get(PanelSidebarMode::SETTING_KEY)
+            );
+        } catch (Throwable) {
+            return PanelSidebarMode::DEFAULT;
         }
     }
 

@@ -13,6 +13,7 @@ use App\Domain\Enums\UserRole;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Filament\Support\PanelSidebarMode;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Knowledge\Jobs\SyncKnowledgeCatalogJob;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
@@ -85,6 +86,7 @@ final class SiteSettings extends Page implements HasForms
         'theme_button_style',
         'theme_dark_mode_default',
         'theme_dark_mode_toggle_visible',
+        PanelSidebarMode::SETTING_KEY,
         'auth_registration_enabled',
         'auth_login_enabled',
         'auth_email_verification_required',
@@ -223,6 +225,7 @@ final class SiteSettings extends Page implements HasForms
             'theme_button_style' => 'solid',
             'theme_dark_mode_default' => false,
             'theme_dark_mode_toggle_visible' => true,
+            PanelSidebarMode::SETTING_KEY => PanelSidebarMode::DEFAULT->value,
             'auth_registration_enabled' => true,
             'auth_login_enabled' => true,
             'auth_email_verification_required' => false,
@@ -488,6 +491,18 @@ final class SiteSettings extends Page implements HasForms
                                     ->label(__('filament.settings.appearance.dark_mode_toggle_visible'))
                                     ->helperText(__('filament.settings.appearance.dark_mode_toggle_visible_help'))
                                     ->default(true),
+
+                                Section::make(__('filament.settings.panel.section'))
+                                    ->description(__('filament.settings.panel.section_description'))
+                                    ->schema([
+                                        Select::make(PanelSidebarMode::SETTING_KEY)
+                                            ->label(__('filament.settings.panel.sidebar_mode'))
+                                            ->helperText(__('filament.settings.panel.sidebar_mode_help'))
+                                            ->options(PanelSidebarMode::options())
+                                            ->native(false)
+                                            ->required()
+                                            ->default(PanelSidebarMode::DEFAULT->value),
+                                    ]),
                             ]),
 
                         Tab::make(__('filament.settings.tabs.authentication'))

@@ -180,6 +180,15 @@ return [
             'dark_mode_toggle_visible' => 'Mostrar selector de tema',
             'dark_mode_toggle_visible_help' => 'Permitir a los usuarios cambiar entre modo claro y oscuro',
         ],
+        'panel' => [
+            'section' => 'Panel de administración',
+            'section_description' => 'Cómo se ve el panel para quienes lo usan',
+            'sidebar_mode' => 'Menú lateral',
+            'sidebar_mode_help' => 'Cada persona lo pliega o lo despliega con el botón de la barra superior y su navegador lo recuerda. En la ayuda se pliega solo.',
+            'sidebar_mode_fixed' => 'Fijo (no se pliega)',
+            'sidebar_mode_icons' => 'Se pliega a iconos',
+            'sidebar_mode_hidden' => 'Se oculta del todo',
+        ],
         'location' => [
             'title' => 'Ubicación de la sede',
             'description' => 'Configura las coordenadas y datos de la ubicación que se mostrará en el mapa de la página "Nosotros".',

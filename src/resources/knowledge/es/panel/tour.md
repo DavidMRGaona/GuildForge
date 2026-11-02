@@ -26,6 +26,8 @@ Las secciones se agrupan así:
 
 Los módulos que tenga tu web pueden añadir sus propios grupos, como torneos o reservas.
 
+Si el menú se puede plegar, el botón de la barra superior, a la izquierda, lo pliega y lo despliega; tu navegador recuerda cómo lo dejas. Según la configuración del sitio se queda en iconos o se oculta del todo. En **Ayuda** se pliega solo para dejar sitio a las guías.
+
 ## El escritorio
 
 Es la primera página al entrar. Muestra resúmenes, como los próximos eventos o los artículos recientes. Cada resumen solo sale si tienes permiso para ver su contenido.

@@ -153,6 +153,15 @@ return [
             'dark_mode_toggle_visible' => 'Show theme toggle',
             'dark_mode_toggle_visible_help' => 'Allow users to switch between light and dark mode',
         ],
+        'panel' => [
+            'section' => 'Admin panel',
+            'section_description' => 'How the panel looks to the people who use it',
+            'sidebar_mode' => 'Sidebar',
+            'sidebar_mode_help' => 'Each person folds or unfolds it with the top bar button and their browser remembers it. It folds by itself on the help page.',
+            'sidebar_mode_fixed' => 'Fixed (does not fold)',
+            'sidebar_mode_icons' => 'Folds to icons',
+            'sidebar_mode_hidden' => 'Hides completely',
+        ],
         'location' => [
             'title' => 'Headquarters Location',
             'description' => 'Configure the coordinates and data of the location that will be displayed on the map on the "About" page.',

@@ -29,7 +29,7 @@ Sube el logo para el tema claro, el del tema oscuro y el de los correos. Si no s
 
 - **Colores**: elige un **Tema predefinido** o tu **Color primario** y tu **Color de acento**. La vista previa te enseña las paletas que salen.
 - **Tipografía**: las fuentes de títulos y de texto, y el tamaño base.
-- **Apariencia**: bordes, sombras, estilo de botones, **Modo oscuro por defecto** y **Mostrar selector de tema**.
+- **Apariencia**: bordes, sombras, estilo de botones, **Modo oscuro por defecto** y **Mostrar selector de tema**. En **Panel de administración**, el **Menú lateral** elige si el menú del panel es fijo, se pliega a iconos o se oculta del todo.
 
 > [!TIP]
 > Los temas predefinidos ya tienen colores con buen contraste. Si eliges colores propios, comprueba que el texto se lee bien.
