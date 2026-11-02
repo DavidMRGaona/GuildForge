@@ -26,7 +26,7 @@ A source implements `App\Application\Search\Contracts\IndexedSearchSourceInterfa
 
 `SearchDocumentDTO` carries `id` (the record's key, a string), `title` and `url` (both required: an empty one throws), `body` (plain text), and optionally `keywords`, `meta` (a short line such as the venue), `imagePublicId`, `startsAt`, `endsAt`, `publishedAt`, `finished`, `audience` and `locale`.
 
-- Dates are `DateTimeImmutable` instants. Results that have not ended yet rank ahead of finished ones (past results count half), so set `finished` for records that are over.
+- Dates are `DateTimeImmutable` instants. Results that have not ended yet rank ahead of finished ones (with Meilisearch, past results weigh half), so set `finished` for records that are over.
 - Turn rich text into plain text before it goes into `body` (`App\Infrastructure\Search\Support\PlainText::from()` is available to code inside the core; a module strips tags itself).
 - `audience` is `SearchAudience::Public` (default), `Authenticated` (any signed-in user) or `Members` (association members). The core filters by the visitor's audiences; a visitor never receives a document above their level.
 
@@ -69,6 +69,7 @@ namespace Modules\MyModule\Search;
 
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Modules\MyModule\Models\TableModel;
 
@@ -113,7 +114,7 @@ final class TableSearchSource implements IndexedSearchSourceInterface
     }
 
     // The same conditions as the public listing; cancelled and draft tables are not in it
-    private function listed(): \Illuminate\Database\Eloquent\Builder
+    private function listed(): Builder
     {
         return TableModel::query()->where('status', 'published');
     }

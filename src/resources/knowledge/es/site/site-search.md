@@ -21,7 +21,7 @@ El buscador mira en toda la web a la vez.
 La página de resultados tiene una pestaña **Todo**, que mezcla todo lo que se ha encontrado, y una pestaña por cada tipo de contenido (eventos, artículos, galerías y, según las secciones que tenga la web, algunas más). Cada página muestra hasta 20 resultados.
 
 - Lo próximo va delante: un evento que aún no ha pasado sale antes que uno que ya terminó, aunque el segundo se parezca más a lo que escribiste.
-- Lo que ya pasó lleva una marca (por ejemplo «Pasado»), para que lo distingas de un vistazo.
+- Lo que ya pasó lleva una marca, como «Celebrado» en los eventos, y aparece detrás de lo próximo.
 - Las guías de **Ayuda** solo aparecen si has iniciado sesión, y solo las que puedes ver con tu cuenta.
 
 ## Qué encuentras
