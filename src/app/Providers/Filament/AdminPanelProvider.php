@@ -8,8 +8,10 @@ use App\Application\Modules\DTOs\RejectedModuleDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
+use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
+use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelSidebarMode;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -85,11 +87,22 @@ class AdminPanelProvider extends PanelProvider
             ->homeUrl('/')
             ->userMenuItems([
                 MenuItem::make()
+                    ->label(__('filament.user_menu.profile'))
+                    ->icon('heroicon-o-user-circle')
+                    ->url(fn (): string => route('profile.show'))
+                    ->openUrlInNewTab(),
+                MenuItem::make()
                     ->label(__('filament.user_menu.visit_site'))
                     ->icon('heroicon-o-globe-alt')
                     ->url('/')
                     ->openUrlInNewTab(),
+                MenuItem::make()
+                    ->label(__('filament.user_menu.help'))
+                    ->icon('heroicon-o-lifebuoy')
+                    ->url(fn (): string => KnowledgeBasePage::getUrl()),
             ])
+            ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
+            ->globalSearchFieldKeyBindingSuffix()
             ->favicon(fn (): string => $this->getFavicon())
             ->colors([
                 'primary' => $this->getPrimaryColor(),
@@ -243,6 +256,16 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_START,
                 // Read on render, never while the panel is being registered
                 fn (): string => $this->incompatibleModulesBanner(),
+            )
+            ->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+                fn (): string => auth()->check()
+                    ? view('filament.components.topbar-actions', [
+                        'createGroups' => PanelCreateMenu::groups(),
+                        'helpUrl' => KnowledgeBasePage::getUrl(),
+                        'siteUrl' => url('/'),
+                    ])->render()
+                    : '',
             );
 
         // Discover resources from enabled modules

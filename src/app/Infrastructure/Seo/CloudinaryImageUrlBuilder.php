@@ -16,6 +16,8 @@ final readonly class CloudinaryImageUrlBuilder
 
     public const int LOGO_SIZE = 600;
 
+    private const string ANIMATED_AVATAR_SUFFIX = '-animated';
+
     private const array STRIPPED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
 
     public function __construct(
@@ -42,6 +44,20 @@ final readonly class CloudinaryImageUrlBuilder
         $background = $darkBackground ? 'b_black' : 'b_white';
 
         return $this->build($publicId, 'w_'.self::LOGO_SIZE.',h_'.self::LOGO_SIZE.",c_pad,{$background},q_auto,f_png");
+    }
+
+    /**
+     * Square avatar cropped around the face, like the client's buildAvatarUrl(). An avatar whose
+     * name ends in "-animated" keeps its animation.
+     */
+    public function avatar(string $publicId, int $size): ?string
+    {
+        $fileName = basename($publicId);
+        $lastDot = strrpos($fileName, '.');
+        $baseName = $lastDot !== false && $lastDot > 0 ? substr($fileName, 0, $lastDot) : $fileName;
+        $animated = str_ends_with($baseName, self::ANIMATED_AVATAR_SUFFIX) ? ',fl_animated' : '';
+
+        return $this->build($publicId, "w_{$size},h_{$size},c_fill,g_face,q_auto,f_auto{$animated}");
     }
 
     private function build(string $publicId, string $transformations): ?string

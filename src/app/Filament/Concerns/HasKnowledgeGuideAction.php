@@ -23,6 +23,8 @@ trait HasKnowledgeGuideAction
             ->label(__('knowledge.contextual_help'))
             ->icon('heroicon-o-question-mark-circle')
             ->color('gray')
-            ->url($url);
+            ->url($url)
+            // The help button of the top bar opens this guide instead of the help home
+            ->extraAttributes(['data-panel-guide-url' => $url]);
     }
 }
