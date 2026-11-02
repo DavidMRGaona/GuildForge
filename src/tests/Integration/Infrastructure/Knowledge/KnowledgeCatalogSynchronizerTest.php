@@ -9,6 +9,9 @@ use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeCategoryMo
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideAliasModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Laravel\Scout\EngineManager;
+use Laravel\Scout\Engines\Engine;
+use Mockery;
 use Tests\Support\Knowledge\KnowledgeFixtures;
 use Tests\TestCase;
 
@@ -32,6 +35,23 @@ final class KnowledgeCatalogSynchronizerTest extends TestCase
     private function guide(string $id, string $locale = 'es'): KnowledgeGuideModel
     {
         return KnowledgeGuideModel::query()->where('guide_id', $id)->where('locale', $locale)->firstOrFail();
+    }
+
+    public function test_saving_a_guide_never_writes_to_the_search_index_even_after_a_sync(): void
+    {
+        $engine = Mockery::mock(Engine::class);
+        $engine->shouldNotReceive('update');
+        $engine->shouldNotReceive('delete');
+        $this->app->make(EngineManager::class)->extend('spy', static fn (): Engine => $engine);
+        config(['scout.driver' => 'spy']);
+        $this->writeCoreGuide('a.md', 'account.one');
+
+        $this->syncKnowledge();
+        $guide = $this->guide('account.one');
+        $guide->title = 'Otro título';
+        $guide->save();
+
+        $this->assertSame('Otro título', $this->guide('account.one')->title);
     }
 
     public function test_first_sync_sets_a_baseline_without_new_badges(): void

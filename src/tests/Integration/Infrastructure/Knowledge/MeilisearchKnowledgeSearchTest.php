@@ -63,7 +63,7 @@ final class MeilisearchKnowledgeSearchTest extends TestCase
 
     private function store(string $guideId, string $title, string $body, string $locale = 'es', bool $active = true): void
     {
-        KnowledgeGuideModel::withoutSyncingToSearch(fn (): KnowledgeGuideModel => KnowledgeGuideModel::query()->create([
+        KnowledgeGuideModel::query()->create([
             'guide_id' => $guideId,
             'locale' => $locale,
             'source' => 'core',
@@ -82,7 +82,7 @@ final class MeilisearchKnowledgeSearchTest extends TestCase
             'featured' => false,
             'content_hash' => str_repeat('a', 40),
             'active' => $active,
-        ]));
+        ]);
     }
 
     private function reindex(): void

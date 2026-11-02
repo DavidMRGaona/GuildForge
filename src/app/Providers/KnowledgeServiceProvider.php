@@ -30,6 +30,7 @@ use App\Infrastructure\Knowledge\Catalog\KnowledgeSourceLocator;
 use App\Infrastructure\Knowledge\Lint\KnowledgeLinter;
 use App\Infrastructure\Knowledge\Listeners\SyncKnowledgeOnModuleChange;
 use App\Infrastructure\Knowledge\Parsing\GuideDocumentParser;
+use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Repositories\EloquentGuideRepository;
 use App\Infrastructure\Knowledge\Rendering\GuideMarkdownRenderer;
 use App\Infrastructure\Knowledge\Search\DatabaseKnowledgeSearch;
@@ -128,6 +129,9 @@ class KnowledgeServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Only the indexer writes to the search index: saving a guide never pushes it on its own
+        KnowledgeGuideModel::disableSearchSyncing();
+
         $this->app->make(KnowledgeCapabilityRegistryInterface::class)
             ->register(EmailVerificationRequiredCapability::class);
 
