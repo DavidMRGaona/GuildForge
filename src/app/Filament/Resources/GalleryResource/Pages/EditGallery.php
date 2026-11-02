@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\GalleryResource\Pages;
 
+use App\Application\Search\Services\SearchIndexerInterface;
 use App\Filament\Resources\GalleryResource;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use Filament\Actions\DeleteAction;
@@ -41,5 +42,7 @@ class EditGallery extends EditRecord
         /** @var GalleryModel $record */
         $record = $this->record;
         $record->tags()->sync($tagIds);
+        // Tags are saved after the record, so the refresh queued by saving it may have missed them
+        app(SearchIndexerInterface::class)->refresh('galleries', (string) $record->getKey());
     }
 }

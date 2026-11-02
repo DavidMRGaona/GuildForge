@@ -60,12 +60,21 @@ final class SearchServiceProvider extends ServiceProvider
         ]);
 
         // Observer instances carry their arguments, so they are attached as model event listeners
-        $own = static fn (Model $model): string => (string) $model->getKey();
+        $own = static fn (Model $model): array => [(string) $model->getKey()];
         $this->refreshOnChange(EventModel::class, new RefreshSearchDocumentObserver('events', $own));
         $this->refreshOnChange(ArticleModel::class, new RefreshSearchDocumentObserver('articles', $own));
         $this->refreshOnChange(GalleryModel::class, new RefreshSearchDocumentObserver('galleries', $own));
         // A photo is part of its gallery's document: it refreshes the gallery and never forgets it
-        $this->refreshOnChange(PhotoModel::class, new RefreshSearchDocumentObserver('galleries', static fn (Model $photo): string => (string) $photo->getAttribute('gallery_id'), forgetOnDelete: false));
+        $this->refreshOnChange(PhotoModel::class, new RefreshSearchDocumentObserver('galleries', static function (Model $photo): array {
+            $ids = [(string) $photo->getAttribute('gallery_id')];
+
+            // A photo moved to another gallery leaves its caption in the old gallery's document
+            if ($photo->wasChanged('gallery_id') && $photo->getOriginal('gallery_id') !== null) {
+                $ids[] = (string) $photo->getOriginal('gallery_id');
+            }
+
+            return $ids;
+        }, forgetOnDelete: false));
 
         foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {
             Event::listen($event, SyncSearchOnModuleChange::class);

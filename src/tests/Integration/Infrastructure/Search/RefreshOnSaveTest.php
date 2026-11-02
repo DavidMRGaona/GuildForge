@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Search;
 
+use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -56,6 +57,29 @@ final class RefreshOnSaveTest extends TestCase
         $photo->delete();
 
         $this->assertStringNotContainsString('Después', (string) $this->stored('galleries', $gallery->id)?->body);
+    }
+
+    public function test_moving_a_photo_to_another_gallery_refreshes_both_galleries(): void
+    {
+        $from = GalleryModel::factory()->create(['is_published' => true, 'description' => 'Origen']);
+        $to = GalleryModel::factory()->create(['is_published' => true, 'description' => 'Destino']);
+        $photo = PhotoModel::factory()->create(['gallery_id' => $from->id, 'caption' => 'Foto viajera']);
+        $this->assertStringContainsString('Foto viajera', (string) $this->stored('galleries', $from->id)?->body);
+
+        $photo->update(['gallery_id' => $to->id]);
+
+        $this->assertStringNotContainsString('Foto viajera', (string) $this->stored('galleries', $from->id)?->body);
+        $this->assertStringContainsString('Foto viajera', (string) $this->stored('galleries', $to->id)?->body);
+    }
+
+    public function test_core_sources_are_registered_at_boot(): void
+    {
+        $types = array_map(
+            static fn ($source): string => $source->type(),
+            $this->app->make(SearchSourceRegistryInterface::class)->indexedSources(),
+        );
+
+        $this->assertEqualsCanonicalizing(['events', 'articles', 'galleries'], $types);
     }
 
     public function test_deleting_an_article_forgets_its_document(): void

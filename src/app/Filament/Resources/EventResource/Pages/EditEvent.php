@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\EventResource\Pages;
 
+use App\Application\Search\Services\SearchIndexerInterface;
 use App\Filament\Resources\EventResource;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use Filament\Actions\DeleteAction;
@@ -58,5 +59,7 @@ class EditEvent extends EditRecord
         /** @var EventModel $record */
         $record = $this->record;
         $record->tags()->sync($tagIds);
+        // Tags are saved after the record, so the refresh queued by saving it may have missed them
+        app(SearchIndexerInterface::class)->refresh('events', (string) $record->getKey());
     }
 }

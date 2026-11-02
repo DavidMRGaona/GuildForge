@@ -17,30 +17,33 @@ use Illuminate\Database\Eloquent\Model;
 final readonly class RefreshSearchDocumentObserver
 {
     /**
-     * @param  Closure(Model): string  $documentId
+     * @param  Closure(Model): list<string>  $documentIds  Ids of the documents the model feeds
      */
     public function __construct(
         private string $type,
-        private Closure $documentId,
+        private Closure $documentIds,
         private bool $forgetOnDelete = true,
     ) {}
 
     public function saved(Model $model): void
     {
-        resolve(SearchIndexerInterface::class)->refresh($this->type, ($this->documentId)($model));
+        $indexer = resolve(SearchIndexerInterface::class);
+
+        foreach (($this->documentIds)($model) as $id) {
+            $indexer->refresh($this->type, $id);
+        }
     }
 
     public function deleted(Model $model): void
     {
         $indexer = resolve(SearchIndexerInterface::class);
-        $id = ($this->documentId)($model);
 
-        if ($this->forgetOnDelete) {
-            $indexer->forget($this->type, $id);
-
-            return;
+        foreach (($this->documentIds)($model) as $id) {
+            if ($this->forgetOnDelete) {
+                $indexer->forget($this->type, $id);
+            } else {
+                $indexer->refresh($this->type, $id);
+            }
         }
-
-        $indexer->refresh($this->type, $id);
     }
 }
