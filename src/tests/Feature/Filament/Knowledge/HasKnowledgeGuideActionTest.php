@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Knowledge;
 
+use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Actions\Action;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Exceptions;
+use Mockery;
+use RuntimeException;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
 use Tests\TestCase;
 
@@ -45,6 +49,18 @@ final class HasKnowledgeGuideActionTest extends TestCase
         $this->assertNull($host->action('core.hidden-panel'));
         $this->assertNull($host->action('core.site-guide'));
         $this->assertNull($host->action('core.missing'));
+    }
+
+    public function test_a_failing_visibility_check_hides_the_action_and_is_reported(): void
+    {
+        Exceptions::fake();
+        $visibility = Mockery::mock(GuideVisibilityServiceInterface::class);
+        $visibility->shouldReceive('findVisible')->andThrow(new RuntimeException('visibility broken'));
+        $this->app->instance(GuideVisibilityServiceInterface::class, $visibility);
+        $this->actingAs(UserModel::factory()->create());
+
+        $this->assertNull($this->host()->action('core.panel-guide'));
+        Exceptions::assertReported(RuntimeException::class);
     }
 
     public function test_action_is_null_for_guests(): void

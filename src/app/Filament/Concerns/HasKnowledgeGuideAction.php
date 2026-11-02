@@ -11,6 +11,7 @@ use App\Domain\Knowledge\Exceptions\InvalidGuideIdException;
 use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Filament\Pages\KnowledgeBasePage;
 use Filament\Actions\Action;
+use Throwable;
 
 /**
  * Adds a header action that opens a panel help guide, only when the signed-in user may see it.
@@ -30,7 +31,16 @@ trait HasKnowledgeGuideAction
             return null;
         }
 
-        if (! app(GuideVisibilityServiceInterface::class)->findVisible($user, $id, GuideAudience::Panel) instanceof Guide) {
+        // A help button is never worth an error page: without a reliable answer, leave it out
+        try {
+            $guide = app(GuideVisibilityServiceInterface::class)->findVisible($user, $id, GuideAudience::Panel);
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        if (! $guide instanceof Guide) {
             return null;
         }
 
