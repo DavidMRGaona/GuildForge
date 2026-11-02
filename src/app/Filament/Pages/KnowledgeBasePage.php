@@ -12,6 +12,7 @@ use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Domain\Knowledge\Enums\GuideAudience;
 use App\Domain\Knowledge\Exceptions\InvalidGuideIdException;
 use App\Domain\Knowledge\ValueObjects\GuideId;
+use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Livewire\Attributes\Url;
 use Throwable;
@@ -65,6 +66,17 @@ final class KnowledgeBasePage extends Page
     {
         $this->guide = null;
         $this->search = '';
+    }
+
+    /**
+     * The guide index needs the room: a sidebar that can collapse folds while this page is open.
+     */
+    public function foldsPanelSidebar(): bool
+    {
+        $panel = Filament::getCurrentOrDefaultPanel();
+
+        return $panel !== null
+            && ($panel->isSidebarCollapsibleOnDesktop() || $panel->isSidebarFullyCollapsibleOnDesktop());
     }
 
     /**

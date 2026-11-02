@@ -1,7 +1,24 @@
 {{-- Tailwind utilities here are compiled by the panel theme (resources/css/filament/admin/theme.css), which scans resources/views/filament --}}
 <x-filament-panels::page>
+    @if($this->foldsPanelSidebar())
+        {{-- Only isOpen changes, not the saved isOpenDesktop: the next page opens the sidebar
+             as it was left. 1024px is the desktop breakpoint of Filament's sidebar store, which
+             copies isOpenDesktop back on livewire:navigated (fired on the first load too). --}}
+        <div
+            hidden
+            wire:ignore
+            data-folds-panel-sidebar
+            x-data
+            x-init="
+                const fold = () => { if (window.innerWidth >= 1024) $store.sidebar.isOpen = false }
+                fold()
+                document.addEventListener('livewire:navigated', fold, { once: true })
+            "
+        ></div>
+    @endif
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside class="flex flex-col gap-4">
+        <aside class="flex flex-col gap-4 lg:border-e lg:border-gray-950/10 lg:pe-6 dark:lg:border-white/10">
             <form wire:submit="submitSearch" role="search">
                 <label for="kb-search" class="sr-only">{{ __('knowledge.panel.search_label') }}</label>
                 <x-filament::input.wrapper prefix-icon="heroicon-m-magnifying-glass">
@@ -15,7 +32,7 @@
                 </x-filament::input.wrapper>
             </form>
 
-            <nav aria-label="{{ __('knowledge.panel.categories') }}" class="flex flex-col gap-4">
+            <nav aria-label="{{ __('knowledge.panel.categories') }}" class="flex flex-col gap-5">
                 <button
                     type="button"
                     wire:click="showHome"
@@ -26,10 +43,11 @@
 
                 @foreach($categoryPages as $page)
                     <div>
-                        <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <h2 class="mb-2 text-sm font-semibold text-gray-950 dark:text-white">
                             {{ $page->category->label }}
                         </h2>
-                        <ul class="flex flex-col">
+                        {{-- Guides hang from a guide line; the open one marks it with the primary colour --}}
+                        <ul class="flex flex-col border-s border-gray-950/10 dark:border-white/10">
                             @foreach($page->guides as $item)
                                 <li wire:key="nav-{{ $item->id }}">
                                     <button
@@ -37,9 +55,9 @@
                                         wire:click="openGuide(@js($item->id))"
                                         @if($selectedGuide !== null && $selectedGuide->id === $item->id) aria-current="page" @endif
                                         @class([
-                                            'w-full rounded-lg px-2 py-1.5 text-start text-sm transition hover:bg-gray-100 dark:hover:bg-white/5',
-                                            'bg-gray-100 font-semibold text-gray-950 dark:bg-white/10 dark:text-white' => $selectedGuide !== null && $selectedGuide->id === $item->id,
-                                            'text-gray-700 dark:text-gray-300' => $selectedGuide === null || $selectedGuide->id !== $item->id,
+                                            '-ms-px w-full rounded-e-lg border-s-2 py-1.5 ps-3 pe-2 text-start text-sm transition',
+                                            'border-primary-600 bg-primary-50 font-semibold text-primary-700 dark:border-primary-400 dark:bg-primary-400/10 dark:text-primary-300' => $selectedGuide !== null && $selectedGuide->id === $item->id,
+                                            'border-transparent text-gray-600 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-950 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:bg-white/5 dark:hover:text-white' => $selectedGuide === null || $selectedGuide->id !== $item->id,
                                         ])
                                     >
                                         {{ $item->title }}
