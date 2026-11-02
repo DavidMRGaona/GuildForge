@@ -72,11 +72,13 @@ final class SearchDocumentModel extends Model
     }
 
     /**
-     * The index name; Scout adds the configured prefix.
+     * The index name with the configured prefix: Scout uses it as given, so the prefix must be added here.
      */
     public function searchableAs(): string
     {
-        return 'search_documents';
+        $prefix = config('scout.prefix');
+
+        return (is_string($prefix) ? $prefix : '').'search_documents';
     }
 
     /**

@@ -95,6 +95,15 @@ final class SearchDocumentStoreTest extends TestCase
         $this->assertNotNull($row->starts_at);
     }
 
+    public function test_index_name_carries_the_scout_prefix(): void
+    {
+        // Sites share one engine, and their keys only reach indexes under their own prefix
+        config(['scout.prefix' => 'site_a_']);
+
+        $this->assertSame('site_a_search_documents', (new SearchDocumentModel)->searchableAs());
+        $this->assertSame('site_a_search_documents', (new SearchDocumentModel)->indexableAs());
+    }
+
     public function test_searchable_array_uses_end_or_start_as_timestamp(): void
     {
         $withEnd = $this->store->upsert('event', null, new SearchDocumentDTO(
