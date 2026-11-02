@@ -77,6 +77,20 @@ final class EndSurveyChoiceDTOTest extends TestCase
         new EndSurveyChoiceDTO([new EndSurveyOptionDTO('none', 'Ninguna')], 'none', editUrl: '');
     }
 
+    public function test_it_keeps_the_guide_of_the_field(): void
+    {
+        $choice = new EndSurveyChoiceDTO([new EndSurveyOptionDTO('none', 'Ninguna')], 'none', guideId: 'surveys.panel.end-survey-field');
+
+        $this->assertSame('surveys.panel.end-survey-field', $choice->guideId);
+    }
+
+    public function test_a_blank_guide_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new EndSurveyChoiceDTO([new EndSurveyOptionDTO('none', 'Ninguna')], 'none', guideId: '');
+    }
+
     public function test_an_option_needs_a_value_and_a_label(): void
     {
         $this->expectException(InvalidArgumentException::class);

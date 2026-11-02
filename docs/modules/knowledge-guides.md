@@ -273,6 +273,8 @@ class ListTables extends ListRecords
 }
 ```
 
+**Help for what another module adds**: a module's page may show a field or a block that belongs to another module (the surveys module's end survey field or survey links on a table's page, say). Modules do not name each other's guides, so the guide travels through the core contract that already joins them: the contract carries a guide id, filled by the module that owns the feature, and the page or the core component shows the button. See `EndSurveyChoiceDTO::$guideId` and `SurveySubjectLinksDTO::$guideId` in the [module development guide](./README.md#linking-a-subjects-page-to-its-surveys).
+
 ## Validation
 
 ```bash

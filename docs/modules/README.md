@@ -1638,6 +1638,24 @@ EndSurveyField::forSubject(fn (Get $get): string => filled($get('parent_id')) ? 
 - Saving the subject never fails because of it: someone who may not choose gets a warning and the type's survey is used, and a choice that can no longer change (the survey already went out) is shown disabled with the reason and a link to the survey.
 - A subject the module does not offer as a survey subject yet (an unpublished event, say) can still keep a template or none; an own survey cannot be prepared for it, so its template to start from is kept instead and the field says so.
 - Its fields (`end_survey`, `end_survey_base`) are not dehydrated, so they never reach the model.
+- When the surveys module names its help guide (`EndSurveyChoiceDTO::$guideId`, core ^3.35), the field shows a «?» that opens it in a new tab, so the form being filled is kept. It only appears to who may see the guide.
+
+## Linking a subject's page to its surveys
+
+A subject's public page (a table, a tournament, an event…) can show a block with its surveys. The module asks `App\Application\Surveys\Contracts\SurveySubjectLinksInterface` (core ^3.29) for the signed-in person and renders what comes back; the core binds a default that answers with nothing, so without the surveys module the page shows nothing new.
+
+```php
+use App\Application\Surveys\Contracts\SurveySubjectLinksInterface;
+
+$links = app(SurveySubjectLinksInterface::class)->forSubject('example-thing', $thing->id, auth()->id());
+
+// $links->manageUrl: the subject's surveys page, only for whoever manages the subject
+// $links->surveys: list<SurveyLinkDTO> with title, url and action (respond or view_results)
+// $links->guideId: the help guide for this person (core ^3.35), or null
+```
+
+- Hide the block when `$links->isEmpty()`. The guide alone does not count as a link.
+- Show `HelpLink` next to the block's title with `$links->guideId` when it is not null: the surveys module picks the guide for answering or for managing, so the page never names another module's guide. `HelpLink` already hides itself from who may not see it.
 
 ---
 

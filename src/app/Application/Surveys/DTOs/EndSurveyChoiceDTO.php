@@ -19,6 +19,7 @@ final readonly class EndSurveyChoiceDTO
      * @param  list<EndSurveyOptionDTO>  $baseTemplates  What the own survey can start from
      * @param  string|null  $lockedReason  Why it can no longer change, already translated
      * @param  string|null  $editUrl  Where the subject's end survey is edited (only seen, once locked), when there is one
+     * @param  string|null  $guideId  The panel help guide on choosing it, opened from the field
      */
     public function __construct(
         public array $options,
@@ -28,6 +29,7 @@ final readonly class EndSurveyChoiceDTO
         public bool $locked = false,
         public ?string $lockedReason = null,
         public ?string $editUrl = null,
+        public ?string $guideId = null,
     ) {
         if ($options === []) {
             throw new InvalidArgumentException('An end survey choice needs at least one option.');
@@ -52,6 +54,10 @@ final readonly class EndSurveyChoiceDTO
 
         if ($editUrl !== null && trim($editUrl) === '') {
             throw new InvalidArgumentException('An end survey edit URL cannot be blank.');
+        }
+
+        if ($guideId !== null && trim($guideId) === '') {
+            throw new InvalidArgumentException('An end survey guide id cannot be blank.');
         }
     }
 }

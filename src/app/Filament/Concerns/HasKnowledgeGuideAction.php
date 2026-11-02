@@ -4,14 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Concerns;
 
-use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
-use App\Domain\Knowledge\Entities\Guide;
-use App\Domain\Knowledge\Enums\GuideAudience;
-use App\Domain\Knowledge\Exceptions\InvalidGuideIdException;
-use App\Domain\Knowledge\ValueObjects\GuideId;
-use App\Filament\Pages\KnowledgeBasePage;
+use App\Filament\Support\PanelGuideUrl;
 use Filament\Actions\Action;
-use Throwable;
 
 /**
  * Adds a header action that opens a panel help guide, only when the signed-in user may see it.
@@ -20,27 +14,8 @@ trait HasKnowledgeGuideAction
 {
     protected function knowledgeGuideAction(string $guideId): ?Action
     {
-        $user = auth()->user();
-        if ($user === null) {
-            return null;
-        }
-
-        try {
-            $id = GuideId::fromString($guideId);
-        } catch (InvalidGuideIdException) {
-            return null;
-        }
-
-        // A help button is never worth an error page: without a reliable answer, leave it out
-        try {
-            $guide = app(GuideVisibilityServiceInterface::class)->findVisible($user, $id, GuideAudience::Panel);
-        } catch (Throwable $e) {
-            report($e);
-
-            return null;
-        }
-
-        if (! $guide instanceof Guide) {
+        $url = PanelGuideUrl::for($guideId);
+        if ($url === null) {
             return null;
         }
 
@@ -48,6 +23,6 @@ trait HasKnowledgeGuideAction
             ->label(__('knowledge.contextual_help'))
             ->icon('heroicon-o-question-mark-circle')
             ->color('gray')
-            ->url(KnowledgeBasePage::getUrl(['guia' => $id->value()]));
+            ->url($url);
     }
 }
