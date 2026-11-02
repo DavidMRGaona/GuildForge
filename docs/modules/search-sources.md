@@ -26,7 +26,7 @@ A source implements `App\Application\Search\Contracts\IndexedSearchSourceInterfa
 
 Prefix the type with the module: the registry keeps the first source registered for a type and skips (and logs) any later one, and modules register before the core. A module type called `events` would take the place of the core events, and two modules using `tables` would hide one another. The prefix also keeps the type readable in `search:sync --type` and in the logs.
 
-`SearchDocumentDTO` carries `id` (the record's key, a string), `title` and `url` (both required: an empty one throws), `body` (plain text), and optionally `keywords`, `meta` (a short line such as the venue), `imagePublicId`, `startsAt`, `endsAt`, `publishedAt`, `finished`, `audience` and `locale`.
+`SearchDocumentDTO` carries `id` (the record's key, a string of at most 100 characters: a longer one throws), `title` and `url` (both required: an empty one throws), `body` (plain text), and optionally `keywords`, `meta` (a short line such as the venue), `imagePublicId`, `startsAt`, `endsAt`, `publishedAt`, `finished`, `audience` and `locale`.
 
 - Dates are `DateTimeImmutable` instants. A result is past when its `endsAt` (its `startsAt` when it has no end) is before the moment of the search: this is worked out when searching, not when indexing, so a record becomes past without being reindexed. Give the dates and let them do the work.
 - Set `finished` only for records that are over by status rather than by date, such as a completed campaign or a closed tournament whose dates are still ahead. Never set it from a date comparison: the document would keep the value it had when it was indexed.

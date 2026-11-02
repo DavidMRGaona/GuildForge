@@ -13,6 +13,9 @@ use InvalidArgumentException;
  */
 final readonly class SearchDocumentDTO
 {
+    /** Length of the stored source id column. */
+    public const int MAX_ID_LENGTH = 100;
+
     public function __construct(
         public string $id,
         public string $title,
@@ -28,6 +31,10 @@ final readonly class SearchDocumentDTO
         public SearchAudience $audience = SearchAudience::Public,
         public ?string $locale = null,
     ) {
+        if (mb_strlen($id) > self::MAX_ID_LENGTH) {
+            throw new InvalidArgumentException(sprintf('A search document id cannot be longer than %d characters.', self::MAX_ID_LENGTH));
+        }
+
         if (trim($title) === '') {
             throw new InvalidArgumentException('A search document needs a title.');
         }

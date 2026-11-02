@@ -31,4 +31,14 @@ final class SearchDocumentDTOTest extends TestCase
         $this->assertFalse($dto->finished);
         $this->assertNull($dto->startsAt);
     }
+
+    public function test_rejects_an_id_longer_than_the_stored_key(): void
+    {
+        // source_id is a string(100): a longer id would fail on PostgreSQL and be cut nowhere
+        $this->assertSame(str_repeat('é', 100), (new SearchDocumentDTO(id: str_repeat('é', 100), title: 'Título', body: '', url: '/a'))->id);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        new SearchDocumentDTO(id: str_repeat('a', 101), title: 'Título', body: '', url: '/a');
+    }
 }
