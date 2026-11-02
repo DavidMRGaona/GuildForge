@@ -4,18 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia as Assert;
 use Mockery;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
-use Tests\Support\Search\FakeSearchSource;
-use Tests\Support\Search\ThrowingSearchSource;
 use Tests\TestCase;
 
 final class SearchControllerTest extends TestCase
@@ -257,23 +253,6 @@ final class SearchControllerTest extends TestCase
         $this->knowledgeGuide('panel.signup', ['title' => 'Apuntarse en el panel', 'summary' => 'Cómo apuntarse', 'audience' => 'panel']);
     }
 
-    public function test_signed_in_users_get_a_help_block(): void
-    {
-        $this->seedHelpGuides();
-        $this->actingAs(UserModel::factory()->create());
-
-        $this->get('/buscar?q=apuntarse')->assertInertia(
-            fn (Assert $page) => $page
-                ->where('sources.0.key', 'help')
-                ->where('sources.0.label', 'Ayuda')
-                ->has('sources.0.results', 1)
-                ->where('sources.0.results.0.title', 'Apuntarse a una partida')
-                ->where('sources.0.results.0.url', route('knowledge.show', 'core.signup'))
-                ->where('sources.0.results.0.context', 'Primeros pasos')
-                ->has('sources.0.results.0.snippet')
-        );
-    }
-
     public function test_guests_get_no_help_block(): void
     {
         $this->seedHelpGuides();
@@ -297,19 +276,6 @@ final class SearchControllerTest extends TestCase
         );
     }
 
-    public function test_help_block_only_contains_visible_site_guides(): void
-    {
-        $this->seedHelpGuides();
-        $this->actingAs(UserModel::factory()->create());
-
-        $this->get('/buscar?q=apuntarse')->assertInertia(
-            fn (Assert $page) => $page
-                ->has('sources', 1)
-                ->has('sources.0.results', 1)
-                ->where('sources.0.results.0.title', 'Apuntarse a una partida')
-        );
-    }
-
     public function test_sources_without_results_are_left_out(): void
     {
         $this->seedHelpGuides();
@@ -327,26 +293,5 @@ final class SearchControllerTest extends TestCase
 
         $this->get('/buscar')->assertInertia(fn (Assert $page) => $page->where('sources', []));
         $this->get('/buscar?q=a')->assertInertia(fn (Assert $page) => $page->where('sources', []));
-    }
-
-    public function test_a_failing_source_is_skipped(): void
-    {
-        $this->seedHelpGuides();
-        $this->actingAs(UserModel::factory()->create());
-        $log = Log::spy();
-        $registry = $this->app->make(SearchSourceRegistryInterface::class);
-        $registry->register(ThrowingSearchSource::class);
-        $registry->register(FakeSearchSource::class);
-
-        $this->get('/buscar?q=apuntarse')
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page) => $page
-                    ->has('sources', 2)
-                    ->where('sources.0.key', 'help')
-                    ->where('sources.1.key', 'fake')
-            );
-
-        $log->shouldHaveReceived('warning')->once();
     }
 }

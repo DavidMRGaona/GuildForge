@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
  * Minimal search over the search_documents table, used when no search engine is configured or it fails.
  * Every term must appear, case-insensitively, in the title, keywords, meta or body; no typo tolerance,
  * accent folding or synonyms. Title matches go first, then what is not past, then the newest date.
+ * The help guides (their own search) come after all the documents.
  */
 final readonly class DatabaseSiteSearch implements SiteSearchInterface
 {
@@ -38,6 +39,7 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
         private SnippetBuilder $snippets,
         private QueryTerms $queryTerms,
         private TimezoneServiceInterface $timezone,
+        private HelpHitsProvider $help,
     ) {}
 
     public function search(SiteSearchQueryDTO $query): SiteSearchResultDTO
@@ -47,24 +49,64 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
             static fn (SearchAudience $audience): string => $audience->value,
             $query->audiences,
         )));
-        $types = array_values(array_unique($query->types));
+        // Without an audience no document is visible
+        $types = $audiences === [] ? [] : array_values(array_unique($query->types));
+        $offset = $query->offset;
+        $limit = $query->limit;
 
-        if ($terms === [] || $audiences === [] || $types === []) {
+        if ($terms === []) {
             return SiteSearchResultDTO::empty();
         }
 
-        $counts = $this->counts($terms, $audiences, $types);
-        $tabTypes = $query->type === null ? $types : array_values(array_intersect($types, [$query->type]));
-        $total = $query->type === null ? array_sum($counts) : ($counts[$query->type] ?? 0);
+        // The help centre's own search, capped at what the pages up to this one can show
+        $help = $query->includeHelp && $query->user !== null
+            ? $this->help->hits($query->user, $query->query, max(1, $offset + $limit))
+            : [];
 
-        if ($total === 0 || $query->limit === 0) {
+        if ($types === [] && $help === []) {
+            return SiteSearchResultDTO::empty();
+        }
+
+        $counts = $types === [] ? [] : $this->counts($terms, $audiences, $types);
+        if ($help !== []) {
+            $counts[HelpHitsProvider::TYPE] = count($help);
+        }
+
+        $tabTypes = match ($query->type) {
+            null => $types,
+            HelpHitsProvider::TYPE => [],
+            default => array_values(array_intersect($types, [$query->type])),
+        };
+        $tabHelp = $query->type === null || $query->type === HelpHitsProvider::TYPE ? $help : [];
+        $documentTotal = array_sum(array_map(static fn (string $type): int => $counts[$type] ?? 0, $tabTypes));
+        $total = $documentTotal + count($tabHelp);
+
+        if ($total === 0 || $limit === 0) {
             return new SiteSearchResultDTO([], $counts, $total);
         }
 
+        // Documents fill the first pages and the help rows the pages after them
+        $hits = $offset < $documentTotal ? $this->documentHits($terms, $audiences, $tabTypes, $offset, $limit) : [];
+        $remaining = $limit - count($hits);
+        if ($remaining > 0) {
+            array_push($hits, ...array_slice($tabHelp, max(0, $offset - $documentTotal), $remaining));
+        }
+
+        return new SiteSearchResultDTO($hits, $counts, $total);
+    }
+
+    /**
+     * @param  list<string>  $terms
+     * @param  list<string>  $audiences
+     * @param  list<string>  $types
+     * @return list<SiteSearchHitDTO>
+     */
+    private function documentHits(array $terms, array $audiences, array $types, int $offset, int $limit): array
+    {
         $now = $this->timezone->toStorage(now())->format('Y-m-d H:i:s');
         $titleMatches = implode(' + ', array_fill(0, count($terms), 'CASE WHEN LOWER(title)'.self::LIKE.' THEN 1 ELSE 0 END'));
 
-        $rows = $this->matching($terms, $audiences, $tabTypes)
+        $rows = $this->matching($terms, $audiences, $types)
             ->select('*')
             ->selectRaw("({$titleMatches}) AS title_matches", array_map($this->pattern(...), $terms))
             ->selectRaw(self::PAST.' AS is_past', [true, $now])
@@ -74,8 +116,8 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
             ->orderByRaw('CASE WHEN COALESCE(starts_at, published_at) IS NULL THEN 1 ELSE 0 END')
             ->orderByRaw('COALESCE(starts_at, published_at) DESC')
             ->orderBy('id')
-            ->offset($query->offset)
-            ->limit($query->limit)
+            ->offset($offset)
+            ->limit($limit)
             ->get();
 
         $hits = [];
@@ -93,7 +135,7 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
             );
         }
 
-        return new SiteSearchResultDTO($hits, $counts, $total);
+        return $hits;
     }
 
     /**

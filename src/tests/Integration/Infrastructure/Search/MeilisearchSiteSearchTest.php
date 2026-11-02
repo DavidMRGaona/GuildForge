@@ -23,9 +23,11 @@ use Meilisearch\Client;
 use Meilisearch\Contracts\MultiSearchFederation;
 use Meilisearch\Contracts\SearchQuery;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use stdClass;
 use Tests\Support\Knowledge\KnowledgeGuides;
 use Tests\TestCase;
+use UnexpectedValueException;
 
 final class MeilisearchSiteSearchTest extends TestCase
 {
@@ -253,6 +255,45 @@ final class MeilisearchSiteSearchTest extends TestCase
 
         $this->assertEquals(SiteSearchResultDTO::empty(), $result);
         $this->assertSame([], $this->calls);
+    }
+
+    /**
+     * @param  array<string, mixed>  $answer
+     */
+    #[DataProvider('malformedAnswers')]
+    public function test_an_answer_without_hits_or_facets_throws_so_the_fallback_answers(array $answer): void
+    {
+        $this->engineAnswers($answer);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $this->search('dragones');
+    }
+
+    public function test_a_tab_request_needs_hits_but_not_facets(): void
+    {
+        $this->engineAnswers(['hits' => []], ['results' => [['indexUid' => self::GUIDES, 'facetDistribution' => ['locale' => ['es' => 1]]]]]);
+
+        $this->assertSame([], $this->search('dragones', type: 'help')->hits);
+
+        $this->engineAnswers(['facetsByIndex' => []], ['results' => [['indexUid' => self::GUIDES, 'facetDistribution' => ['locale' => ['es' => 1]]]]]);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $this->search('dragones', type: 'help');
+    }
+
+    /**
+     * @return array<string, array{array<string, mixed>}>
+     */
+    public static function malformedAnswers(): array
+    {
+        return [
+            'missing hits' => [['facetsByIndex' => []]],
+            'hits that are not a list' => [['hits' => 'none', 'facetsByIndex' => []]],
+            'missing facets' => [['hits' => []]],
+            'facets that are not a map' => [['hits' => [], 'facetsByIndex' => 'none']],
+        ];
     }
 
     /**

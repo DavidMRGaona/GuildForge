@@ -18,7 +18,14 @@ final readonly class MeilisearchKnowledgeSearch implements KnowledgeSearchInterf
 {
     private const int MAX_QUERY_LENGTH = 500;
 
-    private const int CROP_LENGTH = 24;
+    public const int CROP_LENGTH = 24;
+
+    /** Fields the help search reads back from the guides index. */
+    public const array RETRIEVE_ATTRIBUTES = ['guide_id', 'locale'];
+
+    public const array HIGHLIGHT_ATTRIBUTES = ['body_text', 'summary'];
+
+    public const array CROP_ATTRIBUTES = ['body_text'];
 
     public function __construct(
         private MeilisearchHitMapper $mapper,
@@ -34,9 +41,9 @@ final readonly class MeilisearchKnowledgeSearch implements KnowledgeSearchInterf
         $options = [
             'filter' => $this->filterFor($candidates),
             'limit' => $limit,
-            'attributesToRetrieve' => ['guide_id', 'locale'],
-            'attributesToHighlight' => ['body_text', 'summary'],
-            'attributesToCrop' => ['body_text'],
+            'attributesToRetrieve' => self::RETRIEVE_ATTRIBUTES,
+            'attributesToHighlight' => self::HIGHLIGHT_ATTRIBUTES,
+            'attributesToCrop' => self::CROP_ATTRIBUTES,
             'cropLength' => self::CROP_LENGTH,
             'highlightPreTag' => MeilisearchHitMapper::HIGHLIGHT_PRE_TAG,
             'highlightPostTag' => MeilisearchHitMapper::HIGHLIGHT_POST_TAG,

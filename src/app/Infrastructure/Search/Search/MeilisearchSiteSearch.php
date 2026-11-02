@@ -31,7 +31,7 @@ use UnexpectedValueException;
  */
 final readonly class MeilisearchSiteSearch implements SiteSearchInterface
 {
-    public const string HELP_TYPE = 'help';
+    public const string HELP_TYPE = HelpHitsProvider::TYPE;
 
     private const int MAX_QUERY_LENGTH = 500;
 
@@ -54,6 +54,7 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
         private MeilisearchHitMapper $mapper,
         private MeilisearchKnowledgeSearch $knowledgeSearch,
         private GuideVisibilityServiceInterface $visibility,
+        private HelpHitsProvider $help,
     ) {}
 
     public function search(SiteSearchQueryDTO $query): SiteSearchResultDTO
@@ -148,7 +149,12 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
 
         $response = $this->client->multiSearch($queries, $federation);
 
-        return is_array($response) ? $response : [];
+        // An answer without its hits (or its facets, when asked for) is not an answer: the fallback must take over
+        if (! is_array($response) || ! is_array($response['hits'] ?? null) || ($withFacets && ! is_array($response['facetsByIndex'] ?? null))) {
+            throw new UnexpectedValueException('The search engine answered with an unexpected shape.');
+        }
+
+        return $response;
     }
 
     /**
@@ -291,7 +297,7 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
         }
 
         $documents = $this->documents($documentIds, $types, $audiences);
-        $help = $user !== null && $guides !== [] ? $this->helpHits($guideHits, $guides, $user) : [];
+        $help = $user !== null && $guides !== [] ? $this->help->fromKnowledgeHits($this->mapper->map(['hits' => $guideHits], $guides, count($guideHits)), $user) : [];
 
         $hits = [];
         foreach ($order as [$source, $id, $formatted]) {
@@ -378,43 +384,6 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
     }
 
     /**
-     * Help guides as rows of the list, keyed by guide id: a link to the guide, its category as the meta line, never past.
-     *
-     * @param  list<array<array-key, mixed>>  $rawHits
-     * @param  non-empty-list<Guide>  $guides
-     * @return array<string, SiteSearchHitDTO>
-     */
-    private function helpHits(array $rawHits, array $guides, object $user): array
-    {
-        $found = $this->mapper->map(['hits' => $rawHits], $guides, count($rawHits));
-        if ($found === []) {
-            return [];
-        }
-
-        $labels = [];
-        foreach ($this->visibility->visibleCategories($user, GuideAudience::Site) as $row) {
-            $labels[$row['category']->id] = (string) __($row['category']->labelKey);
-        }
-
-        $hits = [];
-        foreach ($found as $hit) {
-            $hits[$hit->id] = new SiteSearchHitDTO(
-                type: self::HELP_TYPE,
-                title: $hit->title,
-                url: route('knowledge.show', $hit->id),
-                meta: $labels[$hit->categoryId] ?? null,
-                imagePublicId: null,
-                startsAt: null,
-                endsAt: null,
-                past: false,
-                snippet: $hit->snippet,
-            );
-        }
-
-        return $hits;
-    }
-
-    /**
      * @param  non-empty-string  $filter
      */
     private function documentsQuery(string $text, string $filter): SearchQuery
@@ -442,10 +411,10 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
             ->setIndexUid($this->guidesIndex())
             ->setQuery($text)
             ->setFilter([$this->knowledgeSearch->filterFor($guides)])
-            ->setAttributesToRetrieve(['guide_id', 'locale'])
-            ->setAttributesToHighlight(['body_text', 'summary'])
-            ->setAttributesToCrop(['body_text'])
-            ->setCropLength(self::CROP_LENGTH)
+            ->setAttributesToRetrieve(MeilisearchKnowledgeSearch::RETRIEVE_ATTRIBUTES)
+            ->setAttributesToHighlight(MeilisearchKnowledgeSearch::HIGHLIGHT_ATTRIBUTES)
+            ->setAttributesToCrop(MeilisearchKnowledgeSearch::CROP_ATTRIBUTES)
+            ->setCropLength(MeilisearchKnowledgeSearch::CROP_LENGTH)
             ->setHighlightPreTag(MeilisearchHitMapper::HIGHLIGHT_PRE_TAG)
             ->setHighlightPostTag(MeilisearchHitMapper::HIGHLIGHT_POST_TAG);
     }
