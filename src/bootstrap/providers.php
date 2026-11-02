@@ -7,6 +7,7 @@ use App\Providers\AppServiceProvider;
 use App\Providers\AuthorizationServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\KnowledgeServiceProvider;
+use App\Providers\SearchServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -14,4 +15,5 @@ return [
     DynamicMailServiceProvider::class,
     AdminPanelProvider::class,
     KnowledgeServiceProvider::class,
+    SearchServiceProvider::class,
 ];

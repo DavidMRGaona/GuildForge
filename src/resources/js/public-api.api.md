@@ -658,6 +658,7 @@ export interface RouteDefinitions {
     home: string;
     about: string;
     search: string;
+    searchSuggestions: string;
     events: {
         index: string;
         show: (slug: string) => string;

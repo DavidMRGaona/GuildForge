@@ -42,7 +42,6 @@ return [
         'badge_new' => 'New',
         'badge_updated' => 'Updated',
     ],
-    'search_block' => 'Help',
     'placeholders' => [
         'association_role_fallback' => 'member',
     ],

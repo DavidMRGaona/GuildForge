@@ -402,4 +402,9 @@ return [
         'locked' => 'The end survey can no longer change.',
         'deferred' => 'This does not take surveys yet, so the own survey could not be prepared. Its template to start from was kept, and is what goes out when it ends.',
     ],
+    'search_misses' => [
+        'heading' => 'Searches without results',
+        'query' => 'Search',
+        'count' => 'Times',
+    ],
 ];

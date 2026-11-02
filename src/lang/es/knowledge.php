@@ -42,7 +42,6 @@ return [
         'badge_new' => 'Nueva',
         'badge_updated' => 'Actualizada',
     ],
-    'search_block' => 'Ayuda',
     'placeholders' => [
         'association_role_fallback' => 'socio',
     ],

@@ -17,11 +17,8 @@ use Illuminate\Contracts\Config\Repository;
  */
 final readonly class DatabaseKnowledgeSearch implements KnowledgeSearchInterface
 {
-    private const int MAX_QUERY_LENGTH = 500;
-
-    private const int MAX_TERMS = 10;
-
-    private const int MIN_TERM_LENGTH = 2;
+    /** Anything that is not a letter or a number around a word. */
+    private const string EDGE_PATTERN = '/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/u';
 
     private const int TITLE_WEIGHT = 8;
 
@@ -33,6 +30,7 @@ final readonly class DatabaseKnowledgeSearch implements KnowledgeSearchInterface
 
     public function __construct(
         private SnippetBuilder $snippets,
+        private QueryTerms $queryTerms,
         private Repository $config,
     ) {}
 
@@ -85,43 +83,13 @@ final readonly class DatabaseKnowledgeSearch implements KnowledgeSearchInterface
     }
 
     /**
-     * Normalized query words of at least two characters, at most ten; stop words are dropped while other words remain.
+     * Normalized query words (accents and case ignored).
      *
      * @return list<string>
      */
     private function terms(string $query): array
     {
-        $normalized = TextNormalizer::normalize(mb_substr($query, 0, self::MAX_QUERY_LENGTH));
-
-        $terms = [];
-        foreach (preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
-            $word = preg_replace('/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/u', '', $word) ?? '';
-            if (mb_strlen($word) >= self::MIN_TERM_LENGTH && ! in_array($word, $terms, true)) {
-                $terms[] = $word;
-            }
-        }
-
-        $stopWords = $this->stopWords();
-        $meaningful = array_values(array_filter($terms, static fn (string $term): bool => ! isset($stopWords[$term])));
-
-        return array_slice($meaningful !== [] ? $meaningful : $terms, 0, self::MAX_TERMS);
-    }
-
-    /**
-     * @return array<string, true>
-     */
-    private function stopWords(): array
-    {
-        $configured = $this->config->get('knowledge.stop_words', []);
-
-        $stopWords = [];
-        foreach (is_array($configured) ? $configured : [] as $word) {
-            if (is_string($word)) {
-                $stopWords[TextNormalizer::normalize($word)] = true;
-            }
-        }
-
-        return $stopWords;
+        return $this->queryTerms->split($query, TextNormalizer::normalize(...), self::EDGE_PATTERN);
     }
 
     /**

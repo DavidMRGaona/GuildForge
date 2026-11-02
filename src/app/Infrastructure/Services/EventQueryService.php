@@ -87,25 +87,6 @@ final readonly class EventQueryService implements EventQueryServiceInterface
         return $event ? $this->dtoFactory->createEventDTO($event) : null;
     }
 
-    public function searchPublished(string $query, int $limit = 12): array
-    {
-        $searchTerm = '%'.mb_strtolower($query).'%';
-
-        $events = EventModel::query()
-            ->with('tags')
-            ->where('is_published', true)
-            ->where(function ($q) use ($searchTerm): void {
-                $q->whereRaw('LOWER(title) LIKE ?', [$searchTerm])
-                    ->orWhereRaw('LOWER(description) LIKE ?', [$searchTerm])
-                    ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm]);
-            })
-            ->orderedByStart('desc')
-            ->limit($limit)
-            ->get();
-
-        return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
-    }
-
     public function findByDateRange(string $start, string $end): array
     {
         // The requested days are display days: bind their midnights as storage-zone instants.

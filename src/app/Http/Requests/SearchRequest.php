@@ -12,6 +12,9 @@ final class SearchRequest extends FormRequest
 
     private const int MAX_QUERY_LENGTH = 100;
 
+    /** The search engine pages up to 1000 hits: 50 pages of 20. */
+    public const int MAX_PAGE = 50;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -38,6 +41,26 @@ final class SearchRequest extends FormRequest
     public function searchQuery(): string
     {
         return trim((string) $this->query('q', ''));
+    }
+
+    /**
+     * The tab asked for (`tipo`), or null; whether it exists is for the caller to decide.
+     */
+    public function tab(): ?string
+    {
+        $tab = $this->query('tipo');
+
+        return is_string($tab) && $tab !== '' ? $tab : null;
+    }
+
+    /**
+     * The page asked for (`pagina`), from 1 to MAX_PAGE; anything else reads as the first page.
+     */
+    public function page(): int
+    {
+        $page = filter_var($this->query('pagina'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => self::MAX_PAGE]]);
+
+        return is_int($page) ? $page : 1;
     }
 
     /**

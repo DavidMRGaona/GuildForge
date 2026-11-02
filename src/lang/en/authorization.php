@@ -18,6 +18,7 @@ return [
         'tags' => 'Tags',
         'menu_items' => 'Navigation menu',
         'settings' => 'Settings',
+        'search' => 'Search',
         'mail' => 'Email',
         'updates' => 'Updates',
         'admin' => 'Administration',
@@ -103,6 +104,9 @@ return [
         ],
         'updates' => [
             'apply' => 'Apply updates',
+        ],
+        'search' => [
+            'view_stats' => 'View search statistics',
         ],
         'mail' => [
             'configure' => 'Configure email',

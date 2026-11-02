@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef, watch } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { Search, Sun, Moon, Monitor, Menu, X } from '@lucide/vue';
@@ -9,6 +9,7 @@ import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
 import { useOnNavigate } from '@/composables/useOnNavigate';
 import { useFitsWithoutOverflow } from '@/composables/useFitsWithoutOverflow';
+import SearchPanel from '@/components/search/SearchPanel.vue';
 import TheNavigation from './TheNavigation.vue';
 import UserDropdown from './UserDropdown.vue';
 import AuthLinks from './AuthLinks.vue';
@@ -21,6 +22,10 @@ const appStore = useAppStore();
 
 const isMobileMenuOpen = ref(false);
 const isThemeMenuOpen = ref(false);
+const isSearchOpen = ref(false);
+const searchButton = useTemplateRef<HTMLButtonElement>('searchButton');
+const menuButton = useTemplateRef<HTMLButtonElement>('menuButton');
+let searchTrigger: HTMLElement | null = null;
 
 // How wide the full bar is depends on the site's links and the user's name, so no breakpoint
 // fits every site: below md, or whenever the bar overflows, the header uses the menu button
@@ -34,6 +39,14 @@ const fitsFullBar = useFitsWithoutOverflow(headerRow, () => [
 useOnNavigate(() => {
     isMobileMenuOpen.value = false;
     isThemeMenuOpen.value = false;
+});
+
+// Read when the panel closes (focus return) and forgotten afterwards, so a later «/» does not
+// send focus to a button that did not open it
+watch(isSearchOpen, (isOpen) => {
+    if (!isOpen) {
+        searchTrigger = null;
+    }
 });
 
 const appName = computed(() => page.props.appName as string);
@@ -58,6 +71,26 @@ function toggleThemeMenu(): void {
 
 function closeThemeMenu(): void {
     isThemeMenuOpen.value = false;
+}
+
+function openSearch(event: MouseEvent): void {
+    searchTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    isSearchOpen.value = true;
+}
+
+/**
+ * The button that opened the panel; after «/», whatever was focused before, or the visible
+ * magnifier (menu button when the bar is collapsed) when that was the page itself.
+ */
+function searchReturnFocus(opener: HTMLElement | null): HTMLElement | null {
+    if (searchTrigger?.isConnected) {
+        return searchTrigger;
+    }
+    if (opener?.isConnected) {
+        return opener;
+    }
+    const fullBarShown = fitsFullBar.value && window.matchMedia('(min-width: 768px)').matches;
+    return (fullBarShown ? searchButton.value : menuButton.value) ?? null;
 }
 
 function selectTheme(mode: ThemeMode): void {
@@ -86,14 +119,18 @@ function selectTheme(mode: ThemeMode): void {
                 >
                     <TheNavigation />
 
-                    <!-- Search button -->
-                    <Link
-                        :href="routes.search"
+                    <!-- Search button: opens the search panel -->
+                    <button
+                        ref="searchButton"
+                        type="button"
                         :aria-label="t('search.title')"
+                        aria-haspopup="dialog"
+                        :aria-expanded="isSearchOpen"
                         class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        @click="openSearch"
                     >
                         <Search class="h-5 w-5" aria-hidden="true" />
-                    </Link>
+                    </button>
 
                     <!-- Theme selector dropdown -->
                     <div v-if="appStore.isThemeToggleVisible" class="relative">
@@ -175,6 +212,7 @@ function selectTheme(mode: ThemeMode): void {
                 <!-- Mobile menu button -->
                 <div :class="{ 'md:hidden': fitsFullBar }">
                     <button
+                        ref="menuButton"
                         type="button"
                         aria-controls="mobile-menu"
                         class="inline-flex items-center justify-center rounded-md p-2 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
@@ -201,15 +239,17 @@ function selectTheme(mode: ThemeMode): void {
             <div class="space-y-1 px-4 py-3">
                 <TheNavigation mobile @navigate="closeMobileMenu" />
 
-                <!-- Search link -->
-                <Link
-                    :href="routes.search"
-                    class="flex items-center px-3 py-2 text-base font-medium text-base-secondary hover:bg-muted hover:text-base-primary rounded-md"
-                    @click="closeMobileMenu"
+                <!-- Search: opens the search panel -->
+                <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    :aria-expanded="isSearchOpen"
+                    class="flex w-full items-center px-3 py-2 text-base font-medium text-base-secondary hover:bg-muted hover:text-base-primary rounded-md"
+                    @click="openSearch"
                 >
                     <Search class="mr-3 h-5 w-5" aria-hidden="true" />
                     {{ t('search.title') }}
-                </Link>
+                </button>
 
                 <!-- Theme selector -->
                 <div v-if="appStore.isThemeToggleVisible" class="px-3 py-2">
@@ -266,5 +306,7 @@ function selectTheme(mode: ThemeMode): void {
                 </div>
             </div>
         </div>
+
+        <SearchPanel v-model:open="isSearchOpen" :return-focus="searchReturnFocus" />
     </header>
 </template>

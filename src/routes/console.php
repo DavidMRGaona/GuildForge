@@ -27,7 +27,17 @@ Schedule::command('knowledge:prune-metrics')
     ->daily()
     ->withoutOverlapping();
 
+// Anonymous site search metrics only matter for a while: drop old searches without results
+Schedule::command('search:prune-metrics')
+    ->daily()
+    ->withoutOverlapping();
+
 // Rebuild the help catalog and its search index daily, so an index left stale by a search engine outage heals on its own
 Schedule::command('knowledge:sync')
+    ->daily()
+    ->withoutOverlapping();
+
+// Rebuild the site search documents daily: picks up bulk changes the observers miss and heals an index left stale by an outage
+Schedule::command('search:sync')
     ->daily()
     ->withoutOverlapping();

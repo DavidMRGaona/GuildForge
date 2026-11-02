@@ -8,6 +8,7 @@ export interface RouteDefinitions {
     home: string;
     about: string;
     search: string;
+    searchSuggestions: string;
 
     // Content sections
     events: {
@@ -68,6 +69,7 @@ const routes: RouteDefinitions = {
     home: '/',
     about: '/nosotros',
     search: '/buscar',
+    searchSuggestions: '/buscar/sugerencias',
 
     // Content sections
     events: {

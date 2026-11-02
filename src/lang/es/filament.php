@@ -748,6 +748,7 @@ return [
             'pending_moderation_widget' => 'Mesas pendientes de moderación',
             'registration_stats_widget' => 'Estadísticas de inscripciones',
             'consent_stats_widget' => 'Estadísticas de consentimiento',
+            'search_misses_widget' => 'Búsquedas sin resultados',
         ],
     ],
     'time_picker' => [
@@ -763,5 +764,10 @@ return [
         'released_as_draft' => 'La encuesta que habías preparado se ha guardado como borrador.',
         'locked' => 'La encuesta al terminar ya no se puede cambiar.',
         'deferred' => 'Esto aún no admite encuestas, así que la encuesta propia no se ha podido preparar. Se ha guardado su plantilla de partida, que es la que saldrá al terminar.',
+    ],
+    'search_misses' => [
+        'heading' => 'Búsquedas sin resultados',
+        'query' => 'Búsqueda',
+        'count' => 'Veces',
     ],
 ];

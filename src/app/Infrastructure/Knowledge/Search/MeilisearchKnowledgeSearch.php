@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Infrastructure\Knowledge\Search;
 
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
+use App\Domain\Knowledge\Entities\Guide;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
+use App\Infrastructure\Search\Search\MeilisearchFilter;
 use Meilisearch\Endpoints\Indexes;
 
 /**
@@ -16,7 +18,14 @@ final readonly class MeilisearchKnowledgeSearch implements KnowledgeSearchInterf
 {
     private const int MAX_QUERY_LENGTH = 500;
 
-    private const int CROP_LENGTH = 24;
+    public const int CROP_LENGTH = 24;
+
+    /** Fields the help search reads back from the guides index. */
+    public const array RETRIEVE_ATTRIBUTES = ['guide_id', 'locale'];
+
+    public const array HIGHLIGHT_ATTRIBUTES = ['body_text', 'summary'];
+
+    public const array CROP_ATTRIBUTES = ['body_text'];
 
     public function __construct(
         private MeilisearchHitMapper $mapper,
@@ -29,19 +38,12 @@ final readonly class MeilisearchKnowledgeSearch implements KnowledgeSearchInterf
             return [];
         }
 
-        $first = $candidates[0];
-        $ids = array_map(fn ($guide): string => $this->quote($guide->id->value()), $candidates);
         $options = [
-            'filter' => sprintf(
-                'active = true AND locale = %s AND audience = %s AND guide_id IN [%s]',
-                $this->quote($first->locale),
-                $this->quote($first->audience->value),
-                implode(', ', $ids),
-            ),
+            'filter' => $this->filterFor($candidates),
             'limit' => $limit,
-            'attributesToRetrieve' => ['guide_id', 'locale'],
-            'attributesToHighlight' => ['body_text', 'summary'],
-            'attributesToCrop' => ['body_text'],
+            'attributesToRetrieve' => self::RETRIEVE_ATTRIBUTES,
+            'attributesToHighlight' => self::HIGHLIGHT_ATTRIBUTES,
+            'attributesToCrop' => self::CROP_ATTRIBUTES,
             'cropLength' => self::CROP_LENGTH,
             'highlightPreTag' => MeilisearchHitMapper::HIGHLIGHT_PRE_TAG,
             'highlightPostTag' => MeilisearchHitMapper::HIGHLIGHT_POST_TAG,
@@ -55,8 +57,21 @@ final readonly class MeilisearchKnowledgeSearch implements KnowledgeSearchInterf
         return $this->mapper->map(is_array($raw) ? $raw : [], $candidates, $limit);
     }
 
-    private function quote(string $value): string
+    /**
+     * The filter that limits a search of the guides index to the candidates; the site search uses it too.
+     *
+     * @param  non-empty-list<Guide>  $candidates
+     * @return non-empty-string
+     */
+    public function filterFor(array $candidates): string
     {
-        return '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $value).'"';
+        $first = $candidates[0];
+
+        return sprintf(
+            'active = true AND locale = %s AND audience = %s AND %s',
+            MeilisearchFilter::quote($first->locale),
+            MeilisearchFilter::quote($first->audience->value),
+            MeilisearchFilter::in('guide_id', array_map(static fn (Guide $guide): string => $guide->id->value(), $candidates)),
+        );
     }
 }

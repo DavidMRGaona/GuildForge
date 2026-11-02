@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Application\Search\Services\SearchSourceRegistryInterface;
-use App\Application\Services\EmailVerificationPolicyInterface;
-use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
-use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
+use App\Application\Search\DTOs\SiteSearchQueryDTO;
+use App\Application\Search\DTOs\SiteSearchResultDTO;
+use App\Application\Search\Services\SearchMetricsServiceInterface;
+use App\Application\Search\Services\SiteSearchInterface;
+use App\Application\Services\SettingsServiceInterface;
+use App\Domain\Search\Enums\SearchAudience;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Mockery;
+use RuntimeException;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
-use Tests\Support\Search\FakeSearchSource;
-use Tests\Support\Search\ThrowingSearchSource;
 use Tests\TestCase;
 
 final class SearchControllerTest extends TestCase
@@ -23,228 +27,295 @@ final class SearchControllerTest extends TestCase
     use CreatesKnowledgeRecords;
     use LazilyRefreshDatabase;
 
-    public function test_search_requires_minimum_two_characters(): void
+    protected function setUp(): void
     {
-        $response = $this->get('/buscar?q=a');
+        parent::setUp();
 
-        $response->assertStatus(200);
-        $response->assertInertia(
+        $this->travelTo(CarbonImmutable::parse('2026-11-15 12:00:00', 'UTC'));
+    }
+
+    public function test_renders_tabs_with_counts_and_mixed_results(): void
+    {
+        $this->document('events', [
+            'title' => 'Torneo de dragones',
+            'body' => 'Una tarde con dragones y dados',
+            'meta' => 'Sala grande',
+            'image_public_id' => 'events/2026/11/dragon',
+            'starts_at' => CarbonImmutable::parse('2026-11-21 09:00:00', 'UTC'),
+        ]);
+        $this->document('events', [
+            'title' => 'Liga de dragones',
+            'starts_at' => CarbonImmutable::parse('2026-10-03 16:30:00', 'UTC'),
+        ]);
+        $this->document('articles', [
+            'title' => 'Pintar dragones',
+            'published_at' => CarbonImmutable::parse('2026-09-15 08:00:00', 'UTC'),
+        ]);
+        $this->document('galleries', ['title' => 'Sin coincidencias']);
+
+        $this->get('/buscar?q=dragones')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Search/Index')
+                ->where('query', 'dragones')
+                ->where('type', null)
+                ->where('tabs', [
+                    ['key' => null, 'label' => 'Todo', 'count' => 3],
+                    ['key' => 'events', 'label' => 'Eventos', 'count' => 2],
+                    ['key' => 'articles', 'label' => 'Artículos', 'count' => 1],
+                ])
+                ->where('total', 3)
+                ->where('page', 1)
+                ->where('hasMore', false)
+                ->where('error', null)
+                ->has('seo')
+                ->missing('events')
+                ->missing('articles')
+                ->missing('sources')
+                ->has('results', 3)
+                ->where('results.0', [
+                    'type' => 'events',
+                    'typeLabel' => 'Evento',
+                    'title' => 'Torneo de dragones',
+                    'url' => '/torneo-de-dragones',
+                    'meta' => 'Sala grande',
+                    'image' => 'events/2026/11/dragon',
+                    'date' => 'sáb 21 nov · 10:00',
+                    'pastLabel' => null,
+                    'snippet' => [
+                        ['text' => 'Una tarde con ', 'match' => false],
+                        ['text' => 'dragones', 'match' => true],
+                        ['text' => ' y dados', 'match' => false],
+                    ],
+                ])
+        );
+
+        $results = $this->results('/buscar?q=dragones');
+        $byTitle = array_column($results, null, 'title');
+        $this->assertSame('sáb 3 oct · 18:30', $byTitle['Liga de dragones']['date']);
+        $this->assertSame('Celebrado', $byTitle['Liga de dragones']['pastLabel']);
+        $this->assertSame('15 sep 2026', $byTitle['Pintar dragones']['date']);
+        $this->assertSame('Artículo', $byTitle['Pintar dragones']['typeLabel']);
+        $this->assertNull($byTitle['Pintar dragones']['pastLabel']);
+        $this->assertNull($byTitle['Pintar dragones']['image']);
+    }
+
+    public function test_results_are_merged_by_the_next_page_request(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+
+        $page = $this->get('/buscar?q=dragones')->viewData('page');
+
+        $this->assertIsArray($page);
+        $this->assertContains('results', $page['mergeProps'] ?? []);
+    }
+
+    public function test_tab_filters_results(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+        $this->document('articles', ['title' => 'Pintar dragones']);
+
+        $this->get('/buscar?q=dragones&tipo=articles')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('type', 'articles')
+                ->where('total', 1)
+                ->has('tabs', 3)
+                ->where('tabs.0.count', 2)
+                ->has('results', 1)
+                ->where('results.0.title', 'Pintar dragones')
+        );
+    }
+
+    public function test_unknown_tab_falls_back_to_all(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+        $this->document('articles', ['title' => 'Pintar dragones']);
+
+        foreach (['nope', 'help', ''] as $tab) {
+            $this->get('/buscar?q=dragones&tipo='.$tab)->assertOk()->assertInertia(
+                fn (Assert $page) => $page
+                    ->where('type', null)
+                    ->where('total', 2)
+                    ->has('results', 2)
+            );
+        }
+    }
+
+    public function test_second_page_returns_next_results_and_has_more(): void
+    {
+        for ($i = 1; $i <= 25; $i++) {
+            $this->document('events', ['title' => 'Partida de dragones '.$i]);
+        }
+
+        $this->get('/buscar?q=dragones')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('page', 1)
+                ->where('total', 25)
+                ->where('hasMore', true)
+                ->has('results', 20)
+        );
+
+        $first = array_column($this->results('/buscar?q=dragones'), 'title');
+        $second = array_column($this->results('/buscar?q=dragones&pagina=2'), 'title');
+
+        $this->assertCount(5, $second);
+        $this->assertSame([], array_intersect($first, $second));
+
+        $this->get('/buscar?q=dragones&pagina=2')->assertInertia(
+            fn (Assert $page) => $page->where('page', 2)->where('hasMore', false)
+        );
+        $this->get('/buscar?q=dragones&pagina=9')->assertInertia(
+            fn (Assert $page) => $page->where('page', 9)->where('hasMore', false)->where('results', [])->where('total', 25)
+        );
+    }
+
+    public function test_invalid_page_is_read_as_the_first(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+
+        foreach (['0', '-3', 'abc', '99999999999999999999999'] as $value) {
+            $this->get('/buscar?q=dragones&pagina='.$value)->assertOk()->assertInertia(
+                fn (Assert $page) => $page->where('page', 1)->has('results', 1)
+            );
+        }
+    }
+
+    public function test_records_miss_only_for_first_page_without_results(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+        $metrics = Mockery::mock(SearchMetricsServiceInterface::class);
+        $metrics->shouldReceive('recordMiss')->once()->with('zzqq');
+        $this->app->instance(SearchMetricsServiceInterface::class, $metrics);
+
+        $this->get('/buscar?q=zzqq')->assertOk();
+        $this->get('/buscar?q=zzqq&pagina=2')->assertOk();
+        $this->get('/buscar?q=zzqq&tipo=events')->assertOk();
+        $this->get('/buscar?q=dragones')->assertOk();
+        $this->get('/buscar?q=z')->assertOk();
+        $this->get('/buscar')->assertOk();
+    }
+
+    public function test_guest_does_not_see_help(): void
+    {
+        $this->seedHelpGuides();
+        $this->document('events', ['title' => 'Apuntarse al torneo']);
+
+        $this->get('/buscar?q=apuntarse')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('tabs', [
+                    ['key' => null, 'label' => 'Todo', 'count' => 1],
+                    ['key' => 'events', 'label' => 'Eventos', 'count' => 1],
+                ])
+                ->has('results', 1)
+                ->where('results.0.type', 'events')
+        );
+    }
+
+    public function test_signed_in_user_sees_visible_site_guides_as_help_rows(): void
+    {
+        $this->seedHelpGuides();
+        $this->document('events', ['title' => 'Apuntarse al torneo']);
+        $this->actingAs($this->member());
+
+        $this->get('/buscar?q=apuntarse')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('tabs', [
+                    ['key' => null, 'label' => 'Todo', 'count' => 2],
+                    ['key' => 'events', 'label' => 'Eventos', 'count' => 1],
+                    ['key' => 'help', 'label' => 'Ayuda', 'count' => 1],
+                ])
+                ->has('results', 2)
+                ->where('results.1.type', 'help')
+                ->where('results.1.typeLabel', 'Ayuda')
+                ->where('results.1.title', 'Apuntarse a una partida')
+                ->where('results.1.url', '/ayuda/core.signup')
+                ->where('results.1.date', null)
+                ->where('results.1.pastLabel', null)
+                ->where('results.1.image', null)
+        );
+
+        $this->get('/buscar?q=apuntarse&tipo=help')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('type', 'help')
+                ->where('total', 1)
+                ->has('results', 1)
+                ->where('results.0.type', 'help')
+        );
+    }
+
+    public function test_user_who_must_verify_does_not_see_help(): void
+    {
+        $this->seedHelpGuides();
+        $settings = app(SettingsServiceInterface::class);
+        $settings->set('auth_email_verification_required', '1');
+        $settings->set('email_verification_enforced_since', '2026-01-01T00:00:00+00:00');
+        $user = UserModel::factory()->unverified()->create();
+        $this->app->make(MemberRoleServiceInterface::class)->assignTo($user);
+        $this->actingAs($user);
+
+        $this->get('/buscar?q=apuntarse')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('tabs', [])
+                ->where('results', [])
+                ->where('total', 0)
+        );
+        $this->get('/buscar?q=apuntarse&tipo=help')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->where('type', null)->where('results', [])
+        );
+    }
+
+    public function test_query_too_short_returns_min_chars(): void
+    {
+        $this->document('events', ['title' => 'a']);
+
+        $this->get('/buscar?q=a')->assertOk()->assertInertia(
             fn (Assert $page) => $page
                 ->component('Search/Index')
                 ->where('query', 'a')
-                ->where('events', [])
-                ->where('articles', [])
                 ->where('error', 'minChars')
+                ->where('tabs', [])
+                ->where('results', [])
+                ->where('total', 0)
+                ->where('hasMore', false)
         );
     }
 
-    public function test_search_with_empty_query_returns_empty_results(): void
+    public function test_empty_query_returns_an_empty_page(): void
     {
-        $response = $this->get('/buscar');
-
-        $response->assertStatus(200);
-        $response->assertInertia(
+        $this->get('/buscar')->assertOk()->assertInertia(
             fn (Assert $page) => $page
                 ->component('Search/Index')
                 ->where('query', '')
-                ->where('events', [])
-                ->where('articles', [])
+                ->where('type', null)
                 ->where('error', null)
+                ->where('tabs', [])
+                ->where('results', [])
+                ->where('total', 0)
+                ->where('page', 1)
+                ->where('hasMore', false)
         );
     }
 
-    public function test_search_finds_events_by_title(): void
+    public function test_survives_engine_failure(): void
     {
-        EventModel::factory()->published()->create([
-            'title' => 'Torneo Warhammer 40K',
-            'slug' => 'torneo-warhammer-40k',
-            'description' => 'Un torneo épico',
-        ]);
-        EventModel::factory()->published()->create([
-            'title' => 'Partida de Rol',
-            'slug' => 'partida-de-rol',
-            'description' => 'Aventura medieval',
-        ]);
+        $this->app->instance(SiteSearchInterface::class, new class implements SiteSearchInterface
+        {
+            public function search(SiteSearchQueryDTO $query): SiteSearchResultDTO
+            {
+                throw new RuntimeException('Search engine is down');
+            }
+        });
+        $metrics = Mockery::mock(SearchMetricsServiceInterface::class);
+        $metrics->shouldNotReceive('recordMiss');
+        $this->app->instance(SearchMetricsServiceInterface::class, $metrics);
 
-        $response = $this->get('/buscar?q=warhammer');
-
-        $response->assertStatus(200);
-        $response->assertInertia(
+        $this->get('/buscar?q=dragones')->assertOk()->assertInertia(
             fn (Assert $page) => $page
                 ->component('Search/Index')
-                ->where('query', 'warhammer')
-                ->has('events', 1)
-                ->where('events.0.title', 'Torneo Warhammer 40K')
-                ->where('events.0.slug', 'torneo-warhammer-40k')
-                ->where('error', null)
-        );
-    }
-
-    public function test_search_finds_events_by_description(): void
-    {
-        EventModel::factory()->published()->create([
-            'title' => 'Torneo de Miniaturas',
-            'slug' => 'torneo-miniaturas',
-            'description' => 'Torneo de Warhammer 40K con premios',
-        ]);
-        EventModel::factory()->published()->create([
-            'title' => 'Taller de Pintura',
-            'slug' => 'taller-pintura',
-            'description' => 'Aprende a pintar miniaturas',
-        ]);
-
-        $response = $this->get('/buscar?q=40K');
-
-        $response->assertStatus(200);
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Search/Index')
-                ->where('query', '40K')
-                ->has('events', 1)
-                ->where('events.0.title', 'Torneo de Miniaturas')
-                ->where('error', null)
-        );
-    }
-
-    public function test_search_finds_articles_by_title(): void
-    {
-        ArticleModel::factory()->published()->create([
-            'title' => 'Guía de pintura para principiantes',
-            'slug' => 'guia-pintura-principiantes',
-            'content' => 'Contenido del artículo',
-        ]);
-        ArticleModel::factory()->published()->create([
-            'title' => 'Reglas de Warhammer',
-            'slug' => 'reglas-warhammer',
-            'content' => 'Otro contenido',
-        ]);
-
-        $response = $this->get('/buscar?q=pintura');
-
-        $response->assertStatus(200);
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Search/Index')
-                ->where('query', 'pintura')
-                ->has('articles', 1)
-                ->where('articles.0.title', 'Guía de pintura para principiantes')
-                ->where('articles.0.slug', 'guia-pintura-principiantes')
-                ->where('error', null)
-        );
-    }
-
-    public function test_search_finds_articles_by_content(): void
-    {
-        ArticleModel::factory()->published()->create([
-            'title' => 'Tutorial completo',
-            'slug' => 'tutorial-completo',
-            'content' => 'Aprende a pintar miniaturas con esta guía detallada',
-        ]);
-        ArticleModel::factory()->published()->create([
-            'title' => 'Otra guía',
-            'slug' => 'otra-guia',
-            'content' => 'Contenido diferente sobre actividades',
-        ]);
-
-        $response = $this->get('/buscar?q=miniaturas');
-
-        $response->assertStatus(200);
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Search/Index')
-                ->where('query', 'miniaturas')
-                ->has('articles', 1)
-                ->where('articles.0.title', 'Tutorial completo')
-                ->where('error', null)
-        );
-    }
-
-    public function test_search_only_returns_published_content(): void
-    {
-        EventModel::factory()->published()->create([
-            'title' => 'Evento Publicado',
-            'slug' => 'evento-publicado',
-            'description' => 'Buscar esta palabra clave',
-        ]);
-        EventModel::factory()->draft()->create([
-            'title' => 'Evento Borrador',
-            'slug' => 'evento-borrador',
-            'description' => 'Buscar esta palabra clave',
-        ]);
-
-        ArticleModel::factory()->published()->create([
-            'title' => 'Artículo Publicado',
-            'slug' => 'articulo-publicado',
-            'content' => 'Buscar esta palabra clave',
-        ]);
-        ArticleModel::factory()->draft()->create([
-            'title' => 'Artículo Borrador',
-            'slug' => 'articulo-borrador',
-            'content' => 'Buscar esta palabra clave',
-        ]);
-
-        $response = $this->get('/buscar?q=clave');
-
-        $response->assertStatus(200);
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Search/Index')
-                ->where('query', 'clave')
-                ->has('events', 1)
-                ->where('events.0.title', 'Evento Publicado')
-                ->has('articles', 1)
-                ->where('articles.0.title', 'Artículo Publicado')
-                ->where('error', null)
-        );
-    }
-
-    public function test_search_returns_no_results_message(): void
-    {
-        EventModel::factory()->published()->create([
-            'title' => 'Torneo de Warhammer',
-            'slug' => 'torneo-warhammer',
-            'description' => 'Descripción del torneo',
-        ]);
-        ArticleModel::factory()->published()->create([
-            'title' => 'Guía de pintura',
-            'slug' => 'guia-pintura',
-            'content' => 'Contenido de la guía',
-        ]);
-
-        $response = $this->get('/buscar?q=xyznoresults');
-
-        $response->assertStatus(200);
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Search/Index')
-                ->where('query', 'xyznoresults')
-                ->where('events', [])
-                ->where('articles', [])
-                ->where('error', null)
-        );
-    }
-
-    public function test_search_is_case_insensitive(): void
-    {
-        EventModel::factory()->published()->create([
-            'title' => 'WARHAMMER Tournament',
-            'slug' => 'warhammer-tournament',
-            'description' => 'Epic tournament',
-        ]);
-        EventModel::factory()->published()->create([
-            'title' => 'warhammer league',
-            'slug' => 'warhammer-league',
-            'description' => 'Regular league',
-        ]);
-
-        $response = $this->get('/buscar?q=warhammer');
-
-        $response->assertStatus(200);
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('Search/Index')
-                ->where('query', 'warhammer')
-                ->has('events', 2)
+                ->where('query', 'dragones')
+                ->where('tabs', [])
+                ->where('results', [])
+                ->where('total', 0)
+                ->where('hasMore', false)
                 ->where('error', null)
         );
     }
@@ -257,96 +328,38 @@ final class SearchControllerTest extends TestCase
         $this->knowledgeGuide('panel.signup', ['title' => 'Apuntarse en el panel', 'summary' => 'Cómo apuntarse', 'audience' => 'panel']);
     }
 
-    public function test_signed_in_users_get_a_help_block(): void
+    private function member(): UserModel
     {
-        $this->seedHelpGuides();
-        $this->actingAs(UserModel::factory()->create());
+        $user = UserModel::factory()->create();
+        $this->app->make(MemberRoleServiceInterface::class)->assignTo($user);
 
-        $this->get('/buscar?q=apuntarse')->assertInertia(
-            fn (Assert $page) => $page
-                ->where('sources.0.key', 'help')
-                ->where('sources.0.label', 'Ayuda')
-                ->has('sources.0.results', 1)
-                ->where('sources.0.results.0.title', 'Apuntarse a una partida')
-                ->where('sources.0.results.0.url', route('knowledge.show', 'core.signup'))
-                ->where('sources.0.results.0.context', 'Primeros pasos')
-                ->has('sources.0.results.0.snippet')
-        );
+        return $user;
     }
 
-    public function test_guests_get_no_help_block(): void
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function results(string $url): array
     {
-        $this->seedHelpGuides();
+        $page = $this->get($url)->viewData('page');
+        $this->assertIsArray($page);
 
-        $this->get('/buscar?q=apuntarse')->assertInertia(
-            fn (Assert $page) => $page->where('sources', [])
-        );
+        return $page['props']['results'];
     }
 
-    public function test_users_who_must_verify_their_email_get_no_help_block(): void
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function document(string $type, array $attributes): void
     {
-        $this->seedHelpGuides();
-        $user = UserModel::factory()->unverified()->create();
-        $policy = Mockery::mock(EmailVerificationPolicyInterface::class);
-        $policy->shouldReceive('mustVerify')->andReturnTrue();
-        $this->app->instance(EmailVerificationPolicyInterface::class, $policy);
-        $this->actingAs($user);
-
-        $this->get('/buscar?q=apuntarse')->assertInertia(
-            fn (Assert $page) => $page->where('sources', [])
-        );
-    }
-
-    public function test_help_block_only_contains_visible_site_guides(): void
-    {
-        $this->seedHelpGuides();
-        $this->actingAs(UserModel::factory()->create());
-
-        $this->get('/buscar?q=apuntarse')->assertInertia(
-            fn (Assert $page) => $page
-                ->has('sources', 1)
-                ->has('sources.0.results', 1)
-                ->where('sources.0.results.0.title', 'Apuntarse a una partida')
-        );
-    }
-
-    public function test_sources_without_results_are_left_out(): void
-    {
-        $this->seedHelpGuides();
-        $this->actingAs(UserModel::factory()->create());
-
-        $this->get('/buscar?q=xyznoresults')->assertInertia(
-            fn (Assert $page) => $page->where('sources', [])
-        );
-    }
-
-    public function test_empty_and_short_queries_return_no_sources(): void
-    {
-        $this->seedHelpGuides();
-        $this->actingAs(UserModel::factory()->create());
-
-        $this->get('/buscar')->assertInertia(fn (Assert $page) => $page->where('sources', []));
-        $this->get('/buscar?q=a')->assertInertia(fn (Assert $page) => $page->where('sources', []));
-    }
-
-    public function test_a_failing_source_is_skipped(): void
-    {
-        $this->seedHelpGuides();
-        $this->actingAs(UserModel::factory()->create());
-        $log = Log::spy();
-        $registry = $this->app->make(SearchSourceRegistryInterface::class);
-        $registry->register(ThrowingSearchSource::class);
-        $registry->register(FakeSearchSource::class);
-
-        $this->get('/buscar?q=apuntarse')
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page) => $page
-                    ->has('sources', 2)
-                    ->where('sources.0.key', 'help')
-                    ->where('sources.1.key', 'fake')
-            );
-
-        $log->shouldHaveReceived('warning')->once();
+        SearchDocumentModel::query()->create([
+            'type' => $type,
+            'source_id' => (string) Str::uuid(),
+            'body' => '',
+            'url' => '/'.Str::slug((string) ($attributes['title'] ?? Str::uuid())),
+            'audience' => SearchAudience::Public->value,
+            'locale' => 'es',
+            ...$attributes,
+        ]);
     }
 }

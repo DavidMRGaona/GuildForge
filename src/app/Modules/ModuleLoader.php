@@ -14,6 +14,7 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
+use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
@@ -93,6 +94,9 @@ final class ModuleLoader
 
         // Register calendar sources from the provider
         $this->registerProviderCalendarSources($provider, $module->name()->value);
+
+        // Register indexed search sources from the provider
+        $this->registerProviderSearchSources($provider, $module->name()->value);
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
@@ -196,6 +200,22 @@ final class ModuleLoader
         if ($this->app->bound(CalendarSourceRegistryInterface::class)) {
             $sourceRegistry = $this->app->make(CalendarSourceRegistryInterface::class);
             $sourceRegistry->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register indexed search sources from a module provider.
+     */
+    private function registerProviderSearchSources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerSearchSources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(SearchSourceRegistryInterface::class)) {
+            $this->app->make(SearchSourceRegistryInterface::class)->registerMany($sources, $moduleName);
         }
     }
 

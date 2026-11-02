@@ -17,7 +17,6 @@ use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
-use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Domain\Knowledge\Repositories\GuideRepositoryInterface;
 use App\Domain\Modules\Events\ModuleDisabled;
 use App\Domain\Modules\Events\ModuleEnabled;
@@ -35,7 +34,6 @@ use App\Infrastructure\Knowledge\Persistence\Eloquent\Repositories\EloquentGuide
 use App\Infrastructure\Knowledge\Rendering\GuideMarkdownRenderer;
 use App\Infrastructure\Knowledge\Search\DatabaseKnowledgeSearch;
 use App\Infrastructure\Knowledge\Search\FallbackKnowledgeSearch;
-use App\Infrastructure\Knowledge\Search\KnowledgeSearchSource;
 use App\Infrastructure\Knowledge\Search\MeilisearchKnowledgeSearch;
 use App\Infrastructure\Knowledge\Search\NullKnowledgeIndexer;
 use App\Infrastructure\Knowledge\Search\ScoutKnowledgeIndexer;
@@ -134,9 +132,6 @@ class KnowledgeServiceProvider extends ServiceProvider
 
         $this->app->make(KnowledgeCapabilityRegistryInterface::class)
             ->register(EmailVerificationRequiredCapability::class);
-
-        $this->app->make(SearchSourceRegistryInterface::class)
-            ->register(KnowledgeSearchSource::class);
 
         foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {
             Event::listen($event, SyncKnowledgeOnModuleChange::class);

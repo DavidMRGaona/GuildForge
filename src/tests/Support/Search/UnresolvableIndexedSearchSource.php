@@ -6,7 +6,7 @@ namespace Tests\Support\Search;
 
 use RuntimeException;
 
-final class UnresolvableSearchSource extends FakeSearchSource
+final class UnresolvableIndexedSearchSource extends FakeIndexedSearchSource
 {
     public function __construct()
     {

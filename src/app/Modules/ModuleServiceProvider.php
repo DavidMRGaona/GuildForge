@@ -12,6 +12,7 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
+use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
@@ -258,6 +259,17 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<CalendarEntrySourceInterface>>
      */
     public function registerCalendarSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register indexed search sources provided by this module.
+     * Allows module records to be found in the global site search; each type is prefixed with the module.
+     *
+     * @return array<class-string<IndexedSearchSourceInterface>>
+     */
+    public function registerSearchSources(): array
     {
         return [];
     }

@@ -46,7 +46,7 @@ function mountHeader(): VueWrapper {
 }
 
 function desktopBar(wrapper: VueWrapper): Element {
-    const searchLink = wrapper.get('a[aria-label="Buscar"]').element;
+    const searchLink = wrapper.get('button[aria-label="Buscar"]').element;
 
     return searchLink.parentElement as Element;
 }

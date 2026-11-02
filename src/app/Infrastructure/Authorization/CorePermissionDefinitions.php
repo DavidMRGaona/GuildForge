@@ -320,6 +320,15 @@ final class CorePermissionDefinitions
                 action: 'view_stats',
             ),
 
+            // Search
+            new PermissionDefinitionDTO(
+                key: 'search.view_stats',
+                label: __('authorization.permissions.search.view_stats'),
+                resource: 'search',
+                action: 'view_stats',
+                defaultRoles: ['editor'],
+            ),
+
             // Modules
             new PermissionDefinitionDTO(
                 key: 'modules.manage',
