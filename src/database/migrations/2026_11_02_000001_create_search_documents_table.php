@@ -16,7 +16,8 @@ return new class extends Migration
     {
         Schema::create('search_documents', function (Blueprint $table): void {
             $table->uuid('id')->primary();
-            $table->string('type', 100)->index();
+            // Searched by type through the unique (type, source_id) index below
+            $table->string('type', 100);
             $table->string('source_id', 100);
             $table->string('module')->nullable();
             $table->string('title');
