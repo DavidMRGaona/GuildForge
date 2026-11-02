@@ -62,7 +62,7 @@ final class EventSearchSource implements IndexedSearchSourceInterface
             id: $event->id,
             title: $event->title,
             body: PlainText::from($event->description),
-            url: route('events.show', $event->slug),
+            url: route('events.show', $event->slug, false),
             keywords: $keywords !== '' ? $keywords : null,
             meta: $event->location,
             imagePublicId: $event->image_public_id,

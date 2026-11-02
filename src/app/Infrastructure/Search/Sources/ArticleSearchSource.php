@@ -62,7 +62,7 @@ final class ArticleSearchSource implements IndexedSearchSourceInterface
             id: $article->id,
             title: $article->title,
             body: PlainText::from(($article->excerpt ?? '').' '.$article->content),
-            url: route('articles.show', $article->slug),
+            url: route('articles.show', $article->slug, false),
             keywords: $keywords !== '' ? $keywords : null,
             imagePublicId: $article->featured_image_public_id,
             publishedAt: $article->published_at?->toImmutable(),

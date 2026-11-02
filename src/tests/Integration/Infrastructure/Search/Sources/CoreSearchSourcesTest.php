@@ -79,7 +79,7 @@ final class CoreSearchSourcesTest extends TestCase
         $this->assertSame($event->id, $document->id);
         $this->assertSame('Torneo de primavera', $document->title);
         $this->assertSame('Una jornada de wargames', $document->body);
-        $this->assertSame(route('events.show', 'torneo-de-primavera'), $document->url);
+        $this->assertSame('/eventos/torneo-de-primavera', $document->url);
         $this->assertSame('Sala principal', $document->meta);
         $this->assertSame('events/torneo', $document->imagePublicId);
         $this->assertEqualsCanonicalizing(['Warhammer', 'Torneo'], explode(' ', (string) $document->keywords));
@@ -144,7 +144,7 @@ final class CoreSearchSourcesTest extends TestCase
         $this->assertNotNull($document);
         $this->assertSame('Resumen & avance Titular Texto del artículo', $document->body);
         $this->assertSame('Crónicas', $document->keywords);
-        $this->assertSame(route('articles.show', 'cronica'), $document->url);
+        $this->assertSame('/articulos/cronica', $document->url);
         $this->assertSame('articles/cronica', $document->imagePublicId);
         $this->assertSame($article->published_at?->getTimestamp(), $document->publishedAt?->getTimestamp());
         $this->assertSame('articles', $source->type());
@@ -171,7 +171,7 @@ final class CoreSearchSourcesTest extends TestCase
         $this->assertNotNull($document);
         $this->assertSame("Fotos del día\nMesa de juego\nMiniaturas pintadas", $document->body);
         $this->assertSame('galleries/first', $document->imagePublicId);
-        $this->assertSame(route('galleries.show', 'jornada'), $document->url);
+        $this->assertSame('/galeria/jornada', $document->url);
         $this->assertSame('galleries', $source->type());
         $this->assertSame('Galerías', $source->label());
         $this->assertSame('Galería', $source->itemLabel());

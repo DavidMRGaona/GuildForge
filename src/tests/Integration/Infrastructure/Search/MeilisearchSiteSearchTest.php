@@ -212,7 +212,7 @@ final class MeilisearchSiteSearchTest extends TestCase
         $this->assertSame([['text' => 'Una liga de ', 'match' => false], ['text' => 'dragones', 'match' => true]], $pastHit->snippet);
 
         $this->assertSame('help', $help->type);
-        $this->assertSame(route('knowledge.show', 'core.signup'), $help->url);
+        $this->assertSame('/ayuda/core.signup', $help->url);
         $this->assertSame('Primeros pasos', $help->meta);
         $this->assertFalse($help->past);
         $this->assertNull($help->imagePublicId);

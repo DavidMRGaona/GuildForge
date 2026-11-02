@@ -92,7 +92,7 @@ final readonly class HelpHitsProvider
             $rows[$hit->id] = new SiteSearchHitDTO(
                 type: self::TYPE,
                 title: $hit->title,
-                url: route('knowledge.show', $hit->id),
+                url: route('knowledge.show', $hit->id, false),
                 meta: $labels[$hit->categoryId] ?? null,
                 imagePublicId: null,
                 startsAt: null,

@@ -227,7 +227,7 @@ final class SearchControllerTest extends TestCase
                 ->where('results.1.type', 'help')
                 ->where('results.1.typeLabel', 'Ayuda')
                 ->where('results.1.title', 'Apuntarse a una partida')
-                ->where('results.1.url', route('knowledge.show', 'core.signup'))
+                ->where('results.1.url', '/ayuda/core.signup')
                 ->where('results.1.date', null)
                 ->where('results.1.pastLabel', null)
                 ->where('results.1.image', null)

@@ -49,7 +49,7 @@ final class HelpInSiteSearchTest extends TestCase
         $this->assertSame([], $without->hits);
 
         $hit = $withUser->hits[0];
-        $this->assertSame(route('knowledge.show', 'core.account.change-password'), $hit->url);
+        $this->assertSame('/ayuda/core.account.change-password', $hit->url);
         $this->assertSame(__('knowledge.categories.account'), $hit->meta);
         $this->assertFalse($hit->past);
         $this->assertNull($hit->startsAt);

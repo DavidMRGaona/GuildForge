@@ -70,7 +70,7 @@ final class GallerySearchSource implements IndexedSearchSourceInterface
             id: $gallery->id,
             title: $gallery->title,
             body: implode("\n", array_filter($parts, static fn (string $part): bool => $part !== '')),
-            url: route('galleries.show', $gallery->slug),
+            url: route('galleries.show', $gallery->slug, false),
             keywords: $keywords !== '' ? $keywords : null,
             imagePublicId: $cover instanceof PhotoModel ? $cover->image_public_id : null,
         );

@@ -40,7 +40,7 @@ Prefix the type with the module: the registry keeps the first source registered 
 2. **Cancelled and draft content returns `null` from `document()`** and is left out of `documents()`. A cancelled record must never be searchable, even for its owner.
 3. **Ids that are not valid for the source return `null`.** `document()` receives whatever the indexer queued; with PostgreSQL a malformed uuid in a query throws, so check the shape first (the core sources use `Str::isUuid()`).
 4. **`documents()` must chunk.** It runs on every full rebuild: use `lazyById()` or `chunkById()` and `yield` one document at a time, and eager-load what `toDocument()` reads to avoid N+1 queries.
-5. Build the URL with `route()` so it is the one a visitor would use.
+5. Build the URL with `route()` so it is the one a visitor would use, and keep it relative (`route($name, $parameters, false)`): the stored document must not depend on the host that indexed it (a queue worker or a console command may not know the site's address).
 
 ## Keeping the index up to date
 
@@ -129,7 +129,7 @@ final class TableSearchSource implements IndexedSearchSourceInterface
             id: (string) $table->getKey(),
             title: $table->title,
             body: strip_tags($table->description),
-            url: route('my-module.tables.show', $table->slug),
+            url: route('my-module.tables.show', $table->slug, false),
             startsAt: $table->starts_at->toImmutable(),
             endsAt: $table->ends_at->toImmutable(),
             // Over by status (a table closed early); being over by date comes from the dates above
