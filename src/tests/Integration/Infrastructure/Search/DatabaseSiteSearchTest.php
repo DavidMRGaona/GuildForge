@@ -68,6 +68,18 @@ final class DatabaseSiteSearchTest extends TestCase
         );
     }
 
+    public function test_more_title_terms_rank_first_then_upcoming(): void
+    {
+        $this->document(['title' => 'Liga Warhammer', 'keywords' => 'torneo', 'starts_at' => now()->subWeeks(2), 'ends_at' => now()->subWeeks(2)->addHours(4)]);
+        $this->document(['title' => 'Torneo de rol', 'body' => 'Con mesa de Warhammer.', 'starts_at' => now()->addWeek()]);
+        $this->document(['title' => 'Torneo de Warhammer', 'starts_at' => now()->subMonth(), 'ends_at' => now()->subMonth()->addHours(4)]);
+
+        $this->assertSame(
+            ['Torneo de Warhammer', 'Torneo de rol', 'Liga Warhammer'],
+            $this->titles($this->search('torneo warhammer')),
+        );
+    }
+
     public function test_upcoming_rank_before_past(): void
     {
         $this->document(['title' => 'Partida terminada', 'body' => 'mazmorra', 'starts_at' => now()->addMonth(), 'finished' => true]);
@@ -90,6 +102,7 @@ final class DatabaseSiteSearchTest extends TestCase
         $this->document(['title' => 'Futura pero cerrada', 'starts_at' => now()->addDay(), 'finished' => true]);
         $this->document(['title' => 'Futura', 'starts_at' => now()->addDay()]);
         $this->document(['title' => 'Sin fechas', 'type' => 'articles', 'published_at' => now()->subYear()]);
+        $this->document(['title' => 'Sin fechas pero cerrada', 'finished' => true]);
 
         $past = [];
         foreach ($this->search('partida', limit: 10)->hits as $hit) {
@@ -103,6 +116,7 @@ final class DatabaseSiteSearchTest extends TestCase
             'Futura' => false,
             'Futura pero cerrada' => true,
             'Sin fechas' => false,
+            'Sin fechas pero cerrada' => true,
             'Terminada' => true,
         ], $past);
     }

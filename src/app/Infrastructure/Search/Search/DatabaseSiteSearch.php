@@ -10,10 +10,10 @@ use App\Application\Search\DTOs\SiteSearchResultDTO;
 use App\Application\Search\Services\SiteSearchInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Search\Enums\SearchAudience;
+use App\Infrastructure\Knowledge\Search\QueryTerms;
 use App\Infrastructure\Knowledge\Search\SnippetBuilder;
 use App\Infrastructure\Knowledge\Text\TextNormalizer;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -23,12 +23,6 @@ use Illuminate\Database\Eloquent\Builder;
  */
 final readonly class DatabaseSiteSearch implements SiteSearchInterface
 {
-    private const int MAX_QUERY_LENGTH = 500;
-
-    private const int MAX_TERMS = 10;
-
-    private const int MIN_TERM_LENGTH = 2;
-
     private const array FIELDS = ['title', 'keywords', 'meta', 'body'];
 
     /** Backslash escapes the LIKE wildcards; SQLite has no default escape character. */
@@ -42,8 +36,8 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
 
     public function __construct(
         private SnippetBuilder $snippets,
+        private QueryTerms $queryTerms,
         private TimezoneServiceInterface $timezone,
-        private Repository $config,
     ) {}
 
     public function search(SiteSearchQueryDTO $query): SiteSearchResultDTO
@@ -162,48 +156,13 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
     }
 
     /**
-     * Lower-cased query words of at least two characters, at most ten; stop words are dropped while other words remain.
+     * Lower-cased query words, accents kept: they are compared with LIKE.
      *
      * @return list<string>
      */
     private function terms(string $query): array
     {
-        $lowered = mb_strtolower(mb_substr($query, 0, self::MAX_QUERY_LENGTH));
-
-        $terms = [];
-        foreach (preg_split('/\s+/u', $lowered, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
-            $word = preg_replace(self::EDGE_PUNCTUATION, '', $word) ?? '';
-            if (mb_strlen($word) >= self::MIN_TERM_LENGTH && ! in_array($word, $terms, true)) {
-                $terms[] = $word;
-            }
-        }
-
-        $stopWords = $this->stopWords();
-        $meaningful = array_values(array_filter(
-            $terms,
-            static fn (string $term): bool => ! isset($stopWords[TextNormalizer::normalize($term)]),
-        ));
-
-        return array_slice($meaningful !== [] ? $meaningful : $terms, 0, self::MAX_TERMS);
-    }
-
-    /**
-     * The help's stop words, shared with the search engine's settings.
-     *
-     * @return array<string, true>
-     */
-    private function stopWords(): array
-    {
-        $configured = $this->config->get('knowledge.stop_words', []);
-
-        $stopWords = [];
-        foreach (is_array($configured) ? $configured : [] as $word) {
-            if (is_string($word)) {
-                $stopWords[TextNormalizer::normalize($word)] = true;
-            }
-        }
-
-        return $stopWords;
+        return $this->queryTerms->split($query, mb_strtolower(...), self::EDGE_PUNCTUATION);
     }
 
     /**
