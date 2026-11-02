@@ -33,6 +33,7 @@ return [
         'unavailable' => 'Esta guía no está disponible',
         'unavailable_hint' => 'Puede que se haya movido o que no tengas acceso a ella.',
         'home' => 'Inicio de la ayuda',
+        'index' => 'Índice',
         'related' => 'Guías relacionadas',
         'siblings' => 'En esta categoría',
         'featured' => 'Destacadas',
