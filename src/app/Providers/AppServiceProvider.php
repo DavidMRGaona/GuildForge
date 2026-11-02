@@ -431,6 +431,12 @@ class AppServiceProvider extends ServiceProvider
             static fn (Request $request) => Limit::perMinute(3)->by($request->ip() ?? 'unknown')
         );
 
+        // The header panel asks while people type
+        RateLimiter::for(
+            'search-suggestions',
+            static fn (Request $request) => Limit::perMinute(60)->by($request->ip() ?? 'unknown')
+        );
+
         Gate::policy(UserModel::class, UserPolicy::class);
         Gate::policy(RoleModel::class, RolePolicy::class);
         Gate::policy(EventModel::class, EventPolicy::class);

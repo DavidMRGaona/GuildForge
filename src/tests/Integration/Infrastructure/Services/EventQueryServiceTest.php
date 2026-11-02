@@ -98,16 +98,6 @@ final class EventQueryServiceTest extends TestCase
         );
     }
 
-    public function test_search_breaks_start_ties_by_creation_then_id(): void
-    {
-        $this->createTiedEvents('2020-05-01 18:00:00', otherStart: '2020-05-02 18:00:00', direction: 'desc');
-
-        $this->assertSame(
-            ['Campaign other', 'Campaign tie high id', 'Campaign tie low id', 'Campaign tie oldest'],
-            $this->titles($this->service->searchPublished('campaign')),
-        );
-    }
-
     /**
      * Three events starting at the same time plus one that sorts before them. The tied events
      * are inserted in the reverse of the order expected for $direction, so they only come out

@@ -25,9 +25,4 @@ interface ArticleQueryServiceInterface
     public function getPublishedTotal(?array $tagSlugs = null): int;
 
     public function findPublishedBySlug(string $slug): ?ArticleResponseDTO;
-
-    /**
-     * @return array<int, ArticleResponseDTO>
-     */
-    public function searchPublished(string $query, int $limit = 12): array;
 }

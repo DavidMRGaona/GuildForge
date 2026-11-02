@@ -22,6 +22,7 @@ use App\Http\Controllers\Knowledge\KnowledgeSearchController;
 use App\Http\Controllers\Knowledge\KnowledgeVisibleGuidesController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SearchSuggestionsController;
 use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +42,9 @@ Route::get('/galeria', [GalleryController::class, 'index'])->name('galleries.ind
 Route::get('/galeria/{slug}', [GalleryController::class, 'show'])->name('galleries.show');
 
 Route::get('/buscar', SearchController::class)->name('search');
+Route::get('/buscar/sugerencias', SearchSuggestionsController::class)
+    ->middleware('throttle:search-suggestions')
+    ->name('search.suggestions');
 
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 

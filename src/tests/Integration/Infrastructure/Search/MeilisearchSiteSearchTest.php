@@ -8,6 +8,7 @@ use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Application\Search\DTOs\SiteSearchHitDTO;
 use App\Application\Search\DTOs\SiteSearchQueryDTO;
 use App\Application\Search\DTOs\SiteSearchResultDTO;
+use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Domain\Knowledge\Entities\Guide;
 use App\Domain\Knowledge\Entities\KnowledgeCategory;
 use App\Domain\Knowledge\Enums\GuideAudience;
@@ -105,6 +106,20 @@ final class MeilisearchSiteSearchTest extends TestCase
         }
     }
 
+    public function test_help_is_left_out_when_the_user_may_not_have_it(): void
+    {
+        $policy = Mockery::mock(EmailVerificationPolicyInterface::class);
+        $policy->shouldReceive('mustVerify')->andReturnTrue();
+        $this->app->instance(EmailVerificationPolicyInterface::class, $policy);
+        $this->engineAnswers(['hits' => [], 'facetsByIndex' => []]);
+
+        // Asked for help, but the engine checks again who may have it
+        $this->search('dragones');
+
+        $this->assertCount(1, $this->calls);
+        $this->assertSame([self::DOCUMENTS, self::DOCUMENTS], array_column($this->calls[0]['queries'], 'indexUid'));
+    }
+
     public function test_quotes_hostile_values_in_filters(): void
     {
         $hostile = 'evil" OR audience = "members\\';
@@ -163,6 +178,7 @@ final class MeilisearchSiteSearchTest extends TestCase
             'meta' => 'Sala 1',
             'image_public_id' => 'events/dragones.jpg',
             'starts_at' => now()->addDays(2),
+            'published_at' => now()->subDay(),
         ]);
         $past = $this->document(['title' => 'Liga de dragones', 'starts_at' => now()->subDays(3), 'ends_at' => now()->subDays(2)]);
         $members = $this->document(['title' => 'Solo socios', 'audience' => SearchAudience::Members->value]);
@@ -212,6 +228,8 @@ final class MeilisearchSiteSearchTest extends TestCase
         $this->assertSame('Sala 1', $upcomingHit->meta);
         $this->assertSame('events/dragones.jpg', $upcomingHit->imagePublicId);
         $this->assertSame(now()->addDays(2)->getTimestamp(), $upcomingHit->startsAt?->getTimestamp());
+        $this->assertSame(now()->subDay()->getTimestamp(), $upcomingHit->publishedAt?->getTimestamp());
+        $this->assertNull($help->publishedAt);
         $this->assertSame([['text' => 'Sala de ', 'match' => false], ['text' => 'dragones', 'match' => true]], $upcomingHit->snippet);
     }
 

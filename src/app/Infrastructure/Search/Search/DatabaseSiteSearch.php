@@ -58,9 +58,9 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
             return SiteSearchResultDTO::empty();
         }
 
-        // The help centre's own search, capped at what the pages up to this one can show
-        $help = $query->includeHelp && $query->user !== null
-            ? $this->help->hits($query->user, $query->query, max(1, $offset + $limit))
+        // The help centre's own search, every match so the help count is exact; the gate is checked again here
+        $help = $query->includeHelp && $query->user !== null && $this->help->availableFor($query->user)
+            ? $this->help->allHits($query->user, $query->query)
             : [];
 
         if ($types === [] && $help === []) {
@@ -132,6 +132,7 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
                 endsAt: $row->ends_at,
                 past: (int) $row->getAttribute('is_past') === 1,
                 snippet: $this->snippet($row, $terms),
+                publishedAt: $row->published_at,
             );
         }
 

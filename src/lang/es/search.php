@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'tabs' => [
+        'all' => 'Todo',
+    ],
+    'help' => 'Ayuda',
     'sources' => [
         'events' => [
             'label' => 'Eventos',

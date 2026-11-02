@@ -17,11 +17,13 @@ use App\Infrastructure\Search\Search\HelpHitsProvider;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Tests\Support\Knowledge\CreatesKnowledgeRecords;
 use Tests\Support\Knowledge\RecordingLogger;
 use Tests\TestCase;
 
 final class HelpInSiteSearchTest extends TestCase
 {
+    use CreatesKnowledgeRecords;
     use LazilyRefreshDatabase;
 
     private const array TYPES = ['events', 'articles', 'galleries'];
@@ -58,7 +60,7 @@ final class HelpInSiteSearchTest extends TestCase
     public function test_help_is_hidden_when_email_must_be_verified(): void
     {
         $user = $this->member();
-        $policy = $this->createMock(EmailVerificationPolicyInterface::class);
+        $policy = $this->createStub(EmailVerificationPolicyInterface::class);
         $policy->method('mustVerify')->willReturn(true);
         $this->app->instance(EmailVerificationPolicyInterface::class, $policy);
 
@@ -76,7 +78,7 @@ final class HelpInSiteSearchTest extends TestCase
     public function test_help_is_unavailable_and_logged_when_the_policy_fails(): void
     {
         $logger = new RecordingLogger;
-        $policy = $this->createMock(EmailVerificationPolicyInterface::class);
+        $policy = $this->createStub(EmailVerificationPolicyInterface::class);
         $policy->method('mustVerify')->willThrowException(new RuntimeException('settings unreadable'));
         $provider = $this->app->make(HelpHitsProvider::class, [
             'emailVerification' => $policy,
@@ -140,6 +142,47 @@ final class HelpInSiteSearchTest extends TestCase
 
         $this->assertSame([], $result->counts);
         $this->assertSame(0, $result->total);
+    }
+
+    public function test_help_is_left_out_when_the_user_may_not_have_it(): void
+    {
+        $user = $this->member();
+        $policy = $this->createStub(EmailVerificationPolicyInterface::class);
+        $policy->method('mustVerify')->willReturn(true);
+        $this->app->instance(EmailVerificationPolicyInterface::class, $policy);
+
+        // Asked for help, but the engine checks again who may have it
+        $result = $this->search('contraseña', user: $user);
+        $tab = $this->search('contraseña', user: $user, type: 'help');
+
+        $this->assertSame([], $result->hits);
+        $this->assertSame([], $result->counts);
+        $this->assertSame([], $tab->hits);
+        $this->assertSame(0, $tab->total);
+    }
+
+    public function test_help_count_is_exact_beyond_one_page(): void
+    {
+        $user = $this->member();
+        for ($i = 1; $i <= 25; $i++) {
+            $this->knowledgeGuide(sprintf('core.zzextra-%02d', $i), ['title' => 'Zzayuda '.$i, 'summary' => 'Zzayuda', 'category_id' => 'account']);
+        }
+
+        $first = $this->search('zzayuda', user: $user, limit: 20);
+        $second = $this->search('zzayuda', user: $user, offset: 20, limit: 20);
+        $tab = $this->search('zzayuda', user: $user, type: 'help', offset: 20, limit: 20);
+
+        $this->assertSame(['help' => 25], $first->counts);
+        $this->assertSame(25, $first->total);
+        $this->assertCount(20, $first->hits);
+        $this->assertSame(['help' => 25], $second->counts);
+        $this->assertSame(25, $second->total);
+        $this->assertCount(5, $second->hits);
+        $this->assertSame(25, $tab->total);
+        $this->assertCount(5, $tab->hits);
+
+        $urls = array_map(static fn (SiteSearchHitDTO $hit): string => $hit->url, [...$first->hits, ...$second->hits]);
+        $this->assertCount(25, array_unique($urls));
     }
 
     public function test_help_alone_is_returned_without_audiences_or_types(): void

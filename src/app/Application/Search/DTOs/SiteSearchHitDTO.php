@@ -25,5 +25,6 @@ final readonly class SiteSearchHitDTO
         public ?DateTimeImmutable $endsAt,
         public bool $past,
         public array $snippet,
+        public ?DateTimeImmutable $publishedAt = null,
     ) {}
 }

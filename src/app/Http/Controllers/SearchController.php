@@ -4,118 +4,83 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Application\Search\Contracts\SearchSourceInterface;
-use App\Application\Search\DTOs\SearchResultDTO;
-use App\Application\Search\Services\SearchSourceRegistryInterface;
+use App\Application\Search\Services\SearchMetricsServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
-use App\Application\Services\ArticleQueryServiceInterface;
-use App\Application\Services\EventQueryServiceInterface;
 use App\Http\Requests\SearchRequest;
-use App\Http\Resources\ArticleResource;
-use App\Http\Resources\EventResource;
-use Illuminate\Support\Facades\Log;
+use App\Http\Resources\SiteSearchHitResource;
+use App\Http\Search\SiteSearchRunner;
 use Inertia\Inertia;
 use Inertia\Response;
-use Throwable;
 
 final class SearchController extends Controller
 {
-    private const int MAX_RESULTS = 12;
+    public const int PER_PAGE = 20;
 
     public function __construct(
-        private readonly EventQueryServiceInterface $eventQuery,
-        private readonly ArticleQueryServiceInterface $articleQuery,
+        private readonly SiteSearchRunner $search,
+        private readonly SearchMetricsServiceInterface $metrics,
         private readonly SeoMetadataFactoryInterface $seo,
-        private readonly SearchSourceRegistryInterface $sources,
     ) {}
 
     public function __invoke(SearchRequest $request): Response
     {
         $query = $request->searchQuery();
+        $page = $request->page();
 
-        // Internal search results are not worth indexing
-        $seo = $this->seo->forPage(new SeoPageDTO(
-            title: (string) __('seo.titles.search'),
-            noindex: true,
-        ))->toArray();
-
-        // Empty query returns empty results
-        if ($query === '') {
-            return Inertia::render('Search/Index', [
-                'query' => '',
-                'events' => [],
-                'articles' => [],
-                'sources' => [],
-                'error' => null,
-                'seo' => $seo,
-            ]);
+        if ($query === '' || $request->isQueryTooShort()) {
+            return $this->render($query, $page, error: $request->isQueryTooShort() ? 'minChars' : null);
         }
 
-        // Query too short
-        if ($request->isQueryTooShort()) {
-            return Inertia::render('Search/Index', [
-                'query' => $query,
-                'events' => [],
-                'articles' => [],
-                'sources' => [],
-                'error' => 'minChars',
-                'seo' => $seo,
-            ]);
+        $outcome = $this->search->run($query, $request->user(), $request->tab(), ($page - 1) * self::PER_PAGE, self::PER_PAGE);
+        $result = $outcome->result;
+
+        // Only a real search of every tab counts: not a later page, not a tab, not a failure
+        if ($result->total === 0 && $page === 1 && $outcome->type === null && ! $outcome->failed) {
+            $this->metrics->recordMiss($query);
         }
 
-        // Search using query services
-        $events = $this->eventQuery->searchPublished($query, self::MAX_RESULTS);
-        $articles = $this->articleQuery->searchPublished($query, self::MAX_RESULTS);
-
-        return Inertia::render('Search/Index', [
-            'query' => $query,
-            'events' => EventResource::collection($events)->resolve(),
-            'articles' => ArticleResource::collection($articles)->resolve(),
-            'sources' => $this->searchSources($request, $query),
-            'error' => null,
-            'seo' => $seo,
-        ]);
+        return $this->render(
+            $query,
+            $page,
+            type: $outcome->type,
+            tabs: $outcome->tabs((string) __('search.tabs.all')),
+            results: SiteSearchHitResource::rows($result->hits, $outcome->labels),
+            total: $result->total,
+            // The engine pages no further than the last page the request accepts
+            hasMore: $page < SearchRequest::MAX_PAGE && ($page - 1) * self::PER_PAGE + count($result->hits) < $result->total,
+        );
     }
 
     /**
-     * Results of every registered source that has any; a source that fails is logged and skipped.
-     *
-     * @return list<array{key: string, label: string, results: list<array{title: string, url: string, context: ?string, snippet: list<array{text: string, match: bool}>}>}>
+     * @param  list<array{key: string|null, label: string, count: int}>  $tabs
+     * @param  list<array<string, mixed>>  $results
      */
-    private function searchSources(SearchRequest $request, string $query): array
-    {
-        $blocks = [];
-
-        foreach ($this->sources->sources() as $source) {
-            try {
-                $results = $source->search($query, $request->user(), self::MAX_RESULTS);
-                $label = $source->label();
-            } catch (Throwable $exception) {
-                $this->logFailure($source, $exception);
-
-                continue;
-            }
-
-            if ($results === []) {
-                continue;
-            }
-
-            $blocks[] = [
-                'key' => $source->key(),
-                'label' => $label,
-                'results' => array_map(static fn (SearchResultDTO $result): array => $result->toArray(), $results),
-            ];
-        }
-
-        return $blocks;
-    }
-
-    private function logFailure(SearchSourceInterface $source, Throwable $exception): void
-    {
-        Log::warning('[SearchController] Search source failed, skipped', [
-            'source' => $source::class,
-            'error' => $exception->getMessage(),
+    private function render(
+        string $query,
+        int $page,
+        ?string $type = null,
+        array $tabs = [],
+        array $results = [],
+        int $total = 0,
+        bool $hasMore = false,
+        ?string $error = null,
+    ): Response {
+        return Inertia::render('Search/Index', [
+            'query' => $query,
+            'type' => $type,
+            'tabs' => $tabs,
+            // The next page is appended to what the page already shows; a new query or tab resets it
+            'results' => Inertia::merge($results),
+            'total' => $total,
+            'page' => $page,
+            'hasMore' => $hasMore,
+            'error' => $error,
+            // Internal search results are not worth indexing
+            'seo' => $this->seo->forPage(new SeoPageDTO(
+                title: (string) __('seo.titles.search'),
+                noindex: true,
+            ))->toArray(),
         ]);
     }
 }

@@ -36,11 +36,6 @@ final class ArticleQueryServiceTest extends TestCase
         $this->assertSame(self::EXPECTED_ORDER, $this->titles($this->service->getPublishedPaginated()));
     }
 
-    public function test_search_breaks_ties_by_creation_then_id(): void
-    {
-        $this->assertSame(self::EXPECTED_ORDER, $this->titles($this->service->searchPublished('campaign')));
-    }
-
     /**
      * Inserted in the reverse of the expected order, so ties only come out right when the query breaks them.
      */

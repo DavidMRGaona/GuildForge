@@ -61,23 +61,4 @@ final readonly class ArticleQueryService implements ArticleQueryServiceInterface
 
         return $article ? $this->dtoFactory->createArticleDTO($article) : null;
     }
-
-    public function searchPublished(string $query, int $limit = 12): array
-    {
-        $searchTerm = '%'.mb_strtolower($query).'%';
-
-        $articles = ArticleModel::query()
-            ->with(['author', 'tags'])
-            ->where('is_published', true)
-            ->where(function ($q) use ($searchTerm): void {
-                $q->whereRaw('LOWER(title) LIKE ?', [$searchTerm])
-                    ->orWhereRaw('LOWER(content) LIKE ?', [$searchTerm])
-                    ->orWhereRaw('LOWER(excerpt) LIKE ?', [$searchTerm]);
-            })
-            ->orderedByPublication()
-            ->limit($limit)
-            ->get();
-
-        return $articles->map(fn (ArticleModel $article) => $this->dtoFactory->createArticleDTO($article))->all();
-    }
 }

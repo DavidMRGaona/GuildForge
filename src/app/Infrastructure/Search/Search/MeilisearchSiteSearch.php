@@ -70,7 +70,8 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
         )));
         // Without an audience no document is visible
         $types = $audiences === [] ? [] : array_values(array_unique($query->types));
-        $guides = $query->includeHelp && $query->user !== null
+        // The gate is checked again here, whatever the caller asked for
+        $guides = $query->includeHelp && $query->user !== null && $this->help->availableFor($query->user)
             ? $this->visibility->visibleGuides($query->user, GuideAudience::Site)
             : [];
 
@@ -362,6 +363,7 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
             endsAt: $row->ends_at,
             past: $row->finished || ($end !== null && $end->getTimestamp() < $now),
             snippet: $this->documentSnippet($formatted),
+            publishedAt: $row->published_at,
         );
     }
 
