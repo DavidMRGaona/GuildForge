@@ -2,6 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { computed, type ComputedRef } from 'vue';
 import { createI18n } from 'vue-i18n';
+import { Link } from '@inertiajs/vue3';
 import HelpLink from '../HelpLink.vue';
 import { resetKnowledgeVisibility } from '@/composables/useKnowledgeVisibility';
 import en from '@/locales/en';
@@ -75,6 +76,13 @@ describe('HelpLink', () => {
         await flushPromises();
 
         expect(wrapper.find('a').exists()).toBe(false);
+    });
+
+    it('navigates with Inertia instead of reloading the page', async () => {
+        const wrapper = mountLink('core.signup');
+        await flushPromises();
+
+        expect(wrapper.findComponent(Link).props('href')).toBe('/ayuda/core.signup');
     });
 
     it('uses an accessible label', async () => {

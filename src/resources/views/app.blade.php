@@ -6,6 +6,23 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="display-timezone" content="{{ config('app.display_timezone') }}">
 
+        {{-- Picks the theme before the first paint, with the same precedence as useAppStore.initTheme(),
+             which only runs once Vue has mounted: without it a full page load in dark mode flashes light --}}
+        <script data-theme-boot>
+            (function () {
+                var darkByDefault = @js((bool) ($page['props']['theme']['darkModeDefault'] ?? false));
+                var mode = null;
+                try {
+                    mode = window.localStorage.getItem('themeMode');
+                } catch (e) {}
+                if (mode !== 'light' && mode !== 'dark' && mode !== 'system') {
+                    mode = darkByDefault ? 'dark' : 'system';
+                }
+                var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.classList.toggle('dark', dark);
+            })();
+        </script>
+
         <x-seo-head :seo="$page['props']['seo'] ?? null" />
 
         {{-- Favicons: the site's own when configured; useFavicons.ts swaps them with the theme --}}
