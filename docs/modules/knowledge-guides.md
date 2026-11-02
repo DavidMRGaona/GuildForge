@@ -184,6 +184,27 @@ Every guide belongs to a category, shown as a group in the help centre.
 - Core categories (site): `getting-started`, `account`, `events-and-games`, `campaigns`, `tournaments`, `membership`, `venue`, `community`.
 - Core categories (panel): `panel-basics`, `content`, `users-and-roles`, `site-settings`, `modules`, `activities`.
 
+### Choosing a category
+
+Categories group guides by area, by what the person wants to do, not by module: people do not know which module runs a page. Guides of several modules share a category, next to the core's ones (`events-and-games` holds the core's events and the game tables and event registrations guides).
+
+| Module | Site | Panel |
+|--------|------|-------|
+| game-tables | `events-and-games` (tables), `campaigns` (campaigns and invitations) | `activities` |
+| event-registrations | `events-and-games` | `activities` |
+| tournaments | `tournaments` | `activities` |
+| venue-bookings | `venue` | `activities` |
+| memberships | `membership` | its own category (fees fit no core one) |
+| surveys | `community` | `content` |
+| announcements | `community` | `content` |
+| cookie-consent | `account` (cookie preferences) | `site-settings` |
+| channel-notifications | `account`, only if people subscribe to something | `site-settings` |
+
+- `activities` is the panel category for running the guild's activities: tables, campaigns, registrations, tournaments and bookings.
+- `content` is for what editors publish; `site-settings` for modules that are only configured.
+- A guide about a module's settings page goes in the same category as the guides on managing it: people look for the reminder settings next to the tables, not under `modules`, which is for installing, enabling and updating modules.
+- A new module follows the same rule. It defines its own category only when no core one fits, and never one per module just to group its guides.
+
 A guide's `audience` must match its category's audience. When none fits, the module defines its own in `resources/knowledge/categories.php`:
 
 ```php
