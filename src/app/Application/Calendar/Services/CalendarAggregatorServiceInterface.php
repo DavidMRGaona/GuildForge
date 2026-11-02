@@ -16,4 +16,16 @@ interface CalendarAggregatorServiceInterface
      * @return array<CalendarEntryDTO>
      */
     public function findByDateRange(DateTimeImmutable $from, DateTimeImmutable $to): array;
+
+    /**
+     * Find one entry of the given source type, or null when the source does not
+     * exist, cannot find entries by id (CalendarEntryLookupInterface), does not
+     * show that entry or fails.
+     */
+    public function findEntry(string $sourceType, string $id): ?CalendarEntryDTO;
+
+    /**
+     * Whether the given source type can find its entries by id.
+     */
+    public function canFindEntries(string $sourceType): bool;
 }

@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Calendar\Sources;
 
+use App\Application\Calendar\Contracts\CalendarEntryLookupInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Calendar\DTOs\CalendarEntryDTO;
 use App\Application\DTOs\Response\EventResponseDTO;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Domain\Calendar\Enums\CalendarSourceColor;
 use DateTimeImmutable;
+use Illuminate\Support\Str;
 
-final readonly class EventCalendarSource implements CalendarEntrySourceInterface
+final readonly class EventCalendarSource implements CalendarEntryLookupInterface, CalendarEntrySourceInterface
 {
     public function __construct(
         private EventQueryServiceInterface $eventQueryService,
@@ -46,6 +48,18 @@ final readonly class EventCalendarSource implements CalendarEntrySourceInterface
             $this->toEntry(...),
             $events,
         );
+    }
+
+    public function findEntry(string $id): ?CalendarEntryDTO
+    {
+        // Ids are UUIDs: anything else would be a query error on PostgreSQL.
+        if (! Str::isUuid($id)) {
+            return null;
+        }
+
+        $event = $this->eventQueryService->findById($id);
+
+        return $event instanceof EventResponseDTO && $event->isPublished ? $this->toEntry($event) : null;
     }
 
     private function toEntry(EventResponseDTO $event): CalendarEntryDTO

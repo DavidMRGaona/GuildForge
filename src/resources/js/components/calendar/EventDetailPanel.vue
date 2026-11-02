@@ -8,6 +8,7 @@ import { buildCardImageUrl } from '@/utils/cloudinary';
 import { resolveCalendarMetaIcon } from '@/utils/icons';
 import { useEvents } from '@/composables/useEvents';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import AddToCalendarMenu from '@/components/calendar/AddToCalendarMenu.vue';
 import TagList from '@/components/ui/TagList.vue';
 
 interface Props {
@@ -55,6 +56,13 @@ const truncatedDescription = computed(() => {
 });
 
 const metaRows = computed(() => props.event?.meta ?? []);
+
+// Adding an entry that is already over to a personal calendar is of no use.
+const calendarLinks = computed(() => {
+    const entry = props.event;
+    if (!entry?.calendarLinks) return null;
+    return new Date(entry.end ?? entry.start).getTime() > Date.now() ? entry.calendarLinks : null;
+});
 </script>
 
 <template>
@@ -146,7 +154,14 @@ const metaRows = computed(() => props.event?.meta ?? []);
             </div>
 
             <!-- Action button -->
-            <div class="mt-4 pt-4 border-t border-default">
+            <div class="mt-4 space-y-2 pt-4 border-t border-default">
+                <AddToCalendarMenu
+                    v-if="calendarLinks"
+                    :links="calendarLinks"
+                    placement="top"
+                    block
+                    size="sm"
+                />
                 <Link :href="event.url" class="block">
                     <BaseButton variant="primary" size="sm" class="w-full">
                         {{ isEventSource ? t('calendar.viewEvent') : t('calendar.viewDetail') }}

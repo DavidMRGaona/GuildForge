@@ -185,6 +185,17 @@ export interface CalendarEntryMetaItem {
     value: string;
 }
 
+/**
+ * Links that add an entry to a personal calendar, built by the backend
+ * (`AddToCalendarLinksFactoryInterface`). `ics` is null when the entry's
+ * source cannot be downloaded on its own.
+ */
+export interface AddToCalendarLinks {
+    google: string;
+    outlook: string;
+    ics: string | null;
+}
+
 export interface CalendarEntry {
     id: string;
     /** Generic source identifier (e.g. 'event', 'game-table'). Frontend stays agnostic of module types. */
@@ -205,6 +216,7 @@ export interface CalendarEntry {
     tags: Tag[];
     /** Source-specific rows (e.g. game system, players); absent on core events. */
     meta?: CalendarEntryMetaItem[];
+    calendarLinks?: AddToCalendarLinks;
 }
 
 /** @deprecated Use CalendarEntry instead */

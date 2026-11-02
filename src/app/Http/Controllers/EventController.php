@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\Calendar\DTOs\CalendarEntryDTO;
+use App\Application\Calendar\Services\AddToCalendarLinksFactoryInterface;
+use App\Application\Calendar\Services\CalendarAggregatorServiceInterface;
 use App\Application\DTOs\Response\EventResponseDTO;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
@@ -26,6 +29,8 @@ final class EventController extends Controller
         private readonly EventQueryServiceInterface $eventQuery,
         private readonly TagQueryServiceInterface $tagQuery,
         private readonly SeoMetadataFactoryInterface $seo,
+        private readonly CalendarAggregatorServiceInterface $calendar,
+        private readonly AddToCalendarLinksFactoryInterface $calendarLinks,
     ) {}
 
     public function index(TagFilterRequest $request): Response
@@ -60,9 +65,14 @@ final class EventController extends Controller
             abort(404);
         }
 
+        $calendarEntry = $this->calendar->findEntry('event', $event->id);
+
         return Inertia::render('Events/Show', [
             'event' => EventResource::make($event)->resolve(),
             'seo' => $this->seo->forEvent($event)->toArray(),
+            'calendarLinks' => $calendarEntry instanceof CalendarEntryDTO
+                ? $this->calendarLinks->for($calendarEntry)->toArray()
+                : null,
         ]);
     }
 }

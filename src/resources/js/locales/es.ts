@@ -114,6 +114,13 @@ export default {
         legendLabel: 'Tipos de actividad',
         entryAriaLabel: '{source}: {title}',
         free: 'Gratuito',
+        addToCalendar: {
+            button: 'Añadir al calendario',
+            google: 'Google Calendar',
+            outlook: 'Outlook',
+            ics: 'Apple Calendar u otro (.ics)',
+            opensInNewTab: 'se abre en una pestaña nueva',
+        },
         // Texts of the FullCalendar toolbar and grids (see useCalendarLocale)
         fullcalendar: {
             previous: {

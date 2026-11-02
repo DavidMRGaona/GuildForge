@@ -114,6 +114,13 @@ export default {
         legendLabel: 'Activity types',
         entryAriaLabel: '{source}: {title}',
         free: 'Free',
+        addToCalendar: {
+            button: 'Add to calendar',
+            google: 'Google Calendar',
+            outlook: 'Outlook',
+            ics: 'Apple Calendar or other (.ics)',
+            opensInNewTab: 'opens in a new tab',
+        },
         // Texts of the FullCalendar toolbar and grids (see useCalendarLocale)
         fullcalendar: {
             previous: {

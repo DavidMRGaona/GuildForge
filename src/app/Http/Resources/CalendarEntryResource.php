@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Application\Calendar\DTOs\CalendarEntryDTO;
+use App\Application\Calendar\Services\AddToCalendarLinksFactoryInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -32,6 +33,7 @@ final class CalendarEntryResource extends JsonResource
             'sourceType' => $this->resource->sourceType,
             'sourceLabel' => $this->resource->sourceLabel,
             'color' => $this->resource->color->value,
+            'calendarLinks' => app(AddToCalendarLinksFactoryInterface::class)->for($this->resource)->toArray(),
         ], $this->resource->details);
     }
 }

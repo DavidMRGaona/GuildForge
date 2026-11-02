@@ -3,7 +3,8 @@ import { Calendar, ChevronLeft, Clock, Download, MapPin } from '@lucide/vue';
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import type { Event } from '@/types/models';
+import type { AddToCalendarLinks, Event } from '@/types/models';
+import AddToCalendarMenu from '@/components/calendar/AddToCalendarMenu.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import TagBadge from '@/components/ui/TagBadge.vue';
 import TagList from '@/components/ui/TagList.vue';
@@ -15,6 +16,7 @@ import ModuleSlot from '@/components/layout/ModuleSlot.vue';
 
 interface Props {
     event: Event;
+    calendarLinks?: AddToCalendarLinks | null;
 }
 
 const props = defineProps<Props>();
@@ -111,6 +113,10 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                         <MapPin class="mr-2 h-5 w-5 text-primary" aria-hidden="true" />
                         <span>{{ props.event.location }}</span>
                     </div>
+                </div>
+
+                <div v-if="props.calendarLinks && isUpcoming(props.event)" class="mb-6">
+                    <AddToCalendarMenu :links="props.calendarLinks" />
                 </div>
 
                 <div
