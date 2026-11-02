@@ -82,6 +82,18 @@ final class KnowledgeBasePageTest extends TestCase
             ->assertSeeHtml('indexOpen = false');
     }
 
+    public function test_opening_a_guide_scrolls_back_to_its_start(): void
+    {
+        $this->signIn();
+
+        $component = Livewire::test(KnowledgeBasePage::class)
+            ->call('openGuide', 'core.panel-guide')
+            ->assertSeeHtml('id="kb-content"');
+
+        // From a related guide or a search hit far down the page the new guide must not open halfway
+        $this->assertStringContainsString('kb-content', (string) json_encode($component->effects['xjs'] ?? []));
+    }
+
     public function test_index_toggle_names_the_open_guide(): void
     {
         $this->signIn();

@@ -19,16 +19,12 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
         {{-- Below lg the index folds behind a bar that says where you are, so the guide is not pushed
-             under a list that grows with every guide. Choosing a guide folds it and goes back to the top. --}}
+             under a list that grows with every guide. Choosing a guide folds it; the page then scrolls
+             to the guide (KnowledgeBasePage::scrollToContent()). Rules in dark mode use the site's
+             border colour (gray-700): white at 10% is lost on the dark background. --}}
         <aside
-            class="flex flex-col gap-4 lg:border-e lg:border-gray-950/10 lg:pe-6 dark:lg:border-white/10"
-            x-data="{
-                indexOpen: false,
-                chose() {
-                    this.indexOpen = false
-                    if (window.innerWidth < 1024) window.scrollTo({ top: 0 })
-                },
-            }"
+            class="flex flex-col gap-4 lg:border-e lg:border-gray-950/10 lg:pe-6 dark:lg:border-gray-700"
+            x-data="{ indexOpen: false }"
         >
             <form wire:submit="submitSearch" role="search">
                 <label for="kb-search" class="sr-only">{{ __('knowledge.panel.search_label') }}</label>
@@ -79,7 +75,7 @@
                 <button
                     type="button"
                     wire:click="showHome"
-                    x-on:click="chose()"
+                    x-on:click="indexOpen = false"
                     class="text-start text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
                 >
                     {{ __('knowledge.panel.home') }}
@@ -91,13 +87,13 @@
                             {{ $page->category->label }}
                         </h2>
                         {{-- Guides hang from a guide line; the open one marks it with the primary colour --}}
-                        <ul class="flex flex-col border-s border-gray-950/10 dark:border-white/10">
+                        <ul class="flex flex-col border-s border-gray-950/10 dark:border-gray-700">
                             @foreach($page->guides as $item)
                                 <li wire:key="nav-{{ $item->id }}">
                                     <button
                                         type="button"
                                         wire:click="openGuide(@js($item->id))"
-                                        x-on:click="chose()"
+                                        x-on:click="indexOpen = false"
                                         @if($selectedGuide !== null && $selectedGuide->id === $item->id) aria-current="page" @endif
                                         @class([
                                             '-ms-px w-full rounded-e-lg border-s-2 py-1.5 ps-3 pe-2 text-start text-sm transition',
@@ -115,7 +111,7 @@
             </nav>
         </aside>
 
-        <div class="min-w-0">
+        <div id="kb-content" class="min-w-0 scroll-mt-24">
             @if($hits !== null)
                 <x-filament::section :heading="__('knowledge.panel.results')">
                     @if($hits === [])
