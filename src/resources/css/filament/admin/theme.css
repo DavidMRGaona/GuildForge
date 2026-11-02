@@ -14,6 +14,13 @@
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 
+/* The global search shortcut hint is no use on a phone and leaves the field a few letters wide */
+@media (max-width: 639px) {
+    .fi-global-search-field .fi-input-wrp-suffix {
+        display: none;
+    }
+}
+
 /* Help index (knowledge-base.blade.php): below lg it folds behind its toggle. The server renders
    it folded and Alpine flips data-open, so there is no flash and no utility fighting another. */
 @media (max-width: 1023px) {

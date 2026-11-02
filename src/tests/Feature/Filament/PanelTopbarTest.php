@@ -11,10 +11,12 @@ use App\Filament\Resources\EventResource;
 use App\Filament\Resources\EventResource\Pages\ListEvents;
 use App\Filament\Resources\GalleryResource;
 use App\Filament\Resources\UserResource;
+use App\Filament\Support\PanelCreateMenu;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Facades\Filament;
 use Filament\Livewire\GlobalSearch;
+use Filament\Navigation\NavigationGroup;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
@@ -98,6 +100,32 @@ final class PanelTopbarTest extends TestCase
             ->assertSee('data-panel-help-link', false)
             ->assertSee(KnowledgeBasePage::getUrl(), false)
             ->assertSee('data-panel-site-link', false);
+    }
+
+    public function test_create_menu_lays_groups_out_in_columns_that_scroll(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get(Dashboard::getUrl())
+            ->assertOk()
+            ->assertSee('data-panel-create-columns', false)
+            // Every group is a block of its own, heading first, so a column never splits it
+            ->assertSeeInOrder(['data-panel-create-group', 'Contenido', EventResource::getUrl('create')], false);
+    }
+
+    public function test_create_menu_groups_follow_the_sidebar_order(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        Filament::setCurrentPanel('admin');
+
+        $menuLabels = array_values(array_filter(array_column(PanelCreateMenu::groups(), 'label')));
+        $sidebarLabels = array_values(array_filter(array_map(
+            static fn (NavigationGroup $group): ?string => $group->getLabel() ?? null,
+            Filament::getPanel('admin')->getNavigation(),
+        )));
+
+        $this->assertNotSame([], $menuLabels);
+        $this->assertSame(array_values(array_intersect($sidebarLabels, $menuLabels)), $menuLabels);
     }
 
     public function test_create_menu_lists_only_what_the_user_may_create(): void
