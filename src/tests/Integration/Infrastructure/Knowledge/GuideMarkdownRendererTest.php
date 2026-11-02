@@ -18,8 +18,10 @@ use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Route;
 use Mockery;
+use RuntimeException;
 use Tests\Support\Knowledge\DeniedKnowledgeCapability;
 use Tests\Support\Knowledge\FakeKnowledgeCapability;
 use Tests\TestCase;
@@ -211,6 +213,20 @@ final class GuideMarkdownRendererTest extends TestCase
 
         $this->assertStringContainsString('Elige Mi perfil. Luego pulsa Guardar, y listo.', $text);
         $this->assertStringContainsString('uno dos', $text);
+    }
+
+    public function test_a_failing_condition_check_hides_the_button_and_is_reported(): void
+    {
+        Exceptions::fake();
+        $evaluator = Mockery::mock(GuideConditionEvaluatorInterface::class);
+        $evaluator->shouldReceive('passes')->andThrow(new RuntimeException('evaluator broken'));
+        $this->app->instance(GuideConditionEvaluatorInterface::class, $evaluator);
+        $renderer = $this->app->make(GuideRendererInterface::class);
+
+        $html = $renderer->toHtml($this->guide('[[action:events.index|Ver los eventos]]'), UserModel::factory()->create());
+
+        $this->assertStringNotContainsString('kb-action', $html);
+        Exceptions::assertReported(RuntimeException::class);
     }
 
     public function test_negated_permission_condition_fails_closed_for_a_disabled_module(): void

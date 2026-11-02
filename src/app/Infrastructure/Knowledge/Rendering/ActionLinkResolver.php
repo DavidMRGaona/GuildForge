@@ -38,7 +38,10 @@ final readonly class ActionLinkResolver
             }
 
             return route($routeName, [], false);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Hidden, not broken: the guide still renders without the button, and the cause is not lost
+            report($e);
+
             return null;
         }
     }
