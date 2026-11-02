@@ -9,6 +9,8 @@ use App\Application\Knowledge\Services\KnowledgeIndexerInterface;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Knowledge\Search\NullKnowledgeIndexer;
 use App\Infrastructure\Knowledge\Search\ScoutKnowledgeIndexer;
+use Illuminate\Console\Scheduling\Event;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\Support\Knowledge\KnowledgeFixtures;
 use Tests\TestCase;
@@ -105,5 +107,16 @@ final class KnowledgeSyncCommandTest extends TestCase
             ->assertSuccessful();
 
         $this->assertTrue(KnowledgeGuideModel::query()->where('guide_id', 'account.one')->exists());
+    }
+
+    public function test_sync_is_scheduled_daily_without_overlapping(): void
+    {
+        $events = collect(app(Schedule::class)->events());
+
+        $this->assertTrue($events->contains(
+            fn (Event $event): bool => str_contains($event->command ?? '', 'knowledge:sync')
+                && $event->expression === '0 0 * * *'
+                && $event->withoutOverlapping
+        ));
     }
 }

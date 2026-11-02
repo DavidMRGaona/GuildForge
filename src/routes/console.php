@@ -26,3 +26,8 @@ Schedule::command('queue:prune-failed --hours=336')
 Schedule::command('knowledge:prune-metrics')
     ->daily()
     ->withoutOverlapping();
+
+// Rebuild the help catalog and its search index daily, so an index left stale by a search engine outage heals on its own
+Schedule::command('knowledge:sync')
+    ->daily()
+    ->withoutOverlapping();
