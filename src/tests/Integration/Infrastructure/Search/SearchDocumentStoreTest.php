@@ -9,7 +9,9 @@ use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Domain\Search\Enums\SearchAudience;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use DateTimeImmutable;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class SearchDocumentStoreTest extends TestCase
@@ -115,5 +117,57 @@ final class SearchDocumentStoreTest extends TestCase
         $this->assertGreaterThan($start->toSearchableArray()['ends_at_ts'], $end->toSearchableArray()['ends_at_ts']);
         $this->assertNull($none->toSearchableArray()['ends_at_ts']);
         $this->assertArrayNotHasKey('url', $end->toSearchableArray());
+    }
+
+    public function test_delete_except_handles_more_kept_ids_than_a_query_can_bind(): void
+    {
+        $this->store->upsert('event', null, $this->document('a'));
+        $removed = $this->store->upsert('event', null, $this->document('b'));
+        $this->store->upsert('event', null, $this->document('c'));
+        $this->store->upsert('article', null, $this->document('b'));
+
+        $keep = ['a', 'c'];
+        for ($i = 0; $i < 5000; $i++) {
+            $keep[] = 'kept-'.$i;
+        }
+
+        // PostgreSQL refuses more than 65535 bindings per query: the kept list never becomes a binding list
+        $bindings = [];
+        DB::listen(static function (QueryExecuted $query) use (&$bindings): void {
+            $bindings[] = count($query->bindings);
+        });
+
+        $this->assertSame([$removed], $this->store->deleteExcept('event', $keep));
+        $this->assertNotSame([], $bindings);
+        $this->assertLessThanOrEqual(500, max([0, ...$bindings]));
+        $this->assertSame(['a', 'c'], SearchDocumentModel::query()->where('type', 'event')->orderBy('source_id')->pluck('source_id')->all());
+        $this->assertSame(['b'], SearchDocumentModel::query()->where('type', 'article')->pluck('source_id')->all());
+    }
+
+    public function test_upsert_truncates_title_and_meta_to_the_column_length(): void
+    {
+        $id = $this->store->upsert('event', null, new SearchDocumentDTO(
+            id: 'long',
+            title: str_repeat('ñ', 300),
+            body: 'B',
+            url: '/long',
+            meta: str_repeat('é', 300),
+        ));
+        $row = SearchDocumentModel::query()->findOrFail($id);
+
+        $this->assertSame(str_repeat('ñ', 255), $row->title);
+        $this->assertSame(str_repeat('é', 255), $row->meta);
+    }
+
+    public function test_types_lists_each_stored_type_once(): void
+    {
+        $this->store->upsert('event', null, $this->document('a'));
+        $this->store->upsert('event', null, $this->document('b'));
+        $this->store->upsert('article', null, $this->document('a'));
+
+        $types = $this->store->types();
+        sort($types);
+
+        $this->assertSame(['article', 'event'], $types);
     }
 }

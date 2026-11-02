@@ -31,3 +31,8 @@ Schedule::command('knowledge:prune-metrics')
 Schedule::command('knowledge:sync')
     ->daily()
     ->withoutOverlapping();
+
+// Rebuild the site search documents daily: picks up bulk changes the observers miss and heals an index left stale by an outage
+Schedule::command('search:sync')
+    ->daily()
+    ->withoutOverlapping();

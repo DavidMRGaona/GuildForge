@@ -14,6 +14,7 @@ interface SearchDocumentStoreInterface
 {
     /**
      * Creates or updates the document and returns the uuid of its row (stable across updates).
+     * The title and the meta line are cut to 255 characters.
      */
     public function upsert(string $type, ?string $module, SearchDocumentDTO $doc): string;
 
@@ -34,4 +35,11 @@ interface SearchDocumentStoreInterface
      * @return list<string> uuids of the removed rows
      */
     public function deleteType(string $type): array;
+
+    /**
+     * Every type with at least one stored document.
+     *
+     * @return list<string>
+     */
+    public function types(): array;
 }
