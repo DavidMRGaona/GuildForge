@@ -16,6 +16,7 @@ use App\Infrastructure\Knowledge\Catalog\CoreKnowledgeCategories;
 use App\Infrastructure\Knowledge\Parsing\GuideDocumentParser;
 use App\Infrastructure\Knowledge\Rendering\ActionCondition;
 use App\Infrastructure\Knowledge\Rendering\ActionLinkResolver;
+use App\Infrastructure\Knowledge\Rendering\ActionTarget;
 use App\Infrastructure\Knowledge\Rendering\Extensions\ActionButtonParser;
 use App\Infrastructure\Knowledge\Rendering\KnowledgePlaceholders;
 use Illuminate\Support\Facades\Route;
@@ -403,9 +404,14 @@ final readonly class KnowledgeLinter
     /**
      * @return list<KnowledgeLintIssueDTO>
      */
-    private function checkButton(string $routeName, ?string $condition, string $file, ?string $module): array
+    private function checkButton(string $target, ?string $condition, string $file, ?string $module): array
     {
         $issues = [];
+        ['route' => $routeName, 'query' => $query] = ActionTarget::split($target);
+        if (ActionTarget::parameters($query) === null) {
+            $issues[] = new KnowledgeLintIssueDTO($file, sprintf("malformed query '%s' of an action button: use key=value pairs joined by &", $query));
+        }
+
         $route = Route::getRoutes()->getByName($routeName);
 
         if ($route === null) {
