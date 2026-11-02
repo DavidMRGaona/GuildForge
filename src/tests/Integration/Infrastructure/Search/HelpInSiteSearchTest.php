@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Search;
 
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
+use App\Application\Knowledge\Services\KnowledgeSearchInterface;
 use App\Application\Search\DTOs\SiteSearchHitDTO;
 use App\Application\Search\DTOs\SiteSearchQueryDTO;
 use App\Application\Search\DTOs\SiteSearchResultDTO;
 use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Domain\Search\Enums\SearchAudience;
+use App\Infrastructure\Knowledge\Search\MeilisearchKnowledgeSearch;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use App\Infrastructure\Search\Search\DatabaseSiteSearch;
@@ -55,6 +57,34 @@ final class HelpInSiteSearchTest extends TestCase
         $this->assertNull($hit->startsAt);
         $this->assertNull($hit->imagePublicId);
         $this->assertNotSame([], $hit->snippet);
+    }
+
+    public function test_the_database_search_reads_help_from_the_database_even_with_meilisearch(): void
+    {
+        // It is the fallback of a failed Meilisearch search: asking Meilisearch again for the help would wait twice
+        config(['scout.driver' => 'meilisearch']);
+        $engine = new class implements KnowledgeSearchInterface
+        {
+            public int $calls = 0;
+
+            public function search(string $query, array $candidates, int $limit): array
+            {
+                $this->calls++;
+
+                throw new RuntimeException('Meilisearch hangs');
+            }
+        };
+        $this->app->instance(MeilisearchKnowledgeSearch::class, $engine);
+        $user = $this->member();
+
+        $hits = $this->search('contraseña', user: $user)->hits;
+
+        $this->assertNotSame([], $hits);
+        $this->assertSame(0, $engine->calls);
+
+        // The help everywhere else still asks Meilisearch first
+        $this->app->make(KnowledgeSearchInterface::class)->search('contraseña', [], 5);
+        $this->assertSame(1, $engine->calls);
     }
 
     public function test_help_is_hidden_when_email_must_be_verified(): void

@@ -16,6 +16,8 @@ use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Updates\Events\ModuleUpdateCompleted;
+use App\Infrastructure\Knowledge\Search\DatabaseKnowledgeSearch;
+use App\Infrastructure\Knowledge\Services\KnowledgeQueryService;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -29,6 +31,7 @@ use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use App\Infrastructure\Search\Persistence\SearchDocumentStore;
 use App\Infrastructure\Search\Search\DatabaseSiteSearch;
 use App\Infrastructure\Search\Search\FallbackSiteSearch;
+use App\Infrastructure\Search\Search\HelpHitsProvider;
 use App\Infrastructure\Search\Search\MeilisearchSiteSearch;
 use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
 use App\Infrastructure\Search\Services\SearchAudienceResolver;
@@ -52,6 +55,14 @@ final class SearchServiceProvider extends ServiceProvider
         $this->app->bind(SearchMetricsServiceInterface::class, SearchMetricsService::class);
         $this->app->bind(SearchSyncRunnerInterface::class, ProcessSearchSyncRunner::class);
         $this->app->bind(SearchAudienceResolverInterface::class, SearchAudienceResolver::class);
+        // The database search is the fallback of a failed Meilisearch search: its help rows come from the database
+        // too, so an engine that hangs costs one timeout, not two
+        $this->app->when(DatabaseSiteSearch::class)
+            ->needs(HelpHitsProvider::class)
+            ->give(fn (Application $app): HelpHitsProvider => $app->make(HelpHitsProvider::class, [
+                'knowledge' => $app->make(KnowledgeQueryService::class, ['search' => $app->make(DatabaseKnowledgeSearch::class)]),
+            ]));
+
         // Meilisearch when Scout is configured for it (falling back to the database search on any failure), otherwise the database search
         $this->app->bind(SiteSearchInterface::class, fn (Application $app): SiteSearchInterface => $this->usesMeilisearch($app)
             ? new FallbackSiteSearch(
