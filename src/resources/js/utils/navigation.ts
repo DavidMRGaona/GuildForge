@@ -38,3 +38,66 @@ export function isActiveHref(href: string, currentUrl: string, origin: string): 
 
     return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
 }
+
+/**
+ * Where to visit with Inertia when a click on server-rendered HTML (v-html) lands on an internal
+ * link, or null to leave it to the browser: a plain <a> there reloads the whole document.
+ *
+ * The browser keeps clicks with a modifier or another button, links that open elsewhere or
+ * download, links to other sites, anchors on the current page, and the excluded paths and the
+ * pages below them (the panel is not an Inertia app).
+ */
+export function internalLinkVisit(
+    event: MouseEvent,
+    currentUrl: string,
+    excludedPaths: readonly string[]
+): string | null {
+    if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+    ) {
+        return null;
+    }
+
+    const link = event.target instanceof Element ? event.target.closest('a') : null;
+    if (
+        link === null ||
+        !link.hasAttribute('href') ||
+        (link.target !== '' && link.target !== '_self') ||
+        link.hasAttribute('download')
+    ) {
+        return null;
+    }
+
+    let target: URL;
+    let current: URL;
+    try {
+        current = new URL(currentUrl);
+        target = new URL(link.getAttribute('href') ?? '', current);
+    } catch {
+        return null;
+    }
+
+    if (target.origin !== current.origin) {
+        return null;
+    }
+
+    if (
+        target.pathname === current.pathname &&
+        target.search === current.search &&
+        target.hash !== ''
+    ) {
+        return null;
+    }
+
+    const path = trimTrailingSlash(target.pathname);
+    if (excludedPaths.some((excluded) => path === excluded || path.startsWith(`${excluded}/`))) {
+        return null;
+    }
+
+    return `${target.pathname}${target.search}${target.hash}`;
+}
