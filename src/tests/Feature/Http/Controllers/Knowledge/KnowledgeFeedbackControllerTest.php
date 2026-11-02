@@ -87,6 +87,17 @@ final class KnowledgeFeedbackControllerTest extends TestCase
         $this->postJson('/ayuda/core.signup/voto', ['helpful' => true])->assertTooManyRequests();
     }
 
+    public function test_searching_does_not_spend_the_voting_allowance(): void
+    {
+        $this->actingAs(UserModel::factory()->create());
+
+        for ($i = 0; $i < 11; $i++) {
+            $this->getJson('/ayuda/buscar?q=apuntarse')->assertOk();
+        }
+
+        $this->postJson('/ayuda/core.signup/voto', ['helpful' => true])->assertNoContent();
+    }
+
     public function test_results_page_records_a_miss_when_nothing_matches(): void
     {
         $this->actingAs(UserModel::factory()->create());

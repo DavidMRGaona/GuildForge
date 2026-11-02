@@ -98,14 +98,15 @@ Route::middleware('auth')->group(function (): void {
 
     // Help centre. Literal routes go before /ayuda/{guide}, whose pattern would swallow them
     Route::get('/ayuda', [KnowledgeController::class, 'index'])->name('knowledge.index');
+    // Own prefixes: without them, search, vote and verification.send would share one per-user counter
     Route::get('/ayuda/buscar', KnowledgeSearchController::class)
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:60,1,knowledge-search')
         ->name('knowledge.search');
     Route::get('/ayuda/visibles', KnowledgeVisibleGuidesController::class)->name('knowledge.visible');
     Route::get('/ayuda/categoria/{category}', [KnowledgeController::class, 'category'])->name('knowledge.category');
     Route::post('/ayuda/{guide}/voto', KnowledgeFeedbackController::class)
         ->where('guide', '[a-z0-9.-]+')
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:10,1,knowledge-vote')
         ->name('knowledge.vote');
     Route::get('/ayuda/{guide}', [KnowledgeController::class, 'show'])
         ->where('guide', '[a-z0-9.-]+')
