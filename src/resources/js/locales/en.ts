@@ -243,6 +243,9 @@ export default {
         resultsCount: '{count} result | {count} results',
         showMore: 'Show more results',
         loadMoreError: 'More results could not be loaded. Please try again.',
+        panelLabel: 'Search the site',
+        seeAll: 'See all results ({count})',
+        suggestionsCount: 'No suggestions | {count} suggestion | {count} suggestions',
     },
     knowledge: {
         contextualHelp: 'Help on this section',

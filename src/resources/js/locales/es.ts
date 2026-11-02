@@ -244,6 +244,9 @@ export default {
         resultsCount: '{count} resultado | {count} resultados',
         showMore: 'Ver más resultados',
         loadMoreError: 'No se han podido cargar más resultados. Inténtalo de nuevo.',
+        panelLabel: 'Buscar en la web',
+        seeAll: 'Ver todos los resultados ({count})',
+        suggestionsCount: 'Sin sugerencias | {count} sugerencia | {count} sugerencias',
     },
     knowledge: {
         contextualHelp: 'Ayuda sobre esta sección',
