@@ -1,6 +1,6 @@
 # Writing knowledge guides
 
-The knowledge base is the in-app help of GuildForge: guides for visitors (audience `site`) and for the people who use the admin panel (audience `panel`). The core ships its own guides; every module can ship the guides for what it adds. This page explains how a module writes them. For the rest of the module SDK, see the [module development guide](./README.md).
+The knowledge base is the in-app help of GuildForge: guides for signed-in users of the site (audience `site`; the help centre is not open to guests) and for the people who use the admin panel (audience `panel`). The core ships its own guides; every module can ship the guides for what it adds. This page explains how a module writes them. For the rest of the module SDK, see the [module development guide](./README.md).
 
 ## Table of contents
 
