@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Calendar\Services\AddToCalendarLinksFactoryInterface;
 use App\Application\Calendar\Services\CalendarAggregatorServiceInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
+use App\Application\Calendar\Services\ICalendarWriterInterface;
 use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Cookies\Services\CookieDeclarationRegistryInterface;
@@ -88,6 +90,8 @@ use App\Domain\Repositories\PhotoRepositoryInterface;
 use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
+use App\Infrastructure\Calendar\Export\AddToCalendarLinksFactory;
+use App\Infrastructure\Calendar\Export\ICalendarWriter;
 use App\Infrastructure\Calendar\Services\CalendarAggregatorService;
 use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
 use App\Infrastructure\Content\Services\TrixContentMigrator;
@@ -363,6 +367,8 @@ class AppServiceProvider extends ServiceProvider
         // Calendar system bindings
         $this->app->singleton(CalendarSourceRegistryInterface::class, CalendarSourceRegistry::class);
         $this->app->singleton(CalendarAggregatorServiceInterface::class, CalendarAggregatorService::class);
+        $this->app->bind(ICalendarWriterInterface::class, ICalendarWriter::class);
+        $this->app->bind(AddToCalendarLinksFactoryInterface::class, AddToCalendarLinksFactory::class);
 
         // Survey subject sources offered by modules
         $this->app->singleton(SurveySubjectSourceRegistryInterface::class, SurveySubjectSourceRegistry::class);

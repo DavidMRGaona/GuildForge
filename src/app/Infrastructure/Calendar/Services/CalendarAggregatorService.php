@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Calendar\Services;
 
+use App\Application\Calendar\Contracts\CalendarEntryLookupInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Calendar\DTOs\CalendarEntryDTO;
 use App\Application\Calendar\Services\CalendarAggregatorServiceInterface;
@@ -35,6 +36,46 @@ final readonly class CalendarAggregatorService implements CalendarAggregatorServ
         usort($entries, static fn (CalendarEntryDTO $a, CalendarEntryDTO $b): int => $a->start <=> $b->start);
 
         return $entries;
+    }
+
+    public function findEntry(string $sourceType, string $id): ?CalendarEntryDTO
+    {
+        $source = $this->lookupSource($sourceType);
+
+        if (! $source instanceof CalendarEntryLookupInterface) {
+            return null;
+        }
+
+        try {
+            return $source->findEntry($id);
+        } catch (Throwable $exception) {
+            Log::warning('[CalendarAggregatorService] Calendar source failed to find an entry', [
+                'source' => $source::class,
+                'sourceType' => $sourceType,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    public function canFindEntries(string $sourceType): bool
+    {
+        return $this->lookupSource($sourceType) instanceof CalendarEntryLookupInterface;
+    }
+
+    /**
+     * The source of the given type when it can find entries by id.
+     */
+    private function lookupSource(string $sourceType): ?CalendarEntryLookupInterface
+    {
+        foreach ($this->sources() as $source) {
+            if ($source instanceof CalendarEntryLookupInterface && $this->safeSourceType($source) === $sourceType) {
+                return $source;
+            }
+        }
+
+        return null;
     }
 
     /**

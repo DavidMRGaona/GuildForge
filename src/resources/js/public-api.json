@@ -12,6 +12,7 @@
         "@fullcalendar/vue3/themes/classic": "resources/js/vendor-exports/fullcalendar-theme-classic.ts"
     },
     "entries": {
+        "@/components/calendar/AddToCalendarMenu.vue": "resources/js/components/calendar/AddToCalendarMenu.vue",
         "@/components/form": "resources/js/components/form/index.ts",
         "@/components/knowledge/HelpLink.vue": "resources/js/components/knowledge/HelpLink.vue",
         "@/components/layout/ModuleSlot.vue": "resources/js/components/layout/ModuleSlot.vue",

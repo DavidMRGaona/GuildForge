@@ -6,6 +6,7 @@ import { isPrivateCoreImport, isSharedWithModules, readPublicApi } from '../publ
 const SRC = resolve(import.meta.dirname, '../..');
 
 const ENTRIES = [
+    '@/components/calendar/AddToCalendarMenu.vue',
     '@/components/form',
     '@/components/knowledge/HelpLink.vue',
     '@/components/layout/ModuleSlot.vue',

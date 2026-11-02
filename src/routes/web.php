@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\CalendarEntryICalendarController;
 use App\Http\Controllers\CalendarPageController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EventController;
@@ -30,6 +31,9 @@ Route::get('/', HomeController::class)->name('home');
 Route::get('/nosotros', AboutController::class)->name('about');
 Route::post('/contacto', ContactController::class)->middleware('throttle:contact')->name('contact.store');
 Route::get('/calendario', CalendarPageController::class)->name('calendar');
+Route::get('/calendario/{source}/{id}.ics', CalendarEntryICalendarController::class)
+    ->where(['source' => '[a-z0-9-]+', 'id' => '[A-Za-z0-9_-]+'])
+    ->name('calendar.entry.ics');
 
 Route::get('/eventos/calendario', [CalendarController::class, 'index'])->name('events.calendar');
 Route::get('/eventos', [EventController::class, 'index'])->name('events.index');
