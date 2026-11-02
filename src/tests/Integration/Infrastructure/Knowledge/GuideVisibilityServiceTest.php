@@ -12,10 +12,12 @@ use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideOverrideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
 
 final class GuideVisibilityServiceTest extends TestCase
 {
+    use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
 
     private GuideVisibilityServiceInterface $visibility;
@@ -73,6 +75,32 @@ final class GuideVisibilityServiceTest extends TestCase
         $this->assertSame(['core.shown'], $ids);
         $this->assertNull($this->visibility->findVisible($user, GuideId::fromString('core.secret'), GuideAudience::Site));
         $this->assertNotNull($this->visibility->findVisible($user, GuideId::fromString('core.shown'), GuideAudience::Site));
+    }
+
+    public function test_visibility_is_memoized_per_user_within_one_instance(): void
+    {
+        $this->category('basics');
+        $this->guide('core.open');
+        $this->guide('core.events-only', ['conditions' => ['permissions' => ['any' => ['events.view_any']]]]);
+        $editor = $this->editorWithPermissions(['events.view_any']);
+        $member = UserModel::factory()->create();
+        $ids = fn (object $user): array => array_map(fn ($g): string => $g->id->value(), $this->visibility->visibleGuides($user, GuideAudience::Site));
+
+        $this->assertSame(['core.events-only', 'core.open'], $this->sorted($ids($editor)));
+        $this->assertSame(['core.open'], $ids($member));
+        $this->assertNull($this->visibility->findVisible($member, GuideId::fromString('core.events-only'), GuideAudience::Site));
+        $this->assertNotNull($this->visibility->findVisible($editor, GuideId::fromString('core.events-only'), GuideAudience::Site));
+    }
+
+    /**
+     * @param  list<string>  $ids
+     * @return list<string>
+     */
+    private function sorted(array $ids): array
+    {
+        sort($ids);
+
+        return $ids;
     }
 
     public function test_categories_without_visible_guides_are_omitted(): void

@@ -18,6 +18,7 @@ use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Knowledge\DeniedKnowledgeCapability;
 use Tests\Support\Knowledge\FakeKnowledgeCapability;
 use Tests\Support\Knowledge\ThrowingKnowledgeCapability;
+use Tests\Support\Knowledge\UserDependentKnowledgeCapability;
 use Tests\TestCase;
 
 final class GuideConditionEvaluatorTest extends TestCase
@@ -35,6 +36,7 @@ final class GuideConditionEvaluatorTest extends TestCase
         $registry->register(FakeKnowledgeCapability::class);
         $registry->register(DeniedKnowledgeCapability::class);
         $registry->register(ThrowingKnowledgeCapability::class);
+        $registry->register(UserDependentKnowledgeCapability::class);
 
         $this->evaluator = $this->app->make(GuideConditionEvaluatorInterface::class);
     }
@@ -93,6 +95,20 @@ final class GuideConditionEvaluatorTest extends TestCase
         $this->assertFalse($this->evaluator->passes($user, new GuideConditions(capabilities: ['fake.denied']), null));
         $this->assertTrue($this->evaluator->passes($user, new GuideConditions(negatedCapabilities: ['fake.denied']), null));
         $this->assertFalse($this->evaluator->passes($user, new GuideConditions(negatedCapabilities: ['fake.can_do_it']), null));
+    }
+
+    public function test_capability_results_are_memoized_per_user(): void
+    {
+        $allowed = UserModel::factory()->create(['email' => 'ana'.UserDependentKnowledgeCapability::ALLOWED_DOMAIN]);
+        $other = UserModel::factory()->create(['email' => 'bruno@example.test']);
+        $conditions = new GuideConditions(capabilities: ['fake.per_user']);
+        $negated = new GuideConditions(negatedCapabilities: ['fake.per_user']);
+
+        $this->assertTrue($this->evaluator->passes($allowed, $conditions, null));
+        $this->assertFalse($this->evaluator->passes($other, $conditions, null));
+        $this->assertTrue($this->evaluator->passes($other, $negated, null));
+        $this->assertFalse($this->evaluator->passes($allowed, $negated, null));
+        $this->assertTrue($this->evaluator->passes($allowed, $conditions, null));
     }
 
     public function test_unknown_capability_fails_closed(): void
