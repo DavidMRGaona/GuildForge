@@ -257,6 +257,8 @@ class ListTables extends ListRecords
 php artisan knowledge:lint --module=my-module
 ```
 
+With the Docker development stack, `make knowledge-lint MODULE=my-module` runs the same check from the core's root.
+
 The command checks the core's guides and the module's: front matter, ids and prefixes, categories and audiences, `related`, `previous_ids`, registered permissions and capabilities, raw HTML, unknown markers, and action buttons (route exists, no required parameters, valid `if=`). It exits with a failure and lists each issue as `file: message`.
 
 Run it in the module's tests so CI blocks a broken guide:
