@@ -265,7 +265,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
 
     /**
      * Register indexed search sources provided by this module.
-     * Allows module records to be found in the global site search.
+     * Allows module records to be found in the global site search; each type is prefixed with the module.
      *
      * @return array<class-string<IndexedSearchSourceInterface>>
      */

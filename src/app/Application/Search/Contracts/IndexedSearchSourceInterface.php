@@ -12,22 +12,23 @@ use App\Application\Search\DTOs\SearchDocumentDTO;
 interface IndexedSearchSourceInterface
 {
     /**
-     * Stable identifier of the kind of record (e.g. "event"); unique across sources.
+     * Stable identifier of the kind of record (e.g. "events"); unique across sources. Module types are
+     * prefixed with the module ("gametables.tables"): the first source registered for a type wins.
      */
     public function type(): string;
 
     /**
-     * Plural, user-facing name of the group (e.g. "Eventos").
+     * Plural, user-facing name of the group (e.g. «Eventos»).
      */
     public function label(): string;
 
     /**
-     * Singular, user-facing name of one record (e.g. "Evento").
+     * Singular, user-facing name of one record (e.g. «Evento»).
      */
     public function itemLabel(): string;
 
     /**
-     * User-facing tag for records that are over (e.g. "Pasado"), or null when the type has none.
+     * User-facing tag for records that are over (e.g. «Celebrado»), or null when the type has none.
      */
     public function pastLabel(): ?string;
 

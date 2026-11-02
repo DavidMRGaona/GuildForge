@@ -4,8 +4,8 @@ The site search (`/buscar` and the suggestions panel in the header) finds events
 
 ## How it works
 
-- Modules only register **indexed sources**. The core copies each record a source offers into a search document (table of stored documents, mirrored to Meilisearch when it is configured) and searches those documents. There is no way for a module to answer a query live.
-- The help guides are the only live source: the core itself filters them by what the signed-in user may see. A module never needs to care about them.
+- Modules only register **indexed sources**. The core copies each record a source offers into a search document (table of stored documents, mirrored to Meilisearch when it is configured) and searches those documents.
+- The help guides are searched by the core itself, filtered by what the signed-in user may see. A module never needs to care about them.
 - The core sources (`EventSearchSource`, `ArticleSearchSource`, `GallerySearchSource` in `app/Infrastructure/Search/Sources/`) follow exactly the rules below and are the best examples.
 - A search never answers 500 because of the engine or of one source: a failing source is logged and skipped, and Meilisearch falls back to the database engine.
 

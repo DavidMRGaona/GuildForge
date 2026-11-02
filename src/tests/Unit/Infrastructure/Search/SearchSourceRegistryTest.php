@@ -10,14 +10,10 @@ use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
 use stdClass;
 use Tests\Support\Search\FakeIndexedSearchSource;
-use Tests\Support\Search\FakeSearchSource;
 use Tests\Support\Search\OtherFakeIndexedSearchSource;
-use Tests\Support\Search\OtherFakeSearchSource;
-use Tests\Support\Search\SameKeyFakeSearchSource;
 use Tests\Support\Search\SameTypeFakeIndexedSearchSource;
 use Tests\Support\Search\ThrowingTypeIndexedSearchSource;
 use Tests\Support\Search\UnresolvableIndexedSearchSource;
-use Tests\Support\Search\UnresolvableSearchSource;
 use Tests\TestCase;
 
 final class SearchSourceRegistryTest extends TestCase
@@ -28,17 +24,6 @@ final class SearchSourceRegistryTest extends TestCase
     {
         parent::setUp();
         $this->registry = new SearchSourceRegistry($this->app);
-    }
-
-    #[Test]
-    public function it_resolves_registered_sources(): void
-    {
-        $this->registry->register(FakeSearchSource::class);
-
-        $sources = $this->registry->sources();
-
-        $this->assertCount(1, $sources);
-        $this->assertInstanceOf(FakeSearchSource::class, $sources[0]);
     }
 
     #[Test]
@@ -56,31 +41,35 @@ final class SearchSourceRegistryTest extends TestCase
     #[Test]
     public function unregistering_a_module_keeps_the_core_sources(): void
     {
-        $this->registry->register(FakeSearchSource::class);
+        $this->registry->register(FakeIndexedSearchSource::class);
         $this->registry->register(OtherFakeIndexedSearchSource::class, 'demo');
 
         $this->registry->unregisterModule('demo');
 
-        $this->assertCount(1, $this->registry->sources());
+        $indexed = $this->registry->indexedSources();
+        $this->assertCount(1, $indexed);
+        $this->assertInstanceOf(FakeIndexedSearchSource::class, $indexed[0]);
     }
 
     #[Test]
     public function clear_removes_every_source(): void
     {
-        $this->registry->register(FakeSearchSource::class);
+        $this->registry->register(FakeIndexedSearchSource::class);
+        $this->registry->register(OtherFakeIndexedSearchSource::class, 'demo');
 
         $this->registry->clear();
 
-        $this->assertSame([], $this->registry->sources());
+        $this->assertSame([], $this->registry->indexedSources());
+        $this->assertSame([], $this->registry->unresolved());
     }
 
     #[Test]
     public function it_skips_and_logs_sources_that_cannot_be_resolved(): void
     {
         $log = Log::spy();
-        $this->registry->registerMany([UnresolvableSearchSource::class, FakeSearchSource::class]);
+        $this->registry->registerMany([UnresolvableIndexedSearchSource::class, FakeIndexedSearchSource::class]);
 
-        $sources = $this->registry->sources();
+        $sources = $this->registry->indexedSources();
 
         $this->assertCount(1, $sources);
         $log->shouldHaveReceived('warning')->once();
@@ -92,18 +81,9 @@ final class SearchSourceRegistryTest extends TestCase
         $log = Log::spy();
         $this->registry->register(stdClass::class);
 
-        $this->assertSame([], $this->registry->sources());
-        $log->shouldHaveReceived('warning')->once();
-    }
-
-    #[Test]
-    public function it_skips_a_source_whose_key_is_already_taken(): void
-    {
-        $log = Log::spy();
-        $this->registry->registerMany([FakeSearchSource::class, SameKeyFakeSearchSource::class]);
-
-        $this->assertCount(1, $this->registry->sources());
-        $log->shouldHaveReceived('warning')->once();
+        $this->assertSame([], $this->registry->indexedSources());
+        $this->assertSame([stdClass::class], $this->registry->unresolved());
+        $log->shouldHaveReceived('warning');
     }
 
     #[Test]
@@ -122,27 +102,6 @@ final class SearchSourceRegistryTest extends TestCase
         $this->assertInstanceOf(FakeIndexedSearchSource::class, $indexed[0]);
         $this->assertSame('other-indexed', $indexed[1]->type());
         $log->shouldHaveReceived('warning')->once();
-    }
-
-    #[Test]
-    public function live_sources_exclude_indexed_ones(): void
-    {
-        $this->registry->registerMany([FakeSearchSource::class, FakeIndexedSearchSource::class]);
-
-        $this->assertCount(1, $this->registry->sources());
-        $this->assertInstanceOf(FakeSearchSource::class, $this->registry->sources()[0]);
-        $this->assertCount(1, $this->registry->indexedSources());
-    }
-
-    #[Test]
-    public function module_live_source_is_ignored_with_a_warning(): void
-    {
-        $log = Log::spy();
-        $this->registry->register(FakeSearchSource::class, 'demo');
-
-        $this->assertSame([], $this->registry->sources());
-        $this->assertSame([], $this->registry->indexedSources());
-        $log->shouldHaveReceived('warning');
     }
 
     #[Test]
@@ -191,14 +150,12 @@ final class SearchSourceRegistryTest extends TestCase
     }
 
     #[Test]
-    public function live_sources_and_taken_types_are_not_load_failures(): void
+    public function taken_types_are_not_load_failures(): void
     {
-        $this->registry->register(OtherFakeSearchSource::class);
-        $this->registry->register(FakeSearchSource::class, 'sample');
         $this->registry->register(FakeIndexedSearchSource::class);
-        $this->registry->register(SameTypeFakeIndexedSearchSource::class);
+        $this->registry->register(SameTypeFakeIndexedSearchSource::class, 'sample');
 
-        // A module's live source is dropped on purpose, and a taken type is owned by another source
+        // A taken type is owned by another source: nothing failed to load
         $this->assertSame([], $this->registry->unresolved());
     }
 }
