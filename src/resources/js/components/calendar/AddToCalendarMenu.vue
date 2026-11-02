@@ -85,10 +85,10 @@ onUnmounted(() => {
 
         <div
             v-if="isOpen"
-            class="absolute z-50 min-w-56 rounded-md border-default bg-surface shadow-lg ring-1 ring-black/5"
+            class="absolute z-50 min-w-56 rounded-md border border-default bg-surface shadow-lg ring-1 ring-black/5"
             :class="[
                 props.placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
-                props.block ? 'inset-x-0' : 'left-0',
+                props.block ? 'inset-x-0' : 'left-0 w-max',
             ]"
         >
             <div class="py-1" role="menu" :aria-label="t('calendar.addToCalendar.button')">
@@ -96,7 +96,7 @@ onUnmounted(() => {
                     :href="props.links.google"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="flex w-full items-center gap-3 px-4 py-2 text-sm text-base-primary hover:bg-muted"
+                    class="flex w-full items-center gap-3 whitespace-nowrap px-4 py-2 text-sm text-base-primary hover:bg-muted"
                     role="menuitem"
                     @click="close"
                 >
@@ -108,7 +108,7 @@ onUnmounted(() => {
                     :href="props.links.outlook"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="flex w-full items-center gap-3 px-4 py-2 text-sm text-base-primary hover:bg-muted"
+                    class="flex w-full items-center gap-3 whitespace-nowrap px-4 py-2 text-sm text-base-primary hover:bg-muted"
                     role="menuitem"
                     @click="close"
                 >
@@ -119,7 +119,7 @@ onUnmounted(() => {
                 <a
                     v-if="props.links.ics"
                     :href="props.links.ics"
-                    class="flex w-full items-center gap-3 px-4 py-2 text-sm text-base-primary hover:bg-muted"
+                    class="flex w-full items-center gap-3 whitespace-nowrap px-4 py-2 text-sm text-base-primary hover:bg-muted"
                     role="menuitem"
                     @click="close"
                 >
