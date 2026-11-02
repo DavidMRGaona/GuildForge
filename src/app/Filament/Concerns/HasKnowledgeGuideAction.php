@@ -34,7 +34,7 @@ trait HasKnowledgeGuideAction
             return null;
         }
 
-        return Action::make('knowledgeGuide')
+        return Action::make('contextualHelp')
             ->label(__('knowledge.contextual_help'))
             ->icon('heroicon-o-question-mark-circle')
             ->color('gray')

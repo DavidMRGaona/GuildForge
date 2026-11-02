@@ -800,6 +800,9 @@ final class SiteSettings extends Page implements HasForms
      */
     protected function getHeaderActions(): array
     {
-        return array_filter([$this->knowledgeGuideAction('core.panel.site-settings')]);
+        // Who may only toggle maintenance sees the maintenance tab alone: its guide instead
+        return array_filter([
+            $this->knowledgeGuideAction('core.panel.site-settings') ?? $this->knowledgeGuideAction('core.panel.maintenance'),
+        ]);
     }
 }

@@ -9,6 +9,7 @@ use App\Domain\Knowledge\Enums\GuideAudience;
 use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Filament\Pages\CoreUpdatesPage;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\ModuleUpdatesPage;
 use App\Filament\Pages\Settings\AboutPageSettings;
@@ -120,8 +121,33 @@ final class CorePanelGuidesTest extends TestCase
         $this->actingAs($this->editorWithPermissions(['events.view_any', 'events.create']));
 
         Livewire::test(ListEvents::class)
-            ->assertActionVisible('knowledgeGuide')
+            ->assertActionVisible('contextualHelp')
             ->assertActionVisible('create');
+    }
+
+    public function test_pages_without_a_visible_guide_have_no_help_action(): void
+    {
+        // The guide needs events.create: the action must be absent, not resolved by name
+        $this->actingAs($this->editorWithPermissions(['events.view_any']));
+
+        Livewire::test(ListEvents::class)->assertActionDoesNotExist('contextualHelp');
+    }
+
+    public function test_site_settings_help_falls_back_to_the_maintenance_guide(): void
+    {
+        $this->actingAs($this->editorWithPermissions(['settings.maintenance']));
+
+        Livewire::test(SiteSettings::class)
+            ->assertActionVisible('contextualHelp')
+            ->assertActionHasUrl('contextualHelp', KnowledgeBasePage::getUrl(['guia' => 'core.panel.maintenance']));
+    }
+
+    public function test_site_settings_help_opens_the_site_settings_guide_for_settings_managers(): void
+    {
+        $this->actingAs($this->editorWithPermissions(['settings.manage', 'settings.maintenance']));
+
+        Livewire::test(SiteSettings::class)
+            ->assertActionHasUrl('contextualHelp', KnowledgeBasePage::getUrl(['guia' => 'core.panel.site-settings']));
     }
 
     /**
@@ -161,7 +187,7 @@ final class CorePanelGuidesTest extends TestCase
     {
         $this->actingAs(UserModel::factory()->admin()->create());
 
-        Livewire::test($page)->assertActionVisible('knowledgeGuide');
+        Livewire::test($page)->assertActionVisible('contextualHelp');
     }
 
     private function queries(): KnowledgeQueryServiceInterface
