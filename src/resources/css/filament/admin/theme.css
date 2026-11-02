@@ -6,8 +6,9 @@
    plus `app/Filament` and `resources/views/filament`.
 
    Modules are not scanned: src/modules is not in the host repository and is
-   absent from Coolify builds. Module panel code uses Filament components and
-   their props (badge, color, icon), never Tailwind classes of its own. */
+   absent from the production container builds. Module panel code uses Filament
+   components and their props (badge, color, icon), never Tailwind classes of
+   its own. */
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 
 @source '../../../../app/Filament/**/*';
