@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules;
 
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
+use App\Application\Knowledge\Contracts\KnowledgeCapabilityInterface;
 use App\Application\Modules\DTOs\ModuleRouteDTO;
 use App\Application\Modules\DTOs\NavigationItemDTO;
 use App\Application\Modules\DTOs\PagePrefixDTO;
@@ -268,6 +269,17 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<SurveySubjectSourceInterface>>
      */
     public function registerSurveySubjectSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register knowledge capabilities provided by this module.
+     * Guides use them to show only what a person can do; each reuses the domain rule that decides the action.
+     *
+     * @return array<class-string<KnowledgeCapabilityInterface>>
+     */
+    public function registerKnowledgeCapabilities(): array
     {
         return [];
     }

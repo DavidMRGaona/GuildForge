@@ -7,6 +7,7 @@ namespace App\Modules;
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
+use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
@@ -95,6 +96,9 @@ final class ModuleLoader
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
+
+        // Register knowledge capabilities from the provider
+        $this->registerProviderKnowledgeCapabilities($provider, $module->name()->value);
 
         // Register navigation from the provider
         $this->registerProviderNavigation($provider);
@@ -209,6 +213,22 @@ final class ModuleLoader
         if ($this->app->bound(SurveySubjectSourceRegistryInterface::class)) {
             $sourceRegistry = $this->app->make(SurveySubjectSourceRegistryInterface::class);
             $sourceRegistry->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register knowledge capabilities from a module provider.
+     */
+    private function registerProviderKnowledgeCapabilities(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $capabilities = $provider->registerKnowledgeCapabilities();
+
+        if ($capabilities === []) {
+            return;
+        }
+
+        if ($this->app->bound(KnowledgeCapabilityRegistryInterface::class)) {
+            $this->app->make(KnowledgeCapabilityRegistryInterface::class)->registerMany($capabilities, $moduleName);
         }
     }
 

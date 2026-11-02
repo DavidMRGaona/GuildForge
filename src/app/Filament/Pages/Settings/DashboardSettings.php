@@ -6,6 +6,7 @@ namespace App\Filament\Pages\Settings;
 
 use App\Application\Services\DashboardWidgetConfigServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
@@ -25,6 +26,7 @@ use Filament\Widgets\TableWidget;
 final class DashboardSettings extends Page implements HasForms
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-squares-2x2';
@@ -177,6 +179,7 @@ final class DashboardSettings extends Page implements HasForms
                 ->modalHeading(__('filament.dashboard_settings.reset_confirm_title'))
                 ->modalDescription(__('filament.dashboard_settings.reset_confirm_description'))
                 ->action(fn () => $this->resetToDefaults(app(DashboardWidgetConfigServiceInterface::class))),
+            ...array_filter([$this->knowledgeGuideAction('core.panel.dashboard-settings')]),
         ];
     }
 

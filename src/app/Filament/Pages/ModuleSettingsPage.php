@@ -8,6 +8,7 @@ use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Modules\ModuleLoader;
 use Filament\Actions\Action;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -24,6 +25,7 @@ use Filament\Schemas\Schema;
 final class ModuleSettingsPage extends Page implements HasForms
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithForms;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
@@ -213,5 +215,13 @@ final class ModuleSettingsPage extends Page implements HasForms
             ModulesPage::getUrl() => __('modules.filament.page.navigation_label'),
             '' => $this->getTitle(),
         ];
+    }
+
+    /**
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return array_filter([$this->knowledgeGuideAction('core.panel.modules')]);
     }
 }

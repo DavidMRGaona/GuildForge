@@ -29,6 +29,8 @@ Commands run in the development containers: `php artisan` and PHPUnit in `guildf
 20. [Releasing a module](#releasing-a-module)
 21. [Quick reference](#quick-reference)
 
+Knowledge base guides for a module's features are covered in [Writing knowledge guides](./knowledge-guides.md).
+
 ---
 
 ## Getting started

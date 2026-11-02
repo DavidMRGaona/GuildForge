@@ -30,7 +30,10 @@ const user: User = {
 function mountHeader(): ReturnType<typeof mount> {
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
-    return mount(ProfileHeader, { props: { user }, global: { plugins: [i18n] } });
+    return mount(ProfileHeader, {
+        props: { user },
+        global: { plugins: [i18n], stubs: { HelpLink: true } },
+    });
 }
 
 function classesOf(element: Element): string[] {
@@ -61,5 +64,11 @@ describe('ProfileHeader', () => {
         expect(classesOf(header).filter((name) => /^(dark:bg-|bg-neutral-)/.test(name))).toEqual(
             []
         );
+    });
+
+    it('links the profile guide next to the name', () => {
+        const link = mountHeader().get('h1 + help-link-stub');
+
+        expect(link.attributes('guide')).toBe('core.account.complete-profile');
     });
 });

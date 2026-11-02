@@ -7,6 +7,7 @@ const SRC = resolve(import.meta.dirname, '../..');
 
 const ENTRIES = [
     '@/components/form',
+    '@/components/knowledge/HelpLink.vue',
     '@/components/layout/ModuleSlot.vue',
     '@/components/ui/BaseButton.vue',
     '@/components/ui/BaseCard.vue',
@@ -17,6 +18,7 @@ const ENTRIES = [
     '@/composables/useCalendarLocale',
     '@/composables/useFlashMessages',
     '@/composables/useGridLayout',
+    '@/composables/useKnowledgeVisibility',
     '@/composables/useNotifications',
     '@/composables/usePagination',
     '@/composables/useRoutes',

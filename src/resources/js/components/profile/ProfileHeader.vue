@@ -5,6 +5,7 @@ import { useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { buildAvatarUrl } from '@/utils/cloudinary';
 import { useNotifications } from '@/composables/useNotifications';
+import HelpLink from '@/components/knowledge/HelpLink.vue';
 import type { User, UpdateProfileFormData } from '@/types/models';
 import { VENUE_TIMEZONE } from '@/utils/datetime';
 
@@ -125,9 +126,13 @@ function uploadAvatar(): void {
 
                 <!-- User info -->
                 <div class="text-center sm:text-left">
-                    <h1 class="text-2xl font-bold text-base-primary sm:text-3xl">
+                    <!-- Inline so the help link sits beside the name, centred or left-aligned with it -->
+                    <h1
+                        class="inline align-middle text-2xl font-bold text-base-primary sm:text-3xl"
+                    >
                         {{ displayName }}
                     </h1>
+                    <HelpLink guide="core.account.complete-profile" class="ml-2 align-middle" />
                     <p class="mt-1 text-base-secondary">
                         {{ user.email }}
                     </p>

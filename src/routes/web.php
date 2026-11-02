@@ -16,6 +16,10 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Knowledge\KnowledgeController;
+use App\Http\Controllers\Knowledge\KnowledgeFeedbackController;
+use App\Http\Controllers\Knowledge\KnowledgeSearchController;
+use App\Http\Controllers\Knowledge\KnowledgeVisibleGuidesController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SitemapController;
@@ -91,4 +95,20 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:6,1,profile')
         ->name('profile.update');
     Route::put('/perfil/contrasena', [ProfileController::class, 'changePassword'])->name('profile.password');
+
+    // Help centre. Literal routes go before /ayuda/{guide}, whose pattern would swallow them
+    Route::get('/ayuda', [KnowledgeController::class, 'index'])->name('knowledge.index');
+    // Own prefixes: without them, search, vote and verification.send would share one per-user counter
+    Route::get('/ayuda/buscar', KnowledgeSearchController::class)
+        ->middleware('throttle:60,1,knowledge-search')
+        ->name('knowledge.search');
+    Route::get('/ayuda/visibles', KnowledgeVisibleGuidesController::class)->name('knowledge.visible');
+    Route::get('/ayuda/categoria/{category}', [KnowledgeController::class, 'category'])->name('knowledge.category');
+    Route::post('/ayuda/{guide}/voto', KnowledgeFeedbackController::class)
+        ->where('guide', '[a-z0-9.-]+')
+        ->middleware('throttle:10,1,knowledge-vote')
+        ->name('knowledge.vote');
+    Route::get('/ayuda/{guide}', [KnowledgeController::class, 'show'])
+        ->where('guide', '[a-z0-9.-]+')
+        ->name('knowledge.show');
 });

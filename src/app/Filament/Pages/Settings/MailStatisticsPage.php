@@ -6,7 +6,9 @@ namespace App\Filament\Pages\Settings;
 
 use App\Domain\Mail\Enums\EmailStatus;
 use App\Filament\Concerns\ChecksPermissions;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Infrastructure\Persistence\Eloquent\Models\EmailLogModel;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -17,6 +19,7 @@ use Filament\Tables\Table;
 final class MailStatisticsPage extends Page implements HasTable
 {
     use ChecksPermissions;
+    use HasKnowledgeGuideAction;
     use InteractsWithTable;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar-square';
@@ -103,5 +106,13 @@ final class MailStatisticsPage extends Page implements HasTable
     protected function getHeaderWidgets(): array
     {
         return [];
+    }
+
+    /**
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return array_filter([$this->knowledgeGuideAction('core.panel.mail')]);
     }
 }

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import type { CalendarEntry } from '@/types/models';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel.vue';
+import HelpLink from '@/components/knowledge/HelpLink.vue';
 import { extractLegend, type CalendarLegendItem } from '@/utils/calendarEntries';
 import { useMediaQuery } from '@/composables/useMediaQuery';
 
@@ -64,10 +65,11 @@ const closeMobileModal = (): void => {
 <template>
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <!-- Page header -->
-        <div class="mb-8">
+        <div class="mb-8 flex items-center gap-3">
             <h1 class="text-3xl font-bold tracking-tight text-base-primary">
                 {{ t('calendar.title') }}
             </h1>
+            <HelpLink guide="core.events.find-events" />
         </div>
 
         <!-- Desktop layout: Calendar + Side panel -->
