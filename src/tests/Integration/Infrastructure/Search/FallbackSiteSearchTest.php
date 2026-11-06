@@ -13,6 +13,7 @@ use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use App\Infrastructure\Search\Search\DatabaseSiteSearch;
 use App\Infrastructure\Search\Search\FallbackSiteSearch;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\Support\Knowledge\RecordingLogger;
@@ -68,10 +69,14 @@ final class FallbackSiteSearchTest extends TestCase
             'locale' => 'es',
         ]);
 
+        Log::spy();
+
         $result = $this->app->make(SiteSearchInterface::class)->search($this->siteQuery('dragones'));
 
         $this->assertSame(['Torneo de dragones'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->title, $result->hits));
         $this->assertSame(['events' => 1], $result->counts);
+        // The fallback is logged, so an engine that is down is noticed
+        Log::shouldHaveReceived('warning')->once();
     }
 
     private function resolvedClass(string $abstract): string

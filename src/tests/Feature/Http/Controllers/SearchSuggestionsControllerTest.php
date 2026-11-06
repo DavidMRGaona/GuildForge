@@ -14,6 +14,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Mockery;
 use RuntimeException;
@@ -62,6 +63,11 @@ final class SearchSuggestionsControllerTest extends TestCase
     {
         $this->get('/buscar/sugerencias?q='.str_repeat('a', 101))->assertOk()->assertExactJson(['results' => [], 'total' => 0]);
         $this->get('/buscar/sugerencias?q[]=dragones')->assertOk()->assertExactJson(['results' => [], 'total' => 0]);
+    }
+
+    public function test_a_query_sent_as_an_array_returns_empty_json(): void
+    {
+        $this->getJson('/buscar/sugerencias?q[]=dragones')->assertOk()->assertExactJson(['results' => [], 'total' => 0]);
     }
 
     public function test_answers_json_to_plain_and_xhr_requests(): void
@@ -125,7 +131,12 @@ final class SearchSuggestionsControllerTest extends TestCase
             }
         });
 
+        Log::spy();
+
         $this->getJson('/buscar/sugerencias?q=dragones')->assertOk()->assertExactJson(['results' => [], 'total' => 0]);
+
+        // Answered with nothing, but never silently
+        Log::shouldHaveReceived('warning')->withArgs(static fn (string $message): bool => str_starts_with($message, '[SiteSearch] Search failed'))->once();
     }
 
     /**

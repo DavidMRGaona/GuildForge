@@ -15,6 +15,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Mockery;
@@ -168,6 +169,19 @@ final class SearchControllerTest extends TestCase
         );
     }
 
+    public function test_tab_and_page_sent_as_arrays_are_ignored(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+
+        // «?tipo[]=…&pagina[]=…» reads as no tab and the first page, never as an error
+        $this->get('/buscar?q=dragones&tipo[]=events&pagina[]=2')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('type', null)
+                ->where('page', 1)
+                ->where('total', 1)
+        );
+    }
+
     public function test_invalid_page_is_read_as_the_first(): void
     {
         $this->document('events', ['title' => 'Torneo de dragones']);
@@ -307,6 +321,7 @@ final class SearchControllerTest extends TestCase
         $metrics = Mockery::mock(SearchMetricsServiceInterface::class);
         $metrics->shouldNotReceive('recordMiss');
         $this->app->instance(SearchMetricsServiceInterface::class, $metrics);
+        Log::spy();
 
         $this->get('/buscar?q=dragones')->assertOk()->assertInertia(
             fn (Assert $page) => $page
@@ -318,6 +333,9 @@ final class SearchControllerTest extends TestCase
                 ->where('hasMore', false)
                 ->where('error', null)
         );
+
+        // Answered with nothing, but never silently
+        Log::shouldHaveReceived('warning')->withArgs(static fn (string $message): bool => str_starts_with($message, '[SiteSearch] Search failed'))->once();
     }
 
     private function seedHelpGuides(): void
