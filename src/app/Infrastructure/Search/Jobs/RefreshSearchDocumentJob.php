@@ -9,10 +9,11 @@ use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Application\Search\Services\SearchDocumentStoreInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
-use App\Application\Search\Services\SearchSyncRunnerInterface;
 use App\Infrastructure\Search\Index\PendingSearchRemovals;
 use App\Infrastructure\Search\Index\SearchIndexMirror;
 use App\Infrastructure\Search\Index\SearchIndexWriterInterface;
+use App\Infrastructure\Search\Services\CoalescingSearchSync;
+use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -26,7 +27,8 @@ use Throwable;
  * the type and either some registered source could not be loaded or the row belongs to an enabled module (this
  * worker may have booted before the module was enabled), the type is synced by a fresh process, which loads
  * every enabled module, and the row is removed if that sync fails: a hidden record must never stay searchable.
- * That sync runs synchronously inside this job, and only a stale or broken worker ever gets there.
+ * That sync runs synchronously inside this job, and only a stale or broken worker ever gets there; one sync
+ * of a type covers every job queued before it started (CoalescingSearchSync).
  *
  * A failing source or engine is logged and the job ends: with the sync queue it runs at commit time, where
  * an exception would reach the request. A source failure leaves the row as it was and the nightly sync
@@ -39,11 +41,25 @@ final class RefreshSearchDocumentJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
 
+    /**
+     * Seconds the worker lets the job run: enough to wait for a sync of the same type and then run its own,
+     * less than the queue's retry_after (660 s), so it is neither killed nor handed to a second worker.
+     */
+    public int $timeout = CoalescingSearchSync::LOCK_WAIT_SECONDS + ProcessSearchSyncRunner::TIMEOUT_SECONDS + 30;
+
+    /**
+     * When the job was queued (microtime): a sync of the type that started later covers its row. Null in a
+     * job queued before this property existed, which then always runs its own sync.
+     */
+    public ?float $queuedAt;
+
     public function __construct(
         public readonly string $type,
         public readonly string $sourceId,
         public readonly bool $forget = false,
-    ) {}
+    ) {
+        $this->queuedAt = microtime(true);
+    }
 
     public function handle(
         SearchSourceRegistryInterface $registry,
@@ -51,7 +67,7 @@ final class RefreshSearchDocumentJob implements ShouldQueue
         SearchIndexWriterInterface $writer,
         PendingSearchRemovals $pending,
         EnabledModulesResolverInterface $modules,
-        SearchSyncRunnerInterface $runner,
+        CoalescingSearchSync $sync,
     ): void {
         $mirror = new SearchIndexMirror($writer, $pending);
         $document = null;
@@ -64,7 +80,7 @@ final class RefreshSearchDocumentJob implements ShouldQueue
                 if ($source instanceof IndexedSearchSourceInterface) {
                     $document = $source->document($this->sourceId);
                     $module = $registry->moduleOf($this->type);
-                } elseif ($this->syncedByFreshProcess($store, $modules, $runner, $registry->unresolved() !== [])) {
+                } elseif ($this->syncedByFreshProcess($store, $modules, $sync, $registry->unresolved() !== [])) {
                     return;
                 }
             } catch (Throwable $e) {
@@ -97,7 +113,7 @@ final class RefreshSearchDocumentJob implements ShouldQueue
     private function syncedByFreshProcess(
         SearchDocumentStoreInterface $store,
         EnabledModulesResolverInterface $modules,
-        SearchSyncRunnerInterface $runner,
+        CoalescingSearchSync $sync,
         bool $someSourcesUnresolved,
     ): bool {
         $owner = $store->moduleOf($this->type, $this->sourceId);
@@ -116,7 +132,7 @@ final class RefreshSearchDocumentJob implements ShouldQueue
         }
 
         try {
-            if ($runner->sync($this->type)) {
+            if ($sync->syncCovering($this->type, $this->queuedAt)) {
                 return true;
             }
 

@@ -12,7 +12,8 @@ use Throwable;
 
 final class ProcessSearchSyncRunner implements SearchSyncRunnerInterface
 {
-    private const int TIMEOUT_SECONDS = 300;
+    /** Seconds the sync process may run; the jobs that start it allow more (see their $timeout) */
+    public const int TIMEOUT_SECONDS = 300;
 
     public function sync(?string $type = null): bool
     {
