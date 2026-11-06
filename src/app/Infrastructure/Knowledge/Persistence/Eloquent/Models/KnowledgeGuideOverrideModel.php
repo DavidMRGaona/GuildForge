@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $guide_id
  * @property bool $hidden
- * @property bool $featured
+ * @property bool|null $featured null keeps what the guide file says
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

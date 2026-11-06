@@ -160,6 +160,13 @@ final class KnowledgeLinterTest extends TestCase
         $this->assertIssue($this->lint(), 'previous id core.two is the id of an existing guide');
     }
 
+    public function test_the_site_prefix_is_reserved_for_the_sites_own_guides(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', extra: "previous_ids: [site.old-rules]\n");
+
+        $this->assertIssue($this->lint(), "previous id site.old-rules uses the prefix 'site'");
+    }
+
     public function test_unknown_category_is_reported(): void
     {
         $this->writeCoreGuide('a.md', 'core.one');

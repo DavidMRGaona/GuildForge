@@ -8,6 +8,7 @@ use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTime
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Laravel\Scout\Searchable;
 
@@ -35,6 +36,7 @@ use Laravel\Scout\Searchable;
  * @property bool $active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read KnowledgeGuideOverrideModel|null $override
  */
 final class KnowledgeGuideModel extends Model
 {
@@ -83,6 +85,16 @@ final class KnowledgeGuideModel extends Model
             'first_seen_at' => 'immutable_datetime',
             'content_changed_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * How this site shows the guide (official guides only), shared by every locale.
+     *
+     * @return HasOne<KnowledgeGuideOverrideModel, $this>
+     */
+    public function override(): HasOne
+    {
+        return $this->hasOne(KnowledgeGuideOverrideModel::class, 'guide_id', 'guide_id');
     }
 
     /**

@@ -13,10 +13,12 @@ use App\Domain\Knowledge\Enums\GuideAudience;
 use App\Domain\Knowledge\Enums\GuideBodyFormat;
 use App\Domain\Knowledge\Enums\GuideSource;
 use App\Domain\Knowledge\Exceptions\InvalidGuideDocumentException;
+use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Infrastructure\Knowledge\Parsing\GuideDocumentParser;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeCategoryModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideAliasModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use RecursiveDirectoryIterator;
@@ -43,13 +45,19 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
 
             $this->syncCategories($roots, $errors);
 
-            $isBaseline = ! KnowledgeGuideModel::query()->exists();
+            $isBaseline = ! $this->fileGuides()->exists();
             $inserted = 0;
             $updated = 0;
             $seen = [];
             $failedSources = [];
 
             foreach ($this->collect($roots, $errors, $failedSources) as $entry) {
+                if ($entry['parsed']->id->isSite()) {
+                    $errors[] = $this->reservedPrefixError($entry['file'], $entry['parsed']->id->value());
+
+                    continue;
+                }
+
                 $key = $entry['parsed']->id->value().'|'.$entry['locale'];
                 if (isset($seen[$key])) {
                     $errors[] = sprintf(
@@ -68,10 +76,11 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
                 $inserted += $result === 'inserted' ? 1 : 0;
                 $updated += $result === 'updated' ? 1 : 0;
 
-                $this->syncAliases($entry['parsed']);
+                $this->syncAliases($entry['parsed'], $entry['file'], $errors);
             }
 
             $deactivated = $this->deactivateMissing($seen, $failedSources);
+            $this->refreshSiteGuidesText();
 
             return new KnowledgeSyncReportDTO($inserted, $updated, $deactivated, $errors);
         });
@@ -169,7 +178,7 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
             'keywords' => $parsed->keywords,
             'body_format' => GuideBodyFormat::Markdown->value,
             'body' => $parsed->body,
-            'body_text' => $this->plainText($parsed->body, $entry['locale']),
+            'body_text' => $this->plainText($parsed->body, GuideBodyFormat::Markdown, $entry['locale']),
             'conditions' => $parsed->conditions->toArray(),
             'related' => array_map(static fn ($id): string => $id->value(), $parsed->related),
             'featured' => $parsed->featured,
@@ -220,21 +229,30 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
     /**
      * Plain text in the guide's own locale, so translated fallbacks do not depend on the sync process.
      */
-    private function plainText(string $body, string $locale): string
+    private function plainText(string $body, GuideBodyFormat $format, string $locale): string
     {
         $previous = App::getLocale();
         App::setLocale($locale);
 
         try {
-            return $this->renderer->toPlainText($body);
+            return $this->renderer->toPlainText($body, $format);
         } finally {
             App::setLocale($previous);
         }
     }
 
-    private function syncAliases(ParsedGuideDTO $parsed): void
+    /**
+     * @param  list<string>  $errors
+     */
+    private function syncAliases(ParsedGuideDTO $parsed, string $file, array &$errors): void
     {
         foreach ($parsed->previousIds as $alias) {
+            if ($alias->isSite()) {
+                $errors[] = $this->reservedPrefixError($file, $alias->value());
+
+                continue;
+            }
+
             KnowledgeGuideAliasModel::query()->updateOrCreate(
                 ['alias_id' => $alias->value()],
                 ['guide_id' => $parsed->id->value()],
@@ -251,7 +269,7 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
     private function deactivateMissing(array $seen, array $failedSources): int
     {
         $deactivated = 0;
-        foreach (KnowledgeGuideModel::query()->where('active', true)->get() as $guide) {
+        foreach ($this->fileGuides()->where('active', true)->get() as $guide) {
             if (isset($failedSources[$guide->module ?? ''])) {
                 continue;
             }
@@ -262,6 +280,35 @@ final readonly class KnowledgeCatalogSynchronizer implements KnowledgeCatalogSyn
         }
 
         return $deactivated;
+    }
+
+    /**
+     * The site's own guides have no file, so a sync leaves them alone; only their plain text follows
+     * the settings behind the placeholders, as for file guides.
+     */
+    private function refreshSiteGuidesText(): void
+    {
+        foreach (KnowledgeGuideModel::query()->where('source', GuideSource::Site->value)->get() as $guide) {
+            $text = $this->plainText($guide->body, GuideBodyFormat::from($guide->body_format), $guide->locale);
+            if ($guide->body_text !== $text) {
+                $guide->update(['body_text' => $text]);
+            }
+        }
+    }
+
+    /**
+     * Guides that come from files (core and modules), as opposed to the site's own.
+     *
+     * @return Builder<KnowledgeGuideModel>
+     */
+    private function fileGuides(): Builder
+    {
+        return KnowledgeGuideModel::query()->where('source', '!=', GuideSource::Site->value);
+    }
+
+    private function reservedPrefixError(string $file, string $id): string
+    {
+        return sprintf("%s: guide id %s uses the prefix '%s', which is reserved for the site's own guides", $file, $id, GuideId::SITE_PREFIX);
     }
 
     /**

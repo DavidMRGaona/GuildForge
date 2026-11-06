@@ -13,8 +13,9 @@ The knowledge base is the in-app help of GuildForge: guides for signed-in users 
 7. [Related guides](#related-guides)
 8. [Stable ids and renames](#stable-ids-and-renames)
 9. [Contextual help](#contextual-help)
-10. [Validation](#validation)
-11. [Writing style](#writing-style)
+10. [Site guides and overrides](#site-guides-and-overrides)
+11. [Validation](#validation)
+12. [Writing style](#writing-style)
 
 ---
 
@@ -274,6 +275,15 @@ class ListTables extends ListRecords
 ```
 
 **Help for what another module adds**: a module's page may show a field or a block that belongs to another module (the surveys module's end survey field or survey links on a table's page, say). Modules do not name each other's guides, so the guide travels through the core contract that already joins them: the contract carries a guide id, filled by the module that owns the feature, and the page or the core component shows the button. See `EndSurveyChoiceDTO::$guideId` and `SurveySubjectLinksDTO::$guideId` in the [module development guide](./README.md#linking-a-subjects-page-to-its-surveys).
+
+## Site guides and overrides
+
+Besides the guides shipped in files, each site writes its own in the admin panel (*Contenido → Guías de ayuda*, permission `knowledge.manage`) and decides how the official ones are shown. A module has nothing to do for this, but it should know what a site can change:
+
+- **Site guides** are rows of the same catalog with source `site`, written in the panel's rich editor (body format `html`) in the fallback locale. Their ids are `site.<slug of the title>`, fixed when the guide is created. The `site` prefix is reserved: a guide file or a `previous_ids` entry that uses it fails the lint and is skipped by `knowledge:sync`, which never changes or deactivates site guides.
+- Their body has the same two extras as Markdown: a **button to a page** (a custom block resolved like `[[action:…]]`, with an optional permission or capability condition) and the **markers** `site_name` and `association_role` (merge tags). Conditions are the same as in front matter, except `modules`: a capability of a disabled module already fails closed.
+- **Overrides** (`knowledge_guide_overrides`, one row per guide id): a site may **hide** an official guide or set its **featured** flag to true, false or "as the file says" (null). A hidden guide is invisible to everybody, so `HelpLink` and `knowledgeGuideAction()` show no button for it. Never assume a guide of yours is always visible.
+- The guides list shows the "Was this helpful?" votes of the last 30 days, and below it the help searches without results; both are the anonymous daily counters, never tied to a user.
 
 ## Validation
 

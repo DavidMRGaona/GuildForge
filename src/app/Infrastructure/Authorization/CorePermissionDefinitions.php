@@ -329,6 +329,16 @@ final class CorePermissionDefinitions
                 defaultRoles: ['editor'],
             ),
 
+            // Knowledge base
+            new PermissionDefinitionDTO(
+                key: 'knowledge.manage',
+                label: __('authorization.permissions.knowledge.manage'),
+                resource: 'knowledge',
+                action: 'manage',
+                defaultRoles: ['editor'],
+                description: __('authorization.permission_descriptions.knowledge.manage'),
+            ),
+
             // Modules
             new PermissionDefinitionDTO(
                 key: 'modules.manage',
