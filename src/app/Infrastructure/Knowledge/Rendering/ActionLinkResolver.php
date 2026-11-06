@@ -8,6 +8,7 @@ use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Knowledge\Services\GuideConditionEvaluatorInterface;
 use App\Domain\Knowledge\ValueObjects\GuideConditions;
 use Illuminate\Routing\Route as RoutingRoute;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Route;
 use Throwable;
 
@@ -42,7 +43,11 @@ final readonly class ActionLinkResolver
                 return null;
             }
 
-            return route($routeName, $parameters, false);
+            // Always as a query: route() would put a key named like an optional route parameter
+            // (`{page?}`) in the path instead
+            $url = route($routeName, [], false);
+
+            return $parameters === [] ? $url : $url.'?'.Arr::query($parameters);
         } catch (Throwable $e) {
             // Hidden, not broken: the guide still renders without the button, and the cause is not lost
             report($e);

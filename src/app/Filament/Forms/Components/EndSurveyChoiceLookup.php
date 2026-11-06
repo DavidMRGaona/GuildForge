@@ -7,15 +7,16 @@ namespace App\Filament\Forms\Components;
 use App\Application\Surveys\Contracts\SubjectEndSurveyChoiceInterface;
 use App\Application\Surveys\DTOs\EndSurveyChoiceDTO;
 use App\Application\Surveys\Enums\SurveySurface;
+use App\Filament\Support\PanelGuideUrl;
 use Closure;
 use Filament\Schemas\Components\Component;
 use Illuminate\Support\Facades\Auth;
 
 /**
  * What the surveys module offers one form, asked once per subject and person: Filament reads
- * options, visibility and state many times per render. Forgotten after saving, so the form
- * shows what the save left. The surveys module is asked when the form is shown, not when a
- * module adds the field at boot.
+ * options, visibility and state many times per render (and so the help button's URL). Forgotten
+ * after saving, so the form shows what the save left. The surveys module is asked when the form
+ * is shown, not when a module adds the field at boot.
  *
  * @internal used by EndSurveyField
  */
@@ -23,6 +24,9 @@ final class EndSurveyChoiceLookup
 {
     /** @var array<string, EndSurveyChoiceDTO|null> */
     private array $choices = [];
+
+    /** @var array<string, string|null> */
+    private array $helpUrls = [];
 
     public function __construct(
         private readonly string|Closure $sourceType,
@@ -45,6 +49,25 @@ final class EndSurveyChoiceLookup
         return $this->choices[$key];
     }
 
+    /**
+     * The help button's URL for the guide the surveys module names: its visibility is checked
+     * once per guide and person, though the button reads it for its URL and its visibility.
+     */
+    public function helpUrl(Component $component): ?string
+    {
+        $guideId = $this->for($component)?->guideId;
+        if ($guideId === null) {
+            return null;
+        }
+
+        $key = $guideId.'|'.Auth::id();
+        if (! array_key_exists($key, $this->helpUrls)) {
+            $this->helpUrls[$key] = PanelGuideUrl::for($guideId);
+        }
+
+        return $this->helpUrls[$key];
+    }
+
     public function sourceType(Component $component): string
     {
         $sourceType = $component->evaluate($this->sourceType);
@@ -55,5 +78,6 @@ final class EndSurveyChoiceLookup
     public function forget(): void
     {
         $this->choices = [];
+        $this->helpUrls = [];
     }
 }

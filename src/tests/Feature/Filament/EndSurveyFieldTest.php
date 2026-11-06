@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Application\Surveys\Contracts\SubjectEndSurveyChoiceInterface;
 use App\Application\Surveys\DTOs\EndSurveyChoiceDTO;
 use App\Application\Surveys\DTOs\EndSurveyOptionDTO;
@@ -24,6 +25,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Tests\Support\Filament\EndSurveyFieldFixturePage;
+use Tests\Support\Knowledge\CountingGuideVisibility;
 use Tests\Support\Surveys\FakeSubjectEndSurveyChoice;
 use Tests\TestCase;
 
@@ -187,6 +189,19 @@ final class EndSurveyFieldTest extends TestCase
             ->assertDontSeeHtml(e(KnowledgeBasePage::getUrl(['guia' => 'core.panel.no-such-guide'])));
     }
 
+    public function test_the_help_link_checks_the_guide_once_per_render(): void
+    {
+        $this->artisanCommand('knowledge:sync')->assertSuccessful()->run();
+        $this->fake($this->choice(guideId: 'core.panel.tags'));
+        $visibility = $this->countGuideChecks();
+
+        // The button reads the URL for its link and for its visibility
+        Livewire::test(EditEvent::class, ['record' => $this->event()->getRouteKey()])
+            ->assertSeeHtml(e(KnowledgeBasePage::getUrl(['guia' => 'core.panel.tags'])));
+
+        $this->assertSame(1, $visibility->checks('core.panel.tags'));
+    }
+
     public function test_a_person_who_may_not_choose_still_saves_the_subject(): void
     {
         $fake = $this->fake($this->choice(), failure: new AuthorizationException);
@@ -308,6 +323,17 @@ final class EndSurveyFieldTest extends TestCase
             editUrl: $editUrl,
             guideId: $guideId,
         );
+    }
+
+    /**
+     * Wraps the guide visibility service to count, per guide, how often a guide is checked.
+     */
+    private function countGuideChecks(): CountingGuideVisibility
+    {
+        $counting = new CountingGuideVisibility($this->app->make(GuideVisibilityServiceInterface::class));
+        $this->app->instance(GuideVisibilityServiceInterface::class, $counting);
+
+        return $counting;
     }
 
     private function event(): EventModel
