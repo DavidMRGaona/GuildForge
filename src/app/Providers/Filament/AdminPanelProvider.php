@@ -11,6 +11,7 @@ use App\Application\Services\SiteBrandingServiceInterface;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
+use App\Filament\Support\InitialsAvatarProvider;
 use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelSidebarMode;
 use App\Modules\ModuleServiceProvider;
@@ -45,7 +46,7 @@ class AdminPanelProvider extends PanelProvider
      *
      * @var array<int, string>
      */
-    private const array GRAY_PALETTE = [
+    public const array GRAY_PALETTE = [
         50 => '#fafaf9',
         100 => '#f5f5f4',
         200 => '#e7e5e4',
@@ -109,6 +110,7 @@ class AdminPanelProvider extends PanelProvider
                 'gray' => self::GRAY_PALETTE,
             ])
             ->darkMode(true)
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->sidebarCollapsibleOnDesktop(fn (): bool => $this->getSidebarMode() === PanelSidebarMode::Icons)
             ->sidebarFullyCollapsibleOnDesktop(fn (): bool => $this->getSidebarMode() === PanelSidebarMode::Hidden)
             ->viteTheme('resources/css/filament/admin/theme.css')
