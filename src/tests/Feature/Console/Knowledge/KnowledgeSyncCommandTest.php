@@ -6,6 +6,7 @@ namespace Tests\Feature\Console\Knowledge;
 
 use App\Application\Knowledge\DTOs\KnowledgeIndexResultDTO;
 use App\Application\Knowledge\Services\KnowledgeIndexerInterface;
+use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Knowledge\Search\NullKnowledgeIndexer;
 use App\Infrastructure\Knowledge\Search\ScoutKnowledgeIndexer;
@@ -61,6 +62,10 @@ final class KnowledgeSyncCommandTest extends TestCase
             {
                 return $this->result;
             }
+
+            public function refresh(GuideId $id): void {}
+
+            public function forget(GuideId $id): void {}
         });
     }
 

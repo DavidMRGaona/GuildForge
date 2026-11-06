@@ -97,6 +97,20 @@ final class EloquentGuideRepositoryTest extends TestCase
         $this->assertTrue($byId['core.native']->featured);
     }
 
+    public function test_featured_override_has_three_states(): void
+    {
+        $this->guide('core.native', ['featured' => true]);
+        $this->guide('core.unstarred', ['featured' => true]);
+        $this->guide('core.plain');
+        KnowledgeGuideOverrideModel::query()->create(['guide_id' => 'core.native', 'hidden' => true, 'featured' => null]);
+        KnowledgeGuideOverrideModel::query()->create(['guide_id' => 'core.unstarred', 'hidden' => false, 'featured' => false]);
+        KnowledgeGuideOverrideModel::query()->create(['guide_id' => 'core.plain', 'hidden' => false, 'featured' => null]);
+
+        $this->assertTrue($this->repository->findActive(GuideId::fromString('core.native'), 'es')?->featured);
+        $this->assertFalse($this->repository->findActive(GuideId::fromString('core.unstarred'), 'es')?->featured);
+        $this->assertFalse($this->repository->findActive(GuideId::fromString('core.plain'), 'es')?->featured);
+    }
+
     public function test_resolve_alias_returns_the_current_id(): void
     {
         KnowledgeGuideAliasModel::query()->create(['alias_id' => 'core.old', 'guide_id' => 'core.new']);

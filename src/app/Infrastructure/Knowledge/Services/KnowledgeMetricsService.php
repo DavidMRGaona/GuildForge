@@ -55,6 +55,41 @@ final readonly class KnowledgeMetricsService implements KnowledgeMetricsServiceI
         );
     }
 
+    public function feedbackTotals(int $days): array
+    {
+        $rows = DB::table('knowledge_guide_feedback')
+            ->selectRaw('guide_id, SUM(helpful_count) as helpful, SUM(not_helpful_count) as not_helpful')
+            ->where('day', '>', $this->dayOffset(-max(0, $days)))
+            ->groupBy('guide_id')
+            ->orderBy('guide_id')
+            ->get();
+
+        $totals = [];
+        foreach ($rows as $row) {
+            $totals[(string) $row->guide_id] = ['helpful' => (int) $row->helpful, 'notHelpful' => (int) $row->not_helpful];
+        }
+
+        return $totals;
+    }
+
+    public function topMisses(int $days, int $limit): array
+    {
+        $rows = DB::table('knowledge_search_misses')
+            ->selectRaw('normalized_query, audience, SUM(count) as total')
+            ->where('day', '>', $this->dayOffset(-max(0, $days)))
+            ->groupBy('normalized_query', 'audience')
+            ->orderByDesc('total')
+            ->orderBy('normalized_query')
+            ->orderBy('audience')
+            ->limit(max(0, $limit))
+            ->get();
+
+        return array_values(array_map(
+            static fn (object $row): array => ['query' => (string) $row->normalized_query, 'audience' => (string) $row->audience, 'count' => (int) $row->total],
+            $rows->all(),
+        ));
+    }
+
     public function prune(int $days): int
     {
         $limit = $this->timezone->today()->modify('-'.max(0, $days).' days')->format('Y-m-d');
@@ -66,5 +101,10 @@ final readonly class KnowledgeMetricsService implements KnowledgeMetricsServiceI
     private function day(): string
     {
         return $this->timezone->today()->format('Y-m-d');
+    }
+
+    private function dayOffset(int $days): string
+    {
+        return $this->timezone->today()->modify(sprintf('%+d days', $days))->format('Y-m-d');
     }
 }

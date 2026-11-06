@@ -25,6 +25,7 @@ return [
         'menu_items' => 'Menú de navegación',
         'settings' => 'Configuración',
         'search' => 'Búsqueda',
+        'knowledge' => 'Guías de ayuda',
         'mail' => 'Correo electrónico',
         'updates' => 'Actualizaciones',
         'admin' => 'Administración',
@@ -114,6 +115,9 @@ return [
         'search' => [
             'view_stats' => 'Ver estadísticas de búsqueda',
         ],
+        'knowledge' => [
+            'manage' => 'Gestionar las guías de ayuda',
+        ],
         'mail' => [
             'configure' => 'Configurar correo electrónico',
             'view_stats' => 'Ver estadísticas de correo',
@@ -134,6 +138,9 @@ return [
     ],
 
     'permission_descriptions' => [
+        'knowledge' => [
+            'manage' => 'Escribir las guías propias del sitio, y ocultar o destacar las oficiales.',
+        ],
         'settings' => [
             'manage' => 'Incluye elegir el rol de socio y la verificación de correo.',
         ],

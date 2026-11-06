@@ -131,7 +131,7 @@ final readonly class EloquentGuideRepository implements GuideRepositoryInterface
             bodyText: $model->body_text,
             conditions: GuideConditions::fromArray($model->conditions),
             related: array_map(GuideId::fromString(...), $model->related),
-            featured: $model->featured || ($override->featured ?? false),
+            featured: $override->featured ?? $model->featured,
             hidden: $override->hidden ?? false,
             firstSeenAt: $model->first_seen_at,
             contentChangedAt: $model->content_changed_at,

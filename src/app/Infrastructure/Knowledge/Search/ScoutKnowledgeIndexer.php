@@ -6,6 +6,7 @@ namespace App\Infrastructure\Knowledge\Search;
 
 use App\Application\Knowledge\DTOs\KnowledgeIndexResultDTO;
 use App\Application\Knowledge\Services\KnowledgeIndexerInterface;
+use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\Eloquent\Collection;
@@ -52,6 +53,37 @@ final readonly class ScoutKnowledgeIndexer implements KnowledgeIndexerInterface
             return new KnowledgeIndexResultDTO($indexed, $removed, null);
         } catch (Throwable $e) {
             return new KnowledgeIndexResultDTO(0, 0, $e->getMessage());
+        }
+    }
+
+    public function refresh(GuideId $id): void
+    {
+        try {
+            $guides = KnowledgeGuideModel::query()->where('guide_id', $id->value())->get();
+            $engine = $this->engines->engine();
+
+            $active = $guides->filter(static fn (KnowledgeGuideModel $guide): bool => $guide->active);
+            $inactive = $guides->reject(static fn (KnowledgeGuideModel $guide): bool => $guide->active);
+            if ($active->isNotEmpty()) {
+                $engine->update($active);
+            }
+            if ($inactive->isNotEmpty()) {
+                $engine->delete($inactive);
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
+    public function forget(GuideId $id): void
+    {
+        try {
+            $guides = KnowledgeGuideModel::query()->where('guide_id', $id->value())->get();
+            if ($guides->isNotEmpty()) {
+                $this->engines->engine()->delete($guides);
+            }
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 

@@ -324,4 +324,72 @@ PHP);
         $this->assertTrue($this->guide('account.one')->active);
         $this->assertFalse($this->guide('alpha.guide')->active);
     }
+
+    public function test_site_guides_are_never_deactivated_or_overwritten_by_a_sync(): void
+    {
+        $this->writeCoreGuide('a.md', 'account.one');
+        $this->syncKnowledge();
+        $site = $this->siteGuide('site.house-rules', active: true);
+        $draft = $this->siteGuide('site.draft', active: false);
+
+        $report = $this->syncKnowledge();
+
+        $this->assertSame(0, $report->deactivated);
+        $this->assertTrue($site->refresh()->active);
+        $this->assertFalse($draft->refresh()->active);
+        $this->assertSame('Normas', $site->refresh()->title);
+    }
+
+    public function test_site_guides_get_their_plain_text_refreshed_with_the_settings(): void
+    {
+        $settings = $this->app->make(SettingsServiceInterface::class);
+        $settings->set('guild_name', 'Primer nombre');
+        $guide = $this->siteGuide('site.welcome', body: '<p>Hola, <span data-type="mergeTag" data-id="site_name"></span>.</p>');
+
+        $settings->set('guild_name', 'Segundo nombre');
+        $report = $this->syncKnowledge();
+
+        $this->assertSame(0, $report->updated);
+        $this->assertSame('Hola, Segundo nombre.', $guide->refresh()->body_text);
+    }
+
+    public function test_file_guides_cannot_use_the_site_prefix(): void
+    {
+        $this->siteGuide('site.house-rules');
+        $this->writeCoreGuide('a.md', 'site.house-rules', title: 'Intruso');
+        $this->writeCoreGuide('b.md', 'account.one', extra: "previous_ids:\n  - site.old-rules\n");
+
+        $report = $this->syncKnowledge();
+
+        $this->assertCount(2, $report->errors);
+        $this->assertStringContainsString("which is reserved for the site's own guides", $report->errors[0]);
+        $this->assertSame('Normas', $this->guide('site.house-rules')->title);
+        $this->assertSame('site', $this->guide('site.house-rules')->source);
+        $this->assertFalse(KnowledgeGuideAliasModel::query()->where('alias_id', 'site.old-rules')->exists());
+        $this->assertTrue($this->guide('account.one')->active);
+    }
+
+    private function siteGuide(string $id, bool $active = true, string $body = '<p>Cuerpo.</p>'): KnowledgeGuideModel
+    {
+        return KnowledgeGuideModel::query()->create([
+            'guide_id' => $id,
+            'locale' => 'es',
+            'source' => 'site',
+            'module' => null,
+            'audience' => 'site',
+            'category_id' => 'community',
+            'sort_order' => 10,
+            'title' => 'Normas',
+            'summary' => 'Resumen',
+            'keywords' => [],
+            'body_format' => 'html',
+            'body' => $body,
+            'body_text' => 'Cuerpo.',
+            'conditions' => [],
+            'related' => [],
+            'featured' => false,
+            'content_hash' => str_repeat('b', 40),
+            'active' => $active,
+        ]);
+    }
 }

@@ -89,6 +89,38 @@ final class KnowledgeMetricsServiceTest extends TestCase
         $this->assertEqualsCanonicalizing(['00000000-0000-4000-8000-000000000082', '00000000-0000-4000-8000-000000000083'], DB::table('knowledge_search_misses')->pluck('id')->all());
     }
 
+    public function test_feedback_totals_sum_the_last_days_per_guide(): void
+    {
+        DB::table('knowledge_guide_feedback')->insert([
+            ['id' => '00000000-0000-4000-8000-000000000091', 'guide_id' => 'core.a', 'day' => $this->daysAgo(0), 'helpful_count' => 2, 'not_helpful_count' => 1],
+            ['id' => '00000000-0000-4000-8000-000000000092', 'guide_id' => 'core.a', 'day' => $this->daysAgo(29), 'helpful_count' => 3, 'not_helpful_count' => 0],
+            ['id' => '00000000-0000-4000-8000-000000000093', 'guide_id' => 'core.a', 'day' => $this->daysAgo(30), 'helpful_count' => 50, 'not_helpful_count' => 50],
+            ['id' => '00000000-0000-4000-8000-000000000094', 'guide_id' => 'site.rules', 'day' => $this->daysAgo(5), 'helpful_count' => 0, 'not_helpful_count' => 4],
+        ]);
+
+        $this->assertSame(
+            ['core.a' => ['helpful' => 5, 'notHelpful' => 1], 'site.rules' => ['helpful' => 0, 'notHelpful' => 4]],
+            $this->metrics->feedbackTotals(30),
+        );
+    }
+
+    public function test_top_misses_group_by_query_and_audience(): void
+    {
+        DB::table('knowledge_search_misses')->insert([
+            ['id' => '00000000-0000-4000-8000-000000000101', 'normalized_query' => 'cuota', 'audience' => 'site', 'day' => $this->daysAgo(0), 'count' => 2],
+            ['id' => '00000000-0000-4000-8000-000000000102', 'normalized_query' => 'cuota', 'audience' => 'site', 'day' => $this->daysAgo(3), 'count' => 3],
+            ['id' => '00000000-0000-4000-8000-000000000103', 'normalized_query' => 'cuota', 'audience' => 'panel', 'day' => $this->daysAgo(3), 'count' => 1],
+            ['id' => '00000000-0000-4000-8000-000000000104', 'normalized_query' => 'aforo', 'audience' => 'site', 'day' => $this->daysAgo(1), 'count' => 1],
+            ['id' => '00000000-0000-4000-8000-000000000105', 'normalized_query' => 'antiguo', 'audience' => 'site', 'day' => $this->daysAgo(30), 'count' => 99],
+        ]);
+
+        $this->assertSame([
+            ['query' => 'cuota', 'audience' => 'site', 'count' => 5],
+            ['query' => 'aforo', 'audience' => 'site', 'count' => 1],
+        ], $this->metrics->topMisses(30, 2));
+        $this->assertCount(3, $this->metrics->topMisses(30, 10));
+    }
+
     private function today(): string
     {
         return $this->app->make(TimezoneServiceInterface::class)->today()->format('Y-m-d');

@@ -9,6 +9,9 @@ use Stringable;
 
 final readonly class GuideId implements Stringable
 {
+    /** Prefix of the site's own guides, written in the admin panel; files never use it */
+    public const string SITE_PREFIX = 'site';
+
     private const string PATTERN = '/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$/';
 
     private function __construct(private string $value) {}
@@ -30,6 +33,11 @@ final readonly class GuideId implements Stringable
     public function prefix(): string
     {
         return explode('.', $this->value, 2)[0];
+    }
+
+    public function isSite(): bool
+    {
+        return $this->prefix() === self::SITE_PREFIX;
     }
 
     public function equals(self $other): bool

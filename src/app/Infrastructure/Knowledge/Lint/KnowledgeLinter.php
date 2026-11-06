@@ -11,6 +11,7 @@ use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Knowledge\Enums\GuideAudience;
 use App\Domain\Knowledge\Exceptions\InvalidGuideDocumentException;
+use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Domain\Modules\Entities\Module;
 use App\Infrastructure\Knowledge\Catalog\CoreKnowledgeCategories;
 use App\Infrastructure\Knowledge\Parsing\GuideDocumentParser;
@@ -267,6 +268,10 @@ final readonly class KnowledgeLinter
                 continue;
             }
             $inList[$value] = true;
+
+            if ($alias->isSite()) {
+                $issues[] = new KnowledgeLintIssueDTO($file, sprintf("previous id %s uses the prefix '%s', which is reserved for the site's own guides", $value, GuideId::SITE_PREFIX));
+            }
 
             if (isset($ids[$value])) {
                 $issues[] = new KnowledgeLintIssueDTO($file, sprintf('previous id %s is the id of an existing guide', $value));

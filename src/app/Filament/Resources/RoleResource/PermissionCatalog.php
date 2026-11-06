@@ -24,7 +24,7 @@ final readonly class PermissionCatalog
 
     /** @var array<string, list<string>> core tab key => resources, in display order */
     private const array CORE_TABS = [
-        'content' => ['events', 'articles', 'galleries', 'hero_slides', 'tags', 'menu_items', 'pages'],
+        'content' => ['events', 'articles', 'galleries', 'hero_slides', 'tags', 'menu_items', 'pages', 'knowledge'],
         'users' => ['users', 'roles'],
         'site' => ['settings', 'updates', 'mail', 'modules', 'dashboard'],
     ];

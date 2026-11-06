@@ -19,6 +19,7 @@ return [
         'menu_items' => 'Navigation menu',
         'settings' => 'Settings',
         'search' => 'Search',
+        'knowledge' => 'Help guides',
         'mail' => 'Email',
         'updates' => 'Updates',
         'admin' => 'Administration',
@@ -108,6 +109,9 @@ return [
         'search' => [
             'view_stats' => 'View search statistics',
         ],
+        'knowledge' => [
+            'manage' => 'Manage help guides',
+        ],
         'mail' => [
             'configure' => 'Configure email',
             'view_stats' => 'View email statistics',
@@ -128,6 +132,9 @@ return [
     ],
 
     'permission_descriptions' => [
+        'knowledge' => [
+            'manage' => "Write the site's own guides, and hide or star the official ones.",
+        ],
         'settings' => [
             'manage' => 'Includes choosing the association member role and email verification.',
         ],

@@ -98,6 +98,7 @@ use App\Infrastructure\Content\Services\TrixContentMigrator;
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Cookies\CookieDeclarationRegistry;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
+use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Legal\LegalMailNoticeRegistry;
 use App\Infrastructure\Legal\LegalMailNoticeService;
 use App\Infrastructure\Mail\Listeners\CheckQuotaBeforeSending;
@@ -200,6 +201,7 @@ use App\Policies\ArticlePolicy;
 use App\Policies\EventPolicy;
 use App\Policies\GalleryPolicy;
 use App\Policies\HeroSlidePolicy;
+use App\Policies\KnowledgeGuidePolicy;
 use App\Policies\MenuItemPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TagPolicy;
@@ -450,6 +452,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(GalleryModel::class, GalleryPolicy::class);
         Gate::policy(HeroSlideModel::class, HeroSlidePolicy::class);
         Gate::policy(TagModel::class, TagPolicy::class);
+        Gate::policy(KnowledgeGuideModel::class, KnowledgeGuidePolicy::class);
         Gate::policy(MenuItemModel::class, MenuItemPolicy::class);
 
         Event::listen(

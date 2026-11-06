@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Knowledge\Services\GuideConditionEvaluatorInterface;
+use App\Application\Knowledge\Services\GuideOverrideServiceInterface;
 use App\Application\Knowledge\Services\GuideRendererInterface;
 use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
@@ -15,6 +16,7 @@ use App\Application\Knowledge\Services\KnowledgeLocaleResolverInterface;
 use App\Application\Knowledge\Services\KnowledgeMetricsServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
+use App\Application\Knowledge\Services\SiteGuideServiceInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Knowledge\Repositories\GuideRepositoryInterface;
@@ -38,11 +40,13 @@ use App\Infrastructure\Knowledge\Search\MeilisearchKnowledgeSearch;
 use App\Infrastructure\Knowledge\Search\NullKnowledgeIndexer;
 use App\Infrastructure\Knowledge\Search\ScoutKnowledgeIndexer;
 use App\Infrastructure\Knowledge\Services\GuideConditionEvaluator;
+use App\Infrastructure\Knowledge\Services\GuideOverrideService;
 use App\Infrastructure\Knowledge\Services\GuideVisibilityService;
 use App\Infrastructure\Knowledge\Services\KnowledgeCapabilityRegistry;
 use App\Infrastructure\Knowledge\Services\KnowledgeLocaleResolver;
 use App\Infrastructure\Knowledge\Services\KnowledgeMetricsService;
 use App\Infrastructure\Knowledge\Services\KnowledgeQueryService;
+use App\Infrastructure\Knowledge\Services\SiteGuideService;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Event;
@@ -63,6 +67,8 @@ class KnowledgeServiceProvider extends ServiceProvider
         $this->app->bind(GuideRendererInterface::class, GuideMarkdownRenderer::class);
         $this->app->bind(KnowledgeQueryServiceInterface::class, KnowledgeQueryService::class);
         $this->app->bind(KnowledgeMetricsServiceInterface::class, KnowledgeMetricsService::class);
+        $this->app->bind(SiteGuideServiceInterface::class, SiteGuideService::class);
+        $this->app->bind(GuideOverrideServiceInterface::class, GuideOverrideService::class);
 
         $this->app->bind(KnowledgeSourceLocator::class, fn (Application $app): KnowledgeSourceLocator => new KnowledgeSourceLocator(
             $app->make(EnabledModulesResolverInterface::class),
