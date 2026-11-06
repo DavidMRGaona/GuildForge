@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Search\Jobs;
 
 use App\Application\Search\Services\SearchSyncRunnerInterface;
+use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,6 +28,12 @@ final class SyncSearchIndexJob implements ShouldBeUniqueUntilProcessing, ShouldQ
 
     /** Seconds the uniqueness lock lasts, so a burst of changes queues a single sync */
     public int $uniqueFor = 300;
+
+    /**
+     * Seconds the worker lets the job run: more than the sync process may take, less than the queue's
+     * retry_after (660 s), so the job is neither killed nor handed to a second worker while it waits.
+     */
+    public int $timeout = ProcessSearchSyncRunner::TIMEOUT_SECONDS + 30;
 
     public function __construct(
         public readonly ?string $type = null,
