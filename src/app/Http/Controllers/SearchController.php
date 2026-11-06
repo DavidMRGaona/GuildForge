@@ -71,7 +71,9 @@ final class SearchController extends Controller
             'type' => $type,
             'tabs' => $tabs,
             // The next page is appended to what the page already shows; a new query or tab resets it
-            'results' => Inertia::merge($results),
+            // Matched on the URL, so a row the next page repeats (the index changed in between) replaces
+            // the one already shown instead of appearing twice
+            'results' => Inertia::merge($results)->matchOn('url'),
             'total' => $total,
             'page' => $page,
             'hasMore' => $hasMore,

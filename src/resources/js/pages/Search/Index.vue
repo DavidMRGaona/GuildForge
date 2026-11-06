@@ -152,10 +152,11 @@ function showMore(): void {
                 </BaseButton>
             </div>
 
+            <!-- Always in the page, so the failure is announced; it takes room only once it says something -->
             <p
                 role="status"
                 data-testid="search-show-more-error"
-                class="mt-3 text-center text-sm text-base-secondary"
+                :class="loadMoreFailed ? 'mt-3 text-center text-sm text-base-secondary' : 'sr-only'"
             >
                 <template v-if="loadMoreFailed">{{ t('search.loadMoreError') }}</template>
             </p>

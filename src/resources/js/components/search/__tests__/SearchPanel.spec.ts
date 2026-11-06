@@ -49,8 +49,10 @@ vi.mock('@/composables/useSearchSuggestions', () => ({
     useSearchSuggestions: (): typeof suggestions => suggestions,
 }));
 
+const fits = ref(true);
+
 vi.mock('@/composables/useFitsWithoutOverflow', () => ({
-    useFitsWithoutOverflow: (): { value: boolean } => ({ value: true }),
+    useFitsWithoutOverflow: (): typeof fits => fits,
 }));
 
 vi.mock('@/composables/useAuth', () => ({
@@ -142,6 +144,7 @@ describe('SearchPanel', () => {
         page.url = '/';
         suggestions.reset();
         suggestions.loading.value = false;
+        fits.value = true;
     });
 
     afterEach(() => {
@@ -402,6 +405,58 @@ describe('SearchPanel', () => {
 
         expect(event.defaultPrevented).toBe(false);
         expect(mocks.calls).toEqual([]);
+    });
+
+    it('slash does nothing while a native dialog is open', () => {
+        mountPanel(false);
+        const other = document.createElement('dialog');
+        other.setAttribute('open', '');
+        document.body.append(other);
+
+        const event = pressSlash(document.body);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(mocks.calls).toEqual([]);
+    });
+
+    it('a press and release on the backdrop closes the panel', async () => {
+        mountPanel();
+        const backdrop = dom().get('[role="dialog"]').element.parentElement as HTMLElement;
+
+        backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await nextTick();
+
+        expect(mocks.calls).toEqual(['close']);
+    });
+
+    it('a text selection released over the backdrop keeps the panel open', async () => {
+        mountPanel();
+        const backdrop = dom().get('[role="dialog"]').element.parentElement as HTMLElement;
+
+        // The press starts in the field; the browser fires the click on the common ancestor
+        combobox().element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await nextTick();
+
+        expect(mocks.calls).toEqual([]);
+        expect(dom().find('[role="dialog"]').exists()).toBe(true);
+    });
+
+    it('returns focus to the menu button when the bar is collapsed', async () => {
+        fits.value = false;
+        mountHeader();
+        (document.activeElement as HTMLElement | null)?.blur();
+
+        pressSlash(document.body);
+        await nextTick();
+        await nextTick();
+        await combobox().trigger('keydown', { key: 'Escape' });
+        await nextTick();
+
+        expect(document.activeElement).toBe(
+            dom().get('button[aria-controls="mobile-menu"]').element
+        );
     });
 
     it('closes when another page is visited', async () => {
