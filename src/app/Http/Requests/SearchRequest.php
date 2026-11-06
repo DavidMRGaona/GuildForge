@@ -8,10 +8,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class SearchRequest extends FormRequest
 {
-    private const int MIN_QUERY_LENGTH = 2;
-
-    private const int MAX_QUERY_LENGTH = 100;
-
     /** The search engine pages up to 1000 hits: 50 pages of 20. */
     public const int MAX_PAGE = 50;
 
@@ -31,7 +27,7 @@ final class SearchRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'q' => ['nullable', 'string', 'max:'.self::MAX_QUERY_LENGTH],
+            'q' => ['nullable', 'string', 'max:'.SearchQueryLength::MAX],
         ];
     }
 
@@ -68,7 +64,7 @@ final class SearchRequest extends FormRequest
      */
     public function hasValidSearchQuery(): bool
     {
-        return mb_strlen($this->searchQuery()) >= self::MIN_QUERY_LENGTH;
+        return mb_strlen($this->searchQuery()) >= SearchQueryLength::MIN;
     }
 
     /**
@@ -78,6 +74,6 @@ final class SearchRequest extends FormRequest
     {
         $query = $this->searchQuery();
 
-        return $query !== '' && mb_strlen($query) < self::MIN_QUERY_LENGTH;
+        return $query !== '' && mb_strlen($query) < SearchQueryLength::MIN;
     }
 }

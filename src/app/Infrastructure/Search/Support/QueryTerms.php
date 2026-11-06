@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Knowledge\Search;
+namespace App\Infrastructure\Search\Support;
 
 use App\Infrastructure\Knowledge\Text\TextNormalizer;
 use Illuminate\Contracts\Config\Repository;

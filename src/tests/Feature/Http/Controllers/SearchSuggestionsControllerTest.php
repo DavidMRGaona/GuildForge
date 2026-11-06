@@ -89,6 +89,19 @@ final class SearchSuggestionsControllerTest extends TestCase
         $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])->getJson('/buscar/sugerencias?q=a')->assertOk();
     }
 
+    public function test_signed_in_people_behind_one_address_have_a_limit_each(): void
+    {
+        $first = UserModel::factory()->create();
+        $second = UserModel::factory()->create();
+
+        for ($i = 0; $i < 60; $i++) {
+            $this->actingAs($first)->getJson('/buscar/sugerencias?q=a')->assertOk();
+        }
+
+        $this->actingAs($first)->getJson('/buscar/sugerencias?q=a')->assertStatus(429);
+        $this->actingAs($second)->getJson('/buscar/sugerencias?q=a')->assertOk();
+    }
+
     public function test_does_not_record_misses(): void
     {
         $metrics = Mockery::mock(SearchMetricsServiceInterface::class);

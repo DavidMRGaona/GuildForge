@@ -62,14 +62,15 @@ final readonly class HelpHitsProvider
     }
 
     /**
-     * Every match of the help centre's own search, best first: as many as the user has visible guides,
-     * so the count is exact and every page of the results can be served.
+     * Every match of the help centre's own search, best first, as it returns them: as many as the user has
+     * visible guides, so the count is exact and every page of the results can be served. Turn into hits
+     * only the ones a page shows (fromKnowledgeHits()).
      *
-     * @return list<SiteSearchHitDTO>
+     * @return list<KnowledgeSearchHitDTO>
      */
-    public function allHits(object $user, string $query): array
+    public function allMatches(object $user, string $query): array
     {
-        return $this->hits($user, $query, count($this->knowledge->visibleIds($user, GuideAudience::Site)));
+        return $this->knowledge->search($user, GuideAudience::Site, $query, count($this->knowledge->visibleIds($user, GuideAudience::Site)));
     }
 
     /**

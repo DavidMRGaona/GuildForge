@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Search;
 
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
+use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
 use App\Application\Search\DTOs\SiteSearchHitDTO;
 use App\Application\Search\DTOs\SiteSearchQueryDTO;
 use App\Application\Search\DTOs\SiteSearchResultDTO;
 use App\Application\Services\EmailVerificationPolicyInterface;
+use App\Domain\Knowledge\Entities\Guide;
+use App\Domain\Knowledge\Enums\GuideAudience;
+use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Domain\Search\Enums\SearchAudience;
 use App\Infrastructure\Knowledge\Search\MeilisearchKnowledgeSearch;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -140,6 +144,45 @@ final class HelpInSiteSearchTest extends TestCase
         $beyond = $this->search('contraseña', user: $user, offset: 2, limit: 1);
         $this->assertSame(['help'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->type, $beyond->hits));
         $this->assertSame($result->hits[2]->url, $beyond->hits[0]->url);
+    }
+
+    public function test_a_page_of_documents_only_counts_the_help_without_building_its_rows(): void
+    {
+        $user = $this->member();
+        $this->document(['title' => 'Cambio de contraseña en el club']);
+        $this->document(['title' => 'Otra contraseña']);
+        $real = $this->app->make(GuideVisibilityServiceInterface::class);
+        $counting = new class($real) implements GuideVisibilityServiceInterface
+        {
+            public int $categoryLookups = 0;
+
+            public function __construct(private readonly GuideVisibilityServiceInterface $inner) {}
+
+            public function visibleGuides(object $user, GuideAudience $audience): array
+            {
+                return $this->inner->visibleGuides($user, $audience);
+            }
+
+            public function findVisible(object $user, GuideId $id, GuideAudience $audience): ?Guide
+            {
+                return $this->inner->findVisible($user, $id, $audience);
+            }
+
+            public function visibleCategories(object $user, GuideAudience $audience): array
+            {
+                // Read only to label the help rows a page shows
+                $this->categoryLookups++;
+
+                return $this->inner->visibleCategories($user, $audience);
+            }
+        };
+        $this->app->instance(GuideVisibilityServiceInterface::class, $counting);
+
+        $result = $this->search('contraseña', user: $user, limit: 2);
+
+        $this->assertSame(['events', 'events'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->type, $result->hits));
+        $this->assertGreaterThan(0, $result->counts['help'] ?? 0);
+        $this->assertSame(0, $counting->categoryLookups);
     }
 
     public function test_help_tab_counts_visible_guides_only(): void

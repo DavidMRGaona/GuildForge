@@ -10,10 +10,10 @@ use App\Application\Search\DTOs\SiteSearchResultDTO;
 use App\Application\Search\Services\SiteSearchInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Search\Enums\SearchAudience;
-use App\Infrastructure\Knowledge\Search\QueryTerms;
 use App\Infrastructure\Knowledge\Search\SnippetBuilder;
 use App\Infrastructure\Knowledge\Text\TextNormalizer;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
+use App\Infrastructure\Search\Support\QueryTerms;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -58,10 +58,10 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
             return SiteSearchResultDTO::empty();
         }
 
-        // The help centre's own search, every match so the help count is exact; the gate is checked again here
-        $help = $query->includeHelp && $query->user !== null && $this->help->availableFor($query->user)
-            ? $this->help->allHits($query->user, $query->query)
-            : [];
+        // The help centre's own search, every match so the help count is exact; the gate is checked again here.
+        // Only the matches the page shows become hits below
+        $user = $query->includeHelp && $query->user !== null && $this->help->availableFor($query->user) ? $query->user : null;
+        $help = $user !== null ? $this->help->allMatches($user, $query->query) : [];
 
         if ($types === [] && $help === []) {
             return SiteSearchResultDTO::empty();
@@ -88,8 +88,9 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
         // Documents fill the first pages and the help rows the pages after them
         $hits = $offset < $documentTotal ? $this->documentHits($terms, $audiences, $tabTypes, $offset, $limit) : [];
         $remaining = $limit - count($hits);
-        if ($remaining > 0) {
-            array_push($hits, ...array_slice($tabHelp, max(0, $offset - $documentTotal), $remaining));
+        $shownHelp = $remaining > 0 ? array_slice($tabHelp, max(0, $offset - $documentTotal), $remaining) : [];
+        if ($user !== null && $shownHelp !== []) {
+            array_push($hits, ...array_values($this->help->fromKnowledgeHits($shownHelp, $user)));
         }
 
         return new SiteSearchResultDTO($hits, $counts, $total);

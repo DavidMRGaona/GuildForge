@@ -439,10 +439,15 @@ class AppServiceProvider extends ServiceProvider
             static fn (Request $request) => Limit::perMinute(3)->by($request->ip() ?? 'unknown')
         );
 
-        // The header panel asks while people type
+        // The header panel asks while people type: per account when signed in, so people behind one
+        // network address do not share the limit, and per address otherwise
         RateLimiter::for(
             'search-suggestions',
-            static fn (Request $request) => Limit::perMinute(60)->by($request->ip() ?? 'unknown')
+            static fn (Request $request) => Limit::perMinute(60)->by(
+                $request->user() !== null
+                    ? 'user:'.$request->user()->getAuthIdentifier()
+                    : 'ip:'.($request->ip() ?? 'unknown')
+            )
         );
 
         Gate::policy(UserModel::class, UserPolicy::class);

@@ -12,10 +12,6 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 final class SearchSuggestionsRequest extends FormRequest
 {
-    private const int MIN_QUERY_LENGTH = 2;
-
-    private const int MAX_QUERY_LENGTH = 100;
-
     public function authorize(): bool
     {
         return true;
@@ -40,6 +36,6 @@ final class SearchSuggestionsRequest extends FormRequest
     {
         $length = mb_strlen($this->searchQuery());
 
-        return $length >= self::MIN_QUERY_LENGTH && $length <= self::MAX_QUERY_LENGTH;
+        return $length >= SearchQueryLength::MIN && $length <= SearchQueryLength::MAX;
     }
 }
