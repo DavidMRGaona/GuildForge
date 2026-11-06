@@ -12,6 +12,9 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Knowledge\Lint\KnowledgeLinter;
 use App\Modules\ModuleLoader;
+use App\Modules\ModuleServiceProvider;
+use Filament\Pages\Page;
+use Filament\Resources\Resource;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Translation\Translator;
 use Tests\Support\Time\UsesUtcStorage;
@@ -25,6 +28,7 @@ use Tests\TestCase;
  */
 abstract class ModuleTestCase extends TestCase
 {
+    use InteractsWithModulePanel;
     use InteractsWithModules;
     use LazilyRefreshDatabase;
     use UsesUtcStorage;
@@ -226,13 +230,21 @@ abstract class ModuleTestCase extends TestCase
 
     /**
      * Assert the module's knowledge base guides pass `knowledge:lint` (enables the module first when needed).
+     *
+     * The admin panel is built while the application boots, before the test enables the module, so
+     * the module's resources and pages are put on it first, as `AdminPanelProvider` does for an enabled
+     * module: panel guides may then link to them. Registering them again only overwrites their routes.
      */
     protected function assertModuleKnowledgeGuidesAreValid(string $moduleName): void
     {
-        if (! $this->findModule($moduleName)?->isEnabled()) {
+        $module = $this->findModule($moduleName);
+
+        if (! $module?->isEnabled()) {
             $this->discoverModules();
-            $this->enableModule($moduleName);
+            $module = $this->enableModule($moduleName);
         }
+
+        $this->registerOnAdminPanel($this->moduleFilamentResources($module), $this->moduleFilamentPages($module));
 
         $issues = app(KnowledgeLinter::class)->lint($moduleName);
 
@@ -241,5 +253,43 @@ abstract class ModuleTestCase extends TestCase
             array_map(static fn ($issue): string => $issue->file.': '.$issue->message, $issues),
             "Module '{$moduleName}' has invalid knowledge base guides.",
         );
+    }
+
+    /**
+     * The module's `src/Filament/Resources/*Resource.php` classes, found as `AdminPanelProvider` finds them.
+     *
+     * @return list<class-string<resource>>
+     */
+    private function moduleFilamentResources(Module $module): array
+    {
+        $resources = [];
+
+        foreach (glob($module->path().'/src/Filament/Resources/*Resource.php') ?: [] as $file) {
+            $class = $module->namespace().'\\Filament\\Resources\\'.basename($file, '.php');
+
+            if (class_exists($class) && is_subclass_of($class, Resource::class)) {
+                $resources[] = $class;
+            }
+        }
+
+        return $resources;
+    }
+
+    /**
+     * The pages the module's provider lists in `registerFilamentPages()`.
+     *
+     * @return list<class-string<Page>>
+     */
+    private function moduleFilamentPages(Module $module): array
+    {
+        $providerClass = $module->namespace().'\\'.$module->provider();
+
+        if (! class_exists($providerClass)) {
+            return [];
+        }
+
+        $provider = $this->app->getProvider($providerClass) ?? new $providerClass($this->app);
+
+        return $provider instanceof ModuleServiceProvider ? array_values($provider->registerFilamentPages()) : [];
     }
 }
