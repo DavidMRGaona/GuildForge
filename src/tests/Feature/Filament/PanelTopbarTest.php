@@ -50,6 +50,19 @@ final class PanelTopbarTest extends TestCase
         $this->assertNull($user->getFilamentAvatarUrl());
     }
 
+    public function test_the_initials_avatar_is_drawn_in_the_panel_without_third_parties(): void
+    {
+        $user = UserModel::factory()->create(['name' => 'John Doe', 'avatar_public_id' => null]);
+
+        Filament::setCurrentPanel('admin');
+        $url = Filament::getUserAvatarUrl($user);
+
+        $this->assertIsString($url);
+
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $url);
+        $this->assertStringNotContainsString('ui-avatars.com', $url);
+    }
+
     public function test_core_content_and_users_are_globally_searchable(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());
