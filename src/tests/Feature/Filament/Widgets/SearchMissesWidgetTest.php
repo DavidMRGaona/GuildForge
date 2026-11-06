@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Widgets;
 
+use App\Application\Services\DashboardWidgetConfigServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Filament\Widgets\SearchMissesWidget;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleAuditEntryModel;
@@ -58,6 +59,60 @@ final class SearchMissesWidgetTest extends TestCase
         $this->assertTrue($editor->permissions()->where('key', 'search.view_stats')->exists());
         $entry = RoleAuditEntryModel::query()->where('role_id', $editor->id)->latest('created_at')->firstOrFail();
         $this->assertSame(['permissions_added' => ['search.view_stats']], $entry->changes);
+    }
+
+    public function test_widget_shows_as_many_rows_as_configured(): void
+    {
+        $this->insert('primera', 1, 9);
+        $this->insert('segunda', 1, 8);
+        $this->insert('tercera', 1, 7);
+        app(DashboardWidgetConfigServiceInterface::class)->saveConfig([
+            SearchMissesWidget::class => ['enabled' => true, 'sort' => 13, 'limit' => 2],
+        ]);
+
+        $this->actingAs($this->editorWithPermissions(['search.view_stats']));
+
+        Livewire::test(SearchMissesWidget::class)
+            ->assertSee('primera')
+            ->assertSee('segunda')
+            ->assertDontSee('tercera');
+    }
+
+    public function test_widget_counts_the_last_30_display_days(): void
+    {
+        // The day 29 days back is inside the window, the one 30 days back is not
+        $this->insert('dentro del plazo', 29, 4);
+        $this->insert('fuera del plazo', 30, 40);
+
+        $this->actingAs($this->editorWithPermissions(['search.view_stats']));
+
+        Livewire::test(SearchMissesWidget::class)
+            ->assertSee('dentro del plazo')
+            ->assertDontSee('fuera del plazo');
+    }
+
+    public function test_the_grant_migration_can_run_twice(): void
+    {
+        $editor = RoleModel::query()->create(['name' => 'editor', 'display_name' => 'Editor']);
+        $migration = database_path('migrations/2026_11_02_000004_grant_search_view_stats_to_editor.php');
+
+        $this->runMigrationFile($migration);
+        $this->runMigrationFile($migration);
+
+        $this->assertSame(1, $editor->permissions()->where('key', 'search.view_stats')->count());
+        // Only the first run changed the role, so only it is in the history
+        $this->assertSame(1, RoleAuditEntryModel::query()->where('role_id', $editor->id)->count());
+    }
+
+    public function test_the_grant_migration_runs_without_an_editor_role(): void
+    {
+        RoleModel::query()->where('name', 'editor')->delete();
+
+        $this->runMigrationFile(database_path('migrations/2026_11_02_000004_grant_search_view_stats_to_editor.php'));
+
+        // Nothing to grant: the role is not made up and the history stays empty
+        $this->assertFalse(RoleModel::query()->where('name', 'editor')->exists());
+        $this->assertSame(0, RoleAuditEntryModel::query()->count());
     }
 
     private function insert(string $query, int $daysAgo, int $count): void
