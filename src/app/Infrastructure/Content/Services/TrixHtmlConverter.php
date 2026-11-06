@@ -134,6 +134,10 @@ final class TrixHtmlConverter implements TrixHtmlConverterInterface
             $this->wrapInlineContent($document, $quote);
         }
 
+        // Text outside any block is a paragraph too. The editor's HTML parser (libxml2) used to
+        // add that paragraph itself, but libxml2 2.14 no longer does
+        $this->wrapInlineContent($document, $body);
+
         $this->joinLines($body);
 
         return $body->innerHTML;
