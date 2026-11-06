@@ -1,0 +1,13 @@
+{
+    "name": "paneled-module",
+    "version": "1.0.0",
+    "storesUtc": true,
+    "description": "Test module with a Filament resource, a Filament page and a panel guide linking to both",
+    "author": "GuildForge",
+    "namespace": "Modules\\PaneledModule",
+    "provider": "PaneledModuleServiceProvider",
+    "requires": {
+        "core": ">=2.0"
+    },
+    "dependencies": {}
+}

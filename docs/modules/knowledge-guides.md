@@ -309,7 +309,7 @@ final class KnowledgeGuidesTest extends ModuleTestCase
 }
 ```
 
-The helper enables the module if needed, so its capabilities and permissions are registered when the lint runs.
+The helper enables the module if needed, so its capabilities and permissions are registered when the lint runs. It also puts the module's Filament resources (`src/Filament/Resources/*Resource.php`) and the pages of `registerFilamentPages()` on the admin panel, as `AdminPanelProvider` does for an enabled module: the panel is built before the test enables the module, and without this a panel guide's button to a module page (`[[action:filament.admin.resources.<slug>.index|…]]`) would fail with "route does not exist". A test that already calls `registerOnAdminPanel()` keeps working: registering a route again only overwrites it.
 
 ## Writing style
 
