@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
+import { computed, nextTick, ref, useId, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { Search, X } from '@lucide/vue';
+import { useModalDialog } from '@/composables/useModalDialog';
 import { useOnNavigate } from '@/composables/useOnNavigate';
 import { useRoutes } from '@/composables/useRoutes';
 import { useSearchShortcut } from '@/composables/useSearchShortcut';
@@ -33,7 +34,11 @@ const dialogRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const activeIndex = ref(-1);
 let opener: HTMLElement | null = null;
-let lockedOverflow: string | null = null;
+// Whether the last press started on the backdrop itself: a text selection started in the field
+// and released over the backdrop also ends in a click there, and must not close the panel
+let pressedOnBackdrop = false;
+
+const { trapTab } = useModalDialog(() => props.open, dialogRef, FOCUSABLE);
 
 const term = computed(() => query.value.trim());
 const isExpanded = computed(() => results.value.length > 0);
@@ -51,14 +56,15 @@ function optionId(index: number): string {
     return `${uid}-option-${index}`;
 }
 
-function setScrollLocked(locked: boolean): void {
-    if (locked) {
-        lockedOverflow ??= document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-    } else if (lockedOverflow !== null) {
-        document.body.style.overflow = lockedOverflow;
-        lockedOverflow = null;
+function onBackdropPointerDown(event: MouseEvent): void {
+    pressedOnBackdrop = event.target === event.currentTarget;
+}
+
+function onBackdropClick(): void {
+    if (pressedOnBackdrop) {
+        close();
     }
+    pressedOnBackdrop = false;
 }
 
 function close(restoreFocus = true): void {
@@ -124,18 +130,8 @@ function onDialogKeydown(event: KeyboardEvent): void {
         close();
         return;
     }
-    if (event.key !== 'Tab') {
-        return;
-    }
-    // Keeps Tab inside the panel while it is open, also from the panel itself (after a click on
-    // a spot that takes no focus)
-    const focusable = Array.from(dialogRef.value?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const current = focusable.indexOf(document.activeElement as HTMLElement);
-    if (current === -1 || document.activeElement === (event.shiftKey ? first : last)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first)?.focus();
+    if (event.key === 'Tab') {
+        trapTab(event);
     }
 }
 
@@ -155,7 +151,6 @@ watch(
 watch(
     () => props.open,
     async (isOpen) => {
-        setScrollLocked(isOpen);
         if (!isOpen) {
             activeIndex.value = -1;
             reset();
@@ -174,7 +169,6 @@ useSearchShortcut(
     () => props.open
 );
 useOnNavigate(() => close(false));
-onBeforeUnmount(() => setScrollLocked(false));
 </script>
 
 <template>
@@ -182,7 +176,8 @@ onBeforeUnmount(() => setScrollLocked(false));
         <div
             v-if="open"
             class="fixed inset-0 z-50 bg-neutral-900/60 md:px-4 md:pt-16"
-            @click.self="close()"
+            @mousedown="onBackdropPointerDown"
+            @click.self="onBackdropClick"
         >
             <div
                 ref="dialogRef"

@@ -32,9 +32,10 @@ function tabHref(tab: SearchTab): string {
          results count is announced as it changes -->
     <nav :aria-label="t('search.tabsLabel')">
         <!-- The base line is an inset shadow and each underline a border inside the scroll box,
-             so scrolling sideways never clips the active one -->
+             so scrolling sideways never clips the active one. The box scrolls by touch, wheel or
+             focus, without a scrollbar under the tabs on narrow screens -->
         <ul
-            class="-mx-4 flex gap-1 overflow-x-auto overflow-y-hidden px-4 shadow-[inset_0_-1px_0_var(--color-border)] sm:mx-0 sm:px-0"
+            class="-mx-4 flex gap-1 overflow-x-auto overflow-y-hidden px-4 shadow-[inset_0_-1px_0_var(--color-border)] [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
         >
             <li v-for="tab in tabs" :key="tab.key ?? 'all'" class="shrink-0">
                 <Link

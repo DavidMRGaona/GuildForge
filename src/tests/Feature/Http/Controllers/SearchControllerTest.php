@@ -107,6 +107,8 @@ final class SearchControllerTest extends TestCase
 
         $this->assertIsArray($page);
         $this->assertContains('results', $page['mergeProps'] ?? []);
+        // A row repeated by the next page replaces the one shown, matched on its URL
+        $this->assertSame(['results.url'], $page['matchPropsOn'] ?? null);
     }
 
     public function test_tab_filters_results(): void

@@ -185,6 +185,35 @@ describe('Search/Index', () => {
         wrapper.unmount();
     });
 
+    it('leaves no gap under show more while there is no error to say', () => {
+        const wrapper = mountPage();
+
+        // Still in the page for screen readers, but out of the layout
+        expect(wrapper.get('[data-testid="search-show-more-error"]').classes()).toEqual([
+            'sr-only',
+        ]);
+
+        wrapper.unmount();
+    });
+
+    it('a cancelled next page re-enables show more without an error', async () => {
+        routerReload.mockClear();
+        const wrapper = mountPage();
+
+        await wrapper.get('[data-testid="search-show-more"]').trigger('click');
+        const options = routerReload.mock.calls[0]?.[0] ?? {};
+        // A tab or a new query cancels the request in flight: Inertia then only calls onFinish
+        options.onFinish?.();
+        await flushPromises();
+
+        expect(
+            wrapper.get('[data-testid="search-show-more"]').attributes('disabled')
+        ).toBeUndefined();
+        expect(wrapper.get('[data-testid="search-show-more-error"]').text()).toBe('');
+
+        wrapper.unmount();
+    });
+
     it('shows the min chars warning', () => {
         const wrapper = mountPage({
             query: 'p',

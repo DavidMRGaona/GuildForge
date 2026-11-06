@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch, ref, nextTick, onMounted, onUnmounted } from 'vue';
+import { useModalDialog } from '@/composables/useModalDialog';
 import { useI18n } from 'vue-i18n';
 import { X, ChevronLeft, ChevronRight } from '@lucide/vue';
 import type { Photo } from '@/types/models';
@@ -23,6 +24,12 @@ const { t } = useI18n();
 
 const lightboxRef = ref<HTMLElement | null>(null);
 const closeButtonRef = ref<HTMLButtonElement | null>(null);
+
+const { trapTab } = useModalDialog(
+    () => props.isOpen,
+    lightboxRef,
+    'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+);
 
 const currentPhoto = computed<Photo | null>(() => {
     if (props.photos.length === 0) {
@@ -59,26 +66,8 @@ function handleKeydown(event: KeyboardEvent): void {
             if (hasMultiplePhotos.value) emit('next');
             break;
         case 'Tab':
-            trapFocus(event);
+            trapTab(event);
             break;
-    }
-}
-
-function trapFocus(event: KeyboardEvent): void {
-    if (!lightboxRef.value) return;
-
-    const focusableElements = lightboxRef.value.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    );
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
-
-    if (event.shiftKey && document.activeElement === firstElement) {
-        event.preventDefault();
-        lastElement?.focus();
-    } else if (!event.shiftKey && document.activeElement === lastElement) {
-        event.preventDefault();
-        firstElement?.focus();
     }
 }
 
@@ -86,11 +75,8 @@ watch(
     () => props.isOpen,
     async (isOpen) => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
             await nextTick();
             closeButtonRef.value?.focus();
-        } else {
-            document.body.style.overflow = '';
         }
     }
 );
