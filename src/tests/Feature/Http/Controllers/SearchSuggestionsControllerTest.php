@@ -131,12 +131,12 @@ final class SearchSuggestionsControllerTest extends TestCase
             }
         });
 
-        Log::spy();
+        $log = Log::spy();
 
         $this->getJson('/buscar/sugerencias?q=dragones')->assertOk()->assertExactJson(['results' => [], 'total' => 0]);
 
         // Answered with nothing, but never silently
-        Log::shouldHaveReceived('warning')->withArgs(static fn (string $message): bool => str_starts_with($message, '[SiteSearch] Search failed'))->once();
+        $log->shouldHaveReceived('warning')->withArgs(static fn (string $message): bool => str_starts_with($message, '[SiteSearch] Search failed'))->once();
     }
 
     /**

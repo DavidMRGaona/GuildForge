@@ -321,7 +321,7 @@ final class SearchControllerTest extends TestCase
         $metrics = Mockery::mock(SearchMetricsServiceInterface::class);
         $metrics->shouldNotReceive('recordMiss');
         $this->app->instance(SearchMetricsServiceInterface::class, $metrics);
-        Log::spy();
+        $log = Log::spy();
 
         $this->get('/buscar?q=dragones')->assertOk()->assertInertia(
             fn (Assert $page) => $page
@@ -335,7 +335,7 @@ final class SearchControllerTest extends TestCase
         );
 
         // Answered with nothing, but never silently
-        Log::shouldHaveReceived('warning')->withArgs(static fn (string $message): bool => str_starts_with($message, '[SiteSearch] Search failed'))->once();
+        $log->shouldHaveReceived('warning')->withArgs(static fn (string $message): bool => str_starts_with($message, '[SiteSearch] Search failed'))->once();
     }
 
     private function seedHelpGuides(): void

@@ -69,14 +69,14 @@ final class FallbackSiteSearchTest extends TestCase
             'locale' => 'es',
         ]);
 
-        Log::spy();
+        $log = Log::spy();
 
         $result = $this->app->make(SiteSearchInterface::class)->search($this->siteQuery('dragones'));
 
         $this->assertSame(['Torneo de dragones'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->title, $result->hits));
         $this->assertSame(['events' => 1], $result->counts);
         // The fallback is logged, so an engine that is down is noticed
-        Log::shouldHaveReceived('warning')->once();
+        $log->shouldHaveReceived('warning')->once();
     }
 
     private function resolvedClass(string $abstract): string
