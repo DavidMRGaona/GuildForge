@@ -155,7 +155,7 @@ The body is CommonMark plus three extensions.
 > The link expires in one hour.
 ```
 
-**Action buttons** link to a page of the application by route name. The route must exist and have no required parameters. Query parameters go after `?` as `key=value` pairs joined by `&` (letters, digits, dots, hyphens and underscores), for example to open a profile tab. The optional `if=` condition shows the button only when a permission or a capability passes (`!` negates it):
+**Action buttons** link to a page of the application by route name. The route must exist and have no required parameters. Query parameters go after `?` as `key=value` pairs joined by `&` (letters, digits, dots, hyphens and underscores), for example to open a profile tab. They always stay in the query string, even when a key is named like an optional route parameter (`{page?}`). The optional `if=` condition shows the button only when a permission or a capability passes (`!` negates it):
 
 ```markdown
 [[action:profile.show|Ir a mi perfil]]

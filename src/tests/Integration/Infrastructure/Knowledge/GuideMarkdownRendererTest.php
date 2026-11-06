@@ -122,6 +122,16 @@ final class GuideMarkdownRendererTest extends TestCase
         $this->assertStringNotContainsString('kb-action', $this->html('[[action:events.index?tab=<x>|Ver]]'));
     }
 
+    public function test_a_query_key_named_like_an_optional_route_parameter_stays_in_the_query(): void
+    {
+        Route::get('/kb-test/{page?}', fn () => 'x')->name('kb.test.optional');
+        Route::getRoutes()->refreshNameLookups();
+
+        $html = $this->html('[[action:kb.test.optional?page=2|Ir]]');
+
+        $this->assertStringContainsString('/kb-test?page=2"', $html);
+    }
+
     public function test_action_button_is_omitted_for_missing_route(): void
     {
         $html = $this->html('Antes [[action:no.such.route|Ir]] después');
