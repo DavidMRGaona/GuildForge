@@ -8,6 +8,7 @@ use App\Application\Knowledge\DTOs\Response\KnowledgeSearchHitDTO;
 use App\Application\Knowledge\Services\KnowledgeSearchInterface;
 use App\Domain\Knowledge\Entities\Guide;
 use App\Infrastructure\Knowledge\Text\TextNormalizer;
+use App\Infrastructure\Search\Support\QueryTerms;
 use Illuminate\Contracts\Config\Repository;
 
 /**

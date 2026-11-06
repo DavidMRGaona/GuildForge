@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Infrastructure\Knowledge;
+namespace Tests\Unit\Infrastructure\Search\Support;
 
-use App\Infrastructure\Knowledge\Search\QueryTerms;
 use App\Infrastructure\Knowledge\Text\TextNormalizer;
+use App\Infrastructure\Search\Support\QueryTerms;
 use Illuminate\Config\Repository;
 use PHPUnit\Framework\TestCase;
 

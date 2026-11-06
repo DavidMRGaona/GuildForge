@@ -6,6 +6,15 @@ use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel
 use App\Infrastructure\Knowledge\Search\KnowledgeSynonyms;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 
+// The language settings both indexes share: the help guides and the site search documents
+$languageSettings = [
+    'synonyms' => KnowledgeSynonyms::toIndexSettings(config('knowledge.synonyms', [])),
+    'stopWords' => array_values(array_filter(
+        (array) config('knowledge.stop_words', []),
+        is_string(...),
+    )),
+];
+
 return [
 
     /*
@@ -156,21 +165,13 @@ return [
                 'filterableAttributes' => ['guide_id', 'locale', 'audience', 'active'],
                 // In order of weight: title > keywords > summary > body
                 'searchableAttributes' => ['title', 'keywords', 'summary', 'body_text'],
-                'synonyms' => KnowledgeSynonyms::toIndexSettings(config('knowledge.synonyms', [])),
-                'stopWords' => array_values(array_filter(
-                    (array) config('knowledge.stop_words', []),
-                    is_string(...),
-                )),
+                ...$languageSettings,
             ],
             SearchDocumentModel::class => [
                 'filterableAttributes' => ['type', 'audience', 'locale', 'finished', 'ends_at_ts'],
                 // In order of weight: title > keywords > meta > body
                 'searchableAttributes' => ['title', 'keywords', 'meta', 'body'],
-                'synonyms' => KnowledgeSynonyms::toIndexSettings(config('knowledge.synonyms', [])),
-                'stopWords' => array_values(array_filter(
-                    (array) config('knowledge.stop_words', []),
-                    is_string(...),
-                )),
+                ...$languageSettings,
             ],
         ],
         'model-settings' => [

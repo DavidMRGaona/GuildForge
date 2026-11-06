@@ -12,6 +12,7 @@ use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Infrastructure\Search\Jobs\SyncSearchIndexJob;
+use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use App\Infrastructure\Search\Services\ProcessSearchSyncRunner;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
@@ -63,9 +64,39 @@ final class SearchSyncCommandTest extends TestCase
     {
         $this->indexerReturning(new SearchSyncResultDTO(1, 0, null));
 
-        $this->artisanCommand('search:sync', ['--type' => 'event'])->assertSuccessful();
+        $this->artisanCommand('search:sync', ['--type' => 'events'])->assertSuccessful();
 
-        $this->assertSame(['event'], $this->syncedTypes);
+        $this->assertSame(['events'], $this->syncedTypes);
+    }
+
+    public function test_an_unknown_type_fails_without_syncing(): void
+    {
+        $this->indexerReturning(new SearchSyncResultDTO(0, 0, null));
+
+        $this->artisanCommand('search:sync', ['--type' => 'evnets'])
+            // One line: the type asked for and the ones that exist
+            ->expectsOutputToContain('Unknown search type "evnets". Known types: articles, events, galleries.')
+            ->assertFailed();
+
+        $this->assertSame([], $this->syncedTypes);
+    }
+
+    public function test_a_stored_type_without_source_still_syncs_so_its_orphans_go(): void
+    {
+        $this->indexerReturning(new SearchSyncResultDTO(0, 2, null));
+        SearchDocumentModel::query()->create([
+            'type' => 'removed-module.things',
+            'source_id' => '1',
+            'title' => 'Cosa de ejemplo',
+            'body' => '',
+            'url' => '/cosas/1',
+            'audience' => 'public',
+            'locale' => 'es',
+        ]);
+
+        $this->artisanCommand('search:sync', ['--type' => 'removed-module.things'])->assertSuccessful();
+
+        $this->assertSame(['removed-module.things'], $this->syncedTypes);
     }
 
     public function test_sync_command_fails_on_error(): void

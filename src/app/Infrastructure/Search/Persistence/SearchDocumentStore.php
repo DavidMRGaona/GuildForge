@@ -17,9 +17,9 @@ final class SearchDocumentStore implements SearchDocumentStoreInterface
 
     public function upsert(string $type, ?string $module, SearchDocumentDTO $doc): string
     {
-        $model = SearchDocumentModel::query()->firstOrNew(['type' => $type, 'source_id' => $doc->id]);
-
-        $model->fill([
+        // updateOrCreate() falls back to the row a concurrent save just created (createOrFirst()), so
+        // two saves of one document never collide on the unique (type, source_id) key
+        $model = SearchDocumentModel::query()->updateOrCreate(['type' => $type, 'source_id' => $doc->id], [
             'module' => $module,
             'title' => mb_substr($doc->title, 0, self::STRING_LENGTH),
             'body' => $doc->body,
@@ -34,7 +34,6 @@ final class SearchDocumentStore implements SearchDocumentStoreInterface
             'audience' => $doc->audience->value,
             'locale' => $doc->locale ?? app()->getLocale(),
         ]);
-        $model->save();
 
         return $model->id;
     }
@@ -71,7 +70,8 @@ final class SearchDocumentStore implements SearchDocumentStoreInterface
         $keep = array_flip($keepSourceIds);
         $ids = [];
 
-        foreach (SearchDocumentModel::query()->where('type', $type)->toBase()->get(['id', 'source_id']) as $row) {
+        // In chunks, so a type with many documents never sits in memory at once
+        foreach (SearchDocumentModel::query()->where('type', $type)->select(['id', 'source_id'])->toBase()->lazyById(1000) as $row) {
             if (! isset($keep[(string) $row->source_id])) {
                 $ids[] = (string) $row->id;
             }
