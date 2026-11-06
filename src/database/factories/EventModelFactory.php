@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -29,7 +30,7 @@ final class EventModelFactory extends Factory
             'slug' => Str::slug($title),
             'description' => $this->faker->paragraphs(3, true),
             'start_date' => $this->faker->dateTimeBetween('+1 week', '+3 months'),
-            'end_date' => fn (array $attr) => Carbon::parse($attr['start_date'])->addDays(random_int(0, 3)),
+            'end_date' => fn (array $attr): Carbon => $this->endAfter($attr['start_date']),
             'location' => $this->faker->optional()->address(),
             'image_public_id' => null,
             'member_price' => $this->faker->optional(0.7)->randomFloat(2, 5, 50),
@@ -70,7 +71,7 @@ final class EventModelFactory extends Factory
 
             return [
                 'start_date' => $startDate,
-                'end_date' => (clone $startDate)->modify('+'.random_int(0, 3).' days'),
+                'end_date' => $this->endAfter($startDate),
             ];
         });
     }
@@ -85,7 +86,7 @@ final class EventModelFactory extends Factory
 
             return [
                 'start_date' => $startDate,
-                'end_date' => (clone $startDate)->modify('+'.random_int(0, 3).' days'),
+                'end_date' => $this->endAfter($startDate),
             ];
         });
     }
@@ -102,6 +103,15 @@ final class EventModelFactory extends Factory
                 'description' => $this->faker->optional(0.7)->sentence(),
             ])->toArray(),
         ]);
+    }
+
+    /**
+     * An end between two hours and three days after the start, never equal to it:
+     * the panel form rejects an event that ends when it starts.
+     */
+    private function endAfter(DateTimeInterface|string $start): Carbon
+    {
+        return Carbon::parse($start)->addHours($this->faker->numberBetween(2, 72));
     }
 
     /**
