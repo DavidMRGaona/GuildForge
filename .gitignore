@@ -25,6 +25,8 @@ src/public/hot
 src/public/storage
 src/public/build/
 src/.phpunit.result.cache
+# One part of the suite, written by .github/scripts/phpunit-part.php
+src/phpunit.part*.xml
 src/coverage/
 src/_ide_helper.php
 src/_ide_helper_models.php
