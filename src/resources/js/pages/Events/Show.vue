@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Calendar, ChevronLeft, Clock, Download, MapPin } from '@lucide/vue';
+import { Calendar, ChevronLeft, Clock, Download, MapPin, Ticket } from '@lucide/vue';
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -91,7 +91,10 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                     />
                 </div>
 
-                <div class="mb-6 flex flex-col gap-3 text-base-secondary sm:flex-row sm:gap-6">
+                <div
+                    data-testid="event-details"
+                    class="mb-6 flex flex-col gap-3 text-base-secondary sm:flex-row sm:flex-wrap sm:gap-x-6"
+                >
                     <div class="flex items-center">
                         <span class="sr-only">{{ t('events.date') }}:</span>
                         <Calendar class="mr-2 h-5 w-5 text-primary" aria-hidden="true" />
@@ -113,34 +116,20 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                         <MapPin class="mr-2 h-5 w-5 text-primary" aria-hidden="true" />
                         <span>{{ props.event.location }}</span>
                     </div>
-                </div>
 
-                <div v-if="props.calendarLinks && isUpcoming(props.event)" class="mb-6">
-                    <AddToCalendarMenu :links="props.calendarLinks" />
-                </div>
-
-                <div
-                    v-if="props.event.memberPrice !== null"
-                    class="mb-6 rounded-lg bg-primary-50 p-4 dark:bg-primary-900/20"
-                >
-                    <h3 class="mb-2 font-semibold text-base-primary">
-                        {{ t('events.pricing') }}
-                    </h3>
-                    <div class="flex flex-col gap-1 sm:flex-row sm:gap-6">
-                        <p class="text-base-secondary">
-                            <span class="font-medium">{{ t('events.memberPrice') }}:</span>
+                    <div class="flex items-center">
+                        <span class="sr-only">{{ t('events.pricing') }}:</span>
+                        <Ticket class="mr-2 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                        <span v-if="props.event.memberPrice !== null">
+                            {{ t('events.memberPrice') }}:
                             {{ formatPrice(props.event.memberPrice) }}
-                        </p>
-                        <p v-if="props.event.nonMemberPrice !== null" class="text-base-secondary">
-                            <span class="font-medium">{{ t('events.nonMemberPrice') }}:</span>
-                            {{ formatPrice(props.event.nonMemberPrice) }}
-                        </p>
+                            <template v-if="props.event.nonMemberPrice !== null">
+                                · {{ t('events.nonMemberPrice') }}:
+                                {{ formatPrice(props.event.nonMemberPrice) }}
+                            </template>
+                        </span>
+                        <span v-else>{{ t('events.free') }}</span>
                     </div>
-                </div>
-                <div v-else class="mb-6 rounded-lg bg-success-light p-4">
-                    <p class="font-medium text-success">
-                        {{ t('events.free') }}
-                    </p>
                 </div>
 
                 <!-- Download links -->
@@ -183,6 +172,11 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                     <ModuleSlot name="event-detail-actions" />
                 </div>
 
+                <!-- Secondary action: after signing up, not before -->
+                <div v-if="props.calendarLinks && isUpcoming(props.event)" class="mb-6">
+                    <AddToCalendarMenu :links="props.calendarLinks" />
+                </div>
+
                 <!--
                     SECURITY: v-html is used to render rich text content from the event.
                     Content is sanitized server-side via SanitizesHtml trait (HTMLPurifier).
@@ -195,7 +189,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                 <div class="mt-8 border-t border-default pt-6">
                     <Link :href="routes.events.index">
                         <BaseButton variant="primary">
-                            {{ t('common.viewAll') }} {{ t('common.events').toLowerCase() }}
+                            {{ t('events.viewAll') }}
                         </BaseButton>
                     </Link>
                 </div>

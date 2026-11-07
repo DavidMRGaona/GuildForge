@@ -56,6 +56,7 @@ export default {
         location: 'Lugar',
         noUpcoming: 'No hay eventos próximos',
         free: 'Gratuito',
+        viewAll: 'Ver todos los eventos',
         pricing: 'Precios',
         memberPrice: 'Precio socios',
         nonMemberPrice: 'Precio no socios',
@@ -65,6 +66,7 @@ export default {
     },
     articles: {
         title: 'Artículos',
+        viewAll: 'Ver todos los artículos',
         latest: 'Últimos artículos',
         by: 'Por',
         publishedAt: 'Publicado el',

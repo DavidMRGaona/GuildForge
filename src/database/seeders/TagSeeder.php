@@ -116,7 +116,7 @@ final class TagSeeder extends Seeder
         $children = [
             ['name' => 'Torneo', 'slug' => 'torneo', 'sort_order' => 1],
             ['name' => 'Taller', 'slug' => 'taller', 'sort_order' => 2],
-            ['name' => 'Sesión Abierta', 'slug' => 'sesion-abierta', 'sort_order' => 3],
+            ['name' => 'Sesión abierta', 'slug' => 'sesion-abierta', 'sort_order' => 3],
         ];
 
         foreach ($children as $child) {
