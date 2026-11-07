@@ -83,17 +83,22 @@ const closeMobileModal = (): void => {
 
 <template>
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <!-- Page header -->
-        <div class="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-            <div class="flex items-center gap-3">
+        <!--
+            Desktop: title over the calendar and the filter over the detail panel, in the
+            same three columns, so the filter lines up with the panel below it.
+        -->
+        <div class="lg:grid lg:grid-cols-3 lg:gap-x-8">
+            <!-- Page header -->
+            <div class="mb-8 flex items-center gap-3 lg:col-span-2 lg:self-start">
                 <h1 class="text-3xl font-bold tracking-tight text-base-primary">
                     {{ t('calendar.title') }}
                 </h1>
                 <HelpLink guide="core.events.find-events" />
             </div>
 
-            <div v-if="personalCalendar" class="max-w-sm">
-                <div class="flex items-center gap-2">
+            <!-- The toggle row is as tall as the title's line, so both share a centre line -->
+            <div v-if="personalCalendar" class="mb-6 max-w-sm lg:col-start-3 lg:mb-8 lg:max-w-none">
+                <div class="flex min-h-9 items-center gap-2">
                     <FormToggle
                         id="calendar-only-mine"
                         v-model="onlyMine"
@@ -104,28 +109,34 @@ const closeMobileModal = (): void => {
                 <p class="mt-1 text-xs text-base-muted">
                     {{ t('calendar.onlyMineHint') }}
                 </p>
+                <p
+                    v-if="showOnlyMineEmpty"
+                    role="status"
+                    class="mt-3 rounded-lg bg-muted p-4 text-sm text-base-secondary"
+                >
+                    {{ t('calendar.onlyMineEmpty') }}
+                </p>
             </div>
-        </div>
 
-        <p
-            v-if="showOnlyMineEmpty"
-            role="status"
-            class="mb-4 rounded-lg bg-muted p-4 text-sm text-base-secondary"
-        >
-            {{ t('calendar.onlyMineEmpty') }}
-        </p>
-
-        <!-- Desktop layout: Calendar + Side panel -->
-        <div class="hidden lg:grid lg:grid-cols-3 lg:gap-8">
-            <!-- Calendar (2/3 width) -->
-            <div class="lg:col-span-2">
-                <EventCalendar
-                    show-tooltips
-                    :only-mine="onlyMine"
-                    :navigate-on-click="false"
-                    @event-select="handleEventSelect"
-                    @events-loaded="handleEventsLoaded"
-                />
+            <!-- Calendar (2/3 width on desktop) -->
+            <div class="lg:col-span-2 lg:col-start-1">
+                <div class="hidden lg:block">
+                    <EventCalendar
+                        show-tooltips
+                        :only-mine="onlyMine"
+                        :navigate-on-click="false"
+                        @event-select="handleEventSelect"
+                        @events-loaded="handleEventsLoaded"
+                    />
+                </div>
+                <div class="lg:hidden">
+                    <EventCalendar
+                        :only-mine="onlyMine"
+                        :navigate-on-click="false"
+                        @event-select="handleEventSelect"
+                        @events-loaded="handleEventsLoaded"
+                    />
+                </div>
 
                 <!-- Legend -->
                 <ul
@@ -147,41 +158,16 @@ const closeMobileModal = (): void => {
                 </ul>
             </div>
 
-            <!-- Detail panel (1/3 width) -->
-            <div class="lg:col-span-1">
+            <!--
+                Detail panel (1/3 width, desktop only; mobile opens it in a modal). It starts
+                level with the day grid, not the toolbar: mt-14 is the toolbar band (36 px
+                buttons + the theme's 20 px gap), checked in the browser at lg and xl.
+            -->
+            <div class="hidden lg:col-start-3 lg:mt-14 lg:block">
                 <div class="sticky top-4">
                     <EventDetailPanel :event="selectedEvent" />
                 </div>
             </div>
-        </div>
-
-        <!-- Mobile layout: Calendar only -->
-        <div class="lg:hidden">
-            <EventCalendar
-                :only-mine="onlyMine"
-                :navigate-on-click="false"
-                @event-select="handleEventSelect"
-                @events-loaded="handleEventsLoaded"
-            />
-
-            <!-- Legend -->
-            <ul
-                v-if="legend.length > 0"
-                class="mt-4 flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
-                :aria-label="t('calendar.legendLabel')"
-            >
-                <li
-                    v-for="item in legend"
-                    :key="item.sourceType"
-                    class="flex items-center gap-1.5 text-sm text-base-secondary"
-                >
-                    <span
-                        :class="['calendar-legend-dot', `calendar-legend-dot--${item.color}`]"
-                        aria-hidden="true"
-                    ></span>
-                    {{ item.sourceLabel }}
-                </li>
-            </ul>
         </div>
     </div>
 
