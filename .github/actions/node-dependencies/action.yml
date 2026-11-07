@@ -1,0 +1,38 @@
+name: Node dependencies
+description: Node 24 and the core's node_modules, restored whole only for the same package-lock.json and Node
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v7
+      with:
+        node-version: '24'
+
+    - name: Read the Node version
+      id: node
+      shell: bash
+      run: echo "version=$(node --version)" >> "$GITHUB_OUTPUT"
+
+    # Exact key, no fallback: the tree npm ci installs depends only on package-lock.json and on
+    # the platform and Node it runs on (native packages), so a hit is what npm ci would install
+    - name: Restore node_modules
+      id: cache
+      uses: actions/cache/restore@v6
+      with:
+        path: src/node_modules
+        key: node-modules-${{ runner.os }}-${{ runner.arch }}-node${{ steps.node.outputs.version }}-${{ hashFiles('src/package-lock.json') }}
+
+    - name: Install NPM dependencies
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      shell: bash
+      working-directory: src
+      run: npm ci
+
+    # Saved right after npm ci, before anything writes its own caches into node_modules
+    - name: Save node_modules
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v6
+      with:
+        path: src/node_modules
+        key: ${{ steps.cache.outputs.cache-primary-key }}

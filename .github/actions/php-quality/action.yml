@@ -1,0 +1,86 @@
+name: PHP quality
+description: Rector, Pint and PHPStan on the core, in that order, with caches that can only make them faster
+
+# Needs the checkout and ./.github/actions/php-dependencies first. No .env and no database, as
+# the tools always ran: Larastan boots the application without either.
+#
+# Rector and PHPStan skip files their cache says are unchanged, but a file's result can depend
+# on others they do not track (Larastan reads the migrations for model types; Rector rules read
+# other classes), so their cache is restored only for exactly the same src/ tree, PHP version and
+# extensions: the result of a run with it is then the one without it. Pint checks each file on
+# its own and its cache records each file's hash and the rules, so any older one will do.
+
+runs:
+  using: composite
+  steps:
+    - name: Cache keys
+      id: keys
+      shell: bash
+      working-directory: src
+      run: |
+        set -euo pipefail
+        # The committed tree of src/: every source, configuration and lock file, nothing generated.
+        # If a tracked file was changed after the checkout, the tree no longer describes what the
+        # tools read, so Rector and PHPStan run without their cache
+        tree="$(git rev-parse --verify 'HEAD:src')"
+        if [ -n "$(git status --porcelain --untracked-files=no -- .)" ]; then
+          echo "::warning::Tracked files in src/ changed after the checkout; Rector and PHPStan run without their cache"
+          tree=""
+        fi
+        php="$(php -r 'echo PHP_VERSION;')-$(php -m | sha256sum | cut -c1-16)"
+        {
+          echo "tree=${tree}"
+          echo "php=${php}"
+          echo "tmp=$(php -r 'echo sys_get_temp_dir();')"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Restore the Rector and PHPStan caches
+      id: analysis
+      if: ${{ steps.keys.outputs.tree != '' }}
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          ${{ steps.keys.outputs.tmp }}/rector_cached_files
+          ${{ steps.keys.outputs.tmp }}/phpstan
+        key: php-analysis-${{ runner.os }}-php${{ steps.keys.outputs.php }}-${{ steps.keys.outputs.tree }}
+
+    - name: Restore the Pint cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ steps.keys.outputs.tmp }}/pint.cache
+        key: pint-${{ runner.os }}-php${{ steps.keys.outputs.php }}-${{ hashFiles('src/pint.json', 'src/composer.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: pint-${{ runner.os }}-php${{ steps.keys.outputs.php }}-${{ hashFiles('src/pint.json', 'src/composer.lock') }}-
+
+    # Before Pint: Rector's output is not Pint-clean, so the order is Rector → Pint → PHPStan
+    - name: Rector
+      shell: bash
+      working-directory: src
+      run: vendor/bin/rector process --dry-run --no-progress-bar
+
+    - name: PHP code style
+      shell: bash
+      working-directory: src
+      env:
+        PINT_CACHE: ${{ steps.keys.outputs.tmp }}/pint.cache
+      run: vendor/bin/pint --test --cache-file="$PINT_CACHE"
+
+    - name: Static analysis
+      shell: bash
+      working-directory: src
+      run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
+
+    # Only reached when the three passed
+    - name: Save the Rector and PHPStan caches
+      if: ${{ steps.keys.outputs.tree != '' && steps.analysis.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          ${{ steps.keys.outputs.tmp }}/rector_cached_files
+          ${{ steps.keys.outputs.tmp }}/phpstan
+        key: ${{ steps.analysis.outputs.cache-primary-key }}
+
+    - name: Save the Pint cache
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ steps.keys.outputs.tmp }}/pint.cache
+        key: pint-${{ runner.os }}-php${{ steps.keys.outputs.php }}-${{ hashFiles('src/pint.json', 'src/composer.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}

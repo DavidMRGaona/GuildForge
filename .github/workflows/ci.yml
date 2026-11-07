@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Parts the suite is split into, one machine each (suite job); the matrix lists 1 to this
+  TEST_PARTS: 2
+
 jobs:
   # Skips the suite only when it would repeat a result already obtained: a push to main whose
   # tree is the one its pull request's CI tested, or a pull request that only changes
@@ -146,202 +150,144 @@ jobs:
           overwrite: true
           retention-days: 30
 
+  # Rector, Pint and PHPStan, and the check that the suite's parts run every test once. No
+  # services, so it starts with the parts below instead of holding them back
+  quality:
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.reuse != 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/php-dependencies
+
+      - uses: ./.github/actions/php-quality
+
+      - name: Check that the parts run every test once
+        run: bash ../.github/scripts/check-phpunit-parts.sh "$TEST_PARTS"
+
+  # The suite in TEST_PARTS parts on as many machines, each part with one process per core. The
+  # regular jobs store in UTC, as fresh installs do; the others run the same suite with instants
+  # stored in Europe/Madrid (sites not converted yet, and --reverse)
+  suite:
+    name: suite (${{ matrix.storage }} storage, part ${{ matrix.part }})
+    needs: gate
+    if: ${{ !cancelled() && needs.gate.outputs.reuse != 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+
+    strategy:
+      # Every part runs to the end, so one run shows every failure
+      fail-fast: false
+      matrix:
+        storage: [UTC, Europe/Madrid]
+        # 1 to TEST_PARTS (top of the file); the first step checks they agree
+        part: [1, 2]
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: guildforge
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: guildforge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U guildforge -d guildforge_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      # A part missing from the matrix would leave its tests unrun without failing anything
+      - name: Check the matrix against TEST_PARTS
+        working-directory: .
+        env:
+          JOBS: ${{ strategy.job-total }}
+        run: |
+          if [ "${JOBS}" -ne $((2 * TEST_PARTS)) ]; then
+            echo "::error::The matrix has ${JOBS} jobs; two storage zones of ${TEST_PARTS} parts need $((2 * TEST_PARTS))"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/php-dependencies
+
+      # The suite does not need the compiled assets (TestCase calls withoutVite()); the lint job
+      # builds them and checks the import map entries
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run migrations
+        run: php artisan migrate --force
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: guildforge_test
+          DB_USERNAME: guildforge
+          DB_PASSWORD: secret
+
+      - name: Select this part of the suite
+        env:
+          PART: ${{ matrix.part }}
+        run: php ../.github/scripts/phpunit-part.php "$PART" "$TEST_PARTS" phpunit.part.xml
+
+      # One process per core; Laravel creates a database per process (guildforge_test_test_1…),
+      # which the service's POSTGRES_USER may do as the image makes it a superuser
+      - name: Run tests
+        run: php artisan test --parallel --configuration=phpunit.part.xml
+        env:
+          APP_STORAGE_TIMEZONE_DEFAULT: ${{ matrix.storage }}
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: guildforge_test
+          DB_USERNAME: guildforge
+          DB_PASSWORD: secret
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+
+  # The required check: passes only when the quality job and every part of the suite passed.
+  # always() so a cancelled or failed part fails it instead of skipping it, since the ruleset
+  # counts a skipped check as passed; it is skipped only when the gate reuses an earlier result,
+  # as every other job then is
   test:
-    needs: gate
-    if: ${{ !cancelled() && needs.gate.outputs.reuse != 'true' }}
+    needs: [gate, quality, suite]
+    if: ${{ always() && needs.gate.outputs.reuse != 'true' }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src
-
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: guildforge
-          POSTGRES_PASSWORD: secret
-          POSTGRES_DB: guildforge_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U guildforge -d guildforge_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-      redis:
-        image: redis:7.2-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
 
     steps:
-      - uses: actions/checkout@v7
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5'
-          extensions: pdo_pgsql, redis, gd, zip, bcmath, intl
-          coverage: none
-
-      - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress
-
-      # Before Pint: Rector's output is not Pint-clean, so the order is Rector → Pint → PHPStan
-      - name: Rector
-        run: vendor/bin/rector process --dry-run --no-progress-bar
-
-      - name: PHP code style
-        run: vendor/bin/pint --test
-
-      - name: Static analysis
-        run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: src/package-lock.json
-
-      - name: Install NPM dependencies
-        run: npm ci
-
-      - name: Build assets
-        run: npm run build
-
-      - name: Verify module import map entries
-        run: npm run verify:build
-
-      - name: Prepare environment
+      - name: Check the quality job and the parts of the suite
+        env:
+          QUALITY: ${{ needs.quality.result }}
+          SUITE: ${{ needs.suite.result }}
         run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      - name: Run migrations
-        run: php artisan migrate --force
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: guildforge_test
-          DB_USERNAME: guildforge
-          DB_PASSWORD: secret
-
-      # One process per core; Laravel creates a database per process (guildforge_test_test_1…),
-      # which the service's POSTGRES_USER may do as the image makes it a superuser
-      - name: Run tests
-        run: php artisan test --parallel
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: guildforge_test
-          DB_USERNAME: guildforge
-          DB_PASSWORD: secret
-          REDIS_HOST: 127.0.0.1
-          REDIS_PORT: 6379
-
-  test-madrid:
-    name: test (Madrid storage)
-    needs: gate
-    if: ${{ !cancelled() && needs.gate.outputs.reuse != 'true' }}
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src
-
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: guildforge
-          POSTGRES_PASSWORD: secret
-          POSTGRES_DB: guildforge_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U guildforge -d guildforge_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-      redis:
-        image: redis:7.2-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5'
-          extensions: pdo_pgsql, redis, gd, zip, bcmath, intl
-          coverage: none
-
-      - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress
-
-      # The regular job stores in UTC, as fresh installs do; this one runs the same suite with
-      # instants stored in Europe/Madrid (sites not converted yet, and --reverse), in its own job
-      # so it runs in parallel with the regular one
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: src/package-lock.json
-
-      - name: Install NPM dependencies
-        run: npm ci
-
-      - name: Build assets
-        run: npm run build
-
-      - name: Verify module import map entries
-        run: npm run verify:build
-
-      - name: Prepare environment
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      - name: Run migrations
-        run: php artisan migrate --force
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: guildforge_test
-          DB_USERNAME: guildforge
-          DB_PASSWORD: secret
-
-      # One process per core; Laravel creates a database per process (guildforge_test_test_1…),
-      # which the service's POSTGRES_USER may do as the image makes it a superuser
-      - name: Run tests
-        run: php artisan test --parallel
-        env:
-          APP_STORAGE_TIMEZONE_DEFAULT: Europe/Madrid
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: guildforge_test
-          DB_USERNAME: guildforge
-          DB_PASSWORD: secret
-          REDIS_HOST: 127.0.0.1
-          REDIS_PORT: 6379
+          echo "quality: ${QUALITY}, suite: ${SUITE}"
+          if [ "${QUALITY}" != "success" ] || [ "${SUITE}" != "success" ]; then
+            echo "::error::The quality job or a part of the suite did not pass"
+            exit 1
+          fi
 
   lint:
     needs: gate
@@ -369,15 +315,10 @@ jobs:
           tar -xzf "$RUNNER_TEMP/$ARCHIVE" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -color
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: src/package-lock.json
+      - uses: ./.github/actions/node-dependencies
 
-      - name: Install dependencies
-        run: npm ci
+      # The build reads Filament's CSS and Laravel's pagination views from vendor/
+      - uses: ./.github/actions/php-dependencies
 
       - name: TypeScript check
         run: npm run type-check
@@ -393,3 +334,10 @@ jobs:
 
       - name: Vitest
         run: npm run test:unit
+
+      # Once per run, here rather than in every part of the suite, which does not need it
+      - name: Build assets
+        run: npm run build
+
+      - name: Verify module import map entries
+        run: npm run verify:build

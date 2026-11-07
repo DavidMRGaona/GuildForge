@@ -1,0 +1,41 @@
+name: CI caches
+
+# Fills the caches CI restores. A pull request only sees the caches of its own runs and those
+# of main, and CI on main usually reuses the result of the pull request (gate job) and runs
+# nothing, so without this every pull request would start with empty caches. A workflow of its
+# own: Deploy waits for CI to finish, not for this. A failure here only leaves caches unsaved.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-caches
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/php-dependencies
+
+      - uses: ./.github/actions/php-quality
+
+  node:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/node-dependencies

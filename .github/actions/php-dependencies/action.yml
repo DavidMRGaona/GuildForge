@@ -1,0 +1,32 @@
+name: PHP dependencies
+description: PHP 8.5 with the core's extensions and the core's Composer dependencies, downloads cached
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.5'
+        extensions: pdo_pgsql, redis, gd, zip, bcmath, intl
+        coverage: none
+
+    - name: Get Composer cache directory
+      id: composer-cache
+      shell: bash
+      working-directory: src
+      run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+    # Only the downloaded archives: composer install still installs exactly composer.lock, so an
+    # older cache only means more downloads
+    - name: Cache Composer downloads
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-php8.5-composer-${{ hashFiles('src/composer.lock') }}
+        restore-keys: ${{ runner.os }}-php8.5-composer-
+
+    - name: Install Composer dependencies
+      shell: bash
+      working-directory: src
+      run: composer install --prefer-dist --no-progress --no-interaction
