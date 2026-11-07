@@ -3,19 +3,25 @@
 declare(strict_types=1);
 
 /*
- * Writes a PHPUnit configuration that runs one part of the suite, so CI can run the parts on
+ * Writes a PHPUnit configuration that runs one part of a suite, so CI can run the parts on
  * separate machines at the same time.
  *
  * Usage, from the host's src/ directory:
- *   php ../.github/scripts/phpunit-part.php <part> <parts> <output.xml>
+ *   php ../.github/scripts/phpunit-part.php [--configuration=<phpunit.xml>] [--allow-empty] <part> <parts> <output.xml>
  *
- * The test files are the ones PHPUnit itself finds with phpunit.xml (--list-test-files), so a new
- * test directory or suite is picked up without touching this script. They are sorted by path and
- * dealt out in turn: every part gets about as many files of each directory, and the same files
- * land in the same part on every machine. The output is phpunit.xml with its test suites replaced
- * by one suite listing that part's files; it is written next to phpunit.xml, whose paths are
- * relative to it. ../.github/scripts/check-phpunit-parts.sh checks that the parts together run
- * every test exactly once.
+ * The configuration is the core's phpunit.xml by default, or a module's
+ * (--configuration=modules/<name>/phpunit.xml, run with the host's vendor/ like the suite itself).
+ * The test files are the ones PHPUnit itself finds with that configuration (--list-test-files), so
+ * a new test directory or suite is picked up without touching this script. They are sorted by path
+ * and dealt out in turn: every part gets about as many files of each directory, and the same files
+ * land in the same part on every machine. The output is the configuration with its test suites
+ * replaced by one suite listing that part's files; it is written next to the configuration, whose
+ * paths are relative to it. ../.github/scripts/check-phpunit-parts.sh checks that the parts
+ * together run every test exactly once.
+ *
+ * A part gets no files only when there are fewer files than parts. That is an error unless
+ * --allow-empty is given (modules, some of which have only a few test files): the part then writes
+ * no output, and removes an output left by an earlier run, so the caller runs nothing.
  */
 
 function fail(string $message): never
@@ -24,11 +30,26 @@ function fail(string $message): never
     exit(1);
 }
 
-$arguments = array_values(array_filter((array) ($_SERVER['argv'] ?? []), is_string(...)));
-if (count($arguments) !== 4) {
-    fail('Usage: php ../.github/scripts/phpunit-part.php <part> <parts> <output.xml>');
+const USAGE = 'Usage: php ../.github/scripts/phpunit-part.php [--configuration=<phpunit.xml>] [--allow-empty] <part> <parts> <output.xml>';
+
+$configuration = 'phpunit.xml';
+$allowEmpty = false;
+$positional = [];
+foreach (array_slice(array_values(array_filter((array) ($_SERVER['argv'] ?? []), is_string(...))), 1) as $argument) {
+    if (str_starts_with($argument, '--configuration=')) {
+        $configuration = substr($argument, strlen('--configuration='));
+    } elseif ($argument === '--allow-empty') {
+        $allowEmpty = true;
+    } elseif (str_starts_with($argument, '--')) {
+        fail("Unknown option '{$argument}'. ".USAGE);
+    } else {
+        $positional[] = $argument;
+    }
 }
-[, $partArgument, $partsArgument, $output] = $arguments;
+if (count($positional) !== 3) {
+    fail(USAGE);
+}
+[$partArgument, $partsArgument, $output] = $positional;
 
 $part = filter_var($partArgument, FILTER_VALIDATE_INT);
 $parts = filter_var($partsArgument, FILTER_VALIDATE_INT);
@@ -37,19 +58,31 @@ if ($parts === false || $parts < 1 || $part === false || $part < 1 || $part > $p
     fail("Invalid part '{$partArgument}' of '{$partsArgument}': it must be a number from 1 to the number of parts");
 }
 
-// A bare file name: the copy must sit next to phpunit.xml, and must never replace it
+// The core's phpunit.xml or a module's, as a relative path without any way out of src/
+if (preg_match('#^(modules/[a-z0-9-]+/)?phpunit\.xml$#', $configuration) !== 1) {
+    fail("Invalid configuration '{$configuration}': it must be phpunit.xml or modules/<name>/phpunit.xml");
+}
+
+// A bare file name: the copy must sit next to the configuration, and must never replace it
 if (preg_match('/^[A-Za-z0-9._-]+\.xml$/', $output) !== 1 || $output === 'phpunit.xml' || $output === 'phpunit.xml.dist') {
     fail("Invalid output '{$output}': it must be a file name ending in .xml, other than phpunit.xml");
 }
 
 $root = getcwd();
-if ($root === false || ! is_file($root.'/phpunit.xml') || ! is_file($root.'/vendor/bin/phpunit')) {
-    fail('Run it from the directory that holds phpunit.xml and vendor/, with the Composer dependencies installed');
+if ($root === false || ! is_file($root.'/'.$configuration) || ! is_file($root.'/vendor/bin/phpunit')) {
+    fail("Run it from the directory that holds vendor/, with the Composer dependencies installed and {$configuration} in place");
 }
+
+// The directory the configuration's paths are relative to, as PHPUnit prints the files under it
+$base = realpath(dirname($root.'/'.$configuration));
+if ($base === false) {
+    fail("Could not resolve the directory of {$configuration}");
+}
+$target = $base.'/'.$output;
 
 // Xdebug in develop mode makes PHPUnit stop with a warning before listing anything
 $process = proc_open(
-    [PHP_BINARY, 'vendor/bin/phpunit', '--configuration=phpunit.xml', '--list-test-files'],
+    [PHP_BINARY, 'vendor/bin/phpunit', '--configuration='.$configuration, '--list-test-files'],
     [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
     $pipes,
     $root,
@@ -74,15 +107,16 @@ foreach (explode("\n", $listing) as $line) {
         continue;
     }
     $path = substr($line, 3);
-    if (! str_starts_with($path, $root.'/')) {
-        fail("PHPUnit listed a test file outside {$root}: {$path}");
+    $real = realpath($path);
+    if ($real === false || ! str_starts_with($real, $base.'/')) {
+        fail("PHPUnit listed a test file outside {$base}: {$path}");
     }
-    $files[] = substr($path, strlen($root) + 1);
+    $files[] = substr($real, strlen($base) + 1);
 }
 
 $files = array_values(array_unique($files));
 if ($files === []) {
-    fail('PHPUnit listed no test files');
+    fail("PHPUnit listed no test files with {$configuration}");
 }
 sort($files, SORT_STRING);
 
@@ -93,20 +127,27 @@ foreach ($files as $index => $file) {
     }
 }
 if ($selected === []) {
-    fail("Part {$part} of {$parts} has no test files: there are only ".count($files));
+    if (! $allowEmpty) {
+        fail("Part {$part} of {$parts} has no test files: there are only ".count($files));
+    }
+    if (file_exists($target) && ! unlink($target)) {
+        fail("Could not remove the {$output} of an earlier run");
+    }
+    echo "Part {$part} of {$parts} has no test files: there are only ".count($files).", so it runs nothing\n";
+    exit(0);
 }
 
 $config = new DOMDocument;
 $config->preserveWhiteSpace = false;
 $config->formatOutput = true;
-if (! $config->load($root.'/phpunit.xml')) {
-    fail('Could not read phpunit.xml');
+if (! $config->load($root.'/'.$configuration)) {
+    fail("Could not read {$configuration}");
 }
 
 $suitesList = $config->getElementsByTagName('testsuites');
 $suites = $suitesList->item(0);
 if ($suitesList->length !== 1 || $suites === null) {
-    fail("phpunit.xml must have exactly one <testsuites> element, it has {$suitesList->length}");
+    fail("{$configuration} must have exactly one <testsuites> element, it has {$suitesList->length}");
 }
 while ($suites->firstChild !== null) {
     $suites->removeChild($suites->firstChild);
@@ -121,8 +162,8 @@ foreach ($selected as $file) {
 }
 $suites->appendChild($suite);
 
-if ($config->save($root.'/'.$output) === false) {
+if ($config->save($target) === false) {
     fail("Could not write {$output}");
 }
 
-echo "Part {$part} of {$parts}: ".count($selected).' of '.count($files)." test files, in {$output}\n";
+echo "Part {$part} of {$parts}: ".count($selected).' of '.count($files).' test files, in '.dirname($configuration).'/'."{$output}\n";
