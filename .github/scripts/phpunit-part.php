@@ -24,16 +24,17 @@ function fail(string $message): never
     exit(1);
 }
 
-if ($argc !== 4) {
+$arguments = array_values(array_filter((array) ($_SERVER['argv'] ?? []), is_string(...)));
+if (count($arguments) !== 4) {
     fail('Usage: php ../.github/scripts/phpunit-part.php <part> <parts> <output.xml>');
 }
+[, $partArgument, $partsArgument, $output] = $arguments;
 
-$part = filter_var($argv[1], FILTER_VALIDATE_INT);
-$parts = filter_var($argv[2], FILTER_VALIDATE_INT);
-$output = $argv[3];
+$part = filter_var($partArgument, FILTER_VALIDATE_INT);
+$parts = filter_var($partsArgument, FILTER_VALIDATE_INT);
 
 if ($parts === false || $parts < 1 || $part === false || $part < 1 || $part > $parts) {
-    fail("Invalid part '{$argv[1]}' of '{$argv[2]}': it must be a number from 1 to the number of parts");
+    fail("Invalid part '{$partArgument}' of '{$partsArgument}': it must be a number from 1 to the number of parts");
 }
 
 // A bare file name: the copy must sit next to phpunit.xml, and must never replace it
@@ -103,10 +104,10 @@ if (! $config->load($root.'/phpunit.xml')) {
 }
 
 $suitesList = $config->getElementsByTagName('testsuites');
-if ($suitesList->length !== 1) {
+$suites = $suitesList->item(0);
+if ($suitesList->length !== 1 || $suites === null) {
     fail("phpunit.xml must have exactly one <testsuites> element, it has {$suitesList->length}");
 }
-$suites = $suitesList->item(0);
 while ($suites->firstChild !== null) {
     $suites->removeChild($suites->firstChild);
 }
