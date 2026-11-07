@@ -317,6 +317,9 @@ jobs:
 
       - uses: ./.github/actions/node-dependencies
 
+      # The build reads Filament's CSS and Laravel's pagination views from vendor/
+      - uses: ./.github/actions/php-dependencies
+
       - name: TypeScript check
         run: npm run type-check
 
