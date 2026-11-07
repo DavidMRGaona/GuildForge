@@ -5,6 +5,8 @@ name: Reusable module tests
 # `make check MODULE=<name>`). Called by each module's tests.yml on every pull request and
 # by reusable-module-release.yml before a release. A pull request that only bumps the version
 # in module.json skips both (gate job), since the tag runs the tests before publishing.
+# The suite runs in TEST_PARTS parts on as many machines (part job); the required check
+# test / Test module is the job that passes only when all of them pass.
 
 on:
   workflow_call:
@@ -31,6 +33,11 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # Parts a module's suite is split into, one machine each (part job); the host job turns it into
+  # the matrix
+  TEST_PARTS: 4
 
 jobs:
   # A release pull request only bumps the version in module.json, and the tag runs the tests
@@ -86,14 +93,71 @@ jobs:
             echo "Tests run: ${reason}" | tee -a "${GITHUB_STEP_SUMMARY}"
           fi
 
-  test:
-    name: Test module
+  # The host commit every part tests against, resolved once: host_ref may be a branch that moves
+  # while the parts start, and parts on different commits could split the suite differently. It
+  # also tells whether that commit splits the suite: a host_ref older than the split (core#355)
+  # has neither phpunit-part.php for modules nor run-module-tests.sh with <part> <parts>, so the
+  # suite then runs whole in a single job
+  host:
+    name: Host
     needs: gate
     if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      split: ${{ steps.resolve.outputs.split }}
+      parts: ${{ steps.resolve.outputs.parts }}
+      count: ${{ steps.resolve.outputs.count }}
+
+    steps:
+      - name: Checkout host scripts
+        uses: actions/checkout@v7
+        with:
+          repository: DavidMRGaona/GuildForge
+          ref: ${{ inputs.host_ref }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Resolve the host commit and how the suite runs
+        id: resolve
+        run: |
+          sha="$(git rev-parse HEAD)"
+          if [ -f .github/scripts/phpunit-part.php ] \
+            && grep -qF 'run-module-tests.sh <module-name> [<part> <parts>]' .github/scripts/run-module-tests.sh; then
+            split=true
+            parts="$(jq -cn --argjson n "${TEST_PARTS}" '[range(1; $n + 1)]')"
+            count="${TEST_PARTS}"
+            echo "Host ${sha}: the suite runs in ${TEST_PARTS} parts" | tee -a "${GITHUB_STEP_SUMMARY}"
+          else
+            split=false
+            parts='[1]'
+            count=1
+            echo "::notice::Host ${sha} does not split module suites: it runs whole in one job"
+            echo "Host ${sha}: the suite runs whole in one job, as this host_ref does not split it" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          {
+            echo "sha=${sha}"
+            echo "split=${split}"
+            echo "parts=${parts}"
+            echo "count=${count}"
+          } >> "${GITHUB_OUTPUT}"
+
+  # The suite in TEST_PARTS parts on as many machines, each part with one process per core
+  part:
+    name: ${{ needs.host.outputs.split == 'true' && format('Tests (part {0} of {1})', matrix.part, needs.host.outputs.count) || 'Tests (whole suite)' }}
+    needs: [gate, host]
+    if: ${{ !cancelled() && needs.gate.outputs.skip != 'true' && needs.host.result == 'success' }}
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: src
+
+    strategy:
+      # Every part runs to the end, so one run shows every failure
+      fail-fast: false
+      matrix:
+        part: ${{ fromJSON(needs.host.outputs.parts) }}
 
     # The sites run on PostgreSQL, so the suite does too, as the core's: SQLite stores dates
     # as text and takes any value in a UUID column, which hides failures. Cache, queue and
@@ -114,11 +178,23 @@ jobs:
           --health-retries=5
 
     steps:
+      # A part missing from the matrix would leave its tests unrun without failing anything
+      - name: Check the matrix against the parts
+        working-directory: .
+        env:
+          JOBS: ${{ strategy.job-total }}
+          COUNT: ${{ needs.host.outputs.count }}
+        run: |
+          if [ "${JOBS}" -ne "${COUNT}" ]; then
+            echo "::error::The matrix has ${JOBS} jobs, but the suite runs in ${COUNT}"
+            exit 1
+          fi
+
       - name: Checkout host application
         uses: actions/checkout@v7
         with:
           repository: DavidMRGaona/GuildForge
-          ref: ${{ inputs.host_ref }}
+          ref: ${{ needs.host.outputs.sha }}
           persist-credentials: false
 
       - name: Setup PHP
@@ -171,13 +247,42 @@ jobs:
       - name: Run module tests
         env:
           MODULE_NAME: ${{ inputs.module_name }}
+          SPLIT: ${{ needs.host.outputs.split }}
+          PART: ${{ matrix.part }}
           DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
           DB_DATABASE: guildforge_test
           DB_USERNAME: guildforge
           DB_PASSWORD: secret
-        run: sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME"
+        run: |
+          if [ "${SPLIT}" = true ]; then
+            sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME" "$PART" "$TEST_PARTS"
+          else
+            sh ../.github/scripts/run-module-tests.sh "$MODULE_NAME"
+          fi
+
+  # The required check, test / Test module: passes only when every part of the suite passed.
+  # always() so a cancelled or failed part fails it instead of skipping it, since the ruleset
+  # counts a skipped check as passed; it is skipped only when the gate skips the tests, as every
+  # other job then is
+  test:
+    name: Test module
+    needs: [gate, host, part]
+    if: ${{ always() && needs.gate.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check the parts of the suite
+        env:
+          HOST: ${{ needs.host.result }}
+          PART: ${{ needs.part.result }}
+        run: |
+          echo "host: ${HOST}, parts: ${PART}"
+          if [ "${HOST}" != "success" ] || [ "${PART}" != "success" ]; then
+            echo "::error::A part of the suite did not pass"
+            exit 1
+          fi
 
   quality:
     name: Quality
