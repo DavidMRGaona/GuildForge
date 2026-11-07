@@ -6,6 +6,7 @@ namespace App\Modules;
 
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
+use App\Application\Calendar\Services\CalendarAttendanceSourceRegistryInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
@@ -94,6 +95,9 @@ final class ModuleLoader
 
         // Register calendar sources from the provider
         $this->registerProviderCalendarSources($provider, $module->name()->value);
+
+        // Register calendar attendance sources from the provider
+        $this->registerProviderCalendarAttendanceSources($provider, $module->name()->value);
 
         // Register indexed search sources from the provider
         $this->registerProviderSearchSources($provider, $module->name()->value);
@@ -200,6 +204,22 @@ final class ModuleLoader
         if ($this->app->bound(CalendarSourceRegistryInterface::class)) {
             $sourceRegistry = $this->app->make(CalendarSourceRegistryInterface::class);
             $sourceRegistry->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register calendar attendance sources from a module provider.
+     */
+    private function registerProviderCalendarAttendanceSources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerCalendarAttendanceSources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(CalendarAttendanceSourceRegistryInterface::class)) {
+            $this->app->make(CalendarAttendanceSourceRegistryInterface::class)->registerMany($sources, $moduleName);
         }
     }
 

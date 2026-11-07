@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
+use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
 use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
+use App\Application\Services\TimezoneServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
@@ -24,6 +27,9 @@ final class ProfileController extends Controller
         private readonly AuthServiceInterface $authService,
         private readonly ResponseDTOFactoryInterface $dtoFactory,
         private readonly SeoMetadataFactoryInterface $seo,
+        private readonly PersonalCalendarServiceInterface $personalCalendar,
+        private readonly CalendarFeedTokenServiceInterface $calendarFeedTokens,
+        private readonly TimezoneServiceInterface $timezone,
     ) {}
 
     public function show(Request $request): Response
@@ -37,6 +43,11 @@ final class ProfileController extends Controller
                 title: (string) __('seo.titles.profile'),
                 noindex: true,
             ))->toArray(),
+            // Whether the address exists, never the address itself (only its hash is stored)
+            'calendarFeed' => [
+                'available' => $this->personalCalendar->isAvailable(),
+                'issuedAt' => $this->timezone->iso($this->calendarFeedTokens->issuedAt((string) $user->id)),
+            ],
         ]);
     }
 

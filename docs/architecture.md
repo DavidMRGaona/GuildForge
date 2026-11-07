@@ -259,6 +259,11 @@ Contracts that define application layer operations:
 - `CalendarAggregatorServiceInterface` - Merges the entries of every calendar source
 - `CalendarSourceRegistryInterface` - Registered sources (core events plus module sources)
 - `CalendarEntrySourceInterface` - Contract a source implements to return `CalendarEntryDTO`s; `details` is merged into the JSON and the detail panel renders `description`, `location`, `imagePublicId`, `tags` and the translated `meta` rows (`icon`, `label`, `value`) generically
+- `CalendarEntryLookupInterface` - Optional companion of a source: finds one entry by id (`.ics` download, add-to-calendar links)
+- `CalendarAttendanceSourceInterface` - Contract a module implements to say which entries a person is confirmed in or runs (`CalendarEntryReferenceDTO`: source type and id); `CalendarAttendanceSourceRegistryInterface` keeps them
+- `PersonalCalendarServiceInterface` - A person's own entries: the attendance references, kept only when the public calendar shows them in the range (filter `?mine=1` and personal feed)
+- `CalendarFeedTokenServiceInterface` - Secret tokens of the personal calendar feeds (one per account, only a SHA-256 hash stored)
+- `ICalendarWriterInterface`, `AddToCalendarLinksFactoryInterface` - iCalendar documents (a named one is a subscription feed) and add-to-calendar links
 
 **Content** (`Application/Content/`):
 - `TrixHtmlConverterInterface` - Converts rich text written with the old Trix editor to TipTap HTML
@@ -322,6 +327,8 @@ In `Infrastructure/Persistence/Eloquent/Concerns/`:
 
 - **`Seo/SeoMetadataFactory`** - Builds `SeoMetadata` (title, description, canonical URL, Open Graph, JSON-LD) for each page
 - **`Calendar/CalendarAggregatorService`** - Merges `EventCalendarSource` (core events) with module sources for `/eventos/calendario`
+- **`Calendar/PersonalCalendarService`** - Intersects the attendance sources' references with the public calendar of the same range; failing sources are logged and skipped
+- **`Calendar/Feed/EloquentCalendarFeedTokenService`** - Personal calendar feed tokens (`calendar_feed_tokens`)
 - **`Content/TrixHtmlConverter`** - Trix to TipTap HTML conversion
 - **`Modules/Services/*`** - Module manager, loader support, compatibility (`ModuleCompatibilityService`, `EnabledModulesResolver`, `HostEnvironmentProvider`), ZIP installer, registries
 - **`Updates/Services/*`** and **`Updates/Jobs/*`** - Update checks, `ModuleUpdater`, `UpdateModuleJob`, `CheckModuleUpdatesJob` (see [Compatibility and updates](#compatibility-and-updates))
@@ -343,6 +350,8 @@ Controllers that receive HTTP requests and return Inertia responses:
 - `ArticleController` - Article listing and detail
 - `GalleryController` - Gallery listing and detail
 - `CalendarPageController` - Calendar page
+- `CalendarEntryICalendarController`, `PersonalCalendarFeedController` - One entry as `.ics`; the private personal calendar feed (`/calendario/personal/{token}.ics`)
+- `Auth\CalendarFeedTokenController` - Issues and revokes the personal calendar address from the profile
 - `ContactController` - Contact form
 - `LegalPageController` - Legal pages
 - `SearchController` - Global search
@@ -473,6 +482,7 @@ src/modules/
 | `registerPagePrefixes()` | `PagePrefixDTO[]` | Page prefixes for Inertia resolution; `usesCoreLayout: true` (core ≥ 3.16) renders the core's persistent layout around their pages |
 | `registerRoutes()` | `ModuleRouteDTO[]` | Public pages offered in the menu editor (`MenuItemResource`) |
 | `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Entries for the public calendars (`/calendario` and the home widget, through `/eventos/calendario`) |
+| `registerCalendarAttendanceSources()` | `class-string<CalendarAttendanceSourceInterface>[]` | Which entries each person takes part in, for the personal calendar (see `docs/modules/calendar.md`) |
 | `registerPolicies()` | `array<model, policy>` | Authorization policies |
 | `registerNavigationGroups()` | `array<label, options>` | Filament navigation groups |
 | `registerFilamentPages()` | `Page[]` | Filament pages |
@@ -567,7 +577,8 @@ Laravel's service container manages all dependencies. Bindings are defined in th
 - `SeoMetadataFactoryInterface` -> `SeoMetadataFactory`, with `CloudinaryImageUrlBuilder`, `SeoDescriptionBuilder` and `StructuredDataBuilder`
 
 **Calendar and content** (`singleton`):
-- `CalendarSourceRegistryInterface`, `CalendarAggregatorServiceInterface`
+- `CalendarSourceRegistryInterface`, `CalendarAggregatorServiceInterface`, `CalendarAttendanceSourceRegistryInterface`
+- `PersonalCalendarServiceInterface`, `CalendarFeedTokenServiceInterface`, `ICalendarWriterInterface` (`bind`)
 - `TrixHtmlConverterInterface`, `TrixContentMigratorInterface`
 
 **Mail system** (mix of `singleton` and `bind`):

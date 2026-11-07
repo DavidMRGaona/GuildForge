@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules;
 
+use App\Application\Calendar\Contracts\CalendarAttendanceSourceInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Knowledge\Contracts\KnowledgeCapabilityInterface;
 use App\Application\Modules\DTOs\ModuleRouteDTO;
@@ -259,6 +260,18 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<CalendarEntrySourceInterface>>
      */
     public function registerCalendarSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register calendar attendance sources provided by this module.
+     * Tell the core which public calendar entries each person takes part in, for their
+     * personal calendar ("only mine" filter and subscription feed).
+     *
+     * @return array<class-string<CalendarAttendanceSourceInterface>>
+     */
+    public function registerCalendarAttendanceSources(): array
     {
         return [];
     }

@@ -28,7 +28,17 @@ final class CalendarRequest extends FormRequest
         return [
             'start' => ['required', 'date'],
             'end' => ['required', 'date'],
+            // Only the entries the signed-in person takes part in (personal calendar)
+            'mine' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /**
+     * Whether only the signed-in person's own entries were asked for.
+     */
+    public function onlyMine(): bool
+    {
+        return $this->boolean('mine');
     }
 
     /**

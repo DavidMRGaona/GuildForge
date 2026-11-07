@@ -33,6 +33,8 @@ Knowledge base guides for a module's features are covered in [Writing knowledge 
 
 Making a module's records searchable from the site search is covered in [Search sources](./search-sources.md).
 
+Putting a module's entries in the public calendar and in each person's personal calendar is covered in [Calendar sources and the personal calendar](./calendar.md).
+
 ---
 
 ## Getting started
@@ -453,7 +455,7 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
 
 Register dynamic relationships on core models in `register()`, not `boot()` (see [Extending core functionality](#extending-core-functionality)).
 
-The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerKnowledgeCapabilities()` and `registerNavigation()`. The panel reads `registerNavigationGroups()`, `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
+The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerKnowledgeCapabilities()` and `registerNavigation()`. The panel reads `registerNavigationGroups()`, `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
 
 `onEnable()` and `onDisable()` are declared on the base class, but the core never calls them: set up data in migrations and seeders, which run when the module is first enabled.
 
@@ -2189,7 +2191,8 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerRoutes()` | `ModuleRouteDTO[]` | Public pages offered in the menu editor |
 | `registerPagePrefixes()` | `PagePrefixDTO[]` | Inertia page prefixes of the module |
 | `registerSlots()` | `SlotRegistrationDTO[]` | Slot component registrations |
-| `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Sources of public calendar entries; fill `details` with `description`, `location`, `imagePublicId` and `meta` rows (`icon`, `label`, `value`, translated) so the detail panel is as complete as an event's |
+| `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Sources of public calendar entries; fill `details` with `description`, `location`, `imagePublicId` and `meta` rows (`icon`, `label`, `value`, translated) so the detail panel is as complete as an event's (see [Calendar sources](./calendar.md)) |
+| `registerCalendarAttendanceSources()` | `class-string<CalendarAttendanceSourceInterface>[]` | Which public calendar entries each person is confirmed in or runs, for their personal calendar; core ≥ 3.38 (see [Calendar sources](./calendar.md#the-personal-calendar)) |
 | `registerSearchSources()` | `class-string<IndexedSearchSourceInterface>[]` | Indexed sources of the site search; types prefixed with the module (see [Search sources](./search-sources.md)) |
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |

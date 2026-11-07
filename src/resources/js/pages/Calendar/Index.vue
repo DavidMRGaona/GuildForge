@@ -1,13 +1,23 @@
 <script setup lang="ts">
 import { X } from '@lucide/vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CalendarEntry } from '@/types/models';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel.vue';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
+import FormToggle from '@/components/form/FormToggle.vue';
 import { extractLegend, type CalendarLegendItem } from '@/utils/calendarEntries';
 import { useMediaQuery } from '@/composables/useMediaQuery';
+
+interface Props {
+    /** Whether to offer the "only mine" filter (signed in, with some module that tells attendance). */
+    personalCalendar?: boolean;
+}
+
+withDefaults(defineProps<Props>(), {
+    personalCalendar: false,
+});
 
 const { t } = useI18n();
 const isMobile = useMediaQuery('(max-width: 1023px)');
@@ -16,9 +26,12 @@ const selectedEvent = ref<CalendarEntry | null>(null);
 const showMobileModal = ref(false);
 const hasSetDefaultEvent = ref(false);
 const legend = ref<CalendarLegendItem[]>([]);
+const onlyMine = ref(false);
+const showOnlyMineEmpty = ref(false);
 
 const handleEventsLoaded = (events: CalendarEntry[]): void => {
     legend.value = extractLegend(events);
+    showOnlyMineEmpty.value = onlyMine.value && events.length === 0;
 
     // Only set default once (first load)
     if (hasSetDefaultEvent.value || events.length === 0) {
@@ -48,6 +61,12 @@ const handleEventsLoaded = (events: CalendarEntry[]): void => {
     hasSetDefaultEvent.value = true;
 };
 
+// The other entries are gone: pick the next one of the new set as on the first load
+watch(onlyMine, () => {
+    selectedEvent.value = null;
+    hasSetDefaultEvent.value = false;
+});
+
 const handleEventSelect = (event: CalendarEntry): void => {
     selectedEvent.value = event;
 
@@ -65,12 +84,36 @@ const closeMobileModal = (): void => {
 <template>
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <!-- Page header -->
-        <div class="mb-8 flex items-center gap-3">
-            <h1 class="text-3xl font-bold tracking-tight text-base-primary">
-                {{ t('calendar.title') }}
-            </h1>
-            <HelpLink guide="core.events.find-events" />
+        <div class="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-bold tracking-tight text-base-primary">
+                    {{ t('calendar.title') }}
+                </h1>
+                <HelpLink guide="core.events.find-events" />
+            </div>
+
+            <div v-if="personalCalendar" class="max-w-sm">
+                <div class="flex items-center gap-2">
+                    <FormToggle
+                        id="calendar-only-mine"
+                        v-model="onlyMine"
+                        :label="t('calendar.onlyMine')"
+                    />
+                    <HelpLink guide="core.events.personal-calendar" />
+                </div>
+                <p class="mt-1 text-xs text-base-muted">
+                    {{ t('calendar.onlyMineHint') }}
+                </p>
+            </div>
         </div>
+
+        <p
+            v-if="showOnlyMineEmpty"
+            role="status"
+            class="mb-4 rounded-lg bg-muted p-4 text-sm text-base-secondary"
+        >
+            {{ t('calendar.onlyMineEmpty') }}
+        </p>
 
         <!-- Desktop layout: Calendar + Side panel -->
         <div class="hidden lg:grid lg:grid-cols-3 lg:gap-8">
@@ -78,6 +121,7 @@ const closeMobileModal = (): void => {
             <div class="lg:col-span-2">
                 <EventCalendar
                     show-tooltips
+                    :only-mine="onlyMine"
                     :navigate-on-click="false"
                     @event-select="handleEventSelect"
                     @events-loaded="handleEventsLoaded"
@@ -114,6 +158,7 @@ const closeMobileModal = (): void => {
         <!-- Mobile layout: Calendar only -->
         <div class="lg:hidden">
             <EventCalendar
+                :only-mine="onlyMine"
                 :navigate-on-click="false"
                 @event-select="handleEventSelect"
                 @events-loaded="handleEventsLoaded"

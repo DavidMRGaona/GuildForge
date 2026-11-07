@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\Auth\CalendarFeedTokenController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Knowledge\KnowledgeFeedbackController;
 use App\Http\Controllers\Knowledge\KnowledgeSearchController;
 use App\Http\Controllers\Knowledge\KnowledgeVisibleGuidesController;
 use App\Http\Controllers\LegalPageController;
+use App\Http\Controllers\PersonalCalendarFeedController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SearchSuggestionsController;
 use App\Http\Controllers\SitemapController;
@@ -31,6 +33,11 @@ Route::get('/', HomeController::class)->name('home');
 Route::get('/nosotros', AboutController::class)->name('about');
 Route::post('/contacto', ContactController::class)->middleware('throttle:contact')->name('contact.store');
 Route::get('/calendario', CalendarPageController::class)->name('calendar');
+// Before /calendario/{source}/{id}.ics, whose pattern would swallow it
+Route::get('/calendario/personal/{token}.ics', PersonalCalendarFeedController::class)
+    ->where('token', '[A-Za-z0-9_-]{43}')
+    ->middleware('throttle:calendar-feed')
+    ->name('calendar.personal.ics');
 Route::get('/calendario/{source}/{id}.ics', CalendarEntryICalendarController::class)
     ->where(['source' => '[a-z0-9-]+', 'id' => '[A-Za-z0-9_-]+'])
     ->name('calendar.entry.ics');
@@ -103,6 +110,13 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:6,1,profile')
         ->name('profile.update');
     Route::put('/perfil/contrasena', [ProfileController::class, 'changePassword'])->name('profile.password');
+    // Personal calendar address: issued (or regenerated) and revoked from the profile
+    Route::post('/perfil/calendario', [CalendarFeedTokenController::class, 'store'])
+        ->middleware('throttle:6,1,calendar-feed-token')
+        ->name('profile.calendar-feed.store');
+    Route::delete('/perfil/calendario', [CalendarFeedTokenController::class, 'destroy'])
+        ->middleware('throttle:6,1,calendar-feed-token')
+        ->name('profile.calendar-feed.destroy');
 
     // Help centre. Literal routes go before /ayuda/{guide}, whose pattern would swallow them
     Route::get('/ayuda', [KnowledgeController::class, 'index'])->name('knowledge.index');

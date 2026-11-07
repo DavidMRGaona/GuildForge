@@ -6,6 +6,7 @@ namespace App\Infrastructure\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
+use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
@@ -25,6 +26,7 @@ final readonly class UserService implements UserServiceInterface
         private AuthorizationServiceInterface $authService,
         private SettingsServiceInterface $settingsService,
         private RoleAuditLoggerInterface $audit,
+        private CalendarFeedTokenServiceInterface $calendarFeedTokens,
     ) {}
 
     public function canAccessPanel(string $userId): bool
@@ -48,10 +50,12 @@ final readonly class UserService implements UserServiceInterface
 
         $anonymousName = $this->settingsService->get('anonymized_user_name', 'Anónimo');
 
-        DB::transaction(function () use ($userModel, $anonymousName): void {
+        DB::transaction(function () use ($userModel, $userId, $anonymousName): void {
             // Before the update: DeletesCloudinaryImages deletes the old avatar right away, so a
             // failed history write must stop the anonymization while the image still exists
             $this->removeEveryRole($userModel);
+            // The personal calendar address would still tell what the person attends
+            $this->calendarFeedTokens->revoke($userId);
 
             $userModel->update([
                 'name' => $anonymousName,
@@ -103,6 +107,8 @@ final readonly class UserService implements UserServiceInterface
             // Before the update: DeletesCloudinaryImages deletes the old avatar right away, so a
             // failed history write must stop the anonymization while the image still exists
             $this->removeEveryRole($userModel);
+            // The personal calendar address would still tell what the person attends
+            $this->calendarFeedTokens->revoke($dto->userId);
 
             $userModel->update([
                 'name' => $anonymousName,
