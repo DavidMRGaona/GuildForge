@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Calendar, ChevronLeft, Clock, Download, MapPin, Ticket } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { AddToCalendarLinks, Event } from '@/types/models';
@@ -13,6 +13,7 @@ import { useTags } from '@/composables/useTags';
 import { useRoutes } from '@/composables/useRoutes';
 import { buildHeroImageUrl } from '@/utils/cloudinary';
 import ModuleSlot from '@/components/layout/ModuleSlot.vue';
+import { useFitsViewportHeight } from '@/composables/useFitsViewportHeight';
 
 interface Props {
     event: Event;
@@ -28,10 +29,15 @@ const routes = useRoutes();
 const heroImageUrl = computed(() => buildHeroImageUrl(props.event.imagePublicId));
 
 const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.event.tags));
+
+// The side column sticks 1.5rem below the top of the window: it needs that room above and below
+const STICKY_MARGIN_PX = 48;
+const aside = useTemplateRef<HTMLElement>('aside');
+const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
 </script>
 
 <template>
-    <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:max-w-6xl lg:px-8">
         <div class="mb-6">
             <Link
                 :href="routes.events.index"
@@ -42,7 +48,8 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
             </Link>
         </div>
 
-        <article class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-neutral-900/50">
+        <!-- overflow-clip, not overflow-hidden: a scroll container would stop the side column sticking -->
+        <article class="overflow-clip rounded-lg bg-surface shadow dark:shadow-neutral-900/50">
             <img
                 v-if="heroImageUrl"
                 :src="heroImageUrl"
@@ -132,59 +139,79 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ev
                     </div>
                 </div>
 
-                <!-- Download links -->
-                <div
-                    v-if="props.event.downloadLinks.length > 0"
-                    class="mb-6 rounded-lg border border-default p-4"
-                >
-                    <h3 class="mb-3 font-semibold text-base-primary">
-                        {{ t('events.downloads') }}
-                    </h3>
-                    <ul class="space-y-3">
-                        <li v-for="(link, index) in props.event.downloadLinks" :key="index">
-                            <a
-                                :href="link.url"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="group flex items-start gap-3"
-                            >
-                                <Download
-                                    class="mt-0.5 h-5 w-5 shrink-0 text-primary group-hover:text-primary-700"
-                                    aria-hidden="true"
-                                />
-                                <div>
-                                    <span
-                                        class="font-medium text-primary group-hover:text-primary-700 group-hover:underline"
-                                    >
-                                        {{ link.label }}
-                                    </span>
-                                    <p v-if="link.description" class="text-sm text-base-muted">
-                                        {{ link.description }}
-                                    </p>
-                                </div>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Module slot for event actions (e.g., registration button) -->
-                <div class="mb-6">
-                    <ModuleSlot name="event-detail-actions" />
-                </div>
-
-                <!-- Secondary action: after signing up, not before -->
-                <div v-if="props.calendarLinks && isUpcoming(props.event)" class="mb-6">
-                    <AddToCalendarMenu :links="props.calendarLinks" />
-                </div>
-
                 <!--
-                    SECURITY: v-html is used to render rich text content from the event.
-                    Content is sanitized server-side via SanitizesHtml trait (HTMLPurifier).
-                    @see App\Infrastructure\Factories\EloquentResponseDTOFactory
+                    One column on phones and tablets (actions first, then the description); from lg
+                    the actions move to a side column, which stays in view while scrolling only when
+                    it fits the window (a taller sticky column would hide its bottom)
                 -->
-                <!-- eslint-disable vue/no-v-html -->
-                <div class="prose max-w-none dark:prose-invert" v-html="props.event.description" />
-                <!-- eslint-enable vue/no-v-html -->
+                <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-10">
+                    <div
+                        ref="aside"
+                        data-testid="event-aside"
+                        class="lg:col-start-2 lg:row-start-1"
+                        :class="{ 'lg:sticky lg:top-6': asideFits }"
+                    >
+                        <!-- Module slot for event actions (e.g., registration button) -->
+                        <div class="mb-6">
+                            <ModuleSlot name="event-detail-actions" />
+                        </div>
+
+                        <!-- Secondary action: after signing up, not before -->
+                        <div v-if="props.calendarLinks && isUpcoming(props.event)" class="mb-6">
+                            <AddToCalendarMenu :links="props.calendarLinks" />
+                        </div>
+
+                        <!-- Download links -->
+                        <div
+                            v-if="props.event.downloadLinks.length > 0"
+                            class="mb-6 rounded-lg border border-default p-4"
+                        >
+                            <h3 class="mb-3 font-semibold text-base-primary">
+                                {{ t('events.downloads') }}
+                            </h3>
+                            <ul class="space-y-3">
+                                <li v-for="(link, index) in props.event.downloadLinks" :key="index">
+                                    <a
+                                        :href="link.url"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="group flex items-start gap-3"
+                                    >
+                                        <Download
+                                            class="mt-0.5 h-5 w-5 shrink-0 text-primary group-hover:text-primary-700"
+                                            aria-hidden="true"
+                                        />
+                                        <div>
+                                            <span
+                                                class="font-medium text-primary group-hover:text-primary-700 group-hover:underline"
+                                            >
+                                                {{ link.label }}
+                                            </span>
+                                            <p
+                                                v-if="link.description"
+                                                class="text-sm text-base-muted"
+                                            >
+                                                {{ link.description }}
+                                            </p>
+                                        </div>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!--
+                        SECURITY: v-html is used to render rich text content from the event.
+                        Content is sanitized server-side via SanitizesHtml trait (HTMLPurifier).
+                        @see App\Infrastructure\Factories\EloquentResponseDTOFactory
+                    -->
+                    <!-- eslint-disable vue/no-v-html -->
+                    <div
+                        class="prose max-w-none dark:prose-invert lg:col-start-1 lg:row-start-1"
+                        v-html="props.event.description"
+                    />
+                    <!-- eslint-enable vue/no-v-html -->
+                </div>
 
                 <div class="mt-8 border-t border-default pt-6">
                     <Link :href="routes.events.index">
