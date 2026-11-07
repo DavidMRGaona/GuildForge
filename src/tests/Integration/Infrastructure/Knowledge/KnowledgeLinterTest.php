@@ -432,6 +432,54 @@ final class KnowledgeLinterTest extends TestCase
         $this->assertIssue($this->lint(), 'raw HTML');
     }
 
+    public function test_unknown_callout_type_is_reported_with_the_supported_ones(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: "> [!NOTE]\n> Texto.");
+
+        $issues = $this->lint();
+
+        $this->assertIssue($issues, "callout '[!NOTE]'");
+        $this->assertIssue($issues, '[!TIP], [!IMPORTANT] or [!WARNING]');
+    }
+
+    public function test_callout_markers_inside_code_and_plain_quotes_are_fine(): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: "Escribe `> [!NOTE]`.\n\n```\n> [!NOTE]\n```\n\n> Una cita [!NOTE] normal.");
+
+        $this->assertSame([], $this->lint());
+    }
+
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function calloutSamples(): array
+    {
+        return [
+            'tip' => ["> [!TIP]\n> Texto.", true],
+            'important' => ["> [!IMPORTANT]\n> Texto.", true],
+            'warning' => ["> [!WARNING]\n> Texto.", true],
+            'inside a list item' => ["1. Paso.\n\n   > [!WARNING]\n   > Texto.", true],
+            'unknown type' => ["> [!NOTE]\n> Texto.", false],
+            'another unknown type' => ["> [!CAUTION]\n> Texto.", false],
+            'lowercase' => ["> [!tip]\n> Texto.", false],
+            'text on the marker line' => ['> [!TIP] Texto.', false],
+            'unknown type inside a list item' => ["- Paso.\n\n  > [!NOTE]\n  > Texto.", false],
+        ];
+    }
+
+    #[DataProvider('calloutSamples')]
+    public function test_linter_and_renderer_agree_on_callouts(string $body, bool $valid): void
+    {
+        $this->writeCoreGuide('a.md', 'core.one', body: $body);
+        $linterAccepts = $this->lint() === [];
+
+        $html = $this->app->make(GuideRendererInterface::class)->toHtml($this->parsedAsGuide($body), UserModel::factory()->create());
+        $rendererAccepts = str_contains($html, 'kb-callout') && ! str_contains($html, '[!');
+
+        $this->assertSame($valid, $linterAccepts, 'linter verdict');
+        $this->assertSame($valid, $rendererAccepts, 'renderer verdict');
+    }
+
     /**
      * @return array<string, array{string, bool}>
      */

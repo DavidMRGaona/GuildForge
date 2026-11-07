@@ -148,7 +148,7 @@ Rules:
 
 The body is CommonMark plus three extensions.
 
-**Callouts** are block quotes with a marker on the first line: `> [!TIP]`, `> [!IMPORTANT]` or `> [!WARNING]`.
+**Callouts** are block quotes with a marker alone on the first line: `> [!TIP]`, `> [!IMPORTANT]` or `> [!WARNING]`. Other GitHub markers (`[!NOTE]`, `[!CAUTION]`), lowercase markers and text on the marker line are not rendered, and `knowledge:lint` rejects them.
 
 ```markdown
 > [!IMPORTANT]
@@ -293,7 +293,7 @@ php artisan knowledge:lint --module=my-module
 
 With the Docker development stack, `make knowledge-lint MODULE=my-module` runs the same check from the core's root.
 
-The command checks the core's guides and the module's: front matter, ids and prefixes, categories and audiences, `related`, `previous_ids`, registered permissions and capabilities, raw HTML, unknown markers, and action buttons (route exists, no required parameters, valid `if=`). It exits with a failure and lists each issue as `file: message`.
+The command checks the core's guides and the module's: front matter, ids and prefixes, categories and audiences, `related`, `previous_ids`, registered permissions and capabilities, raw HTML, unknown markers, callouts the renderer would leave as plain quotes, and action buttons (route exists, no required parameters, valid `if=`). It exits with a failure and lists each issue as `file: message`.
 
 Run it in the module's tests so CI blocks a broken guide:
 

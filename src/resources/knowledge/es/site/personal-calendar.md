@@ -38,9 +38,6 @@ Android no trae ninguna aplicación que se suscriba a una dirección, así que e
 - **Con Google Calendar**: suscríbete con el botón **Google Calendar**, o a mano desde calendar.google.com en un ordenador. El calendario aparece después en la app de Google Calendar del móvil; si no lo ves, entra en los ajustes de la app, toca el calendario y activa **Sincronizar**.
 - **Con ICSx⁵** (Google Play o F-Droid): instálala, pulsa **+** y pega cualquiera de las dos direcciones. Con ICSx⁵ instalada, el botón **Apple Calendar (iPhone y Mac)** también te lleva a ella. El calendario se ve luego en cualquier app de calendario del móvil.
 
-> [!NOTE]
-> DAVx⁵ no sirve para esto: sincroniza cuentas CalDAV, no suscripciones por dirección. Si ya la usas, instala también ICSx⁵.
-
 Tu aplicación añade sola las nuevas inscripciones, los cambios de hora y las cancelaciones. El calendario suscrito abarca desde 30 días atrás hasta 12 meses vista.
 
 > [!WARNING]
