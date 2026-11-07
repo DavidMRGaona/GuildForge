@@ -6,6 +6,7 @@ namespace Tests\Unit\Infrastructure\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
+use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
@@ -31,6 +32,8 @@ final class UserServiceTest extends TestCase
 
     private RoleAuditLoggerInterface&MockInterface $audit;
 
+    private CalendarFeedTokenServiceInterface&MockInterface $calendarFeedTokens;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -39,12 +42,14 @@ final class UserServiceTest extends TestCase
         $this->authService = Mockery::mock(AuthorizationServiceInterface::class);
         $this->settingsService = Mockery::mock(SettingsServiceInterface::class);
         $this->audit = Mockery::mock(RoleAuditLoggerInterface::class);
+        $this->calendarFeedTokens = Mockery::mock(CalendarFeedTokenServiceInterface::class);
 
         $this->service = new UserService(
             $this->userModelQuery,
             $this->authService,
             $this->settingsService,
             $this->audit,
+            $this->calendarFeedTokens,
         );
     }
 
@@ -144,6 +149,8 @@ final class UserServiceTest extends TestCase
         $this->audit->shouldReceive('roleRemoved')->once()->with($userModel, 'member');
         // Without its roles the user must lose access at once, not when the cache expires
         $this->authService->shouldReceive('invalidateCacheFor')->once()->with($userModel);
+        // The personal calendar address goes too
+        $this->calendarFeedTokens->shouldReceive('revoke')->once()->with($userId->value());
 
         $this->service->anonymize($userId->value());
 

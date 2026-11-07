@@ -6,4 +6,8 @@ return [
     'sources' => [
         'event' => 'Events',
     ],
+    'personal' => [
+        'feed_name' => 'My calendar · :site',
+        'sign_in_required' => 'Sign in to see only your own entries.',
+    ],
 ];

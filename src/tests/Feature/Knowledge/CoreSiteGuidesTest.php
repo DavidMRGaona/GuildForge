@@ -9,11 +9,13 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\Calendar\RegistersPersonalCalendarSources;
 use Tests\TestCase;
 
 final class CoreSiteGuidesTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use RegistersPersonalCalendarSources;
 
     /** Guides every signed-in account sees, by category. */
     private const array GUIDES_BY_CATEGORY = [
@@ -26,6 +28,8 @@ final class CoreSiteGuidesTest extends TestCase
     private const array FEATURED = ['core.help.welcome', 'core.account.complete-profile', 'core.events.find-events'];
 
     private const string VERIFY_EMAIL_GUIDE = 'core.account.verify-email';
+
+    private const string PERSONAL_CALENDAR_GUIDE = 'core.events.personal-calendar';
 
     protected function setUp(): void
     {
@@ -111,6 +115,27 @@ final class CoreSiteGuidesTest extends TestCase
         $this->actingAs($this->member());
 
         $this->get('/ayuda/'.self::VERIFY_EMAIL_GUIDE)->assertOk();
+    }
+
+    public function test_the_personal_calendar_guide_is_hidden_without_attendance_sources(): void
+    {
+        $this->actingAs($this->member());
+
+        $this->get('/ayuda/'.self::PERSONAL_CALENDAR_GUIDE)->assertNotFound();
+    }
+
+    public function test_the_personal_calendar_guide_opens_the_profile_tab_when_attendance_is_known(): void
+    {
+        $this->registerAttendance([]);
+        $this->actingAs($this->member());
+
+        $this->get('/ayuda/'.self::PERSONAL_CALENDAR_GUIDE)->assertOk()->assertInertia(function (Assert $page): void {
+            $html = $page->toArray()['props']['guide']['html'];
+            $this->assertIsString($html);
+            $this->assertStringContainsString('class="kb-action"', $html);
+            $this->assertStringContainsString('/perfil?tab=calendar', $html);
+            $this->assertStringNotContainsString('{{', $html);
+        });
     }
 
     private function member(): UserModel

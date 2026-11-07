@@ -15,6 +15,9 @@ interface UseProfileTabsReturn {
 
 const DEFAULT_TAB = 'account';
 
+/** Core tab with the personal calendar subscription, shown when the page says it is available. */
+export const CALENDAR_TAB = 'calendar';
+
 function tabFromUrl(url: string): string | null {
     return new URL(url, 'http://localhost').searchParams.get('tab');
 }
@@ -67,9 +70,15 @@ export function useProfileTabs(): UseProfileTabsReturn {
             (registration) => registration.profileTab
         )
     );
-    const visibleTabIds = profileRegistrations.value
-        .filter(isRegistrationVisible)
-        .map(registeredTabId);
+    const hasCalendarTab = computed(() => {
+        const feed = page.props.calendarFeed as { available?: unknown } | undefined;
+
+        return feed?.available === true;
+    });
+    const visibleTabIds = [
+        ...(hasCalendarTab.value ? [CALENDAR_TAB] : []),
+        ...profileRegistrations.value.filter(isRegistrationVisible).map(registeredTabId),
+    ];
     const requestedTab = tabFromUrl(page.url);
     const activeTabId = ref(
         requestedTab !== null && visibleTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB
@@ -83,6 +92,14 @@ export function useProfileTabs(): UseProfileTabsReturn {
                 icon: 'user' as ProfileTabIcon,
             },
         ];
+
+        if (hasCalendarTab.value) {
+            baseTabs.push({
+                id: CALENDAR_TAB,
+                label: t('auth.profile.tabs.calendar'),
+                icon: 'calendar' as ProfileTabIcon,
+            });
+        }
 
         // Add module tabs from profile-sections slot
         const moduleSlots = getSlotComponents('profile-sections');

@@ -18,6 +18,9 @@ final readonly class ICalendarWriter implements ICalendarWriterInterface
 
     private const int DESCRIPTION_CHARACTERS = 2000;
 
+    /** How often subscribed clients are asked to fetch a named calendar again. */
+    private const string REFRESH_INTERVAL = 'PT1H';
+
     public function __construct(
         private UrlGenerator $urls,
     ) {}
@@ -25,7 +28,7 @@ final readonly class ICalendarWriter implements ICalendarWriterInterface
     /**
      * @param  array<CalendarEntryDTO>  $entries
      */
-    public function write(array $entries): string
+    public function write(array $entries, ?string $calendarName = null): string
     {
         $stamp = $this->instant(CarbonImmutable::now('UTC'));
 
@@ -36,6 +39,17 @@ final readonly class ICalendarWriter implements ICalendarWriterInterface
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
         ];
+
+        if ($calendarName !== null && trim($calendarName) !== '') {
+            $name = $this->text(trim($calendarName));
+            $lines = [
+                ...$lines,
+                'NAME:'.$name,
+                'X-WR-CALNAME:'.$name,
+                'REFRESH-INTERVAL;VALUE=DURATION:'.self::REFRESH_INTERVAL,
+                'X-PUBLISHED-TTL:'.self::REFRESH_INTERVAL,
+            ];
+        }
 
         foreach ($entries as $entry) {
             $lines = [...$lines, ...$this->event(ExportableCalendarEntry::from($entry, $this->urls), $stamp)];

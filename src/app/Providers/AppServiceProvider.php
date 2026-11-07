@@ -6,8 +6,11 @@ namespace App\Providers;
 
 use App\Application\Calendar\Services\AddToCalendarLinksFactoryInterface;
 use App\Application\Calendar\Services\CalendarAggregatorServiceInterface;
+use App\Application\Calendar\Services\CalendarAttendanceSourceRegistryInterface;
+use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Calendar\Services\ICalendarWriterInterface;
+use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
 use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Cookies\Services\CookieDeclarationRegistryInterface;
@@ -92,8 +95,11 @@ use App\Domain\Repositories\UserRepositoryInterface;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Calendar\Export\AddToCalendarLinksFactory;
 use App\Infrastructure\Calendar\Export\ICalendarWriter;
+use App\Infrastructure\Calendar\Feed\EloquentCalendarFeedTokenService;
 use App\Infrastructure\Calendar\Services\CalendarAggregatorService;
+use App\Infrastructure\Calendar\Services\CalendarAttendanceSourceRegistry;
 use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
+use App\Infrastructure\Calendar\Services\PersonalCalendarService;
 use App\Infrastructure\Content\Services\TrixContentMigrator;
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Cookies\CookieDeclarationRegistry;
@@ -371,6 +377,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CalendarAggregatorServiceInterface::class, CalendarAggregatorService::class);
         $this->app->bind(ICalendarWriterInterface::class, ICalendarWriter::class);
         $this->app->bind(AddToCalendarLinksFactoryInterface::class, AddToCalendarLinksFactory::class);
+        // Personal calendar: modules say what each person attends
+        $this->app->singleton(CalendarAttendanceSourceRegistryInterface::class, CalendarAttendanceSourceRegistry::class);
+        $this->app->bind(PersonalCalendarServiceInterface::class, PersonalCalendarService::class);
+        $this->app->bind(CalendarFeedTokenServiceInterface::class, EloquentCalendarFeedTokenService::class);
 
         // Survey subject sources offered by modules
         $this->app->singleton(SurveySubjectSourceRegistryInterface::class, SurveySubjectSourceRegistry::class);
@@ -448,6 +458,16 @@ class AppServiceProvider extends ServiceProvider
                     ? 'user:'.$request->user()->getAuthIdentifier()
                     : 'ip:'.($request->ip() ?? 'unknown')
             )
+        );
+
+        // Personal calendar feeds: per address, since calendar services fetch everyone's feeds
+        // from a few shared network addresses, plus a generous cap per address against guessing
+        RateLimiter::for(
+            'calendar-feed',
+            static fn (Request $request): array => [
+                Limit::perMinute(6)->by('token:'.hash('sha256', (string) $request->route('token'))),
+                Limit::perMinute(120)->by('ip:'.($request->ip() ?? 'unknown')),
+            ]
         );
 
         Gate::policy(UserModel::class, UserPolicy::class);

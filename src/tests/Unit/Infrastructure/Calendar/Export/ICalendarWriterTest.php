@@ -148,6 +148,38 @@ final class ICalendarWriterTest extends TestCase
         $this->assertStringContainsString('UID:game-table-table-1@', $document);
     }
 
+    #[Test]
+    public function a_named_calendar_carries_its_name_and_refresh_hints(): void
+    {
+        $document = $this->writer->write([$this->entry()], 'Mi calendario, Example Guild');
+
+        $this->assertStringContainsString("\r\nNAME:Mi calendario\\, Example Guild\r\n", $document);
+        $this->assertStringContainsString("\r\nX-WR-CALNAME:Mi calendario\\, Example Guild\r\n", $document);
+        $this->assertStringContainsString("\r\nREFRESH-INTERVAL;VALUE=DURATION:PT1H\r\n", $document);
+        $this->assertStringContainsString("\r\nX-PUBLISHED-TTL:PT1H\r\n", $document);
+        // Calendar properties go before the first event
+        $this->assertLessThan(strpos($document, 'BEGIN:VEVENT'), strpos($document, 'X-WR-CALNAME'));
+    }
+
+    #[Test]
+    public function an_unnamed_calendar_has_no_name_or_refresh_hints(): void
+    {
+        $document = $this->writer->write([$this->entry()]);
+
+        $this->assertStringNotContainsString('X-WR-CALNAME', $document);
+        $this->assertStringNotContainsString('REFRESH-INTERVAL', $document);
+    }
+
+    #[Test]
+    public function a_named_calendar_without_entries_is_still_valid(): void
+    {
+        $document = $this->writer->write([], 'Mi calendario');
+
+        $this->assertStringStartsWith("BEGIN:VCALENDAR\r\n", $document);
+        $this->assertStringEndsWith("END:VCALENDAR\r\n", $document);
+        $this->assertStringNotContainsString('BEGIN:VEVENT', $document);
+    }
+
     private function entry(
         string $id = '0198a1b2-0000-7000-8000-000000000001',
         string $sourceType = 'event',

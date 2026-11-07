@@ -7,7 +7,7 @@ audience: site
 order: 10
 featured: true
 keywords: [calendario, eventos, actividades, próximos eventos, qué hay, cuándo, fecha, horario, agenda, este mes, quedadas, planes]
-related: [core.search.site-search, core.help.welcome]
+related: [core.events.personal-calendar, core.search.site-search, core.help.welcome]
 ---
 El calendario muestra los eventos y actividades de {{site_name}}, mes a mes.
 

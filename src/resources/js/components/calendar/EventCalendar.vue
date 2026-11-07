@@ -32,12 +32,15 @@ interface Props {
     compact?: boolean;
     showTooltips?: boolean;
     navigateOnClick?: boolean;
+    /** Only the entries the signed-in person takes part in (personal calendar). */
+    onlyMine?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     compact: false,
     showTooltips: false,
     navigateOnClick: true,
+    onlyMine: false,
 });
 
 const emit = defineEmits<{
@@ -51,6 +54,7 @@ const calendarLocale = useCalendarLocale();
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const eventsCache = ref<Map<string, CalendarEntry>>(new Map());
+const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null);
 
 // Tooltip state
 const tooltipEvent = ref<CalendarEntry | null>(null);
@@ -71,6 +75,9 @@ const fetchEvents = async (
             start: info.startStr,
             end: info.endStr,
         });
+        if (props.onlyMine) {
+            params.set('mine', '1');
+        }
 
         const response = await fetch(`/eventos/calendario?${params}`);
         if (!response.ok) {
@@ -261,6 +268,14 @@ const calendarOptions = computed<CalendarOptions>(() => {
     return baseOptions;
 });
 
+// The event source is the same function either way: ask FullCalendar to call it again
+watch(
+    () => props.onlyMine,
+    () => {
+        calendarRef.value?.getApi().refetchEvents();
+    }
+);
+
 // Update tooltip position on mouse move when visible
 const handleGlobalMouseMove = (event: MouseEvent): void => {
     if (tooltipVisible.value) {
@@ -301,7 +316,7 @@ watch(tooltipVisible, (visible) => {
                 </div>
             </div>
 
-            <FullCalendar :options="calendarOptions">
+            <FullCalendar ref="calendarRef" :options="calendarOptions">
                 <template v-if="compact" #eventContent="arg">
                     <span
                         v-for="uid in eventEntryUids(arg.event)"

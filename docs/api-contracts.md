@@ -38,6 +38,8 @@ GuildForge is an Inertia application: most public URLs return an Inertia page (H
 | `GET` | `/nosotros` | `AboutController` (invokable) | Inertia `About` | No | `about` |
 | `POST` | `/contacto` | `ContactController` (invokable), `throttle:contact` | Redirect back with flash | No | `contact.store` |
 | `GET` | `/calendario` | `CalendarPageController` (invokable) | Inertia `Calendar/Index` | No | `calendar` |
+| `GET` | `/calendario/personal/{token}.ics` | `PersonalCalendarFeedController` (invokable), `throttle:calendar-feed` | `text/calendar` (`Cache-Control: private, no-store`, `X-Robots-Tag: noindex, nofollow`): the token owner's personal calendar, 30 days back to 12 months ahead; 404 for an unknown or revoked token, a deactivated or anonymized account, or one that must verify its email | No (the token) | `calendar.personal.ics` |
+| `GET` | `/calendario/{source}/{id}.ics` | `CalendarEntryICalendarController` (invokable) | `text/calendar` attachment with one entry; 404 when the source has no lookup or does not show it | No | `calendar.entry.ics` |
 | `GET` | `/eventos` | `EventController@index` | Inertia `Events/Index` | No | `events.index` |
 | `GET` | `/eventos/calendario` | `Api\CalendarController@index` | JSON | No | `events.calendar` |
 | `GET` | `/eventos/{slug}` | `EventController@show` | Inertia `Events/Show` | No | `events.show` |
@@ -58,7 +60,7 @@ GuildForge is an Inertia application: most public URLs return an Inertia page (H
 |------|-------|
 | `Home` | `heroSlides` (`HeroSlideResource[]`, active slides), `events` (`EventResource[]`: the next 3 upcoming events, or the 3 most recent past events when none is upcoming), `eventsArePast` (boolean), `latestArticles` (`ArticleResource[]`, 3), `featuredGallery` (`GalleryWithPhotosResource` with up to 6 photos, or `null`) |
 | `About` | the keys of `AboutPageResponseDTO::toArray()`: `guildName`, `aboutHistory`, `contactEmail`, `contactPhone`, `contactAddress`, `aboutHeroImage`, `aboutTagline`, `activities` (`{icon, title, description}[]`), `joinSteps` (`{title, description}[]`), `socialFacebook`, `socialInstagram`, `socialTwitter`, `socialDiscord`, `socialTiktok`, `socialBluesky`, `socialTelegram`, `location` (`{name, address, lat, lng, zoom}`) |
-| `Calendar/Index` | only `seo`; the page loads its entries from `/eventos/calendario` |
+| `Calendar/Index` | `seo`, `personalCalendar` (boolean: signed in, not required to verify the email, and some module registers a calendar attendance source); the page loads its entries from `/eventos/calendario` |
 | `Events/Index` | `events` (paginated `EventResource`, 12 per page), `tags` (`TagResource[]` that apply to events), `currentTags` (`string[]`) |
 | `Events/Show` | `event` (`EventResource`) |
 | `Articles/Index` | `articles` (paginated `ArticleResource`, 12 per page), `tags`, `currentTags` |
@@ -167,6 +169,8 @@ Listing query parameters (`/eventos`, `/articulos`, `/galeria`): `page` (integer
 | `GET` | `/perfil` | `ProfileController@show` | -- | Inertia `Profile/Show` | `profile.show` |
 | `POST` | `/perfil` | `ProfileController@update` | `throttle:6,1,profile` | Redirect back with `success`; a new email is stored as pending and its confirmation link is mailed to the new address | `profile.update` |
 | `PUT` | `/perfil/contrasena` | `ProfileController@changePassword` | -- | Redirect back with `success`, or `error` when the current password is wrong | `profile.password` |
+| `POST` | `/perfil/calendario` | `CalendarFeedTokenController@store` | `throttle:6,1,calendar-feed-token` | JSON `{feedUrl, webcalUrl, issuedAt}`: a new personal calendar address, replacing the previous one; the only response that ever carries it (only its hash is stored); 404 without calendar attendance sources | `profile.calendar-feed.store` |
+| `DELETE` | `/perfil/calendario` | `CalendarFeedTokenController@destroy` | `throttle:6,1,calendar-feed-token` | `204`; the address stops working | `profile.calendar-feed.destroy` |
 
 While *Requerir verificación de email* is on, `EnsureEmailIsVerifiedWhenRequired` (§9) closes every route with `auth` or the alias `email.verified-if-required`, module routes included, to accounts that must verify (`EmailVerificationPolicyInterface`: unverified, not anonymized and created from `email_verification_enforced_since` on): browser and Inertia visits are redirected to `/verificar-email`, remembering the intended URL, and other JSON requests get a `403` whose `message` is `auth.email_verification_required`, with `error: "email_verification_required"` and the header `X-Email-Verification-Required: 1`. `logout`, `verification.*`, `profile.show` and `profile.update` stay open.
 
@@ -176,7 +180,7 @@ While *Requerir verificación de email* is on, `EnsureEmailIsVerifiedWhenRequire
 |------|-------|
 | `Auth/Login`, `Auth/Register`, `Auth/ForgotPassword`, `Auth/VerifyEmail` | only `seo` |
 | `Auth/ResetPassword` | `token`, `email` (from the `email` query parameter) |
-| `Profile/Show` | `user` (`UserResponseDTO`: `id`, `name`, `displayName`, `email`, `pendingEmail`, `avatarPublicId`, `emailVerified`, `createdAt`) |
+| `Profile/Show` | `user` (`UserResponseDTO`: `id`, `name`, `displayName`, `email`, `pendingEmail`, `avatarPublicId`, `emailVerified`, `createdAt`), `calendarFeed` (`{available, issuedAt}`: whether the «Mi calendario» tab is shown and when the current address was created, never the address) |
 
 ---
 
@@ -186,7 +190,9 @@ While *Requerir verificación de email* is on, `EnsureEmailIsVerifiedWhenRequire
 
 Public JSON endpoint in `routes/web.php` (`web` middleware). `CalendarAggregatorService` merges the entries of every calendar source: core events (`EventCalendarSource`) plus the sources modules register through `registerCalendarSources()` (today, game-tables registers `GameTableCalendarSource`). Entries are sorted by `start`; a source that fails is logged and skipped.
 
-**Query parameters** (`CalendarRequest`): `start` (required, date), `end` (required, date).
+**Query parameters** (`CalendarRequest`): `start` (required, date), `end` (required, date), `mine` (optional, boolean).
+
+With `mine=1` only the signed-in person's entries come back (`PersonalCalendarServiceInterface`: what the calendar attendance sources of the modules report, kept only when the public calendar shows it), with `Cache-Control: private, no-store`. A guest gets `401`; an account that must verify its email gets the same `403` as `EnsureEmailIsVerifiedWhenRequired` (`error: email_verification_required`, header `X-Email-Verification-Required: 1`).
 
 **Response**: `200`, a JSON array of `CalendarEntryResource` (see [§8.1](#calendarentryresource)).
 
@@ -907,9 +913,11 @@ Because the first four are in the `web` group, `/api/*` responses get no Inertia
 | `throttle:5,1` | 5 per minute | IP | `POST /registro`, `POST /olvide-contrasena` |
 | `throttle:6,1` | 6 per minute | user | `POST /verificar-email/reenviar` |
 | `throttle:6,1,profile` | 6 per minute | user | `POST /perfil` |
+| `throttle:6,1,calendar-feed-token` | 6 per minute | user | `POST` and `DELETE /perfil/calendario` |
+| `calendar-feed` | 6 per minute and 120 per minute | token hash; IP | `GET /calendario/personal/{token}.ics` (per token, because calendar services fetch everyone's feeds from a few shared addresses) |
 | `search-suggestions` | 60 per minute | IP | `GET /buscar/sugerencias` |
 
-The `login`, `contact` and `search-suggestions` limiters are defined in `AppServiceProvider` (`RateLimiter::for()`). Exceeding a limit answers `429`.
+The `login`, `contact`, `search-suggestions` and `calendar-feed` limiters are defined in `AppServiceProvider` (`RateLimiter::for()`). Exceeding a limit answers `429`.
 
 ---
 

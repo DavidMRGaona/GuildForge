@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace {{ moduleNamespace }};
 
+use App\Application\Calendar\Contracts\CalendarAttendanceSourceInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Modules\DTOs\ModuleRouteDTO;
 use App\Application\Modules\DTOs\NavigationItemDTO;
@@ -263,6 +264,17 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      * @return array<class-string<CalendarEntrySourceInterface>>
      */
     public function registerCalendarSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register calendar attendance sources provided by this module.
+     * Tells the core which calendar entries each person is confirmed in or runs (personal calendar).
+     *
+     * @return array<class-string<CalendarAttendanceSourceInterface>>
+     */
+    public function registerCalendarAttendanceSources(): array
     {
         return [];
     }

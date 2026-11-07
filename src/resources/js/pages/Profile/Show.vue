@@ -4,16 +4,21 @@ import ProfileHeader from '@/components/profile/ProfileHeader.vue';
 import ProfileSidebar from '@/components/profile/ProfileSidebar.vue';
 import ProfileTabBar from '@/components/profile/ProfileTabBar.vue';
 import ProfileAccountTab from '@/components/profile/ProfileAccountTab.vue';
-import { useProfileTabs } from '@/composables/useProfileTabs';
+import ProfileCalendarTab from '@/components/profile/ProfileCalendarTab.vue';
+import { CALENDAR_TAB, useProfileTabs } from '@/composables/useProfileTabs';
 import { useModuleSlots } from '@/composables/useModuleSlots';
 import { useFlashMessages } from '@/composables/useFlashMessages';
 import type { User } from '@/types/models';
+import type { CalendarFeedStatus } from '@/types/calendarFeed';
 
 interface Props {
     user: User;
+    calendarFeed?: CalendarFeedStatus;
 }
 
-defineProps<Props>();
+withDefaults(defineProps<Props>(), {
+    calendarFeed: () => ({ available: false, issuedAt: null }),
+});
 
 const { tabs, activeTabId, setActiveTab } = useProfileTabs();
 const { getSlotComponents, hasSlotComponents } = useModuleSlots();
@@ -58,6 +63,12 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
             <div class="min-w-0">
                 <!-- Account tab -->
                 <ProfileAccountTab v-if="activeTabId === 'account'" :user="user" />
+
+                <!-- Personal calendar subscription -->
+                <ProfileCalendarTab
+                    v-if="activeTabId === CALENDAR_TAB && calendarFeed.available"
+                    :calendar-feed="calendarFeed"
+                />
 
                 <!-- Module tabs -->
                 <template v-if="hasModuleTabs">
