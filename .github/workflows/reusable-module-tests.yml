@@ -220,11 +220,32 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: src/package-lock.json
+
+      - name: Read the Node version
+        id: node
+        run: echo "version=$(node --version)" >> "$GITHUB_OUTPUT"
+
+      # Inline rather than the core's .github/actions: host_ref may name a release without them.
+      # Exact key, no fallback: the tree npm ci installs depends only on package-lock.json and on
+      # the platform and Node it runs on, so a hit is what npm ci would install
+      - name: Restore host node_modules
+        id: node-modules
+        uses: actions/cache/restore@v6
+        with:
+          path: src/node_modules
+          key: host-node-modules-${{ runner.os }}-${{ runner.arch }}-node${{ steps.node.outputs.version }}-${{ hashFiles('src/package-lock.json') }}
 
       - name: Install host npm dependencies
+        if: ${{ steps.node-modules.outputs.cache-hit != 'true' }}
         run: npm ci
+
+      # Right after npm ci, before the module is checked out and anything else lands in node_modules
+      - name: Save host node_modules
+        if: ${{ steps.node-modules.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: src/node_modules
+          key: ${{ steps.node-modules.outputs.cache-primary-key }}
 
       # After the host is installed, as in the test job: the tools run with the core's
       # configuration from host_ref, and the module copies none of it
