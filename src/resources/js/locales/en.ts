@@ -443,7 +443,7 @@ export default {
                 privateWarning:
                     'This address is private: whoever has it will see what you signed up for. Do not share it.',
                 shownOnce: 'It is only shown now. If you lose it, create a new one.',
-                webcalLabel: 'Apple Calendar and Outlook (webcal)',
+                webcalLabel: 'Apple Calendar, Outlook and ICSx⁵ on Android (webcal)',
                 httpsLabel: 'Google Calendar and other apps (https)',
                 copy: 'Copy',
                 copied: 'Copied',

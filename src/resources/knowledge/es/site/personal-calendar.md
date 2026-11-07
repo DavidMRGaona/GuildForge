@@ -5,7 +5,7 @@ summary: Mira en el calendario solo aquello en lo que estás inscrito y llévalo
 category: events-and-games
 audience: site
 order: 20
-keywords: [mi calendario, mis inscripciones, inscrito, apuntado, mis partidas, suscripción, suscribirme, google calendar, apple calendar, outlook, ical, ics, webcal, móvil, sincronizar, actualizar, frecuencia, agenda]
+keywords: [mi calendario, mis inscripciones, inscrito, apuntado, mis partidas, suscripción, suscribirme, google calendar, apple calendar, outlook, ical, ics, webcal, android, icsx5, davx5, móvil, sincronizar, actualizar, frecuencia, agenda]
 related: [core.events.find-events, core.account.complete-profile]
 conditions:
   capabilities: [core.personal_calendar]
@@ -31,6 +31,16 @@ Si prefieres hacerlo a mano, copia la dirección: la que empieza por `webcal://`
 > [!IMPORTANT]
 > En iPhone, solo Safari abre la app Calendario desde la web. Con Chrome u otro navegador, abre la página en Safari o copia la dirección `webcal://` y añádela en **Ajustes → Apps → Calendario → Cuentas de calendario → Añadir cuenta → Otra → Añadir calendario suscrito**.
 
+### En Android
+
+Android no trae ninguna aplicación que se suscriba a una dirección, así que el botón **Apple Calendar (iPhone y Mac)** no hace nada hasta que instales una. Tienes dos caminos:
+
+- **Con Google Calendar**: suscríbete con el botón **Google Calendar**, o a mano desde calendar.google.com en un ordenador. El calendario aparece después en la app de Google Calendar del móvil; si no lo ves, entra en los ajustes de la app, toca el calendario y activa **Sincronizar**.
+- **Con ICSx⁵** (Google Play o F-Droid): instálala, pulsa **+** y pega cualquiera de las dos direcciones. Con ICSx⁵ instalada, el botón **Apple Calendar (iPhone y Mac)** también te lleva a ella. El calendario se ve luego en cualquier app de calendario del móvil.
+
+> [!NOTE]
+> DAVx⁵ no sirve para esto: sincroniza cuentas CalDAV, no suscripciones por dirección. Si ya la usas, instala también ICSx⁵.
+
 Tu aplicación añade sola las nuevas inscripciones, los cambios de hora y las cancelaciones. El calendario suscrito abarca desde 30 días atrás hasta 12 meses vista.
 
 > [!WARNING]
@@ -44,6 +54,7 @@ Tu aplicación añade sola las nuevas inscripciones, los cambios de hora y las c
 - **iPhone y iPad**: sigue el ajuste de **Ajustes → Apps → Calendario → Cuentas de calendario → Obtener datos**.
 - **Google Calendar**: actualiza por su cuenta, normalmente varias veces al día; no se puede cambiar.
 - **Outlook**: actualiza cada pocas horas.
+- **ICSx⁵**: elige el intervalo en sus ajustes.
 
 > [!TIP]
 > Si acabas de inscribirte y aún no lo ves en tu aplicación, el filtro **Solo en lo que estoy inscrito** del calendario de la web siempre está al día.
