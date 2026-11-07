@@ -19,6 +19,7 @@ use App\Infrastructure\Knowledge\Rendering\ActionCondition;
 use App\Infrastructure\Knowledge\Rendering\ActionLinkResolver;
 use App\Infrastructure\Knowledge\Rendering\ActionTarget;
 use App\Infrastructure\Knowledge\Rendering\Extensions\ActionButtonParser;
+use App\Infrastructure\Knowledge\Rendering\Extensions\CalloutExtension;
 use App\Infrastructure\Knowledge\Rendering\KnowledgePlaceholders;
 use Illuminate\Support\Facades\Route;
 use RecursiveDirectoryIterator;
@@ -390,6 +391,14 @@ final readonly class KnowledgeLinter
         foreach (array_unique($markers[1]) as $marker) {
             if (! in_array($marker, KnowledgePlaceholders::NAMES, true)) {
                 $issues[] = new KnowledgeLintIssueDTO($file, sprintf("unknown marker '{{%s}}'", $marker));
+            }
+        }
+
+        // A quote line starting with "[!" is meant as a callout; anything the renderer does not take shows up raw.
+        preg_match_all('/^[ \t]*(?:>[ \t]?)+[ \t]*(\[!.*?)[ \t]*$/m', $text, $callouts);
+        foreach (array_unique($callouts[1]) as $callout) {
+            if (preg_match(CalloutExtension::MARKER, $callout) !== 1) {
+                $issues[] = new KnowledgeLintIssueDTO($file, sprintf("callout '%s' is not rendered: put [!TIP], [!IMPORTANT] or [!WARNING] alone on the first line of the quote", $callout));
             }
         }
 

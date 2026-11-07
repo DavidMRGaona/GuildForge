@@ -21,7 +21,8 @@ final readonly class CalloutExtension implements ExtensionInterface
     /** @param bool $withTitle false for the plain-text path, where the translated title would pollute the index */
     public function __construct(private bool $withTitle = true) {}
 
-    private const string MARKER = '/^\[!(TIP|IMPORTANT|WARNING)\]$/';
+    /** Shared with `KnowledgeLinter`, so both accept the same markers. */
+    public const string MARKER = '/^\[!(TIP|IMPORTANT|WARNING)\]$/';
 
     public function register(EnvironmentBuilderInterface $environment): void
     {
