@@ -9,6 +9,7 @@ name: Reusable project sync
 # - an issue closed as completed goes to «Done»; a reopened one back to «Todo»
 # - when the last open issue of a Hito is closed, a project status update reports it (once per Hito)
 # Only issues already in the project are moved. «Design» and «Blocked» are set by hand.
+# An exhausted API rate limit is waited out (the job allows for one reset) instead of failing the run.
 
 on:
   workflow_call:
@@ -46,7 +47,51 @@ jobs:
     concurrency:
       group: project-sync-${{ github.repository }}-${{ github.event.issue.number || github.event.pull_request.number }}
       cancel-in-progress: false
+    # Room for one wait until the rate limit resets (at most an hour)
+    timeout-minutes: 90
     steps:
+      # Shared by the steps below: `api` is `gh api` that waits out an exhausted rate limit.
+      # The limit belongs to the token's user, so any other use of the API by that user spends it too.
+      - name: Prepare the API helper
+        run: |
+          cat >"$RUNNER_TEMP/gh-api.sh" <<'EOF'
+          # Seconds until the exhausted limit resets; a minute for a secondary limit, which has no reset time
+          rate_limit_wait() {
+            local now reset
+            now=$(date +%s)
+            reset=$(gh api rate_limit \
+              --jq '[.resources.core, .resources.graphql] | map(select(.remaining == 0) | .reset) | max // empty' \
+              2>/dev/null || true)
+            if [[ "$reset" =~ ^[0-9]+$ ]] && [ "$reset" -gt "$now" ]; then
+              echo $((reset - now + 5))
+            else
+              echo 60
+            fi
+          }
+
+          # gh api, retried a few times when the rate limit is exhausted; any other error fails at once
+          api() {
+            local attempt err out wait
+            err=$(mktemp)
+            for attempt in 1 2 3 4; do
+              if out=$(gh api "$@" 2>"$err"); then
+                rm -f "$err"
+                [ -z "$out" ] || printf '%s\n' "$out"
+                return 0
+              fi
+              if [ "$attempt" = 4 ] || ! grep -qi 'rate limit' "$err"; then
+                cat "$err" >&2
+                rm -f "$err"
+                return 1
+              fi
+              wait=$(rate_limit_wait)
+              # stderr: stdout is the response the caller captures
+              echo "::warning::GitHub API rate limit exhausted; retrying in ${wait}s" >&2
+              sleep "$wait"
+            done
+          }
+          EOF
+
       - name: Update the project item
         env:
           GH_TOKEN: ${{ secrets.project_token }}
@@ -68,6 +113,7 @@ jobs:
           PR_DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           set -euo pipefail
+          source "$RUNNER_TEMP/gh-api.sh"
 
           # Pull requests from forks and Dependabot get no secrets
           if [ -z "$GH_TOKEN" ]; then
@@ -75,7 +121,7 @@ jobs:
             exit 0
           fi
 
-          PROJECT=$(gh api graphql -f query='
+          PROJECT=$(api graphql -f query='
             query($owner: String!, $number: Int!) {
               user(login: $owner) {
                 projectV2(number: $number) {
@@ -90,7 +136,7 @@ jobs:
 
           # Idempotent: an item already in the project is returned as it is
           add_item() {
-            gh api graphql -f query='
+            api graphql -f query='
               mutation($project: ID!, $content: ID!) {
                 addProjectV2ItemById(input: {projectId: $project, contentId: $content}) { item { id } }
               }' -f project="$PROJECT_ID" -f content="$1" --jq '.data.addProjectV2ItemById.item.id'
@@ -98,7 +144,7 @@ jobs:
 
           # The content's item in this project; empty when it is not in it
           project_item() {
-            gh api graphql -f query='
+            api graphql -f query='
               query($content: ID!) {
                 node(id: $content) { ... on Issue { projectItems(first: 50) { nodes { id project { id } } } } }
               }' -f content="$1" \
@@ -106,7 +152,7 @@ jobs:
           }
 
           value_of() {
-            gh api graphql -f query='
+            api graphql -f query='
               query($item: ID!, $field: String!) {
                 node(id: $item) {
                   ... on ProjectV2Item {
@@ -125,7 +171,7 @@ jobs:
               echo "::warning::The project has no option «$option» in «$field»"
               return 0
             fi
-            gh api graphql -f query='
+            api graphql -f query='
               mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
                 updateProjectV2ItemFieldValue(input: {
                   projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}
@@ -149,7 +195,7 @@ jobs:
                   ;;
                 *)
                   if [ "$ACTION" = "opened" ] && [ "$(jq 'length' <<<"$ISSUE_ASSIGNEES")" = "0" ]; then
-                    gh api -X POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/assignees" -f "assignees[]=$ASSIGNEE" >/dev/null
+                    api -X POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/assignees" -f "assignees[]=$ASSIGNEE" >/dev/null
                     echo "Assigned to $ASSIGNEE"
                   fi
                   if [[ ! "$ISSUE_AUTHOR" =~ ^(OWNER|MEMBER|COLLABORATOR)$ ]] \
@@ -176,7 +222,7 @@ jobs:
               esac
               ;;
             pull_request)
-              issues=$(gh api graphql -f query='
+              issues=$(api graphql -f query='
                 query($pr: ID!) {
                   node(id: $pr) { ... on PullRequest { closingIssuesReferences(first: 20) { nodes { id } } } }
                 }' -f pr="$PR_ID" --jq '.data.node.closingIssuesReferences.nodes[].id')
@@ -205,23 +251,55 @@ jobs:
           GH_TOKEN: ${{ secrets.project_token }}
           OWNER: ${{ inputs.project_owner }}
           NUMBER: ${{ inputs.project_number }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
           STATE_REASON: ${{ github.event.issue.state_reason }}
         run: |
           set -euo pipefail
+          source "$RUNNER_TEMP/gh-api.sh"
 
           if [ -z "$GH_TOKEN" ]; then
             exit 0
           fi
 
-          items='[]'
+          # The closed issue's Hito and the updates already posted, before going through every card
+          meta=$(api graphql -f query='
+            query($owner: String!, $number: Int!, $issue: ID!) {
+              user(login: $owner) { projectV2(number: $number) { id statusUpdates(first: 100) { nodes { body } } } }
+              node(id: $issue) {
+                ... on Issue {
+                  projectItems(first: 50) {
+                    nodes {
+                      project { id }
+                      hito: fieldValueByName(name: "Hito") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+                    }
+                  }
+                }
+              }
+            }' -f owner="$OWNER" -F number="$NUMBER" -f issue="$ISSUE_ID")
+          PROJECT_ID=$(jq -r '.data.user.projectV2.id' <<<"$meta")
+          hito=$(jq -r --arg project "$PROJECT_ID" \
+            '[.data.node.projectItems.nodes[] | select(.project.id == $project) | .hito.name // empty] | first // ""' <<<"$meta")
+          if [ -z "$hito" ]; then
+            echo "The issue has no Hito"
+            exit 0
+          fi
+          heading="**Hito cerrado: $hito**"
+          posted=$(jq --arg h "$heading" '[.data.user.projectV2.statusUpdates.nodes[].body | select(startswith($h))] | length' <<<"$meta")
+          if [ "$posted" != "0" ]; then
+            echo "«$hito» already has its status update"
+            exit 0
+          fi
+
+          # Pages go to a file: the whole project no longer fits in a command-line argument
+          pages=$(mktemp)
+          page=$(mktemp)
           cursor=''
           while :; do
-            page=$(gh api graphql -f query='
+            api graphql -f query='
               query($owner: String!, $number: Int!, $after: String) {
                 user(login: $owner) {
                   projectV2(number: $number) {
-                    id
                     items(first: 100, after: $after) {
                       pageInfo { hasNextPage endCursor }
                       nodes {
@@ -234,39 +312,22 @@ jobs:
                     }
                   }
                 }
-              }' -f owner="$OWNER" -F number="$NUMBER" ${cursor:+-f after="$cursor"})
-            PROJECT_ID=$(jq -r '.data.user.projectV2.id' <<<"$page")
-            items=$(jq -c --argjson acc "$items" '$acc + .data.user.projectV2.items.nodes' <<<"$page")
-            [ "$(jq -r '.data.user.projectV2.items.pageInfo.hasNextPage' <<<"$page")" = "true" ] || break
-            cursor=$(jq -r '.data.user.projectV2.items.pageInfo.endCursor' <<<"$page")
+              }' -f owner="$OWNER" -F number="$NUMBER" ${cursor:+-f after="$cursor"} >"$page"
+            cat "$page" >>"$pages"
+            [ "$(jq -r '.data.user.projectV2.items.pageInfo.hasNextPage' "$page")" = "true" ] || break
+            cursor=$(jq -r '.data.user.projectV2.items.pageInfo.endCursor' "$page")
           done
 
           # Issues only, with the closed issue taken as closed even if the API still lags behind the event
-          cards=$(jq -c --arg url "$ISSUE_URL" --arg reason "$(tr '[:lower:]' '[:upper:]' <<<"$STATE_REASON")" '
-            map(select(.content.url != null) | {
+          cards=$(jq -cs --arg url "$ISSUE_URL" --arg reason "$(tr '[:lower:]' '[:upper:]' <<<"$STATE_REASON")" '
+            map(.data.user.projectV2.items.nodes[]) | map(select(.content.url != null) | {
               hito: .hito.name, module: (.module.name // .content.repository.name), start: .start.date, target: .target.date,
               title: .content.title, number: .content.number, url: .content.url, state: .content.state, reason: .content.stateReason
-            } | if .url == $url then .state = "CLOSED" | .reason = $reason else . end)' <<<"$items")
+            } | if .url == $url then .state = "CLOSED" | .reason = $reason else . end)' "$pages")
 
-          hito=$(jq -r --arg url "$ISSUE_URL" '.[] | select(.url == $url) | .hito // ""' <<<"$cards")
-          if [ -z "$hito" ]; then
-            echo "The issue has no Hito"
-            exit 0
-          fi
           open=$(jq --arg h "$hito" 'map(select(.hito == $h and .state != "CLOSED")) | length' <<<"$cards")
           if [ "$open" != "0" ]; then
             echo "«$hito» still has $open open cards"
-            exit 0
-          fi
-
-          heading="**Hito cerrado: $hito**"
-          posted=$(gh api graphql -f query='
-            query($owner: String!, $number: Int!) {
-              user(login: $owner) { projectV2(number: $number) { statusUpdates(first: 100) { nodes { body } } } }
-            }' -f owner="$OWNER" -F number="$NUMBER" \
-            | jq --arg h "$heading" '[.data.user.projectV2.statusUpdates.nodes[].body | select(startswith($h))] | length')
-          if [ "$posted" != "0" ]; then
-            echo "«$hito» already has its status update"
             exit 0
           fi
 
@@ -310,7 +371,7 @@ jobs:
               dates+=(-f "$date=$value")
             fi
           done
-          gh api graphql -f query='
+          api graphql -f query='
             mutation($project: ID!, $body: String!, $status: ProjectV2StatusUpdateStatus!, $start: Date, $target: Date) {
               createProjectV2StatusUpdate(input: {
                 projectId: $project, body: $body, status: $status, startDate: $start, targetDate: $target
