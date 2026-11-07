@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Services;
 
 use App\Application\DTOs\Response\EventResponseDTO;
+use App\Application\DTOs\UpcomingEventsCriteriaDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
@@ -26,6 +27,28 @@ final readonly class EventQueryService implements EventQueryServiceInterface
             ->where('start_date', '>=', now())
             ->orderedByStart('asc')
             ->limit($limit)
+            ->get();
+
+        return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
+    }
+
+    public function getUpcomingEventsWithin(UpcomingEventsCriteriaDTO $criteria): array
+    {
+        // Bindings bypass the storage-zone cast: bind both bounds as storage-zone wall times.
+        // The horizon counts display days, today being the first, and ends at the next midnight.
+        $lastDay = $this->timezone->today()->modify(sprintf('+%d days', $criteria->withinDays - 1));
+        $from = $this->timezone->toStorage(now())->format('Y-m-d H:i:s');
+        $until = $this->timezone->displayDayRange($lastDay)[1]->format('Y-m-d H:i:s');
+
+        $query = EventModel::query()
+            ->with('tags')
+            ->where('is_published', true)
+            ->where('start_date', '>=', $from)
+            ->where('start_date', '<', $until);
+
+        $events = QueryHelpers::applyTagFilter($query, $criteria->tagSlugs)
+            ->orderedByStart('asc')
+            ->limit($criteria->limit)
             ->get();
 
         return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
