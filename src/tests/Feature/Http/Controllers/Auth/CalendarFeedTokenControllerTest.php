@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers\Auth;
 
 use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
+use App\Application\Services\SiteBrandingServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -32,6 +33,36 @@ final class CalendarFeedTokenControllerTest extends TestCase
 
         $token = basename($feedUrl, '.ics');
         $this->assertSame($user->id, app(CalendarFeedTokenServiceInterface::class)->userIdFor($token));
+    }
+
+    public function test_issuing_returns_links_that_subscribe_in_google_and_outlook(): void
+    {
+        $this->registerAttendance([]);
+        $user = UserModel::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/perfil/calendario');
+
+        $response->assertOk();
+        $feedUrl = $response->json('feedUrl');
+        $webcalUrl = $response->json('webcalUrl');
+        $this->assertIsString($feedUrl);
+        $this->assertIsString($webcalUrl);
+
+        $google = $response->json('googleUrl');
+        $this->assertIsString($google);
+        $this->assertStringStartsWith('https://calendar.google.com/calendar/r?', $google);
+        parse_str((string) parse_url($google, PHP_URL_QUERY), $googleQuery);
+        $this->assertSame($webcalUrl, $googleQuery['cid'] ?? null);
+
+        $outlook = $response->json('outlookUrl');
+        $this->assertIsString($outlook);
+        $this->assertStringStartsWith('https://outlook.live.com/calendar/0/addfromweb?', $outlook);
+        parse_str((string) parse_url($outlook, PHP_URL_QUERY), $outlookQuery);
+        $this->assertSame($feedUrl, $outlookQuery['url'] ?? null);
+        $this->assertSame(
+            __('calendar.personal.feed_name', ['site' => app(SiteBrandingServiceInterface::class)->siteName()]),
+            $outlookQuery['name'] ?? null,
+        );
     }
 
     public function test_issuing_again_regenerates_the_address(): void

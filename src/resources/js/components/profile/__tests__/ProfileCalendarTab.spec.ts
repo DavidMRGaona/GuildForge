@@ -22,6 +22,19 @@ const FEED_URL =
     'https://example.test/calendario/personal/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ.ics';
 const WEBCAL_URL =
     'webcal://example.test/calendario/personal/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ.ics';
+const GOOGLE_URL = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(WEBCAL_URL)}`;
+const OUTLOOK_URL = `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(FEED_URL)}&name=Mi%20calendario`;
+const ADDRESSES = {
+    feedUrl: FEED_URL,
+    webcalUrl: WEBCAL_URL,
+    googleUrl: GOOGLE_URL,
+    outlookUrl: OUTLOOK_URL,
+    issuedAt: null,
+};
+const SAFARI_IOS =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1';
+const CHROME_IOS =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/142.0.7444.46 Mobile/15E148 Safari/604.1';
 
 function mountTab(
     calendarFeed: CalendarFeedStatus,
@@ -129,6 +142,68 @@ describe('ProfileCalendarTab', () => {
 
         expect(writeText).toHaveBeenCalledWith(FEED_URL);
         expect(wrapper.text()).toContain('Copiada');
+    });
+
+    describe('subscribe options', () => {
+        async function createdAddresses(): Promise<ReturnType<typeof mount>> {
+            fetchMock.mockResolvedValue(jsonResponse(ADDRESSES));
+            const wrapper = mountTab({ available: true, issuedAt: null });
+            await buttonWithText(wrapper, 'Crear dirección de suscripción').trigger('click');
+            await flushPromises();
+
+            return wrapper;
+        }
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it('offers Apple Calendar, Google Calendar and Outlook', async () => {
+            const wrapper = await createdAddresses();
+
+            const links = wrapper.findAll('[data-testid="calendar-feed-subscribe"] a');
+            expect(links.map((link) => link.attributes('href'))).toEqual([
+                WEBCAL_URL,
+                GOOGLE_URL,
+                OUTLOOK_URL,
+            ]);
+            expect(links.map((link) => link.text())).toEqual([
+                expect.stringContaining('Apple Calendar'),
+                expect.stringContaining('Google Calendar'),
+                expect.stringContaining('Outlook'),
+            ]);
+        });
+
+        it('opens Google and Outlook in a new tab without sending the referrer', async () => {
+            const wrapper = await createdAddresses();
+
+            const [apple, google, outlook] = wrapper.findAll(
+                '[data-testid="calendar-feed-subscribe"] a'
+            );
+            expect(apple?.attributes('target')).toBeUndefined();
+            for (const link of [google, outlook]) {
+                expect(link?.attributes('target')).toBe('_blank');
+                expect(link?.attributes('rel')).toContain('noopener');
+                expect(link?.attributes('rel')).toContain('noreferrer');
+            }
+        });
+
+        it('tells iPhone browsers other than Safari how to subscribe', async () => {
+            vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(CHROME_IOS);
+
+            const wrapper = await createdAddresses();
+
+            expect(wrapper.find('[data-testid="calendar-feed-ios-hint"]').exists()).toBe(true);
+            expect(wrapper.text()).toContain('Safari');
+        });
+
+        it('gives Safari on iPhone no extra hint', async () => {
+            vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(SAFARI_IOS);
+
+            const wrapper = await createdAddresses();
+
+            expect(wrapper.find('[data-testid="calendar-feed-ios-hint"]').exists()).toBe(false);
+        });
     });
 
     it('says an earlier address exists without showing it', () => {

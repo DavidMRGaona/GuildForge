@@ -22,9 +22,14 @@ Tu calendario personal reúne los eventos, partidas y torneos de {{site_name}} e
 
 1. Pulsa tu nombre en la cabecera y elige **Mi perfil**.
 2. Abre la pestaña **Mi calendario** y pulsa **Crear dirección de suscripción**.
-3. Copia la dirección que corresponda a tu aplicación:
-   - **Apple Calendar y Outlook**: la que empieza por `webcal://`. También puedes pulsar **Abrir en mi aplicación de calendario**.
-   - **Google Calendar**: la que empieza por `https://`. En Google Calendar, pulsa **+** junto a **Otros calendarios**, elige **Desde URL** y pégala.
+3. En **Suscribirte desde**, pulsa el botón de tu aplicación:
+   - **Apple Calendar (iPhone y Mac)** abre la app Calendario para que confirmes la suscripción.
+   - **Google Calendar** y **Outlook** abren la web de cada uno con la suscripción lista para añadir.
+
+Si prefieres hacerlo a mano, copia la dirección: la que empieza por `webcal://` para Apple Calendar y Outlook, y la que empieza por `https://` para Google Calendar (pulsa **+** junto a **Otros calendarios**, elige **Desde URL** y pégala).
+
+> [!IMPORTANT]
+> En iPhone, solo Safari abre la app Calendario desde la web. Con Chrome u otro navegador, abre la página en Safari o copia la dirección `webcal://` y añádela en **Ajustes → Apps → Calendario → Cuentas de calendario → Añadir cuenta → Otra → Añadir calendario suscrito**.
 
 Tu aplicación consulta la dirección cada cierto tiempo y añade sola las nuevas inscripciones, los cambios de hora y las cancelaciones. Algunas tardan varias horas en actualizarse. El calendario suscrito abarca desde 30 días atrás hasta 12 meses vista.
 
