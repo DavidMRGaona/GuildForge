@@ -447,7 +447,7 @@ export default {
                 privateWarning:
                     'Esta dirección es privada: quien la tenga verá en qué estás inscrito. No la compartas.',
                 shownOnce: 'Solo se muestra ahora. Si la pierdes, crea una nueva.',
-                webcalLabel: 'Apple Calendar y Outlook (webcal)',
+                webcalLabel: 'Apple Calendar, Outlook e ICSx⁵ en Android (webcal)',
                 httpsLabel: 'Google Calendar y otras aplicaciones (https)',
                 copy: 'Copiar',
                 copied: 'Copiada',
