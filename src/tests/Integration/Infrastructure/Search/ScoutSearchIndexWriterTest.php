@@ -77,10 +77,14 @@ final class ScoutSearchIndexWriterTest extends TestCase
 
     public function test_sync_settings_pushes_the_configured_index_settings(): void
     {
-        config(['scout.driver' => 'meilisearch', 'scout.meilisearch.index-settings.'.SearchDocumentModel::class => ['filterableAttributes' => ['type']]]);
+        config([
+            'scout.driver' => 'meilisearch',
+            'scout.prefix' => 'test_',
+            'scout.meilisearch.index-settings.'.SearchDocumentModel::class => ['filterableAttributes' => ['type']],
+        ]);
         /** @var Engine&UpdatesIndexSettings&MockInterface $engine */
         $engine = Mockery::mock(Engine::class.', '.UpdatesIndexSettings::class);
-        $engine->shouldReceive('updateIndexSettings')->once()->with('search_documents', ['filterableAttributes' => ['type']]);
+        $engine->shouldReceive('updateIndexSettings')->once()->with('test_search_documents', ['filterableAttributes' => ['type']]);
 
         $this->writerWith($engine)->syncSettings();
     }
