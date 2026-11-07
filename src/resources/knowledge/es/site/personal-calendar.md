@@ -5,7 +5,7 @@ summary: Mira en el calendario solo aquello en lo que estás inscrito y llévalo
 category: events-and-games
 audience: site
 order: 20
-keywords: [mi calendario, mis inscripciones, inscrito, apuntado, mis partidas, suscripción, suscribirme, google calendar, apple calendar, outlook, ical, ics, webcal, móvil, sincronizar, agenda]
+keywords: [mi calendario, mis inscripciones, inscrito, apuntado, mis partidas, suscripción, suscribirme, google calendar, apple calendar, outlook, ical, ics, webcal, móvil, sincronizar, actualizar, frecuencia, agenda]
 related: [core.events.find-events, core.account.complete-profile]
 conditions:
   capabilities: [core.personal_calendar]
@@ -31,10 +31,22 @@ Si prefieres hacerlo a mano, copia la dirección: la que empieza por `webcal://`
 > [!IMPORTANT]
 > En iPhone, solo Safari abre la app Calendario desde la web. Con Chrome u otro navegador, abre la página en Safari o copia la dirección `webcal://` y añádela en **Ajustes → Apps → Calendario → Cuentas de calendario → Añadir cuenta → Otra → Añadir calendario suscrito**.
 
-Tu aplicación consulta la dirección cada cierto tiempo y añade sola las nuevas inscripciones, los cambios de hora y las cancelaciones. Algunas tardan varias horas en actualizarse. El calendario suscrito abarca desde 30 días atrás hasta 12 meses vista.
+Tu aplicación añade sola las nuevas inscripciones, los cambios de hora y las cancelaciones. El calendario suscrito abarca desde 30 días atrás hasta 12 meses vista.
 
 > [!WARNING]
 > La dirección es privada: quien la tenga verá en qué estás inscrito. No la compartas. Solo se muestra al crearla; si la pierdes, crea una nueva.
+
+## Cada cuánto se actualiza
+
+{{site_name}} pide a las aplicaciones que consulten tu calendario cada hora, pero cada una decide por su cuenta:
+
+- **Calendar en Mac**: al suscribirte, en **Actualizar automáticamente** elige **Cada hora** (o **Cada 15 minutos**). Por defecto propone **Cada semana**.
+- **iPhone y iPad**: sigue el ajuste de **Ajustes → Apps → Calendario → Cuentas de calendario → Obtener datos**.
+- **Google Calendar**: actualiza por su cuenta, normalmente varias veces al día; no se puede cambiar.
+- **Outlook**: actualiza cada pocas horas.
+
+> [!TIP]
+> Si acabas de inscribirte y aún no lo ves en tu aplicación, el filtro **Solo en lo que estoy inscrito** del calendario de la web siempre está al día.
 
 ## Cambiar o quitar la dirección
 

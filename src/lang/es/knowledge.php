@@ -22,7 +22,7 @@ return [
     'callouts' => [
         'tip' => 'Consejo',
         'important' => 'Importante',
-        'warning' => 'Ojo',
+        'warning' => 'Atención',
     ],
     'contextual_help' => 'Ayuda sobre esta pantalla',
     'panel' => [
