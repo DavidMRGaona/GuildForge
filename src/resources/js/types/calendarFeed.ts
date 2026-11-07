@@ -10,5 +10,9 @@ export interface CalendarFeedStatus {
 export interface CalendarFeedAddresses {
     feedUrl: string;
     webcalUrl: string;
+    /** Opens Google Calendar with the subscription ready. */
+    googleUrl: string;
+    /** Opens Outlook on the web with the subscription ready. */
+    outlookUrl: string;
     issuedAt: string | null;
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarDays, Check, Copy, ShieldAlert } from '@lucide/vue';
+import { CalendarDays, Check, Copy, ExternalLink, Info, ShieldAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BaseCard from '@/components/ui/BaseCard.vue';
@@ -35,6 +35,10 @@ const confirmRevoke = ref(false);
 
 const hasAddress = computed(() => issuedAt.value !== null);
 
+// Chrome, Firefox, Edge, Opera and the Google app on iPhone do not hand webcal:// to Calendar
+const isIosOtherBrowser =
+    typeof navigator !== 'undefined' && /CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(navigator.userAgent);
+
 const issuedAtLabel = computed(() =>
     issuedAt.value === null
         ? ''
@@ -59,6 +63,24 @@ const addressRows = computed(() =>
                   key: 'https' as const,
                   label: t('auth.profile.calendarFeed.httpsLabel'),
                   url: addresses.value.feedUrl,
+              },
+          ]
+);
+
+const subscribeLinkClass =
+    'inline-flex min-h-[44px] items-center gap-2 rounded-md bg-muted px-4 py-2 text-sm font-medium text-base-primary hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:hover:bg-neutral-700 dark:focus:ring-offset-page';
+
+const externalSubscribeLinks = computed(() =>
+    addresses.value === null
+        ? []
+        : [
+              {
+                  label: t('auth.profile.calendarFeed.subscribeGoogle'),
+                  url: addresses.value.googleUrl,
+              },
+              {
+                  label: t('auth.profile.calendarFeed.subscribeOutlook'),
+                  url: addresses.value.outlookUrl,
               },
           ]
 );
@@ -225,12 +247,39 @@ function selectAll(event: FocusEvent): void {
                     </div>
                 </div>
 
-                <a
-                    :href="addresses.webcalUrl"
-                    class="inline-flex text-sm font-medium text-primary underline hover:text-primary-700"
-                >
-                    {{ t('auth.profile.calendarFeed.openWebcal') }}
-                </a>
+                <div data-testid="calendar-feed-subscribe" class="space-y-2">
+                    <p class="text-sm font-medium text-base-secondary">
+                        {{ t('auth.profile.calendarFeed.subscribeIn') }}
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <a :href="addresses.webcalUrl" :class="subscribeLinkClass">
+                            <CalendarDays class="h-4 w-4" aria-hidden="true" />
+                            {{ t('auth.profile.calendarFeed.subscribeApple') }}
+                        </a>
+                        <a
+                            v-for="link in externalSubscribeLinks"
+                            :key="link.label"
+                            :href="link.url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            :class="subscribeLinkClass"
+                        >
+                            <ExternalLink class="h-4 w-4" aria-hidden="true" />
+                            {{ link.label }}
+                            <span class="sr-only"
+                                >({{ t('auth.profile.calendarFeed.opensInNewTab') }})</span
+                            >
+                        </a>
+                    </div>
+                    <p
+                        v-if="isIosOtherBrowser"
+                        data-testid="calendar-feed-ios-hint"
+                        class="flex gap-2 text-sm text-base-secondary"
+                    >
+                        <Info class="mt-0.5 h-4 w-4 shrink-0 text-info" aria-hidden="true" />
+                        {{ t('auth.profile.calendarFeed.iosOtherBrowserHint') }}
+                    </p>
+                </div>
             </div>
 
             <!-- An address exists, created earlier: it cannot be shown again -->
