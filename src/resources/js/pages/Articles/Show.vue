@@ -111,7 +111,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ar
                 <div class="mt-8 border-t border-default pt-6">
                     <Link :href="routes.articles.index">
                         <BaseButton variant="primary">
-                            {{ t('common.viewAll') }} {{ t('common.articles').toLowerCase() }}
+                            {{ t('articles.viewAll') }}
                         </BaseButton>
                     </Link>
                 </div>
