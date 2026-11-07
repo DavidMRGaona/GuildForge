@@ -102,7 +102,10 @@ export function useEvents(): UseEventsReturn {
 
     function formatPrice(price: number | null): string {
         if (price === null) return t('events.free');
-        return `${price.toFixed(2)} €`;
+        // Decimal separator and symbol position follow the page language
+        return new Intl.NumberFormat(locale.value, { style: 'currency', currency: 'EUR' }).format(
+            price
+        );
     }
 
     function isUpcoming(event: Event): boolean {
