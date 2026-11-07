@@ -132,10 +132,10 @@ final class KnowledgeCatalogSynchronizerTest extends TestCase
 
         $en = $this->guide('account.one', 'en')->body_text;
         $this->assertStringContainsString('You are member', $en);
-        $this->assertStringNotContainsString('Ojo', $en);
+        $this->assertStringNotContainsString('Atención', $en);
         $this->assertStringNotContainsString('Warning', $en);
         $this->assertStringContainsString('Eres socio', $this->guide('account.one', 'es')->body_text);
-        $this->assertStringNotContainsString('Ojo', $this->guide('account.one', 'es')->body_text);
+        $this->assertStringNotContainsString('Atención', $this->guide('account.one', 'es')->body_text);
         $this->assertSame('es', app()->getLocale());
     }
 
