@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
+import type { ComputedRef } from 'vue';
 import Show from '../Show.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
@@ -10,6 +11,16 @@ vi.mock('@inertiajs/vue3', () => ({
     Link: { props: ['href'], template: '<a :href="href"><slot /></a>' },
     usePage: (): { url: string; props: Record<string, unknown> } => ({ url: '/', props: {} }),
 }));
+
+// Whether the side column fits the window is a measurement: each test decides it
+const asideFits = vi.hoisted(() => ({ value: true }));
+vi.mock('@/composables/useFitsViewportHeight', async () => {
+    const { computed } = await import('vue');
+
+    return {
+        useFitsViewportHeight: (): ComputedRef<boolean> => computed(() => asideFits.value),
+    };
+});
 
 const calendarLinks: AddToCalendarLinks = {
     google: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=Partida',
@@ -109,5 +120,47 @@ describe('Events/Show', () => {
         const page = mountPage({ event: event() });
 
         expect(page.text()).toContain('Ver todos los eventos');
+    });
+
+    describe('side column', () => {
+        const withDownloads = {
+            downloadLinks: [
+                { label: 'Reglamento', url: 'https://example.com/r.pdf', description: '' },
+            ],
+        };
+
+        it('holds the module actions, the calendar and the downloads, not the description', () => {
+            const page = mountPage({ event: event(withDownloads), calendarLinks });
+
+            const aside = page.get('[data-testid="event-aside"]');
+            expect(aside.find('[data-module-slot]').exists()).toBe(true);
+            expect(aside.find('[data-add-to-calendar]').exists()).toBe(true);
+            expect(aside.text()).toContain('Reglamento');
+            expect(aside.text()).not.toContain('Descripción del evento');
+        });
+
+        it('comes after the description, so a phone reads what the event is before signing up', () => {
+            const page = mountPage({ event: event() });
+
+            const html = page.html();
+            const descriptionAt = html.indexOf('Descripción del evento');
+            expect(descriptionAt).toBeGreaterThan(-1);
+            expect(html.indexOf('data-testid="event-aside"')).toBeGreaterThan(descriptionAt);
+        });
+
+        it('stays in view while scrolling when it fits the window', () => {
+            asideFits.value = true;
+            const page = mountPage({ event: event() });
+
+            expect(page.get('[data-testid="event-aside"]').classes()).toContain('lg:sticky');
+        });
+
+        it('scrolls with the page when it is taller than the window', () => {
+            asideFits.value = false;
+            const page = mountPage({ event: event() });
+
+            expect(page.get('[data-testid="event-aside"]').classes()).not.toContain('lg:sticky');
+            asideFits.value = true;
+        });
     });
 });
