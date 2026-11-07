@@ -75,9 +75,10 @@ describe('Events/Show', () => {
     it('shows member and non-member prices among the details', () => {
         const page = mountPage({ event: event({ memberPrice: 5, nonMemberPrice: 8 }) });
 
-        const details = page.get('[data-testid="event-details"]').text();
-        expect(details).toContain('Precio socios: 5.00 €');
-        expect(details).toContain('Precio no socios: 8.00 €');
+        // Intl separates the amount and the symbol with a no-break space
+        const details = page.get('[data-testid="event-details"]').text().replace(/\s/g, ' ');
+        expect(details).toContain('Precio socios: 5,00 €');
+        expect(details).toContain('Precio no socios: 8,00 €');
         expect(details).not.toContain('Gratuito');
     });
 
