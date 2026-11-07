@@ -140,11 +140,24 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
                 </div>
 
                 <!--
-                    One column on phones and tablets (actions first, then the description); from lg
-                    the actions move to a side column, which stays in view while scrolling only when
-                    it fits the window (a taller sticky column would hide its bottom)
+                    One column on phones and tablets (the description, then the actions: what the event
+                    is before signing up); from lg the actions move to a side column, which stays in
+                    view while scrolling only when it fits the window (a taller sticky column would
+                    hide its bottom)
                 -->
                 <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-10">
+                    <!--
+                        SECURITY: v-html is used to render rich text content from the event.
+                        Content is sanitized server-side via SanitizesHtml trait (HTMLPurifier).
+                        @see App\Infrastructure\Factories\EloquentResponseDTOFactory
+                    -->
+                    <!-- eslint-disable vue/no-v-html -->
+                    <div
+                        class="prose mb-6 max-w-none dark:prose-invert lg:col-start-1 lg:row-start-1 lg:mb-0"
+                        v-html="props.event.description"
+                    />
+                    <!-- eslint-enable vue/no-v-html -->
+
                     <div
                         ref="aside"
                         data-testid="event-aside"
@@ -199,18 +212,6 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
                             </ul>
                         </div>
                     </div>
-
-                    <!--
-                        SECURITY: v-html is used to render rich text content from the event.
-                        Content is sanitized server-side via SanitizesHtml trait (HTMLPurifier).
-                        @see App\Infrastructure\Factories\EloquentResponseDTOFactory
-                    -->
-                    <!-- eslint-disable vue/no-v-html -->
-                    <div
-                        class="prose max-w-none dark:prose-invert lg:col-start-1 lg:row-start-1"
-                        v-html="props.event.description"
-                    />
-                    <!-- eslint-enable vue/no-v-html -->
                 </div>
 
                 <div class="mt-8 border-t border-default pt-6">

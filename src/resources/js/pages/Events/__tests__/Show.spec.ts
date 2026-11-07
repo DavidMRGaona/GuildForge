@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
+import type { ComputedRef } from 'vue';
 import Show from '../Show.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
@@ -15,10 +16,9 @@ vi.mock('@inertiajs/vue3', () => ({
 const asideFits = vi.hoisted(() => ({ value: true }));
 vi.mock('@/composables/useFitsViewportHeight', async () => {
     const { computed } = await import('vue');
-    type Fits = ReturnType<typeof computed<boolean>>;
 
     return {
-        useFitsViewportHeight: (): Fits => computed(() => asideFits.value),
+        useFitsViewportHeight: (): ComputedRef<boolean> => computed(() => asideFits.value),
     };
 });
 
@@ -139,13 +139,13 @@ describe('Events/Show', () => {
             expect(aside.text()).not.toContain('Descripción del evento');
         });
 
-        it('comes before the description, so a phone shows the sign-up first', () => {
+        it('comes after the description, so a phone reads what the event is before signing up', () => {
             const page = mountPage({ event: event() });
 
             const html = page.html();
-            const asideAt = html.indexOf('data-testid="event-aside"');
-            expect(asideAt).toBeGreaterThan(-1);
-            expect(asideAt).toBeLessThan(html.indexOf('Descripción del evento'));
+            const descriptionAt = html.indexOf('Descripción del evento');
+            expect(descriptionAt).toBeGreaterThan(-1);
+            expect(html.indexOf('data-testid="event-aside"')).toBeGreaterThan(descriptionAt);
         });
 
         it('stays in view while scrolling when it fits the window', () => {
