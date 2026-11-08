@@ -14,6 +14,9 @@ return [
         'settings' => 'Configuración',
         'admin' => 'Administración',
     ],
+    'settings_cluster' => [
+        'label' => 'Configuración',
+    ],
     'navigation_groups' => [
         'content' => 'Contenido',
         'activities' => 'Actividades',
@@ -753,7 +756,7 @@ return [
         ],
     ],
     'dashboard_settings' => [
-        'navigation' => 'Panel de control',
+        'navigation' => 'Escritorio',
         'title' => 'Configuración del panel',
         'saved' => 'Configuración del panel guardada correctamente',
         'reset' => 'Configuración restablecida a valores por defecto',

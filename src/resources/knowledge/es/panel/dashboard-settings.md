@@ -32,4 +32,4 @@ Pulsa **Restablecer por defecto**, arriba a la derecha, y confirma. El escritori
 > [!TIP]
 > Si un módulo está deshabilitado, sus widgets no salen en la lista. Su orden y sus filas se guardan para cuando lo vuelvas a habilitar.
 
-[[action:filament.admin.pages.dashboard-settings|Configurar el escritorio]]
+[[action:filament.admin.configuracion.pages.dashboard-settings|Configurar el escritorio]]

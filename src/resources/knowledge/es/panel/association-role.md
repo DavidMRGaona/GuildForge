@@ -37,4 +37,4 @@ Si el rol guardado ya no existe o no se puede usar, nadie cuenta como miembro de
 
 El rol elegido no se puede renombrar ni borrar mientras lo sea.
 
-[[action:filament.admin.pages.site-settings|Abrir la configuración del sitio]]
+[[action:filament.admin.configuracion.pages.site-settings|Abrir la configuración del sitio]]

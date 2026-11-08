@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Settings;
 
 use App\Application\Services\DashboardWidgetConfigServiceInterface;
+use App\Filament\Clusters\SettingsCluster;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use Filament\Actions\Action;
@@ -31,7 +32,9 @@ final class DashboardSettings extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-squares-2x2';
 
-    protected static ?int $navigationSort = 99;
+    protected static ?string $cluster = SettingsCluster::class;
+
+    protected static ?int $navigationSort = 40;
 
     protected string $view = 'filament.pages.settings.dashboard-settings';
 
@@ -43,11 +46,6 @@ final class DashboardSettings extends Page implements HasForms
     public static function getNavigationLabel(): string
     {
         return __('filament.dashboard_settings.navigation');
-    }
-
-    public static function getNavigationGroup(): string
-    {
-        return __('filament.navigation.settings');
     }
 
     public function getTitle(): string

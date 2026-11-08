@@ -46,4 +46,4 @@ Sube el logo para el tema claro, el del tema oscuro y el de los correos. Si no s
 
 Esta pestaña solo sale si tienes permiso para el modo mantenimiento. Tiene su propia guía.
 
-[[action:filament.admin.pages.site-settings|Abrir la configuración del sitio]]
+[[action:filament.admin.configuracion.pages.site-settings|Abrir la configuración del sitio]]

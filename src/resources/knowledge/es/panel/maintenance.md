@@ -33,4 +33,4 @@ Pulsa **Desactivar** en el aviso del panel. Te lleva a la pestaña **Mantenimien
 > [!WARNING]
 > Acuérdate de desactivarlo al terminar. Mientras siga activo, nadie de fuera puede usar la web.
 
-[[action:filament.admin.pages.site-settings|Abrir la configuración del sitio]]
+[[action:filament.admin.configuracion.pages.site-settings|Abrir la configuración del sitio]]

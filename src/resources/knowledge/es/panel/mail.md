@@ -46,5 +46,5 @@ En **Límites y cuotas** puedes fijar un **Límite diario** y un **Límite mensu
 
 El escritorio también puede mostrar el estado del correo y sus estadísticas.
 
-[[action:filament.admin.pages.mail-settings|Configurar el correo|if=mail.configure]]
-[[action:filament.admin.pages.mail-statistics-page|Ver las estadísticas|if=mail.view_stats]]
+[[action:filament.admin.configuracion.pages.mail-settings|Configurar el correo|if=mail.configure]]
+[[action:filament.admin.configuracion.pages.mail-statistics-page|Ver las estadísticas|if=mail.view_stats]]

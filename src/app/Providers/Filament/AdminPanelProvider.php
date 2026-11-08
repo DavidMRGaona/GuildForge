@@ -11,6 +11,7 @@ use App\Application\Services\SiteBrandingServiceInterface;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
+use App\Filament\Support\ClusteredPageRedirects;
 use App\Filament\Support\InitialsAvatarProvider;
 use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelNavigationGroups;
@@ -118,9 +119,11 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups($this->getNavigationGroups())
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+            ->discoverClusters(in: app_path('Filament/Clusters'), for: 'App\\Filament\\Clusters')
             ->pages([
                 ...$this->discoverModulePages(),
             ])
+            ->authenticatedRoutes(static fn (Panel $panel) => ClusteredPageRedirects::register($panel))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets($this->discoverModuleWidgets())
             ->middleware([

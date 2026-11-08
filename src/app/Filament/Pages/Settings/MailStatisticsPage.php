@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Settings;
 
 use App\Domain\Mail\Enums\EmailStatus;
+use App\Filament\Clusters\SettingsCluster;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Infrastructure\Persistence\Eloquent\Models\EmailLogModel;
@@ -24,18 +25,15 @@ final class MailStatisticsPage extends Page implements HasTable
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar-square';
 
-    protected static ?int $navigationSort = 13;
+    protected static ?string $cluster = SettingsCluster::class;
+
+    protected static ?int $navigationSort = 30;
 
     protected string $view = 'filament.pages.settings.mail-statistics';
 
     public static function getNavigationLabel(): string
     {
         return __('filament.mail_statistics.title');
-    }
-
-    public static function getNavigationGroup(): string
-    {
-        return __('filament.navigation.admin');
     }
 
     public function getTitle(): string

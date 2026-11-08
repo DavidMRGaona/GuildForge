@@ -14,6 +14,9 @@ return [
         'settings' => 'Settings',
         'admin' => 'Administration',
     ],
+    'settings_cluster' => [
+        'label' => 'Settings',
+    ],
     'navigation_groups' => [
         'content' => 'Content',
         'activities' => 'Activities',
