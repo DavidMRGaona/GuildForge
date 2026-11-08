@@ -50,6 +50,19 @@ final class QrCodeTestImages
     }
 
     /**
+     * A solid SVG of the same red as the raster images, with the given viewBox size.
+     */
+    public static function svg(int $width, int $height, string $extra = ''): string
+    {
+        return sprintf(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %1$d %2$d"><rect width="%1$d" height="%2$d" fill="#C81E1E"/>%3$s</svg>',
+            $width,
+            $height,
+            $extra,
+        );
+    }
+
+    /**
      * The text a QR code in a PNG decodes to, or null when it cannot be read.
      *
      * With GD even where Imagick is loaded, as on the CI runners: the decoder would pick Imagick

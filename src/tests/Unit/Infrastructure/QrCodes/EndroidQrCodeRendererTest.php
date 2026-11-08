@@ -12,6 +12,7 @@ use App\Domain\QrCodes\Exceptions\InvalidQrCodeContentException;
 use App\Domain\QrCodes\Exceptions\QrCodeRenderingException;
 use App\Infrastructure\QrCodes\EndroidQrCodeRenderer;
 use App\Infrastructure\QrCodes\QrCodeContentPolicy;
+use App\Infrastructure\QrCodes\RsvgConvertRasterizer;
 use DOMDocument;
 use DOMElement;
 use PHPUnit\Framework\TestCase;
@@ -155,6 +156,80 @@ final class EndroidQrCodeRendererTest extends TestCase
         $this->assertSame('#FFF8E7', $patch->getAttribute('fill'));
         $this->assertSame('80', $patch->getAttribute('width'));
         $this->assertSame('40', $patch->getAttribute('height'));
+    }
+
+    public function test_a_png_with_an_svg_logo_rasterizes_it_and_still_decodes(): void
+    {
+        $options = new QrCodeOptionsDTO(
+            size: 512,
+            margin: 16,
+            logo: new QrCodeLogoDTO(QrCodeTestImages::svg(2, 1), QrCodeLogoDTO::MAX_WIDTH_RATIO),
+        );
+
+        $png = $this->renderer->render(self::URL, $options, QrCodeFormat::Png)->contents;
+
+        $this->assertSame([512, 512], array_slice((array) getimagesizefromstring($png), 0, 2));
+        // 25% of the 480 px code is 120 x 60 px around the centre
+        $this->assertSame([200, 30, 30], QrCodeTestImages::pixel($png, 256, 256));
+        $this->assertSame([200, 30, 30], QrCodeTestImages::pixel($png, 256 - 55, 256 - 25));
+        $this->assertSame([200, 30, 30], QrCodeTestImages::pixel($png, 256 + 55, 256 + 25));
+        $this->assertNotSame([200, 30, 30], QrCodeTestImages::pixel($png, 256, 256 - 40));
+        $this->assertSame(self::URL, QrCodeTestImages::decode($png));
+    }
+
+    public function test_an_svg_with_an_svg_logo_embeds_the_sanitized_logo_in_proportion(): void
+    {
+        $logo = new QrCodeLogoDTO(QrCodeTestImages::svg(200, 100, '<script>alert(1)</script>'), 0.2);
+        $options = new QrCodeOptionsDTO(size: 400, margin: 0, logo: $logo);
+
+        $svg = $this->parseSvg($this->renderer->render(self::URL, $options, QrCodeFormat::Svg)->contents);
+
+        $image = $svg->getElementsByTagName('image')->item(0);
+        $this->assertInstanceOf(DOMElement::class, $image);
+        $this->assertSame('data:image/svg+xml;base64,'.base64_encode($logo->contents), $image->getAttribute('href'));
+        $this->assertStringNotContainsString('script', $logo->contents);
+        $this->assertSame('80', $image->getAttribute('width'));
+        $this->assertSame('40', $image->getAttribute('height'));
+        $this->assertSame('160', $image->getAttribute('x'));
+        $this->assertSame('180', $image->getAttribute('y'));
+        $this->assertSame(0, $svg->getElementsByTagName('script')->length);
+    }
+
+    public function test_an_svg_logo_that_points_to_a_local_file_does_not_read_it(): void
+    {
+        $secret = tempnam(sys_get_temp_dir(), 'qr-secret-');
+        $this->assertIsString($secret);
+        file_put_contents($secret.'.png', QrCodeTestImages::png(64, 64));
+
+        try {
+            // A green logo with a red local image over it: only green may reach the PNG
+            $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#00FF00"/>'
+                .'<image width="10" height="10" href="file://'.$secret.'.png"/><image width="10" height="10" href="'.basename($secret).'.png"/></svg>';
+            $options = new QrCodeOptionsDTO(size: 512, logo: new QrCodeLogoDTO($svg, QrCodeLogoDTO::MAX_WIDTH_RATIO));
+
+            $png = $this->renderer->render(self::URL, $options, QrCodeFormat::Png)->contents;
+
+            $this->assertSame([0, 255, 0], QrCodeTestImages::pixel($png, 256, 256));
+        } finally {
+            @unlink($secret);
+            @unlink($secret.'.png');
+        }
+    }
+
+    public function test_without_the_rasterizer_a_png_with_an_svg_logo_fails_with_a_rendering_exception(): void
+    {
+        $renderer = new EndroidQrCodeRenderer(
+            new QrCodeContentPolicy('https://guild.example.org', allowsHttp: false),
+            new RsvgConvertRasterizer('/nonexistent/rsvg-convert'),
+        );
+        $options = new QrCodeOptionsDTO(logo: new QrCodeLogoDTO(QrCodeTestImages::svg(1, 1)));
+
+        // The SVG output needs no rasterizer
+        $this->assertStringStartsWith('<svg', $renderer->render(self::URL, $options, QrCodeFormat::Svg)->contents);
+
+        $this->expectException(QrCodeRenderingException::class);
+
+        $renderer->render(self::URL, $options, QrCodeFormat::Png);
     }
 
     public function test_it_checks_the_url_before_rendering(): void

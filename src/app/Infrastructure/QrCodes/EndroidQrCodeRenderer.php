@@ -27,7 +27,8 @@ use Throwable;
 
 /**
  * QR codes with endroid/qr-code (on bacon/bacon-qr-code). PNG goes through GD, the only image
- * extension present in production, development and CI alike.
+ * extension present in production, development and CI alike; an SVG logo is rasterized for it
+ * by rsvg-convert first. The SVG output embeds any logo as a data URI image.
  */
 final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface
 {
@@ -40,6 +41,7 @@ final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface
 
     public function __construct(
         private QrCodeContentPolicy $policy,
+        private RsvgConvertRasterizer $rasterizer = new RsvgConvertRasterizer,
     ) {}
 
     public function render(string $url, QrCodeOptionsDTO $options, QrCodeFormat $format): RenderedQrCodeDTO
@@ -84,11 +86,16 @@ final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface
         }
 
         try {
-            if (file_put_contents($path, $options->logo->contents) === false) {
+            [$width, $height] = $this->logoSize($options);
+
+            // GD reads no SVG: draw it at the exact size it takes in the code
+            $contents = $options->logo->isSvg()
+                ? $this->rasterizer->rasterize($options->logo->contents, $width, $height)
+                : $options->logo->contents;
+
+            if (file_put_contents($path, $contents) === false) {
                 throw new RuntimeException('Cannot write the logo to a temporary file');
             }
-
-            [$width, $height] = $this->logoSize($options);
 
             // Punchout: the modules under the logo become background, so it reads cleanly
             return (new PngWriter)
@@ -109,7 +116,9 @@ final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface
             return $svg;
         }
 
-        // endroid's SVG writer has no punchout: draw a background patch, then the logo over it
+        // endroid's SVG writer has no punchout: draw a background patch, then the logo over it.
+        // A data URI <image> keeps an SVG logo's styles and ids apart from the code's, and its
+        // explicit size with the logo's viewBox keeps the proportion
         $document = new DOMDocument;
         if (! $document->loadXML($svg, LIBXML_NONET) || ! $document->documentElement instanceof DOMElement) {
             throw new RuntimeException('Cannot read the generated SVG');
