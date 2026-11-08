@@ -213,7 +213,7 @@ Contracts that define application layer operations:
 - `DashboardWidgetConfigServiceInterface` - Dashboard widget configuration
 - `ImageOptimizationServiceInterface` - Image optimization
 - `SlugRedirectServiceInterface` - Slug redirects
-- `SiteBrandingServiceInterface` - The site's own logo, favicons and social profiles (empty when the GuildForge defaults are used)
+- `SiteBrandingServiceInterface` - The site's own logo (also per colour scheme, `customLogoFor()`), favicons and social profiles (empty when the GuildForge defaults are used)
 - `UserModelQueryServiceInterface` - Eloquent `UserModel` lookups for framework features (notifications, auth)
 - `ColorPaletteGeneratorInterface` - Theme palette generation from a base color (OKLCH)
 - `LogContextProviderInterface` - Request context added to log entries

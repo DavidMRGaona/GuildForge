@@ -890,6 +890,30 @@ export default {
 
 Use them as `$t('myModule.games.empty')`. They are merged into the core's messages when the core is built with the module present; for a module installed afterwards, the server parses the files on each request and sends them to the page. That parser only understands a plain object literal: no imports, variables, spreads or computed keys. vue-i18n gives `@`, `{`, `}` and `|` a meaning: write them as literal interpolations (`'info{\'@\'}example.org'`).
 
+### The site's name and logo
+
+`SiteBrandingServiceInterface` (`App\Application\Services`) gives the site's name (`siteName()`) and its own logos, as uploaded in *Configuración del sitio*. The site can have a logo for the light theme and another for the dark one. `customLogoFor(ColorScheme $scheme)` (core ≥ the release with #422, `App\Domain\Enums\ColorScheme`) returns a `SiteLogoDTO` (`path`, `url`, `isDark`) with that scheme's logo, the other one when the site only has one (`isDark` says which it is, so the page can put it on a suitable background), or `null` when the site has no logo of its own:
+
+```php
+use App\Domain\Enums\ColorScheme;
+
+return Inertia::render('MyModule/Show', [
+    'logos' => [
+        'light' => $branding->customLogoFor(ColorScheme::Light)?->toArray(),
+        'dark' => $branding->customLogoFor(ColorScheme::Dark)?->toArray(),
+    ],
+]);
+```
+
+Render both and let the document's `dark` class pick one, so the logo follows the light theme, the dark one and «según el dispositivo» without any script (`dark:hidden` and `dark:block` are in the core safelist):
+
+```vue
+<img v-if="logos.light" :src="logos.light.url" :alt="alt" class="dark:hidden" />
+<img v-if="logos.dark" :src="logos.dark.url" :alt="alt" class="hidden dark:block" />
+```
+
+`customLogoPath()`, `customLogoUrl()` and `customLogoIsDark()` still return a single logo (the light one, else the dark one) for places with no theme, such as link previews and QR codes. The `siteLogoLight` / `siteLogoDark` shared props are for the site's own layout: they fall back to the GuildForge logos, so a module cannot tell them from the site's.
+
 ---
 
 ## Slot registration

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Application\Services;
 
+use App\Application\DTOs\Response\SiteLogoDTO;
+use App\Domain\Enums\ColorScheme;
+
 /**
  * The site's own branding as configured in the admin settings.
  *
@@ -23,6 +26,12 @@ interface SiteBrandingServiceInterface
 
     /** Whether that logo is the dark-theme one (the site has no light logo). */
     public function customLogoIsDark(): bool;
+
+    /**
+     * The site's own logo for a colour scheme: that scheme's logo, else the
+     * other one (its isDark says which it is), or null when the site has none.
+     */
+    public function customLogoFor(ColorScheme $scheme): ?SiteLogoDTO;
 
     /**
      * @return array{light: string|null, dark: string|null}

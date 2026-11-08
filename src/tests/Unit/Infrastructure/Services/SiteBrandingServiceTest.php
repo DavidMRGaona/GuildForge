@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Services;
 
+use App\Application\DTOs\Response\SiteLogoDTO;
 use App\Application\Services\SettingsServiceInterface;
+use App\Domain\Enums\ColorScheme;
 use App\Infrastructure\Services\SiteBrandingService;
 use App\Infrastructure\Services\SiteNameResolver;
 use Illuminate\Support\Facades\Storage;
@@ -76,6 +78,63 @@ final class SiteBrandingServiceTest extends TestCase
         $this->assertSame('settings/dark.png', $service->customLogoPath());
         $this->assertSame(Storage::disk('images')->url('settings/dark.png'), $service->customLogoUrl());
         $this->assertTrue($service->customLogoIsDark());
+    }
+
+    public function test_each_colour_scheme_gets_its_own_logo(): void
+    {
+        $service = $this->service(['site_logo_light' => 'settings/light.png', 'site_logo_dark' => 'settings/dark.png']);
+
+        $light = $service->customLogoFor(ColorScheme::Light);
+        $dark = $service->customLogoFor(ColorScheme::Dark);
+
+        $this->assertEquals(
+            new SiteLogoDTO('settings/light.png', Storage::disk('images')->url('settings/light.png'), isDark: false),
+            $light,
+        );
+        $this->assertEquals(
+            new SiteLogoDTO('settings/dark.png', Storage::disk('images')->url('settings/dark.png'), isDark: true),
+            $dark,
+        );
+    }
+
+    public function test_dark_scheme_falls_back_to_the_light_logo(): void
+    {
+        $service = $this->service(['site_logo_light' => 'settings/light.png']);
+
+        $logo = $service->customLogoFor(ColorScheme::Dark);
+
+        $this->assertNotNull($logo);
+        $this->assertSame('settings/light.png', $logo->path);
+        $this->assertFalse($logo->isDark);
+    }
+
+    public function test_light_scheme_falls_back_to_the_dark_logo(): void
+    {
+        $service = $this->service(['site_logo_dark' => 'settings/dark.png']);
+
+        $logo = $service->customLogoFor(ColorScheme::Light);
+
+        $this->assertNotNull($logo);
+        $this->assertSame('settings/dark.png', $logo->path);
+        $this->assertTrue($logo->isDark);
+    }
+
+    public function test_no_logo_for_either_scheme_without_custom_logos(): void
+    {
+        $service = $this->service(['site_logo_light' => '', 'site_logo_dark' => '']);
+
+        $this->assertNull($service->customLogoFor(ColorScheme::Light));
+        $this->assertNull($service->customLogoFor(ColorScheme::Dark));
+    }
+
+    public function test_site_logo_dto_serialises_for_the_frontend(): void
+    {
+        $logo = new SiteLogoDTO('settings/dark.png', 'https://images.example.test/settings/dark.png', isDark: true);
+
+        $this->assertSame(
+            ['url' => 'https://images.example.test/settings/dark.png', 'isDark' => true],
+            $logo->toArray(),
+        );
     }
 
     public function test_social_profiles_are_absolute_and_skip_empty_values(): void
