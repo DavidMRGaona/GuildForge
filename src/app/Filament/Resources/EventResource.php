@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources;
 
 use App\Application\Services\TimezoneServiceInterface;
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Concerns\HasExtendableFormSections;
 use App\Filament\Concerns\HasExtendableRelations;
 use App\Filament\Resources\EventResource\Pages\CreateEvent;
@@ -234,6 +235,10 @@ class EventResource extends BaseResource
             ->filters([
                 TernaryFilter::make('is_published')
                     ->label(__('Publicado')),
+            ])
+            // The whole row opens the record: «Ver detalles» shows what narrow screens hide (core#399)
+            ->recordActions([
+                RowDetailsAction::makeIconButton(),
             ])
             ->defaultSort('start_date', 'desc');
     }

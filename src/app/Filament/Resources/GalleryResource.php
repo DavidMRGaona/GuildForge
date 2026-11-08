@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\GalleryResource\Pages\CreateGallery;
 use App\Filament\Resources\GalleryResource\Pages\EditGallery;
 use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
@@ -159,6 +160,7 @@ class GalleryResource extends BaseResource
                     ->wrap(),
                 TextColumn::make('photos_count')
                     ->label(__('Fotos'))
+                    ->alignCenter()
                     ->counts('photos')
                     ->sortable()
                     ->visibleFrom('sm'),
@@ -178,6 +180,10 @@ class GalleryResource extends BaseResource
             ->filters([
                 TernaryFilter::make('is_published')
                     ->label(__('Publicada')),
+            ])
+            // The whole row opens the record: «Ver detalles» shows what narrow screens hide (core#399)
+            ->recordActions([
+                RowDetailsAction::makeIconButton(),
             ])
             ->defaultSort('created_at', 'desc');
     }

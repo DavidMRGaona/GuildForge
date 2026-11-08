@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\ArticleResource\Pages\ListArticles;
 use App\Filament\Resources\EventResource\Pages\ListEvents;
 use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
@@ -15,8 +16,12 @@ use App\Filament\Resources\TagResource\Pages\ListTags;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
 use App\Filament\Widgets\RecentArticlesWidget;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Support\Enums\Alignment;
+use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\Column;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
@@ -46,11 +51,11 @@ final class PanelTablesFitTest extends TestCase
     public static function rowActionMenus(): array
     {
         return [
-            'help guides' => [ListKnowledgeGuides::class, ['edit', 'hide', 'show', 'feature', 'delete']],
-            'tags' => [ListTags::class, ['edit', 'delete']],
-            'users' => [ListUsers::class, ['edit', 'sendVerificationEmail', 'sendPasswordResetEmail', 'deactivate', 'restore', 'anonymize']],
-            'menu items' => [ListMenuItems::class, ['edit', 'delete']],
-            'roles' => [ListRoles::class, ['edit', 'delete']],
+            'help guides' => [ListKnowledgeGuides::class, ['rowDetails', 'edit', 'hide', 'show', 'feature', 'delete']],
+            'tags' => [ListTags::class, ['rowDetails', 'edit', 'delete']],
+            'users' => [ListUsers::class, ['rowDetails', 'edit', 'sendVerificationEmail', 'sendPasswordResetEmail', 'deactivate', 'restore', 'anonymize']],
+            'menu items' => [ListMenuItems::class, ['rowDetails', 'edit', 'delete']],
+            'roles' => [ListRoles::class, ['rowDetails', 'edit', 'delete']],
         ];
     }
 
@@ -70,6 +75,118 @@ final class PanelTablesFitTest extends TestCase
         $group = $actions[0];
         $this->assertInstanceOf(ActionGroup::class, $group);
         $this->assertEqualsCanonicalizing($expected, array_keys($group->getFlatActions()));
+    }
+
+    /**
+     * Tables whose only row action is «Ver detalles»: the whole row opens the record, so it shows
+     * as one icon instead of a menu with a single entry.
+     *
+     * @return array<string, array{class-string<HasTable>}>
+     */
+    public static function tablesWithOnlyRowDetails(): array
+    {
+        return [
+            'events' => [ListEvents::class],
+            'articles' => [ListArticles::class],
+            'galleries' => [ListGalleries::class],
+            'hero slides' => [ListHeroSlides::class],
+            'recent articles' => [RecentArticlesWidget::class],
+        ];
+    }
+
+    /**
+     * @param  class-string<HasTable>  $page
+     */
+    #[DataProvider('tablesWithOnlyRowDetails')]
+    public function test_row_details_is_the_only_row_action_where_there_was_none(string $page): void
+    {
+        $actions = $this->table($page)->getRecordActions();
+
+        $this->assertCount(1, $actions);
+        $this->assertInstanceOf(Action::class, $actions[0]);
+        $this->assertSame(RowDetailsAction::NAME, $actions[0]->getName());
+    }
+
+    /**
+     * Every list table of the panel.
+     *
+     * @return array<string, array{class-string<HasTable>}>
+     */
+    public static function panelTables(): array
+    {
+        return [
+            'events' => [ListEvents::class],
+            'help guides' => [ListKnowledgeGuides::class],
+            'tags' => [ListTags::class],
+            'users' => [ListUsers::class],
+            'menu items' => [ListMenuItems::class],
+            'hero slides' => [ListHeroSlides::class],
+            'articles' => [ListArticles::class],
+            'galleries' => [ListGalleries::class],
+            'roles' => [ListRoles::class],
+            'recent articles' => [RecentArticlesWidget::class],
+        ];
+    }
+
+    /**
+     * A column hidden below some width must still be readable on a phone (core#399).
+     *
+     * @param  class-string<HasTable>  $page
+     */
+    #[DataProvider('panelTables')]
+    public function test_tables_that_hide_columns_offer_row_details(string $page): void
+    {
+        $table = $this->table($page);
+        $hidesColumns = array_filter($table->getColumns(), fn (Column $column): bool => $column->getVisibleFrom() !== null);
+
+        $this->assertNotEmpty($hidesColumns, 'Every panel table hides some column; update the list otherwise');
+        $this->assertInstanceOf(Action::class, $table->getAction(RowDetailsAction::NAME));
+    }
+
+    /**
+     * Icons and colour swatches sit in the middle of their column, under its heading.
+     *
+     * @param  class-string<HasTable>  $page
+     */
+    #[DataProvider('panelTables')]
+    public function test_icon_columns_are_centred(string $page): void
+    {
+        foreach ($this->table($page)->getColumns() as $column) {
+            if ($column instanceof IconColumn || $column instanceof ColorColumn) {
+                $this->assertSame(Alignment::Center, $column->getAlignment(), "Column {$column->getName()} is not centred");
+            }
+        }
+    }
+
+    /**
+     * Short counters are centred too; text and badges stay at the start.
+     *
+     * @return array<string, array{class-string<HasTable>, string}>
+     */
+    public static function counterColumns(): array
+    {
+        return [
+            'guides helpful' => [ListKnowledgeGuides::class, 'helpful'],
+            'guides not helpful' => [ListKnowledgeGuides::class, 'not_helpful'],
+            'tags events' => [ListTags::class, 'events_count'],
+            'tags articles' => [ListTags::class, 'articles_count'],
+            'tags galleries' => [ListTags::class, 'galleries_count'],
+            'tags order' => [ListTags::class, 'sort_order'],
+            'menu order' => [ListMenuItems::class, 'sort_order'],
+            'hero slides order' => [ListHeroSlides::class, 'sort_order'],
+            'galleries photos' => [ListGalleries::class, 'photos_count'],
+            'roles users' => [ListRoles::class, 'users_count'],
+            'roles permissions' => [ListRoles::class, 'permissions_count'],
+        ];
+    }
+
+    /**
+     * @param  class-string<HasTable>  $page
+     */
+    #[DataProvider('counterColumns')]
+    public function test_counters_are_centred(string $page, string $column): void
+    {
+        $this->assertSame(Alignment::Center, $this->column($page, $column)->getAlignment());
     }
 
     /**

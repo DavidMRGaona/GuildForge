@@ -13,6 +13,7 @@ use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Application\Authorization\Services\RoleRestrictionRule;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Authorization\ValueObjects\RoleName;
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
@@ -197,12 +198,14 @@ class RoleResource extends BaseResource
                     ->visibleFrom('md'),
                 TextColumn::make('permissions_count')
                     ->label(__('filament.roles.fields.permissionsCount'))
+                    ->alignCenter()
                     ->counts('permissions')
                     ->badge()
                     ->color('success')
                     ->visibleFrom('sm'),
                 TextColumn::make('users_count')
                     ->label(__('filament.roles.fields.usersCount'))
+                    ->alignCenter()
                     ->counts('users')
                     ->badge()
                     ->color('info'),
@@ -228,6 +231,7 @@ class RoleResource extends BaseResource
             // One menu: labelled row actions made the table overflow its container
             ->recordActions([
                 ActionGroup::make([
+                    RowDetailsAction::make(),
                     EditAction::make(),
                     self::deleteAction()
                         ->hidden(fn (RoleModel $record): bool => self::isLocked($record)),

@@ -232,6 +232,8 @@ use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Support\Facades\FilamentTimezone;
+use Filament\Tables\Columns\ColorColumn;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -579,6 +581,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->preserveFilamentV3Defaults();
+        $this->centreIconColumns();
         $this->showFilamentDatesInDisplayTimezone();
         $this->keepSentenceCaseInBulkDeleteHeadings();
 
@@ -621,6 +624,16 @@ class AppServiceProvider extends ServiceProvider
         FileUpload::configureUsing(fn (FileUpload $upload): FileUpload => $upload->visibility('public'));
         ImageColumn::configureUsing(fn (ImageColumn $column): ImageColumn => $column->visibility('public'));
         ImageEntry::configureUsing(fn (ImageEntry $entry): ImageEntry => $entry->visibility('public'));
+    }
+
+    /**
+     * Icons and colour swatches sit in the middle of their column, under its heading (core#399).
+     * Every table of the core and the modules gets it; a column can still align itself otherwise.
+     */
+    private function centreIconColumns(): void
+    {
+        IconColumn::configureUsing(fn (IconColumn $column): IconColumn => $column->alignCenter());
+        ColorColumn::configureUsing(fn (ColorColumn $column): ColorColumn => $column->alignCenter());
     }
 
     /**

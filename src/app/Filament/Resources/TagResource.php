@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources;
 
 use App\Application\Services\TagQueryServiceInterface;
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\TagResource\Pages\CreateTag;
 use App\Filament\Resources\TagResource\Pages\EditTag;
 use App\Filament\Resources\TagResource\Pages\ListTags;
@@ -137,21 +138,25 @@ class TagResource extends BaseResource
                     ->visibleFrom('sm'),
                 TextColumn::make('events_count')
                     ->label(__('filament.tags.fields.events_count'))
+                    ->alignCenter()
                     ->counts('events')
                     ->sortable()
                     ->visibleFrom('xl'),
                 TextColumn::make('articles_count')
                     ->label(__('filament.tags.fields.articles_count'))
+                    ->alignCenter()
                     ->counts('articles')
                     ->sortable()
                     ->visibleFrom('xl'),
                 TextColumn::make('galleries_count')
                     ->label(__('filament.tags.fields.galleries_count'))
+                    ->alignCenter()
                     ->counts('galleries')
                     ->sortable()
                     ->visibleFrom('xl'),
                 TextColumn::make('sort_order')
                     ->label(__('filament.tags.fields.sort_order'))
+                    ->alignCenter()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
@@ -187,6 +192,7 @@ class TagResource extends BaseResource
             // One menu: labelled row actions made the table overflow its container
             ->recordActions([
                 ActionGroup::make([
+                    RowDetailsAction::make(),
                     EditAction::make(),
                     DeleteAction::make()
                         ->hidden(fn (TagModel $record): bool => ! self::getTagQueryService()->canDelete($record->id)),

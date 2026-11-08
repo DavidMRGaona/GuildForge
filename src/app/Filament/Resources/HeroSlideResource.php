@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\HeroSlideResource\Pages\CreateHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\EditHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\ListHeroSlides;
@@ -101,8 +102,13 @@ class HeroSlideResource extends BaseResource
                     ->boolean(),
                 TextColumn::make('sort_order')
                     ->label(__('Orden'))
+                    ->alignCenter()
                     ->sortable()
                     ->visibleFrom('sm'),
+            ])
+            // The whole row opens the record: «Ver detalles» shows what narrow screens hide (core#399)
+            ->recordActions([
+                RowDetailsAction::makeIconButton(),
             ])
             ->reorderable('sort_order')
             ->defaultSort('sort_order', 'asc');
