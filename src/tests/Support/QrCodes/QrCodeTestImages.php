@@ -9,7 +9,7 @@ use RuntimeException;
 use Zxing\QrReader;
 
 /**
- * Small images and a decoder for the QR code tests (GD only, as in CI).
+ * Small images and a decoder for the QR code tests, GD only.
  */
 final class QrCodeTestImages
 {
@@ -51,10 +51,13 @@ final class QrCodeTestImages
 
     /**
      * The text a QR code in a PNG decodes to, or null when it cannot be read.
+     *
+     * With GD even where Imagick is loaded, as on the CI runners: the decoder would pick Imagick
+     * then, which needs about four times the memory (over 300 MB for a 2048 px code).
      */
     public static function decode(string $png): ?string
     {
-        $text = (new QrReader($png, QrReader::SOURCE_TYPE_BLOB))->text();
+        $text = (new QrReader($png, QrReader::SOURCE_TYPE_BLOB, useImagickIfAvailable: false))->text();
 
         return is_string($text) ? $text : null;
     }
