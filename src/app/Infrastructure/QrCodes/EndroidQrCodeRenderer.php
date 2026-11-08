@@ -22,6 +22,7 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\Writer\SvgWriter;
+use GdImage;
 use RuntimeException;
 use Throwable;
 
@@ -93,7 +94,7 @@ final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface
                 ? $this->rasterizer->rasterize($options->logo->contents, $width, $height)
                 : $options->logo->contents;
 
-            if (file_put_contents($path, $contents) === false) {
+            if (file_put_contents($path, $this->overBackground($contents, $options->background())) === false) {
                 throw new RuntimeException('Cannot write the logo to a temporary file');
             }
 
@@ -192,5 +193,41 @@ final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface
     private function color(HexColor $color): Color
     {
         return new Color($color->red, $color->green, $color->blue);
+    }
+
+    /**
+     * The logo flattened over the code's background, as a PNG. endroid's PngWriter copies a
+     * logo with GD without its alpha channel, so transparent pixels came out black: a logo
+     * exported without a background (and every rasterized SVG) turned into a dark block.
+     */
+    private function overBackground(string $logo, HexColor $background): string
+    {
+        $source = imagecreatefromstring($logo);
+        if (! $source instanceof GdImage) {
+            throw new RuntimeException('The logo is not an image GD can read');
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        $canvas = imagecreatetruecolor($width, $height);
+        $fill = imagecolorallocate($canvas, $background->red, $background->green, $background->blue);
+        if ($fill === false) {
+            throw new RuntimeException('Cannot paint the logo background');
+        }
+
+        imagefilledrectangle($canvas, 0, 0, $width - 1, $height - 1, $fill);
+        // Blend the logo over the colour by its alpha
+        imagealphablending($canvas, true);
+        imagecopy($canvas, $source, 0, 0, 0, 0, $width, $height);
+
+        ob_start();
+        $written = imagepng($canvas);
+        $png = (string) ob_get_clean();
+
+        if (! $written || $png === '') {
+            throw new RuntimeException('Cannot write the flattened logo');
+        }
+
+        return $png;
     }
 }
