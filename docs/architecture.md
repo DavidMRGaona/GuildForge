@@ -1146,7 +1146,7 @@ Domain events decouple business logic from its side effects:
 
 ```
 ModuleEnabled
-    -> ClearCachesOnModuleChange (clears route, config, view caches)
+    -> ClearCachesOnModuleChange (module:refresh-caches in a fresh process: rebuilds in place the caches in use)
     -> BuildModuleAssetsOnEnabled (builds module Vue components)
     -> ActivateMenuItemsOnModuleEnabled (reactivates the module's existing menu links)
 

@@ -24,8 +24,9 @@ interface ModulePostUpdateRunnerInterface
     public function run(ModuleName $moduleName, ModuleVersion $version): PostUpdateReportDTO;
 
     /**
-     * Rebuild config, route and view caches. Best effort: failures are logged, never thrown,
-     * because the update is already committed when this runs.
+     * Rebuild in place the config, route, event and view caches in use, in a fresh process
+     * (also after a module is enabled, disabled or installed). Best effort: failures are
+     * logged, never thrown, because the module change is already committed when this runs.
      */
     public function refreshCaches(): void;
 }

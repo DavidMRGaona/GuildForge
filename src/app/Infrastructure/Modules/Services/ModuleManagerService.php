@@ -30,7 +30,6 @@ use App\Domain\Modules\ValueObjects\ModuleRequirements;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
 use DateTimeImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
@@ -241,7 +240,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         $this->repository->save($module);
 
         $this->resolver->reset();
-        $this->clearRouteCacheIfNeeded();
 
         // Dispatch event
         $this->events->dispatch(new ModuleEnabled(
@@ -282,8 +280,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         // Disable the module
         $module->disable();
         $this->repository->save($module);
-
-        $this->clearRouteCacheIfNeeded();
 
         // Dispatch event
         $this->events->dispatch(new ModuleDisabled(
@@ -534,17 +530,6 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     public function findByName(string $name): ?Module
     {
         return $this->repository->findByName(new ModuleName($name));
-    }
-
-    /**
-     * Clear route cache if routes are cached.
-     * Module resources change Filament panel routes, so stale route cache causes RouteNotFoundException.
-     */
-    private function clearRouteCacheIfNeeded(): void
-    {
-        if (app()->routesAreCached()) {
-            Artisan::call('route:clear');
-        }
     }
 
     /**

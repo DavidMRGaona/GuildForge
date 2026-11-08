@@ -89,7 +89,7 @@ src/
 │   │   ├── Updates/                    # CoreUpdateChecker, ModuleUpdater, ModuleBackupService, update history models
 │   │   │   └── Jobs/                   # UpdateModuleJob, CheckModuleUpdatesJob
 │   │   ├── Factories/                  # ResponseDTOFactory (implementation)
-│   │   └── Support/                    # QueryHelpers, SanitizesHtml, FrameworkCacheCommands
+│   │   └── Support/                    # QueryHelpers, SanitizesHtml, FrameworkCacheCommands, FrameworkCache, AtomicFrameworkCacheRebuilder
 │   │
 │   ├── Http/                           # HTTP presentation layer
 │   │   ├── Controllers/                # HomeController, EventController, ArticleController, etc.
