@@ -8,6 +8,7 @@ use App\Application\Navigation\Services\RouteRegistryInterface;
 use App\Domain\Navigation\Enums\LinkTarget;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Domain\Navigation\Enums\MenuVisibility;
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\MenuItemResource\Pages\CreateMenuItem;
 use App\Filament\Resources\MenuItemResource\Pages\EditMenuItem;
 use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
@@ -245,6 +246,7 @@ class MenuItemResource extends BaseResource
 
                 TextColumn::make('sort_order')
                     ->label(__('filament.menu_items.fields.sort_order'))
+                    ->alignCenter()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
@@ -272,6 +274,7 @@ class MenuItemResource extends BaseResource
             // One menu: labelled row actions made the table overflow its container
             ->recordActions([
                 ActionGroup::make([
+                    RowDetailsAction::make(),
                     EditAction::make(),
                     DeleteAction::make(),
                 ]),

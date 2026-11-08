@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 return [
+    'row_details' => [
+        'action' => 'Ver detalles',
+        'heading' => 'Detalles',
+        'close' => 'Cerrar',
+    ],
     'navigation' => [
         'pages' => 'Páginas',
         'content' => 'Contenido',

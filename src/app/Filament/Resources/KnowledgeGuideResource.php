@@ -12,6 +12,7 @@ use App\Application\Knowledge\Services\SiteGuideServiceInterface;
 use App\Domain\Knowledge\Enums\GuideAudience;
 use App\Domain\Knowledge\Enums\GuideSource;
 use App\Domain\Knowledge\ValueObjects\GuideId;
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Forms\RichEditor\KnowledgeActionBlock;
 use App\Filament\Resources\KnowledgeGuideResource\Pages\CreateKnowledgeGuide;
 use App\Filament\Resources\KnowledgeGuideResource\Pages\EditKnowledgeGuide;
@@ -269,12 +270,14 @@ class KnowledgeGuideResource extends BaseResource
                     ->visibleFrom('md'),
                 TextColumn::make('helpful')
                     ->label(__('filament.knowledge_guides.columns.helpful'))
+                    ->alignCenter()
                     ->tooltip(__('filament.knowledge_guides.columns.votes_help', ['days' => self::METRICS_DAYS]))
                     ->state(fn (KnowledgeGuideModel $record): int => self::feedback()[$record->guide_id]['helpful'] ?? 0)
                     ->numeric()
                     ->visibleFrom('xl'),
                 TextColumn::make('not_helpful')
                     ->label(__('filament.knowledge_guides.columns.not_helpful'))
+                    ->alignCenter()
                     ->tooltip(__('filament.knowledge_guides.columns.votes_help', ['days' => self::METRICS_DAYS]))
                     ->state(fn (KnowledgeGuideModel $record): int => self::feedback()[$record->guide_id]['notHelpful'] ?? 0)
                     ->numeric()
@@ -296,6 +299,7 @@ class KnowledgeGuideResource extends BaseResource
             // One menu: labelled row actions made the table overflow its container
             ->recordActions([
                 ActionGroup::make([
+                    RowDetailsAction::make(),
                     EditAction::make(),
                     Action::make('hide')
                         ->label(__('filament.knowledge_guides.actions.hide'))

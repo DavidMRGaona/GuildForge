@@ -12,6 +12,7 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
@@ -282,6 +283,7 @@ class UserResource extends BaseResource
             // One menu: «Editar» beside the menu made the table overflow its container
             ->recordActions([
                 ActionGroup::make([
+                    RowDetailsAction::make(),
                     EditAction::make(),
                     Action::make('sendVerificationEmail')
                         ->authorize('update')

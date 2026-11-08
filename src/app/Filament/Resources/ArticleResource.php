@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\ArticleResource\Pages\CreateArticle;
 use App\Filament\Resources\ArticleResource\Pages\EditArticle;
 use App\Filament\Resources\ArticleResource\Pages\ListArticles;
@@ -186,6 +187,10 @@ class ArticleResource extends BaseResource
                     ->label(__('Autor'))
                     ->relationship('author', 'display_name')
                     ->getOptionLabelFromRecordUsing(fn (UserModel $record): string => $record->display_name ?? $record->name),
+            ])
+            // The whole row opens the record: «Ver detalles» shows what narrow screens hide (core#399)
+            ->recordActions([
+                RowDetailsAction::makeIconButton(),
             ])
             ->defaultSort('created_at', 'desc');
     }

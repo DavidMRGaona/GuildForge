@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Application\Services\DashboardWidgetConfigServiceInterface;
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\ArticleResource;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use Filament\Tables\Columns\TextColumn;
@@ -53,6 +54,10 @@ class RecentArticlesWidget extends TableWidget
                 TextColumn::make('published_at')
                     ->label(__('Publicado'))
                     ->dateTime('d/m/Y H:i'),
+            ])
+            // The whole row opens the record: «Ver detalles» shows what narrow screens hide (core#399)
+            ->recordActions([
+                RowDetailsAction::makeIconButton(),
             ])
             ->paginated(false);
     }
