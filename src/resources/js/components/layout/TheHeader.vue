@@ -9,6 +9,7 @@ import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
 import { useOnNavigate } from '@/composables/useOnNavigate';
 import { useFitsWithoutOverflow } from '@/composables/useFitsWithoutOverflow';
+import { useSiteLogo } from '@/composables/useSiteLogo';
 import SearchPanel from '@/components/search/SearchPanel.vue';
 import TheNavigation from './TheNavigation.vue';
 import UserDropdown from './UserDropdown.vue';
@@ -50,12 +51,7 @@ watch(isSearchOpen, (isOpen) => {
 });
 
 const appName = computed(() => page.props.appName as string);
-const siteLogoLight = computed(() => page.props.siteLogoLight as string);
-const siteLogoDark = computed(() => page.props.siteLogoDark as string);
-
-const currentLogo = computed(() => {
-    return appStore.isDarkMode ? siteLogoDark.value : siteLogoLight.value;
-});
+const { logo: currentLogo, markFailed: markLogoFailed } = useSiteLogo();
 
 function toggleMobileMenu(): void {
     isMobileMenuOpen.value = !isMobileMenuOpen.value;
@@ -106,9 +102,15 @@ function selectTheme(mode: ThemeMode): void {
                 <!-- Logo -->
                 <div class="shrink-0">
                     <Link :href="routes.home" class="flex items-center">
-                        <img v-if="currentLogo" :src="currentLogo" :alt="appName" class="h-8" />
+                        <img
+                            v-if="currentLogo"
+                            :src="currentLogo"
+                            :alt="appName"
+                            class="h-8"
+                            @error="markLogoFailed"
+                        />
                         <span v-else class="text-xl font-bold text-primary">
-                            {{ t('layout.brand') }}
+                            {{ appName }}
                         </span>
                     </Link>
                 </div>

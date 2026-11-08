@@ -94,4 +94,11 @@ describe('TheHeader', () => {
 
         expect(wrapper.get('#mobile-menu').classes()).toContain('md:hidden');
     });
+
+    it('shows the site name when the site has no logo', () => {
+        const brand = mountHeader().get('a[href="/"]');
+
+        expect(brand.find('img').exists()).toBe(false);
+        expect(brand.text()).toBe('Example guild');
+    });
 });
