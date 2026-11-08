@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\KnowledgeBasePage;
+use App\Filament\Resources\HeroSlideResource;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationGroup;
@@ -89,6 +90,15 @@ final class PanelNavigationTest extends TestCase
         )));
 
         $this->assertSame(['Contenido', 'Sitio web'], $labels);
+    }
+
+    public function test_home_page_slides_are_called_diapositivas_everywhere(): void
+    {
+        $this->assertSame('Portada', HeroSlideResource::getNavigationLabel());
+        $this->assertSame('diapositiva', HeroSlideResource::getModelLabel());
+        $this->assertSame('Diapositivas de la portada', HeroSlideResource::getPluralModelLabel());
+        $this->assertSame('Crear diapositiva', __('authorization.permissions.hero_slides.create'));
+        $this->assertSame('Ver listado de diapositivas de la portada', __('authorization.permissions.hero_slides.view_any'));
     }
 
     public function test_help_is_not_in_the_sidebar(): void

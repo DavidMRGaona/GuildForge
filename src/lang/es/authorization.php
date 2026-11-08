@@ -87,10 +87,10 @@ return [
             'delete' => 'Eliminar rol',
         ],
         'hero_slides' => [
-            'view_any' => 'Ver listado de slides',
-            'create' => 'Crear slide',
-            'update' => 'Editar slide',
-            'delete' => 'Eliminar slide',
+            'view_any' => 'Ver listado de diapositivas de la portada',
+            'create' => 'Crear diapositiva',
+            'update' => 'Editar diapositiva',
+            'delete' => 'Eliminar diapositiva',
         ],
         'tags' => [
             'view_any' => 'Ver listado de etiquetas',

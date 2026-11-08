@@ -16,6 +16,7 @@ return [
     ],
     'hero_slides' => [
         'navigation' => 'Portada',
+        'label' => 'diapositiva',
         'plural' => 'Diapositivas de la portada',
     ],
     'settings_cluster' => [

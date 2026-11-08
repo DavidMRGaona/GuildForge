@@ -41,7 +41,7 @@ class HeroSlideResource extends BaseResource
 
     public static function getModelLabel(): string
     {
-        return __('slide');
+        return __('filament.hero_slides.label');
     }
 
     public static function getPluralModelLabel(): string

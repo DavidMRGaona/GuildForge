@@ -16,6 +16,7 @@ return [
     ],
     'hero_slides' => [
         'navigation' => 'Home page',
+        'label' => 'slide',
         'plural' => 'Home page slides',
     ],
     'settings_cluster' => [
