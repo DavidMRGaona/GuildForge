@@ -152,6 +152,20 @@ import ModuleEventCalendar from '@/components/calendar/ModuleEventCalendar.vue';
 
 Clicking an entry opens its page. The look is the shared one (`calendarTheme.ts`, styles in the core's `app.css`), so the page needs nothing else. A module building its own FullCalendar can import the list plugin from `@fullcalendar/vue3/list`, a shared package like `daygrid` and `timegrid`.
 
+A module's own FullCalendar gets the shared toolbar by spreading `calendarClassOptions` (buttons 44 px tall, ‹ › joined, the views as a segmented control) and `calendarToolbarOptions(viewButtons)` (core ≥ the release with #423) instead of its own `headerToolbar`. That helper puts the title and ‹ › on one row and «Hoy» with the view buttons below it, or everything on one row once the calendar is 34rem wide:
+
+```ts
+import { calendarClassOptions, calendarToolbarOptions } from '@/utils/calendarTheme';
+
+const options: CalendarOptions = {
+    ...calendarClassOptions,
+    ...calendarToolbarOptions('dayGridMonth,timeGridWeek,timeGridDay'),
+    // the module's own options
+};
+```
+
+Wrap the calendar in an element with the `event-calendar` class, as `ModuleEventCalendar` does, so the styles apply.
+
 ## Upcoming core events
 
 `EventQueryServiceInterface::getUpcomingEventsWithin(UpcomingEventsCriteriaDTO $criteria)` (core ≥ the release with #349) returns the published core events (`EventResponseDTO`) starting from now, soonest first:

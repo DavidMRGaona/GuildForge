@@ -79,6 +79,7 @@
     "@/utils/calendarTheme": [
         "calendarClassOptions",
         "calendarThemePlugin",
+        "calendarToolbarOptions",
         "eventTimeRange"
     ],
     "@/utils/cloudinary": [

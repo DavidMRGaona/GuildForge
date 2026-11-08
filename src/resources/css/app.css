@@ -707,15 +707,156 @@ button[data-headlessui-state]:hover {
     --calendar-entry-info-text: var(--calendar-entry-accent-text);
 }
 
+/* ----- Toolbar (core#423) -----
+   The month's title leads; the buttons are quiet outlines 44 px tall, ‹ ›
+   joined in one group, and only the selected view carries the site colour.
+   Colours go through the --fc-classic-* variables, so a module that redefines
+   them (custom page colours) still reaches the toolbar. */
+
 .event-calendar .calendar-title {
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
     color: var(--color-text-primary);
 }
 
+/* «noviembre de 2026» opens the heading, so it takes a capital */
+.event-calendar .calendar-title::first-letter {
+    text-transform: uppercase;
+}
+
 .event-calendar .calendar-button {
-    text-transform: capitalize;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    justify-content: center;
+    padding-inline: 1rem;
+    /* The theme only draws the inline borders */
+    border: 1px solid var(--fc-classic-strong-border);
+    border-radius: 0.5rem;
+    background-color: transparent;
+    color: var(--fc-classic-foreground);
     font-weight: 500;
+    text-transform: capitalize;
+}
+
+.event-calendar .calendar-button--icon {
+    padding-inline: 0;
+}
+
+.event-calendar .calendar-button:hover:not(:disabled),
+.event-calendar .calendar-button:active:not(:disabled) {
+    border-color: var(--fc-classic-strong-border);
+    background-color: var(--fc-classic-muted);
+}
+
+/* «Hoy» while today is on screen: dimmed text, not a faded block of colour */
+.event-calendar .calendar-button:disabled {
+    border-color: var(--fc-classic-border);
+    background-color: transparent;
+    color: var(--fc-classic-faint-foreground);
+    opacity: 1;
+}
+
+.event-calendar
+    .calendar-button-group:not(.calendar-button-group--views)
+    > .calendar-button:not(:first-child) {
+    margin-inline-start: -1px;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+}
+
+.event-calendar
+    .calendar-button-group:not(.calendar-button-group--views)
+    > .calendar-button:not(:last-child) {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+}
+
+/* The views as a segmented control: a muted track, the selected one filled */
+.event-calendar .calendar-button-group--views {
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--fc-classic-border);
+    border-radius: 0.625rem;
+    background-color: var(--fc-classic-muted);
+}
+
+.event-calendar .calendar-button-group--views > .calendar-button {
+    min-height: calc(2.75rem - 6px);
+    margin: 0;
+    border-color: transparent;
+    border-radius: 0.5rem;
+    /* The secondary text colour falls below 4.5:1 on the track in the light theme */
+    color: var(--fc-classic-foreground);
+}
+
+.event-calendar .calendar-button-group--views > .calendar-button:hover:not(:disabled) {
+    border-color: transparent;
+    background-color: var(--fc-classic-background);
+    color: var(--fc-classic-foreground);
+}
+
+.event-calendar .calendar-button-group--views > .calendar-button--selected,
+.event-calendar .calendar-button-group--views > .calendar-button--selected:hover:not(:disabled) {
+    background-color: var(--fc-classic-button);
+    color: var(--fc-classic-button-foreground);
+    font-weight: 600;
+}
+
+/* calendarToolbarOptions(): two rows (title and ‹ ›, then «Hoy» and the views)
+   until the calendar itself is 34rem wide, then one row */
+.event-calendar:has(.calendar-toolbar--responsive) {
+    container: calendar / inline-size;
+}
+
+.event-calendar .calendar-toolbar--responsive {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        'title nav'
+        'tools tools';
+    align-items: center;
+    /* With «Hoy» beside ‹ ›, «septiembre de 2026» still fits on one line at 375 px */
+    gap: 0.75rem;
+}
+
+.calendar-toolbar--responsive > .calendar-toolbar-section--start {
+    grid-area: title;
+    min-width: 0;
+}
+
+.calendar-toolbar--responsive > .calendar-toolbar-section--center {
+    grid-area: tools;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.calendar-toolbar--responsive > .calendar-toolbar-section--center:empty {
+    display: none;
+}
+
+.calendar-toolbar--responsive > .calendar-toolbar-section--end {
+    grid-area: nav;
+    gap: 0.5rem;
+}
+
+@container calendar (min-width: 34rem) {
+    .event-calendar .calendar-toolbar--responsive {
+        display: flex;
+    }
+
+    .calendar-toolbar--responsive > .calendar-toolbar-section--start {
+        flex: 1 1 auto;
+    }
+
+    .calendar-toolbar--responsive > .calendar-toolbar-section--center {
+        gap: 0.75rem;
+    }
+
+    .event-calendar .calendar-title {
+        font-size: 1.25rem;
+    }
 }
 
 .event-calendar .calendar-day-header-row {
@@ -837,16 +978,17 @@ button[data-headlessui-state]:hover {
     font-weight: 600;
 }
 
-.event-calendar--compact .calendar-button {
+/* Bare chevrons, with the same 44 px touch area as the full toolbar */
+.event-calendar--compact .calendar-button,
+.event-calendar--compact .calendar-button:hover:not(:disabled) {
     background: none;
     border: none;
     color: var(--color-text-muted);
     box-shadow: none;
 }
 
-.event-calendar--compact .calendar-button:hover {
+.event-calendar--compact .calendar-button:hover:not(:disabled) {
     color: var(--color-primary-action, var(--color-primary-link));
-    background: none;
 }
 
 .dark .event-calendar--compact .calendar-button:hover {

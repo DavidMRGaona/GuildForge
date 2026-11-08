@@ -90,12 +90,21 @@ describe('EventCalendar', () => {
         const options = calendarOptions(mountComponent(EventCalendar));
 
         expect(options.initialView).toBe('dayGridMonth');
+        // Without views to choose, «Hoy» sits next to ‹ › on the title's row
         expect(options.headerToolbar).toEqual({
-            left: 'prev,next today',
-            center: 'title',
-            right: '',
+            start: 'title',
+            center: '',
+            end: 'today prev,next',
         });
+        expect(options.headerToolbarClass).toBe('calendar-toolbar--responsive');
         expect(options.height).toBe('auto');
+    });
+
+    it('keeps the compact toolbar of the home page widget', () => {
+        const options = calendarOptions(mountComponent(EventCalendar, { compact: true }));
+
+        expect(options.headerToolbar).toEqual({ left: 'prev', center: 'title', right: 'next' });
+        expect(options.headerToolbarClass).toBeUndefined();
     });
 
     it('starts on the given view and offers the given ones as buttons', () => {
@@ -108,7 +117,11 @@ describe('EventCalendar', () => {
         );
 
         expect(options.initialView).toBe('listMonth');
-        expect(options.headerToolbar).toMatchObject({ right: 'listMonth,dayGridMonth' });
+        expect(options.headerToolbar).toEqual({
+            start: 'title',
+            center: 'today listMonth,dayGridMonth',
+            end: 'prev,next',
+        });
         expect(options.height).toBe(480);
         expect(options.buttons).toMatchObject({
             dayGridMonth: { text: 'Mes' },
@@ -123,7 +136,7 @@ describe('ModuleEventCalendar', () => {
         const options = calendarOptions(mountComponent(ModuleEventCalendar));
 
         expect(options.initialView).toBe('dayGridMonth');
-        expect(options.headerToolbar).toMatchObject({ right: '' });
+        expect(options.headerToolbar).toMatchObject({ center: '', end: 'today prev,next' });
         expect(options.height).toBe('auto');
     });
 
@@ -137,7 +150,7 @@ describe('ModuleEventCalendar', () => {
         );
 
         expect(options.initialView).toBe('listMonth');
-        expect(options.headerToolbar).toMatchObject({ right: 'listMonth,dayGridMonth' });
+        expect(options.headerToolbar).toMatchObject({ center: 'today listMonth,dayGridMonth' });
         expect(options.height).toBe(600);
     });
 

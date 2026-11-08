@@ -8,7 +8,12 @@ import interactionPlugin from '@fullcalendar/vue3/interaction';
 import listPlugin from '@fullcalendar/vue3/list';
 import { useCalendarLocale } from '@/composables/useCalendarLocale';
 import { VENUE_TIMEZONE } from '@/utils/datetime';
-import { calendarClassOptions, calendarThemePlugin, eventTimeRange } from '@/utils/calendarTheme';
+import {
+    calendarClassOptions,
+    calendarThemePlugin,
+    calendarToolbarOptions,
+    eventTimeRange,
+} from '@/utils/calendarTheme';
 import { availableCalendarViews, fullCalendarView, type CalendarView } from '@/utils/calendarViews';
 import type {
     CalendarOptions,
@@ -248,17 +253,15 @@ const calendarOptions = computed<CalendarOptions>(() => {
         eventClick: handleEventClick,
         eventDidMount: handleEventDidMount,
         dateClick: handleDateClick,
-        headerToolbar: props.compact
+        ...(props.compact
             ? {
-                  left: 'prev',
-                  center: 'title',
-                  right: 'next',
+                  headerToolbar: {
+                      left: 'prev',
+                      center: 'title',
+                      right: 'next',
+                  },
               }
-            : {
-                  left: 'prev,next today',
-                  center: 'title',
-                  right: viewButtons.value,
-              },
+            : calendarToolbarOptions(viewButtons.value)),
         buttons: {
             today: { text: t('calendar.today') },
             dayGridMonth: { text: t('calendar.views.month') },
