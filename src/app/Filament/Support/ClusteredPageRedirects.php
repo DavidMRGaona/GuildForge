@@ -19,19 +19,50 @@ final class ClusteredPageRedirects
 {
     /**
      * Called inside the panel's authenticated route group (names prefixed `filament.<panel>.`).
+     * Path and name are built as Filament builds a page outside a cluster; the closures capture
+     * only strings, so the routes can be cached.
      */
     public static function register(Panel $panel): void
     {
-        /** @var class-string<Page> $page */
-        foreach ($panel->getPages() as $page) {
-            if (blank($page::getCluster())) {
-                continue;
-            }
+        $panelId = $panel->getId();
 
-            $slug = $page::getSlug($panel);
-
-            Route::get($slug, static fn (Request $request): RedirectResponse => redirect()->to($page::getUrl($request->query(), panel: $panel->getId())))
-                ->name("pages.{$slug}");
+        foreach (self::clusteredPages($panel) as $page) {
+            Route::get($page::getRoutePath($panel), static fn (Request $request): RedirectResponse => redirect()->to($page::getUrl($request->query(), panel: $panelId)))
+                ->name(self::oldRelativeRouteName($page, $panel));
         }
+    }
+
+    /**
+     * The route name a clustered page answers to now, given the one it had before joining its
+     * cluster; null when the name is not such an old name.
+     */
+    public static function currentRouteName(Panel $panel, string $routeName): ?string
+    {
+        foreach (self::clusteredPages($panel) as $page) {
+            if ($panel->generateRouteName(self::oldRelativeRouteName($page, $panel)) === $routeName) {
+                return $page::getRouteName($panel);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<class-string<Page>>
+     */
+    private static function clusteredPages(Panel $panel): array
+    {
+        /** @var list<class-string<Page>> $pages */
+        $pages = array_values($panel->getPages());
+
+        return array_values(array_filter($pages, static fn (string $page): bool => filled($page::getCluster())));
+    }
+
+    /**
+     * @param  class-string<Page>  $page
+     */
+    private static function oldRelativeRouteName(string $page, Panel $panel): string
+    {
+        return 'pages.'.$page::getRelativeRouteName($panel);
     }
 }

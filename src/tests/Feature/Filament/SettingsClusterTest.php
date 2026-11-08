@@ -9,9 +9,16 @@ use App\Filament\Pages\Settings\DashboardSettings;
 use App\Filament\Pages\Settings\MailSettings;
 use App\Filament\Pages\Settings\MailStatisticsPage;
 use App\Filament\Pages\SiteSettings;
+use App\Filament\Support\ClusteredPageRedirects;
+use App\Filament\Support\KnowledgeActionTargets;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Closure;
 use Filament\Facades\Filament;
+use Filament\Pages\Page;
+use Filament\Panel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Route;
+use ReflectionFunction;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
 
@@ -59,6 +66,42 @@ final class SettingsClusterTest extends TestCase
         }
     }
 
+    public function test_redirect_routes_capture_no_objects_so_routes_can_be_cached(): void
+    {
+        $action = Route::getRoutes()->getByName('filament.admin.pages.site-settings')?->getAction('uses');
+        $this->assertInstanceOf(Closure::class, $action);
+
+        $reflection = new ReflectionFunction($action);
+        $captured = [...$reflection->getStaticVariables(), ...$reflection->getClosureUsedVariables()];
+
+        $this->assertNotSame([], $captured);
+        foreach ($captured as $name => $value) {
+            $this->assertIsString($value, "\${$name} is captured by the redirect closure");
+        }
+    }
+
+    public function test_redirects_follow_filaments_route_path_and_name_for_nested_slugs(): void
+    {
+        $panel = Panel::make()->id('nested-test')->pages([NestedSlugSettingsPage::class]);
+
+        Route::name('filament.nested-test.')->prefix('nested-test')->group(
+            static fn () => ClusteredPageRedirects::register($panel),
+        );
+        Route::getRoutes()->refreshNameLookups();
+
+        $this->assertSame(url('/nested-test/club/fees'), route('filament.nested-test.pages.club.fees'));
+    }
+
+    public function test_a_guide_button_saved_with_an_old_route_name_shows_its_page(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        Filament::setCurrentPanel('admin');
+
+        $this->assertSame(SiteSettings::getRouteName(), KnowledgeActionTargets::canonical('filament.admin.pages.site-settings'));
+        $this->assertSame('Configuración del sitio', KnowledgeActionTargets::label('filament.admin.pages.site-settings'));
+        $this->assertSame('filament.admin.resources.events.index', KnowledgeActionTargets::canonical('filament.admin.resources.events.index'));
+    }
+
     public function test_old_settings_path_asks_guests_to_sign_in(): void
     {
         $this->get('/admin/mail-settings')->assertRedirect(Filament::getPanel('admin')->getLoginUrl());
@@ -78,4 +121,14 @@ final class SettingsClusterTest extends TestCase
         $this->assertFalse(SettingsCluster::shouldRegisterNavigation());
         $this->get(SettingsCluster::getUrl())->assertForbidden();
     }
+}
+
+/**
+ * A clustered page whose slug has a slash, as a module settings page could have.
+ */
+final class NestedSlugSettingsPage extends Page
+{
+    protected static ?string $cluster = SettingsCluster::class;
+
+    protected static ?string $slug = 'club/fees';
 }

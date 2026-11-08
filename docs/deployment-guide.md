@@ -539,7 +539,7 @@ The admin panel includes widgets for monitoring the mail system:
 - **MailHealthWidget**: shows the mail system status (visible to administrators only)
 - **MailStatsOverviewWidget**: mail delivery statistics (visible to administrators only)
 
-These widgets are configured from the dashboard settings page at `/admin/dashboard-settings`.
+These widgets are configured from the dashboard settings page at `/admin/configuracion/dashboard-settings`.
 
 ### Health endpoint
 

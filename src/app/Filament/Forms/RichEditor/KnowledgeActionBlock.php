@@ -38,6 +38,7 @@ final class KnowledgeActionBlock extends ActionButtonBlock
                 Select::make('target')
                     ->label(__('filament.knowledge_guides.blocks.action.target'))
                     ->options(KnowledgeActionTargets::grouped())
+                    ->formatStateUsing(static fn (?string $state): ?string => $state === null ? null : KnowledgeActionTargets::canonical($state))
                     ->searchable()
                     ->native(false)
                     ->required(),
