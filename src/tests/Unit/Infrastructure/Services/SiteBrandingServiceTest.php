@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Services;
 
-use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Services\SiteBrandingService;
 use App\Infrastructure\Services\SiteNameResolver;
@@ -26,7 +25,6 @@ final class SiteBrandingServiceTest extends TestCase
 
         return new SiteBrandingService(
             $settingsService,
-            app(AboutPageServiceInterface::class),
             new SiteNameResolver($settingsService),
         );
     }

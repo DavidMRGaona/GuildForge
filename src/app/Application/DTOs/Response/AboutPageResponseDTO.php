@@ -44,6 +44,9 @@ final readonly class AboutPageResponseDTO
      *     socialTiktok: string,
      *     socialBluesky: string,
      *     socialTelegram: string,
+     *     socialWhatsapp: string,
+     *     socialYoutube: string,
+     *     socialTwitch: string,
      *     location: array{name: string, address: string, lat: float, lng: float, zoom: int},
      * }
      */
@@ -72,6 +75,9 @@ final readonly class AboutPageResponseDTO
             'socialTiktok' => $this->socialLinks->tiktok,
             'socialBluesky' => $this->socialLinks->bluesky,
             'socialTelegram' => $this->socialLinks->telegram,
+            'socialWhatsapp' => $this->socialLinks->whatsapp,
+            'socialYoutube' => $this->socialLinks->youtube,
+            'socialTwitch' => $this->socialLinks->twitch,
             'location' => $this->location->toArray(),
         ];
     }

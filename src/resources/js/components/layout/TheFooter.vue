@@ -94,7 +94,13 @@ const hasSocialLinks = computed(() => {
                         v-if="hasSocialLinks && socialLinks"
                         class="mt-3 flex justify-center md:justify-end"
                     >
-                        <SocialLinks :links="socialLinks" size="sm" variant="dark" />
+                        <SocialLinks
+                            :links="socialLinks"
+                            size="sm"
+                            variant="dark"
+                            balanced
+                            class="md:ml-auto md:mr-0"
+                        />
                     </div>
                 </div>
             </div>

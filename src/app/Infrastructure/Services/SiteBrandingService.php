@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Services;
 
-use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
+use App\Application\Social\SocialNetwork;
+use App\Application\Social\SocialUrl;
 use Illuminate\Support\Facades\Storage;
 
 final readonly class SiteBrandingService implements SiteBrandingServiceInterface
 {
-    private const array SOCIAL_NETWORKS = ['facebook', 'instagram', 'twitter', 'discord', 'tiktok', 'bluesky', 'telegram'];
-
     public function __construct(
         private SettingsServiceInterface $settings,
-        private AboutPageServiceInterface $aboutPage,
         private SiteNameResolver $siteName,
     ) {}
 
@@ -53,8 +51,8 @@ final readonly class SiteBrandingService implements SiteBrandingServiceInterface
     {
         $urls = [];
 
-        foreach (self::SOCIAL_NETWORKS as $network) {
-            $url = $this->aboutPage->formatSocialUrl($this->settings->get("social_{$network}", ''));
+        foreach (SocialNetwork::cases() as $network) {
+            $url = SocialUrl::normalize($this->settings->get($network->settingKey(), ''), $network);
 
             if ($url !== '') {
                 $urls[] = $url;

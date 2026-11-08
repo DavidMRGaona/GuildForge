@@ -10,6 +10,9 @@ use App\Application\DTOs\Response\JoinStepDTO;
 use App\Application\DTOs\Response\SocialLinksDTO;
 use App\Application\Services\AboutPageServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Social\SocialNetwork;
+use App\Application\Social\SocialUrl;
+use App\Infrastructure\Social\SocialLinkResolver;
 use App\Infrastructure\Support\SanitizesHtml;
 use JsonException;
 
@@ -20,10 +23,13 @@ final readonly class AboutPageService implements AboutPageServiceInterface
     public function __construct(
         private SettingsServiceInterface $settings,
         private SiteNameResolver $siteName,
+        private SocialLinkResolver $socialLinks,
     ) {}
 
     public function getAboutPageData(): AboutPageResponseDTO
     {
+        $links = $this->socialLinks->publicAddresses();
+
         return new AboutPageResponseDTO(
             guildName: $this->siteName->resolve(),
             aboutHistory: $this->sanitizeHtml((string) $this->settings->get('about_history', '')),
@@ -35,13 +41,16 @@ final readonly class AboutPageService implements AboutPageServiceInterface
             activities: $this->parseActivities($this->settings->get('about_activities', '')),
             joinSteps: $this->parseJoinSteps($this->settings->get('join_steps', '')),
             socialLinks: new SocialLinksDTO(
-                facebook: $this->formatSocialUrl($this->settings->get('social_facebook', '')),
-                instagram: $this->formatSocialUrl($this->settings->get('social_instagram', '')),
-                twitter: $this->formatSocialUrl($this->settings->get('social_twitter', '')),
-                discord: $this->formatSocialUrl($this->settings->get('social_discord', '')),
-                tiktok: $this->formatSocialUrl($this->settings->get('social_tiktok', '')),
-                bluesky: $this->formatSocialUrl($this->settings->get('social_bluesky', '')),
-                telegram: $this->formatSocialUrl($this->settings->get('social_telegram', '')),
+                facebook: $links[SocialNetwork::Facebook->value],
+                instagram: $links[SocialNetwork::Instagram->value],
+                twitter: $links[SocialNetwork::Twitter->value],
+                discord: $links[SocialNetwork::Discord->value],
+                tiktok: $links[SocialNetwork::Tiktok->value],
+                bluesky: $links[SocialNetwork::Bluesky->value],
+                telegram: $links[SocialNetwork::Telegram->value],
+                whatsapp: $links[SocialNetwork::Whatsapp->value],
+                youtube: $links[SocialNetwork::Youtube->value],
+                twitch: $links[SocialNetwork::Twitch->value],
             ),
             location: $this->settings->getLocationSettings(),
         );
@@ -107,15 +116,6 @@ final readonly class AboutPageService implements AboutPageServiceInterface
 
     public function formatSocialUrl(mixed $url): string
     {
-        if (! is_string($url) || $url === '') {
-            return '';
-        }
-
-        // If already has protocol, return as-is
-        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
-        }
-
-        return 'https://'.$url;
+        return SocialUrl::normalize($url);
     }
 }

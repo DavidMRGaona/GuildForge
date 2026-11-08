@@ -27,6 +27,9 @@ interface Props {
     socialTiktok: string;
     socialBluesky: string;
     socialTelegram: string;
+    socialWhatsapp: string;
+    socialYoutube: string;
+    socialTwitch: string;
     location: { name: string; address: string; lat: number; lng: number; zoom: number } | null;
 }
 
@@ -52,18 +55,12 @@ const socialLinks = computed<SocialMediaLinks>(() => ({
     tiktok: props.socialTiktok || undefined,
     bluesky: props.socialBluesky || undefined,
     telegram: props.socialTelegram || undefined,
+    whatsapp: props.socialWhatsapp || undefined,
+    youtube: props.socialYoutube || undefined,
+    twitch: props.socialTwitch || undefined,
 }));
 
-const hasSocialLinks = computed(
-    () =>
-        props.socialFacebook ||
-        props.socialInstagram ||
-        props.socialTwitter ||
-        props.socialDiscord ||
-        props.socialTiktok ||
-        props.socialBluesky ||
-        props.socialTelegram
-);
+const hasSocialLinks = computed(() => Object.values(socialLinks.value).some((url) => url));
 
 const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroImage));
 </script>
@@ -295,7 +292,7 @@ const heroImageUrl = computed(() => buildFullScreenHeroImageUrl(props.aboutHeroI
                             <h3 class="font-semibold text-base-primary mb-4">
                                 {{ t('about.contact.social.title') }}
                             </h3>
-                            <SocialLinks :links="socialLinks" size="md" variant="light" />
+                            <SocialLinks :links="socialLinks" size="md" variant="light" balanced />
                         </div>
                     </div>
                 </BaseCard>

@@ -260,4 +260,7 @@ export interface SocialMediaLinks {
     tiktok?: string | undefined;
     bluesky?: string | undefined;
     telegram?: string | undefined;
+    whatsapp?: string | undefined;
+    youtube?: string | undefined;
+    twitch?: string | undefined;
 }

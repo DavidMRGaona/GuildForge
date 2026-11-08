@@ -14,12 +14,15 @@ final readonly class SocialLinksDTO
         public string $tiktok,
         public string $bluesky,
         public string $telegram,
+        public string $whatsapp = '',
+        public string $youtube = '',
+        public string $twitch = '',
     ) {}
 
     /**
      * Convert to array for frontend consumption.
      *
-     * @return array{facebook: string, instagram: string, twitter: string, discord: string, tiktok: string, bluesky: string, telegram: string}
+     * @return array{facebook: string, instagram: string, twitter: string, discord: string, tiktok: string, bluesky: string, telegram: string, whatsapp: string, youtube: string, twitch: string}
      */
     public function toArray(): array
     {
@@ -31,6 +34,9 @@ final readonly class SocialLinksDTO
             'tiktok' => $this->tiktok,
             'bluesky' => $this->bluesky,
             'telegram' => $this->telegram,
+            'whatsapp' => $this->whatsapp,
+            'youtube' => $this->youtube,
+            'twitch' => $this->twitch,
         ];
     }
 }

@@ -15,7 +15,9 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
+use App\Application\Social\SocialNetwork;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
+use App\Infrastructure\Social\SocialLinkResolver;
 use App\Modules\ModuleLoader;
 use Closure;
 use Illuminate\Http\Request;
@@ -530,53 +532,19 @@ final class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Get social media links for frontend (footer, etc.).
+     * Get social media links for frontend (footer, etc.): the ones with a valid address that are shown on the site.
      *
-     * @return array{facebook: string, instagram: string, twitter: string, discord: string, tiktok: string, bluesky: string, telegram: string}
+     * @return array<string, string>
      */
     private function getSocialLinks(): array
     {
         try {
-            $settingsService = app(SettingsServiceInterface::class);
-
-            $keys = ['facebook', 'instagram', 'twitter', 'discord', 'tiktok', 'bluesky', 'telegram'];
-            $links = [];
-
-            foreach ($keys as $key) {
-                $url = (string) $settingsService->get("social_{$key}", '');
-                $links[$key] = $this->formatSocialUrl($url);
-            }
-
-            return $links;
+            return app(SocialLinkResolver::class)->publicAddresses();
         } catch (\Throwable $e) {
             $this->logDebugError('getSocialLinks', $e);
 
-            return [
-                'facebook' => '',
-                'instagram' => '',
-                'twitter' => '',
-                'discord' => '',
-                'tiktok' => '',
-                'bluesky' => '',
-                'telegram' => '',
-            ];
+            return array_fill_keys(array_column(SocialNetwork::cases(), 'value'), '');
         }
-    }
-
-    /**
-     * Format a social media URL, adding https:// prefix if needed.
-     */
-    private function formatSocialUrl(string $url): string
-    {
-        if ($url === '') {
-            return '';
-        }
-
-        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
-        }
-
-        return 'https://'.$url;
     }
 
     /**
