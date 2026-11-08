@@ -6,7 +6,7 @@ category: events-and-games
 audience: site
 order: 10
 featured: true
-keywords: [calendario, eventos, actividades, próximos eventos, qué hay, cuándo, fecha, horario, agenda, este mes, quedadas, planes]
+keywords: [calendario, eventos, suscribirse, suscripción, google calendar, apple calendar, outlook, actividades, próximos eventos, qué hay, cuándo, fecha, horario, agenda, este mes, quedadas, planes]
 related: [core.events.personal-calendar, core.search.site-search, core.help.welcome]
 ---
 El calendario muestra los eventos y actividades de {{site_name}}, mes a mes.
@@ -29,6 +29,21 @@ Cada día muestra sus actividades con la hora de inicio y de fin. Debajo del cal
 
 > [!TIP]
 > En el ordenador, deja el ratón sobre un evento para ver un adelanto sin pulsar.
+
+## Suscribirte al calendario
+
+Puedes añadir el calendario de {{site_name}} a la app de calendario del móvil o del ordenador, sin crear una cuenta. Se actualiza solo con los eventos nuevos, los cambios de hora y las cancelaciones.
+
+1. Pulsa **Suscribirse**, debajo del calendario, junto a la leyenda.
+2. Elige tu calendario:
+   - **Apple Calendar (iPhone y Mac)** abre la app Calendario con la suscripción preparada.
+   - **Google Calendar** u **Outlook** abren su web en una pestaña nueva.
+3. Confirma la suscripción en la app.
+
+Si usas otra app, pulsa **Copiar dirección** y pégala donde la app te deje añadir un calendario por su dirección.
+
+> [!TIP]
+> Las apps de calendario consultan los cambios cada cierto tiempo, a menudo cada pocas horas. Un cambio de hora puede tardar un poco en aparecer.
 
 ## La lista de eventos
 

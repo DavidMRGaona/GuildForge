@@ -3,8 +3,10 @@ import { X } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CalendarEntry } from '@/types/models';
+import type { CalendarSubscriptionLinks } from '@/types/calendarFeed';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel.vue';
+import CalendarSubscribeMenu from '@/components/calendar/CalendarSubscribeMenu.vue';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
 import FormToggle from '@/components/form/FormToggle.vue';
 import { extractLegend, type CalendarLegendItem } from '@/utils/calendarEntries';
@@ -13,10 +15,13 @@ import { useMediaQuery } from '@/composables/useMediaQuery';
 interface Props {
     /** Whether to offer the "only mine" filter (signed in, with some module that tells attendance). */
     personalCalendar?: boolean;
+    /** Addresses to subscribe to the public calendar feed, without an account. */
+    publicCalendarFeed?: CalendarSubscriptionLinks | null;
 }
 
 withDefaults(defineProps<Props>(), {
     personalCalendar: false,
+    publicCalendarFeed: null,
 });
 
 const { t } = useI18n();
@@ -138,24 +143,42 @@ const closeMobileModal = (): void => {
                     />
                 </div>
 
-                <!-- Legend -->
-                <ul
-                    v-if="legend.length > 0"
-                    class="mt-4 flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
-                    :aria-label="t('calendar.legendLabel')"
+                <!--
+                    Legend and the public subscription, below the calendar: away from the
+                    "only mine" toggle beside the title. On phones the button takes its own row.
+                -->
+                <div
+                    v-if="legend.length > 0 || publicCalendarFeed"
+                    class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3"
                 >
-                    <li
-                        v-for="item in legend"
-                        :key="item.sourceType"
-                        class="flex items-center gap-1.5 text-sm text-base-secondary"
+                    <ul
+                        v-if="legend.length > 0"
+                        class="flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
+                        :aria-label="t('calendar.legendLabel')"
                     >
-                        <span
-                            :class="['calendar-legend-dot', `calendar-legend-dot--${item.color}`]"
-                            aria-hidden="true"
-                        ></span>
-                        {{ item.sourceLabel }}
-                    </li>
-                </ul>
+                        <li
+                            v-for="item in legend"
+                            :key="item.sourceType"
+                            class="flex items-center gap-1.5 text-sm text-base-secondary"
+                        >
+                            <span
+                                :class="[
+                                    'calendar-legend-dot',
+                                    `calendar-legend-dot--${item.color}`,
+                                ]"
+                                aria-hidden="true"
+                            ></span>
+                            {{ item.sourceLabel }}
+                        </li>
+                    </ul>
+                    <div v-if="publicCalendarFeed" class="basis-full sm:ml-auto sm:basis-auto">
+                        <CalendarSubscribeMenu
+                            :links="publicCalendarFeed"
+                            align="end"
+                            placement="top"
+                        />
+                    </div>
+                </div>
             </div>
 
             <!--

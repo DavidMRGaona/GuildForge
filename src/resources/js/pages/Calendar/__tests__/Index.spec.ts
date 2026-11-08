@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import Index from '../Index.vue';
+import CalendarSubscribeMenu from '@/components/calendar/CalendarSubscribeMenu.vue';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
@@ -41,5 +42,24 @@ describe('Calendar/Index', () => {
         await wrapper.get('#calendar-only-mine').setValue(true);
 
         expect(calendars()).toEqual([true, true]);
+    });
+
+    it('offers the public subscription when the page sends its addresses', () => {
+        const feed = {
+            feedUrl: 'https://example.test/calendario.ics',
+            webcalUrl: 'webcal://example.test/calendario.ics',
+            googleUrl: 'https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fexample.test',
+            outlookUrl:
+                'https://outlook.live.com/calendar/0/addfromweb?url=https%3A%2F%2Fexample.test',
+        };
+
+        const menu = mountPage({ publicCalendarFeed: feed }).findComponent(CalendarSubscribeMenu);
+
+        expect(menu.exists()).toBe(true);
+        expect(menu.props('links')).toEqual(feed);
+    });
+
+    it('hides the subscription without addresses', () => {
+        expect(mountPage().findComponent(CalendarSubscribeMenu).exists()).toBe(false);
     });
 });

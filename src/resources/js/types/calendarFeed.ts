@@ -6,13 +6,17 @@ export interface CalendarFeedStatus {
     issuedAt: string | null;
 }
 
-/** Answer to creating an address: the only time the address is ever sent. */
-export interface CalendarFeedAddresses {
+/** Addresses to subscribe to a calendar feed (`CalendarSubscriptionLinksDTO`). */
+export interface CalendarSubscriptionLinks {
     feedUrl: string;
     webcalUrl: string;
     /** Opens Google Calendar with the subscription ready. */
     googleUrl: string;
     /** Opens Outlook on the web with the subscription ready. */
     outlookUrl: string;
+}
+
+/** Answer to creating an address: the only time the address is ever sent. */
+export interface CalendarFeedAddresses extends CalendarSubscriptionLinks {
     issuedAt: string | null;
 }
