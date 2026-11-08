@@ -14,6 +14,10 @@ return [
         'settings' => 'Configuración',
         'admin' => 'Administración',
     ],
+    'hero_slides' => [
+        'navigation' => 'Portada',
+        'plural' => 'Diapositivas de la portada',
+    ],
     'settings_cluster' => [
         'label' => 'Configuración',
     ],

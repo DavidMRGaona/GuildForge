@@ -8,6 +8,7 @@ use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\ArticleResource\Pages\CreateArticle;
 use App\Filament\Resources\ArticleResource\Pages\EditArticle;
 use App\Filament\Resources\ArticleResource\Pages\ListArticles;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -38,11 +39,14 @@ class ArticleResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Contenido';
-
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 20;
 
     protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::Content->getLabel();
+    }
 
     public static function getModelLabel(): string
     {

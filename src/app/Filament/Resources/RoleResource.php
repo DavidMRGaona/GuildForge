@@ -23,6 +23,7 @@ use App\Filament\Resources\RoleResource\PermissionSection;
 use App\Filament\Resources\RoleResource\PermissionTab;
 use App\Filament\Resources\RoleResource\RelationManagers\RoleAuditRelationManager;
 use App\Filament\Resources\RoleResource\RoleRequirementImpact;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -55,15 +56,18 @@ class RoleResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Administración';
-
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 20;
 
     /** @var WeakMap<object, list<PermissionTab>>|null */
     private static ?WeakMap $permissionTabsByPage = null;
 
     /** @var WeakMap<object, int>|null */
     private static ?WeakMap $holderCountByPage = null;
+
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::People->getLabel();
+    }
 
     public static function getModelLabel(): string
     {

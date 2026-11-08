@@ -18,6 +18,7 @@ use App\Filament\Resources\KnowledgeGuideResource\Pages\CreateKnowledgeGuide;
 use App\Filament\Resources\KnowledgeGuideResource\Pages\EditKnowledgeGuide;
 use App\Filament\Resources\KnowledgeGuideResource\Pages\ListKnowledgeGuides;
 use App\Filament\Resources\KnowledgeGuideResource\SiteGuideFormData;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeCategoryModel;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Knowledge\Services\SiteGuideService;
@@ -59,13 +60,13 @@ class KnowledgeGuideResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-lifebuoy';
 
-    protected static ?int $navigationSort = 60;
+    protected static ?int $navigationSort = 90;
 
     protected static ?string $slug = 'guias-de-ayuda';
 
-    public static function getNavigationGroup(): ?string
+    public static function getNavigationGroup(): string
     {
-        return 'Contenido';
+        return PanelNavigationGroup::Content->getLabel();
     }
 
     public static function getModelLabel(): string

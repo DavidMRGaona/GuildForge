@@ -11,6 +11,7 @@ use App\Filament\Concerns\HasExtendableRelations;
 use App\Filament\Resources\EventResource\Pages\CreateEvent;
 use App\Filament\Resources\EventResource\Pages\EditEvent;
 use App\Filament\Resources\EventResource\Pages\ListEvents;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Filament\Forms\Components\DateTimePicker;
@@ -43,11 +44,14 @@ class EventResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-calendar';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Contenido';
-
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::Content->getLabel();
+    }
 
     public static function getModelLabel(): string
     {

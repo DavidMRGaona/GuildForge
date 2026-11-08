@@ -28,7 +28,8 @@ final class KnowledgeBasePage extends Page
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-lifebuoy';
 
-    protected static ?int $navigationSort = 1000;
+    /** Reached from the user menu and the top bar, not from the sidebar. */
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $slug = 'ayuda';
 

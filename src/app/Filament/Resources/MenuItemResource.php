@@ -12,6 +12,7 @@ use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\MenuItemResource\Pages\CreateMenuItem;
 use App\Filament\Resources\MenuItemResource\Pages\EditMenuItem;
 use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use Filament\Actions\ActionGroup;
@@ -40,11 +41,11 @@ class MenuItemResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-bars-3';
 
-    protected static ?int $navigationSort = 50;
+    protected static ?int $navigationSort = 20;
 
-    public static function getNavigationGroup(): ?string
+    public static function getNavigationGroup(): string
     {
-        return __('filament.navigation.admin');
+        return PanelNavigationGroup::Site->getLabel();
     }
 
     public static function getNavigationLabel(): string

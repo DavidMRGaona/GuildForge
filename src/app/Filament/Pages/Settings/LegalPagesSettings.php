@@ -10,6 +10,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Filament\Support\PanelNavigationGroup;
 use Filament\Actions\Action;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
@@ -40,7 +41,7 @@ final class LegalPagesSettings extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-scale';
 
-    protected static ?int $navigationSort = 11;
+    protected static ?int $navigationSort = 40;
 
     protected string $view = 'filament.pages.settings.legal-pages-settings';
 
@@ -67,7 +68,7 @@ final class LegalPagesSettings extends Page implements HasForms
 
     public static function getNavigationGroup(): string
     {
-        return __('filament.navigation.pages');
+        return PanelNavigationGroup::Site->getLabel();
     }
 
     public function getTitle(): string

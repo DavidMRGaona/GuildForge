@@ -17,6 +17,7 @@ use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
 use App\Filament\Resources\UserResource\RelationManagers\RoleAuditRelationManager;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Images\AvatarPath;
@@ -57,11 +58,14 @@ class UserResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Administración';
-
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::People->getLabel();
+    }
 
     public static function getModelLabel(): string
     {

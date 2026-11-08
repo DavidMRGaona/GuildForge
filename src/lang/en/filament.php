@@ -14,6 +14,10 @@ return [
         'settings' => 'Settings',
         'admin' => 'Administration',
     ],
+    'hero_slides' => [
+        'navigation' => 'Home page',
+        'plural' => 'Home page slides',
+    ],
     'settings_cluster' => [
         'label' => 'Settings',
     ],
