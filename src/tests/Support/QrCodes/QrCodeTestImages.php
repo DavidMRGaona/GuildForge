@@ -50,6 +50,38 @@ final class QrCodeTestImages
     }
 
     /**
+     * A transparent PNG with a red square of the given side in its centre, like most logos
+     * exported without a background.
+     *
+     * @param  positive-int  $size
+     * @param  positive-int  $square
+     */
+    public static function transparentPng(int $size, int $square): string
+    {
+        $image = imagecreatetruecolor($size, $size);
+        if (! $image instanceof GdImage) {
+            throw new RuntimeException('Cannot create the test image');
+        }
+
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        $clear = imagecolorallocatealpha($image, 0, 0, 0, 127);
+        $red = imagecolorallocate($image, 200, 30, 30);
+        if ($clear === false || $red === false) {
+            throw new RuntimeException('Cannot allocate the test colours');
+        }
+
+        imagefill($image, 0, 0, $clear);
+        $from = intdiv($size - $square, 2);
+        imagefilledrectangle($image, $from, $from, $from + $square - 1, $from + $square - 1, $red);
+
+        ob_start();
+        imagepng($image);
+
+        return (string) ob_get_clean();
+    }
+
+    /**
      * A solid SVG of the same red as the raster images, with the given viewBox size.
      */
     public static function svg(int $width, int $height, string $extra = ''): string

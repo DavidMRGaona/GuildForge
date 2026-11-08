@@ -15,6 +15,7 @@ use App\Infrastructure\QrCodes\QrCodeContentPolicy;
 use App\Infrastructure\QrCodes\RsvgConvertRasterizer;
 use DOMDocument;
 use DOMElement;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\QrCodes\QrCodeTestImages;
 
@@ -69,6 +70,36 @@ final class EndroidQrCodeRendererTest extends TestCase
         $this->assertSame([512, 512], array_slice((array) getimagesizefromstring($png), 0, 2));
         // The logo sits in the centre
         $this->assertSame([200, 30, 30], QrCodeTestImages::pixel($png, 256, 256));
+        $this->assertSame(self::URL, QrCodeTestImages::decode($png));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function logosWithTransparency(): iterable
+    {
+        // 120 px wide with a 40 px red square in the middle; everything else is transparent
+        yield 'a PNG with an alpha channel' => [QrCodeTestImages::transparentPng(120, 40)];
+        yield 'an SVG without a background' => ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect x="40" y="40" width="40" height="40" fill="#C81E1E"/></svg>'];
+    }
+
+    #[DataProvider('logosWithTransparency')]
+    public function test_the_transparent_parts_of_a_logo_show_the_background_in_a_png(string $logo): void
+    {
+        $options = new QrCodeOptionsDTO(
+            size: 512,
+            margin: 16,
+            backgroundColor: '#FFF8E7',
+            logo: new QrCodeLogoDTO($logo, QrCodeLogoDTO::MAX_WIDTH_RATIO),
+        );
+
+        $png = $this->renderer->render(self::URL, $options, QrCodeFormat::Png)->contents;
+
+        // 25% of the 480 px code is a 120 px square around the centre; its middle third is red
+        $this->assertSame([200, 30, 30], QrCodeTestImages::pixel($png, 256, 256));
+        // Inside the logo's square but outside the red one: the code's background, never black
+        $this->assertSame([0xFF, 0xF8, 0xE7], QrCodeTestImages::pixel($png, 256 - 45, 256 - 45));
+        $this->assertSame([0xFF, 0xF8, 0xE7], QrCodeTestImages::pixel($png, 256 + 45, 256 + 45));
         $this->assertSame(self::URL, QrCodeTestImages::decode($png));
     }
 
