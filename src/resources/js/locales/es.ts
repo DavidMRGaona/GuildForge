@@ -229,7 +229,6 @@ export default {
         last_updated: 'Última actualización',
     },
     layout: {
-        brand: '{appName}',
         copyright: '© {year} {appName}. Todos los derechos reservados.',
         madeWith: 'Hecho con ❤️',
         selectTheme: 'Tema',

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { usePage, Link } from '@inertiajs/vue3';
 import { useAppStore } from '@/stores/useAppStore';
 import { useRoutes } from '@/composables/useRoutes';
+import { useSiteLogo } from '@/composables/useSiteLogo';
 import type { ThemeSettings } from '@/types/inertia';
 import type { AuthLayoutProps } from '@/types/layouts';
 
@@ -18,6 +19,8 @@ const { t } = useI18n();
 const page = usePage();
 const appStore = useAppStore();
 const routes = useRoutes();
+const { logo, markFailed } = useSiteLogo();
+const appName = computed(() => page.props.appName as string);
 
 const theme = computed(() => page.props.theme as ThemeSettings | undefined);
 const cssVariables = computed(() => theme.value?.cssVariables ?? '');
@@ -66,8 +69,15 @@ watch(theme, (newTheme) => {
 
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
             <Link :href="routes.home" class="flex justify-center">
-                <span class="text-2xl font-bold text-primary">
-                    {{ page.props.appName }}
+                <img
+                    v-if="logo"
+                    :src="logo"
+                    :alt="appName"
+                    class="h-16 w-auto max-w-full object-contain"
+                    @error="markFailed"
+                />
+                <span v-else class="text-2xl font-bold text-primary">
+                    {{ appName }}
                 </span>
             </Link>
             <h1 class="mt-6 text-center text-3xl font-bold tracking-tight text-base-primary">
