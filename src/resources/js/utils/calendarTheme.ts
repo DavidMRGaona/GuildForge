@@ -83,13 +83,45 @@ export function eventTimeRange(
 }
 
 /**
+ * The toolbar of a full-size calendar: the month's title with ‹ › and, below
+ * it, «Hoy» with the view buttons (`viewButtons`, FullCalendar view names
+ * joined by commas, or '' when there is no view to choose: «Hoy» then sits
+ * next to ‹ ›). Where the calendar is at least 34rem wide, app.css puts it all
+ * on one row: the layout follows the calendar's width, not the window's.
+ */
+export function calendarToolbarOptions(
+    viewButtons: string
+): Required<Pick<CalendarOptions, 'headerToolbar' | 'headerToolbarClass'>> {
+    return {
+        headerToolbar:
+            viewButtons === ''
+                ? { start: 'title', center: '', end: 'today prev,next' }
+                : { start: 'title', center: `today ${viewButtons}`, end: 'prev,next' },
+        headerToolbarClass: 'calendar-toolbar--responsive',
+    };
+}
+
+/**
  * Stable class names for the rest of the styling in app.css. FullCalendar
  * joins them to the theme's own classes instead of replacing them.
  */
 export const calendarClassOptions: CalendarOptions = {
+    toolbarClass: 'calendar-toolbar',
+    toolbarSectionClass: (info) =>
+        `calendar-toolbar-section calendar-toolbar-section--${info.name}`,
     toolbarTitleClass: 'calendar-title',
+    // Only a group of view buttons can hold the selected one
+    buttonGroupClass: (info) =>
+        joinClassNames(
+            'calendar-button-group',
+            info.hasSelection && 'calendar-button-group--views'
+        ),
     buttonClass: (info) =>
-        joinClassNames('calendar-button', info.isSelected && 'calendar-button--selected'),
+        joinClassNames(
+            'calendar-button',
+            info.isSelected && 'calendar-button--selected',
+            info.isIconOnly && 'calendar-button--icon'
+        ),
     tableClass: 'calendar-table',
     // The row carries the header colours: FullCalendar skips dayHeaderClass on disabled days
     dayHeaderRowClass: 'calendar-day-header-row',

@@ -1125,6 +1125,7 @@ export declare function eventTimeRange(event: {
     start: Date | null;
     end: Date | null;
 }, locale: string): string;
+export declare function calendarToolbarOptions(viewButtons: string): Required<Pick<CalendarOptions, 'headerToolbar' | 'headerToolbarClass'>>;
 export declare const calendarClassOptions: CalendarOptions;
 ```
 

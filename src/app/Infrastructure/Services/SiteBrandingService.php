@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Services;
 
+use App\Application\DTOs\Response\SiteLogoDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Social\SocialNetwork;
 use App\Application\Social\SocialUrl;
+use App\Domain\Enums\ColorScheme;
 use Illuminate\Support\Facades\Storage;
 
 final readonly class SiteBrandingService implements SiteBrandingServiceInterface
@@ -37,6 +39,27 @@ final readonly class SiteBrandingService implements SiteBrandingServiceInterface
     public function customLogoIsDark(): bool
     {
         return $this->path('site_logo_light') === null && $this->path('site_logo_dark') !== null;
+    }
+
+    public function customLogoFor(ColorScheme $scheme): ?SiteLogoDTO
+    {
+        $preferred = $scheme === ColorScheme::Dark
+            ? ['site_logo_dark', 'site_logo_light']
+            : ['site_logo_light', 'site_logo_dark'];
+
+        foreach ($preferred as $key) {
+            $path = $this->path($key);
+
+            if ($path !== null) {
+                return new SiteLogoDTO(
+                    path: $path,
+                    url: Storage::disk('images')->url($path),
+                    isDark: $key === 'site_logo_dark',
+                );
+            }
+        }
+
+        return null;
     }
 
     public function customFavicons(): array
