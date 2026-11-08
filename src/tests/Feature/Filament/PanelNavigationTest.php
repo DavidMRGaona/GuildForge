@@ -73,7 +73,7 @@ final class PanelNavigationTest extends TestCase
             '' => ['Escritorio'],
             'Contenido' => ['Eventos', 'Artículos', 'Galerías', 'Guías de ayuda'],
             'Personas' => ['Usuarios', 'Roles'],
-            'Sitio web' => ['Portada', 'Navegación', 'Nosotros', 'Páginas legales'],
+            'Sitio web' => ['Hero slides', 'Navegación', 'Nosotros', 'Páginas legales'],
             'Catálogos' => ['Etiquetas'],
             'Sistema' => ['Configuración', 'Módulos', 'Actualizaciones de módulos', 'Actualización del core'],
         ], $tree);
@@ -92,13 +92,16 @@ final class PanelNavigationTest extends TestCase
         $this->assertSame(['Contenido', 'Sitio web'], $labels);
     }
 
-    public function test_home_page_slides_are_called_diapositivas_everywhere(): void
+    /**
+     * «Hero slides» and «slide» are the accepted names for the home page carousel; they stay as they are.
+     */
+    public function test_home_page_slides_keep_their_accepted_names(): void
     {
-        $this->assertSame('Portada', HeroSlideResource::getNavigationLabel());
-        $this->assertSame('diapositiva', HeroSlideResource::getModelLabel());
-        $this->assertSame('Diapositivas de la portada', HeroSlideResource::getPluralModelLabel());
-        $this->assertSame('Crear diapositiva', __('authorization.permissions.hero_slides.create'));
-        $this->assertSame('Ver listado de diapositivas de la portada', __('authorization.permissions.hero_slides.view_any'));
+        $this->assertSame('Hero slides', HeroSlideResource::getNavigationLabel());
+        $this->assertSame('slide', HeroSlideResource::getModelLabel());
+        $this->assertSame('Hero slides', HeroSlideResource::getPluralModelLabel());
+        $this->assertSame('Crear slide', __('authorization.permissions.hero_slides.create'));
+        $this->assertSame('Ver listado de slides', __('authorization.permissions.hero_slides.view_any'));
     }
 
     public function test_help_is_not_in_the_sidebar(): void
