@@ -43,6 +43,11 @@ abstract class TestCase extends BaseTestCase
 
         $this->withoutVite();
 
+        // Livewire keeps "a component was rendered" and pending @assets in static properties
+        // that only Livewire::test() resets, so a test that requested a panel page made the
+        // next HTML response in the same process carry Livewire's injected <style> and scripts
+        $this->app->make('livewire')->flushState();
+
         $this->app->instance(PermissionSyncRunnerInterface::class, new FakePermissionSyncRunner);
         $this->app->instance(SearchSyncRunnerInterface::class, new FakeSearchSyncRunner);
 

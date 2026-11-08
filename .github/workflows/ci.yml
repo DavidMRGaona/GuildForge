@@ -231,6 +231,8 @@ jobs:
 
       - uses: ./.github/actions/php-dependencies
 
+      - uses: ./.github/actions/svg-rasterizer
+
       # The suite does not need the compiled assets (TestCase calls withoutVite()); the lint job
       # builds them and checks the import map entries
       - name: Prepare environment

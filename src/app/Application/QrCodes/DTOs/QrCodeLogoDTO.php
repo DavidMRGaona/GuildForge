@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Application\QrCodes\DTOs;
 
+use App\Application\QrCodes\SvgLogoSanitizer;
 use App\Domain\QrCodes\Exceptions\InvalidQrCodeOptionsException;
 
 /**
- * A raster logo drawn in the centre of a QR code. It is given as bytes, never as a path or a
- * URL, so the renderer reads nothing from disk or the network on a module's behalf.
+ * A logo drawn in the centre of a QR code: PNG, JPEG, WebP or SVG. It is given as bytes, never
+ * as a path or a URL, so the renderer reads nothing from disk or the network on a module's
+ * behalf. An SVG is sanitized here (SvgLogoSanitizer), so $contents only ever holds markup
+ * that refers to nothing outside itself.
  */
 final readonly class QrCodeLogoDTO
 {
@@ -24,6 +27,8 @@ final readonly class QrCodeLogoDTO
 
     public const float DEFAULT_WIDTH_RATIO = 0.20;
 
+    public const string SVG_MIME_TYPE = 'image/svg+xml';
+
     /** @var array<int, string> */
     private const array MIME_TYPES = [
         IMAGETYPE_PNG => 'image/png',
@@ -31,18 +36,22 @@ final readonly class QrCodeLogoDTO
         IMAGETYPE_WEBP => 'image/webp',
     ];
 
+    /** The raster bytes as given, or the sanitized SVG markup */
+    public string $contents;
+
     public string $mimeType;
 
+    /** In pixels; for an SVG only the proportion counts, with the longer side at MAX_DIMENSION */
     public int $width;
 
     public int $height;
 
     /**
-     * @param  string  $contents  PNG, JPEG or WebP bytes
+     * @param  string  $contents  PNG, JPEG, WebP or SVG bytes
      * @param  float  $widthRatio  Width of the logo over the width of the code (margin excluded)
      */
     public function __construct(
-        public string $contents,
+        string $contents,
         public float $widthRatio = self::DEFAULT_WIDTH_RATIO,
     ) {
         if (is_nan($widthRatio) || $widthRatio < self::MIN_WIDTH_RATIO || $widthRatio > self::MAX_WIDTH_RATIO) {
@@ -61,9 +70,29 @@ final readonly class QrCodeLogoDTO
             throw InvalidQrCodeOptionsException::because(sprintf('the logo is larger than %d bytes', self::MAX_BYTES));
         }
 
+        [$this->contents, $this->mimeType, $this->width, $this->height] = $this->read($contents);
+    }
+
+    public function isSvg(): bool
+    {
+        return $this->mimeType === self::SVG_MIME_TYPE;
+    }
+
+    /**
+     * @return array{string, string, int, int} Contents, MIME type, width and height
+     */
+    private function read(string $contents): array
+    {
+        // PHP 8.5's getimagesize() recognises SVG too (IMAGETYPE_SVG), so it is not a raster check
         $info = @getimagesizefromstring($contents);
+        $isRaster = $info !== false && isset(self::MIME_TYPES[$info[2]]);
+
+        if (! $isRaster && preg_match('/<svg[\s>\/]/i', $contents) === 1) {
+            return $this->readSvg($contents);
+        }
+
         if ($info === false || ! isset(self::MIME_TYPES[$info[2]])) {
-            throw InvalidQrCodeOptionsException::because('the logo must be a PNG, JPEG or WebP image');
+            throw InvalidQrCodeOptionsException::because('the logo must be a PNG, JPEG, WebP or SVG image');
         }
 
         [$width, $height] = $info;
@@ -74,8 +103,20 @@ final readonly class QrCodeLogoDTO
             ));
         }
 
-        $this->mimeType = self::MIME_TYPES[$info[2]];
-        $this->width = $width;
-        $this->height = $height;
+        return [$contents, self::MIME_TYPES[$info[2]], $width, $height];
+    }
+
+    /**
+     * @return array{string, string, int, int}
+     */
+    private function readSvg(string $contents): array
+    {
+        $svg = SvgLogoSanitizer::sanitize($contents);
+
+        if ($svg->width >= $svg->height) {
+            return [$svg->contents, self::SVG_MIME_TYPE, self::MAX_DIMENSION, max(1, (int) round(self::MAX_DIMENSION * $svg->height / $svg->width))];
+        }
+
+        return [$svg->contents, self::SVG_MIME_TYPE, max(1, (int) round(self::MAX_DIMENSION * $svg->width / $svg->height)), self::MAX_DIMENSION];
     }
 }

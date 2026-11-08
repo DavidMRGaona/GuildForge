@@ -1,0 +1,14 @@
+name: SVG rasterizer
+description: rsvg-convert, which the QR code renderer runs to draw SVG logos for PNG codes (Dockerfile.prod and the development image install it too)
+
+runs:
+  using: composite
+  steps:
+    - name: Install rsvg-convert
+      shell: bash
+      run: |
+        if ! command -v rsvg-convert >/dev/null; then
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends librsvg2-bin
+        fi
+        rsvg-convert --version
