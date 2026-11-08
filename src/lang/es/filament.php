@@ -255,6 +255,12 @@ return [
             'tiktok' => 'TikTok',
             'bluesky' => 'Bluesky',
             'telegram' => 'Telegram',
+            'whatsapp' => 'WhatsApp',
+            'youtube' => 'YouTube',
+            'twitch' => 'Twitch',
+            'visible' => 'Mostrar en el sitio',
+            'invalid' => 'Escribe una dirección web válida, sin espacios ni usuario y contraseña.',
+            'invalid_host' => 'Escribe un enlace de WhatsApp: chat.whatsapp.com/… (grupo o canal) o wa.me/… (chat).',
         ],
         'auth' => [
             'section_public' => 'Acceso público',

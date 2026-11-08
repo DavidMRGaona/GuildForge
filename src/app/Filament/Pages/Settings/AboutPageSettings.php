@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Settings;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Social\SocialNetwork;
+use App\Application\Social\SocialUrl;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
@@ -15,10 +18,12 @@ use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
@@ -203,43 +208,7 @@ final class AboutPageSettings extends Page implements HasForms
                             ])->columns(2),
 
                         Tab::make(__('filament.pages.about.tabs.social'))
-                            ->schema([
-                                TextInput::make('social_facebook')
-                                    ->label(__('filament.settings.social.facebook'))
-                                    ->prefix('https://')
-                                    ->placeholder('www.facebook.com/tu-pagina')
-                                    ->maxLength(255),
-                                TextInput::make('social_instagram')
-                                    ->label(__('filament.settings.social.instagram'))
-                                    ->prefix('https://')
-                                    ->placeholder('www.instagram.com/tu-usuario')
-                                    ->maxLength(255),
-                                TextInput::make('social_twitter')
-                                    ->label(__('filament.settings.social.twitter'))
-                                    ->prefix('https://')
-                                    ->placeholder('x.com/tu-usuario')
-                                    ->maxLength(255),
-                                TextInput::make('social_discord')
-                                    ->label(__('filament.settings.social.discord'))
-                                    ->prefix('https://')
-                                    ->placeholder('discord.gg/tu-servidor')
-                                    ->maxLength(255),
-                                TextInput::make('social_tiktok')
-                                    ->label(__('filament.settings.social.tiktok'))
-                                    ->prefix('https://')
-                                    ->placeholder('www.tiktok.com/@tu-usuario')
-                                    ->maxLength(255),
-                                TextInput::make('social_bluesky')
-                                    ->label(__('filament.settings.social.bluesky'))
-                                    ->prefix('https://')
-                                    ->placeholder('bsky.app/profile/tu-usuario')
-                                    ->maxLength(255),
-                                TextInput::make('social_telegram')
-                                    ->label(__('filament.settings.social.telegram'))
-                                    ->prefix('https://')
-                                    ->placeholder('t.me/tu-grupo')
-                                    ->maxLength(255),
-                            ])->columns(2),
+                            ->schema($this->socialNetworkFields()),
                     ])
                     ->columnSpanFull(),
             ])
@@ -285,6 +254,10 @@ final class AboutPageSettings extends Page implements HasForms
             'social_tiktok',
             'social_bluesky',
             'social_telegram',
+            'social_whatsapp',
+            'social_youtube',
+            'social_twitch',
+            ...array_map(static fn (SocialNetwork $network): string => $network->visibilityKey(), SocialNetwork::cases()),
         ];
     }
 
@@ -344,7 +317,59 @@ final class AboutPageSettings extends Page implements HasForms
             'social_tiktok' => '',
             'social_bluesky' => '',
             'social_telegram' => '',
+            'social_whatsapp' => '',
+            'social_youtube' => '',
+            'social_twitch' => '',
+            ...array_fill_keys(
+                array_map(static fn (SocialNetwork $network): string => $network->visibilityKey(), SocialNetwork::cases()),
+                '1',
+            ),
         ];
+    }
+
+    /**
+     * One row per social network: its address and whether it is shown on the public site.
+     *
+     * @return array<Grid>
+     */
+    private function socialNetworkFields(): array
+    {
+        $placeholders = [
+            'facebook' => 'www.facebook.com/tu-pagina',
+            'instagram' => 'www.instagram.com/tu-usuario',
+            'twitter' => 'x.com/tu-usuario',
+            'discord' => 'discord.gg/tu-servidor',
+            'tiktok' => 'www.tiktok.com/@tu-usuario',
+            'bluesky' => 'bsky.app/profile/tu-usuario',
+            'telegram' => 't.me/tu-grupo',
+            'whatsapp' => 'chat.whatsapp.com/tu-grupo',
+            'youtube' => 'www.youtube.com/@tu-canal',
+            'twitch' => 'www.twitch.tv/tu-canal',
+        ];
+
+        return array_map(
+            static fn (SocialNetwork $network): Grid => Grid::make(['default' => 1, 'md' => 3])
+                ->schema([
+                    TextInput::make($network->settingKey())
+                        ->label(__('filament.settings.social.'.$network->value))
+                        ->prefix('https://')
+                        ->placeholder($placeholders[$network->value])
+                        ->maxLength(255)
+                        ->rule(static fn (): Closure => static function (string $attribute, mixed $value, Closure $fail) use ($network): void {
+                            if (is_string($value) && trim($value) !== '' && ! SocialUrl::isValid($value, $network)) {
+                                $fail(__($network->allowedHosts() === null
+                                    ? 'filament.settings.social.invalid'
+                                    : 'filament.settings.social.invalid_host'));
+                            }
+                        })
+                        ->columnSpan(['md' => 2]),
+                    Toggle::make($network->visibilityKey())
+                        ->label(__('filament.settings.social.visible'))
+                        ->inline(false)
+                        ->default(true),
+                ]),
+            SocialNetwork::cases(),
+        );
     }
 
     /**

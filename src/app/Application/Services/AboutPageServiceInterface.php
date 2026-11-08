@@ -30,7 +30,7 @@ interface AboutPageServiceInterface
     public function parseJoinSteps(mixed $json): array;
 
     /**
-     * Format social URL by prepending https:// if needed.
+     * Normalize a stored social address to an https URL, or '' when it is not a valid one.
      */
     public function formatSocialUrl(mixed $url): string;
 }
