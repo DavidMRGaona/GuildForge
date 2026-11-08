@@ -14,6 +14,15 @@ return [
         'settings' => 'Settings',
         'admin' => 'Administration',
     ],
+    'navigation_groups' => [
+        'content' => 'Content',
+        'activities' => 'Activities',
+        'communication' => 'Communication',
+        'people' => 'People',
+        'site' => 'Website',
+        'catalogues' => 'Catalogues',
+        'system' => 'System',
+    ],
     'user_menu' => [
         'visit_site' => 'Visit site',
         'profile' => 'My profile',

@@ -15,6 +15,12 @@ return [
         'admin' => 'Administración',
     ],
     'navigation_groups' => [
+        'content' => 'Contenido',
+        'activities' => 'Actividades',
+        'communication' => 'Comunicación',
+        'people' => 'Personas',
+        'site' => 'Sitio web',
+        'catalogues' => 'Catálogos',
         'system' => 'Sistema',
     ],
     'user_menu' => [
