@@ -61,6 +61,8 @@
     "overrides": {
         "@tailwindcss/typography": {
             "postcss-selector-parser": "^6.1.5"
-        }
+        },
+        "glob": "^14.0.4",
+        "minimatch": "^11.0.5"
     }
 }

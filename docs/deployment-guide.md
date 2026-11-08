@@ -250,7 +250,7 @@ CI: test, test (Madrid storage)    ←── in parallel ──→    CI: lint (
 
 Checks both lock files for security advisories, without installing anything:
 - Job `composer`: `composer audit --locked` on `src/composer.lock`; abandoned packages are listed without failing
-- Job `npm`: `npm audit --package-lock-only --audit-level=high` on `src/package-lock.json`; only high and critical advisories fail it, moderate and low ones are listed. Some moderate ones are only fixed in majors that the packages depending on them do not accept yet (for example `minimatch` 11 and `glob` 14 under ESLint, typescript-eslint and js-beautify); forcing those with `overrides` could change which files ESLint checks without any error
+- Job `npm`: `npm audit --package-lock-only --audit-level=moderate` on `src/package-lock.json`; moderate, high and critical advisories fail it, low ones are listed
 
 It runs:
 - On pull requests to `main` that change `src/composer.json`, `src/composer.lock`, `src/package.json`, `src/package-lock.json` or the workflow itself: the locks they bring must be clean
@@ -258,6 +258,8 @@ It runs:
 - On demand from the Actions tab (`workflow_dispatch`)
 
 It is not a required check and Deploy does not wait for it, on purpose: a new advisory must not block unrelated pull requests or deployments. When it fails, update the affected packages in a pull request of their own: `composer update <packages> --no-install` (only `composer.lock` changes), or `npm install --package-lock-only` with the npm of the Node container. A dependency that pins a vulnerable version exactly can be lifted with `overrides` in `package.json`, scoped to that dependency and within the same major (as `@tailwindcss/typography` → `postcss-selector-parser`).
+
+`package.json` also overrides `minimatch` (`^11.0.5`) and `glob` (`^14.0.4`) for every package, because their advisories are only fixed in majors that ESLint, `@eslint/config-array`, typescript-eslint, `editorconfig` and `js-beautify` do not accept yet. They only run in tooling: ESLint (which files it checks and the configuration each one gets), and the `js-beautify` and `editorconfig` CLIs. Before they were forced, ESLint's list of checked files, its ignored files and the configuration computed for every file under the core's and the modules' JavaScript paths were compared with the previous versions and came out identical. Remove both overrides once those packages accept these majors; if an override ever has to move to another major, compare ESLint's files and configurations the same way first, since a change in glob matching does not raise any error.
 
 #### 4. Module release (`reusable-module-release.yml`)
 

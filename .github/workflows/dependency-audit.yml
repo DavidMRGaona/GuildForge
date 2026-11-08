@@ -72,10 +72,7 @@ jobs:
         with:
           node-version: '24'
 
-      # Reads package-lock.json, without installing anything. Only high and critical advisories
-      # fail the run; moderate and low ones are still listed. Some moderate ones are only fixed
-      # in majors that the packages depending on them do not accept yet (minimatch 11, glob 14
-      # for ESLint, typescript-eslint and js-beautify), and forcing those could change which
-      # files ESLint checks without any error
+      # Reads package-lock.json, without installing anything. Moderate, high and critical
+      # advisories fail the run; low ones are still listed
       - name: Audit package-lock.json
-        run: npm audit --package-lock-only --audit-level=high
+        run: npm audit --package-lock-only --audit-level=moderate
