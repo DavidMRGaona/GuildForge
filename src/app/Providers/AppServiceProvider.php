@@ -38,6 +38,7 @@ use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuItemHrefResolverInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Navigation\Services\RouteRegistryInterface;
+use App\Application\QrCodes\Services\QrCodeRendererInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AboutPageServiceInterface;
@@ -162,6 +163,8 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentModuleRepositor
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentPhotoRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentSlugRedirectRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
+use App\Infrastructure\QrCodes\EndroidQrCodeRenderer;
+use App\Infrastructure\QrCodes\QrCodeContentPolicy;
 use App\Infrastructure\Search\Services\SearchSourceRegistry;
 use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
 use App\Infrastructure\Seo\SeoDescriptionBuilder;
@@ -314,6 +317,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SeoDescriptionBuilder::class, fn (): SeoDescriptionBuilder => new SeoDescriptionBuilder((string) config('app.display_timezone')));
         $this->app->bind(StructuredDataBuilder::class, fn (): StructuredDataBuilder => new StructuredDataBuilder((string) config('app.display_timezone')));
         $this->app->bind(SeoMetadataFactoryInterface::class, SeoMetadataFactory::class);
+
+        // QR codes for modules: only URLs of this site, plain http only in local and testing
+        $this->app->bind(QrCodeRendererInterface::class, fn ($app): QrCodeRendererInterface => new EndroidQrCodeRenderer(
+            new QrCodeContentPolicy((string) config('app.url'), $app->environment('local', 'testing')),
+        ));
 
         // Module system bindings
         $this->app->bind(ModuleRepositoryInterface::class, EloquentModuleRepository::class);
