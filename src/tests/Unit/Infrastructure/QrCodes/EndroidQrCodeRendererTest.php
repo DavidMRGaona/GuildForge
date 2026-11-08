@@ -92,6 +92,21 @@ final class EndroidQrCodeRendererTest extends TestCase
         $this->assertSame(self::URL, QrCodeTestImages::decode($largest->contents));
     }
 
+    public function test_decoding_the_largest_code_fits_in_a_test_process(): void
+    {
+        $largest = $this->renderer->render(self::URL, new QrCodeOptionsDTO(size: 2048, margin: 512), QrCodeFormat::Png);
+
+        gc_collect_cycles();
+        memory_reset_peak_usage();
+        $before = memory_get_usage();
+
+        $this->assertSame(self::URL, QrCodeTestImages::decode($largest->contents));
+
+        // About 85 MB with the decoder's GD source; its Imagick source needs over 300 MB, which
+        // ran a paratest worker out of its 512 MB once earlier tests had used some of them
+        $this->assertLessThan(160 * 1024 * 1024, memory_get_peak_usage() - $before);
+    }
+
     public function test_it_renders_an_svg_document(): void
     {
         $options = new QrCodeOptionsDTO(size: 300, margin: 12, foregroundColor: '#123456');

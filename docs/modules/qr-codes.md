@@ -69,4 +69,4 @@ Let a form validate colours and sizes first, then wrap the DTO in a `try` to tur
 
 ## Testing
 
-`khanamiryan/qrcode-detector-decoder` is a development dependency of the core. `Tests\Support\QrCodes\QrCodeTestImages::decode($png)` returns the text of a PNG code, and `png()`, `jpeg()` and `webp()` build logos. In CI only GD is available, as in production, so the PNG path is the one tested.
+`khanamiryan/qrcode-detector-decoder` is a development dependency of the core. `Tests\Support\QrCodes\QrCodeTestImages::decode($png)` returns the text of a PNG code, and `png()`, `jpeg()` and `webp()` build logos. The renderer only uses GD, as in production, so the PNG path is the one tested. `decode()` reads with GD too, even where Imagick is loaded (the CI runners load it): the decoder would otherwise pick Imagick, which needs about four times the memory (over 300 MB for a 2048 px code) and ran paratest workers out of memory. Pass `useImagickIfAvailable: false` if a module test builds its own `QrReader`.
