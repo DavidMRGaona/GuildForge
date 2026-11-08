@@ -35,6 +35,8 @@ Making a module's records searchable from the site search is covered in [Search 
 
 Putting a module's entries in the public calendar and in each person's personal calendar is covered in [Calendar sources and the personal calendar](./calendar.md).
 
+Drawing QR codes (SVG or PNG) for pages of the site is covered in [QR codes](./qr-codes.md).
+
 ---
 
 ## Getting started
