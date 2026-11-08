@@ -23,6 +23,26 @@ declare const _default: typeof __VLS_export;
 export default _default;
 ```
 
+## resources/js/components/calendar/ModuleEventCalendar.vue
+
+```ts
+import type { CalendarView } from '@/utils/calendarViews';
+interface Props {
+    initialView?: CalendarView;
+    views?: CalendarView[];
+    height?: number | 'auto';
+    legend?: boolean;
+}
+declare const __VLS_export: import("vue").DefineComponent<Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<Props> & Readonly<{}>, {
+    legend: boolean;
+    height: number | "auto";
+    initialView: CalendarView;
+    views: CalendarView[];
+}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+```
+
 ## resources/js/components/form/FormCheckbox.vue
 
 ```ts
@@ -1103,6 +1123,14 @@ export declare function eventTimeRange(event: {
     end: Date | null;
 }, locale: string): string;
 export declare const calendarClassOptions: CalendarOptions;
+```
+
+## resources/js/utils/calendarViews.ts
+
+```ts
+export type CalendarView = 'month' | 'list';
+export declare function fullCalendarView(view: CalendarView): string;
+export declare function availableCalendarViews(initialView: CalendarView, views: readonly CalendarView[]): CalendarView[];
 ```
 
 ## resources/js/utils/cloudinary.ts

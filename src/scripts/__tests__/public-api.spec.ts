@@ -7,6 +7,7 @@ const SRC = resolve(import.meta.dirname, '../..');
 
 const ENTRIES = [
     '@/components/calendar/AddToCalendarMenu.vue',
+    '@/components/calendar/ModuleEventCalendar.vue',
     '@/components/form',
     '@/components/knowledge/HelpLink.vue',
     '@/components/layout/ModuleSlot.vue',
@@ -41,6 +42,7 @@ const PACKAGES = [
     '@fullcalendar/vue3/daygrid',
     '@fullcalendar/vue3/timegrid',
     '@fullcalendar/vue3/interaction',
+    '@fullcalendar/vue3/list',
     '@fullcalendar/vue3/themes/classic',
 ];
 

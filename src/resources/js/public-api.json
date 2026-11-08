@@ -9,10 +9,12 @@
         "@fullcalendar/vue3/daygrid": "resources/js/vendor-exports/fullcalendar-daygrid.ts",
         "@fullcalendar/vue3/timegrid": "resources/js/vendor-exports/fullcalendar-timegrid.ts",
         "@fullcalendar/vue3/interaction": "resources/js/vendor-exports/fullcalendar-interaction.ts",
+        "@fullcalendar/vue3/list": "resources/js/vendor-exports/fullcalendar-list.ts",
         "@fullcalendar/vue3/themes/classic": "resources/js/vendor-exports/fullcalendar-theme-classic.ts"
     },
     "entries": {
         "@/components/calendar/AddToCalendarMenu.vue": "resources/js/components/calendar/AddToCalendarMenu.vue",
+        "@/components/calendar/ModuleEventCalendar.vue": "resources/js/components/calendar/ModuleEventCalendar.vue",
         "@/components/form": "resources/js/components/form/index.ts",
         "@/components/knowledge/HelpLink.vue": "resources/js/components/knowledge/HelpLink.vue",
         "@/components/layout/ModuleSlot.vue": "resources/js/components/layout/ModuleSlot.vue",

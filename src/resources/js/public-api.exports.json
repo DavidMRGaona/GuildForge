@@ -2,6 +2,9 @@
     "@/components/calendar/AddToCalendarMenu.vue": [
         "default"
     ],
+    "@/components/calendar/ModuleEventCalendar.vue": [
+        "default"
+    ],
     "@/components/form": [
         "FormCheckbox",
         "FormCheckboxGroup",
