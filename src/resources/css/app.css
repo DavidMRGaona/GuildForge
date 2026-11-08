@@ -659,9 +659,19 @@ button[data-headlessui-state]:hover {
     /* The selected view button (core#394). The shades only exist once the site palette loads:
        without it (theme settings failing) the fallbacks darken --color-primary, which already
        carries white text at 4.5:1 in both modes */
-    --fc-classic-button-strong: var(--color-primary-700, color-mix(in oklab, var(--color-primary) 75%, black));
-    --fc-classic-button-strong-border: var(--color-primary-800, color-mix(in oklab, var(--color-primary) 60%, black));
-    --fc-classic-button-outline: color-mix(in oklab, var(--color-primary-action, var(--color-primary-link)) 50%, transparent);
+    --fc-classic-button-strong: var(
+        --color-primary-700,
+        color-mix(in oklab, var(--color-primary) 75%, black)
+    );
+    --fc-classic-button-strong-border: var(
+        --color-primary-800,
+        color-mix(in oklab, var(--color-primary) 60%, black)
+    );
+    --fc-classic-button-outline: color-mix(
+        in oklab,
+        var(--color-primary-action, var(--color-primary-link)) 50%,
+        transparent
+    );
     /* --color-primary is computed to carry white text at 4.5:1, in dark mode too */
     --fc-classic-button-foreground: #ffffff;
     --fc-classic-primary: var(--color-primary);
@@ -671,7 +681,11 @@ button[data-headlessui-state]:hover {
     --fc-classic-background-event: var(--color-success);
     --fc-classic-background-event-opacity: 15%;
     --fc-classic-background-event-foreground-opacity: 50%;
-    --fc-classic-highlight: color-mix(in oklab, var(--color-primary-action, var(--color-primary-link)) 20%, transparent);
+    --fc-classic-highlight: color-mix(
+        in oklab,
+        var(--color-primary-action, var(--color-primary-link)) 20%,
+        transparent
+    );
     --fc-classic-today: var(--color-primary-light);
     --fc-classic-now: var(--color-error);
     --fc-classic-small-dot-width: 8px;
@@ -973,7 +987,10 @@ button[data-headlessui-state]:hover {
 }
 
 .calendar-legend-dot--primary {
-    background-color: var(--color-calendar-primary, var(--color-primary-action, var(--color-primary-link)));
+    background-color: var(
+        --color-calendar-primary,
+        var(--color-primary-action, var(--color-primary-link))
+    );
 }
 
 .calendar-legend-dot--accent {
