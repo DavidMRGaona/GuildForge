@@ -96,3 +96,41 @@ What the core does with it:
 - `/calendario/personal/{token}.ics` is the private feed. The token is 32 random bytes, stored only as a SHA-256 hash, issued and revoked from the profile («Mi calendario» tab), dropped when the account is anonymized, and refused (404) for deactivated or anonymized accounts and for accounts that must verify their email. It is rate limited per address.
 
 Test it with a feature test that calls `PersonalCalendarServiceInterface::entriesFor()` for a person with a confirmed sign-up, a pending one, one in a cancelled entry and someone else's: only the first comes back.
+
+## The calendar on a module page
+
+A module page can show the site calendar (core events and every public source) with `ModuleEventCalendar.vue`, a public API entry (core ≥ the release with #349):
+
+```vue
+<script setup lang="ts">
+import ModuleEventCalendar from '@/components/calendar/ModuleEventCalendar.vue';
+</script>
+
+<template>
+    <ModuleEventCalendar initial-view="list" :views="['list', 'month']" />
+</template>
+```
+
+| Prop | Default | What it does |
+|------|---------|--------------|
+| `initialView` | `'month'` | View shown first: `'month'` (the month grid) or `'list'` (the month's entries as a list, easier to read on a phone) |
+| `views` | `[]` | Views offered as toolbar buttons («Lista», «Mes»); with fewer than two there are none. The initial view is always in |
+| `height` | `'auto'` | Height in pixels, or `'auto'` to grow with the content |
+| `legend` | `true` | Lists the activity types and their colours below the calendar |
+
+Clicking an entry opens its page. The look is the shared one (`calendarTheme.ts`, styles in the core's `app.css`), so the page needs nothing else. A module building its own FullCalendar can import the list plugin from `@fullcalendar/vue3/list`, a shared package like `daygrid` and `timegrid`.
+
+## Upcoming core events
+
+`EventQueryServiceInterface::getUpcomingEventsWithin(UpcomingEventsCriteriaDTO $criteria)` (core ≥ the release with #349) returns the published core events (`EventResponseDTO`) starting from now, soonest first:
+
+```php
+$events = $eventQuery->getUpcomingEventsWithin(
+    new UpcomingEventsCriteriaDTO(limit: 5, withinDays: 30, tagSlugs: ['wargames']),
+);
+```
+
+- `limit` and `withinDays` must be at least 1 (`InvalidArgumentException` otherwise).
+- `withinDays` counts display days, today being the first: 1 is the rest of today, 7 today and the six days after it. The horizon ends at the following midnight in the display timezone.
+- `tagSlugs` keeps the events with any of the tags; without it there is no tag filter. Blank and repeated slugs are dropped.
+- Events that have already started are not included, as in `getUpcomingEvents()`.

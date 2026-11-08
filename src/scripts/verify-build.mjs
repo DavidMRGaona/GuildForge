@@ -46,6 +46,7 @@ const PACKAGE_REQUIRED = {
     '@fullcalendar/vue3/daygrid': ['default'],
     '@fullcalendar/vue3/timegrid': ['default'],
     '@fullcalendar/vue3/interaction': ['default'],
+    '@fullcalendar/vue3/list': ['default'],
     '@fullcalendar/vue3/themes/classic': ['default'],
 };
 

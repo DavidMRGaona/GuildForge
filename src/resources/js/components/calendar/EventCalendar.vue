@@ -5,9 +5,11 @@ import { useI18n } from 'vue-i18n';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/vue3/daygrid';
 import interactionPlugin from '@fullcalendar/vue3/interaction';
+import listPlugin from '@fullcalendar/vue3/list';
 import { useCalendarLocale } from '@/composables/useCalendarLocale';
 import { VENUE_TIMEZONE } from '@/utils/datetime';
 import { calendarClassOptions, calendarThemePlugin, eventTimeRange } from '@/utils/calendarTheme';
+import { availableCalendarViews, fullCalendarView, type CalendarView } from '@/utils/calendarViews';
 import type {
     CalendarOptions,
     EventClickInfo,
@@ -34,6 +36,12 @@ interface Props {
     navigateOnClick?: boolean;
     /** Only the entries the signed-in person takes part in (personal calendar). */
     onlyMine?: boolean;
+    /** View shown first; only read when the calendar mounts. */
+    initialView?: CalendarView;
+    /** Views offered as toolbar buttons when there are two or more (the initial one is always in). */
+    views?: CalendarView[];
+    /** Height in pixels, or 'auto' to grow with the content. */
+    height?: number | 'auto';
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -41,6 +49,15 @@ const props = withDefaults(defineProps<Props>(), {
     showTooltips: false,
     navigateOnClick: true,
     onlyMine: false,
+    initialView: 'month',
+    views: () => [],
+    height: 'auto',
+});
+
+const viewButtons = computed<string>(() => {
+    const views = availableCalendarViews(props.initialView, props.views);
+
+    return views.length > 1 ? views.map(fullCalendarView).join(',') : '';
 });
 
 const emit = defineEmits<{
@@ -221,8 +238,8 @@ const handleEventDidMount = (info: MountInfo<EventDisplayInfo>): void => {
 const calendarOptions = computed<CalendarOptions>(() => {
     const baseOptions: CalendarOptions = {
         ...calendarClassOptions,
-        plugins: [calendarThemePlugin, dayGridPlugin, interactionPlugin],
-        initialView: 'dayGridMonth',
+        plugins: [calendarThemePlugin, dayGridPlugin, listPlugin, interactionPlugin],
+        initialView: fullCalendarView(props.initialView),
         // Without a named timezone FullCalendar would place entries on the
         // visitor's local day instead of the venue's.
         timeZone: VENUE_TIMEZONE,
@@ -240,12 +257,15 @@ const calendarOptions = computed<CalendarOptions>(() => {
             : {
                   left: 'prev,next today',
                   center: 'title',
-                  right: '',
+                  right: viewButtons.value,
               },
         buttons: {
             today: { text: t('calendar.today') },
+            dayGridMonth: { text: t('calendar.views.month') },
+            listMonth: { text: t('calendar.views.list') },
         },
-        height: 'auto',
+        noEventsText: t('calendar.noEvents'),
+        height: props.height,
         fixedWeekCount: !props.compact,
         eventDisplay: props.compact ? 'list-item' : 'block',
         // Month view shows the time range ("18:00–21:00") on its own line

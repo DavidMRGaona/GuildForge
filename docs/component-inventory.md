@@ -309,9 +309,15 @@ Located in `src/resources/js/components/`.
 #### EventCalendar
 
 - **File**: `calendar/EventCalendar.vue`
-- **Props**: `compact?: boolean`, `showTooltips?: boolean`, `navigateOnClick?: boolean`
+- **Props**: `compact?: boolean`, `showTooltips?: boolean`, `navigateOnClick?: boolean`, `onlyMine?: boolean`, `initialView?: 'month' | 'list'` (default `month`), `views?: ('month' | 'list')[]` (toolbar buttons when there are two or more), `height?: number | 'auto'`
 - **Emits**: `eventSelect`, `calendarClick`, `eventsLoaded`
-- **Features**: FullCalendar 7 calendar with the `daygrid` and `interaction` plugins and the shared look from `calendarTheme.ts`. Loads events via API (`/eventos/calendario`). Event cache for quick access. Dynamic locale support (`useCalendarLocale`). Tooltips on hover (`EventTooltip`). Loading indicator. Configurable toolbar (compact vs full). Month view shows the time range (`18:00–21:00`) above the title; multi-day events show only the title. Each event's `aria-label` carries the time range and the title, since FullCalendar drops the visible time in day cells narrower than 60 px. Compact mode renders one event per day and draws its entries as dots in the `eventContent` slot
+- **Features**: FullCalendar 7 calendar with the `daygrid`, `list` and `interaction` plugins (the list view is `listMonth`) and the shared look from `calendarTheme.ts`. Loads events via API (`/eventos/calendario`). Event cache for quick access. Dynamic locale support (`useCalendarLocale`). Tooltips on hover (`EventTooltip`). Loading indicator. Configurable toolbar (compact vs full). Month view shows the time range (`18:00–21:00`) above the title; multi-day events show only the title. Each event's `aria-label` carries the time range and the title, since FullCalendar drops the visible time in day cells narrower than 60 px. Compact mode renders one event per day and draws its entries as dots in the `eventContent` slot
+
+#### ModuleEventCalendar
+
+- **File**: `calendar/ModuleEventCalendar.vue` (public API entry for modules)
+- **Props**: `initialView?: 'month' | 'list'`, `views?: ('month' | 'list')[]`, `height?: number | 'auto'`, `legend?: boolean` (default `true`)
+- **Features**: Narrow wrapper of `EventCalendar` for module pages: every public source, click opens the entry page, legend of activity types below. See `docs/modules/calendar.md`
 
 #### EventDetailPanel
 

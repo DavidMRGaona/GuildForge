@@ -110,6 +110,10 @@ export default {
         noEvents: 'No hay eventos en este mes',
         error: 'Error al cargar los eventos',
         today: 'Hoy',
+        views: {
+            month: 'Mes',
+            list: 'Lista',
+        },
         selectEvent: 'Selecciona un evento del calendario',
         viewEvent: 'Ver evento completo',
         viewDetail: 'Ver ficha completa',
@@ -155,6 +159,7 @@ export default {
                 week: 'Vista de semana',
                 month: 'Vista de mes',
                 year: 'Vista de año',
+                list: 'Vista de lista',
                 other: 'Vista: {view}',
             },
             viewChange: 'Cambiar vista',

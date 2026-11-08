@@ -125,6 +125,7 @@ export const calendarClassOptions: CalendarOptions = {
     eventTitleClass: 'calendar-event-title',
     eventTimeClass: 'calendar-event-time',
     listItemEventBeforeClass: 'calendar-event-dot',
+    listDaysClass: 'calendar-list',
     moreLinkClass: 'calendar-more-link',
     slotHeaderClass: 'calendar-slot-header',
 };

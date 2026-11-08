@@ -110,6 +110,10 @@ export default {
         noEvents: 'No events this month',
         error: 'Error loading events',
         today: 'Today',
+        views: {
+            month: 'Month',
+            list: 'List',
+        },
         selectEvent: 'Select an event from the calendar',
         viewEvent: 'View full event',
         viewDetail: 'View full details',
@@ -155,6 +159,7 @@ export default {
                 week: 'Week view',
                 month: 'Month view',
                 year: 'Year view',
+                list: 'List view',
                 other: '{view} view',
             },
             viewChange: 'Change view',
