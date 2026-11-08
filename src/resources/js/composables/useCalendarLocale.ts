@@ -14,8 +14,13 @@ function hintUnit(unit: string | undefined): HintUnit {
     return UNITS.find((known) => known === unit) ?? 'other';
 }
 
-// The view hint gets the view name ("timeGridWeek"), not its unit
-function viewUnit(viewName: string): HintUnit {
+// The view hint gets the view name ("timeGridWeek"), not its unit. A list view
+// ("listMonth") ends in its unit too, but must not be named like the month grid.
+function viewHintKey(viewName: string): HintUnit | 'list' {
+    if (viewName.startsWith('list')) {
+        return 'list';
+    }
+
     return hintUnit(UNITS.find((unit) => viewName.toLowerCase().endsWith(unit)));
 }
 
@@ -37,7 +42,7 @@ export function useCalendarLocale(): ComputedRef<LocaleInput> {
         todayHint: (_unitText: string, unit?: string) =>
             t(`calendar.fullcalendar.current.${hintUnit(unit)}`),
         viewHint: (buttonText: string, viewName: string) =>
-            t(`calendar.fullcalendar.view.${viewUnit(viewName)}`, { view: buttonText }),
+            t(`calendar.fullcalendar.view.${viewHintKey(viewName)}`, { view: buttonText }),
         viewChangeHint: t('calendar.fullcalendar.viewChange'),
         timedText: t('calendar.fullcalendar.timed'),
         moreLinkHint: (count: number) => t('calendar.fullcalendar.moreLink', count),

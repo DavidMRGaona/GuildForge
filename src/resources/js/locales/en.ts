@@ -159,6 +159,7 @@ export default {
                 week: 'Week view',
                 month: 'Month view',
                 year: 'Year view',
+                list: 'List view',
                 other: '{view} view',
             },
             viewChange: 'Change view',

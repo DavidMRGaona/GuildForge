@@ -780,6 +780,22 @@ button[data-headlessui-state]:hover {
     overflow: hidden;
 }
 
+/* List view: the time keeps only its own width (the theme gives it half the
+   row, up to 200 px, too much on phones) and long titles wrap instead of being
+   cut off. Each row spans the list, so it does not grow on hover */
+.event-calendar .calendar-list .calendar-event-time {
+    width: auto;
+}
+
+.event-calendar .calendar-list .calendar-event-title {
+    white-space: normal;
+}
+
+.event-calendar .calendar-list .calendar-event:hover,
+.event-calendar .calendar-list .calendar-event:focus-visible {
+    transform: none;
+}
+
 .dark .event-calendar .calendar-more-link {
     color: var(--color-primary-action);
 }

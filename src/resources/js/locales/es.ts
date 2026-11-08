@@ -159,6 +159,7 @@ export default {
                 week: 'Vista de semana',
                 month: 'Vista de mes',
                 year: 'Vista de año',
+                list: 'Vista de lista',
                 other: 'Vista: {view}',
             },
             viewChange: 'Cambiar vista',

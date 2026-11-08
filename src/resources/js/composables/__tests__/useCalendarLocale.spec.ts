@@ -5,6 +5,7 @@ import { createI18n } from 'vue-i18n';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/vue3/daygrid';
 import timeGridPlugin from '@fullcalendar/vue3/timegrid';
+import listPlugin from '@fullcalendar/vue3/list';
 import { useCalendarLocale } from '../useCalendarLocale';
 import es from '@/locales/es';
 import en from '@/locales/en';
@@ -17,14 +18,14 @@ function mountCalendar(locale: 'es' | 'en', initialView: string): void {
             return () =>
                 h(FullCalendar, {
                     options: {
-                        plugins: [dayGridPlugin, timeGridPlugin],
+                        plugins: [dayGridPlugin, timeGridPlugin, listPlugin],
                         initialView,
                         initialDate: '2026-11-07',
                         locale: calendarLocale.value,
                         headerToolbar: {
                             left: 'prev,next today',
                             center: 'title',
-                            right: 'dayGridMonth,timeGridWeek,timeGridDay',
+                            right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
                         },
                     },
                 });
@@ -89,6 +90,15 @@ describe('useCalendarLocale', () => {
         expect(hints()).not.toContain('Vista del semana');
     });
 
+    it('names the list view apart from the month view', async () => {
+        mountCalendar('es', 'listMonth');
+        await nextTick();
+
+        expect(hints()).toContain('Vista de lista');
+        expect(hints().filter((hint) => hint === 'Vista de mes')).toHaveLength(1);
+        expect(hints()).toEqual(expect.arrayContaining(['Mes anterior', 'Mes siguiente']));
+    });
+
     it('translates the texts the Spanish FullCalendar locale lacks', async () => {
         mountCalendar('es', 'timeGridWeek');
         await nextTick();
@@ -103,7 +113,13 @@ describe('useCalendarLocale', () => {
         await nextTick();
 
         expect(hints()).toEqual(
-            expect.arrayContaining(['Previous week', 'Next week', 'This week', 'Week view'])
+            expect.arrayContaining([
+                'Previous week',
+                'Next week',
+                'This week',
+                'Week view',
+                'List view',
+            ])
         );
         expect(document.body.querySelector('[aria-label="Change view"]')).not.toBeNull();
     });
