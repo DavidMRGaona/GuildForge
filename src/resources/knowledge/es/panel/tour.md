@@ -18,13 +18,17 @@ El panel es la zona de gestión de {{site_name}}. Solo ves las secciones para la
 
 Las secciones se agrupan así:
 
-- **Contenido**: eventos, artículos, galerías y el carrusel de portada (**Hero slides**).
-- **Páginas**: la página «Nosotros» y las páginas legales.
-- **Configuración**: las etiquetas y el escritorio (**Panel de control**).
-- **Administración**: usuarios, roles, el menú del sitio, la configuración del sitio, el correo y los módulos.
-- **Sistema**: las actualizaciones.
+- **Contenido**: eventos, artículos, galerías y guías de ayuda.
+- **Actividades**: lo que se juega, como mesas, torneos o reservas del local.
+- **Comunicación**: anuncios y encuestas.
+- **Personas**: usuarios, roles y socios.
+- **Sitio web**: el carrusel de portada (**Portada**), el menú del sitio (**Navegación**), la página «Nosotros» y las páginas legales.
+- **Catálogos**: las listas que usan otras secciones, como las etiquetas.
+- **Sistema**: **Configuración** (del sitio, del correo, del escritorio y de cada módulo), los módulos y las actualizaciones.
 
-Los módulos que tenga tu web pueden añadir sus propios grupos, como torneos o reservas.
+Actividades, Comunicación y parte de los demás grupos dependen de los módulos que tenga tu web. **Catálogos** y **Sistema** empiezan plegados: pulsa su nombre para abrirlos.
+
+Dentro de una sección pueden aparecer otras subordinadas (por ejemplo, las campañas bajo las mesas) cuando la abres.
 
 Si el menú se puede plegar, el botón de la barra superior, a la izquierda, lo pliega y lo despliega; tu navegador recuerda cómo lo dejas. Según la configuración del sitio se queda en iconos o se oculta del todo. En **Ayuda** se pliega solo para dejar sitio a las guías.
 
@@ -41,7 +45,7 @@ Es la primera página al entrar. Muestra resúmenes, como los próximos eventos 
 
 ## La ayuda
 
-- **Ayuda**, en el menú lateral, reúne todas las guías del panel que puedes usar.
+- **Ayuda**, en tu menú (tu avatar, arriba a la derecha), reúne todas las guías del panel que puedes usar.
 - Muchas pantallas tienen arriba el botón **Ayuda sobre esta pantalla**. Abre la guía de esa pantalla.
 
 ## Tu menú

@@ -11,11 +11,11 @@ conditions:
   permissions:
     all: [pages.manage]
 ---
-Las dos páginas están en el grupo **Páginas** del menú lateral: **Páginas legales** y **Nosotros**.
+Las dos páginas están en el grupo **Sitio web** del menú lateral: **Páginas legales** y **Nosotros**.
 
 ## Datos de la asociación
 
-1. Abre **Páginas** y elige **Páginas legales**.
+1. Abre **Sitio web** y elige **Páginas legales**.
 2. En la pestaña **Datos de la asociación**, rellena el nombre, el **CIF/NIF**, el **Domicilio social**, el **Email de contacto** y el resto de datos que tengas.
 3. Pulsa **Guardar**.
 
@@ -39,7 +39,7 @@ Si algún módulo añade avisos legales a sus correos, verás la pestaña **Avis
 
 ## La página «Nosotros»
 
-1. Abre **Páginas** y elige **Nosotros**.
+1. Abre **Sitio web** y elige **Nosotros**.
 2. Rellena sus pestañas: **Hero**, **Contenido**, **Cómo unirse**, **Ubicación**, **Contacto** y **Redes sociales**.
 3. Pulsa **Guardar**.
 

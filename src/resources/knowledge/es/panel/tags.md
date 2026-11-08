@@ -22,7 +22,7 @@ Hay dos niveles:
 
 ## Crear una etiqueta
 
-1. En el menú lateral, abre **Configuración** y elige **Etiquetas**.
+1. En el menú lateral, abre **Catálogos** y elige **Etiquetas**.
 2. Pulsa **Crear etiqueta**.
 3. Escribe el **Nombre**. El **Slug** se rellena solo.
 4. Para una etiqueta adicional, elige su **Etiqueta padre**. Para una categoría, déjalo vacío.

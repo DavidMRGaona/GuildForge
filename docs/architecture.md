@@ -484,7 +484,7 @@ src/modules/
 | `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Entries for the public calendars (`/calendario` and the home widget, through `/eventos/calendario`) |
 | `registerCalendarAttendanceSources()` | `class-string<CalendarAttendanceSourceInterface>[]` | Which entries each person takes part in, for the personal calendar (see `docs/modules/calendar.md`) |
 | `registerPolicies()` | `array<model, policy>` | Authorization policies |
-| `registerNavigationGroups()` | `array<label, options>` | Filament navigation groups |
+| `registerNavigationGroups()` | `array<label, options>` | Deprecated: entries go in the core's groups (`PanelNavigationGroup`) |
 | `registerFilamentPages()` | `Page[]` | Filament pages |
 | `getSettingsSchema()` | `Component[]` | Module settings form |
 | `onEnable()` / `onDisable()` | `void` | Lifecycle callbacks |
@@ -922,7 +922,7 @@ Dashboard widgets, configurable by the administrator via `DashboardWidgetConfigS
 
 **Module widgets**: Registered via `registerFilamentWidgets()` in the module's ServiceProvider (an optional method: it is not declared on `ModuleServiceProvider`, and the panel calls it only when it exists).
 
-**Dashboard configuration**: The `DashboardSettings` page (`/admin/dashboard-settings`) allows enabling/disabling widgets, setting order, and configuring table row limits.
+**Dashboard configuration**: The `DashboardSettings` page (`/admin/configuracion/dashboard-settings`) allows enabling/disabling widgets, setting order, and configuring table row limits.
 
 ### Module integration in Filament
 
@@ -930,7 +930,7 @@ Modules can:
 - Register their own Filament resources
 - Add widgets to the dashboard
 - Register Filament pages via `registerFilamentPages()`
-- Add navigation groups via `registerNavigationGroups()`
+- Place their entries in the core's navigation groups (`PanelNavigationGroup`) and their settings pages in the «Configuración» cluster (`SettingsCluster`); see `docs/modules/README.md` → Navigation groups
 - Provide settings forms via `getSettingsSchema()`
 
 ---

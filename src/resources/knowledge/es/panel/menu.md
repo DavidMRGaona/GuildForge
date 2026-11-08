@@ -15,7 +15,7 @@ El menú de la web tiene dos partes: la **Cabecera** y el **Pie de página**. Ca
 
 ## Añadir un enlace
 
-1. En el menú lateral, abre **Administración** y elige **Navegación**. La página se llama «Elementos de menú».
+1. En el menú lateral, abre **Sitio web** y elige **Navegación**. La página se llama «Elementos de menú».
 2. Pulsa **Crear elemento de menú**.
 3. Elige la **Ubicación**: cabecera o pie de página.
 4. Para un submenú, elige el **Elemento padre**. Déjalo vacío para un enlace de primer nivel.

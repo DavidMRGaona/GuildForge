@@ -11,11 +11,11 @@ conditions:
   permissions:
     any: [mail.configure, mail.view_stats]
 ---
-La web envía correos para verificar cuentas, recuperar contraseñas y avisar de novedades. Hay dos pantallas en **Administración**: **Correo electrónico**, para configurarlo, y **Estadísticas de correo**, para ver lo enviado. Cada una necesita su propio permiso.
+La web envía correos para verificar cuentas, recuperar contraseñas y avisar de novedades. Hay dos pantallas en **Sistema → Configuración**: **Correo electrónico**, para configurarlo, y **Estadísticas de correo**, para ver lo enviado. Cada una necesita su propio permiso.
 
 ## Configurar el envío
 
-1. Abre **Administración** y elige **Correo electrónico**.
+1. Abre **Sistema → Configuración** y elige **Correo electrónico**.
 2. En **General**:
    - Deja activado **Envío de correos activado**.
    - Elige el **Driver de correo**: el servicio que envía los correos.
@@ -40,7 +40,7 @@ En **Límites y cuotas** puedes fijar un **Límite diario** y un **Límite mensu
 
 ## Ver qué correos han salido
 
-1. Abre **Administración** y elige **Estadísticas de correo**.
+1. Abre **Sistema → Configuración** y elige **Estadísticas de correo**.
 2. La tabla muestra cada correo con su **Destinatario**, su **Asunto**, su **Estado** y su **Fecha**.
 3. Filtra por **Estado** para ver los **Fallido** o los **Rebotado**. La columna **Error** dice qué pasó.
 

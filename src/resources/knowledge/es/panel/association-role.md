@@ -17,7 +17,7 @@ Los módulos lo usan, por ejemplo, para el contenido reservado, el acceso antici
 
 ## Cambiar el rol
 
-1. En el menú lateral, abre **Administración** y elige **Configuración del sitio**.
+1. En el menú lateral, abre **Sistema**, elige **Configuración** y después **Configuración del sitio**.
 2. Abre la pestaña **Autenticación**.
 3. En **Socios de la asociación**, elige el rol en **Rol de socio**.
 4. Lee el aviso que sale debajo, si sale.

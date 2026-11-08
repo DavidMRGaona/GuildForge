@@ -11,7 +11,7 @@ conditions:
   permissions:
     all: [users.view_any]
 ---
-Todas las cuentas de {{site_name}} están en **Administración → Usuarios**.
+Todas las cuentas de {{site_name}} están en **Personas → Usuarios**.
 
 ## Encontrar una cuenta
 

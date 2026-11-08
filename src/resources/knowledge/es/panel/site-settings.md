@@ -11,7 +11,7 @@ conditions:
   permissions:
     all: [settings.manage]
 ---
-En el menú lateral, abre **Administración** y elige **Configuración del sitio**. Los ajustes están repartidos en pestañas.
+En el menú lateral, abre **Sistema**, elige **Configuración** y después **Configuración del sitio**. Los ajustes están repartidos en pestañas.
 
 > [!IMPORTANT]
 > **Guardar** guarda todas las pestañas a la vez. Revisa lo que hayas tocado antes de pulsarlo.

@@ -11,7 +11,7 @@ conditions:
   permissions:
     any: [modules.manage, modules.configure]
 ---
-Los módulos añaden funciones a la web, como torneos, partidas o reservas. Están en **Administración → Módulos**.
+Los módulos añaden funciones a la web, como torneos, partidas o reservas. Están en **Sistema → Módulos**.
 
 Cada módulo sale en una tarjeta con su versión, su autor y sus dependencias. Usa **Todos**, **Habilitados** y **Deshabilitados** o el buscador para encontrar uno.
 
