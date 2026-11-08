@@ -248,12 +248,16 @@ CI: test, test (Madrid storage)    ←── in parallel ──→    CI: lint (
 
 #### 3. Dependency audit (`dependency-audit.yml`)
 
-Runs `composer audit --locked` on `src/composer.lock` (security advisories; abandoned packages are listed without failing):
-- On pull requests to `main` that change `src/composer.json`, `src/composer.lock` or the workflow itself: the lock they bring must be clean
-- Every day at 06:17 UTC on `main`, to catch advisories published after the lock last changed; GitHub mails a failed scheduled run to whoever last edited the workflow's schedule
+Checks both lock files for security advisories, without installing anything:
+- Job `composer`: `composer audit --locked` on `src/composer.lock`; abandoned packages are listed without failing
+- Job `npm`: `npm audit --package-lock-only --audit-level=high` on `src/package-lock.json`; only high and critical advisories fail it, moderate and low ones are listed. Some moderate ones are only fixed in majors that the packages depending on them do not accept yet (for example `minimatch` 11 and `glob` 14 under ESLint, typescript-eslint and js-beautify); forcing those with `overrides` could change which files ESLint checks without any error
+
+It runs:
+- On pull requests to `main` that change `src/composer.json`, `src/composer.lock`, `src/package.json`, `src/package-lock.json` or the workflow itself: the locks they bring must be clean
+- Every day at 06:17 UTC on `main`, to catch advisories published after the locks last changed; GitHub mails a failed scheduled run to whoever last edited the workflow's schedule
 - On demand from the Actions tab (`workflow_dispatch`)
 
-It is not a required check and Deploy does not wait for it, on purpose: a new advisory must not block unrelated pull requests or deployments. When it fails, update the affected packages (`composer update <packages> --no-install`, only `composer.lock` changes) in a pull request of their own.
+It is not a required check and Deploy does not wait for it, on purpose: a new advisory must not block unrelated pull requests or deployments. When it fails, update the affected packages in a pull request of their own: `composer update <packages> --no-install` (only `composer.lock` changes), or `npm install --package-lock-only` with the npm of the Node container. A dependency that pins a vulnerable version exactly can be lifted with `overrides` in `package.json`, scoped to that dependency and within the same major (as `@tailwindcss/typography` → `postcss-selector-parser`).
 
 #### 4. Module release (`reusable-module-release.yml`)
 

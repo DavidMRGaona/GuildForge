@@ -1,12 +1,13 @@
 name: Dependency audit
 
-# Security advisories for the PHP dependencies pinned in composer.lock. A workflow of its own,
-# not a step of CI: CI holds the required checks and Deploy waits for it, so an advisory
-# published today would otherwise block every pull request and every deployment, urgent fixes
-# included, until someone updates the lock. Here a failure only turns this run red.
+# Security advisories for the dependencies pinned in composer.lock and package-lock.json. A
+# workflow of its own, not a step of CI: CI holds the required checks and Deploy waits for it,
+# so an advisory published today would otherwise block every pull request and every
+# deployment, urgent fixes included, until someone updates the lock. Here a failure only turns
+# this run red.
 #
-# - Pull requests that change the Composer files: the lock they bring must be clean
-# - Every day on main: catches advisories published after the lock was last changed; GitHub
+# - Pull requests that change the Composer or npm files: the locks they bring must be clean
+# - Every day on main: catches advisories published after the locks were last changed; GitHub
 #   mails a failed scheduled run to whoever last edited this file's schedule
 
 on:
@@ -15,6 +16,8 @@ on:
     paths:
       - 'src/composer.json'
       - 'src/composer.lock'
+      - 'src/package.json'
+      - 'src/package-lock.json'
       - '.github/workflows/dependency-audit.yml'
   schedule:
     - cron: '17 6 * * *'
@@ -51,3 +54,28 @@ jobs:
       # Abandoned packages are listed but do not fail the run: this job is about advisories
       - name: Audit composer.lock
         run: composer audit --locked --no-interaction --abandoned=report
+
+  npm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      # Reads package-lock.json, without installing anything. Only high and critical advisories
+      # fail the run; moderate and low ones are still listed. Some moderate ones are only fixed
+      # in majors that the packages depending on them do not accept yet (minimatch 11, glob 14
+      # for ESLint, typescript-eslint and js-beautify), and forcing those could change which
+      # files ESLint checks without any error
+      - name: Audit package-lock.json
+        run: npm audit --package-lock-only --audit-level=high
