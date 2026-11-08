@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Clusters\SettingsCluster;
+use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Settings\DashboardSettings;
 use App\Filament\Pages\Settings\MailSettings;
 use App\Filament\Pages\Settings\MailStatisticsPage;
@@ -100,6 +101,25 @@ final class SettingsClusterTest extends TestCase
         $this->assertSame(SiteSettings::getRouteName(), KnowledgeActionTargets::canonical('filament.admin.pages.site-settings'));
         $this->assertSame('Configuración del sitio', KnowledgeActionTargets::label('filament.admin.pages.site-settings'));
         $this->assertSame('filament.admin.resources.events.index', KnowledgeActionTargets::canonical('filament.admin.resources.events.index'));
+    }
+
+    public function test_a_page_of_a_collapsed_group_opens_that_group(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get(MailSettings::getUrl())
+            ->assertOk()
+            ->assertSee('data-expand-active-navigation-group', false)
+            ->assertSee("const label = 'Sistema'", false);
+    }
+
+    public function test_an_ungrouped_page_opens_no_group(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get(Dashboard::getUrl())
+            ->assertOk()
+            ->assertDontSee('data-expand-active-navigation-group', false);
     }
 
     public function test_old_settings_path_asks_guests_to_sign_in(): void

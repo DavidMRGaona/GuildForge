@@ -11,6 +11,7 @@ use App\Application\Services\SiteBrandingServiceInterface;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
+use App\Filament\Support\ActiveNavigationGroup;
 use App\Filament\Support\ClusteredPageRedirects;
 use App\Filament\Support\InitialsAvatarProvider;
 use App\Filament\Support\PanelCreateMenu;
@@ -18,6 +19,7 @@ use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
+use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -262,6 +264,12 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_START,
                 // Read on render, never while the panel is being registered
                 fn (): string => $this->incompatibleModulesBanner(),
+            )
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_NAV_END,
+                fn (): string => view('filament.components.expand-active-navigation-group', [
+                    'group' => ActiveNavigationGroup::label(Filament::getNavigation()),
+                ])->render(),
             )
             ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_AFTER,
