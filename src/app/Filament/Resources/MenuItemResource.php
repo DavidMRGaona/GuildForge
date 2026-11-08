@@ -13,6 +13,7 @@ use App\Filament\Resources\MenuItemResource\Pages\EditMenuItem;
 use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -218,7 +219,8 @@ class MenuItemResource extends BaseResource
                         return '-';
                     })
                     ->limit(40)
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('xl'),
 
                 TextColumn::make('visibility')
                     ->label(__('filament.menu_items.fields.visibility'))
@@ -234,7 +236,8 @@ class MenuItemResource extends BaseResource
                         MenuVisibility::Authenticated => __('filament.menu_items.visibility.authenticated'),
                         MenuVisibility::Guests => __('filament.menu_items.visibility.guests'),
                         MenuVisibility::Permission => __('filament.menu_items.visibility.permission'),
-                    }),
+                    })
+                    ->visibleFrom('sm'),
 
                 IconColumn::make('is_active')
                     ->label(__('filament.menu_items.fields.is_active'))
@@ -253,7 +256,8 @@ class MenuItemResource extends BaseResource
                         MenuItemModel::CORE_MODULE => __('filament.menu_items.modules.core'),
                         null => '-',
                         default => $state,
-                    }),
+                    })
+                    ->visibleFrom('md'),
             ])
             ->filters([
                 SelectFilter::make('visibility')
@@ -265,9 +269,12 @@ class MenuItemResource extends BaseResource
                         MenuVisibility::Permission->value => __('filament.menu_items.visibility.permission'),
                     ]),
             ])
+            // One menu: labelled row actions made the table overflow its container
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ]),
             ])
             ->toolbarActions([
                 DeleteBulkAction::make()

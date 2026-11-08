@@ -18,11 +18,12 @@ use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideOverr
 use App\Infrastructure\Persistence\Eloquent\Models\RoleAuditEntryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Database\RunsMigrationFiles;
@@ -68,18 +69,35 @@ final class KnowledgeGuideResourceTest extends TestCase
         ]);
         $this->actingAs($this->editorWithPermissions(['knowledge.manage']));
 
-        Livewire::test(ListKnowledgeGuides::class)
+        $list = Livewire::test(ListKnowledgeGuides::class)
             ->assertCanSeeTableRecords([$official, $draft])
             ->assertCountTableRecords(2)
             ->assertTableColumnStateSet('helpful', 7, $official)
             ->assertTableColumnStateSet('not_helpful', 2, $official)
-            ->assertTableColumnStateSet('status', 'draft', $draft)
-            ->assertTableActionVisible(EditAction::class, $draft)
-            ->assertTableActionHidden(EditAction::class, $official)
-            ->assertTableActionHidden(DeleteAction::class, $official)
-            ->assertTableActionVisible('hide', $official)
-            ->assertTableActionHidden('hide', $draft)
-            ->assertTableActionHidden('feature', $draft);
+            ->assertTableColumnStateSet('status', 'draft', $draft);
+
+        $this->assertFalse($this->rowActionHidden($list, 'edit', $draft));
+        $this->assertTrue($this->rowActionHidden($list, 'edit', $official));
+        $this->assertTrue($this->rowActionHidden($list, 'delete', $official));
+        $this->assertFalse($this->rowActionHidden($list, 'hide', $official));
+        $this->assertTrue($this->rowActionHidden($list, 'hide', $draft));
+        $this->assertTrue($this->rowActionHidden($list, 'feature', $draft));
+    }
+
+    /**
+     * Whether a row action is hidden for the given record. The row actions sit in a menu, and
+     * Filament caches a grouped action's visibility by the record's object id: the table test
+     * helpers load a fresh copy of the record, which may reuse the id of a row already rendered
+     * and freed, and read that row's visibility. Checking with the test's own record avoids it.
+     *
+     * @param  Testable<ListKnowledgeGuides>  $list
+     */
+    private function rowActionHidden(Testable $list, string $name, KnowledgeGuideModel $record): bool
+    {
+        $action = $list->instance()->getTable()->getAction($name);
+        $this->assertInstanceOf(Action::class, $action, "Row action {$name} not found");
+
+        return $action->record($record)->isHidden();
     }
 
     public function test_official_guides_are_hidden_and_starred_without_editing_them(): void

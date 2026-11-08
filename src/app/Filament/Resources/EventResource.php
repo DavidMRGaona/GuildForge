@@ -195,12 +195,14 @@ class EventResource extends BaseResource
                 ImageColumn::make('image_public_id')
                     ->label(__('Imagen'))
                     ->square()
-                    ->disk('images'),
+                    ->disk('images')
+                    ->visibleFrom('md'),
                 TextColumn::make('title')
                     ->label(__('Título'))
                     ->searchable()
                     ->sortable()
-                    ->limit(50),
+                    ->limit(50)
+                    ->wrap(),
                 TextColumn::make('start_date')
                     ->label(__('Fecha'))
                     ->formatStateUsing(function (EventModel $record): string {
@@ -212,12 +214,14 @@ class EventResource extends BaseResource
                                 : $timezone->format($record->end_date)
                         );
                     })
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('sm'),
                 TextColumn::make('location')
                     ->label(__('Ubicación'))
                     ->searchable()
                     ->limit(30)
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('xl'),
                 IconColumn::make('is_published')
                     ->label(__('Publicado'))
                     ->boolean(),

@@ -82,23 +82,27 @@ class HeroSlideResource extends BaseResource
                 ImageColumn::make('image_public_id')
                     ->label(__('Imagen'))
                     ->square()
-                    ->disk('images'),
+                    ->disk('images')
+                    ->visibleFrom('sm'),
                 TextColumn::make('title')
                     ->label(__('Título'))
                     ->searchable()
                     ->sortable()
-                    ->limit(50),
+                    ->limit(50)
+                    ->wrap(),
                 TextColumn::make('subtitle')
                     ->label(__('Subtítulo'))
                     ->searchable()
                     ->limit(30)
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('xl'),
                 IconColumn::make('is_active')
                     ->label(__('Activo'))
                     ->boolean(),
                 TextColumn::make('sort_order')
                     ->label(__('Orden'))
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('sm'),
             ])
             ->reorderable('sort_order')
             ->defaultSort('sort_order', 'asc');

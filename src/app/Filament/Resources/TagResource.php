@@ -9,6 +9,7 @@ use App\Filament\Resources\TagResource\Pages\CreateTag;
 use App\Filament\Resources\TagResource\Pages\EditTag;
 use App\Filament\Resources\TagResource\Pages\ListTags;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
@@ -120,7 +121,8 @@ class TagResource extends BaseResource
                         return '↳ '.__('filament.tags.child_of', ['parent' => $parentName]);
                     })
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->wrap(),
                 ColorColumn::make('color')
                     ->label(__('filament.tags.fields.color')),
                 TextColumn::make('applies_to')
@@ -131,19 +133,23 @@ class TagResource extends BaseResource
                         'articles' => __('filament.tags.applies_to_options.articles'),
                         'galleries' => __('filament.tags.applies_to_options.galleries'),
                         default => $state,
-                    }),
+                    })
+                    ->visibleFrom('sm'),
                 TextColumn::make('events_count')
                     ->label(__('filament.tags.fields.events_count'))
                     ->counts('events')
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('xl'),
                 TextColumn::make('articles_count')
                     ->label(__('filament.tags.fields.articles_count'))
                     ->counts('articles')
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('xl'),
                 TextColumn::make('galleries_count')
                     ->label(__('filament.tags.fields.galleries_count'))
                     ->counts('galleries')
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('xl'),
                 TextColumn::make('sort_order')
                     ->label(__('filament.tags.fields.sort_order'))
                     ->sortable()
@@ -178,10 +184,13 @@ class TagResource extends BaseResource
                         fn (Builder $q, string $value): Builder => $q->where('parent_id', $value)
                     )),
             ])
+            // One menu: labelled row actions made the table overflow its container
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make()
-                    ->hidden(fn (TagModel $record): bool => ! self::getTagQueryService()->canDelete($record->id)),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make()
+                        ->hidden(fn (TagModel $record): bool => ! self::getTagQueryService()->canDelete($record->id)),
+                ]),
             ])
             ->paginated(false)
             ->defaultSort(null);

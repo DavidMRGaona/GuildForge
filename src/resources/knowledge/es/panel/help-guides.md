@@ -42,14 +42,14 @@ El título se puede cambiar cuando quieras: los enlaces a la guía siguen funcio
 
 ## Ocultar o destacar una guía oficial
 
-Las guías oficiales no se editan, pero puedes decidir cómo se ven en este sitio:
+Las guías oficiales no se editan, pero puedes decidir cómo se ven en este sitio desde el menú **⋯** de su fila:
 
 - **Ocultar**: nadie la ve, tampoco desde los botones de ayuda de las páginas. **Mostrar** la recupera.
 - **Destacar**: elige **Destacada** para que salga en la portada de la ayuda, **No destacada** para quitarla de ahí, o **Como viene** para dejar lo que decide la guía.
 
 ## Borrar una guía del sitio
 
-Pulsa **Borrar** en su fila, marca la casilla de confirmación y confirma. Se borran la guía, sus votos y sus enlaces, y no se puede deshacer. Si solo quieres retirarla un tiempo, desmarca **Publicada**.
+Abre el menú **⋯** de su fila, pulsa **Borrar**, marca la casilla de confirmación y confirma. Se borran la guía, sus votos y sus enlaces, y no se puede deshacer. Si solo quieres retirarla un tiempo, desmarca **Publicada**.
 
 ## Si algo no sale bien
 

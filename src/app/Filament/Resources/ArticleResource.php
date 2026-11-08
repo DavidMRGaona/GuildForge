@@ -151,16 +151,19 @@ class ArticleResource extends BaseResource
                 ImageColumn::make('featured_image_public_id')
                     ->label(__('Imagen'))
                     ->square()
-                    ->disk('images'),
+                    ->disk('images')
+                    ->visibleFrom('md'),
                 TextColumn::make('title')
                     ->label(__('Título'))
                     ->searchable()
                     ->sortable()
-                    ->limit(50),
+                    ->limit(50)
+                    ->wrap(),
                 TextColumn::make('author.display_name')
                     ->getStateUsing(fn (ArticleModel $record): string => $record->author->display_name ?? $record->author->name)
                     ->label(__('Autor'))
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('xl'),
                 IconColumn::make('is_published')
                     ->label(__('Publicado'))
                     ->boolean(),
@@ -168,7 +171,8 @@ class ArticleResource extends BaseResource
                     ->label(__('Fecha de publicación'))
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
-                    ->placeholder(__('Sin publicar')),
+                    ->placeholder(__('Sin publicar'))
+                    ->visibleFrom('sm'),
                 TextColumn::make('created_at')
                     ->label(__('Creado'))
                     ->dateTime('d/m/Y')

@@ -27,6 +27,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
@@ -186,17 +187,20 @@ class RoleResource extends BaseResource
                 TextColumn::make('display_name')
                     ->label(__('filament.roles.fields.displayName'))
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->wrap(),
                 TextColumn::make('name')
                     ->label(__('filament.roles.fields.name'))
                     ->searchable()
                     ->badge()
-                    ->color('gray'),
+                    ->color('gray')
+                    ->visibleFrom('md'),
                 TextColumn::make('permissions_count')
                     ->label(__('filament.roles.fields.permissionsCount'))
                     ->counts('permissions')
                     ->badge()
-                    ->color('success'),
+                    ->color('success')
+                    ->visibleFrom('sm'),
                 TextColumn::make('users_count')
                     ->label(__('filament.roles.fields.usersCount'))
                     ->counts('users')
@@ -204,14 +208,16 @@ class RoleResource extends BaseResource
                     ->color('info'),
                 IconColumn::make('requires_association_member')
                     ->label(__('filament.roles.fields.requiresAssociationMemberShort'))
-                    ->boolean(),
+                    ->boolean()
+                    ->visibleFrom('xl'),
                 IconColumn::make('is_protected')
                     ->label(__('filament.roles.fields.isProtected'))
                     ->boolean()
                     ->trueIcon('heroicon-o-lock-closed')
                     ->falseIcon('heroicon-o-lock-open')
                     ->trueColor('warning')
-                    ->falseColor('gray'),
+                    ->falseColor('gray')
+                    ->visibleFrom('sm'),
                 TextColumn::make('created_at')
                     ->label(__('filament.roles.fields.createdAt'))
                     ->dateTime('d/m/Y H:i')
@@ -219,10 +225,13 @@ class RoleResource extends BaseResource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('display_name')
+            // One menu: labelled row actions made the table overflow its container
             ->recordActions([
-                EditAction::make(),
-                self::deleteAction()
-                    ->hidden(fn (RoleModel $record): bool => self::isLocked($record)),
+                ActionGroup::make([
+                    EditAction::make(),
+                    self::deleteAction()
+                        ->hidden(fn (RoleModel $record): bool => self::isLocked($record)),
+                ]),
             ]);
     }
 
