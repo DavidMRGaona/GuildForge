@@ -17,7 +17,7 @@ Los módulos lo usan, por ejemplo, para el contenido reservado, el acceso antici
 
 ## Cambiar el rol
 
-1. En el menú lateral, abre **Administración** y elige **Configuración del sitio**.
+1. En el menú lateral, abre **Sistema**, elige **Configuración** y después **Configuración del sitio**.
 2. Abre la pestaña **Autenticación**.
 3. En **Socios de la asociación**, elige el rol en **Rol de socio**.
 4. Lee el aviso que sale debajo, si sale.
@@ -37,4 +37,4 @@ Si el rol guardado ya no existe o no se puede usar, nadie cuenta como miembro de
 
 El rol elegido no se puede renombrar ni borrar mientras lo sea.
 
-[[action:filament.admin.pages.site-settings|Abrir la configuración del sitio]]
+[[action:filament.admin.configuracion.pages.site-settings|Abrir la configuración del sitio]]

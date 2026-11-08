@@ -8,6 +8,7 @@ use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\HeroSlideResource\Pages\CreateHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\EditHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\ListHeroSlides;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -26,20 +27,26 @@ class HeroSlideResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-photo';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Contenido';
+    protected static ?int $navigationSort = 10;
 
-    protected static ?int $navigationSort = 0;
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::Site->getLabel();
+    }
 
-    protected static ?string $navigationLabel = 'Hero slides';
+    public static function getNavigationLabel(): string
+    {
+        return __('filament.hero_slides.navigation');
+    }
 
     public static function getModelLabel(): string
     {
-        return __('slide');
+        return __('filament.hero_slides.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Hero slides');
+        return __('filament.hero_slides.plural');
     }
 
     public static function form(Schema $schema): Schema

@@ -160,7 +160,7 @@ The body is CommonMark plus three extensions.
 ```markdown
 [[action:profile.show|Ir a mi perfil]]
 [[action:profile.show?tab=surveys|Ver mis encuestas]]
-[[action:filament.admin.pages.site-settings|Abrir la configuración|if=settings.manage]]
+[[action:filament.admin.configuracion.pages.site-settings|Abrir la configuración|if=settings.manage]]
 [[action:my-module.tables.index|Ver partidas|if=!my-module.is_blocked]]
 ```
 

@@ -21,6 +21,7 @@ use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Modules\ModuleLoader;
 use App\View\Modules\CompatibilityIssueFormatter;
 use DateTimeInterface;
@@ -47,9 +48,7 @@ final class ModulesPage extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-puzzle-piece';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Administración';
-
-    protected static ?int $navigationSort = 90;
+    protected static ?int $navigationSort = 20;
 
     protected string $view = 'filament.pages.modules';
 
@@ -67,6 +66,11 @@ final class ModulesPage extends Page implements HasForms
     public bool $confirmDeleteData = false;
 
     protected TimezoneServiceInterface $timezone;
+
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::System->getLabel();
+    }
 
     /** Livewire injects the container dependencies of boot() on every request. */
     public function boot(TimezoneServiceInterface $timezone): void

@@ -7,6 +7,7 @@ namespace App\Filament\Pages\Settings;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
 use App\Application\Mail\Services\MailTestServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Filament\Clusters\SettingsCluster;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
@@ -38,7 +39,9 @@ final class MailSettings extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-envelope';
 
-    protected static ?int $navigationSort = 12;
+    protected static ?string $cluster = SettingsCluster::class;
+
+    protected static ?int $navigationSort = 20;
 
     protected string $view = 'filament.pages.settings.mail-settings';
 
@@ -50,11 +53,6 @@ final class MailSettings extends Page implements HasForms
     public static function getNavigationLabel(): string
     {
         return __('filament.mail.title');
-    }
-
-    public static function getNavigationGroup(): string
-    {
-        return __('filament.navigation.admin');
     }
 
     public function getTitle(): string

@@ -11,6 +11,7 @@ use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
 use DateTimeInterface;
 use Filament\Actions\Action;
@@ -42,9 +43,7 @@ final class CoreUpdatesPage extends Page implements HasTable
 
     protected string $view = 'filament.pages.core-updates';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Sistema';
-
-    protected static ?int $navigationSort = 101;
+    protected static ?int $navigationSort = 40;
 
     public string $deployedCommit = '';
 
@@ -62,6 +61,11 @@ final class CoreUpdatesPage extends Page implements HasTable
     public ?string $deployedAt = null;
 
     protected TimezoneServiceInterface $timezone;
+
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::System->getLabel();
+    }
 
     /** Livewire injects the container dependencies of boot() on every request. */
     public function boot(TimezoneServiceInterface $timezone): void

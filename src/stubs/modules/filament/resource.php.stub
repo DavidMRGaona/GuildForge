@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace {{ moduleNamespace }}\Filament\Resources;
 
 use App\Filament\Resources\BaseResource;
+use App\Filament\Support\PanelNavigationGroup;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -23,9 +24,12 @@ final class {{ nameStudly }}Resource extends BaseResource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    /**
+     * One of the core's groups; the sort slot of each entry is listed in docs/modules/README.md.
+     */
     public static function getNavigationGroup(): string
     {
-        return __('{{ moduleName }}::filament.navigation_group');
+        return PanelNavigationGroup::Content->getLabel();
     }
 
     public static function getModelLabel(): string

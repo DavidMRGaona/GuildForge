@@ -11,12 +11,12 @@ conditions:
   permissions:
     all: [hero_slides.view_any]
 ---
-El carrusel de portada son las diapositivas grandes de la página de inicio. En el panel se llaman **Hero slides**.
+El carrusel de portada son las diapositivas grandes de la página de inicio. En el panel están en **Portada**.
 
 ## Añadir una diapositiva
 
-1. En el menú lateral, abre **Contenido** y elige **Hero slides**.
-2. Pulsa **Crear slide**.
+1. En el menú lateral, abre **Sitio web** y elige **Portada**.
+2. Pulsa **Crear diapositiva**.
 3. Escribe el **Título** y, si quieres, un **Subtítulo**.
 4. Si quieres un botón, escribe el **Texto del botón** y la **URL del botón**, por ejemplo la página de un evento.
 5. Sube la **Imagen** (hasta 2 MB).

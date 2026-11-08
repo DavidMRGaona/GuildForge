@@ -561,7 +561,7 @@ public function registerNavigation(): array
             label: __('my-module::messages.navigation.games'),
             route: 'filament.admin.resources.games.index',
             icon: 'heroicon-o-puzzle-piece',
-            group: __('my-module::messages.navigation_group'),
+            group: PanelNavigationGroup::Activities->getLabel(),
             sort: 1,
             permissions: ['my-module:games.view_any'],
             module: 'my-module',
@@ -570,11 +570,11 @@ public function registerNavigation(): array
 }
 ```
 
-The core keeps these items in `ModuleNavigationRegistryInterface` and never copies them into the public menu. The sidebar itself is built by Filament from the module's resources and pages (their navigation group, label, icon and sort) and the groups from `registerNavigationGroups()`.
+The core keeps these items in `ModuleNavigationRegistryInterface` and never copies them into the public menu. The sidebar itself is built by Filament from the module's resources and pages (their navigation group, label, icon and sort) and the core's groups (see [Navigation groups](#navigation-groups)).
 
 ### Public menu links
 
-Modules offer their public pages through `registerRoutes()`. Each `ModuleRouteDTO` appears in the page select of the menu editor (*Administración → Navegación*), where admins, or roles with the `menu_items.*` permissions, decide which pages go in the header or footer menu:
+Modules offer their public pages through `registerRoutes()`. Each `ModuleRouteDTO` appears in the page select of the menu editor (*Sitio web → Navegación*), where admins, or roles with the `menu_items.*` permissions, decide which pages go in the header or footer menu:
 
 ```php
 use App\Application\Modules\DTOs\ModuleRouteDTO;
@@ -630,7 +630,7 @@ The values saved from the panel are stored in the core's `settings` table under 
 
 ### Settings form schema
 
-Override `getSettingsSchema()` in the provider. The core's module settings page renders it, reached from *Administración → Módulos* (admins only):
+Override `getSettingsSchema()` in the provider. The core's module settings page renders it, reached from *Sistema → Módulos* (admins only):
 
 ```php
 use Filament\Forms\Components\TextInput;
@@ -710,21 +710,67 @@ $apiKey = config('modules.settings.my-module.api_key');
 
 ### Navigation groups
 
-Modules can register Filament navigation groups:
+The sidebar groups belong to the core (`App\Filament\Support\PanelNavigationGroup`, core ≥ the release with #409). They are grouped by task, not by module, and in this order:
+
+| Group | Holds |
+|---|---|
+| Contenido | Events, articles, galleries, help guides |
+| Actividades | What people play or book: tables, tournaments, venue bookings |
+| Comunicación | Announcements, surveys |
+| Personas | Users, roles, association members |
+| Sitio web | Home page slides, public menu, «Nosotros», legal pages, link page, cookies |
+| Catálogos (collapsed) | Lists other entries use: game systems, publishers, content warnings, tournament profiles, tags |
+| Sistema (collapsed) | «Configuración» (every settings page), modules, updates |
+
+A resource or page names its group with the enum's label, **as a string**:
 
 ```php
-public function registerNavigationGroups(): array
+use App\Filament\Support\PanelNavigationGroup;
+
+public static function getNavigationGroup(): string
 {
-    return [
-        __('my-module::messages.navigation_group') => [
-            'icon' => 'heroicon-o-puzzle-piece',
-            'sort' => 20,
-        ],
-    ];
+    return PanelNavigationGroup::Activities->getLabel();
 }
 ```
 
-Groups are only added if the core does not define them already.
+Never `protected static $navigationGroup = PanelNavigationGroup::Activities`: Filament groups entries by the serialized group, so an enum case and another module that still returns the label as text («Contenido») would become two groups under one heading, and one of them would lose its entries.
+
+Sort slots, so modules never depend on each other's numbers (core entries in brackets):
+
+| Group | Entries (sort) |
+|---|---|
+| Contenido | [Eventos 10 · Artículos 20 · Galerías 30 · Guías de ayuda 90] |
+| Actividades | game-tables Mesas 10 · tournaments Torneos 20 · venue-bookings Reservas 30 |
+| Comunicación | announcements Anuncios 10 · surveys Encuestas 20 |
+| Personas | [Usuarios 10 · Roles 20] · memberships Socios 30 |
+| Sitio web | [Portada 10 · Navegación 20 · Nosotros 30 · Páginas legales 40] · link-page Página de enlaces 50 · cookie-consent Cookies 60 |
+| Catálogos | game-tables Sistemas de juego 10, Editoriales 20, Avisos de contenido 30 · tournaments Perfiles de torneo 40 · [Etiquetas 90] |
+| Sistema | [Configuración 10 · Módulos 20 · Actualizaciones de módulos 30 · Actualización del core 40] |
+
+A new module takes a free number in the group that fits and adds its row here.
+
+**Secondary entries** (campaigns under tables, fees under members, templates under surveys…) are children of their main entry. Filament shows them under the parent while one of them is open:
+
+```php
+public static function getNavigationParentItem(): ?string
+{
+    return __('my-module::messages.navigation.games'); // the parent's navigation label
+}
+```
+
+**Settings pages** join the «Configuración» cluster instead of a group. Their label is short and says what they configure («Mesas», «Reservas»), never «Configuración» again:
+
+```php
+use App\Filament\Clusters\SettingsCluster;
+
+protected static ?string $cluster = SettingsCluster::class;
+
+protected static ?int $navigationSort = 130;
+```
+
+Core settings use 10–40. Module slots: Banner de cookies 110 · Encuestas 120 · Mesas 130 · Notificaciones a canales 140 · Página de enlaces 150 · Reservas 160 · Socios 170. A clustered page's path and route name gain the cluster prefix (`/admin/configuracion/<slug>`, `filament.admin.configuracion.pages.<slug>`). The core keeps a redirect under the old path and route name, query string included, so existing links and guides keep working; new guides use the new name.
+
+`registerNavigationGroups()` is deprecated. Groups it returns are still shown, after the core ones, until every module has migrated; a group named like a core group simply is that core group.
 
 ### Policy registration
 
@@ -1157,7 +1203,7 @@ Anything outside the safelist (arbitrary values, uncommon utilities, variants no
 
 ### Installing from the admin panel
 
-In *Administración → Módulos* (admins only), with maintenance mode on, use *Instalar / actualizar* to upload the release ZIP. A ZIP of a module that is already installed updates it. Updates from GitHub releases are covered in [Updating installed modules](../module-ci-cd.md#updating-installed-modules).
+In *Sistema → Módulos* (admins only), with maintenance mode on, use *Instalar / actualizar* to upload the release ZIP. A ZIP of a module that is already installed updates it. Updates from GitHub releases are covered in [Updating installed modules](../module-ci-cd.md#updating-installed-modules).
 
 ### Programmatic installation
 
@@ -2201,7 +2247,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |
 | `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |
-| `registerNavigationGroups()` | `array` | Filament navigation groups |
+| `registerNavigationGroups()` | `array` | Deprecated: modules use the core's groups (see [Navigation groups](#navigation-groups)) |
 | `registerFilamentPages()` | `class-string<Page>[]` | Filament pages |
 | `registerFilamentWidgets()` | `class-string<Widget>[]` | Dashboard widgets (optional method, not declared on the base class) |
 | `getSettingsSchema()` | `Filament\Schemas\Components\Component[]` | Form schema of the module settings page |

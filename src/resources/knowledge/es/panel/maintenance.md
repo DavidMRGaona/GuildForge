@@ -15,7 +15,7 @@ El modo mantenimiento cierra la web pública. Los visitantes ven una página de 
 
 ## Activarlo
 
-1. En el menú lateral, abre **Administración** y elige **Configuración del sitio**.
+1. En el menú lateral, abre **Sistema**, elige **Configuración** y después **Configuración del sitio**.
 2. Abre la pestaña **Mantenimiento**.
 3. Activa **Activar modo mantenimiento**.
 4. Si quieres, escribe un **Mensaje para los visitantes**. Si lo dejas vacío, sale un mensaje genérico.
@@ -33,4 +33,4 @@ Pulsa **Desactivar** en el aviso del panel. Te lleva a la pestaña **Mantenimien
 > [!WARNING]
 > Acuérdate de desactivarlo al terminar. Mientras siga activo, nadie de fuera puede usar la web.
 
-[[action:filament.admin.pages.site-settings|Abrir la configuración del sitio]]
+[[action:filament.admin.configuracion.pages.site-settings|Abrir la configuración del sitio]]

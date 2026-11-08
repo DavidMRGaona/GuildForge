@@ -14,6 +14,23 @@ return [
         'settings' => 'Settings',
         'admin' => 'Administration',
     ],
+    'hero_slides' => [
+        'navigation' => 'Home page',
+        'label' => 'slide',
+        'plural' => 'Home page slides',
+    ],
+    'settings_cluster' => [
+        'label' => 'Settings',
+    ],
+    'navigation_groups' => [
+        'content' => 'Content',
+        'activities' => 'Activities',
+        'communication' => 'Communication',
+        'people' => 'People',
+        'site' => 'Website',
+        'catalogues' => 'Catalogues',
+        'system' => 'System',
+    ],
     'user_menu' => [
         'visit_site' => 'Visit site',
         'profile' => 'My profile',

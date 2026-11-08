@@ -8,6 +8,7 @@ use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\GalleryResource\Pages\CreateGallery;
 use App\Filament\Resources\GalleryResource\Pages\EditGallery;
 use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Filament\Forms\Components\FileUpload;
@@ -34,11 +35,14 @@ class GalleryResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-photo';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Contenido';
-
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 30;
 
     protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::Content->getLabel();
+    }
 
     public static function getModelLabel(): string
     {

@@ -15,7 +15,7 @@ Un rol es un conjunto de permisos. Cada persona tiene los permisos de todos sus 
 
 ## Crear un rol
 
-1. En el menú lateral, abre **Administración** y elige **Roles**.
+1. En el menú lateral, abre **Personas** y elige **Roles**.
 2. Pulsa **Crear rol**.
 3. En **Información general**:
    - **Nombre**: identificador interno. Solo minúsculas, números y guiones, sin espacios.

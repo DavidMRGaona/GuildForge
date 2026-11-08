@@ -991,7 +991,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $resource = self::readFile($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php');
         $this->assertStringContainsString("__('blog-posts::filament.post.label')", $resource);
-        $this->assertStringContainsString("__('blog-posts::filament.navigation_group')", $resource);
+        $this->assertStringNotContainsString('navigation_group', $resource);
     }
 
     public function test_generators_write_the_translation_keys_their_stubs_use(): void
@@ -1029,9 +1029,29 @@ final class ModuleScaffoldingServiceTest extends TestCase
         $this->service->createWidget('blog-posts', 'Stats');
 
         $updated = include $file;
-        $this->assertSame(['navigation_group', 'post', 'widgets'], array_keys($updated));
+        $this->assertSame(['post', 'widgets'], array_keys($updated));
         $this->assertSame('entrada', $updated['post']['label']);
         $this->assertSame('Stats', $updated['widgets']['stats']['heading']);
+    }
+
+    public function test_generated_resources_use_a_core_navigation_group(): void
+    {
+        $this->service->createModule('blog-posts');
+        $this->service->createFilamentResource('blog-posts', 'Post');
+
+        $resource = self::readFile($this->tempModulesPath.'/blog-posts/src/Filament/Resources/PostResource.php');
+
+        $this->assertStringContainsString('use App\\Filament\\Support\\PanelNavigationGroup;', $resource);
+        $this->assertStringContainsString('return PanelNavigationGroup::Content->getLabel();', $resource);
+    }
+
+    public function test_generated_providers_declare_no_navigation_group(): void
+    {
+        $this->service->createModule('blog-posts');
+
+        $provider = self::readFile($this->tempModulesPath.'/blog-posts/src/BlogPostsServiceProvider.php');
+
+        $this->assertStringNotContainsString('registerNavigationGroups', $provider);
     }
 
     public function test_resource_labels_follow_spanish_capitalization(): void
@@ -1043,7 +1063,7 @@ final class ModuleScaffoldingServiceTest extends TestCase
 
         $this->assertSame('blog post', $translations['blog_post']['label']);
         $this->assertSame('Blog posts', $translations['blog_post']['plural_label']);
-        $this->assertSame('Blog posts', $translations['navigation_group']);
+        $this->assertArrayNotHasKey('navigation_group', $translations);
     }
 
     public function test_api_routes_are_not_prefixed_twice(): void

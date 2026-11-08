@@ -10,6 +10,7 @@ use App\Application\Social\SocialUrl;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Filament\Support\PanelNavigationGroup;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -42,7 +43,7 @@ final class AboutPageSettings extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 30;
 
     protected string $view = 'filament.pages.settings.about-page-settings';
 
@@ -58,7 +59,7 @@ final class AboutPageSettings extends Page implements HasForms
 
     public static function getNavigationGroup(): string
     {
-        return __('filament.navigation.pages');
+        return PanelNavigationGroup::Site->getLabel();
     }
 
     public function getTitle(): string

@@ -14,7 +14,21 @@ return [
         'settings' => 'Configuración',
         'admin' => 'Administración',
     ],
+    'hero_slides' => [
+        'navigation' => 'Portada',
+        'label' => 'diapositiva',
+        'plural' => 'Diapositivas de la portada',
+    ],
+    'settings_cluster' => [
+        'label' => 'Configuración',
+    ],
     'navigation_groups' => [
+        'content' => 'Contenido',
+        'activities' => 'Actividades',
+        'communication' => 'Comunicación',
+        'people' => 'Personas',
+        'site' => 'Sitio web',
+        'catalogues' => 'Catálogos',
         'system' => 'Sistema',
     ],
     'user_menu' => [
@@ -747,7 +761,7 @@ return [
         ],
     ],
     'dashboard_settings' => [
-        'navigation' => 'Panel de control',
+        'navigation' => 'Escritorio',
         'title' => 'Configuración del panel',
         'saved' => 'Configuración del panel guardada correctamente',
         'reset' => 'Configuración restablecida a valores por defecto',

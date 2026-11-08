@@ -146,7 +146,7 @@ Everything in the repository is copied except `.git/`, `.github/`, `tests/`, `no
 
 1. Go to the module's Releases page on GitHub
 2. Download the `{module_name}-{version}.zip` file
-3. In the admin panel, turn maintenance mode on and go to *Administración → Módulos* (admins only)
+3. In the admin panel, turn maintenance mode on and go to *Sistema → Módulos* (admins only)
 4. Use *Instalar / actualizar* to upload the ZIP; a ZIP of an installed module updates it
 
 ### Verify integrity (optional)

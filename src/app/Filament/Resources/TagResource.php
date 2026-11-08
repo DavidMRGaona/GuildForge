@@ -9,6 +9,7 @@ use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\TagResource\Pages\CreateTag;
 use App\Filament\Resources\TagResource\Pages\EditTag;
 use App\Filament\Resources\TagResource\Pages\ListTags;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
@@ -34,9 +35,12 @@ class TagResource extends BaseResource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Configuración';
+    protected static ?int $navigationSort = 90;
 
-    protected static ?int $navigationSort = 10;
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::Catalogues->getLabel();
+    }
 
     public static function getModelLabel(): string
     {

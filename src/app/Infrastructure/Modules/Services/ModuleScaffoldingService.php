@@ -406,7 +406,6 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         }
 
         $files = array_merge($files, $this->mergeTranslations($modulePath, 'filament', [
-            'navigation_group' => $this->moduleDisplayName($modulePath, $module),
             $variables['nameSnake'] => [
                 'label' => $this->label($name),
                 'plural_label' => $this->sentence(Str::plural($name)),
@@ -838,20 +837,6 @@ final readonly class ModuleScaffoldingService implements ModuleScaffoldingServic
         }
 
         return $existing;
-    }
-
-    /**
-     * The module name shown in the admin panel ("displayName" in module.json).
-     */
-    private function moduleDisplayName(string $modulePath, string $module): string
-    {
-        $manifest = file_exists($modulePath.'/module.json')
-            ? json_decode((string) file_get_contents($modulePath.'/module.json'), true)
-            : null;
-
-        $displayName = is_array($manifest) ? ($manifest['displayName'] ?? null) : null;
-
-        return is_string($displayName) && $displayName !== '' ? $displayName : $this->sentence($module);
     }
 
     /**

@@ -15,7 +15,7 @@ El escritorio es la primera página del panel. Desde aquí decides qué resúmen
 
 ## Cambiar el escritorio
 
-1. En el menú lateral, abre **Configuración** y elige **Panel de control**.
+1. En el menú lateral, abre **Sistema**, elige **Configuración** y después **Escritorio**.
 2. Cada fila es un widget. Para cada uno:
    - **Activo**: desactívalo para ocultarlo.
    - **Orden**: los números más bajos salen primero.
@@ -32,4 +32,4 @@ Pulsa **Restablecer por defecto**, arriba a la derecha, y confirma. El escritori
 > [!TIP]
 > Si un módulo está deshabilitado, sus widgets no salen en la lista. Su orden y sus filas se guardan para cuando lo vuelvas a habilitar.
 
-[[action:filament.admin.pages.dashboard-settings|Configurar el escritorio]]
+[[action:filament.admin.configuracion.pages.dashboard-settings|Configurar el escritorio]]

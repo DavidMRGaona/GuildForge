@@ -29,8 +29,25 @@ final class KnowledgeActionTargets
         ]);
     }
 
+    /**
+     * The target as the editor lists it today: a button saved before its page joined a cluster
+     * keeps the old route name, which still works for readers (ClusteredPageRedirects).
+     */
+    public static function canonical(string $target): string
+    {
+        try {
+            return ClusteredPageRedirects::currentRouteName(Filament::getPanel('admin'), $target) ?? $target;
+        } catch (Throwable $e) {
+            report($e);
+
+            return $target;
+        }
+    }
+
     public static function label(string $target): ?string
     {
+        $target = self::canonical($target);
+
         foreach (self::grouped() as $options) {
             if (isset($options[$target])) {
                 return $options[$target];

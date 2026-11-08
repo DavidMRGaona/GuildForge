@@ -11,11 +11,15 @@ use App\Application\Services\SiteBrandingServiceInterface;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
+use App\Filament\Support\ActiveNavigationGroup;
+use App\Filament\Support\ClusteredPageRedirects;
 use App\Filament\Support\InitialsAvatarProvider;
 use App\Filament\Support\PanelCreateMenu;
+use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
+use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -117,9 +121,11 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups($this->getNavigationGroups())
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+            ->discoverClusters(in: app_path('Filament/Clusters'), for: 'App\\Filament\\Clusters')
             ->pages([
                 ...$this->discoverModulePages(),
             ])
+            ->authenticatedRoutes(static fn (Panel $panel) => ClusteredPageRedirects::register($panel))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets($this->discoverModuleWidgets())
             ->middleware([
@@ -260,6 +266,12 @@ class AdminPanelProvider extends PanelProvider
                 fn (): string => $this->incompatibleModulesBanner(),
             )
             ->renderHook(
+                PanelsRenderHook::SIDEBAR_NAV_END,
+                fn (): string => view('filament.components.expand-active-navigation-group', [
+                    'group' => ActiveNavigationGroup::label(Filament::getNavigation()),
+                ])->render(),
+            )
+            ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_AFTER,
                 fn (): string => auth()->check()
                     ? view('filament.components.topbar-actions', [
@@ -344,54 +356,13 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * Get all navigation groups (core + modules).
+     * The core's groups (PanelNavigationGroup), then those that modules not migrated yet declare.
      *
-     * @return array<NavigationGroup>
+     * @return array<string, NavigationGroup>
      */
     private function getNavigationGroups(): array
     {
-        // Core navigation groups with sort order (use translations)
-        $coreGroups = [
-            __('filament.navigation.content') => ['sort' => 10],
-            __('filament.navigation.pages') => ['sort' => 30],
-            __('filament.navigation.settings') => ['sort' => 40],
-            __('filament.navigation.admin') => ['sort' => 50],
-            'Sistema' => ['sort' => 900],
-        ];
-
-        // Collect navigation groups from modules
-        $moduleGroups = $this->collectModuleNavigationGroups();
-
-        // Merge groups (modules can add new groups but not override core)
-        $allGroups = array_merge($moduleGroups, $coreGroups);
-
-        // Sort by 'sort' key (default to 100), then alphabetically by label for ties
-        uksort($allGroups, static function (string $labelA, string $labelB) use ($allGroups): int {
-            $sortA = $allGroups[$labelA]['sort'] ?? 100;
-            $sortB = $allGroups[$labelB]['sort'] ?? 100;
-
-            // Primary: sort order
-            if ($sortA !== $sortB) {
-                return $sortA <=> $sortB;
-            }
-
-            // Secondary: alphabetical by label
-            return $labelA <=> $labelB;
-        });
-
-        // Convert to NavigationGroup objects
-        $navigationGroups = [];
-        foreach ($allGroups as $label => $options) {
-            $group = NavigationGroup::make($label);
-
-            if (isset($options['icon'])) {
-                $group->icon($options['icon']);
-            }
-
-            $navigationGroups[] = $group;
-        }
-
-        return $navigationGroups;
+        return PanelNavigationGroups::build($this->collectModuleNavigationGroups());
     }
 
     /**

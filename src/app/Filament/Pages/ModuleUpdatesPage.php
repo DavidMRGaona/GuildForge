@@ -16,6 +16,7 @@ use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -45,9 +46,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
 
     protected string $view = 'filament.pages.module-updates';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Sistema';
-
-    protected static ?int $navigationSort = 100;
+    protected static ?int $navigationSort = 30;
 
     /**
      * Stored as arrays: Livewire cannot serialize DTO objects in public properties.
@@ -78,6 +77,11 @@ final class ModuleUpdatesPage extends Page implements HasTable
     public array $blockedReleases = [];
 
     protected TimezoneServiceInterface $timezone;
+
+    public static function getNavigationGroup(): string
+    {
+        return PanelNavigationGroup::System->getLabel();
+    }
 
     /** Livewire injects the container dependencies of boot() on every request. */
     public function boot(TimezoneServiceInterface $timezone): void

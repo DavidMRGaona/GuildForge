@@ -10,6 +10,7 @@ use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Domain\Enums\UserRole;
+use App\Filament\Clusters\SettingsCluster;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
@@ -109,7 +110,9 @@ final class SiteSettings extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static ?int $navigationSort = 100;
+    protected static ?string $cluster = SettingsCluster::class;
+
+    protected static ?int $navigationSort = 10;
 
     protected string $view = 'filament.pages.site-settings';
 
@@ -135,11 +138,6 @@ final class SiteSettings extends Page implements HasForms
     public static function getNavigationLabel(): string
     {
         return __('filament.settings.title');
-    }
-
-    public static function getNavigationGroup(): string
-    {
-        return __('filament.navigation.admin');
     }
 
     public function getTitle(): string

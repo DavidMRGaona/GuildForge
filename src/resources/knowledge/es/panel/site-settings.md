@@ -11,7 +11,7 @@ conditions:
   permissions:
     all: [settings.manage]
 ---
-En el menú lateral, abre **Administración** y elige **Configuración del sitio**. Los ajustes están repartidos en pestañas.
+En el menú lateral, abre **Sistema**, elige **Configuración** y después **Configuración del sitio**. Los ajustes están repartidos en pestañas.
 
 > [!IMPORTANT]
 > **Guardar** guarda todas las pestañas a la vez. Revisa lo que hayas tocado antes de pulsarlo.
@@ -46,4 +46,4 @@ Sube el logo para el tema claro, el del tema oscuro y el de los correos. Si no s
 
 Esta pestaña solo sale si tienes permiso para el modo mantenimiento. Tiene su propia guía.
 
-[[action:filament.admin.pages.site-settings|Abrir la configuración del sitio]]
+[[action:filament.admin.configuracion.pages.site-settings|Abrir la configuración del sitio]]
