@@ -31,6 +31,7 @@ use App\Infrastructure\Authorization\Services\RoleAuditLogger;
 use App\Infrastructure\Authorization\Services\RoleAuditSourceResolver;
 use App\Infrastructure\Authorization\Services\RolePermissionGrants;
 use App\Infrastructure\Authorization\Services\RoleService;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -50,7 +51,12 @@ class AuthorizationServiceProvider extends ServiceProvider
         // Per request or job: the singleton above must not keep a token across them
         $this->app->scoped(AuthorizationCacheVersion::class);
         $this->app->singleton(RoleServiceInterface::class, RoleService::class);
-        $this->app->singleton(PermissionRegistryInterface::class, PermissionRegistry::class);
+        // A permission key outside "resource.action" fails as its module loads where the author
+        // looks (local, tests, module CI); in production it is skipped with a warning (core#402)
+        $this->app->singleton(PermissionRegistryInterface::class, fn (Application $app): PermissionRegistry => new PermissionRegistry(
+            $app->make(PermissionRepositoryInterface::class),
+            rejectsInvalidKeys: $app->environment('local', 'testing'),
+        ));
         $this->app->singleton(PermissionSyncRunnerInterface::class, ProcessPermissionSyncRunner::class);
         $this->app->singleton(AssociationMembershipServiceInterface::class, AssociationMembershipService::class);
         // Per request or job, so a forbidden association member role is logged once per lifecycle

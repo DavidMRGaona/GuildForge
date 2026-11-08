@@ -229,8 +229,8 @@ final class PermissionCatalogTest extends TestCase
 
     public function test_sections_whose_resources_slug_the_same_get_distinct_keys(): void
     {
-        $this->register('cookieconsent:Año.view_any', 'A', 'Año', 'cookieconsent', 'Uno');
-        $this->register('cookieconsent:Ano.view_any', 'B', 'Ano', 'cookieconsent', 'Dos');
+        $this->register('cookieconsent:year_accented.view_any', 'A', 'Año', 'cookieconsent', 'Uno');
+        $this->register('cookieconsent:year.view_any', 'B', 'Ano', 'cookieconsent', 'Dos');
         $this->modules(['cookie-consent' => 'Cookies']);
 
         $this->assertSame(['ano', 'ano-2'], $this->sectionKeys($this->tab($this->tabs(), 'module-cookieconsent')));
@@ -238,7 +238,7 @@ final class PermissionCatalogTest extends TestCase
 
     public function test_an_empty_slug_falls_back_to_a_numbered_section(): void
     {
-        $this->register('cookieconsent:!!!.view_any', 'A', '!!!', 'cookieconsent');
+        $this->register('cookieconsent:symbols.view_any', 'A', '!!!', 'cookieconsent');
         $this->modules(['cookie-consent' => 'Cookies']);
 
         $this->assertSame(['section-1'], $this->sectionKeys($this->tab($this->tabs(), 'module-cookieconsent')));
@@ -247,11 +247,12 @@ final class PermissionCatalogTest extends TestCase
     public function test_tab_and_section_keys_never_hold_a_dot(): void
     {
         // Keys are parts of the form state path: a dot would split it
-        app(PermissionRegistryInterface::class)->register(new PermissionDefinitionDTO('odd.thing.view', 'Ver cosas raras', 'odd.thing', 'view'));
-        PermissionModel::query()->create(['key' => 'odd.thing.view', 'label' => 'odd.thing.view', 'resource' => 'odd.thing', 'action' => 'view']);
+        // A permission key never holds more than one dot (core#402), but its resource may
+        app(PermissionRegistryInterface::class)->register(new PermissionDefinitionDTO('odd_thing.view', 'Ver cosas raras', 'odd.thing', 'view'));
+        PermissionModel::query()->create(['key' => 'odd_thing.view', 'label' => 'odd_thing.view', 'resource' => 'odd.thing', 'action' => 'view']);
         app(PermissionRegistryInterface::class)->register(new PermissionDefinitionDTO('odd-thing.view', 'Ver cosas', 'odd-thing', 'view'));
         PermissionModel::query()->create(['key' => 'odd-thing.view', 'label' => 'odd-thing.view', 'resource' => 'odd-thing', 'action' => 'view']);
-        $this->register('venuebookings:rooms.v2.view', 'Ver salas v2', 'rooms.v2', 'venuebookings');
+        $this->register('venuebookings:rooms_v2.view', 'Ver salas v2', 'rooms.v2', 'venuebookings');
         $this->modules(['venue-bookings' => 'Reservas de salas']);
 
         $tabs = $this->tabs();

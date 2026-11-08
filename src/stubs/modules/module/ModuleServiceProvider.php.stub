@@ -164,7 +164,9 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      * Register permissions provided by this module.
      *
      * They are stored as "{module}:{name}", the key the generated policies check
-     * ("{{ moduleName }}:items.view_any" for the example below):
+     * ("{{ moduleName }}:items.view_any" for the example below). Every name is
+     * "resource.action" (lowercase letters, digits, "-" and "_"): a name such as "manage"
+     * fails as the module loads locally and in tests, and is skipped in production.
      *
      *     return [
      *         new PermissionDTO(
