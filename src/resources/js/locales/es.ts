@@ -131,6 +131,19 @@ export default {
             ics: 'Apple Calendar u otro (.ics)',
             opensInNewTab: 'se abre en una pestaña nueva',
         },
+        subscribe: {
+            button: 'Suscribirse',
+            menuLabel: 'Suscribirse al calendario',
+            apple: 'Apple Calendar (iPhone y Mac)',
+            google: 'Google Calendar',
+            outlook: 'Outlook',
+            copy: 'Copiar dirección',
+            copied: 'Dirección copiada',
+            copyError: 'No se ha podido copiar la dirección.',
+            hint: 'Se actualiza solo con los cambios, sin necesidad de cuenta.',
+            iosOtherBrowserHint:
+                'En iPhone, este navegador no abre la app Calendario: abre esta página en Safari o copia la dirección.',
+        },
         // Texts of the FullCalendar toolbar and grids (see useCalendarLocale)
         fullcalendar: {
             previous: {

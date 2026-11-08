@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
+use App\Application\Calendar\Services\PublicCalendarFeedInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\EmailVerificationPolicyInterface;
@@ -18,6 +19,7 @@ final class CalendarPageController extends Controller
         private readonly SeoMetadataFactoryInterface $seo,
         private readonly PersonalCalendarServiceInterface $personalCalendar,
         private readonly EmailVerificationPolicyInterface $emailVerification,
+        private readonly PublicCalendarFeedInterface $publicFeed,
     ) {}
 
     public function __invoke(Request $request): Response
@@ -25,6 +27,7 @@ final class CalendarPageController extends Controller
         return Inertia::render('Calendar/Index', [
             'seo' => $this->seo->forPage(new SeoPageDTO(title: (string) __('seo.titles.calendar')))->toArray(),
             'personalCalendar' => $this->offersPersonalCalendar($request),
+            'publicCalendarFeed' => $this->publicFeed->subscriptionLinks()->toArray(),
         ]);
     }
 

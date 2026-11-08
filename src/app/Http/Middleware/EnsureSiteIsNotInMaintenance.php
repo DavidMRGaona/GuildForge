@@ -55,6 +55,16 @@ final readonly class EnsureSiteIsNotInMaintenance
             return $next($request);
         }
 
+        // Routes without a session (feeds for calendar apps) are read by machines, and
+        // the maintenance page needs the session for its shared props
+        if (! $request->hasSession()) {
+            return response(strip_tags($this->settings->getMaintenanceMessage() ?? ''), Response::HTTP_SERVICE_UNAVAILABLE, [
+                'Content-Type' => 'text/plain; charset=utf-8',
+                'Retry-After' => (string) self::RETRY_AFTER_SECONDS,
+                'Cache-Control' => 'no-store',
+            ]);
+        }
+
         $response = Inertia::render('Maintenance', [
             'message' => $this->settings->getMaintenanceMessage(),
             'seo' => $this->seo->forPage(new SeoPageDTO(

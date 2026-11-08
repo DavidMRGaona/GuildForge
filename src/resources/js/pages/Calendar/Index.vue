@@ -3,8 +3,10 @@ import { X } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CalendarEntry } from '@/types/models';
+import type { CalendarSubscriptionLinks } from '@/types/calendarFeed';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel.vue';
+import CalendarSubscribeMenu from '@/components/calendar/CalendarSubscribeMenu.vue';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
 import FormToggle from '@/components/form/FormToggle.vue';
 import { extractLegend, type CalendarLegendItem } from '@/utils/calendarEntries';
@@ -13,10 +15,13 @@ import { useMediaQuery } from '@/composables/useMediaQuery';
 interface Props {
     /** Whether to offer the "only mine" filter (signed in, with some module that tells attendance). */
     personalCalendar?: boolean;
+    /** Addresses to subscribe to the public calendar feed, without an account. */
+    publicCalendarFeed?: CalendarSubscriptionLinks | null;
 }
 
 withDefaults(defineProps<Props>(), {
     personalCalendar: false,
+    publicCalendarFeed: null,
 });
 
 const { t } = useI18n();
@@ -89,11 +94,17 @@ const closeMobileModal = (): void => {
         -->
         <div class="lg:grid lg:grid-cols-3 lg:gap-x-8">
             <!-- Page header -->
-            <div class="mb-8 flex items-center gap-3 lg:col-span-2 lg:self-start">
+            <div
+                class="mb-8 flex flex-wrap items-center gap-x-3 gap-y-3 lg:col-span-2 lg:self-start"
+            >
                 <h1 class="text-3xl font-bold tracking-tight text-base-primary">
                     {{ t('calendar.title') }}
                 </h1>
                 <HelpLink guide="core.events.find-events" />
+                <!-- Own row on phones, where it does not fit beside the title; at the end from sm -->
+                <div v-if="publicCalendarFeed" class="basis-full sm:ml-auto sm:basis-auto">
+                    <CalendarSubscribeMenu :links="publicCalendarFeed" align="end" />
+                </div>
             </div>
 
             <!-- The toggle row is as tall as the title's line, so both share a centre line -->

@@ -24,15 +24,30 @@ use App\Http\Controllers\Knowledge\KnowledgeSearchController;
 use App\Http\Controllers\Knowledge\KnowledgeVisibleGuidesController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\PersonalCalendarFeedController;
+use App\Http\Controllers\PublicCalendarFeedController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SearchSuggestionsController;
 use App\Http\Controllers\SitemapController;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 Route::get('/', HomeController::class)->name('home');
 Route::get('/nosotros', AboutController::class)->name('about');
 Route::post('/contacto', ContactController::class)->middleware('throttle:contact')->name('contact.store');
 Route::get('/calendario', CalendarPageController::class)->name('calendar');
+// Same for everyone: no session (nor its cookie), so shared caches can keep it
+Route::get('/calendario.ics', PublicCalendarFeedController::class)
+    ->withoutMiddleware([
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        PreventRequestForgery::class,
+        AddQueuedCookiesToResponse::class,
+    ])
+    ->middleware('throttle:calendar-public-feed')
+    ->name('calendar.public.ics');
 // Before /calendario/{source}/{id}.ics, whose pattern would swallow it
 Route::get('/calendario/personal/{token}.ics', PersonalCalendarFeedController::class)
     ->where('token', '[A-Za-z0-9_-]{43}')

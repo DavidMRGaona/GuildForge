@@ -33,7 +33,7 @@ Knowledge base guides for a module's features are covered in [Writing knowledge 
 
 Making a module's records searchable from the site search is covered in [Search sources](./search-sources.md).
 
-Putting a module's entries in the public calendar and in each person's personal calendar is covered in [Calendar sources and the personal calendar](./calendar.md).
+Putting a module's entries in the public calendar and in each person's personal calendar is covered in [Calendar sources, the public feed and the personal calendar](./calendar.md), which also shows how to offer the public calendar subscription (`PublicCalendarFeedInterface`).
 
 Drawing QR codes (SVG or PNG) for pages of the site is covered in [QR codes](./qr-codes.md).
 
