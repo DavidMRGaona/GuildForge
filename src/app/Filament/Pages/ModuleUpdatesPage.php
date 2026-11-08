@@ -78,12 +78,12 @@ final class ModuleUpdatesPage extends Page implements HasTable
 
     protected TimezoneServiceInterface $timezone;
 
-    /** Livewire injects the container dependencies of boot() on every request. */
     public static function getNavigationGroup(): string
     {
         return PanelNavigationGroup::System->getLabel();
     }
 
+    /** Livewire injects the container dependencies of boot() on every request. */
     public function boot(TimezoneServiceInterface $timezone): void
     {
         $this->timezone = $timezone;
