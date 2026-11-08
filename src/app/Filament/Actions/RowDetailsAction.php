@@ -46,7 +46,7 @@ final class RowDetailsAction
             // Not the record title: without a title attribute Filament gives the model label, and the
             // main column (first entry) already names the record
             ->modalHeading(__('filament.row_details.heading'))
-            ->modalContent(fn (Action $action, Model $record): View => view('filament.tables.row-details', [
+            ->modalContent(fn (Action $action, Model|array $record): View => view('filament.tables.row-details', [
                 'entries' => self::entries(self::tableOf($action), $record),
             ]))
             ->modalSubmitAction(false)
@@ -67,11 +67,13 @@ final class RowDetailsAction
     }
 
     /**
-     * Every column shown for the record, in table order, with its label and its cell.
+     * Every column shown for the record, in table order, with its label and its cell. Rows that
+     * come from `->records()` are arrays (core#403); Filament's columns read both.
      *
+     * @param  Model|array<string, mixed>  $record
      * @return list<array{name: string, label: string, html: HtmlString, empty: bool}>
      */
-    public static function entries(Table $table, Model $record): array
+    public static function entries(Table $table, Model|array $record): array
     {
         $entries = [];
 
