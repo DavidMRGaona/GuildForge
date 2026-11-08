@@ -24,10 +24,10 @@ final class PanelNavigationGroupsTest extends TestCase
 
     public function test_catalogues_and_system_start_collapsed(): void
     {
-        $collapsed = array_map(
+        $collapsed = array_values(array_map(
             static fn (NavigationGroup $group): array => [$group->getLabel(), $group->isCollapsed()],
             PanelNavigationGroups::build([]),
-        );
+        ));
 
         $this->assertSame([
             ['Contenido', false],
@@ -63,15 +63,22 @@ final class PanelNavigationGroupsTest extends TestCase
     {
         $groups = PanelNavigationGroups::build(['Mesas de rol' => ['icon' => 'heroicon-o-puzzle-piece']]);
 
-        $this->assertSame('heroicon-o-puzzle-piece', $groups[7]->getIcon());
+        $this->assertSame('heroicon-o-puzzle-piece', $groups['Mesas de rol']->getIcon());
+    }
+
+    public function test_groups_are_keyed_by_their_label(): void
+    {
+        foreach (PanelNavigationGroups::build(['Mesas de rol' => []]) as $key => $group) {
+            $this->assertSame($group->getLabel(), $key);
+        }
     }
 
     /**
-     * @param  list<NavigationGroup>  $groups
+     * @param  array<string, NavigationGroup>  $groups
      * @return list<string|null>
      */
     private function labels(array $groups): array
     {
-        return array_map(static fn (NavigationGroup $group): ?string => $group->getLabel(), $groups);
+        return array_values(array_map(static fn (NavigationGroup $group): ?string => $group->getLabel(), $groups));
     }
 }

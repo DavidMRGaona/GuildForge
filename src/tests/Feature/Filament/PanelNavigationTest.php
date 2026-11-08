@@ -39,6 +39,22 @@ final class PanelNavigationTest extends TestCase
         $this->assertContains('Eventos', $labels);
     }
 
+    public function test_a_group_nobody_registered_goes_after_the_core_groups(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        Filament::setCurrentPanel('admin');
+        $panel = Filament::getPanel('admin');
+        $panel->navigationItems([NavigationItem::make('Unregistered item')->group('Unregistered group')->url('/unregistered')]);
+
+        $labels = array_values(array_filter(array_map(
+            static fn (NavigationGroup $group): ?string => $group->getLabel(),
+            $panel->getNavigation(),
+        )));
+
+        $this->assertSame('Unregistered group', end($labels));
+        $this->assertSame('Contenido', $labels[0]);
+    }
+
     public function test_admin_sees_the_core_entries_grouped_by_task(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());

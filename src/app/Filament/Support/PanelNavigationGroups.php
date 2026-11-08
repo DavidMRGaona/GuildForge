@@ -15,22 +15,25 @@ final class PanelNavigationGroups
     private const int DEFAULT_MODULE_SORT = 100;
 
     /**
+     * Keyed by label: Filament places each group by searching its label among the registered
+     * keys followed by the labels, and gives a group nobody registered the position
+     * count(registered). With list keys every registered group would sit `count` places later
+     * and an unregistered group would tie with the first one, ahead of the core groups.
+     *
      * @param  array<string, array{icon?: string, sort?: int}>  $moduleGroups  label => options
-     * @return list<NavigationGroup>
+     * @return array<string, NavigationGroup>
      */
     public static function build(array $moduleGroups): array
     {
         $groups = [];
-        $coreLabels = [];
 
         foreach (PanelNavigationGroup::cases() as $case) {
             $label = $case->getLabel();
-            $coreLabels[$label] = true;
-            $groups[] = NavigationGroup::make($label)->collapsed($case->isCollapsed());
+            $groups[$label] = NavigationGroup::make($label)->collapsed($case->isCollapsed());
         }
 
         // A module group named like a core group is that core group: its items join it
-        $moduleGroups = array_diff_key($moduleGroups, $coreLabels);
+        $moduleGroups = array_diff_key($moduleGroups, $groups);
 
         uksort($moduleGroups, static function (string $labelA, string $labelB) use ($moduleGroups): int {
             $sortA = $moduleGroups[$labelA]['sort'] ?? self::DEFAULT_MODULE_SORT;
@@ -46,7 +49,7 @@ final class PanelNavigationGroups
                 $group->icon($options['icon']);
             }
 
-            $groups[] = $group;
+            $groups[$label] = $group;
         }
 
         return $groups;

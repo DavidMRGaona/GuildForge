@@ -350,7 +350,7 @@ class AdminPanelProvider extends PanelProvider
     /**
      * The core's groups (PanelNavigationGroup), then those that modules not migrated yet declare.
      *
-     * @return list<NavigationGroup>
+     * @return array<string, NavigationGroup>
      */
     private function getNavigationGroups(): array
     {
