@@ -141,20 +141,21 @@ REDIS_HOST=redis-prod
 
 ### Production entrypoint
 
-The `docker/prod/entrypoint.sh` script runs when the container starts:
+The `docker/prod/entrypoint.sh` script runs when the container starts. It runs as root, but every `artisan` command goes through its `artisan()` function, which runs it as `www-data` with `su-exec`: the app runs as `www-data` and must be able to rewrite what the boot writes (compiled views, the config cache, logs). The image build fails if the script calls `php artisan` any other way.
 
 1. Creates required directories (storage, bootstrap/cache, modules, public/build/modules)
-2. Syncs modules from the image (`php artisan module:sync-from-image`)
-3. Publishes module build assets (`php artisan module:publish-build-assets`)
-4. Sets permissions (775 for storage, bootstrap/cache, modules, public/build)
+2. Sets permissions (775 and owner `www-data` for storage, bootstrap/cache, modules, public/build), which also repairs files a boot run as root left in the volumes
+3. Syncs modules from the image (`module:sync-from-image`)
+4. Publishes module build assets (`module:publish-build-assets`)
 5. Creates the storage symbolic link if it does not exist
-6. Opens the deployment log entry (`php artisan core:record-deployment start`)
-7. Runs pending migrations (`php artisan migrate --force`); on failure it records `fail` and stops
-8. Discovers modules (`php artisan module:discover`) and syncs permissions (`php artisan permissions:sync`)
-   - then syncs the knowledge base (`php artisan knowledge:sync`); a failure only logs a warning and never stops the start
+6. Opens the deployment log entry (`core:record-deployment start`)
+7. Runs pending migrations (`migrate --force`); on failure it records `fail` and stops
+8. Discovers modules (`module:discover`) and syncs permissions (`permissions:sync`)
+   - then syncs the knowledge base (`knowledge:sync`) and the site search (`search:sync`); a failure only logs a warning and never stops the start
 9. Caches configuration, clears routes and caches views; on failure it records `fail` and stops
-10. Closes the deployment log entry (`php artisan core:record-deployment finish`)
-11. Starts Supervisord
+10. Closes the deployment log entry (`core:record-deployment finish`)
+11. Lists any file in `storage/framework`, `storage/logs` or `bootstrap/cache` not owned by `www-data` as a warning and hands it back to `www-data` (the start goes on)
+12. Starts Supervisord
 
 ### Supervisord
 

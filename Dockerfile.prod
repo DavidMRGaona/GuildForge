@@ -154,6 +154,12 @@ RUN apk add --no-cache rsvg-convert \
     && printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><rect width="2" height="1"/></svg>' \
         | rsvg-convert --format=png --width=20 --height=10 | head -c 8 | od -An -tx1 | grep -q '89 50 4e 47'
 
+# The entrypoint runs as root (it fixes the volumes' ownership) but every artisan command
+# as www-data through su-exec, so the caches it writes stay writable by the app. Its own
+# layer, so the extension build above stays cached. Fail the build if it cannot switch
+RUN apk add --no-cache su-exec \
+    && [ "$(su-exec www-data id -un)" = www-data ]
+
 # Install Composer
 COPY --from=composer:2.10 /usr/bin/composer /usr/bin/composer
 
@@ -203,7 +209,12 @@ COPY docker/prod/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/prod/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/prod/php.ini /usr/local/etc/php/conf.d/production.ini
 COPY docker/prod/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# An artisan command run as root leaves caches the app cannot rewrite (compiled views,
+# config cache): fail the build if the entrypoint calls php artisan outside artisan()
+RUN chmod +x /entrypoint.sh \
+    && if grep -n 'php artisan' /entrypoint.sh | grep -v 'su-exec www-data php artisan'; then \
+        echo "entrypoint.sh: run artisan commands through artisan(), as www-data" >&2; exit 1; \
+    fi
 
 EXPOSE 8000
 
