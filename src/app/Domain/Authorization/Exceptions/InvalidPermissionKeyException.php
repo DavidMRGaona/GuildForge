@@ -22,4 +22,20 @@ final class InvalidPermissionKeyException extends DomainException
             )
         );
     }
+
+    /**
+     * A registered permission whose key is not "resource.action" (or "module:resource.action").
+     */
+    public static function notResourceAction(string $key, ?string $module): self
+    {
+        if ($module !== null) {
+            return new self(sprintf(
+                'Module "%s" declares the permission "%s", whose name must be in the form "resource.action" (for example "settings.manage").',
+                $module,
+                $key,
+            ));
+        }
+
+        return new self(sprintf('The permission "%s" must be in the form "resource.action".', $key));
+    }
 }
