@@ -14,8 +14,8 @@ use Tests\Support\Files\ReadsFiles;
 
 /**
  * cache:clear and optimize:clear run FLUSHDB on the Redis cache database, which
- * production shares between tenants. Application code must use
- * App\Infrastructure\Support\FrameworkCacheCommands::CLEAR instead.
+ * production shares between tenants. Application code refreshes compiled files with
+ * php artisan module:refresh-caches (App\Console\Commands\Updates\RefreshCachesCommand) instead.
  */
 final class NoDataCacheFlushTest extends TestCase
 {

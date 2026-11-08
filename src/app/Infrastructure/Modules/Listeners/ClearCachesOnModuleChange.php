@@ -4,61 +4,42 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Modules\Listeners;
 
+use App\Application\Updates\Services\ModulePostUpdateRunnerInterface;
 use App\Domain\Modules\Events\ModuleDisabled;
 use App\Domain\Modules\Events\ModuleEnabled;
 use App\Domain\Modules\Events\ModuleInstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
-use App\Infrastructure\Support\FrameworkCacheCommands;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
 
 /**
- * Clears and rebuilds Laravel caches when a module is enabled, disabled, installed, or updated.
+ * Refreshes the framework caches when a module is enabled, disabled, installed, or updated.
  *
- * Required in production where routes are cached. Without clearing and
- * rebuilding the cache, Filament resources from newly enabled modules
- * won't have their routes registered, causing "Route not defined" errors.
+ * With cached routes or config, the cache must follow the module change, or the module's
+ * Filament resources are missing from it ("Route not defined"). The refresh runs in a fresh
+ * process (module:refresh-caches): it rebuilds in place only the caches in use, without the
+ * moment in which a request finds them missing (core#408), and without replacing the
+ * application instance of this request or worker.
  */
-final class ClearCachesOnModuleChange
+final readonly class ClearCachesOnModuleChange
 {
+    public function __construct(
+        private ModulePostUpdateRunnerInterface $runner,
+    ) {}
+
     public function handle(ModuleEnabled|ModuleDisabled|ModuleInstalled|ModuleUpdated $event): void
     {
-        // In tests, caches (routes, views, config) are not active, so clearing
-        // and rebuilding is unnecessary and destroys compiled Blade views
-        // mid-request, crashing subsequent Livewire re-renders.
+        // In tests, caches (routes, views, config) are not active, so refreshing them is
+        // unnecessary and rewriting compiled Blade views mid-request breaks Livewire re-renders
         if (app()->runningUnitTests()) {
             return;
         }
 
-        try {
-            // 1. Clear the compiled framework caches. Never optimize:clear or cache:clear:
-            //    with Redis they FLUSHDB a cache database shared with the other tenant
-            foreach (FrameworkCacheCommands::CLEAR as $command) {
-                Artisan::call($command);
-            }
-
-            // 2. Clear Filament component discovery cache
-            $filamentCachePath = config('filament.cache_path', base_path('bootstrap/cache/filament'));
-            if (is_dir($filamentCachePath)) {
-                File::deleteDirectory($filamentCachePath);
-            }
-
-            // 3. Invalidate OPcache for module files
-            if (function_exists('opcache_reset')) {
-                opcache_reset();
-            }
-
-            // 4. Rebuild caches
-            Artisan::call('config:cache');
-            Artisan::call('route:cache');
-            Artisan::call('view:cache');
-        } catch (\Throwable $e) {
-            Log::warning('Failed to rebuild caches after module change', [
-                'module' => $event->moduleName,
-                'event' => $event::class,
-                'error' => $e->getMessage(),
-            ]);
+        // Module PHP files changed; PHP-FPM revalidates them by timestamp anyway, this only
+        // makes it immediate when the change came through a web request
+        if (function_exists('opcache_reset')) {
+            opcache_reset();
         }
+
+        // Best effort: failures are logged by the runner, never thrown
+        $this->runner->refreshCaches();
     }
 }

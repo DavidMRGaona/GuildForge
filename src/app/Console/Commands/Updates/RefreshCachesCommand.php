@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Updates;
 
+use App\Infrastructure\Support\AtomicFrameworkCacheRebuilder;
+use App\Infrastructure\Support\FrameworkCache;
 use App\Infrastructure\Support\FrameworkCacheCommands;
 use Illuminate\Console\Command;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Artisan;
 
 /**
- * Rebuild the caches a module update may invalidate (config, routes, events, views).
+ * Refresh the framework caches a module change may invalidate (config, routes, events, views).
  *
- * Run by the updater in a fresh process once the update is committed: rebuilding
- * the config cache inside the queue worker replaces its application instance.
- * Caches are only rebuilt when the site was using them in the first place.
+ * Run in a fresh process, by the updater once the update is committed and on every module
+ * enable, disable or install: rebuilding the config cache inside the queue worker or a web
+ * request replaces its application instance. Only the caches the site was using are
+ * rebuilt, and each one in place while the site keeps serving requests (core#408): a cache
+ * that was not in use stays that way.
  *
  * The data cache is never cleared: with Redis that is a FLUSHDB of a database the
  * production tenants share (see FrameworkCacheCommands).
@@ -22,46 +27,60 @@ final class RefreshCachesCommand extends Command
 {
     protected $signature = 'module:refresh-caches';
 
-    protected $description = 'Clear and rebuild the framework caches after a module update (used by the updater)';
+    protected $description = 'Rebuild in place the framework caches in use after a module change (used by the updater)';
 
     protected $hidden = true;
 
-    public function handle(): int
+    public function __construct(
+        private readonly AtomicFrameworkCacheRebuilder $rebuilder,
+    ) {
+        parent::__construct();
+    }
+
+    public function handle(Application $app): int
     {
-        if ($this->laravel->runningUnitTests()) {
+        if ($app->runningUnitTests()) {
             return self::SUCCESS;
         }
 
-        $this->refresh(
-            configCached: $this->laravel->configurationIsCached(),
-            routesCached: $this->laravel->routesAreCached(),
-        );
+        $this->refresh(array_values(array_filter(
+            FrameworkCache::cases(),
+            fn (FrameworkCache $cache): bool => $cache->isCached($app),
+        )));
 
         return self::SUCCESS;
     }
 
     /**
-     * Clear the framework caches and rebuild the ones that were in use.
+     * Rebuild the caches in use and refresh the compiled views and discovery caches.
      *
-     * @return list<string> The Artisan commands run, in order
+     * @param  list<FrameworkCache>  $cached  The caches the site was using
+     * @return list<string> The cache commands and Artisan commands run, in order
      */
-    public function refresh(bool $configCached, bool $routesCached): array
+    public function refresh(array $cached): array
     {
-        $commands = FrameworkCacheCommands::CLEAR;
+        $ran = [];
 
-        if ($configCached) {
-            $commands[] = 'config:cache';
-            $commands[] = 'view:cache';
+        // In case order: the config first, since the other children boot with it
+        foreach (FrameworkCache::cases() as $cache) {
+            if (in_array($cache, $cached, true)) {
+                $this->rebuilder->rebuild($cache);
+                $ran[] = $cache->cacheCommand();
+            }
         }
 
-        if ($routesCached) {
-            $commands[] = 'route:cache';
-        }
+        // A cached config stands for a production-like site, where views are precompiled;
+        // elsewhere they are compiled on demand, so dropping them is enough
+        $commands = [
+            in_array(FrameworkCache::Config, $cached, true) ? 'view:recompile' : 'view:clear',
+            ...FrameworkCacheCommands::CLEAR,
+        ];
 
         foreach ($commands as $command) {
             Artisan::call($command);
+            $ran[] = $command;
         }
 
-        return $commands;
+        return $ran;
     }
 }
