@@ -22,7 +22,7 @@ Las secciones se agrupan así:
 - **Actividades**: lo que se juega, como mesas, torneos o reservas del local.
 - **Comunicación**: anuncios y encuestas.
 - **Personas**: usuarios, roles y socios.
-- **Sitio web**: el carrusel de portada (**Portada**), el menú del sitio (**Navegación**), la página «Nosotros» y las páginas legales.
+- **Sitio web**: el carrusel de portada (**Hero slides**), el menú del sitio (**Navegación**), la página «Nosotros» y las páginas legales.
 - **Catálogos**: las listas que usan otras secciones, como las etiquetas.
 - **Sistema**: **Configuración** (del sitio, del correo, del escritorio y de cada módulo), los módulos y las actualizaciones.
 

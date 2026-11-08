@@ -15,9 +15,9 @@ return [
         'admin' => 'Administration',
     ],
     'hero_slides' => [
-        'navigation' => 'Home page',
+        'navigation' => 'Hero slides',
         'label' => 'slide',
-        'plural' => 'Home page slides',
+        'plural' => 'Hero slides',
     ],
     'settings_cluster' => [
         'label' => 'Settings',

@@ -15,9 +15,9 @@ return [
         'admin' => 'Administración',
     ],
     'hero_slides' => [
-        'navigation' => 'Portada',
-        'label' => 'diapositiva',
-        'plural' => 'Diapositivas de la portada',
+        'navigation' => 'Hero slides',
+        'label' => 'slide',
+        'plural' => 'Hero slides',
     ],
     'settings_cluster' => [
         'label' => 'Configuración',

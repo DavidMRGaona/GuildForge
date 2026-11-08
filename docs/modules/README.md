@@ -718,7 +718,7 @@ The sidebar groups belong to the core (`App\Filament\Support\PanelNavigationGrou
 | Actividades | What people play or book: tables, tournaments, venue bookings |
 | Comunicación | Announcements, surveys |
 | Personas | Users, roles, association members |
-| Sitio web | Home page slides, public menu, «Nosotros», legal pages, link page, cookies |
+| Sitio web | Hero slides, public menu, «Nosotros», legal pages, link page, cookies |
 | Catálogos (collapsed) | Lists other entries use: game systems, publishers, content warnings, tournament profiles, tags |
 | Sistema (collapsed) | «Configuración» (every settings page), modules, updates |
 
@@ -743,7 +743,7 @@ Sort slots, so modules never depend on each other's numbers (core entries in bra
 | Actividades | game-tables Mesas 10 · tournaments Torneos 20 · venue-bookings Reservas 30 |
 | Comunicación | announcements Anuncios 10 · surveys Encuestas 20 |
 | Personas | [Usuarios 10 · Roles 20] · memberships Socios 30 |
-| Sitio web | [Portada 10 · Navegación 20 · Nosotros 30 · Páginas legales 40] · link-page Página de enlaces 50 · cookie-consent Cookies 60 |
+| Sitio web | [Hero slides 10 · Navegación 20 · Nosotros 30 · Páginas legales 40] · link-page Página de enlaces 50 · cookie-consent Cookies 60 |
 | Catálogos | game-tables Sistemas de juego 10, Editoriales 20, Avisos de contenido 30 · tournaments Perfiles de torneo 40 · [Etiquetas 90] |
 | Sistema | [Configuración 10 · Módulos 20 · Actualizaciones de módulos 30 · Actualización del core 40] |
 
