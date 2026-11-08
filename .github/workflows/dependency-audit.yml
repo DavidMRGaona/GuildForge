@@ -1,0 +1,53 @@
+name: Dependency audit
+
+# Security advisories for the PHP dependencies pinned in composer.lock. A workflow of its own,
+# not a step of CI: CI holds the required checks and Deploy waits for it, so an advisory
+# published today would otherwise block every pull request and every deployment, urgent fixes
+# included, until someone updates the lock. Here a failure only turns this run red.
+#
+# - Pull requests that change the Composer files: the lock they bring must be clean
+# - Every day on main: catches advisories published after the lock was last changed; GitHub
+#   mails a failed scheduled run to whoever last edited this file's schedule
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/composer.json'
+      - 'src/composer.lock'
+      - '.github/workflows/dependency-audit.yml'
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  composer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Only Composer is needed: --locked reads composer.lock, without installing anything
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          tools: composer
+
+      # Abandoned packages are listed but do not fail the run: this job is about advisories
+      - name: Audit composer.lock
+        run: composer audit --locked --no-interaction --abandoned=report
