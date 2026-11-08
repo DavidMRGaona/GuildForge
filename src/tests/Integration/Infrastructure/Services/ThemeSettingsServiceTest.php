@@ -138,10 +138,12 @@ final class ThemeSettingsServiceTest extends TestCase
     {
         $css = $this->service->getCssVariables();
 
-        $this->assertStringStartsWith(':root {', trim($css));
+        // One step more specific than app.css (:root and .dark): the site palette wins whatever
+        // order the stylesheets load in (the dev server appends app.css after the head)
+        $this->assertStringStartsWith(':root:root {', trim($css));
         $this->assertMatchesRegularExpression('/--[\w-]+:\s*[^;]+;/', $css);
         $this->assertStringContainsString('}', $css);
-        $this->assertStringContainsString('.dark {', $css);
+        $this->assertStringContainsString(':root.dark {', $css);
     }
 
     public function test_get_css_variables_includes_dark_mode_overrides(): void

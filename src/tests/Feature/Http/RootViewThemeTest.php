@@ -44,6 +44,49 @@ final class RootViewThemeTest extends TestCase
         $this->assertStringContainsString('var darkByDefault = true;', $this->rootHead());
     }
 
+    /**
+     * The layouts add the site palette only once Vue mounts them, and module pages without the
+     * core layout get no layout at all: the head carries it for every page (core#394).
+     */
+    public function test_the_head_carries_the_site_palette(): void
+    {
+        $head = $this->rootHead();
+
+        $this->assertMatchesRegularExpression('#<style data-site-theme>\s*:root:root \{#', $head);
+        $this->assertStringContainsString('--color-primary-700:', $head);
+        $this->assertStringContainsString('--color-primary-action:', $head);
+        $this->assertStringContainsString(':root.dark {', $head);
+    }
+
+    public function test_the_head_loads_the_site_fonts(): void
+    {
+        app(SettingsServiceInterface::class)->set('theme_font_heading', 'Lora');
+        app(SettingsServiceInterface::class)->set('theme_font_body', 'Open Sans');
+
+        $this->assertStringContainsString(
+            '<link rel="stylesheet" href="https://fonts.bunny.net/css2?family=Lora:wght@400;500;600;700&amp;family=Open%20Sans:wght@400;500;600;700&amp;display=swap" data-site-fonts>',
+            $this->rootHead(),
+        );
+    }
+
+    public function test_system_fonts_load_nothing(): void
+    {
+        app(SettingsServiceInterface::class)->set('theme_font_heading', 'system-ui');
+        app(SettingsServiceInterface::class)->set('theme_font_body', 'system-ui');
+
+        $this->assertStringNotContainsString('data-site-fonts', $this->rootHead());
+    }
+
+    public function test_a_stored_value_cannot_close_the_style_element(): void
+    {
+        app(SettingsServiceInterface::class)->set('theme_font_heading', 'Lora</style><script>alert(1)</script>');
+
+        $head = $this->rootHead();
+
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $head);
+        $this->assertSame(1, substr_count($head, '</style>'));
+    }
+
     private function rootHead(): string
     {
         $html = $this->get('/')->assertOk()->getContent();
