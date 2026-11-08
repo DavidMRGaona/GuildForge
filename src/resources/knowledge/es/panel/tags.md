@@ -35,7 +35,7 @@ Hay dos niveles:
 
 ## Borrar una etiqueta
 
-Solo se puede borrar una etiqueta que no tenga subcategorías y que no use ningún evento, artículo ni galería. Si no ves **Borrar**, quítala antes de ese contenido.
+Solo se puede borrar una etiqueta que no tenga subcategorías y que no use ningún evento, artículo ni galería. Si no ves **Borrar** en el menú **⋯** de su fila, quítala antes de ese contenido.
 
 La lista enseña cuántos eventos, artículos y galerías usan cada etiqueta.
 

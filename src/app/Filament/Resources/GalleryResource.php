@@ -155,17 +155,20 @@ class GalleryResource extends BaseResource
                     ->label(__('Título'))
                     ->searchable()
                     ->sortable()
-                    ->limit(50),
+                    ->limit(50)
+                    ->wrap(),
                 TextColumn::make('photos_count')
                     ->label(__('Fotos'))
                     ->counts('photos')
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('sm'),
                 IconColumn::make('is_published')
                     ->label(__('Publicada'))
                     ->boolean(),
                 IconColumn::make('is_featured')
                     ->label(__('Destacada'))
-                    ->boolean(),
+                    ->boolean()
+                    ->visibleFrom('sm'),
                 TextColumn::make('created_at')
                     ->label(__('Creada'))
                     ->dateTime('d/m/Y')

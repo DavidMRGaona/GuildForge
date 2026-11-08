@@ -198,7 +198,8 @@ class UserResource extends BaseResource
                 ImageColumn::make('avatar_public_id')
                     ->label(__('Avatar'))
                     ->circular()
-                    ->disk('images'),
+                    ->disk('images')
+                    ->visibleFrom('md'),
                 TextColumn::make('name')
                     ->label(__('Nombre de usuario'))
                     ->searchable()
@@ -206,11 +207,13 @@ class UserResource extends BaseResource
                 TextColumn::make('display_name')
                     ->label(__('Nombre para mostrar'))
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('2xl'),
                 TextColumn::make('email')
                     ->label(__('Correo electrónico'))
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->visibleFrom('sm'),
                 TextColumn::make('roles.display_name')
                     ->label(__('filament.users.fields.roles'))
                     ->badge()
@@ -223,7 +226,8 @@ class UserResource extends BaseResource
                     })
                     ->tooltip(fn (UserModel $record): ?string => $inactiveRoles($record) === []
                         ? null
-                        : (string) __('filament.users.roleBadges.inactive')),
+                        : (string) __('filament.users.roleBadges.inactive'))
+                    ->visibleFrom('xl'),
                 IconColumn::make('email_verified_at')
                     ->label(__('filament.users.fields.emailVerified'))
                     ->boolean()
@@ -231,7 +235,8 @@ class UserResource extends BaseResource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger')
-                    ->getStateUsing(fn (UserModel $record): bool => $record->email_verified_at !== null),
+                    ->getStateUsing(fn (UserModel $record): bool => $record->email_verified_at !== null)
+                    ->visibleFrom('xl'),
                 TextColumn::make('status')
                     ->label(__('filament.users.fields.status'))
                     ->badge()
@@ -274,9 +279,10 @@ class UserResource extends BaseResource
                     ->label(__('filament.users.filters.status'))
                     ->default('with'),
             ])
+            // One menu: «Editar» beside the menu made the table overflow its container
             ->recordActions([
-                EditAction::make(),
                 ActionGroup::make([
+                    EditAction::make(),
                     Action::make('sendVerificationEmail')
                         ->authorize('update')
                         ->label(__('filament.users.actions.sendVerificationEmail'))

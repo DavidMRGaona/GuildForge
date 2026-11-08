@@ -45,9 +45,11 @@ class RecentArticlesWidget extends TableWidget
                     ->limit(50)
                     ->url(fn (ArticleModel $record): ?string => ArticleResource::canEdit($record)
                         ? ArticleResource::getUrl('edit', ['record' => $record])
-                        : null),
+                        : null)
+                    ->wrap(),
                 TextColumn::make('author.display_name')
-                    ->label(__('Autor')),
+                    ->label(__('Autor'))
+                    ->visibleFrom('sm'),
                 TextColumn::make('published_at')
                     ->label(__('Publicado'))
                     ->dateTime('d/m/Y H:i'),

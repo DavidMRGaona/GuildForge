@@ -22,6 +22,7 @@ use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel
 use App\Infrastructure\Knowledge\Services\SiteGuideService;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Checkbox;
@@ -239,15 +240,18 @@ class KnowledgeGuideResource extends BaseResource
                     ->label(__('filament.knowledge_guides.columns.source'))
                     ->badge()
                     ->formatStateUsing(fn (KnowledgeGuideModel $record): string => self::sourceLabel($record))
-                    ->color(fn (KnowledgeGuideModel $record): string => self::isSiteGuide($record) ? 'primary' : 'gray'),
+                    ->color(fn (KnowledgeGuideModel $record): string => self::isSiteGuide($record) ? 'primary' : 'gray')
+                    ->visibleFrom('sm'),
                 TextColumn::make('audience')
                     ->label(__('filament.knowledge_guides.columns.audience'))
                     ->formatStateUsing(fn (string $state): string => self::audienceOptions()[$state] ?? $state)
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('xl'),
                 TextColumn::make('category_id')
                     ->label(__('filament.knowledge_guides.columns.category'))
                     ->formatStateUsing(fn (string $state): string => self::categoryLabels()[$state] ?? $state)
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visibleFrom('2xl'),
                 TextColumn::make('status')
                     ->label(__('filament.knowledge_guides.columns.status'))
                     ->badge()
@@ -261,17 +265,20 @@ class KnowledgeGuideResource extends BaseResource
                 IconColumn::make('is_featured')
                     ->label(__('filament.knowledge_guides.columns.featured'))
                     ->state(fn (KnowledgeGuideModel $record): bool => self::isFeatured($record))
-                    ->boolean(),
+                    ->boolean()
+                    ->visibleFrom('md'),
                 TextColumn::make('helpful')
                     ->label(__('filament.knowledge_guides.columns.helpful'))
                     ->tooltip(__('filament.knowledge_guides.columns.votes_help', ['days' => self::METRICS_DAYS]))
                     ->state(fn (KnowledgeGuideModel $record): int => self::feedback()[$record->guide_id]['helpful'] ?? 0)
-                    ->numeric(),
+                    ->numeric()
+                    ->visibleFrom('xl'),
                 TextColumn::make('not_helpful')
                     ->label(__('filament.knowledge_guides.columns.not_helpful'))
                     ->tooltip(__('filament.knowledge_guides.columns.votes_help', ['days' => self::METRICS_DAYS]))
                     ->state(fn (KnowledgeGuideModel $record): int => self::feedback()[$record->guide_id]['notHelpful'] ?? 0)
-                    ->numeric(),
+                    ->numeric()
+                    ->visibleFrom('xl'),
             ])
             ->defaultSort('title')
             ->filters([
@@ -286,71 +293,74 @@ class KnowledgeGuideResource extends BaseResource
                     ->label(__('filament.knowledge_guides.filters.audience'))
                     ->options(self::audienceOptions()),
             ])
+            // One menu: labelled row actions made the table overflow its container
             ->recordActions([
-                EditAction::make(),
-                Action::make('hide')
-                    ->label(__('filament.knowledge_guides.actions.hide'))
-                    ->icon('heroicon-o-eye-slash')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalDescription(__('filament.knowledge_guides.actions.hide_description'))
-                    ->visible(fn (KnowledgeGuideModel $record): bool => self::canOverride($record) && ! self::isHidden($record))
-                    ->action(function (KnowledgeGuideModel $record): void {
-                        resolve(GuideOverrideServiceInterface::class)->setHidden(GuideId::fromString($record->guide_id), true);
-                        Notification::make()->title(__('filament.knowledge_guides.notifications.hidden'))->success()->send();
-                    }),
-                Action::make('show')
-                    ->label(__('filament.knowledge_guides.actions.show'))
-                    ->icon('heroicon-o-eye')
-                    ->visible(fn (KnowledgeGuideModel $record): bool => self::canOverride($record) && self::isHidden($record))
-                    ->action(function (KnowledgeGuideModel $record): void {
-                        resolve(GuideOverrideServiceInterface::class)->setHidden(GuideId::fromString($record->guide_id), false);
-                        Notification::make()->title(__('filament.knowledge_guides.notifications.shown'))->success()->send();
-                    }),
-                Action::make('feature')
-                    ->label(__('filament.knowledge_guides.actions.feature'))
-                    ->icon('heroicon-o-star')
-                    ->visible(fn (KnowledgeGuideModel $record): bool => self::canOverride($record))
-                    ->fillForm(fn (KnowledgeGuideModel $record): array => ['featured' => match ($record->override?->featured) {
-                        true => 'featured',
-                        false => 'not_featured',
-                        null => 'default',
-                    }])
-                    ->schema([
-                        Select::make('featured')
-                            ->label(__('filament.knowledge_guides.actions.feature_field'))
-                            ->helperText(__('filament.knowledge_guides.actions.feature_help'))
-                            ->options([
-                                'default' => __('filament.knowledge_guides.featured_states.default'),
-                                'featured' => __('filament.knowledge_guides.featured_states.featured'),
-                                'not_featured' => __('filament.knowledge_guides.featured_states.not_featured'),
-                            ])
-                            ->required()
-                            ->native(false),
-                    ])
-                    ->action(function (KnowledgeGuideModel $record, array $data): void {
-                        resolve(GuideOverrideServiceInterface::class)->setFeatured(
-                            GuideId::fromString($record->guide_id),
-                            match ($data['featured'] ?? null) {
-                                'featured' => true,
-                                'not_featured' => false,
-                                default => null,
-                            },
-                        );
-                        Notification::make()->title(__('filament.knowledge_guides.notifications.featured'))->success()->send();
-                    }),
-                DeleteAction::make()
-                    ->schema([
-                        Checkbox::make('confirmation')
-                            ->label(__('filament.knowledge_guides.actions.delete_confirmation_check'))
-                            ->accepted()
-                            ->required(),
-                    ])
-                    ->using(function (KnowledgeGuideModel $record): bool {
-                        resolve(SiteGuideServiceInterface::class)->delete(GuideId::fromString($record->guide_id));
+                ActionGroup::make([
+                    EditAction::make(),
+                    Action::make('hide')
+                        ->label(__('filament.knowledge_guides.actions.hide'))
+                        ->icon('heroicon-o-eye-slash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalDescription(__('filament.knowledge_guides.actions.hide_description'))
+                        ->visible(fn (KnowledgeGuideModel $record): bool => self::canOverride($record) && ! self::isHidden($record))
+                        ->action(function (KnowledgeGuideModel $record): void {
+                            resolve(GuideOverrideServiceInterface::class)->setHidden(GuideId::fromString($record->guide_id), true);
+                            Notification::make()->title(__('filament.knowledge_guides.notifications.hidden'))->success()->send();
+                        }),
+                    Action::make('show')
+                        ->label(__('filament.knowledge_guides.actions.show'))
+                        ->icon('heroicon-o-eye')
+                        ->visible(fn (KnowledgeGuideModel $record): bool => self::canOverride($record) && self::isHidden($record))
+                        ->action(function (KnowledgeGuideModel $record): void {
+                            resolve(GuideOverrideServiceInterface::class)->setHidden(GuideId::fromString($record->guide_id), false);
+                            Notification::make()->title(__('filament.knowledge_guides.notifications.shown'))->success()->send();
+                        }),
+                    Action::make('feature')
+                        ->label(__('filament.knowledge_guides.actions.feature'))
+                        ->icon('heroicon-o-star')
+                        ->visible(fn (KnowledgeGuideModel $record): bool => self::canOverride($record))
+                        ->fillForm(fn (KnowledgeGuideModel $record): array => ['featured' => match ($record->override?->featured) {
+                            true => 'featured',
+                            false => 'not_featured',
+                            null => 'default',
+                        }])
+                        ->schema([
+                            Select::make('featured')
+                                ->label(__('filament.knowledge_guides.actions.feature_field'))
+                                ->helperText(__('filament.knowledge_guides.actions.feature_help'))
+                                ->options([
+                                    'default' => __('filament.knowledge_guides.featured_states.default'),
+                                    'featured' => __('filament.knowledge_guides.featured_states.featured'),
+                                    'not_featured' => __('filament.knowledge_guides.featured_states.not_featured'),
+                                ])
+                                ->required()
+                                ->native(false),
+                        ])
+                        ->action(function (KnowledgeGuideModel $record, array $data): void {
+                            resolve(GuideOverrideServiceInterface::class)->setFeatured(
+                                GuideId::fromString($record->guide_id),
+                                match ($data['featured'] ?? null) {
+                                    'featured' => true,
+                                    'not_featured' => false,
+                                    default => null,
+                                },
+                            );
+                            Notification::make()->title(__('filament.knowledge_guides.notifications.featured'))->success()->send();
+                        }),
+                    DeleteAction::make()
+                        ->schema([
+                            Checkbox::make('confirmation')
+                                ->label(__('filament.knowledge_guides.actions.delete_confirmation_check'))
+                                ->accepted()
+                                ->required(),
+                        ])
+                        ->using(function (KnowledgeGuideModel $record): bool {
+                            resolve(SiteGuideServiceInterface::class)->delete(GuideId::fromString($record->guide_id));
 
-                        return true;
-                    }),
+                            return true;
+                        }),
+                ]),
             ]);
     }
 

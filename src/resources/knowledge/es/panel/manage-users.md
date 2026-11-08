@@ -45,7 +45,7 @@ Un rol puede salir como inactivo si requiere ser {{association_role}} y la perso
 
 ## Ayudar con el acceso
 
-En el menú de acciones de cada fila tienes:
+En el menú **⋯** de cada fila tienes:
 
 - **Enviar email de verificación**: solo si aún no ha verificado su correo.
 - **Enviar email de recuperación**: le llega un enlace para poner una contraseña nueva.
@@ -53,6 +53,8 @@ En el menú de acciones de cada fila tienes:
 Para cambiarle la contraseña tú, escríbela en **Contraseña** y guarda. Si dejas el campo vacío, la contraseña no cambia.
 
 ## Desactivar, restaurar y anonimizar
+
+Están en el mismo menú **⋯** de la fila del usuario:
 
 - **Desactivar**: la persona ya no puede iniciar sesión. No puedes desactivar tu propia cuenta.
 - **Restaurar**: reactiva una cuenta desactivada. Si alguno de sus roles ya está al máximo de personas, la cuenta vuelve sin ese rol y te lo avisa.
