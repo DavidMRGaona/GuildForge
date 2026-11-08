@@ -7,7 +7,7 @@
 ```
 guildforge/                             # Repository root
 ├── .github/
-│   └── workflows/                      # ci.yml, deploy.yml, reusable-module-release.yml
+│   └── workflows/                      # ci.yml, deploy.yml, dependency-audit.yml, reusable-module-release.yml
 ├── docker/                             # Container configuration
 │   ├── nginx/                          # Nginx configuration (development)
 │   ├── node/                           # Node container (Vite dev server)

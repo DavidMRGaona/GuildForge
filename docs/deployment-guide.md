@@ -184,7 +184,7 @@ At startup supervisord logs `CRIT Server 'unix_http_server' running without any 
 
 ### GitHub Actions
 
-The project uses two main workflows and one reusable workflow:
+The project uses two main workflows, a dependency audit and one reusable workflow:
 
 #### 1. CI (`ci.yml`)
 
@@ -246,7 +246,16 @@ CI: test, test (Madrid storage)    ←── in parallel ──→    CI: lint (
                 Deploy (rollout): every other target
 ```
 
-#### 3. Module release (`reusable-module-release.yml`)
+#### 3. Dependency audit (`dependency-audit.yml`)
+
+Runs `composer audit --locked` on `src/composer.lock` (security advisories; abandoned packages are listed without failing):
+- On pull requests to `main` that change `src/composer.json`, `src/composer.lock` or the workflow itself: the lock they bring must be clean
+- Every day at 06:17 UTC on `main`, to catch advisories published after the lock last changed; GitHub mails a failed scheduled run to whoever last edited the workflow's schedule
+- On demand from the Actions tab (`workflow_dispatch`)
+
+It is not a required check and Deploy does not wait for it, on purpose: a new advisory must not block unrelated pull requests or deployments. When it fails, update the affected packages (`composer update <packages> --no-install`, only `composer.lock` changes) in a pull request of their own.
+
+#### 4. Module release (`reusable-module-release.yml`)
 
 Reusable workflow for publishing modules as ZIP packages in GitHub Releases.
 
