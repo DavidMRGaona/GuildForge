@@ -22,6 +22,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Tests\Support\Filament\ArrayRecordsTableFixtureWidget;
 use Tests\TestCase;
 
 /**
@@ -113,6 +114,33 @@ final class RowDetailsActionTest extends TestCase
         $this->assertFalse($byName['title']['empty']);
         // An icon is a value, not a blank
         $this->assertFalse($byName['is_published']['empty']);
+    }
+
+    /**
+     * Rows that come from `->records()` are arrays, not models (core#403).
+     */
+    public function test_it_reads_rows_that_are_arrays(): void
+    {
+        $widget = Livewire::test(ArrayRecordsTableFixtureWidget::class)
+            ->mountTableAction(RowDetailsAction::NAME, 'first');
+
+        $component = $widget->instance();
+        $this->assertInstanceOf(HasTable::class, $component);
+        $table = $component->getTable();
+        // The row as Filament hands it to the action: the array plus its key
+        $record = $component->getTableRecord('first');
+        $this->assertIsArray($record);
+
+        $byName = array_column(RowDetailsAction::entries($table, $record), null, 'name');
+        $this->assertSame(['title', 'kind', 'pending'], array_keys($byName));
+        $this->assertStringContainsString('3', $byName['pending']['html']->toHtml());
+
+        $action = $table->getAction(RowDetailsAction::NAME);
+        $this->assertInstanceOf(Action::class, $action);
+        $content = $action->record($record)->getModalContent();
+        $this->assertInstanceOf(Htmlable::class, $content);
+        $this->assertStringContainsString('data-row-details-entry="pending"', $content->toHtml());
+        $this->assertStringContainsString('Mesa del sábado', $content->toHtml());
     }
 
     public function test_it_hides_from_the_width_where_every_column_already_shows(): void
