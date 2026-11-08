@@ -58,8 +58,10 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         $primaryLight = $this->shade($primaryPalette, 600)->readableOn($white, lighten: false)->value;
         $primaryDark = $this->shade($primaryPalette, 500)->readableOn($white, lighten: false)->value;
 
+        // One step more specific than the defaults in app.css (:root and .dark), so the site palette
+        // wins whatever order the stylesheets load in: the dev server appends app.css after the head
         return <<<CSS
-        :root {
+        :root:root {
           /* Primary palette */
           {$primaryCss}
 
@@ -134,7 +136,7 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           --shadow-intensity: {$theme->shadowIntensity};
         }
 
-        .dark {
+        :root.dark {
           /* Semantic aliases (override app.css hardcoded values) */
           --color-primary: {$primaryDark};
           --color-primary-hover: var(--color-primary-400);
