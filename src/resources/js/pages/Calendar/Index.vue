@@ -94,17 +94,11 @@ const closeMobileModal = (): void => {
         -->
         <div class="lg:grid lg:grid-cols-3 lg:gap-x-8">
             <!-- Page header -->
-            <div
-                class="mb-8 flex flex-wrap items-center gap-x-3 gap-y-3 lg:col-span-2 lg:self-start"
-            >
+            <div class="mb-8 flex items-center gap-3 lg:col-span-2 lg:self-start">
                 <h1 class="text-3xl font-bold tracking-tight text-base-primary">
                     {{ t('calendar.title') }}
                 </h1>
                 <HelpLink guide="core.events.find-events" />
-                <!-- Own row on phones, where it does not fit beside the title; at the end from sm -->
-                <div v-if="publicCalendarFeed" class="basis-full sm:ml-auto sm:basis-auto">
-                    <CalendarSubscribeMenu :links="publicCalendarFeed" align="end" />
-                </div>
             </div>
 
             <!-- The toggle row is as tall as the title's line, so both share a centre line -->
@@ -149,24 +143,42 @@ const closeMobileModal = (): void => {
                     />
                 </div>
 
-                <!-- Legend -->
-                <ul
-                    v-if="legend.length > 0"
-                    class="mt-4 flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
-                    :aria-label="t('calendar.legendLabel')"
+                <!--
+                    Legend and the public subscription, below the calendar: away from the
+                    "only mine" toggle beside the title. On phones the button takes its own row.
+                -->
+                <div
+                    v-if="legend.length > 0 || publicCalendarFeed"
+                    class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3"
                 >
-                    <li
-                        v-for="item in legend"
-                        :key="item.sourceType"
-                        class="flex items-center gap-1.5 text-sm text-base-secondary"
+                    <ul
+                        v-if="legend.length > 0"
+                        class="flex list-none flex-wrap items-center gap-x-4 gap-y-2 p-0"
+                        :aria-label="t('calendar.legendLabel')"
                     >
-                        <span
-                            :class="['calendar-legend-dot', `calendar-legend-dot--${item.color}`]"
-                            aria-hidden="true"
-                        ></span>
-                        {{ item.sourceLabel }}
-                    </li>
-                </ul>
+                        <li
+                            v-for="item in legend"
+                            :key="item.sourceType"
+                            class="flex items-center gap-1.5 text-sm text-base-secondary"
+                        >
+                            <span
+                                :class="[
+                                    'calendar-legend-dot',
+                                    `calendar-legend-dot--${item.color}`,
+                                ]"
+                                aria-hidden="true"
+                            ></span>
+                            {{ item.sourceLabel }}
+                        </li>
+                    </ul>
+                    <div v-if="publicCalendarFeed" class="basis-full sm:ml-auto sm:basis-auto">
+                        <CalendarSubscribeMenu
+                            :links="publicCalendarFeed"
+                            align="end"
+                            placement="top"
+                        />
+                    </div>
+                </div>
             </div>
 
             <!--

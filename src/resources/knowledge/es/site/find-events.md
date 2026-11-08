@@ -34,7 +34,7 @@ Cada día muestra sus actividades con la hora de inicio y de fin. Debajo del cal
 
 Puedes añadir el calendario de {{site_name}} a la app de calendario del móvil o del ordenador, sin crear una cuenta. Se actualiza solo con los eventos nuevos, los cambios de hora y las cancelaciones.
 
-1. Pulsa **Suscribirse**, junto al título del calendario.
+1. Pulsa **Suscribirse**, debajo del calendario, junto a la leyenda.
 2. Elige tu calendario:
    - **Apple Calendar (iPhone y Mac)** abre la app Calendario con la suscripción preparada.
    - **Google Calendar** u **Outlook** abren su web en una pestaña nueva.

@@ -28,10 +28,10 @@ const links: CalendarSubscriptionLinks = {
 
 let wrapper: VueWrapper | null = null;
 
-function mountMenu(): VueWrapper {
+function mountMenu(extraProps: Record<string, unknown> = {}): VueWrapper {
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
     wrapper = mount(CalendarSubscribeMenu, {
-        props: { links },
+        props: { links, ...extraProps },
         global: { plugins: [i18n] },
         attachTo: document.body,
     });
@@ -114,5 +114,14 @@ describe('CalendarSubscribeMenu', () => {
 
         expect(menu.find('[role="menu"]').exists()).toBe(false);
         expect(document.activeElement).toBe(menu.find('button[aria-haspopup="menu"]').element);
+    });
+
+    it('opens upwards for a button at the bottom of the content', async () => {
+        const menu = mountMenu({ placement: 'top' });
+        await open(menu);
+
+        const panel = menu.find('[role="menu"]').element.parentElement;
+        expect(panel?.classList.contains('bottom-full')).toBe(true);
+        expect(panel?.classList.contains('top-full')).toBe(false);
     });
 });

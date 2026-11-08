@@ -15,10 +15,13 @@ interface Props {
      * leftwards from sm up and rightwards on phones, where the button has its own row.
      */
     align?: 'start' | 'end';
+    /** Where the menu opens vertically; 'top' for a button at the bottom of the content. */
+    placement?: 'bottom' | 'top';
 }
 
 const props = withDefaults(defineProps<Props>(), {
     align: 'start',
+    placement: 'bottom',
 });
 
 const { t } = useI18n();
@@ -98,8 +101,11 @@ onUnmounted(() => {
 
         <div
             v-if="isOpen"
-            class="absolute top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-md border border-default bg-surface shadow-lg ring-1 ring-black/5"
-            :class="props.align === 'end' ? 'left-0 sm:left-auto sm:right-0' : 'left-0'"
+            class="absolute z-50 w-72 max-w-[calc(100vw-2rem)] rounded-md border border-default bg-surface shadow-lg ring-1 ring-black/5"
+            :class="[
+                props.placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
+                props.align === 'end' ? 'left-0 sm:left-auto sm:right-0' : 'left-0',
+            ]"
         >
             <div class="py-1" role="menu" :aria-label="t('calendar.subscribe.menuLabel')">
                 <a :href="props.links.webcalUrl" :class="itemClass" role="menuitem" @click="close">
