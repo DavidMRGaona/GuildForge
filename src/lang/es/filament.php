@@ -411,6 +411,18 @@ return [
             'ap-northeast-1' => 'Asia Pacific (Tokyo)',
         ],
     ],
+    'mail_opt_outs' => [
+        'heading' => 'Bajas por categoría de correo',
+        'paused' => '{0} Ninguna cuenta tiene sus correos optativos en pausa|{1} :count cuenta tiene sus correos optativos en pausa|[2,*] :count cuentas tienen sus correos optativos en pausa',
+        'columns' => [
+            'category' => 'Categoría',
+            'section' => 'Sección',
+            'opted_out' => 'Bajas',
+            'eligible' => 'Pueden recibirla',
+            'percentage' => 'Porcentaje',
+        ],
+        'empty' => 'No hay categorías de correo optativas',
+    ],
     'mail_statistics' => [
         'title' => 'Estadísticas de correo',
         'table' => [

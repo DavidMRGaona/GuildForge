@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Application\Mail\Contracts\MailDeliveryRuleInterface;
+use App\Application\Mail\Services\MailCategoryOptOutStatisticsInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
@@ -15,6 +16,7 @@ use App\Infrastructure\Mail\Channels\PreferenceAwareMailChannel;
 use App\Infrastructure\Mail\Footer\CurrentMailFooter;
 use App\Infrastructure\Mail\Listeners\FilterMailByPreferences;
 use App\Infrastructure\Mail\Preferences\CoreMailCategories;
+use App\Infrastructure\Mail\Preferences\MailCategoryOptOutStatistics;
 use App\Infrastructure\Mail\Preferences\MailCategoryRegistry;
 use App\Infrastructure\Mail\Preferences\MailPauseService;
 use App\Infrastructure\Mail\Preferences\MailPreferenceService;
@@ -58,6 +60,8 @@ final class MailPreferencesServiceProvider extends ServiceProvider
             $app->make(MailPreferenceRepositoryInterface::class),
             $app->tagged(MailDeliveryRuleInterface::TAG),
         ));
+
+        $this->app->bind(MailCategoryOptOutStatisticsInterface::class, MailCategoryOptOutStatistics::class);
 
         $this->app->scoped(FilterMailByPreferences::class);
 
