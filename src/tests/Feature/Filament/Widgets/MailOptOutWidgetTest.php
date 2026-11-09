@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament\Widgets;
 
 use App\Application\Mail\DTOs\MailCategoryDTO;
+use App\Application\Mail\DTOs\MailOptOutReportDTO;
+use App\Application\Mail\Services\MailCategoryOptOutStatisticsInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Filament\Pages\Settings\MailStatisticsPage;
 use App\Filament\Widgets\MailOptOutWidget;
@@ -52,6 +54,27 @@ final class MailOptOutWidgetTest extends TestCase
             ->assertSee('1 cuenta')
             ->assertDontSee('quiet.person@example.test')
             ->assertDontSee($quiet->name);
+    }
+
+    public function test_it_reads_the_report_once_per_render(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $statistics = new class implements MailCategoryOptOutStatisticsInterface
+        {
+            public int $calls = 0;
+
+            public function report(): MailOptOutReportDTO
+            {
+                $this->calls++;
+
+                return new MailOptOutReportDTO(categories: [], pausedAccounts: 0);
+            }
+        };
+        $this->app->instance(MailCategoryOptOutStatisticsInterface::class, $statistics);
+
+        Livewire::test(MailOptOutWidget::class);
+
+        $this->assertSame(1, $statistics->calls);
     }
 
     public function test_the_page_shows_the_section_to_who_can_see_statistics(): void
