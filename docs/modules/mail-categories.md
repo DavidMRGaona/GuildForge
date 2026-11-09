@@ -10,6 +10,7 @@ Group the module's mail into a few categories under one section, the module's vi
 
 - **Mandatory**: the mail confirms something the person did, changes their plans or asks them to act (a sign-up confirmation, a cancellation, a request to approve). It is always sent.
 - **Optional**: everything else (reminders, news, notices about other people). It is on until the person turns it off.
+- **Digestible** (optional only): notices that come in bursts and can wait a day, such as «someone joined your table». The person can get them as a daily digest instead (see [Daily digest](#daily-digest)).
 
 The module's own global switches (settings the administrators set for the whole site) still decide first: a personal preference only ever means receiving less, never more.
 
@@ -54,6 +55,7 @@ public function registerMailCategories(): array
 
 - `section`, `label`, `description` and `reason` are translation keys: the core translates them when it lists the categories. Write them in Spanish, with the project's capitalization («Recordatorios de partidas»).
 - `icon` (optional, `optional()` and `mandatory()`) is the Lucide icon name, in kebab case, of the section's card in the profile; the first category of a section that declares one decides. The profile knows a closed list (`mailSectionIconMap` in `resources/js/utils/icons.ts`: `bell`, `book-open`, `building-2`, `calendar-check`, `calendar-days`, `circle-user-round`, `clipboard-list`, `credit-card`, `dices`, `handshake`, `heart`, `id-card`, `mail`, `megaphone`, `map-pin`, `newspaper`, `settings-2`, `shield-check`, `swords`, `ticket`, `trophy`, `users`) and uses a generic mail icon for a missing or unknown name; a name that is not kebab case throws `InvalidMailCategoryException` like the other invalid values. Needs a core with the field: declare the minimum version in the module.
+- `digestible: true` (on `optional()` only; `mandatory()` has no such parameter) offers the daily digest for the category.
 - `audience` only decides who sees the category in their profile. It never decides whether a mail goes out, and if it throws, the category is hidden. Without it, everyone sees the category.
 - The core loads the categories of enabled modules only. A key without the module's prefix, a malformed key or a mandatory category without a reason throws `InvalidMailCategoryException` in local and testing (module CI included); in production the category is skipped with a warning.
 
@@ -128,6 +130,58 @@ app(MailSubjectMuteServiceInterface::class)->forgetSubject('my-module.table', $t
 
 `MailSubjectMuteServiceInterface` also answers `isMuted($user, $subject)` and `mutedFor($user)`; never read `user_mail_subject_mutes` directly. The table holds one row per account and thing (`unique(user_id, subject_type, subject_id)`, plus an index on `(subject_type, subject_id)` for `forgetSubject()`); the account's deletion cascades.
 
+## Daily digest
+
+Some optional mail comes in bursts: «Ana joined your table», «Luis left it», five times in an afternoon. Turning it off leaves the organizer blind; receiving each one is too much. A category marked `digestible: true` offers three choices instead of the switch: **at once** (the default), **daily digest** or **not at all**.
+
+```php
+MailCategoryDTO::optional(
+    key: 'my-module.sign-ups',
+    section: 'my-module::mail.categories.section',
+    label: 'my-module::mail.categories.sign_ups.label',
+    description: 'my-module::mail.categories.sign_ups.description',
+    digestible: true,
+),
+```
+
+Mark only notices that can wait until the next morning and are about other people or things. Never a mail that asks the person to act soon, and never a mandatory one: those always go out at once.
+
+**The line of each notice.** The digest shows one line per notice. A notification gives its own with `HasMailDigestLine`:
+
+```php
+use App\Application\Mail\Contracts\HasMailCategory;
+use App\Application\Mail\Contracts\HasMailDigestLine;
+use App\Application\Mail\DTOs\MailDigestLineDTO;
+use Illuminate\Notifications\Notification;
+
+final class PlayerJoinedNotification extends Notification implements HasMailCategory, HasMailDigestLine
+{
+    public function mailDigestLine(object $notifiable): ?MailDigestLineDTO
+    {
+        return new MailDigestLineDTO(
+            text: __('my-module::mail.digest.joined', ['player' => $this->player->name, 'table' => $this->table->title]),
+            url: route('my-module.tables.show', $this->table),
+        );
+    }
+}
+```
+
+- `text` is put on one line and cut to 200 characters (ending in «…»). It is escaped wherever it is shown, so pass names as they are. It is written when the notice is kept, in the locale of that moment.
+- `url` is optional and must be an absolute `http(s)` address (`route()` gives one); anything else throws `InvalidArgumentException`.
+- Without `HasMailDigestLine`, or when it returns `null` or throws, the digest uses the **subject** of the mail and the address of its **button** (`action()`): every notification has a subject, and it already says in one line what the mail is about. Implement the contract when the subject is too vague on its own («Nueva inscripción»).
+- A notification whose `toMail()` returns a `Mailable` is never kept: it is sent at once.
+- Both need the core release with core#333: set `requires.core` accordingly.
+
+What the core does with it:
+
+- **Keeping.** When the person chose the digest for the category, the notice is kept instead of sent, but only after every delivery rule let it through: a paused mail or one about a muted thing is dropped, not kept. If it cannot be kept, it is sent at once.
+- **Sending.** Every hour the scheduler runs `mail:send-digests`. It queues, for each person, a digest with what was kept before the last digest hour (*Sistema → Configuración → Correo electrónico → Hora del resumen diario*, 08:00 by default, in the display zone), so a missed run is caught up an hour later. Each notice is checked again: if the person turned its category off, paused their mail or muted its subject since, it is dropped, and so is one of a category that is no longer registered. The notices are deleted only once the mail went out: a failure keeps them for the next run, and running twice sends nothing twice. One digest shows the newest 100 notices and counts the rest.
+- **The digest mail** has no category of its own and only an anonymized account stops it. Its footer lists each category it gathers with its unsubscribe link; when it gathers just one, it also carries that category's `List-Unsubscribe` headers.
+- **Cleaning up.** A notice that could not be sent for a week is dropped, with a warning in the log. Anonymizing an account deletes its notices; deleting it cascades.
+- Choosing «at once» again leaves what was already kept for the next digest.
+
+Never read `user_mail_digest_items` or the `digest` column of `user_mail_preferences` directly: `MailPreferenceServiceInterface::sectionsFor()` says how each category is received (`delivery`: `immediate`, `digest` or `none`; `enabled` is false only for `none`) and `MailDigestServiceInterface` keeps and sends the notices.
+
 ## Notify the account, not its address
 
 The core recognises the person only when the notification goes to the account:
@@ -145,7 +199,8 @@ When a notification is about to go out by mail to an account, the core:
 1. Sends nothing to an anonymized account.
 2. Sends mail of a mandatory category always.
 3. Holds back mail of an optional category the person turned off, while their optional mail is paused, or about a thing they muted.
-4. Sends the mail if the preferences cannot be read: missing a cancellation is worse than one reminder too many.
+4. Keeps what is left of a digestible category for the daily digest, when the person chose it (core#333).
+5. Sends the mail if the preferences cannot be read: missing a cancellation is worse than one reminder too many.
 
 Each reason to hold optional mail back is a `MailDeliveryRuleInterface` tagged `mail.delivery_rules`: `allows($user, $category, $subject)`, where `$subject` is the `MailSubjectDTO` of the notification or `null`. Mandatory categories never reach the rules, and a rule that throws lets the mail through.
 
@@ -178,11 +233,11 @@ To build these addresses yourself (for example in a page of the module), use `Ma
 
 ## Where people choose
 
-The profile has a **Correos** tab (`/perfil?tab=mail`, id `mail`, exported as `MAIL_TAB` in `useProfileTabs.ts`) that draws `sectionsFor()` as one card per section (core#453): icon (`MailPreferenceSectionDTO::$icon`), name and «2 de 3 activados» on top, one row with a switch per optional category (`MailPreferenceRow`, whose `control` slot takes any other control and receives the ids it must be labelled and described by), and the mandatory ones as a list with a padlock, their reason and no control at the end of the card (`MailMandatoryList`; a section with only mandatory ones shows only that), and a «Guardar cambios» button that sends only what changed to `PUT /perfil/correos` (`profile.mail-preferences.update`). The server validates every choice through `update()`; a refused one comes back as an error under `preferences.<category key>`. The tab is where mail footers and unsubscribe links point to. Above the categories sits the pause block (core#331): a week, a month or until the person resumes (`PUT /perfil/correos/pausa` with `duration` = `week|month|indefinite`; `DELETE` resumes; both behind the same middleware and throttle as the choices). The pause is one row in `user_mail_pauses` (`user_id` primary key, `paused_until` nullable: null = until the person resumes; resuming deletes the row). It is a delivery rule like any other (`PausedMailRule`, tagged in `mail.delivery_rules`): it holds back every optional mail, leaves mandatory mail alone, never reads or changes the per-category choices, and ends by itself because the end is compared with the current instant when a mail is sent (nothing is scheduled). A week or a month lasts through that display day, so «until 12 December» includes the 12th. If the pause cannot be read, the mail goes out. Anonymizing an account deletes it. Ask `MailPauseServiceInterface::current($user)` (null when there is none or it is over) instead of reading the table. Accounts paused right now: `SELECT COUNT(*) FROM user_mail_pauses WHERE paused_until IS NULL OR paused_until > <now in the storage zone>`.
+The profile has a **Correos** tab (`/perfil?tab=mail`, id `mail`, exported as `MAIL_TAB` in `useProfileTabs.ts`) that draws `sectionsFor()` as one card per section (core#453): icon (`MailPreferenceSectionDTO::$icon`), name and «2 de 3 activados» on top, one row with a switch per optional category (`MailPreferenceRow`, whose `control` slot takes any other control and receives the ids it must be labelled and described by; a digestible category gets three radios there, «Al momento», «Resumen diario» and «No recibir», core#333), and the mandatory ones as a list with a padlock, their reason and no control at the end of the card (`MailMandatoryList`; a section with only mandatory ones shows only that), and a «Guardar cambios» button that sends only what changed to `PUT /perfil/correos` (`profile.mail-preferences.update`): a boolean for a switch, `immediate`, `digest` or `none` for a digestible category. The server validates every choice through `update()`; a refused one comes back as an error under `preferences.<category key>`. The tab is where mail footers and unsubscribe links point to. Above the categories sits the pause block (core#331): a week, a month or until the person resumes (`PUT /perfil/correos/pausa` with `duration` = `week|month|indefinite`; `DELETE` resumes; both behind the same middleware and throttle as the choices). The pause is one row in `user_mail_pauses` (`user_id` primary key, `paused_until` nullable: null = until the person resumes; resuming deletes the row). It is a delivery rule like any other (`PausedMailRule`, tagged in `mail.delivery_rules`): it holds back every optional mail, leaves mandatory mail alone, never reads or changes the per-category choices, and ends by itself because the end is compared with the current instant when a mail is sent (nothing is scheduled). A week or a month lasts through that display day, so «until 12 December» includes the 12th. If the pause cannot be read, the mail goes out. Anonymizing an account deletes it. Ask `MailPauseServiceInterface::current($user)` (null when there is none or it is over) instead of reading the table. Accounts paused right now: `SELECT COUNT(*) FROM user_mail_pauses WHERE paused_until IS NULL OR paused_until > <now in the storage zone>`.
 
 ## Opt-outs in the panel statistics
 
-*Sistema → Configuración → Estadísticas de correo* (`mail.view_stats`) lists, for each optional category, how many accounts turned it off, out of how many can receive it, and the percentage (core#332), plus how many accounts have their optional mail paused right now. Only counts: never names or addresses. Ask `MailCategoryOptOutStatisticsInterface::report()` instead of reading the tables.
+*Sistema → Configuración → Estadísticas de correo* (`mail.view_stats`) lists, for each optional category, how many accounts turned it off, out of how many can receive it, and the percentage (core#332), how many receive it as a daily digest when it is digestible (core#333, `MailCategoryOptOutDTO::$inDigest`, null otherwise), plus how many accounts have their optional mail paused right now. Only counts: never names or addresses. Ask `MailCategoryOptOutStatisticsInterface::report()` instead of reading the tables.
 
 - «Can receive it» is the active accounts: neither anonymized nor deactivated, which count nowhere. A category without `audience` costs two grouped counts.
 - With an `audience`, the closure runs on the active accounts in chunks of 500 and the result is cached for 10 minutes; someone who turned the category off and no longer sees it is not counted. A closure that throws counts nobody for that account.

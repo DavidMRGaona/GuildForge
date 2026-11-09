@@ -5,7 +5,7 @@ summary: Elige cómo se envían los correos de la web, pruébalo y revisa qué c
 category: site-settings
 audience: panel
 order: 30
-keywords: [correo, email, correos, envío de correos, remitente, smtp, no llegan los correos, correo de prueba, estadísticas de correo, fallidos, rebotados, límites, cuotas]
+keywords: [correo, email, correos, envío de correos, remitente, resumen diario, hora del resumen, smtp, no llegan los correos, correo de prueba, estadísticas de correo, fallidos, rebotados, límites, cuotas]
 related: [core.panel.site-settings, core.panel.dashboard-settings]
 conditions:
   permissions:
@@ -20,6 +20,7 @@ La web envía correos para verificar cuentas, recuperar contraseñas y avisar de
    - Deja activado **Envío de correos activado**.
    - Elige el **Driver de correo**: el servicio que envía los correos.
    - Escribe la **Dirección del remitente** y, si quieres, el **Nombre del remitente**. Si lo dejas vacío, se usa «{{site_name}}».
+   - Elige la **Hora del resumen diario**: a esa hora sale, cada día, el correo con los avisos que cada persona eligió recibir juntos. Por defecto son las 08:00.
 3. Abre la pestaña del servicio que elegiste (**SMTP**, **Amazon SES** o **Resend**) y rellena los datos que te da tu proveedor de correo.
 4. Pulsa **Guardar**.
 
@@ -43,6 +44,8 @@ En **Límites y cuotas** puedes fijar un **Límite diario** y un **Límite mensu
 1. Abre **Sistema → Configuración** y elige **Estadísticas de correo**.
 2. La tabla muestra cada correo con su **Destinatario**, su **Asunto**, su **Estado** y su **Fecha**.
 3. Filtra por **Estado** para ver los **Fallido** o los **Rebotado**. La columna **Error** dice qué pasó.
+
+En la misma pantalla, **Bajas por categoría de correo** cuenta, para cada tipo de correo opcional, cuántas cuentas lo han desactivado y, en los que lo permiten, cuántas lo reciben en el resumen diario. Solo son números: nunca dice quién.
 
 El escritorio también puede mostrar el estado del correo y sus estadísticas.
 

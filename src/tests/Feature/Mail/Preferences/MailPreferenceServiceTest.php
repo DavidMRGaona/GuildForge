@@ -11,6 +11,7 @@ use App\Application\Mail\DTOs\MailPreferenceSectionDTO;
 use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
+use App\Domain\Mail\Enums\MailDelivery;
 use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
@@ -78,6 +79,8 @@ final class MailPreferenceServiceTest extends TestCase
                     mandatory: true,
                     mandatoryReason: 'It confirms something you did',
                     enabled: true,
+                    digestible: false,
+                    delivery: 'immediate',
                 ),
                 new MailPreferenceDTO(
                     key: 'example.reminders',
@@ -86,6 +89,8 @@ final class MailPreferenceServiceTest extends TestCase
                     mandatory: false,
                     mandatoryReason: null,
                     enabled: false,
+                    digestible: false,
+                    delivery: 'none',
                 ),
             ]),
         ], $sections);
@@ -258,6 +263,95 @@ final class MailPreferenceServiceTest extends TestCase
 
         $this->assertSame([], $this->service()->sectionsFor($guest));
         $this->assertTrue($this->service()->receives($guest, $this->category('example.reminders')));
+    }
+
+    public function test_a_digestible_category_offers_three_choices_and_saves_them(): void
+    {
+        $this->registerDigestible();
+        $user = UserModel::factory()->create();
+
+        $this->assertSame([true, 'immediate'], $this->stateOf($user, 'example.sign-ups'));
+
+        $this->service()->update($user, ['example.sign-ups' => MailDelivery::Digest]);
+        $this->assertSame([true, 'digest'], $this->stateOf($user, 'example.sign-ups'));
+
+        $this->service()->update($user, ['example.sign-ups' => MailDelivery::None]);
+        $this->assertSame([false, 'none'], $this->stateOf($user, 'example.sign-ups'));
+        $this->assertSame(['example.sign-ups'], $this->disabled($user));
+
+        // An unsubscribe link sends false: it turns the digest off too
+        $this->service()->update($user, ['example.sign-ups' => MailDelivery::Digest]);
+        $this->service()->update($user, ['example.sign-ups' => false]);
+        $this->assertSame([false, 'none'], $this->stateOf($user, 'example.sign-ups'));
+
+        $this->service()->update($user, ['example.sign-ups' => true]);
+        $this->assertSame([true, 'immediate'], $this->stateOf($user, 'example.sign-ups'));
+        $this->assertSame([], $this->disabled($user));
+    }
+
+    public function test_only_a_digestible_category_can_be_received_as_a_digest(): void
+    {
+        $this->registerDigestible();
+        $user = UserModel::factory()->create();
+
+        try {
+            $this->service()->update($user, ['example.sign-ups' => MailDelivery::Digest, 'example.reminders' => MailDelivery::Digest]);
+            $this->fail('The change should have been refused.');
+        } catch (MailPreferenceNotEditableException $exception) {
+            $this->assertSame('example.reminders', $exception->categoryKey);
+        }
+
+        $this->assertSame(0, DB::table('user_mail_preferences')->count());
+        $this->service()->update($user, ['example.reminders' => MailDelivery::None]);
+        $this->assertSame(['example.reminders'], $this->disabled($user));
+    }
+
+    public function test_the_digest_is_offered_only_where_the_module_allows_it(): void
+    {
+        $this->registerDigestible();
+        $user = UserModel::factory()->create();
+
+        $categories = $this->service()->sectionsFor($user)[0]->categories;
+
+        $this->assertSame(
+            ['example.confirmations' => false, 'example.reminders' => false, 'example.sign-ups' => true],
+            array_combine(
+                array_map(static fn (MailPreferenceDTO $category): string => $category->key, $categories),
+                array_map(static fn (MailPreferenceDTO $category): bool => $category->digestible, $categories),
+            ),
+        );
+    }
+
+    public function test_a_mandatory_category_cannot_be_declared_digestible(): void
+    {
+        $this->assertFalse(MailCategoryDTO::mandatory('example.x', 'S', 'L', 'D', 'R')->digestible);
+    }
+
+    private function registerDigestible(): void
+    {
+        $this->registry->register(MailCategoryDTO::optional(
+            key: 'example.sign-ups',
+            section: 'Example section',
+            label: 'Sign-ups',
+            description: 'When someone joins',
+            digestible: true,
+        ), 'example');
+    }
+
+    /**
+     * @return array{bool, string} [enabled, delivery] as the profile receives them
+     */
+    private function stateOf(UserModel $user, string $key): array
+    {
+        foreach ($this->service()->sectionsFor($user) as $section) {
+            foreach ($section->categories as $category) {
+                if ($category->key === $key) {
+                    return [$category->enabled, $category->delivery];
+                }
+            }
+        }
+
+        $this->fail("No category {$key}");
     }
 
     /**

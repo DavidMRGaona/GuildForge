@@ -72,6 +72,24 @@ final class MailSettingsTest extends TestCase
         $this->assertEquals('GuildForge', $settings->get('mail_from_name'));
     }
 
+    public function test_mail_settings_saves_the_hour_of_the_daily_digest(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(MailSettings::class)
+            ->assertFormSet(['mail_digest_hour' => '8'])
+            ->fillForm(['mail_digest_hour' => '19'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('19', app(SettingsServiceInterface::class)->get('mail_digest_hour'));
+
+        Livewire::test(MailSettings::class)
+            ->fillForm(['mail_digest_hour' => '24'])
+            ->call('save')
+            ->assertHasFormErrors(['mail_digest_hour']);
+    }
+
     public function test_mail_settings_saves_smtp_config(): void
     {
         $user = UserModel::factory()->admin()->create();

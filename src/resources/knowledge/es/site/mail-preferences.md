@@ -5,7 +5,7 @@ summary: Decide qué correos opcionales quieres recibir y entiende cuáles se en
 category: account
 audience: site
 order: 40
-keywords: [correos, emails, avisos, notificaciones, darme de baja, baja, dejar de recibir, cancelar suscripción, no quiero recibir, demasiados correos, spam, recordatorios, novedades, preferencias de correo, categorías, obligatorios, silenciar, avisos silenciados, una partida concreta, volver a recibir]
+keywords: [correos, emails, avisos, notificaciones, resumen diario, un correo al día, todos juntos, demasiados avisos, darme de baja, baja, dejar de recibir, cancelar suscripción, no quiero recibir, demasiados correos, spam, recordatorios, novedades, preferencias de correo, categorías, obligatorios, silenciar, avisos silenciados, una partida concreta, volver a recibir]
 related: [core.account.change-email, core.account.complete-profile]
 ---
 {{site_name}} te manda correos de varios tipos. Tú decides cuáles quieres recibir, salvo los que son imprescindibles.
@@ -14,10 +14,25 @@ related: [core.account.change-email, core.account.complete-profile]
 
 1. Pulsa tu nombre en la cabecera y elige **Mi perfil**.
 2. Abre la pestaña **Correos**.
-3. Activa o desactiva los interruptores de cada tipo de correo.
+3. Activa o desactiva los interruptores de cada tipo de correo. Algunos tipos ofrecen tres opciones en lugar del interruptor (lo explicamos más abajo).
 4. Pulsa **Guardar cambios**.
 
 Los correos están agrupados en una tarjeta por sección (**Cuenta**, **Partidas**, **Torneos**…). Cada tarjeta te dice cuántos tienes activados, por ejemplo «2 de 3 activados». Solo ves los tipos que te pueden llegar a ti: por ejemplo, los avisos de moderación solo aparecen si puedes moderar.
+
+## Recibir los avisos en un resumen diario
+
+Hay avisos que llegan muchos en poco tiempo, como «se ha apuntado alguien a tu mesa». En esos tipos, en lugar del interruptor verás tres opciones:
+
+- **Al momento**: cada aviso te llega en cuanto ocurre.
+- **Resumen diario**: los avisos se guardan y te llegan todos juntos en un solo correo al día, a la hora que se indica debajo.
+- **No recibir**: no te llega ninguno.
+
+El resumen agrupa los avisos por tipo, con la hora de cada uno y un enlace para verlo. Si no hubo ninguno, ese día no te llega nada. Al final del resumen tienes un enlace para darte de baja de cada tipo.
+
+> [!IMPORTANT]
+> Lo que pausas o silencias también vale para el resumen: si pausas tus correos o silencias algo antes de que salga, esos avisos no te llegan. Si vuelves a **Al momento**, lo que ya estaba guardado te llega en el próximo resumen.
+
+Los correos obligatorios nunca van al resumen: te llegan siempre al momento.
 
 ## Pausar los correos optativos
 
@@ -62,5 +77,6 @@ A veces lo que sobra no es un tipo de correo entero, sino los avisos de una part
 - **No me deja guardar**: si tu cuenta aún no tiene el email verificado, primero tienes que verificarlo.
 - **Sigo recibiendo un correo que desactivé**: comprueba que no sea uno obligatorio. Los que tienen candado se envían siempre.
 - **Sigo recibiendo correos de algo que silencié**: silenciar algo concreto no apaga los correos obligatorios sobre ello.
+- **No me llega el resumen diario**: solo sale los días en que hubo algún aviso de los tipos que elegiste. Lo que llega después de la hora del resumen va en el del día siguiente.
 
 [[action:profile.show?tab=mail|Elegir mis correos]]

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Application\Mail\Contracts\HasMailCategory;
+use App\Application\Mail\Contracts\HasMailDigestLine;
+use App\Application\Mail\DTOs\MailDigestLineDTO;
 use App\Infrastructure\Mail\Preferences\CoreMailCategories;
 use App\Notifications\Support\EscapesMarkdown;
 use Illuminate\Bus\Queueable;
@@ -16,7 +18,7 @@ use Illuminate\Notifications\Notification;
  * Tells whoever can grant the roles that someone's roles that require association
  * membership are paused.
  */
-final class InactiveRolesManagerNotification extends Notification implements HasMailCategory, ShouldQueue
+final class InactiveRolesManagerNotification extends Notification implements HasMailCategory, HasMailDigestLine, ShouldQueue
 {
     use Queueable;
 
@@ -46,5 +48,13 @@ final class InactiveRolesManagerNotification extends Notification implements Has
     public function mailCategory(): string
     {
         return CoreMailCategories::ROLE_MANAGEMENT;
+    }
+
+    public function mailDigestLine(object $notifiable): MailDigestLineDTO
+    {
+        return new MailDigestLineDTO(__('authorization.inactive_roles.manager_digest_line', [
+            'name' => $this->personName,
+            'roles' => $this->roles,
+        ]));
     }
 }

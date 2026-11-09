@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { MailPreference } from '@/types/mailPreferences';
+import type { MailDelivery, MailPreference } from '@/types/mailPreferences';
 
 /**
  * One optional category: its text on the left and a control on the right. The control is a
  * switch unless the parent fills the `control` slot with another one (for instance a choice
- * of how the mail arrives), which gets the ids it must be labelled and described by.
+ * of how the mail arrives, `MailDeliveryChoice`), which gets the ids it must be labelled and
+ * described by. The switch turns the category on (at once) or off.
  * Mandatory categories are not rows: `MailMandatoryList` lists them without a control.
  */
 interface Props {
     category: MailPreference;
     /** Current choice, which may differ from the saved one until the person saves. */
-    modelValue: boolean;
+    modelValue: MailDelivery;
     /** Locks the control for now (saving, or an account that must verify its email). */
     busy?: boolean;
     /** Translated error for this category, shown under it. */
@@ -20,7 +21,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), { busy: false, error: '' });
 
-const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>();
+const emit = defineEmits<{ 'update:modelValue': [value: MailDelivery] }>();
 
 // The id of the category key (`events.reminders`) is safe in an attribute and unique on the page
 const baseId = computed(() => `mail-pref-${props.category.key.replace(/[^a-z0-9-]/gi, '-')}`);
@@ -31,7 +32,7 @@ const errorId = computed(() => `${baseId.value}-error`);
 // aria-disabled (not `disabled`) keeps a locked switch in the tab order, so a screen reader
 // user reaches it and hears that it cannot be changed right now
 const locked = computed(() => props.busy);
-const checked = computed(() => props.modelValue);
+const checked = computed(() => props.modelValue !== 'none');
 
 const describedBy = computed(() =>
     [descriptionId.value, props.error ? errorId.value : null]
@@ -44,7 +45,7 @@ function toggle(): void {
         return;
     }
 
-    emit('update:modelValue', !props.modelValue);
+    emit('update:modelValue', checked.value ? 'none' : 'immediate');
 }
 </script>
 
@@ -64,7 +65,13 @@ function toggle(): void {
             <p v-if="error" :id="errorId" class="mt-1.5 text-sm text-error">{{ error }}</p>
         </div>
 
-        <slot name="control" :label-id="labelId" :described-by="describedBy" :locked="locked">
+        <slot
+            name="control"
+            :base-id="baseId"
+            :label-id="labelId"
+            :described-by="describedBy"
+            :locked="locked"
+        >
             <!-- 44 px tall hit area around the 24 px track -->
             <button
                 type="button"

@@ -161,6 +161,56 @@ final class MailCategoryOptOutStatisticsTest extends TestCase
         $this->assertSame(2, $this->service()->report()->pausedAccounts);
     }
 
+    public function test_it_counts_who_receives_a_digestible_category_as_a_digest(): void
+    {
+        $this->registerNews();
+        $this->registry->register(MailCategoryDTO::optional(
+            key: 'test.sign-ups',
+            section: 'Pruebas',
+            label: 'Inscripciones',
+            description: 'Inscripciones de prueba',
+            digestible: true,
+        ), 'test');
+        $first = UserModel::factory()->create();
+        $second = UserModel::factory()->create();
+        $anonymized = UserModel::factory()->create(['anonymized_at' => now()]);
+        $this->optOut($first, 'test.sign-ups');
+        $this->digest($second, 'test.sign-ups');
+        $this->digest($anonymized, 'test.sign-ups');
+
+        $row = $this->row('test.sign-ups');
+
+        $this->assertSame(1, $row->optedOut);
+        $this->assertSame(1, $row->inDigest);
+        $this->assertNull($this->row('test.news')->inDigest);
+    }
+
+    public function test_a_digestible_category_with_audience_counts_its_digests_among_those_who_see_it(): void
+    {
+        $this->registry->register(MailCategoryDTO::optional(
+            key: 'test.moderation',
+            section: 'Pruebas',
+            label: 'Moderación',
+            description: 'Moderación de prueba',
+            audience: static fn (object $user): bool => $user instanceof UserModel && $user->name === 'Moderator',
+            digestible: true,
+        ), 'test');
+        $moderator = UserModel::factory()->create(['name' => 'Moderator']);
+        $former = UserModel::factory()->create(['name' => 'Someone']);
+        $this->digest($moderator, 'test.moderation');
+        $this->digest($former, 'test.moderation');
+
+        $this->assertSame(1, $this->row('test.moderation')->inDigest);
+    }
+
+    private function digest(UserModel $user, string $category): void
+    {
+        DB::table('user_mail_preferences')->insert([
+            'id' => (string) Str::uuid(), 'user_id' => $user->id,
+            'category' => $category, 'enabled' => true, 'digest' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
+
     private function registerNews(): void
     {
         $this->registry->register(MailCategoryDTO::optional(

@@ -27,6 +27,7 @@ final readonly class MailCategoryDTO
      * @param  string|null  $icon  Lucide icon name in kebab case («dices») for the section the category is listed under;
      *                             the first category of a section that declares one decides. The profile falls back to a
      *                             generic mail icon for a missing or unknown name.
+     * @param  bool  $digestible  Whether a person may get it as a daily digest instead (core#333). Never mandatory.
      */
     private function __construct(
         public string $key,
@@ -36,10 +37,15 @@ final readonly class MailCategoryDTO
         public ?string $mandatoryReason,
         public ?Closure $audience,
         public ?string $icon = null,
+        public bool $digestible = false,
     ) {}
 
     /**
      * A category the person may turn off. Without a preference it is sent.
+     *
+     * A digestible one offers three choices instead of a switch: at once, a daily digest or not
+     * at all. Mark as digestible the notices that come in bursts and can wait a day (someone
+     * joined, someone left), never those that ask to act soon.
      *
      * @param  (Closure(object): bool)|null  $audience
      */
@@ -50,8 +56,9 @@ final readonly class MailCategoryDTO
         string $description,
         ?Closure $audience = null,
         ?string $icon = null,
+        bool $digestible = false,
     ): self {
-        return new self($key, $section, $label, $description, null, $audience, $icon);
+        return new self($key, $section, $label, $description, null, $audience, $icon, $digestible);
     }
 
     /**

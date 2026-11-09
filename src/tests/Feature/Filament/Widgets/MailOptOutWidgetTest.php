@@ -56,6 +56,28 @@ final class MailOptOutWidgetTest extends TestCase
             ->assertDontSee($quiet->name);
     }
 
+    public function test_a_digestible_category_shows_how_many_receive_it_as_a_digest(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->app->make(MailCategoryRegistryInterface::class)->register(MailCategoryDTO::optional(
+            key: 'test.sign-ups',
+            section: 'Sección de prueba',
+            label: 'Inscripciones de prueba',
+            description: 'Inscripciones',
+            digestible: true,
+        ), 'test');
+        $person = UserModel::factory()->create();
+        DB::table('user_mail_preferences')->insert([
+            'id' => (string) Str::uuid(), 'user_id' => $person->id, 'category' => 'test.sign-ups',
+            'enabled' => true, 'digest' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        Livewire::test(MailOptOutWidget::class)
+            ->assertSee('En resumen diario')
+            ->assertTableColumnStateSet('in_digest', 1, 'test.sign-ups')
+            ->assertTableColumnStateSet('in_digest', null, 'test.news');
+    }
+
     public function test_it_reads_the_report_once_per_render(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());

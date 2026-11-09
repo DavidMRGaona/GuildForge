@@ -33,6 +33,19 @@ final class CoreMailCategoriesTest extends TestCase
         $this->assertFalse($registry->find(CoreMailCategories::ROLE_MANAGEMENT)?->isMandatory());
     }
 
+    public function test_inactive_role_notices_to_managers_can_wait_for_the_daily_digest(): void
+    {
+        app()->setLocale('es');
+        $registry = $this->app->make(MailCategoryRegistryInterface::class);
+
+        $this->assertTrue($registry->find(CoreMailCategories::ROLE_MANAGEMENT)?->digestible);
+        $this->assertFalse($registry->find(CoreMailCategories::ACCOUNT)?->digestible);
+        $this->assertSame(
+            'Ana tiene roles en pausa: Tesorería',
+            (new InactiveRolesManagerNotification('Ana', 'Tesorería'))->mailDigestLine(new \stdClass)->text,
+        );
+    }
+
     /**
      * @return iterable<string, array{Notification, string}>
      */

@@ -8,7 +8,7 @@ use DomainException;
 
 /**
  * A person tried to change a mail category they cannot change: unknown, mandatory or not
- * shown to them. Nothing is saved.
+ * shown to them, or asked for a digest the category does not offer. Nothing is saved.
  */
 final class MailPreferenceNotEditableException extends DomainException
 {
@@ -32,5 +32,10 @@ final class MailPreferenceNotEditableException extends DomainException
     public static function notVisible(string $key): self
     {
         return new self(sprintf('The mail category "%s" is not offered to this person.', $key), $key);
+    }
+
+    public static function notDigestible(string $key): self
+    {
+        return new self(sprintf('The mail category "%s" cannot be received as a daily digest.', $key), $key);
     }
 }

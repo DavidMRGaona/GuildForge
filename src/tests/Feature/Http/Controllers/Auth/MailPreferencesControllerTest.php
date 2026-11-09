@@ -47,6 +47,13 @@ final class MailPreferencesControllerTest extends TestCase
                 description: 'Pending review',
                 audience: static fn (object $user): bool => $user instanceof UserModel && $user->name === 'Moderator',
             ),
+            MailCategoryDTO::optional(
+                key: 'example.sign-ups',
+                section: 'Example section',
+                label: 'Sign-ups',
+                description: 'When someone joins',
+                digestible: true,
+            ),
         ], 'example');
     }
 
@@ -61,7 +68,7 @@ final class MailPreferencesControllerTest extends TestCase
                 ->component('Profile/Show')
                 ->has('mailPreferences.sections', 1)
                 ->where('mailPreferences.sections.0.label', 'Example section')
-                ->has('mailPreferences.sections.0.categories', 2)
+                ->has('mailPreferences.sections.0.categories', 3)
                 ->where('mailPreferences.sections.0.categories.0.key', 'example.confirmations')
                 ->where('mailPreferences.sections.0.categories.0.mandatory', true)
                 ->where('mailPreferences.sections.0.categories.0.mandatoryReason', 'It confirms something you did')
@@ -69,7 +76,44 @@ final class MailPreferencesControllerTest extends TestCase
                 ->where('mailPreferences.sections.0.categories.1.key', 'example.reminders')
                 ->where('mailPreferences.sections.0.categories.1.mandatory', false)
                 ->where('mailPreferences.sections.0.categories.1.mandatoryReason', null)
-                ->where('mailPreferences.sections.0.categories.1.enabled', false));
+                ->where('mailPreferences.sections.0.categories.1.enabled', false)
+                ->where('mailPreferences.sections.0.categories.1.digestible', false)
+                ->where('mailPreferences.sections.0.categories.1.delivery', 'none')
+                ->where('mailPreferences.sections.0.categories.2.digestible', true)
+                ->where('mailPreferences.sections.0.categories.2.delivery', 'immediate'));
+    }
+
+    public function test_the_mail_tab_says_when_the_daily_digest_goes_out(): void
+    {
+        app(SettingsServiceInterface::class)->set('mail_digest_hour', '19');
+
+        $this->actingAs(UserModel::factory()->create())->get('/perfil?tab=mail')
+            ->assertInertia(fn (Assert $page) => $page->where('mailPreferences.digestTime', '19:00'));
+    }
+
+    public function test_it_saves_the_three_choices_of_a_digestible_category(): void
+    {
+        $user = UserModel::factory()->create();
+
+        foreach (['digest' => [1, 1], 'none' => [0, 0], 'immediate' => [1, 0]] as $choice => [$enabled, $digest]) {
+            $this->actingAs($user)
+                ->put('/perfil/correos', ['preferences' => ['example.sign-ups' => $choice]])
+                ->assertSessionHas('success');
+
+            $row = DB::table('user_mail_preferences')->where('user_id', $user->id)->where('category', 'example.sign-ups')->sole();
+            $this->assertSame([$enabled, $digest], [(int) $row->enabled, (int) $row->digest], $choice);
+        }
+    }
+
+    public function test_it_rejects_a_digest_for_a_category_that_does_not_offer_it(): void
+    {
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['preferences' => ['example.reminders' => 'digest']])
+            ->assertSessionHasErrors('preferences.example.reminders');
+
+        $this->assertSame(0, DB::table('user_mail_preferences')->count());
     }
 
     public function test_a_category_the_person_does_not_see_is_left_out(): void
@@ -173,6 +217,10 @@ final class MailPreferencesControllerTest extends TestCase
 
         $this->actingAs($user)
             ->put('/perfil/correos', ['preferences' => ['example.reminders' => 'maybe']])
+            ->assertSessionHasErrors('preferences.example.reminders');
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['preferences' => ['example.reminders' => 1]])
             ->assertSessionHasErrors('preferences.example.reminders');
 
         $this->actingAs($user)

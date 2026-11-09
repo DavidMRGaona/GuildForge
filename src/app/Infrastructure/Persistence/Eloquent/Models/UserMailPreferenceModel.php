@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property string $user_id
  * @property string $category
  * @property bool $enabled
+ * @property bool $digest
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -28,6 +29,7 @@ final class UserMailPreferenceModel extends Model
         'user_id',
         'category',
         'enabled',
+        'digest',
     ];
 
     /**
@@ -37,6 +39,7 @@ final class UserMailPreferenceModel extends Model
     {
         return [
             'enabled' => 'boolean',
+            'digest' => 'boolean',
         ];
     }
 }
