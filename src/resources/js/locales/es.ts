@@ -340,6 +340,7 @@ export default {
         messages: 'Sin mensajes | 1 mensaje | {count} mensajes',
         lastPostedAt: 'último el {date}',
         comment: 'Comentar en el foro',
+        opensInNewTab: 'se abre en una pestaña nueva',
         topic: 'Sin temas sobre {label} | 1 tema sobre {label} | {count} temas sobre {label}',
     },
     tags: {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MessagesSquare } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { SubjectDiscussion } from '@/types/models';
 import { VENUE_TIMEZONE } from '@/utils/datetime';
@@ -13,6 +13,8 @@ interface Props {
 const props = defineProps<Props>();
 
 const { t, locale } = useI18n();
+
+const headingId = `subject-discussion-${useId()}`;
 
 const own = computed(() => props.discussion?.discussion ?? null);
 const topics = computed(() => props.discussion?.topics ?? []);
@@ -32,9 +34,9 @@ function formatDate(iso: string): string {
     <section
         v-if="visible"
         class="rounded-lg border border-default p-4"
-        :aria-label="t('discussions.title')"
+        :aria-labelledby="headingId"
     >
-        <h2 class="mb-2 flex items-center gap-2 font-semibold text-base-primary">
+        <h2 :id="headingId" class="mb-2 flex items-center gap-2 font-semibold text-base-primary">
             <MessagesSquare class="h-5 w-5 text-primary" aria-hidden="true" />
             {{ t('discussions.title') }}
         </h2>
@@ -43,11 +45,12 @@ function formatDate(iso: string): string {
             <p class="text-sm text-base-secondary">
                 <a
                     :href="own.url"
-                    class="font-medium text-primary hover:text-primary-700 hover:underline"
+                    class="inline-flex min-h-[44px] items-center font-medium text-primary hover:text-primary-700 hover:underline"
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                 >
                     {{ t('discussions.messages', { count: own.commentCount }, own.commentCount) }}
+                    <span class="sr-only"> ({{ t('discussions.opensInNewTab') }})</span>
                 </a>
                 <template v-if="own.lastPostedAt">
                     · {{ t('discussions.lastPostedAt', { date: formatDate(own.lastPostedAt) }) }}
@@ -61,13 +64,13 @@ function formatDate(iso: string): string {
             </a>
         </template>
 
-        <ul v-if="topics.length > 0" class="mt-3 space-y-1 text-sm text-base-secondary">
+        <ul v-if="topics.length > 0" class="mt-3 text-sm text-base-secondary">
             <li v-for="topic in topics" :key="topic.url">
                 <a
                     :href="topic.url"
-                    class="hover:text-primary hover:underline"
+                    class="inline-flex min-h-[44px] items-center hover:text-primary hover:underline"
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                 >
                     {{
                         t(
@@ -76,6 +79,7 @@ function formatDate(iso: string): string {
                             topic.discussionCount
                         )
                     }}
+                    <span class="sr-only"> ({{ t('discussions.opensInNewTab') }})</span>
                 </a>
                 <template v-if="topic.lastPostedAt">
                     · {{ t('discussions.lastPostedAt', { date: formatDate(topic.lastPostedAt) }) }}

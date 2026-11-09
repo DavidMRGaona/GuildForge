@@ -48,6 +48,6 @@ A page that shows a publication (an event, a game table, a campaign) may show th
 - Ask `App\Application\Discussions\Contracts\SubjectDiscussionInterface::forSubject($type, $id, $userId)` (the publication's type and id, and the signed-in account or null) in the page's controller and pass `->toArray($timezone)` as the `discussion` prop. Catch any `Throwable`, report it and pass null: the page always shows, without the block when something fails.
 - Render it with the shared component `@/components/discussions/SubjectDiscussion.vue` (`<SubjectDiscussion :discussion="discussion" />`, types `SubjectDiscussion`, `DiscussionActivity` and `TopicActivity` in `@/types/models`). With null it renders nothing.
 - `SubjectDiscussionDTO` holds `discussion` (`DiscussionActivityDTO`: `url`, `actionUrl`, `commentCount`, `lastPostedAt`) and `topics` (`TopicActivityDTO`: `label`, `url`, `discussionCount`, `lastPostedAt`); links are absolute http(s) URLs. With nothing to show the answer is null, never an empty DTO.
-- The core binds `NullSubjectDiscussion` (always null); a forum module replaces it and decides what each person may see. It never calls the forum while answering a page.
+- The core binds `NullSubjectDiscussion` (always null); a forum module replaces it and decides what each person may see. Every page view asks it, so it must be cheap: it reads what it keeps and never calls the forum while answering a page.
 
 The core's event page does it already.
