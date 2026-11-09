@@ -41,6 +41,26 @@ Listen to `PublicationChanged` and `PublicationRemoved` with an ordinary listene
 
 Nothing in the core listens to them: without an announcer they do nothing.
 
+## Rosters
+
+Some records have people in them: the players of a campaign and its directors. A module that gives them something elsewhere (a private group in a forum) needs to know who they are and when that changes. Requirement: the core release with core#467.
+
+| Piece | Where | What it does |
+|---|---|---|
+| `PublicationRosterInterface` | `App\Application\Publications\Contracts` | Optional, implemented by a source next to `PublicationSourceInterface`: `roster($id)` and `rostersOf($userId)` |
+| `PublicationRosterDTO` | `App\Application\Publications\DTOs` | `memberIds` (who takes part) and `leaderIds` (who leads, whether they take part or not): account UUIDs, lowercase, each once |
+| `PublicationMembershipDTO` | same | `type`, `id` and `isLeader`: one record a user is in |
+| `PublicationRosterChanged` | `App\Domain\Publications\Events` | `type`, `id` and `userIds` (the accounts whose place changed, never empty) |
+
+Offering it:
+
+- `roster($id)` answers for exactly the records `find()` returns: `null` when the record does not exist or is not published, and the roster of a cancelled or ended record that is still published (read its state from `find()`).
+- `rostersOf($userId)` lists the published records that are neither cancelled nor ended that the user takes part in or leads, so a listener can send a person's complete list (a shorter list reads as removals). `isLeader` is true for a leader whether or not they also take part.
+- User ids are account UUIDs: listeners pass them in lowercase, sources compare them without regard to case.
+- Dispatch `PublicationRosterChanged($type, $id, $userIds)` once the change commits, when someone joins, leaves or is removed, or starts or stops leading. Cancelling, ending, taking down or deleting the record dispatches no roster event: that is a `PublicationChanged` or `PublicationRemoved`, and listeners read `rostersOf()` again for the people they knew.
+
+Listening: check the capability with `instanceof` on the source from `PublicationSourceRegistryInterface::source($type)`. Read `roster()` and `rostersOf()` again when the queued job runs, never from the event. The registry does not change: a source without the capability simply has no roster.
+
 ## Discussion activity on pages
 
 A page that shows a publication (an event, a game table, a campaign) may show the activity of its discussion elsewhere: messages, the last one, a button to comment, and topics such as its game system. Requirement: the core release with core#470.
