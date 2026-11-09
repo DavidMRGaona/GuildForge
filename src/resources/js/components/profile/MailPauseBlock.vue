@@ -131,10 +131,12 @@ function send(method: 'put' | 'delete'): void {
         </p>
 
         <div class="mt-3 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-6">
+            <!-- Native radios (kept for the fieldset, keyboard and v-model) drawn like FormRadioGroup -->
             <label
                 v-for="option in DURATIONS"
                 :key="option"
-                class="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-base-primary"
+                class="group flex min-h-[44px] items-center gap-3 text-sm text-base-primary"
+                :class="locked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
             >
                 <input
                     v-model="duration"
@@ -142,9 +144,25 @@ function send(method: 'put' | 'delete'): void {
                     name="mail-pause-duration"
                     :value="option"
                     :disabled="locked"
-                    class="h-4 w-4 border-neutral-300 text-primary-600 focus:ring-2 focus:ring-primary-500 dark:border-neutral-600"
+                    class="peer sr-only"
                 />
-                {{ t(`auth.profile.mail.pause.durations.${option}`) }}
+                <span
+                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 bg-surface transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface"
+                    :class="
+                        duration === option
+                            ? 'border-primary-600 dark:border-primary-500'
+                            : 'border-neutral-300 group-hover:border-primary-400 dark:border-neutral-600 dark:group-hover:border-primary-500'
+                    "
+                    aria-hidden="true"
+                >
+                    <span
+                        class="h-2.5 w-2.5 rounded-full bg-primary-600 transition-all duration-150 dark:bg-primary-500"
+                        :class="duration === option ? 'scale-100 opacity-100' : 'scale-0 opacity-0'"
+                    />
+                </span>
+                <span class="select-none">
+                    {{ t(`auth.profile.mail.pause.durations.${option}`) }}
+                </span>
             </label>
         </div>
 
