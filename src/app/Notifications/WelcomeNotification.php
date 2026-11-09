@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Application\Mail\Contracts\HasMailCategory;
+use App\Infrastructure\Mail\Preferences\CoreMailCategories;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-final class WelcomeNotification extends Notification implements ShouldQueue
+final class WelcomeNotification extends Notification implements HasMailCategory, ShouldQueue
 {
     use Queueable;
 
@@ -43,5 +45,10 @@ final class WelcomeNotification extends Notification implements ShouldQueue
             ->line(__('auth.welcome_line2'))
             ->action(__('auth.welcome_action'), $loginUrl)
             ->line(__('auth.welcome_line3', ['app' => $this->appName]));
+    }
+
+    public function mailCategory(): string
+    {
+        return CoreMailCategories::ACCOUNT;
     }
 }

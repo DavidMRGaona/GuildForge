@@ -9,6 +9,7 @@ use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Calendar\Services\CalendarAttendanceSourceRegistryInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
+use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
@@ -109,6 +110,9 @@ final class ModuleLoader
 
         // Register knowledge capabilities from the provider
         $this->registerProviderKnowledgeCapabilities($provider, $module->name()->value);
+
+        // Register mail categories from the provider
+        $this->registerProviderMailCategories($provider, $module->name()->value);
 
         // Register navigation from the provider
         $this->registerProviderNavigation($provider);
@@ -286,6 +290,22 @@ final class ModuleLoader
 
         if ($this->app->bound(KnowledgeCapabilityRegistryInterface::class)) {
             $this->app->make(KnowledgeCapabilityRegistryInterface::class)->registerMany($capabilities, $moduleName);
+        }
+    }
+
+    /**
+     * Register mail categories from a module provider, under the module's prefix.
+     */
+    private function registerProviderMailCategories(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $categories = $provider->registerMailCategories();
+
+        if ($categories === []) {
+            return;
+        }
+
+        if ($this->app->bound(MailCategoryRegistryInterface::class)) {
+            $this->app->make(MailCategoryRegistryInterface::class)->registerMany($categories, $moduleName);
         }
     }
 

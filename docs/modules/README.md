@@ -37,6 +37,8 @@ Putting a module's entries in the public calendar and in each person's personal 
 
 Drawing QR codes (SVG or PNG) for pages of the site is covered in [QR codes](./qr-codes.md).
 
+Letting people choose which of the module's mail they receive is covered in [Mail categories](./mail-categories.md): declare the categories, mark each notification and notify the account with `$user->notify()`.
+
 ---
 
 ## Getting started
@@ -457,7 +459,7 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
 
 Register dynamic relationships on core models in `register()`, not `boot()` (see [Extending core functionality](#extending-core-functionality)).
 
-The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerKnowledgeCapabilities()` and `registerNavigation()`. The panel reads `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
+The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerKnowledgeCapabilities()`, `registerMailCategories()` and `registerNavigation()`. The panel reads `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
 
 `onEnable()` and `onDisable()` are declared on the base class, but the core never calls them: set up data in migrations and seeders, which run when the module is first enabled.
 
@@ -2271,6 +2273,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerSearchSources()` | `class-string<IndexedSearchSourceInterface>[]` | Indexed sources of the site search; types prefixed with the module (see [Search sources](./search-sources.md)) |
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |
+| `registerMailCategories()` | `MailCategoryDTO[]` | Categories of the module's mail, which people turn off in their profile when optional; keys prefixed with the module (see [Mail categories](./mail-categories.md)) |
 | `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |
 | `registerFilamentPages()` | `class-string<Page>[]` | Filament pages |
 | `registerFilamentWidgets()` | `class-string<Widget>[]` | Dashboard widgets (optional method, not declared on the base class) |

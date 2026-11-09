@@ -8,6 +8,8 @@ use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
+use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
+use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
@@ -62,6 +64,24 @@ final class UserServiceAnonymizeTest extends TestCase
         $this->assertNull($user->anonymized_at);
         $this->assertSame('avatars/jane.jpg', $user->avatar_public_id);
         $this->assertSame(['vocal'], $user->roles()->pluck('roles.name')->all());
+    }
+
+    /**
+     * @param  Closure(UserServiceInterface, string): void  $anonymize
+     */
+    #[DataProvider('anonymizers')]
+    public function test_anonymizing_deletes_the_mail_preferences(Closure $anonymize): void
+    {
+        $user = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        $preferences = app(MailPreferenceRepositoryInterface::class);
+        $preferences->save(UserId::fromString($user->id), ['example.reminders' => false]);
+        $preferences->save(UserId::fromString($other->id), ['example.reminders' => false]);
+
+        $anonymize(app(UserServiceInterface::class), (string) $user->id);
+
+        $this->assertSame([], $preferences->disabledFor(UserId::fromString($user->id)));
+        $this->assertSame(['example.reminders'], $preferences->disabledFor(UserId::fromString($other->id)));
     }
 
     /**
