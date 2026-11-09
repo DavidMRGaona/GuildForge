@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Publications\Services;
 
+use App\Application\Publications\Contracts\PublicationRosterInterface;
 use App\Application\Publications\Services\PublicationSourceRegistryInterface;
 use App\Infrastructure\Publications\Services\PublicationSourceRegistry;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
 use stdClass;
 use Tests\Support\Publications\FakePublicationSource;
+use Tests\Support\Publications\FakeRosterPublicationSource;
 use Tests\Support\Publications\InvalidTypePublicationSource;
 use Tests\Support\Publications\OtherFakePublicationSource;
 use Tests\Support\Publications\SameTypeFakePublicationSource;
@@ -96,6 +98,17 @@ final class PublicationSourceRegistryTest extends TestCase
         $this->assertSame(['fake', 'other-fake'], array_keys($sources));
         $this->assertInstanceOf(FakePublicationSource::class, $sources['fake']);
         $this->assertInstanceOf(OtherFakePublicationSource::class, $sources['other-fake']);
+    }
+
+    #[Test]
+    public function a_source_offering_its_roster_is_told_apart_with_instanceof(): void
+    {
+        $this->registry->registerMany([FakePublicationSource::class, FakeRosterPublicationSource::class]);
+
+        $sources = $this->registry->sources();
+
+        $this->assertNotInstanceOf(PublicationRosterInterface::class, $sources['fake']);
+        $this->assertInstanceOf(PublicationRosterInterface::class, $this->registry->source('fake-roster'));
     }
 
     #[Test]
