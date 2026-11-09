@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import MailDeliveryChoice from '@/components/profile/MailDeliveryChoice.vue';
 import MailMandatoryList from '@/components/profile/MailMandatoryList.vue';
 import MailPreferenceRow from '@/components/profile/MailPreferenceRow.vue';
-import type { MailPreferenceSection } from '@/types/mailPreferences';
+import type { MailDelivery, MailPreferenceSection } from '@/types/mailPreferences';
 import { resolveMailSectionIcon } from '@/utils/icons';
 import { countOptionalOn, optionalCategories } from '@/utils/mailPreferences';
 
@@ -14,15 +15,21 @@ import { countOptionalOn, optionalCategories } from '@/utils/mailPreferences';
 interface Props {
     section: MailPreferenceSection;
     /** Current choice of every category, by key. */
-    choices: Record<string, boolean>;
+    choices: Record<string, MailDelivery>;
     busy?: boolean;
     /** Translated errors by category key. */
     errors?: Record<string, string>;
+    /** When the daily digest goes out (`HH:MM`), for the categories that offer it (core#333). */
+    digestTime?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), { busy: false, errors: () => ({}) });
+const props = withDefaults(defineProps<Props>(), {
+    busy: false,
+    errors: () => ({}),
+    digestTime: '08:00',
+});
 
-const emit = defineEmits<{ change: [key: string, value: boolean] }>();
+const emit = defineEmits<{ change: [key: string, value: MailDelivery] }>();
 
 const { t } = useI18n();
 
@@ -32,10 +39,11 @@ const icon = computed(() => resolveMailSectionIcon(props.section.icon));
 const optional = computed(() => optionalCategories(props.section));
 const mandatory = computed(() => props.section.categories.filter((category) => category.mandatory));
 
-function isOn(key: string, saved: boolean): boolean {
+function choiceOf(key: string, saved: MailDelivery): MailDelivery {
     return props.choices[key] ?? saved;
 }
 
+// Received at once or in the daily digest: everything but «no recibir» counts as on
 const enabledCount = computed(() => countOptionalOn(props.section, props.choices));
 // Plural on the total («1 de 1 activado», «2 de 3 activados»)
 const summary = computed(() =>
@@ -82,11 +90,23 @@ const summary = computed(() =>
                 v-for="category in optional"
                 :key="category.key"
                 :category="category"
-                :model-value="isOn(category.key, category.enabled)"
+                :model-value="choiceOf(category.key, category.delivery)"
                 :busy="busy"
                 :error="errors[category.key] ?? ''"
                 @update:model-value="emit('change', category.key, $event)"
-            />
+            >
+                <template v-if="category.digestible" #control="control">
+                    <MailDeliveryChoice
+                        :model-value="choiceOf(category.key, category.delivery)"
+                        :base-id="control.baseId"
+                        :label-id="control.labelId"
+                        :described-by="control.describedBy"
+                        :locked="control.locked"
+                        :digest-time="digestTime"
+                        @update:model-value="emit('change', category.key, $event)"
+                    />
+                </template>
+            </MailPreferenceRow>
         </ul>
 
         <div v-if="mandatory.length > 0" class="border-t border-default bg-muted px-4 py-3 sm:px-5">

@@ -11,6 +11,7 @@ use App\Application\Mail\DTOs\MailPreferenceSectionDTO;
 use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
+use App\Domain\Mail\Enums\MailDelivery;
 use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
@@ -36,7 +37,9 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
             return [];
         }
 
-        $disabled = $this->preferences->disabledFor(UserId::fromString($user->id));
+        $userId = UserId::fromString($user->id);
+        $disabled = $this->preferences->disabledFor($userId);
+        $digest = $this->preferences->digestFor($userId);
 
         /** @var array<string, list<MailPreferenceDTO>> $sections */
         $sections = [];
@@ -51,13 +54,17 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
                 $icons[$category->section] = $category->icon;
             }
 
+            $delivery = $this->deliveryOf($category, $disabled, $digest);
+
             $sections[$category->section][] = new MailPreferenceDTO(
                 key: $category->key,
                 label: $this->translate($category->label),
                 description: $this->translate($category->description),
                 mandatory: $category->isMandatory(),
                 mandatoryReason: $category->mandatoryReason === null ? null : $this->translate($category->mandatoryReason),
-                enabled: $category->isMandatory() || ! in_array($category->key, $disabled, true),
+                enabled: $delivery !== MailDelivery::None,
+                digestible: $this->offersDigest($category),
+                delivery: $delivery->value,
             );
         }
 
@@ -75,7 +82,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
             throw new InvalidArgumentException('Only accounts have mail preferences.');
         }
 
-        foreach (array_keys($changes) as $key) {
+        foreach ($changes as $key => $choice) {
             $key = (string) $key;
             $category = $this->categories->find($key);
 
@@ -89,6 +96,10 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
 
             if (! $this->isVisibleTo($category, $user)) {
                 throw MailPreferenceNotEditableException::notVisible($key);
+            }
+
+            if ($choice === MailDelivery::Digest && ! $this->offersDigest($category)) {
+                throw MailPreferenceNotEditableException::notDigestible($key);
             }
         }
 
@@ -120,6 +131,33 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
         }
 
         return true;
+    }
+
+    /**
+     * A digest choice stored for a category that is no longer digestible counts as «at once»,
+     * as the delivery itself does.
+     *
+     * @param  list<string>  $disabled
+     * @param  list<string>  $digest
+     */
+    private function deliveryOf(MailCategoryDTO $category, array $disabled, array $digest): MailDelivery
+    {
+        if ($category->isMandatory()) {
+            return MailDelivery::Immediate;
+        }
+
+        if (in_array($category->key, $disabled, true)) {
+            return MailDelivery::None;
+        }
+
+        return $this->offersDigest($category) && in_array($category->key, $digest, true)
+            ? MailDelivery::Digest
+            : MailDelivery::Immediate;
+    }
+
+    private function offersDigest(MailCategoryDTO $category): bool
+    {
+        return $category->digestible && ! $category->isMandatory();
     }
 
     private function isVisibleTo(MailCategoryDTO $category, UserModel $user): bool

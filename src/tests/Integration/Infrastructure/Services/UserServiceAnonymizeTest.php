@@ -10,6 +10,7 @@ use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
+use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPauseRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
@@ -17,6 +18,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
@@ -121,6 +123,25 @@ final class UserServiceAnonymizeTest extends TestCase
 
         $this->assertSame([], $mutes->mutedFor($user));
         $this->assertCount(1, $mutes->mutedFor($other));
+    }
+
+    /**
+     * @param  Closure(UserServiceInterface, string): void  $anonymize
+     */
+    #[DataProvider('anonymizers')]
+    public function test_anonymizing_deletes_the_notices_kept_for_the_daily_digest(Closure $anonymize): void
+    {
+        $user = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        $items = app(MailDigestItemRepositoryInterface::class);
+        foreach ([$user, $other] as $owner) {
+            $items->add(UserId::fromString($owner->id), 'example.sign-ups', 'Ana se ha apuntado', null, null, null);
+        }
+
+        $anonymize(app(UserServiceInterface::class), (string) $user->id);
+
+        $this->assertSame(0, DB::table('user_mail_digest_items')->where('user_id', $user->id)->count());
+        $this->assertSame(1, DB::table('user_mail_digest_items')->where('user_id', $other->id)->count());
     }
 
     /**

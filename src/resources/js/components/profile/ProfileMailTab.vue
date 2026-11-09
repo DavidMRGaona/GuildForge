@@ -14,6 +14,7 @@ import MutedMailSubjectsBlock from '@/components/profile/MutedMailSubjectsBlock.
 import { useMailPreferencesView } from '@/composables/useMailPreferencesView';
 import { useVerificationGate } from '@/composables/useVerificationGate';
 import type {
+    MailDelivery,
     MailPause,
     MailPreferenceSection as Section,
     MutedMailSubject,
@@ -24,9 +25,11 @@ interface Props {
     pause: MailPause;
     /** Things muted from a mail footer (core#334). */
     mutedSubjects?: MutedMailSubject[];
+    /** When the daily digest goes out, `HH:MM` in the display zone (core#333). */
+    digestTime?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), { mutedSubjects: () => [] });
+const props = withDefaults(defineProps<Props>(), { mutedSubjects: () => [], digestTime: '08:00' });
 
 const ENDPOINT = '/perfil/correos';
 // Laravel names the errors of the submitted map `preferences.<category key>`
@@ -38,11 +41,11 @@ const page = usePage();
 const gate = useVerificationGate();
 
 /** What the server has saved, by category key. */
-const saved = computed<Record<string, boolean>>(() => {
-    const state: Record<string, boolean> = {};
+const saved = computed<Record<string, MailDelivery>>(() => {
+    const state: Record<string, MailDelivery> = {};
     for (const section of props.sections) {
         for (const category of section.categories) {
-            state[category.key] = category.enabled;
+            state[category.key] = category.delivery;
         }
     }
 
@@ -57,7 +60,21 @@ const selectedSection = computed(
 );
 const PANEL_ID = 'mail-section-panel';
 
-const choices = ref<Record<string, boolean>>({ ...saved.value });
+/** Categories that offer the daily digest: they send their delivery, the others the switch. */
+const digestible = computed<Set<string>>(() => {
+    const keys = new Set<string>();
+    for (const section of props.sections) {
+        for (const category of section.categories) {
+            if (category.digestible) {
+                keys.add(category.key);
+            }
+        }
+    }
+
+    return keys;
+});
+
+const choices = ref<Record<string, MailDelivery>>({ ...saved.value });
 const processing = ref(false);
 const errors = ref<Record<string, string>>({});
 const generalError = ref<string | null>(null);
@@ -68,11 +85,11 @@ watch(saved, (state) => {
 });
 
 /** Only what differs from the saved state travels: the server keeps the rest as it is. */
-const changes = computed<Record<string, boolean>>(() => {
-    const diff: Record<string, boolean> = {};
+const changes = computed<Record<string, boolean | MailDelivery>>(() => {
+    const diff: Record<string, boolean | MailDelivery> = {};
     for (const [key, value] of Object.entries(choices.value)) {
         if (saved.value[key] !== undefined && saved.value[key] !== value) {
-            diff[key] = value;
+            diff[key] = digestible.value.has(key) ? value : value !== 'none';
         }
     }
 
@@ -81,7 +98,7 @@ const changes = computed<Record<string, boolean>>(() => {
 const hasChanges = computed(() => Object.keys(changes.value).length > 0);
 const locked = computed(() => processing.value || gate.blocked.value);
 
-function setChoice(key: string, value: boolean): void {
+function setChoice(key: string, value: MailDelivery): void {
     choices.value = { ...choices.value, [key]: value };
     errors.value = {};
     generalError.value = null;
@@ -172,6 +189,7 @@ function save(): void {
                     :choices="choices"
                     :busy="locked"
                     :errors="errors"
+                    :digest-time="digestTime"
                     @change="setChoice"
                 />
             </div>
@@ -196,6 +214,7 @@ function save(): void {
                         :choices="choices"
                         :busy="locked"
                         :errors="errors"
+                        :digest-time="digestTime"
                         @change="setChoice"
                     />
                 </div>

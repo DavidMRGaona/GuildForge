@@ -15,7 +15,11 @@ final readonly class MailPreferenceDTO
         public string $description,
         public bool $mandatory,
         public ?string $mandatoryReason,
-        /** Always true for a mandatory category. */
+        /** Always true for a mandatory category; false only when the person receives none of it. */
         public bool $enabled,
+        /** Whether it can be received as a daily digest (core#333). */
+        public bool $digestible = false,
+        /** "immediate", "digest" or "none" (MailDelivery); "immediate" for a mandatory category. */
+        public string $delivery = 'immediate',
     ) {}
 }

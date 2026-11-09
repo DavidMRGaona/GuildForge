@@ -29,6 +29,8 @@
 
 @endif
 {{ __('mail.footer.optional') }} [{{ __('mail.footer.unsubscribe', ['category' => \App\Notifications\Support\EscapesMarkdown::escape((string) $mailFooter->categoryLabel)]) }}]({{ $mailFooter->unsubscribeUrl }}) · [{{ __('mail.footer.choose') }}]({{ $mailFooter->preferencesUrl }})
+@elseif($mailFooter->isDigest())
+{{ __('mail.footer.digest') }} @foreach($mailFooter->digestCategories as $digestCategory)[{{ __('mail.footer.unsubscribe', ['category' => \App\Notifications\Support\EscapesMarkdown::escape($digestCategory['label'])]) }}]({{ $digestCategory['unsubscribeUrl'] }}) · @endforeach[{{ __('mail.footer.choose') }}]({{ $mailFooter->preferencesUrl }})
 @else
 {{ __($mailFooter->mandatory ? 'mail.footer.mandatory' : 'mail.footer.without_category', ['profile' => '['.__('mail.footer.profile_link').']('.$mailFooter->preferencesUrl.')']) }}
 @endif

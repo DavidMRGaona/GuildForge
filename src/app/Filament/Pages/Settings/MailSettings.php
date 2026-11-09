@@ -11,6 +11,7 @@ use App\Filament\Clusters\SettingsCluster;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Infrastructure\Mail\Digest\MailDigestService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -125,6 +126,7 @@ final class MailSettings extends Page implements HasForms
             'mail_quota_daily_limit',
             'mail_quota_monthly_limit',
             'mail_quota_warning_threshold',
+            MailDigestService::HOUR_SETTING,
         ];
     }
 
@@ -175,7 +177,21 @@ final class MailSettings extends Page implements HasForms
             'mail_quota_daily_limit' => '0',
             'mail_quota_monthly_limit' => '0',
             'mail_quota_warning_threshold' => '80',
+            MailDigestService::HOUR_SETTING => (string) MailDigestService::DEFAULT_HOUR,
         ];
+    }
+
+    /**
+     * @return array<int, string> 0 => "00:00" … 23 => "23:00" (the form state is the hour as a string)
+     */
+    private function digestHours(): array
+    {
+        $hours = [];
+        for ($hour = 0; $hour < 24; $hour++) {
+            $hours[$hour] = sprintf('%02d:00', $hour);
+        }
+
+        return $hours;
     }
 
     private function generalTab(): Tab
@@ -214,6 +230,14 @@ final class MailSettings extends Page implements HasForms
                             ->helperText(__('filament.mail.fields.from_name_help'))
                             ->maxLength(255),
                     ]),
+
+                // Daily digest of the digestible mail categories (core#333)
+                Select::make(MailDigestService::HOUR_SETTING)
+                    ->label(__('filament.mail.fields.digest_hour'))
+                    ->helperText(__('filament.mail.fields.digest_hour_help'))
+                    ->options($this->digestHours())
+                    ->native(false)
+                    ->required(),
             ]);
     }
 

@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Infrastructure\Mail\Listeners;
 
 use App\Application\Mail\Contracts\HasMailCategory;
+use App\Application\Mail\Contracts\IsMailDigest;
 use App\Application\Mail\DTOs\MailCategoryDTO;
+use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\Mail\Services\MailDigestServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Infrastructure\Mail\Preferences\NotificationMailSubject;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -16,7 +19,8 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Cancels a mail notification to an account that does not want that kind of mail.
+ * Cancels a mail notification to an account that does not want that kind of mail, or keeps it
+ * for the person's daily digest when they chose one for its category (core#333).
  *
  * Laravel stops a notification when a NotificationSending listener returns false, and stops
  * asking further listeners at the first answer that is not null: so this returns null, never
@@ -33,6 +37,7 @@ final class FilterMailByPreferences
     public function __construct(
         private readonly MailCategoryRegistryInterface $categories,
         private readonly MailPreferenceServiceInterface $preferences,
+        private readonly MailDigestServiceInterface $digests,
     ) {}
 
     public function handle(NotificationSending $event): ?false
@@ -47,6 +52,11 @@ final class FilterMailByPreferences
             return false;
         }
 
+        // The digest gathers notices that each went through the person's choices already
+        if ($event->notification instanceof IsMailDigest) {
+            return null;
+        }
+
         try {
             $category = $this->categories->forNotification($event->notification);
 
@@ -58,7 +68,9 @@ final class FilterMailByPreferences
 
             $subject = NotificationMailSubject::of($event->notification);
 
-            return $this->preferences->receives($event->notifiable, $category, $subject) ? null : false;
+            if (! $this->preferences->receives($event->notifiable, $category, $subject)) {
+                return false;
+            }
         } catch (Throwable $exception) {
             Log::warning('Could not check the mail preferences; the mail is sent.', [
                 'notification' => $event->notification::class,
@@ -67,6 +79,29 @@ final class FilterMailByPreferences
             ]);
 
             return null;
+        }
+
+        // Only what every rule let through may wait for the digest: paused or muted mail is dropped
+        return $this->keptForDigest($event, $category, $subject) ? false : null;
+    }
+
+    private function keptForDigest(NotificationSending $event, MailCategoryDTO $category, ?MailSubjectDTO $subject): bool
+    {
+        if ($category->isMandatory() || ! $category->digestible) {
+            return false;
+        }
+
+        try {
+            return $this->digests->holds($event->notifiable, $category, $event->notification, $subject);
+        } catch (Throwable $exception) {
+            Log::warning('Could not keep a notice for the daily digest; the mail is sent now.', [
+                'notification' => $event->notification::class,
+                'category' => $category->key,
+                'user_id' => $event->notifiable instanceof UserModel ? $event->notifiable->id : null,
+                'exception' => $exception,
+            ]);
+
+            return false;
         }
     }
 

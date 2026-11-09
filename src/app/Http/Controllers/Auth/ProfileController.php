@@ -8,6 +8,7 @@ use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
 use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Mail\Services\MailDigestServiceInterface;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
@@ -42,6 +43,7 @@ final class ProfileController extends Controller
         private readonly MailPreferenceServiceInterface $mailPreferences,
         private readonly MailPauseServiceInterface $mailPause,
         private readonly MailSubjectMuteServiceInterface $mailSubjectMutes,
+        private readonly MailDigestServiceInterface $mailDigests,
     ) {}
 
     public function show(Request $request): Response
@@ -83,6 +85,8 @@ final class ProfileController extends Controller
                     'typeLabel' => MailSubjectTypeLabel::translate($muted->typeLabel),
                     'mutedAt' => $this->timezone->iso($muted->mutedAt),
                 ], $this->mailSubjectMutes->mutedFor($user)),
+                // When the daily digest goes out (core#333), display zone
+                'digestTime' => $this->mailDigests->time(),
             ];
         }
 

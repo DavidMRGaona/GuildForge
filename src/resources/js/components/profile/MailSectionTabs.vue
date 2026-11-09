@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { MailPreferenceSection } from '@/types/mailPreferences';
+import type { MailDelivery, MailPreferenceSection } from '@/types/mailPreferences';
 import { countOptionalOn, optionalCategories } from '@/utils/mailPreferences';
 
 /**
@@ -12,7 +12,7 @@ import { countOptionalOn, optionalCategories } from '@/utils/mailPreferences';
 interface Props {
     sections: MailPreferenceSection[];
     /** Current choice of every category, by key. */
-    choices: Record<string, boolean>;
+    choices: Record<string, MailDelivery>;
     /** Key of the selected section. */
     modelValue: string;
     /** Id of the panel the tabs control. */

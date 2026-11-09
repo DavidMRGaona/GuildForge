@@ -47,17 +47,24 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
             return new MailOptOutReportDTO([], $this->pausedAccounts());
         }
 
-        $optedOut = $this->optedOutByCategory();
+        $optedOut = $this->countByCategory(enabled: false);
+        $inDigest = null;
         $active = null;
         $rows = [];
 
         foreach ($optional as $category) {
             if ($category->audience instanceof Closure) {
-                [$eligible, $count] = $this->audienceCounts($category);
+                [$eligible, $count, $digests] = $this->audienceCounts($category);
             } else {
                 $active ??= $this->activeAccounts()->count();
                 $eligible = $active;
                 $count = $optedOut[$category->key] ?? 0;
+                $digests = 0;
+                // Only digestible categories pay for the count of who receives them once a day (core#333)
+                if ($category->digestible) {
+                    $inDigest ??= $this->countByCategory(enabled: true, digest: true);
+                    $digests = $inDigest[$category->key] ?? 0;
+                }
             }
 
             $rows[] = new MailCategoryOptOutDTO(
@@ -67,6 +74,7 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
                 optedOut: $count,
                 eligible: $eligible,
                 percentage: $eligible === 0 ? 0.0 : round($count / $eligible * 100, 1),
+                inDigest: $category->digestible ? $digests : null,
             );
         }
 
@@ -79,15 +87,17 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
     }
 
     /**
-     * @return array<string, int> category key => active accounts that turned it off
+     * @return array<string, int> category key => active accounts that turned it off, or (with
+     *                            $digest) that receive it as a daily digest
      */
-    private function optedOutByCategory(): array
+    private function countByCategory(bool $enabled, bool $digest = false): array
     {
         return DB::table('user_mail_preferences')
             ->join('users', 'users.id', '=', 'user_mail_preferences.user_id')
             ->whereNull('users.deleted_at')
             ->whereNull('users.anonymized_at')
-            ->where('user_mail_preferences.enabled', false)
+            ->where('user_mail_preferences.enabled', $enabled)
+            ->when($digest, static fn (Builder $query): Builder => $query->where('user_mail_preferences.digest', true))
             ->groupBy('user_mail_preferences.category')
             ->selectRaw('user_mail_preferences.category as category, COUNT(*) as total')
             ->pluck('total', 'category')
@@ -111,13 +121,15 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
     }
 
     /**
-     * @return array{0: int, 1: int} [accounts that see the category, those that turned it off]
+     * @return array{0: int, 1: int, 2: int} [accounts that see the category, those that turned it
+     *                                       off, those that receive it as a daily digest]
      */
     private function audienceCounts(MailCategoryDTO $category): array
     {
-        /** @var array{0: int, 1: int} $counts */
+        /** @var array{0: int, 1: int, 2: int} $counts */
         $counts = Cache::remember(
-            'mail_optout_stats.audience.'.$category->key,
+            // v2: the digest count was added (core#333)
+            'mail_optout_stats.audience.v2.'.$category->key,
             self::AUDIENCE_CACHE_SECONDS,
             fn (): array => $this->computeAudienceCounts($category),
         );
@@ -126,13 +138,13 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
     }
 
     /**
-     * @return array{0: int, 1: int}
+     * @return array{0: int, 1: int, 2: int}
      */
     private function computeAudienceCounts(MailCategoryDTO $category): array
     {
         $audience = $category->audience;
         if (! $audience instanceof Closure) {
-            return [0, 0];
+            return [0, 0, 0];
         }
 
         /** @var Collection<int, string> $turnedOff */
@@ -142,13 +154,24 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
             ->pluck('user_id');
         $turnedOff = array_flip($turnedOff->all());
 
+        /** @var Collection<int, string> $digests */
+        $digests = $category->digestible
+            ? DB::table('user_mail_preferences')
+                ->where('category', $category->key)
+                ->where('enabled', true)
+                ->where('digest', true)
+                ->pluck('user_id')
+            : collect();
+        $digests = array_flip($digests->all());
+
         $eligible = 0;
         $optedOut = 0;
+        $inDigest = 0;
         $failed = false;
 
         UserModel::query()
             ->whereNull('anonymized_at')
-            ->chunkById(self::CHUNK_SIZE, function (Collection $users) use ($audience, $turnedOff, &$eligible, &$optedOut, &$failed): void {
+            ->chunkById(self::CHUNK_SIZE, function (Collection $users) use ($audience, $turnedOff, $digests, &$eligible, &$optedOut, &$inDigest, &$failed): void {
                 foreach ($users as $user) {
                     try {
                         if ($audience($user) !== true) {
@@ -165,6 +188,9 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
                     if (isset($turnedOff[$user->id])) {
                         $optedOut++;
                     }
+                    if (isset($digests[$user->id])) {
+                        $inDigest++;
+                    }
                 }
             });
 
@@ -174,7 +200,7 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
             ]);
         }
 
-        return [$eligible, $optedOut];
+        return [$eligible, $optedOut, $inDigest];
     }
 
     private function translate(string $key): string

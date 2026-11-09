@@ -4,7 +4,7 @@ import { createI18n } from 'vue-i18n';
 import MailSectionTabs from '../MailSectionTabs.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
-import type { MailPreference, MailPreferenceSection } from '@/types/mailPreferences';
+import type { MailDelivery, MailPreference, MailPreferenceSection } from '@/types/mailPreferences';
 
 function category(key: string, mandatory = false, enabled = true): MailPreference {
     return {
@@ -14,6 +14,8 @@ function category(key: string, mandatory = false, enabled = true): MailPreferenc
         mandatory,
         mandatoryReason: mandatory ? 'Siempre se envía' : null,
         enabled,
+        digestible: false,
+        delivery: enabled ? 'immediate' : 'none',
     };
 }
 
@@ -28,7 +30,7 @@ const SECTIONS: MailPreferenceSection[] = [
     { key: 'Torneos', label: 'Torneos', icon: null, categories: [category('t.one')] },
 ];
 
-function mountTabs(choices: Record<string, boolean> = {}, modelValue = 'Cuenta'): VueWrapper {
+function mountTabs(choices: Record<string, MailDelivery> = {}, modelValue = 'Cuenta'): VueWrapper {
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
     return mount(MailSectionTabs, {
@@ -56,7 +58,7 @@ describe('MailSectionTabs', () => {
     });
 
     it('shows how many optional categories are on, read once by screen readers', () => {
-        const wrapper = mountTabs({ 'p.one': false });
+        const wrapper = mountTabs({ 'p.one': 'none' });
 
         const tab = wrapper.get('#mail-tab-Partidas');
         expect(tab.get('[aria-hidden="true"]').text()).toBe('1/3');

@@ -537,6 +537,12 @@ export default {
                 unsaved: 'Tienes cambios sin guardar.',
                 error: 'No se han podido guardar los cambios. Inténtalo de nuevo.',
                 verifyFirst: 'Para cambiar qué correos recibes, verifica tu email.',
+                delivery: {
+                    immediate: 'Al momento',
+                    digest: 'Resumen diario',
+                    none: 'No recibir',
+                    digestHint: 'Te llegarán todos juntos en un correo al día, hacia las {time}.',
+                },
                 pause: {
                     title: 'Pausar los correos optativos',
                     description:

@@ -41,3 +41,9 @@ Schedule::command('knowledge:sync')
 Schedule::command('search:sync')
     ->daily()
     ->withoutOverlapping();
+
+// Daily mail digests (core#333): asked every hour, each run sends what was kept before the last
+// digest hour of the display zone, so a missed run is caught up and a repeated one sends nothing
+Schedule::command('mail:send-digests')
+    ->hourlyAt(5)
+    ->withoutOverlapping();

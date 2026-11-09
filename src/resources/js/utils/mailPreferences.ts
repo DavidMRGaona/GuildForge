@@ -1,4 +1,4 @@
-import type { MailPreferenceSection } from '@/types/mailPreferences';
+import type { MailDelivery, MailPreferenceSection } from '@/types/mailPreferences';
 
 /** The categories of a section the person can turn on and off (the mandatory ones are always sent). */
 export function optionalCategories(
@@ -13,9 +13,10 @@ export function optionalCategories(
  */
 export function countOptionalOn(
     section: MailPreferenceSection,
-    choices: Record<string, boolean>
+    choices: Record<string, MailDelivery>
 ): number {
+    // Received at once or in the daily digest: everything but «no recibir» counts as on
     return optionalCategories(section).filter(
-        (category) => choices[category.key] ?? category.enabled
+        (category) => (choices[category.key] ?? category.delivery) !== 'none'
     ).length;
 }
