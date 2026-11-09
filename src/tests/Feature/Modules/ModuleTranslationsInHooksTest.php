@@ -10,7 +10,6 @@ use App\Modules\ModuleLoader;
 use App\Providers\ModulesServiceProvider;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
-use Modules\HookTranslationsModule\HookTranslationsModuleServiceProvider;
 use Tests\TestCase;
 
 /**
@@ -23,6 +22,9 @@ final class ModuleTranslationsInHooksTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    /** Set by the fixture's registerPermissions(); the fixture class is not autoloaded by the suite */
+    private const string LABEL_CONFIG_KEY = 'testing.hook_translations_module.permission_label';
+
     private string $root;
 
     protected function setUp(): void
@@ -34,10 +36,7 @@ final class ModuleTranslationsInHooksTest extends TestCase
         File::copyDirectory(base_path('tests/Fixtures/modules/hook-translations-module'), "{$modulesPath}/hook-translations-module");
         config(['modules.path' => $modulesPath]);
 
-        // The fixture class only autoloads once ModuleLoader has registered the module
-        if (class_exists(HookTranslationsModuleServiceProvider::class, false)) {
-            HookTranslationsModuleServiceProvider::$permissionLabel = null;
-        }
+        config([self::LABEL_CONFIG_KEY => null]);
 
         ModuleModel::factory()->enabled()->create([
             'name' => 'hook-translations-module',
@@ -60,7 +59,7 @@ final class ModuleTranslationsInHooksTest extends TestCase
     public function test_a_label_translated_in_a_registration_hook_is_translated(): void
     {
         $this->assertContains('hook-translations-module', app(ModuleLoader::class)->loadedModules());
-        $this->assertSame('Ver cosas', HookTranslationsModuleServiceProvider::$permissionLabel);
+        $this->assertSame('Ver cosas', config(self::LABEL_CONFIG_KEY));
     }
 
     public function test_the_rest_of_the_group_stays_translated_afterwards(): void

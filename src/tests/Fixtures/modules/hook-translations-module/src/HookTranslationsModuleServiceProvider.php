@@ -16,7 +16,8 @@ use App\Modules\ModuleServiceProvider;
  */
 final class HookTranslationsModuleServiceProvider extends ModuleServiceProvider
 {
-    public static ?string $permissionLabel = null;
+    /** Where the label read inside registerPermissions() is left for the test to check */
+    public const string LABEL_CONFIG_KEY = 'testing.hook_translations_module.permission_label';
 
     public function moduleName(): string
     {
@@ -30,12 +31,13 @@ final class HookTranslationsModuleServiceProvider extends ModuleServiceProvider
 
     public function registerPermissions(): array
     {
-        self::$permissionLabel = __('hook-translations-module::messages.permission');
+        $label = __('hook-translations-module::messages.permission');
+        config([self::LABEL_CONFIG_KEY => $label]);
 
         return [
             new PermissionDTO(
                 name: 'things.view',
-                label: self::$permissionLabel,
+                label: $label,
                 group: 'Cosas',
             ),
         ];
