@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Domain\Events\UserDeactivated;
+use App\Domain\Events\UserRestored;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
@@ -24,6 +26,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 /**
  * @property string $id
@@ -52,6 +56,31 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
     use StoresInstantsInStorageTimezone;
 
     private const int PANEL_AVATAR_SIZE = 64;
+
+    /**
+     * Deactivating (soft deleting) and restoring tell the modules after the commit, wherever
+     * they happen: panel, commands or code. A permanent deletion does not.
+     */
+    protected static function booted(): void
+    {
+        static::deleted(static function (self $user): void {
+            if ($user->isForceDeleting()) {
+                return;
+            }
+
+            $userId = (string) $user->getKey();
+            DB::afterCommit(static function () use ($userId): void {
+                Event::dispatch(new UserDeactivated($userId));
+            });
+        });
+
+        static::restored(static function (self $user): void {
+            $userId = (string) $user->getKey();
+            DB::afterCommit(static function () use ($userId): void {
+                Event::dispatch(new UserRestored($userId));
+            });
+        });
+    }
 
     /** @var array<string> */
     protected array $cloudinaryImageFields = ['avatar_public_id'];

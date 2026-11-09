@@ -11,6 +11,7 @@ use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Domain\Authorization\Exceptions\RoleHolderLimitReachedException;
 use App\Domain\Events\AssociationRoleLost;
+use App\Domain\Events\UserRolesChanged;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Collection;
@@ -158,13 +159,19 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
             $role = RoleModel::where('name', $roleName)->firstOrFail();
 
             // Already held: no new holder, nothing to check, nothing to log
+            $before = null;
             if (! $user->roles()->whereKey($role->id)->exists()) {
+                $before = $this->storedRoleNames($user);
                 $this->holderLimit->assertCanHold($user, $role);
                 $user->roles()->attach($role->id);
                 $this->audit()->roleAssigned($user, $role->name);
             }
 
             $this->invalidateCacheFor($user);
+
+            if ($before !== null) {
+                $this->announceRolesChanged($user, $before, $this->storedRoleNames($user));
+            }
         });
     }
 
@@ -181,6 +188,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
             DB::transaction(function () use ($user, $role): void {
                 // Logged only when the user held it; the entry and the change stand or fall together
                 $detached = false;
+                $before = $this->storedRoleNames($user);
                 if ($user->roles()->detach($role->id) > 0) {
                     $this->audit()->roleRemoved($user, $role->name);
                     $detached = true;
@@ -190,6 +198,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
 
                 // After the cache invalidation, so its listeners never read stale roles
                 if ($detached) {
+                    $this->announceRolesChanged($user, $before, $this->storedRoleNames($user));
                     $this->announceAssociationRoleLost($user, [$role->name]);
                 }
             });
@@ -210,6 +219,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         DB::transaction(function () use ($user, $roleNames): void {
             // Read from the database, not the cache: a user who has the base role of every account keeps it
             $currentIds = $user->roles()->pluck('roles.id')->all();
+            $before = $this->storedRoleNames($user);
             $hasBaseRole = $user->roles()->where('roles.name', BaseRoleRule::NAME)->exists();
 
             if ($hasBaseRole && ! in_array(BaseRoleRule::NAME, $roleNames, true)) {
@@ -242,10 +252,42 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
             $this->invalidateCacheFor($user);
 
             // After the cache invalidation, so its listeners never read stale roles
+            if ($changes['detached'] !== [] || $changes['attached'] !== []) {
+                $this->announceRolesChanged($user, $before, $this->storedRoleNames($user));
+            }
+
             $this->announceAssociationRoleLost(
                 $user,
                 array_values(array_map(static fn (int|string $roleId): string => (string) $namesById[$roleId], $changes['detached'])),
             );
+        });
+    }
+
+    /**
+     * The roles stored for the account, inactive ones included, by name and sorted.
+     *
+     * @return list<string>
+     */
+    private function storedRoleNames(UserModel $user): array
+    {
+        /** @var list<string> $names */
+        $names = $user->roles()->pluck('roles.name')->map(strval(...))->sort()->values()->all();
+
+        return $names;
+    }
+
+    /**
+     * After the commit, tells listeners that the stored roles of the account changed.
+     *
+     * @param  list<string>  $before
+     * @param  list<string>  $after
+     */
+    private function announceRolesChanged(UserModel $user, array $before, array $after): void
+    {
+        $userId = (string) $user->getKey();
+
+        DB::afterCommit(static function () use ($userId, $before, $after): void {
+            Event::dispatch(new UserRolesChanged($userId, $before, $after));
         });
     }
 
