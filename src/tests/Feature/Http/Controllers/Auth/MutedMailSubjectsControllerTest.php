@@ -10,6 +10,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\Time\UsesUtcStorage;
 use Tests\TestCase;
 
 /**
@@ -18,6 +19,7 @@ use Tests\TestCase;
 final class MutedMailSubjectsControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use UsesUtcStorage;
 
     private const string ENDPOINT = '/perfil/correos/silenciados';
 
@@ -31,6 +33,9 @@ final class MutedMailSubjectsControllerTest extends TestCase
 
     public function test_the_tab_lists_what_the_person_muted(): void
     {
+        // Stored in UTC, shown in Madrid: 10:00 UTC is 11:00 there
+        $this->useUtcStorage();
+        config(['app.display_timezone' => 'Europe/Madrid']);
         $this->travelTo('2026-12-01 10:00:00');
         $user = UserModel::factory()->create();
         $this->service()->mute($user, new MailSubjectDTO('example.campaign', 'c-1', 'La tumba', 'example-subjects.campaign'));
