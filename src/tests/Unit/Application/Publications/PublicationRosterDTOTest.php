@@ -7,6 +7,7 @@ namespace Tests\Unit\Application\Publications;
 use App\Application\Publications\DTOs\PublicationMembershipDTO;
 use App\Application\Publications\DTOs\PublicationRosterDTO;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class PublicationRosterDTOTest extends TestCase
@@ -42,11 +43,28 @@ final class PublicationRosterDTOTest extends TestCase
         $this->assertSame([], $roster->leaderIds);
     }
 
-    public function test_ids_that_are_not_user_ids_are_rejected(): void
+    /**
+     * @param  list<mixed>  $ids
+     */
+    #[DataProvider('invalidIds')]
+    public function test_ids_that_are_not_user_ids_are_rejected(array $ids): void
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new PublicationRosterDTO(memberIds: ['not-a-uuid']);
+        new PublicationRosterDTO(memberIds: $ids);
+    }
+
+    /**
+     * @return array<string, array{list<mixed>}>
+     */
+    public static function invalidIds(): array
+    {
+        return [
+            'not a uuid' => [['not-a-uuid']],
+            'empty' => [['']],
+            'not a string' => [[42]],
+            'uuid with more after it' => [[self::PLAYER.'x']],
+        ];
     }
 
     public function test_a_membership_names_its_publication(): void

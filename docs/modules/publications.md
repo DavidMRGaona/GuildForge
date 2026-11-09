@@ -54,9 +54,10 @@ Some records have people in them: the players of a campaign and its directors. A
 
 Offering it:
 
-- `roster($id)` answers for the same records as `find()`: `null` when the record does not exist or is not published.
-- `rostersOf($userId)` lists the published records not over yet that the user takes part in or leads, so a listener can send a person's complete list (a shorter list reads as removals).
-- Dispatch `PublicationRosterChanged($type, $id, $userIds)` once the change commits, when someone joins, leaves or is removed, or starts or stops leading. Ending, cancelling or taking down the record is a `PublicationChanged`: the roster of a record `find()` no longer returns is `null`.
+- `roster($id)` answers for exactly the records `find()` returns: `null` when the record does not exist or is not published, and the roster of a cancelled or ended record that is still published (read its state from `find()`).
+- `rostersOf($userId)` lists the published records that are neither cancelled nor ended that the user takes part in or leads, so a listener can send a person's complete list (a shorter list reads as removals). `isLeader` is true for a leader whether or not they also take part.
+- User ids are account UUIDs: listeners pass them in lowercase, sources compare them without regard to case.
+- Dispatch `PublicationRosterChanged($type, $id, $userIds)` once the change commits, when someone joins, leaves or is removed, or starts or stops leading. Cancelling, ending, taking down or deleting the record dispatches no roster event: that is a `PublicationChanged` or `PublicationRemoved`, and listeners read `rostersOf()` again for the people they knew.
 
 Listening: check the capability with `instanceof` on the source from `PublicationSourceRegistryInterface::source($type)`. Read `roster()` and `rostersOf()` again when the queued job runs, never from the event. The registry does not change: a source without the capability simply has no roster.
 
