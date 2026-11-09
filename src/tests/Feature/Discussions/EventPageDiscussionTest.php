@@ -7,7 +7,6 @@ namespace Tests\Feature\Discussions;
 use App\Application\Discussions\Contracts\SubjectDiscussionInterface;
 use App\Application\Discussions\DTOs\DiscussionActivityDTO;
 use App\Application\Discussions\DTOs\SubjectDiscussionDTO;
-use App\Infrastructure\Discussions\Services\NullSubjectDiscussion;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -25,7 +24,7 @@ final class EventPageDiscussionTest extends TestCase
 
     public function test_without_a_forum_module_there_is_no_discussion(): void
     {
-        $this->assertInstanceOf(NullSubjectDiscussion::class, $this->app->make(SubjectDiscussionInterface::class));
+        $this->assertNull($this->app->make(SubjectDiscussionInterface::class)->forSubject('event', 'event-1', null));
         $event = EventModel::factory()->published()->upcoming()->create();
 
         $this->get('/eventos/'.$event->slug)->assertInertia(
