@@ -543,6 +543,8 @@ export default {
                     none: 'No recibir',
                     digestHint: 'Te llegarán todos juntos en un correo al día, hacia las {time}.',
                 },
+                loadError: 'No se han podido cargar tus preferencias de correo.',
+                retry: 'Reintentar',
                 pause: {
                     title: 'Pausar los correos optativos',
                     description:

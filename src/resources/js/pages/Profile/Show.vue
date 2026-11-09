@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import BaseButton from '@/components/ui/BaseButton.vue';
 import ProfileHeader from '@/components/profile/ProfileHeader.vue';
 import ProfileSidebar from '@/components/profile/ProfileSidebar.vue';
 import ProfileTabBar from '@/components/profile/ProfileTabBar.vue';
@@ -25,7 +27,9 @@ withDefaults(defineProps<Props>(), {
     mailPreferences: null,
 });
 
-const { tabs, activeTabId, setActiveTab } = useProfileTabs();
+const { t } = useI18n();
+const { tabs, activeTabId, setActiveTab, mailPreferencesFailed, loadMailPreferences } =
+    useProfileTabs();
 const { getSlotComponents, hasSlotComponents } = useModuleSlots();
 const { success: successMessage, error: errorMessage } = useFlashMessages();
 
@@ -84,6 +88,16 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                         :muted-subjects="mailPreferences.mutedSubjects"
                         :digest-time="mailPreferences.digestTime"
                     />
+                    <div
+                        v-else-if="mailPreferencesFailed"
+                        role="alert"
+                        class="flex flex-col items-center gap-4 py-12 text-center"
+                    >
+                        <p class="text-sm text-error">{{ t('auth.profile.mail.loadError') }}</p>
+                        <BaseButton type="button" variant="secondary" @click="loadMailPreferences">
+                            {{ t('auth.profile.mail.retry') }}
+                        </BaseButton>
+                    </div>
                     <div v-else class="flex items-center justify-center py-12">
                         <div
                             class="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"
