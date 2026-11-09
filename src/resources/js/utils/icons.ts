@@ -3,26 +3,40 @@ import type { ActivityIcon, CalendarEntryMetaIcon } from '@/types/models';
 import type { ProfileTabIcon as ProfileTabIconType } from '@/types/profile';
 import type { NotificationType } from '@/composables/useNotifications';
 import {
+    Bell,
     BookOpen,
+    Building2,
     Calendar,
+    CalendarCheck,
+    CalendarDays,
     CircleAlert,
     CircleCheck,
+    CircleUserRound,
+    ClipboardList,
     Clock,
+    CreditCard,
     Dices,
     FileText,
+    Handshake,
     Heart,
+    IdCard,
     Image,
     Info,
     Lock,
     Mail,
     Map,
     MapPin,
+    Megaphone,
     Monitor,
+    Newspaper,
     Puzzle,
     Settings,
+    Settings2,
+    ShieldCheck,
     Sparkles,
     SquarePen,
     Swords,
+    Ticket,
     TriangleAlert,
     Trophy,
     User,
@@ -92,4 +106,42 @@ function isCalendarMetaIcon(icon: string): icon is CalendarEntryMetaIcon {
 /** Resolve a source-provided icon name, falling back to a neutral icon for names this core does not know. */
 export function resolveCalendarMetaIcon(icon: string): Component {
     return isCalendarMetaIcon(icon) ? calendarMetaIconMap[icon] : Info;
+}
+
+/**
+ * Lucide icons a module may name for its section of the «Correos» tab (`MailCategoryDTO::$icon`).
+ * A closed list keeps the bundle small: the rest of the library is never imported.
+ */
+export const mailSectionIconMap: Record<string, Component> = {
+    bell: Bell,
+    'book-open': BookOpen,
+    'building-2': Building2,
+    'calendar-check': CalendarCheck,
+    'calendar-days': CalendarDays,
+    'circle-user-round': CircleUserRound,
+    'clipboard-list': ClipboardList,
+    'credit-card': CreditCard,
+    dices: Dices,
+    handshake: Handshake,
+    heart: Heart,
+    'id-card': IdCard,
+    mail: Mail,
+    megaphone: Megaphone,
+    'map-pin': MapPin,
+    newspaper: Newspaper,
+    'settings-2': Settings2,
+    'shield-check': ShieldCheck,
+    swords: Swords,
+    ticket: Ticket,
+    trophy: Trophy,
+    users: Users,
+};
+
+/** Resolve the icon a module names for its mail section, falling back to a generic mail icon. */
+export function resolveMailSectionIcon(icon: string | null): Component {
+    return (
+        (icon !== null && Object.hasOwn(mailSectionIconMap, icon)
+            ? mailSectionIconMap[icon]
+            : undefined) ?? Mail
+    );
 }

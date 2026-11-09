@@ -24,6 +24,7 @@ const SECTIONS: MailPreferenceSection[] = [
     {
         key: 'Cuenta',
         label: 'Cuenta',
+        icon: 'circle-user-round',
         categories: [
             {
                 key: 'core.account',
@@ -38,6 +39,7 @@ const SECTIONS: MailPreferenceSection[] = [
     {
         key: 'Partidas',
         label: 'Partidas',
+        icon: null,
         categories: [
             {
                 key: 'game-tables.reminders',
@@ -81,13 +83,15 @@ describe('ProfileMailTab', () => {
         router.delete.mockReset();
     });
 
-    it('draws a labelled switch per category, grouped by section', () => {
+    it('draws a card per section with a labelled switch per optional category', () => {
         const wrapper = mountTab();
 
         expect(
             wrapper.find('[data-testid="mail-preference-sections"]').findAll('section')
         ).toHaveLength(2);
-        expect(wrapper.findAll('[role="switch"]')).toHaveLength(3);
+        // The mandatory category of «Cuenta» has no switch: it is listed, locked, at the end of its card
+        expect(wrapper.findAll('[role="switch"]')).toHaveLength(2);
+        expect(switchFor(wrapper, 'core.account').exists()).toBe(false);
 
         const reminders = switchFor(wrapper, 'game-tables.reminders');
         expect(reminders.attributes('aria-checked')).toBe('true');
@@ -96,25 +100,18 @@ describe('ProfileMailTab', () => {
         expect(switchFor(wrapper, 'game-tables.news').attributes('aria-checked')).toBe('false');
     });
 
-    it('shows a mandatory category locked, with its reason read by the switch', () => {
+    it('lists a mandatory category with its reason as text, without a control', () => {
         const wrapper = mountTab();
 
-        const locked = switchFor(wrapper, 'core.account');
-        expect(locked.attributes('aria-checked')).toBe('true');
-        expect(locked.attributes('aria-disabled')).toBe('true');
-        expect(locked.attributes('disabled')).toBeUndefined();
-
-        const describedBy = (locked.attributes('aria-describedby') ?? '').split(' ');
-        const reasonText = describedBy.map((id) => wrapper.find(`#${id}`).text()).join(' ');
-        expect(reasonText).toContain('Siempre se envía: confirma algo que has hecho tú.');
+        const item = wrapper.find('[data-mandatory-category="core.account"]');
+        expect(item.text()).toContain('Correos de tu cuenta');
+        expect(item.text()).toContain('Siempre se envía: confirma algo que has hecho tú.');
+        expect(item.find('[role="switch"], button, input').exists()).toBe(false);
     });
 
-    it('does not change a locked switch and keeps the save button off', async () => {
+    it('keeps the save button off until something changes', () => {
         const wrapper = mountTab();
 
-        await switchFor(wrapper, 'core.account').trigger('click');
-
-        expect(switchFor(wrapper, 'core.account').attributes('aria-checked')).toBe('true');
         expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBeDefined();
     });
 

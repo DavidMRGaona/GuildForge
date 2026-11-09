@@ -15,12 +15,18 @@ use Closure;
  */
 final readonly class MailCategoryDTO
 {
+    /** Shape of an icon name: a Lucide icon in kebab case («calendar-check»). */
+    public const string ICON_PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
+
     /**
      * @param  string  $key  "<prefix>.<name>", where the prefix is "core" or the module name.
      * @param  string  $section  Heading the category is listed under; categories with the same one go together.
      * @param  string|null  $mandatoryReason  Why it is always sent; null for an optional category.
      * @param  (Closure(object): bool)|null  $audience  Whether a person sees the category; null shows it to everyone.
      *                                                  It only decides what is listed, never whether a mail goes out.
+     * @param  string|null  $icon  Lucide icon name in kebab case («dices») for the section the category is listed under;
+     *                             the first category of a section that declares one decides. The profile falls back to a
+     *                             generic mail icon for a missing or unknown name.
      */
     private function __construct(
         public string $key,
@@ -29,6 +35,7 @@ final readonly class MailCategoryDTO
         public string $description,
         public ?string $mandatoryReason,
         public ?Closure $audience,
+        public ?string $icon = null,
     ) {}
 
     /**
@@ -42,8 +49,9 @@ final readonly class MailCategoryDTO
         string $label,
         string $description,
         ?Closure $audience = null,
+        ?string $icon = null,
     ): self {
-        return new self($key, $section, $label, $description, null, $audience);
+        return new self($key, $section, $label, $description, null, $audience, $icon);
     }
 
     /**
@@ -59,8 +67,9 @@ final readonly class MailCategoryDTO
         string $description,
         string $reason,
         ?Closure $audience = null,
+        ?string $icon = null,
     ): self {
-        return new self($key, $section, $label, $description, $reason, $audience);
+        return new self($key, $section, $label, $description, $reason, $audience, $icon);
     }
 
     public function isMandatory(): bool

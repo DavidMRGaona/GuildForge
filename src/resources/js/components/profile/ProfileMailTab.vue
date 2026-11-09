@@ -149,7 +149,7 @@ function save(): void {
                 <MailPauseBlock :pause="pause" :blocked="gate.blocked.value" />
             </div>
 
-            <div class="space-y-8" data-testid="mail-preference-sections">
+            <div class="space-y-4" data-testid="mail-preference-sections">
                 <MailPreferenceSection
                     v-for="section in sections"
                     :key="section.key"

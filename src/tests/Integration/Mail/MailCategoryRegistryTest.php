@@ -79,6 +79,35 @@ final class MailCategoryRegistryTest extends TestCase
         ), 'example');
     }
 
+    public function test_a_malformed_icon_name_is_rejected(): void
+    {
+        $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);
+
+        $this->expectException(InvalidMailCategoryException::class);
+        $registry->register(MailCategoryDTO::optional(
+            key: 'example.first',
+            section: 'example::mail.section',
+            label: 'Label',
+            description: 'Description',
+            icon: 'Calendar Check',
+        ), 'example');
+    }
+
+    public function test_a_kebab_case_icon_name_is_accepted(): void
+    {
+        $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);
+
+        $registry->register(MailCategoryDTO::optional(
+            key: 'example.first',
+            section: 'example::mail.section',
+            label: 'Label',
+            description: 'Description',
+            icon: 'calendar-check',
+        ), 'example');
+
+        $this->assertSame('calendar-check', $registry->find('example.first')?->icon);
+    }
+
     public function test_outside_local_and_testing_an_invalid_category_is_skipped_with_a_warning(): void
     {
         $log = Log::spy();

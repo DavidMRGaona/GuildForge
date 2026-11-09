@@ -516,7 +516,13 @@ export default {
             },
             mail: {
                 title: 'Mail you receive',
-                intro: 'Choose which mail you want to receive from {appName}. Mandatory ones are always sent, because they confirm something you did or warn you of something that changes your plans.',
+                intro: 'Choose which mail you want to receive from {appName}. The ones at the end of each card, with a padlock, are always sent, because they confirm something you did or warn you of something that changes your plans.',
+                section: {
+                    summary: '{enabled} of {total} turned on | {enabled} of {total} turned on',
+                },
+                mandatory: {
+                    label: 'Always sent',
+                },
                 save: 'Save changes',
                 unsaved: 'You have unsaved changes.',
                 error: 'The changes could not be saved. Try again.',

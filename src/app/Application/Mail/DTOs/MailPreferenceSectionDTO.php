@@ -12,10 +12,12 @@ final readonly class MailPreferenceSectionDTO
     /**
      * @param  string  $key  The section as the categories declare it (its translation key).
      * @param  list<MailPreferenceDTO>  $categories  In registration order.
+     * @param  string|null  $icon  Lucide icon name declared by the first category that has one.
      */
     public function __construct(
         public string $key,
         public string $label,
         public array $categories,
+        public ?string $icon = null,
     ) {}
 }
