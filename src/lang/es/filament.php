@@ -8,12 +8,6 @@ return [
         'heading' => 'Detalles',
         'close' => 'Cerrar',
     ],
-    'navigation' => [
-        'pages' => 'Páginas',
-        'content' => 'Contenido',
-        'settings' => 'Configuración',
-        'admin' => 'Administración',
-    ],
     'hero_slides' => [
         'navigation' => 'Hero slides',
         'label' => 'slide',

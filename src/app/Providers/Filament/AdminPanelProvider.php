@@ -356,103 +356,13 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * The core's groups (PanelNavigationGroup), then those that modules not migrated yet declare.
+     * The core's groups (PanelNavigationGroup); modules place their entries in them.
      *
      * @return array<string, NavigationGroup>
      */
     private function getNavigationGroups(): array
     {
-        return PanelNavigationGroups::build($this->collectModuleNavigationGroups());
-    }
-
-    /**
-     * Collect navigation groups from enabled modules.
-     *
-     * @return array<string, array{icon?: string, sort?: int}>
-     */
-    private function collectModuleNavigationGroups(): array
-    {
-        try {
-            $groups = [];
-            $modulesPath = config('modules.path', base_path('modules'));
-
-            if (! is_dir($modulesPath)) {
-                return $groups;
-            }
-
-            // Get list of enabled module names
-            $enabledModules = $this->getEnabledModuleNames();
-
-            // If no modules enabled, skip the rest
-            if ($enabledModules === []) {
-                return $groups;
-            }
-
-            // Scan module directories for service providers
-            $moduleDirectories = glob($modulesPath.'/*', GLOB_ONLYDIR);
-            if ($moduleDirectories === false) {
-                return $groups;
-            }
-
-            foreach ($moduleDirectories as $modulePath) {
-                $moduleName = basename($modulePath);
-
-                // Skip disabled modules
-                if (! in_array($moduleName, $enabledModules, true)) {
-                    continue;
-                }
-
-                try {
-                    $studlyName = str_replace('-', '', ucwords($moduleName, '-'));
-
-                    // Find the service provider file
-                    $providerFile = $modulePath.'/src/'.$studlyName.'ServiceProvider.php';
-                    if (! file_exists($providerFile)) {
-                        continue;
-                    }
-
-                    // Register autoloader and load the provider
-                    $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath.'/src');
-
-                    $providerClass = "Modules\\{$studlyName}\\{$studlyName}ServiceProvider";
-
-                    // Load the provider file
-                    require_once $providerFile;
-
-                    if (! class_exists($providerClass)) {
-                        continue;
-                    }
-
-                    // Load module translations first
-                    $langPath = $modulePath.'/lang';
-                    if (is_dir($langPath)) {
-                        app('translator')->addNamespace($moduleName, $langPath);
-                    }
-
-                    /** @var ModuleServiceProvider $provider */
-                    $provider = new $providerClass(app());
-                    $moduleGroups = $provider->registerNavigationGroups();
-
-                    foreach ($moduleGroups as $label => $options) {
-                        $groups[$label] ??= $options;
-                    }
-                } catch (Throwable $e) {
-                    // Log the error but continue with other modules
-                    logger()->warning("[AdminPanelProvider] Failed to load navigation groups for module: {$moduleName}", [
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-
-            return $groups;
-        } catch (Throwable $e) {
-            // If anything fails, return empty groups and let core groups handle navigation
-            logger()->error('[AdminPanelProvider] Failed to collect module navigation groups', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return [];
-        }
+        return PanelNavigationGroups::build();
     }
 
     /**
