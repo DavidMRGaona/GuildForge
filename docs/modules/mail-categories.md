@@ -100,3 +100,7 @@ The check runs when the mail is delivered, inside the queue worker for queued no
 
 - `MailCategoryRegistryInterface` lists every category (`all()`, `find()`) and tells which one a notification belongs to (`forNotification()`).
 - `MailPreferenceServiceInterface` lists the categories a person sees, grouped by section and with their state (`sectionsFor()`), saves their choices (`update()`, which refuses mandatory, unknown or hidden categories) and says whether a mail of a category reaches them (`receives()`).
+
+## Where people choose
+
+The profile has a **Correos** tab (`/perfil?tab=mail`, id `mail`, exported as `MAIL_TAB` in `useProfileTabs.ts`) that draws `sectionsFor()`: one switch per optional category, mandatory ones locked with their reason, and a «Guardar cambios» button that sends only what changed to `PUT /perfil/correos` (`profile.mail-preferences.update`). The server validates every choice through `update()`; a refused one comes back as an error under `preferences.<category key>`. The tab is where mail footers and unsubscribe links point to. The component leaves a `pause` slot above the categories for the pause block (core#331).

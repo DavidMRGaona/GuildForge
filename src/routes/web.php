@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\CalendarFeedTokenController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\MailPreferencesController;
 use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
@@ -125,6 +126,11 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:6,1,profile')
         ->name('profile.update');
     Route::put('/perfil/contrasena', [ProfileController::class, 'changePassword'])->name('profile.password');
+    // Which optional mail the person receives. Open to accounts that must verify their email
+    // (it is where they stop a mail); the service decides which categories are editable
+    Route::put('/perfil/correos', [MailPreferencesController::class, 'update'])
+        ->middleware('throttle:30,1,profile-mail-preferences')
+        ->name('profile.mail-preferences.update');
     // Personal calendar address: issued (or regenerated) and revoked from the profile
     Route::post('/perfil/calendario', [CalendarFeedTokenController::class, 'store'])
         ->middleware('throttle:6,1,calendar-feed-token')

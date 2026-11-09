@@ -14,6 +14,8 @@ return [
     'profile_updated' => 'Perfil actualizado correctamente.',
     'password_incorrect' => 'La contraseña actual no es correcta.',
     'password_changed' => 'Contraseña actualizada correctamente.',
+    'mail_preferences_saved' => 'Preferencias de correo guardadas.',
+    'mail_preferences_not_editable' => 'Esa categoría de correo no se puede cambiar.',
     'email_change_verification_failed' => 'El enlace de verificación no es válido o ha expirado.',
     'email_changed' => 'Tu correo electrónico ha sido actualizado correctamente.',
     'email_change_pending' => 'Se ha enviado un correo de verificación a tu nueva dirección.',

@@ -18,6 +18,12 @@ const DEFAULT_TAB = 'account';
 /** Core tab with the personal calendar subscription, shown when the page says it is available. */
 export const CALENDAR_TAB = 'calendar';
 
+/**
+ * Core tab where each person chooses which optional mail they receive. Every account has it;
+ * `/perfil?tab=mail` is the address other pages and mails link to.
+ */
+export const MAIL_TAB = 'mail';
+
 function tabFromUrl(url: string): string | null {
     return new URL(url, 'http://localhost').searchParams.get('tab');
 }
@@ -77,6 +83,7 @@ export function useProfileTabs(): UseProfileTabsReturn {
     });
     const visibleTabIds = [
         ...(hasCalendarTab.value ? [CALENDAR_TAB] : []),
+        MAIL_TAB,
         ...profileRegistrations.value.filter(isRegistrationVisible).map(registeredTabId),
     ];
     const requestedTab = tabFromUrl(page.url);
@@ -100,6 +107,12 @@ export function useProfileTabs(): UseProfileTabsReturn {
                 icon: 'calendar' as ProfileTabIcon,
             });
         }
+
+        baseTabs.push({
+            id: MAIL_TAB,
+            label: t('auth.profile.tabs.mail'),
+            icon: 'envelope' as ProfileTabIcon,
+        });
 
         // Add module tabs from profile-sections slot
         const moduleSlots = getSlotComponents('profile-sections');
