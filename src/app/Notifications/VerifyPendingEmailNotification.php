@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Application\Mail\Contracts\HasMailCategory;
+use App\Infrastructure\Mail\Preferences\CoreMailCategories;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\Contracts\NamesMailRecipient;
 use Illuminate\Bus\Queueable;
@@ -12,7 +14,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 
-final class VerifyPendingEmailNotification extends Notification implements NamesMailRecipient, ShouldQueue
+final class VerifyPendingEmailNotification extends Notification implements HasMailCategory, NamesMailRecipient, ShouldQueue
 {
     use Queueable;
 
@@ -67,5 +69,10 @@ final class VerifyPendingEmailNotification extends Notification implements Names
     public function mailRecipient(): string
     {
         return $this->pendingEmail;
+    }
+
+    public function mailCategory(): string
+    {
+        return CoreMailCategories::ACCOUNT;
     }
 }

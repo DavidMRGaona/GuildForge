@@ -7,6 +7,7 @@ namespace App\Modules;
 use App\Application\Calendar\Contracts\CalendarAttendanceSourceInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Knowledge\Contracts\KnowledgeCapabilityInterface;
+use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Modules\DTOs\ModuleRouteDTO;
 use App\Application\Modules\DTOs\NavigationItemDTO;
 use App\Application\Modules\DTOs\PagePrefixDTO;
@@ -294,6 +295,18 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<KnowledgeCapabilityInterface>>
      */
     public function registerKnowledgeCapabilities(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the mail categories of this module's notifications.
+     * Each key starts with "<module name>."; every mail notification of the module returns one
+     * of them from HasMailCategory::mailCategory(), so people can turn the optional ones off.
+     *
+     * @return list<MailCategoryDTO>
+     */
+    public function registerMailCategories(): array
     {
         return [];
     }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Application\Mail\Contracts\HasMailCategory;
+use App\Infrastructure\Mail\Preferences\CoreMailCategories;
 use App\Notifications\Support\EscapesMarkdown;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +16,7 @@ use Illuminate\Notifications\Notification;
  * Tells whoever can grant the roles that someone's roles that require association
  * membership are paused.
  */
-final class InactiveRolesManagerNotification extends Notification implements ShouldQueue
+final class InactiveRolesManagerNotification extends Notification implements HasMailCategory, ShouldQueue
 {
     use Queueable;
 
@@ -39,5 +41,10 @@ final class InactiveRolesManagerNotification extends Notification implements Sho
                 'name' => EscapesMarkdown::escape($this->personName),
                 'roles' => EscapesMarkdown::escape($this->roles),
             ]));
+    }
+
+    public function mailCategory(): string
+    {
+        return CoreMailCategories::ROLE_MANAGEMENT;
     }
 }

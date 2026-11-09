@@ -12,6 +12,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Exceptions\UserNotFoundException;
+use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -27,6 +28,7 @@ final readonly class UserService implements UserServiceInterface
         private SettingsServiceInterface $settingsService,
         private RoleAuditLoggerInterface $audit,
         private CalendarFeedTokenServiceInterface $calendarFeedTokens,
+        private MailPreferenceRepositoryInterface $mailPreferences,
     ) {}
 
     public function canAccessPanel(string $userId): bool
@@ -56,6 +58,8 @@ final readonly class UserService implements UserServiceInterface
             $this->removeEveryRole($userModel);
             // The personal calendar address would still tell what the person attends
             $this->calendarFeedTokens->revoke($userId);
+            // So do the mail preferences
+            $this->mailPreferences->deleteForUser(UserId::fromString($userId));
 
             $userModel->update([
                 'name' => $anonymousName,
@@ -109,6 +113,7 @@ final readonly class UserService implements UserServiceInterface
             $this->removeEveryRole($userModel);
             // The personal calendar address would still tell what the person attends
             $this->calendarFeedTokens->revoke($dto->userId);
+            $this->mailPreferences->deleteForUser(UserId::fromString($dto->userId));
 
             $userModel->update([
                 'name' => $anonymousName,

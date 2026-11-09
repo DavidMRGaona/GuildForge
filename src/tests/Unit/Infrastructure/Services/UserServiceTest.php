@@ -12,6 +12,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Exceptions\UserNotFoundException;
+use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Services\UserService;
@@ -34,6 +35,8 @@ final class UserServiceTest extends TestCase
 
     private CalendarFeedTokenServiceInterface&MockInterface $calendarFeedTokens;
 
+    private MailPreferenceRepositoryInterface&MockInterface $mailPreferences;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -43,6 +46,7 @@ final class UserServiceTest extends TestCase
         $this->settingsService = Mockery::mock(SettingsServiceInterface::class);
         $this->audit = Mockery::mock(RoleAuditLoggerInterface::class);
         $this->calendarFeedTokens = Mockery::mock(CalendarFeedTokenServiceInterface::class);
+        $this->mailPreferences = Mockery::mock(MailPreferenceRepositoryInterface::class);
 
         $this->service = new UserService(
             $this->userModelQuery,
@@ -50,6 +54,7 @@ final class UserServiceTest extends TestCase
             $this->settingsService,
             $this->audit,
             $this->calendarFeedTokens,
+            $this->mailPreferences,
         );
     }
 
@@ -151,6 +156,8 @@ final class UserServiceTest extends TestCase
         $this->authService->shouldReceive('invalidateCacheFor')->once()->with($userModel);
         // The personal calendar address goes too
         $this->calendarFeedTokens->shouldReceive('revoke')->once()->with($userId->value());
+        // And the mail preferences, which would still describe the person
+        $this->mailPreferences->shouldReceive('deleteForUser')->once()->with(Mockery::on(fn (UserId $id): bool => $id->value() === $userId->value()));
 
         $this->service->anonymize($userId->value());
 
