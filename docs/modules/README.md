@@ -457,7 +457,7 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
 
 Register dynamic relationships on core models in `register()`, not `boot()` (see [Extending core functionality](#extending-core-functionality)).
 
-The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerKnowledgeCapabilities()` and `registerNavigation()`. The panel reads `registerNavigationGroups()`, `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
+The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerKnowledgeCapabilities()` and `registerNavigation()`. The panel reads `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
 
 `onEnable()` and `onDisable()` are declared on the base class, but the core never calls them: set up data in migrations and seeders, which run when the module is first enabled.
 
@@ -770,7 +770,7 @@ protected static ?int $navigationSort = 130;
 
 Core settings use 10–40. Module slots: Banner de cookies 110 · Encuestas 120 · Mesas 130 · Notificaciones a canales 140 · Página de enlaces 150 · Reservas 160 · Socios 170. A clustered page's path and route name gain the cluster prefix (`/admin/configuracion/<slug>`, `filament.admin.configuracion.pages.<slug>`). The core keeps a redirect under the old path and route name, query string included, so existing links and guides keep working; new guides use the new name.
 
-`registerNavigationGroups()` is deprecated. Groups it returns are still shown, after the core ones, until every module has migrated; a group named like a core group simply is that core group.
+Modules declare no groups of their own: `registerNavigationGroups()` was removed from `ModuleServiceProvider` once every module had migrated (core#429).
 
 ### Policy registration
 
@@ -2271,7 +2271,6 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |
 | `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |
-| `registerNavigationGroups()` | `array` | Deprecated: modules use the core's groups (see [Navigation groups](#navigation-groups)) |
 | `registerFilamentPages()` | `class-string<Page>[]` | Filament pages |
 | `registerFilamentWidgets()` | `class-string<Widget>[]` | Dashboard widgets (optional method, not declared on the base class) |
 | `getSettingsSchema()` | `Filament\Schemas\Components\Component[]` | Form schema of the module settings page |
