@@ -11,6 +11,10 @@ interface UseProfileTabsReturn {
     activeTab: ComputedRef<ProfileTab | undefined>;
     setActiveTab: (id: string) => void;
     isActiveTab: (id: string) => boolean;
+    /** The mail tab's preferences could not be fetched (network or server error). */
+    mailPreferencesFailed: Ref<boolean>;
+    /** Fetches the mail tab's preferences and shows the tab (also used to retry). */
+    loadMailPreferences: () => void;
 }
 
 const DEFAULT_TAB = 'account';
@@ -168,8 +172,51 @@ export function useProfileTabs(): UseProfileTabsReturn {
         }
     );
 
+    const mailPreferencesFailed = ref(false);
+    let cancelMailLoad: (() => void) | null = null;
+
+    // The server only sends `mailPreferences` for `?tab=mail` (listing the categories checks
+    // permissions the other tabs never need), so opening the tab from another one must ask for
+    // them: a partial reload of that prop alone, which also puts `?tab=mail` in the address bar
+    function loadMailPreferences(): void {
+        mailPreferencesFailed.value = false;
+        const fail = (): false => {
+            mailPreferencesFailed.value = true;
+
+            // Shown inside the tab instead of Inertia's error dialog
+            return false;
+        };
+
+        router.visit(urlWithTab(page.url, MAIL_TAB), {
+            only: ['mailPreferences'],
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onCancelToken: (token) => {
+                cancelMailLoad = (): void => token.cancel();
+            },
+            onError: fail,
+            onHttpException: fail,
+            onNetworkError: fail,
+            onFinish: () => {
+                cancelMailLoad = null;
+            },
+        });
+    }
+
     function setActiveTab(id: string): void {
         activeTabId.value = id;
+
+        // Leaving the tab while its preferences load: the reload would put `?tab=mail` back
+        cancelMailLoad?.();
+        cancelMailLoad = null;
+
+        if (id === MAIL_TAB && page.props.mailPreferences == null) {
+            loadMailPreferences();
+
+            return;
+        }
+
         router.replace({
             url: urlWithTab(page.url, id),
             preserveScroll: true,
@@ -187,5 +234,7 @@ export function useProfileTabs(): UseProfileTabsReturn {
         activeTab,
         setActiveTab,
         isActiveTab,
+        mailPreferencesFailed,
+        loadMailPreferences,
     };
 }

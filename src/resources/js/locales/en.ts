@@ -533,6 +533,8 @@ export default {
                     none: 'Do not receive',
                     digestHint: 'They will arrive together in one email a day, around {time}.',
                 },
+                loadError: 'Your mail preferences could not be loaded.',
+                retry: 'Try again',
                 pause: {
                     title: 'Pause optional mail',
                     description:
