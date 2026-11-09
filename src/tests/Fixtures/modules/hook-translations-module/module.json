@@ -1,0 +1,13 @@
+{
+    "name": "hook-translations-module",
+    "version": "1.0.0",
+    "storesUtc": true,
+    "description": "Test module that translates labels inside its registration hooks",
+    "author": "GuildForge",
+    "namespace": "Modules\\HookTranslationsModule",
+    "provider": "HookTranslationsModuleServiceProvider",
+    "requires": {
+        "core": ">=2.0"
+    },
+    "dependencies": {}
+}
