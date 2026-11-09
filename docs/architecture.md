@@ -484,6 +484,7 @@ src/modules/
 | `registerCalendarSources()` | `class-string<CalendarEntrySourceInterface>[]` | Entries for the public calendars (`/calendario` and the home widget, through `/eventos/calendario`) |
 | `registerCalendarAttendanceSources()` | `class-string<CalendarAttendanceSourceInterface>[]` | Which entries each person takes part in, for the personal calendar (see `docs/modules/calendar.md`) |
 | `registerPolicies()` | `array<model, policy>` | Authorization policies |
+| `registerNavigationGroups()` | `array<label, options>` | Deprecated: entries go in the core's groups (`PanelNavigationGroup`) |
 | `registerFilamentPages()` | `Page[]` | Filament pages |
 | `getSettingsSchema()` | `Component[]` | Module settings form |
 | `onEnable()` / `onDisable()` | `void` | Lifecycle callbacks |

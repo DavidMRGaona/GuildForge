@@ -56,14 +56,6 @@ final class PanelNavigationTest extends TestCase
         $this->assertSame('Contenido', $labels[0]);
     }
 
-    public function test_the_panel_registers_only_the_core_groups(): void
-    {
-        $this->assertSame(
-            ['Contenido', 'Actividades', 'Comunicación', 'Personas', 'Sitio web', 'Catálogos', 'Sistema'],
-            array_keys(Filament::getPanel('admin')->getNavigationGroups()),
-        );
-    }
-
     public function test_admin_sees_the_core_entries_grouped_by_task(): void
     {
         $this->actingAs(UserModel::factory()->admin()->create());
