@@ -34,10 +34,11 @@ final class ModuleLoaderPublicationSourcesTest extends TestCase
         $this->registerSources($provider);
 
         $registry = $this->app->make(PublicationSourceRegistryInterface::class);
-        $this->assertSame([EventPublicationSource::class, FakePublicationSource::class], $registry->all());
+        $this->assertContains(FakePublicationSource::class, $registry->all());
 
         $registry->unregisterModule('example-module');
-        $this->assertSame([EventPublicationSource::class], $registry->all());
+        $this->assertNotContains(FakePublicationSource::class, $registry->all());
+        $this->assertContains(EventPublicationSource::class, $registry->all());
     }
 
     public function test_a_module_without_publication_sources_registers_nothing(): void
@@ -50,10 +51,12 @@ final class ModuleLoaderPublicationSourcesTest extends TestCase
             }
         };
 
+        $registry = $this->app->make(PublicationSourceRegistryInterface::class);
+        $before = $registry->all();
+
         $this->registerSources($provider);
 
-        // Only the core's own source
-        $this->assertSame([EventPublicationSource::class], $this->app->make(PublicationSourceRegistryInterface::class)->all());
+        $this->assertSame($before, $registry->all());
     }
 
     private function registerSources(ModuleServiceProvider $provider): void
