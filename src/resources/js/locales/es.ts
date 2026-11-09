@@ -494,9 +494,18 @@ export default {
                 verifyFirst: 'Para crear la dirección de tu calendario, verifica tu email.',
                 cancel: 'Cancelar',
             },
+            mail: {
+                title: 'Correos que recibes',
+                intro: 'Elige qué correos quieres recibir de {appName}. Los marcados como obligatorios siempre se envían, porque confirman algo que has hecho tú o te avisan de algo que cambia tus planes.',
+                save: 'Guardar cambios',
+                unsaved: 'Tienes cambios sin guardar.',
+                error: 'No se han podido guardar los cambios. Inténtalo de nuevo.',
+                verifyFirst: 'Para cambiar qué correos recibes, verifica tu email.',
+            },
             tabs: {
                 account: 'Cuenta',
                 calendar: 'Mi calendario',
+                mail: 'Correos',
                 gameTables: 'Mesas',
             },
         },

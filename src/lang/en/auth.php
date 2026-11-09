@@ -11,6 +11,8 @@ return [
     'profile_updated' => 'Profile updated successfully.',
     'password_incorrect' => 'The current password is incorrect.',
     'password_changed' => 'Password updated successfully.',
+    'mail_preferences_saved' => 'Mail preferences saved.',
+    'mail_preferences_not_editable' => 'That mail category cannot be changed.',
     'email_change_verification_failed' => 'The verification link is invalid or has expired.',
     'email_changed' => 'Your email has been updated successfully.',
     'email_change_pending' => 'A verification email has been sent to your new address.',

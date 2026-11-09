@@ -20,7 +20,7 @@ final class CoreSiteGuidesTest extends TestCase
     /** Guides every signed-in account sees, by category. */
     private const array GUIDES_BY_CATEGORY = [
         'getting-started' => ['core.help.welcome', 'core.help.use-help', 'core.search.site-search'],
-        'account' => ['core.account.complete-profile', 'core.account.change-password', 'core.account.change-email'],
+        'account' => ['core.account.complete-profile', 'core.account.change-password', 'core.account.change-email', 'core.account.mail-preferences'],
         'events-and-games' => ['core.events.find-events'],
         'community' => ['core.content.read-articles', 'core.content.browse-galleries'],
     ];

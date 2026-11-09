@@ -5,19 +5,24 @@ import ProfileSidebar from '@/components/profile/ProfileSidebar.vue';
 import ProfileTabBar from '@/components/profile/ProfileTabBar.vue';
 import ProfileAccountTab from '@/components/profile/ProfileAccountTab.vue';
 import ProfileCalendarTab from '@/components/profile/ProfileCalendarTab.vue';
-import { CALENDAR_TAB, useProfileTabs } from '@/composables/useProfileTabs';
+import ProfileMailTab from '@/components/profile/ProfileMailTab.vue';
+import { CALENDAR_TAB, MAIL_TAB, useProfileTabs } from '@/composables/useProfileTabs';
 import { useModuleSlots } from '@/composables/useModuleSlots';
 import { useFlashMessages } from '@/composables/useFlashMessages';
 import type { User } from '@/types/models';
 import type { CalendarFeedStatus } from '@/types/calendarFeed';
+import type { MailPreferencesProps } from '@/types/mailPreferences';
 
 interface Props {
     user: User;
     calendarFeed?: CalendarFeedStatus;
+    /** Only sent while the «Correos» tab is open (`?tab=mail`). */
+    mailPreferences?: MailPreferencesProps | null;
 }
 
 withDefaults(defineProps<Props>(), {
     calendarFeed: () => ({ available: false, issuedAt: null }),
+    mailPreferences: null,
 });
 
 const { tabs, activeTabId, setActiveTab } = useProfileTabs();
@@ -69,6 +74,16 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                     v-if="activeTabId === CALENDAR_TAB && calendarFeed.available"
                     :calendar-feed="calendarFeed"
                 />
+
+                <!-- Which optional mail the person receives -->
+                <template v-if="activeTabId === MAIL_TAB">
+                    <ProfileMailTab v-if="mailPreferences" :sections="mailPreferences.sections" />
+                    <div v-else class="flex items-center justify-center py-12">
+                        <div
+                            class="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"
+                        />
+                    </div>
+                </template>
 
                 <!-- Module tabs -->
                 <template v-if="hasModuleTabs">

@@ -490,9 +490,18 @@ export default {
                 verifyFirst: 'To create your calendar address, verify your email.',
                 cancel: 'Cancel',
             },
+            mail: {
+                title: 'Mail you receive',
+                intro: 'Choose which mail you want to receive from {appName}. Mandatory ones are always sent, because they confirm something you did or warn you of something that changes your plans.',
+                save: 'Save changes',
+                unsaved: 'You have unsaved changes.',
+                error: 'The changes could not be saved. Try again.',
+                verifyFirst: 'To change which mail you receive, verify your email.',
+            },
             tabs: {
                 account: 'Account',
                 calendar: 'My calendar',
+                mail: 'Mail',
                 gameTables: 'Tables',
             },
         },

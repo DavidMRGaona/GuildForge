@@ -8,6 +8,7 @@ use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
 use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
@@ -23,6 +24,9 @@ use Inertia\Response;
 
 final class ProfileController extends Controller
 {
+    /** Profile tab id of the mail preferences; the same as `MAIL_TAB` in useProfileTabs.ts. */
+    private const string MAIL_TAB = 'mail';
+
     public function __construct(
         private readonly AuthServiceInterface $authService,
         private readonly ResponseDTOFactoryInterface $dtoFactory,
@@ -30,6 +34,7 @@ final class ProfileController extends Controller
         private readonly PersonalCalendarServiceInterface $personalCalendar,
         private readonly CalendarFeedTokenServiceInterface $calendarFeedTokens,
         private readonly TimezoneServiceInterface $timezone,
+        private readonly MailPreferenceServiceInterface $mailPreferences,
     ) {}
 
     public function show(Request $request): Response
@@ -37,7 +42,7 @@ final class ProfileController extends Controller
         /** @var UserModel $user */
         $user = $request->user();
 
-        return Inertia::render('Profile/Show', [
+        $props = [
             'user' => $this->dtoFactory->createUserDTO($user),
             'seo' => $this->seo->forPage(new SeoPageDTO(
                 title: (string) __('seo.titles.profile'),
@@ -48,7 +53,15 @@ final class ProfileController extends Controller
                 'available' => $this->personalCalendar->isAvailable(),
                 'issuedAt' => $this->timezone->iso($this->calendarFeedTokens->issuedAt((string) $user->id)),
             ],
-        ]);
+        ];
+
+        // Only for the «Correos» tab (`?tab=mail`): listing the categories evaluates each one's
+        // audience (permissions), which the other tabs never need
+        if ($request->query('tab') === self::MAIL_TAB) {
+            $props['mailPreferences'] = ['sections' => $this->mailPreferences->sectionsFor($user)];
+        }
+
+        return Inertia::render('Profile/Show', $props);
     }
 
     public function update(UpdateProfileRequest $request): RedirectResponse
