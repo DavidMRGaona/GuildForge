@@ -41,8 +41,6 @@ class MailOptOutWidget extends TableWidget
     {
         $report = app(MailCategoryOptOutStatisticsInterface::class)->report();
 
-        $report = app(MailCategoryOptOutStatisticsInterface::class)->report();
-
         $records = [];
         foreach ($report->categories as $row) {
             $records[$row->key] = [
