@@ -29,13 +29,15 @@ const menuButton = useTemplateRef<HTMLButtonElement>('menuButton');
 let searchTrigger: HTMLElement | null = null;
 
 // How wide the full bar is depends on the site's links and the user's name, so no breakpoint
-// fits every site: below md, or whenever the bar overflows, the header uses the menu button
+// fits every site: below md, or whenever the bar overflows, the header uses the menu button.
+// The logo is observed too: it has no width until the image loads, and each theme has its own
 const headerRow = useTemplateRef<HTMLElement>('headerRow');
-const fitsFullBar = useFitsWithoutOverflow(headerRow, () => [
-    page.props.navigation,
-    page.props.auth,
-    appStore.isThemeToggleVisible,
-]);
+const brand = useTemplateRef<HTMLElement>('brand');
+const fitsFullBar = useFitsWithoutOverflow(
+    headerRow,
+    () => [page.props.navigation, page.props.auth, appStore.isThemeToggleVisible],
+    [brand]
+);
 
 useOnNavigate(() => {
     isMobileMenuOpen.value = false;
@@ -100,7 +102,7 @@ function selectTheme(mode: ThemeMode): void {
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div ref="headerRow" class="flex h-16 items-center justify-between">
                 <!-- Logo -->
-                <div class="shrink-0">
+                <div ref="brand" class="shrink-0">
                     <Link :href="routes.home" class="flex items-center">
                         <img
                             v-if="currentLogo"

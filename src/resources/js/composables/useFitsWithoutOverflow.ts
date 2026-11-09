@@ -10,13 +10,19 @@ import type { Ref, ShallowRef, WatchSource } from 'vue';
  * reads it before the browser paints, so neither layout flashes.
  *
  * The row is checked when its width changes (`target` must take its width from its container,
- * not from its content, or the switch would trigger the observer again), when the web fonts have
- * loaded and when `recheckOn` changes (different links, a longer user name...). Without
- * `ResizeObserver` the row is assumed to fit.
+ * not from its content, or the switch would trigger the observer again), when one of `parts`
+ * changes size, when the web fonts have loaded and when `recheckOn` changes (different links, a
+ * longer user name...). Without `ResizeObserver` the row is assumed to fit.
+ *
+ * `parts` are children whose width changes on its own while the row keeps its width (the header
+ * logo, zero wide until the image loads and different for each theme). Only pass parts whose size
+ * the switch does not change: observing the full layout would make each switch trigger a new
+ * check.
  */
 export function useFitsWithoutOverflow(
     target: Readonly<ShallowRef<HTMLElement | null>>,
-    recheckOn: WatchSource
+    recheckOn: WatchSource,
+    parts: ReadonlyArray<Readonly<ShallowRef<HTMLElement | null>>> = []
 ): Readonly<Ref<boolean>> {
     const fits = ref(true);
     let observer: ResizeObserver | null = null;
@@ -38,6 +44,11 @@ export function useFitsWithoutOverflow(
 
         observer = new ResizeObserver(() => void check());
         observer.observe(target.value);
+        for (const part of parts) {
+            if (part.value !== null) {
+                observer.observe(part.value);
+            }
+        }
         void document.fonts?.ready.then(() => check());
     });
 
