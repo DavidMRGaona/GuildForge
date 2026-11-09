@@ -28,4 +28,18 @@ return [
             ],
         ],
     ],
+    'footer' => [
+        'optional' => '¿No quieres recibir más correos como este?',
+        'unsubscribe' => 'Darte de baja de «:category»',
+        'choose' => 'Elegir qué correos recibes',
+        'mandatory' => 'Este correo siempre se envía. Puedes elegir qué otros recibes :profile.',
+        'without_category' => 'Puedes elegir qué correos recibes :profile.',
+        'profile_link' => 'en tu perfil',
+    ],
+    'unsubscribe' => [
+        'done' => 'Ya no recibirás correos de «:category».',
+        'resubscribed' => 'Vuelves a recibir correos de «:category».',
+        'mandatory' => 'Los correos de «:category» siempre se envían.',
+        'one_click_not_found' => 'Este enlace ya no sirve para darse de baja.',
+    ],
 ];

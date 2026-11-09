@@ -28,4 +28,18 @@ return [
             ],
         ],
     ],
+    'footer' => [
+        'optional' => "Don't want to receive more emails like this?",
+        'unsubscribe' => 'Unsubscribe from «:category»',
+        'choose' => 'Choose which emails you receive',
+        'mandatory' => 'This email is always sent. You can choose which others you receive :profile.',
+        'without_category' => 'You can choose which emails you receive :profile.',
+        'profile_link' => 'in your profile',
+    ],
+    'unsubscribe' => [
+        'done' => 'You will no longer receive emails of «:category».',
+        'resubscribed' => 'You will receive emails of «:category» again.',
+        'mandatory' => 'Emails of «:category» are always sent.',
+        'one_click_not_found' => 'This link can no longer be used to unsubscribe.',
+    ],
 ];

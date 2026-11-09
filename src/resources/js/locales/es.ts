@@ -234,6 +234,19 @@ export default {
         serverError: 'Error del servidor',
         forbidden: 'Acceso denegado',
     },
+    mailUnsubscribe: {
+        title: 'Darte de baja',
+        confirm: '¿Quieres dejar de recibir los correos de «{category}»?',
+        confirmHint:
+            'Seguirás recibiendo los correos que siempre se envían, como los de tu cuenta.',
+        submit: 'Darme de baja',
+        doneTitle: 'Te has dado de baja',
+        done: 'Ya no recibirás correos de «{category}».',
+        undo: 'Deshacer',
+        mandatoryTitle: 'Este correo siempre se envía',
+        mandatory: 'Los correos de «{category}» siempre se envían.',
+        choose: 'Elegir qué correos recibes',
+    },
     maintenance: {
         title: 'Estamos en mantenimiento',
         defaultMessage: 'Estamos haciendo mejoras en la web. Vuelve a intentarlo en unos minutos.',

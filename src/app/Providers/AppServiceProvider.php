@@ -496,6 +496,16 @@ class AppServiceProvider extends ServiceProvider
             static fn (Request $request): Limit => Limit::perMinute(60)->by('ip:'.($request->ip() ?? 'unknown'))
         );
 
+        // Mail unsubscribe links: per account, plus a generous cap per address, since mail
+        // services post the one-click unsubscribes of many people from a few shared addresses
+        RateLimiter::for(
+            'mail-unsubscribe',
+            static fn (Request $request): array => [
+                Limit::perMinute(20)->by('user:'.$request->route('user')),
+                Limit::perMinute(120)->by('ip:'.($request->ip() ?? 'unknown')),
+            ]
+        );
+
         Gate::policy(UserModel::class, UserPolicy::class);
         Gate::policy(RoleModel::class, RolePolicy::class);
         Gate::policy(EventModel::class, EventPolicy::class);
