@@ -17,7 +17,7 @@ related: [core.account.change-email, core.account.complete-profile]
 3. Activa o desactiva los interruptores de cada tipo de correo. Algunos tipos ofrecen tres opciones en lugar del interruptor (lo explicamos más abajo).
 4. Pulsa **Guardar cambios**.
 
-Los correos están agrupados en una tarjeta por sección (**Cuenta**, **Partidas**, **Torneos**…). Cada tarjeta te dice cuántos tienes activados, por ejemplo «2 de 3 activados». Solo ves los tipos que te pueden llegar a ti: por ejemplo, los avisos de moderación solo aparecen si puedes moderar.
+Los correos están agrupados en una tarjeta por sección (**Cuenta**, **Partidas**, **Torneos**…). Cada tarjeta te dice cuántos tienes activados, por ejemplo «2 de 3 activados». Si prefieres ir sección por sección, el conmutador **Pestañas** de la parte de arriba te enseña una sección cada vez, con cuántos tienes activados en cada una. Tu elección se recuerda en este navegador. Solo ves los tipos que te pueden llegar a ti: por ejemplo, los avisos de moderación solo aparecen si puedes moderar.
 
 ## Recibir los avisos en un resumen diario
 

@@ -103,7 +103,7 @@ function send(method: 'put' | 'delete'): void {
             </div>
             <BaseButton
                 type="button"
-                variant="secondary"
+                variant="primary"
                 class="shrink-0"
                 :loading="processing"
                 :disabled="blocked"
@@ -169,7 +169,7 @@ function send(method: 'put' | 'delete'): void {
         <div class="mt-3">
             <BaseButton
                 type="button"
-                variant="secondary"
+                variant="primary"
                 :loading="processing"
                 :disabled="blocked"
                 @click="send('put')"
