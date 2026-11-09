@@ -3,11 +3,14 @@ import { mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { reactive, ref } from 'vue';
+import type { ShallowRef } from 'vue';
 import TheHeader from '../TheHeader.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
 
 const fits = ref(true);
+/** Parts of the row the header asked the composable to observe besides the row itself */
+let observedParts: ReadonlyArray<Readonly<ShallowRef<HTMLElement | null>>> = [];
 
 vi.mock('@inertiajs/vue3', () => ({
     usePage: (): { url: string; props: Record<string, unknown> } =>
@@ -16,7 +19,14 @@ vi.mock('@inertiajs/vue3', () => ({
 }));
 
 vi.mock('@/composables/useFitsWithoutOverflow', () => ({
-    useFitsWithoutOverflow: (): typeof fits => fits,
+    useFitsWithoutOverflow: (
+        _target: unknown,
+        _recheckOn: unknown,
+        parts: ReadonlyArray<Readonly<ShallowRef<HTMLElement | null>>> = []
+    ): typeof fits => {
+        observedParts = parts;
+        return fits;
+    },
 }));
 
 vi.mock('@/composables/useAuth', () => ({
@@ -58,6 +68,14 @@ function menuButton(wrapper: VueWrapper): ReturnType<VueWrapper['get']> {
 describe('TheHeader', () => {
     beforeEach(() => {
         fits.value = true;
+        observedParts = [];
+    });
+
+    it('observes the logo, whose width changes when it loads or the theme switches', () => {
+        const wrapper = mountHeader();
+        const brand = wrapper.get('a[href="/"]').element;
+
+        expect(observedParts.map((part) => part.value)).toEqual([brand.parentElement]);
     });
 
     it('shows the full bar from md up while it fits', () => {

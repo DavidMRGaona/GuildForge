@@ -35,16 +35,33 @@ let rowWidth = 0;
 /** Whether the row was rendered in its full layout when it was measured */
 let measuredInFullLayout: boolean[] = [];
 
-function mountRow(trigger: Ref<number>): VueWrapper & { fits: () => boolean } {
+/**
+ * Mounts a row; with `withPart`, the row holds a child (like the header logo) passed to the
+ * composable as a part to observe.
+ */
+function mountRow(
+    trigger: Ref<number>,
+    withPart = false
+): VueWrapper & { fits: () => boolean; part: () => Element | null } {
     const result: { fits: Readonly<Ref<boolean>> | null } = { fits: null };
 
     const Host = defineComponent({
         setup(): () => VNode {
             const row = useTemplateRef<HTMLElement>('row');
-            const fits = useFitsWithoutOverflow(row, () => trigger.value);
+            const part = useTemplateRef<HTMLElement>('part');
+            const fits = useFitsWithoutOverflow(
+                row,
+                () => trigger.value,
+                withPart ? [part] : undefined
+            );
             result.fits = fits;
 
-            return () => h('div', { ref: 'row', 'data-full': String(fits.value) });
+            return () =>
+                h(
+                    'div',
+                    { ref: 'row', 'data-full': String(fits.value) },
+                    withPart ? [h('span', { ref: 'part' })] : []
+                );
         },
     });
 
@@ -58,7 +75,10 @@ function mountRow(trigger: Ref<number>): VueWrapper & { fits: () => boolean } {
     });
     Object.defineProperty(element, 'clientWidth', { get: () => rowWidth });
 
-    return Object.assign(wrapper, { fits: () => result.fits?.value ?? true });
+    return Object.assign(wrapper, {
+        fits: () => result.fits?.value ?? true,
+        part: () => element.querySelector('span'),
+    });
 }
 
 async function settle(): Promise<void> {
@@ -141,6 +161,28 @@ describe('useFitsWithoutOverflow', () => {
         wrapper.unmount();
 
         expect(observers[0]?.disconnected).toBe(true);
+    });
+
+    it('also observes the given parts of the row', () => {
+        const wrapper = mountRow(ref(0), true);
+
+        expect(observers).toHaveLength(1);
+        expect(observers[0]?.observed).toEqual([wrapper.element, wrapper.part()]);
+    });
+
+    it('checks again when an observed part grows while the row keeps its width', async () => {
+        const wrapper = mountRow(ref(0), true);
+        contentWidth = 900;
+        rowWidth = 1000;
+        observers[0]?.trigger();
+        await settle();
+
+        // The logo finishes loading: the content widens, the row does not
+        contentWidth = 1040;
+        observers[0]?.trigger();
+        await settle();
+
+        expect(wrapper.fits()).toBe(false);
     });
 
     it('assumes the row fits where ResizeObserver is not available', async () => {
