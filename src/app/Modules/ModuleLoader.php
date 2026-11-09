@@ -16,6 +16,7 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
+use App\Application\Publications\Services\PublicationSourceRegistryInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
 use App\Domain\Modules\Entities\Module;
@@ -107,6 +108,9 @@ final class ModuleLoader
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
+
+        // Register publication sources from the provider
+        $this->registerProviderPublicationSources($provider, $module->name()->value);
 
         // Register knowledge capabilities from the provider
         $this->registerProviderKnowledgeCapabilities($provider, $module->name()->value);
@@ -274,6 +278,22 @@ final class ModuleLoader
         if ($this->app->bound(SurveySubjectSourceRegistryInterface::class)) {
             $sourceRegistry = $this->app->make(SurveySubjectSourceRegistryInterface::class);
             $sourceRegistry->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register publication sources from a module provider.
+     */
+    private function registerProviderPublicationSources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerPublicationSources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(PublicationSourceRegistryInterface::class)) {
+            $this->app->make(PublicationSourceRegistryInterface::class)->registerMany($sources, $moduleName);
         }
     }
 
