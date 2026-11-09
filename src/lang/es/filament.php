@@ -537,6 +537,7 @@ return [
     'roles' => [
         'notifications' => [
             'permissionsBeyondYours' => 'No puedes añadir ni quitar permisos que no tienes.',
+            'adminOnlyPermissions' => 'Instalar módulos y aplicar actualizaciones son permisos solo de la administración: ningún otro rol puede tenerlos.',
             'associationRoleNoPanel' => 'El rol de socio y el rol base no pueden tener acceso al panel de administración.',
             'unknownPermission' => 'Alguno de los permisos enviados no existe.',
         ],
@@ -607,6 +608,7 @@ return [
             'maxHoldersOverLimit' => '{1} Ahora lo tiene :count persona: nadie lo pierde, pero no se podrá dar a nadie más hasta que lo tengan menos de :max.|[2,*] Ahora lo tienen :count personas: nadie lo pierde, pero no se podrá dar a nadie más hasta que lo tengan menos de :max.',
             'permissions' => 'Permisos',
             'suggestedForRole' => 'Sugerido para este rol',
+            'adminOnlyPermission' => 'Solo para la administración',
             'panelAccess' => 'Puede entrar en el panel',
             'panelAccessHelp' => 'Quien tenga este rol podrá entrar en el panel de administración y usar en él los permisos marcados.',
             'panelAccessLockedHint' => 'El rol de socio y el rol base no pueden entrar en el panel.',

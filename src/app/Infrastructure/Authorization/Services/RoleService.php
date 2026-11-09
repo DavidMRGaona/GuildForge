@@ -7,6 +7,7 @@ namespace App\Infrastructure\Authorization\Services;
 use App\Application\Authorization\DTOs\CreateRoleDTO;
 use App\Application\Authorization\DTOs\RoleResponseDTO;
 use App\Application\Authorization\DTOs\UpdateRoleDTO;
+use App\Application\Authorization\Services\AdminOnlyPermissionRule;
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
@@ -34,6 +35,7 @@ final readonly class RoleService implements RoleServiceInterface
         private BaseRoleRule $baseRole,
         private RoleRestrictionRule $roleRestriction,
         private RoleAuditLoggerInterface $audit,
+        private AdminOnlyPermissionRule $adminOnly,
         private RoleDefinitionChanges $definitionChanges = new RoleDefinitionChanges,
     ) {}
 
@@ -83,6 +85,7 @@ final readonly class RoleService implements RoleServiceInterface
         );
 
         $this->guardRestrictions($role);
+        $this->guardAdminOnlyPermissions($role, $dto->permissionKeys);
 
         // The role and its history entry stand or fall together
         DB::transaction(function () use ($role, $dto): void {
@@ -127,6 +130,7 @@ final readonly class RoleService implements RoleServiceInterface
         );
 
         $this->guardRestrictions($role);
+        $this->guardAdminOnlyPermissions($role, $dto->permissionKeys ?? []);
 
         DB::transaction(function () use ($role, $dto): void {
             $this->roleRepository->save($role);
@@ -206,6 +210,8 @@ final readonly class RoleService implements RoleServiceInterface
             return;
         }
 
+        $this->guardAdminOnlyPermissions($role, $permissionKeys);
+
         DB::transaction(fn () => $this->changePermissions($role, $permissionKeys, $detach));
     }
 
@@ -249,6 +255,20 @@ final readonly class RoleService implements RoleServiceInterface
             'requires_association_member' => $role->requiresAssociationMember(),
             'max_holders' => $role->maxHolders(),
         ];
+    }
+
+    /**
+     * Installing modules and applying updates stay with the administrator role, whoever asks.
+     *
+     * @param  array<string>  $permissionKeys
+     */
+    private function guardAdminOnlyPermissions(Role $role, array $permissionKeys): void
+    {
+        $notAllowed = $this->adminOnly->notAllowedFor($role->name()->value, $permissionKeys);
+
+        if ($notAllowed !== []) {
+            throw RoleProtectedException::adminOnlyPermissions($role->name()->value, $notAllowed);
+        }
     }
 
     private function guardRestrictions(Role $role): void

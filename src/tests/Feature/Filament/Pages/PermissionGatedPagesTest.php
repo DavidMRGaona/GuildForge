@@ -31,7 +31,6 @@ final class PermissionGatedPagesTest extends TestCase
     public static function gatedPages(): array
     {
         return [
-            'modules (manage)' => [ModulesPage::class, 'modules.manage', 'canAccess'],
             'modules (configure)' => [ModulesPage::class, 'modules.configure', 'canAccess'],
             'module settings' => [ModuleSettingsPage::class, 'modules.configure', 'canAccess'],
             'dashboard settings' => [DashboardSettings::class, 'dashboard.configure', 'canAccess'],
@@ -107,12 +106,25 @@ final class PermissionGatedPagesTest extends TestCase
         $this->assertSame([], $component->get('mountedActions'));
     }
 
-    public function test_modules_page_shows_management_controls_with_modules_manage(): void
+    public function test_modules_page_shows_management_controls_to_the_admin(): void
     {
-        $this->actingAs($this->editorWithPermissions(['modules.manage']));
+        $this->actingAs(UserModel::factory()->admin()->create());
 
         Livewire::test(ModulesPage::class)
             ->assertActionVisible('install')
             ->assertActionVisible('discover');
+    }
+
+    public function test_modules_manage_in_another_role_opens_nothing(): void
+    {
+        // Admin-only: stored in a role other than admin it gives nothing
+        $this->actingAs($this->editorWithPermissions(['modules.manage']));
+        $this->assertFalse(ModulesPage::canAccess());
+
+        $this->actingAs($this->editorWithPermissions(['modules.manage', 'modules.configure']));
+
+        Livewire::test(ModulesPage::class)
+            ->assertActionHidden('install')
+            ->assertActionHidden('discover');
     }
 }

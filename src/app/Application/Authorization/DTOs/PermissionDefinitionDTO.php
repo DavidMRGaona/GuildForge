@@ -8,6 +8,7 @@ final readonly class PermissionDefinitionDTO
 {
     /**
      * @param  array<string>  $defaultRoles  Roles that should have this permission by default
+     * @param  bool  $adminOnly  Only the administrator role may hold it (AdminOnlyPermissionRule)
      */
     public function __construct(
         public string $key,
@@ -18,10 +19,11 @@ final readonly class PermissionDefinitionDTO
         public array $defaultRoles = [],
         public ?string $description = null,
         public ?string $group = null,
+        public bool $adminOnly = false,
     ) {}
 
     /**
-     * @param  array{key: string, label: string, resource: string, action: string, module?: string|null, default_roles?: array<string>, description?: string|null, group?: string|null}  $data
+     * @param  array{key: string, label: string, resource: string, action: string, module?: string|null, default_roles?: array<string>, description?: string|null, group?: string|null, admin_only?: bool}  $data
      */
     public static function fromArray(array $data): self
     {
@@ -34,11 +36,12 @@ final readonly class PermissionDefinitionDTO
             defaultRoles: $data['default_roles'] ?? [],
             description: $data['description'] ?? null,
             group: $data['group'] ?? null,
+            adminOnly: $data['admin_only'] ?? false,
         );
     }
 
     /**
-     * @return array{key: string, label: string, resource: string, action: string, module: string|null, default_roles: array<string>, description: string|null, group: string|null}
+     * @return array{key: string, label: string, resource: string, action: string, module: string|null, default_roles: array<string>, description: string|null, group: string|null, admin_only: bool}
      */
     public function toArray(): array
     {
@@ -51,6 +54,7 @@ final readonly class PermissionDefinitionDTO
             'default_roles' => $this->defaultRoles,
             'description' => $this->description,
             'group' => $this->group,
+            'admin_only' => $this->adminOnly,
         ];
     }
 

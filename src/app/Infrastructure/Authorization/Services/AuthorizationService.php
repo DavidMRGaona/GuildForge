@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Authorization\Services;
 
+use App\Application\Authorization\Services\AdminOnlyPermissionRule;
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
@@ -117,11 +118,15 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 return [];
             }
 
+            $adminOnly = app(AdminOnlyPermissionRule::class);
+
             return RoleModel::query()
                 ->whereIn('id', $activeIds)
                 ->with('permissions')
                 ->get()
-                ->flatMap(fn (RoleModel $role) => $role->permissions->pluck('key'))
+                // An admin-only permission written into another role gives nothing (fails closed)
+                ->flatMap(fn (RoleModel $role) => $role->permissions->pluck('key')
+                    ->filter(static fn (mixed $key): bool => is_string($key) && $adminOnly->mayHold($role->name, $key)))
                 ->unique()
                 ->values()
                 ->toArray();

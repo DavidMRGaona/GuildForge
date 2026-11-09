@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\RoleResource;
 
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
+use App\Application\Authorization\Services\AdminOnlyPermissionRule;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Entities\Module;
@@ -32,6 +33,7 @@ final readonly class PermissionCatalog
     public function __construct(
         private PermissionRegistryInterface $registry,
         private ModuleManagerServiceInterface $modules,
+        private AdminOnlyPermissionRule $adminOnly,
     ) {}
 
     /**
@@ -57,6 +59,7 @@ final readonly class PermissionCatalog
                 label: $definition->label,
                 description: $definition->description,
                 suggestedFor: array_values($definition->defaultRoles),
+                adminOnly: $this->adminOnly->isAdminOnly($definition->key),
             );
 
             if ($definition->module === null) {

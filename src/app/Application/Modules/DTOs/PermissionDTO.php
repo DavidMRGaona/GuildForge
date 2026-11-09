@@ -8,6 +8,8 @@ final readonly class PermissionDTO
 {
     /**
      * @param  array<string>  $roles  Roles that have this permission by default
+     * @param  bool  $adminOnly  Only the administrator role may hold it: for permissions that run
+     *                           code on the server or could take the site down
      */
     public function __construct(
         public string $name,
@@ -16,6 +18,7 @@ final readonly class PermissionDTO
         public ?string $description = null,
         public ?string $module = null,
         public array $roles = [],
+        public bool $adminOnly = false,
     ) {}
 
     /**
@@ -30,6 +33,7 @@ final readonly class PermissionDTO
             description: $data['description'] ?? null,
             module: $data['module'] ?? null,
             roles: $data['roles'] ?? [],
+            adminOnly: (bool) ($data['admin_only'] ?? false),
         );
     }
 
@@ -45,6 +49,7 @@ final readonly class PermissionDTO
             'description' => $this->description,
             'module' => $this->module,
             'roles' => $this->roles,
+            'admin_only' => $this->adminOnly,
         ];
     }
 

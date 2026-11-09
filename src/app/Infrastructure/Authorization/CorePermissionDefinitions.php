@@ -304,6 +304,7 @@ final class CorePermissionDefinitions
                 label: __('authorization.permissions.updates.apply'),
                 resource: 'updates',
                 action: 'apply',
+                adminOnly: true,
             ),
 
             // Mail
@@ -346,6 +347,7 @@ final class CorePermissionDefinitions
                 resource: 'modules',
                 action: 'manage',
                 description: __('authorization.permission_descriptions.modules.manage'),
+                adminOnly: true,
             ),
             new PermissionDefinitionDTO(
                 key: 'modules.configure',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\RoleResource\Concerns;
 
 use App\Filament\Resources\RoleResource;
+use App\Filament\Resources\RoleResource\PermissionOption;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 
@@ -32,13 +33,20 @@ trait SyncsPermissionTabs
     protected function fillPermissionTabs(RoleModel $role): array
     {
         $held = $this->currentPermissionIds($role);
+        $isAdminRole = RoleResource::isAdminRole($role);
         $state = [];
 
         foreach (RoleResource::permissionTabs($this) as $tab) {
             foreach ($tab->sections as $section) {
-                $state[$tab->key][$section->key] = array_values(array_filter(
-                    array_map(static fn ($option): string => $option->id, $section->permissions),
-                    static fn (string $id): bool => in_array($id, $held, true),
+                $state[$tab->key][$section->key] = array_values(array_map(
+                    static fn (PermissionOption $option): string => $option->id,
+                    array_filter(
+                        $section->permissions,
+                        // An admin-only permission stored in another role (written before the rule)
+                        // starts unticked, so saving the role takes it away and the history says so
+                        static fn (PermissionOption $option): bool => in_array($option->id, $held, true)
+                            && ($isAdminRole || ! $option->adminOnly),
+                    ),
                 ));
             }
         }

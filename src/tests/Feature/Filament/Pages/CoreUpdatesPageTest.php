@@ -53,11 +53,19 @@ final class CoreUpdatesPageTest extends TestCase
         $this->get(CoreUpdatesPage::getUrl())->assertOk();
     }
 
-    public function test_page_is_accessible_with_the_apply_updates_permission(): void
+    public function test_page_is_accessible_to_the_admin(): void
     {
-        $this->actingAs($this->editorWithPermissions(['updates.apply']));
+        $this->actingAs(UserModel::factory()->admin()->create());
 
         $this->get(CoreUpdatesPage::getUrl())->assertOk();
+    }
+
+    public function test_apply_updates_in_another_role_does_not_open_the_page(): void
+    {
+        // Admin-only: stored in a role other than admin it gives nothing
+        $this->actingAs($this->editorWithPermissions(['admin.access', 'updates.apply']));
+
+        $this->get(CoreUpdatesPage::getUrl())->assertForbidden();
     }
 
     public function test_pending_commits_warn_to_enable_maintenance_mode_first(): void
