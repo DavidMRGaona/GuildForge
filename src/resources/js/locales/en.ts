@@ -527,6 +527,12 @@ export default {
                 unsaved: 'You have unsaved changes.',
                 error: 'The changes could not be saved. Try again.',
                 verifyFirst: 'To change which mail you receive, verify your email.',
+                delivery: {
+                    immediate: 'Right away',
+                    digest: 'Daily digest',
+                    none: 'Do not receive',
+                    digestHint: 'They will arrive together in one email a day, around {time}.',
+                },
                 pause: {
                     title: 'Pause optional mail',
                     description:

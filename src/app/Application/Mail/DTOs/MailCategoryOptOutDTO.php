@@ -15,6 +15,7 @@ final readonly class MailCategoryOptOutDTO
      * @param  int  $optedOut  Active accounts that turned the category off.
      * @param  int  $eligible  Active accounts that can receive it.
      * @param  float  $percentage  optedOut over eligible, one decimal; 0 when nobody is eligible.
+     * @param  int|null  $inDigest  Active accounts that receive it as a daily digest; null when it does not offer one.
      */
     public function __construct(
         public string $key,
@@ -23,5 +24,6 @@ final readonly class MailCategoryOptOutDTO
         public int $optedOut,
         public int $eligible,
         public float $percentage,
+        public ?int $inDigest = null,
     ) {}
 }

@@ -7,14 +7,17 @@ namespace App\Providers;
 use App\Application\Mail\Contracts\MailDeliveryRuleInterface;
 use App\Application\Mail\Services\MailCategoryOptOutStatisticsInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\Mail\Services\MailDigestServiceInterface;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\Mail\Services\MailUnsubscribeLinksInterface;
+use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPauseRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\Mail\Repositories\MailSubjectMuteRepositoryInterface;
 use App\Infrastructure\Mail\Channels\PreferenceAwareMailChannel;
+use App\Infrastructure\Mail\Digest\MailDigestService;
 use App\Infrastructure\Mail\Footer\CurrentMailFooter;
 use App\Infrastructure\Mail\Listeners\FilterMailByPreferences;
 use App\Infrastructure\Mail\Preferences\CoreMailCategories;
@@ -27,6 +30,7 @@ use App\Infrastructure\Mail\Preferences\Rules\CategoryPreferenceRule;
 use App\Infrastructure\Mail\Preferences\Rules\MutedSubjectRule;
 use App\Infrastructure\Mail\Preferences\Rules\PausedMailRule;
 use App\Infrastructure\Mail\Unsubscribe\SignedMailUnsubscribeLinks;
+use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailDigestItemRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailPauseRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailPreferenceRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailSubjectMuteRepository;
@@ -70,6 +74,10 @@ final class MailPreferencesServiceProvider extends ServiceProvider
         ));
 
         $this->app->bind(MailCategoryOptOutStatisticsInterface::class, MailCategoryOptOutStatistics::class);
+
+        // Daily digest of the digestible categories (core#333): kept after every rule let it through
+        $this->app->bind(MailDigestItemRepositoryInterface::class, EloquentMailDigestItemRepository::class);
+        $this->app->bind(MailDigestServiceInterface::class, MailDigestService::class);
 
         $this->app->scoped(FilterMailByPreferences::class);
 

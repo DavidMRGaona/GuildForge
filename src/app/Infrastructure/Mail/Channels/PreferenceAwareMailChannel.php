@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Mail\Channels;
 
+use App\Application\Mail\Contracts\IsMailDigest;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailFooterDTO;
 use App\Application\Mail\DTOs\MailSubjectDTO;
@@ -93,6 +94,40 @@ final class PreferenceAwareMailChannel extends MailChannel
         $headers->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
     }
 
+    /**
+     * Each category the digest gathers, with its own unsubscribe link (core#333). The one-click
+     * header can stop a single category only, so it is there when the digest has just one.
+     */
+    private function digestFooter(UserModel $notifiable, IsMailDigest $digest, string $preferencesUrl): MailFooterDTO
+    {
+        $categories = [];
+        foreach ($digest->digestCategories() as $key) {
+            $category = $this->categories->find($key);
+            if (! $category instanceof MailCategoryDTO || $category->isMandatory()) {
+                continue;
+            }
+
+            $label = __($category->label);
+            $categories[] = [
+                'label' => is_string($label) ? $label : $category->label,
+                'unsubscribeUrl' => $this->links->unsubscribeUrl($notifiable->id, $key),
+                'key' => $key,
+            ];
+        }
+
+        if ($categories === []) {
+            return MailFooterDTO::withoutCategory($preferencesUrl);
+        }
+
+        $oneClickUrl = count($categories) === 1 ? $this->links->oneClickUrl($notifiable->id, $categories[0]['key']) : null;
+
+        return MailFooterDTO::digest(
+            array_map(static fn (array $category): array => ['label' => $category['label'], 'unsubscribeUrl' => $category['unsubscribeUrl']], $categories),
+            $oneClickUrl,
+            $preferencesUrl,
+        );
+    }
+
     private function footerFor(mixed $notifiable, Notification $notification): ?MailFooterDTO
     {
         if (! $notifiable instanceof UserModel || $notifiable->anonymized_at !== null) {
@@ -101,6 +136,11 @@ final class PreferenceAwareMailChannel extends MailChannel
 
         try {
             $preferencesUrl = $this->links->preferencesUrl();
+
+            if ($notification instanceof IsMailDigest) {
+                return $this->digestFooter($notifiable, $notification, $preferencesUrl);
+            }
+
             $category = $this->categories->forNotification($notification);
 
             if (! $category instanceof MailCategoryDTO) {

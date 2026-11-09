@@ -36,6 +36,7 @@ return [
         'without_category' => 'You can choose which emails you receive :profile.',
         'profile_link' => 'in your profile',
         'mute_subject' => 'Stop notices about «:subject»',
+        'digest' => 'You receive this digest because you chose to get the notices of these categories once a day.',
     ],
     'unsubscribe' => [
         'done' => 'You will no longer receive emails of «:category».',
@@ -45,5 +46,11 @@ return [
     ],
     'mute_subject' => [
         'unmuted' => 'You will receive notices about «:subject» again.',
+    ],
+    'digest' => [
+        'subject' => '{1} Your daily digest: 1 notice|[2,*] Your daily digest: :count notices',
+        'intro' => 'These are the notices you chose to receive together, once a day.',
+        'open' => 'View',
+        'more' => '{1} And 1 more notice, the oldest, that does not fit in this digest.|[2,*] And :count more notices, the oldest, that do not fit in this digest.',
     ],
 ];

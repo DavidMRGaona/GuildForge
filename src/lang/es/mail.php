@@ -36,6 +36,7 @@ return [
         'without_category' => 'Puedes elegir qué correos recibes :profile.',
         'profile_link' => 'en tu perfil',
         'mute_subject' => 'No recibir más avisos de «:subject»',
+        'digest' => 'Recibes este resumen porque elegiste recibir una vez al día los avisos de estas categorías.',
     ],
     'unsubscribe' => [
         'done' => 'Ya no recibirás correos de «:category».',
@@ -45,5 +46,11 @@ return [
     ],
     'mute_subject' => [
         'unmuted' => 'Vuelves a recibir avisos de «:subject».',
+    ],
+    'digest' => [
+        'subject' => '{1} Tu resumen diario: 1 aviso|[2,*] Tu resumen diario: :count avisos',
+        'intro' => 'Estos son los avisos que elegiste recibir juntos, una vez al día.',
+        'open' => 'Ver',
+        'more' => '{1} Y 1 aviso más, el más antiguo, que no cabe en este resumen.|[2,*] Y :count avisos más, los más antiguos, que no caben en este resumen.',
     ],
 ];

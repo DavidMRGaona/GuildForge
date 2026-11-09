@@ -49,6 +49,7 @@ class MailOptOutWidget extends TableWidget
                 'opted_out' => $row->optedOut,
                 'eligible' => $row->eligible,
                 'percentage' => $row->percentage,
+                'in_digest' => $row->inDigest,
             ];
         }
 
@@ -76,6 +77,12 @@ class MailOptOutWidget extends TableWidget
                     ->label(__('filament.mail_opt_outs.columns.percentage'))
                     ->formatStateUsing(static fn (float $state): string => Number::format($state, maxPrecision: 1, locale: 'es').' %')
                     ->alignCenter(),
+                // Only digestible categories offer it (core#333); the others show a dash
+                TextColumn::make('in_digest')
+                    ->label(__('filament.mail_opt_outs.columns.in_digest'))
+                    ->placeholder('—')
+                    ->alignCenter()
+                    ->visibleFrom('xl'),
             ])
             ->recordActions([
                 RowDetailsAction::makeIconButton(),

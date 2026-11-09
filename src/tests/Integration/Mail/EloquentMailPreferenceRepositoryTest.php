@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Mail;
 
+use App\Domain\Mail\Enums\MailDelivery;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -65,6 +66,21 @@ final class EloquentMailPreferenceRepositoryTest extends TestCase
         $user->forceDelete();
 
         $this->assertSame(0, DB::table('user_mail_preferences')->count());
+    }
+
+    public function test_it_saves_the_three_deliveries_in_the_same_row(): void
+    {
+        $user = UserModel::factory()->create();
+        $userId = UserId::fromString($user->id);
+
+        $this->repository()->save($userId, ['example.first' => MailDelivery::Digest, 'example.second' => MailDelivery::Digest]);
+        $this->assertSame(['example.first', 'example.second'], $this->repository()->digestFor($userId));
+        $this->assertSame([], $this->repository()->disabledFor($userId));
+
+        $this->repository()->save($userId, ['example.first' => MailDelivery::None, 'example.second' => MailDelivery::Immediate]);
+        $this->assertSame([], $this->repository()->digestFor($userId));
+        $this->assertSame(['example.first'], $this->repository()->disabledFor($userId));
+        $this->assertSame(2, DB::table('user_mail_preferences')->where('user_id', $user->id)->count());
     }
 
     private function repository(): MailPreferenceRepositoryInterface

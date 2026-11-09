@@ -13,6 +13,9 @@ namespace App\Application\Mail\DTOs;
  * - without a category (a module not adapted yet): only where to choose.
  *
  * An optional mail about one thing (HasMailSubject) also offers to mute that thing (core#334).
+ *
+ * - digest (core#333): why the person receives it and how to stop each category it gathers. The
+ *   one-click address is set only when it gathers one category, the one it would unsubscribe.
  */
 final readonly class MailFooterDTO
 {
@@ -24,11 +27,21 @@ final readonly class MailFooterDTO
         public ?string $oneClickUrl,
         public ?string $subjectLabel = null,
         public ?string $muteSubjectUrl = null,
+        /** @var list<array{label: string, unsubscribeUrl: string}> */
+        public array $digestCategories = [],
     ) {}
 
     public static function optional(string $categoryLabel, string $unsubscribeUrl, string $oneClickUrl, string $preferencesUrl): self
     {
         return new self($preferencesUrl, false, $categoryLabel, $unsubscribeUrl, $oneClickUrl);
+    }
+
+    /**
+     * @param  list<array{label: string, unsubscribeUrl: string}>  $categories
+     */
+    public static function digest(array $categories, ?string $oneClickUrl, string $preferencesUrl): self
+    {
+        return new self($preferencesUrl, false, null, null, $oneClickUrl, digestCategories: $categories);
     }
 
     public static function mandatory(string $preferencesUrl): self
@@ -65,6 +78,11 @@ final readonly class MailFooterDTO
     public function offersToMuteSubject(): bool
     {
         return $this->muteSubjectUrl !== null;
+    }
+
+    public function isDigest(): bool
+    {
+        return $this->digestCategories !== [];
     }
 
     public function isOptional(): bool

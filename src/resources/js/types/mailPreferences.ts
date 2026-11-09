@@ -1,3 +1,6 @@
+/** How a category is received (core#333): `digest` only where the category is digestible. */
+export type MailDelivery = 'immediate' | 'digest' | 'none';
+
 /** One mail category as the «Correos» tab of the profile receives it (texts already translated). */
 export interface MailPreference {
     /** Stable `<module>.<name>` key, the one sent back when saving. */
@@ -7,7 +10,11 @@ export interface MailPreference {
     /** A mandatory category is always sent: it is shown locked, with its reason. */
     mandatory: boolean;
     mandatoryReason: string | null;
+    /** False only when the person receives none of it. */
     enabled: boolean;
+    /** Offers «al momento», «resumen diario» and «no recibir» instead of a switch. */
+    digestible: boolean;
+    delivery: MailDelivery;
 }
 
 /** A group of categories under one heading («Cuenta», «Partidas»…). */
@@ -47,4 +54,6 @@ export interface MailPreferencesProps {
     sections: MailPreferenceSection[];
     pause: MailPause;
     mutedSubjects: MutedMailSubject[];
+    /** When the daily digest goes out, `HH:MM` in the display zone. */
+    digestTime: string;
 }

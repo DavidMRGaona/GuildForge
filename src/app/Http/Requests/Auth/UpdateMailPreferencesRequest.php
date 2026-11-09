@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Domain\Mail\Enums\MailDelivery;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Shape of the mail choices only: which categories the person may change is decided by
- * MailPreferenceServiceInterface::update(), never by the client.
+ * Shape of the mail choices only: which categories the person may change, and which offer the
+ * daily digest, is decided by MailPreferenceServiceInterface::update(), never by the client.
+ * Each choice is the switch (a boolean) or one of the three deliveries (core#333).
  */
 final class UpdateMailPreferencesRequest extends FormRequest
 {
@@ -22,24 +25,31 @@ final class UpdateMailPreferencesRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, string|Closure>>
      */
     public function rules(): array
     {
         return [
             'preferences' => ['required', 'array', 'min:1', 'max:200'],
-            'preferences.*' => ['boolean:strict'],
+            'preferences.*' => [static function (string $attribute, mixed $value, Closure $fail): void {
+                if (! is_bool($value) && (! is_string($value) || ! MailDelivery::tryFrom($value) instanceof MailDelivery)) {
+                    $fail(__('validation.boolean', ['attribute' => $attribute]));
+                }
+            }],
         ];
     }
 
     /**
-     * @return array<string, bool>
+     * @return array<string, bool|MailDelivery>
      */
     public function preferences(): array
     {
-        /** @var array<string, bool> $preferences */
+        /** @var array<string, bool|string> $preferences */
         $preferences = $this->validated('preferences');
 
-        return $preferences;
+        return array_map(
+            static fn (bool|string $choice): bool|MailDelivery => is_bool($choice) ? $choice : MailDelivery::from($choice),
+            $preferences,
+        );
     }
 }

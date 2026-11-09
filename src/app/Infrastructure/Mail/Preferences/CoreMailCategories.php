@@ -42,6 +42,8 @@ final class CoreMailCategories
                 audience: static fn (object $user): bool => app(AuthorizationServiceInterface::class)
                     ->can($user, RoleGrantPolicy::ASSIGN_ROLES_PERMISSION),
                 icon: 'shield-check',
+                // Notices about other people, which come in bursts when the association role changes
+                digestible: true,
             ),
         ]);
 

@@ -4,7 +4,11 @@ import { createI18n } from 'vue-i18n';
 import MailPreferenceSection from '../MailPreferenceSection.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
-import type { MailPreference, MailPreferenceSection as Section } from '@/types/mailPreferences';
+import type {
+    MailDelivery,
+    MailPreference,
+    MailPreferenceSection as Section,
+} from '@/types/mailPreferences';
 
 function category(key: string, overrides: Partial<MailPreference> = {}): MailPreference {
     return {
@@ -14,6 +18,8 @@ function category(key: string, overrides: Partial<MailPreference> = {}): MailPre
         mandatory: false,
         mandatoryReason: null,
         enabled: true,
+        digestible: false,
+        delivery: overrides.enabled === false ? 'none' : 'immediate',
         ...overrides,
     };
 }
@@ -27,7 +33,7 @@ function mandatory(key: string): MailPreference {
 
 function mountSection(
     section: Partial<Section> & Pick<Section, 'categories'>,
-    choices: Record<string, boolean> = {}
+    choices: Record<string, MailDelivery> = {}
 ): VueWrapper {
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
@@ -61,12 +67,12 @@ describe('MailPreferenceSection', () => {
             mountSection({ categories }).get('[data-testid="mail-section-summary"]').text()
         ).toBe('2 de 3 activados');
         expect(
-            mountSection({ categories }, { 'a.one': false, 'a.two': true })
+            mountSection({ categories }, { 'a.one': 'none', 'a.two': 'immediate' })
                 .get('[data-testid="mail-section-summary"]')
                 .text()
         ).toBe('2 de 3 activados');
         expect(
-            mountSection({ categories }, { 'a.one': false })
+            mountSection({ categories }, { 'a.one': 'none' })
                 .get('[data-testid="mail-section-summary"]')
                 .text()
         ).toBe('1 de 3 activados');
@@ -123,7 +129,39 @@ describe('MailPreferenceSection', () => {
 
         await wrapper.get('[data-category="a.one"] [role="switch"]').trigger('click');
 
-        expect(wrapper.emitted('change')).toEqual([['a.one', false]]);
+        expect(wrapper.emitted('change')).toEqual([['a.one', 'none']]);
+    });
+
+    it('counts a category received in the daily digest as on', () => {
+        const categories = [
+            category('a.one', { digestible: true, delivery: 'digest' }),
+            category('a.two', { enabled: false }),
+        ];
+
+        expect(
+            mountSection({ categories }).get('[data-testid="mail-section-summary"]').text()
+        ).toBe('1 de 2 activados');
+        expect(
+            mountSection({ categories }, { 'a.one': 'none' })
+                .get('[data-testid="mail-section-summary"]')
+                .text()
+        ).toBe('0 de 2 activados');
+    });
+
+    it('offers three choices instead of the switch where the daily digest is possible', async () => {
+        const wrapper = mountSection({
+            categories: [category('a.one', { digestible: true, delivery: 'immediate' })],
+        });
+
+        const row = wrapper.get('[data-category="a.one"]');
+        expect(row.find('[role="switch"]').exists()).toBe(false);
+        const fieldset = row.get('fieldset');
+        expect(wrapper.get(`#${fieldset.attributes('aria-labelledby') ?? ''}`).text()).toBe(
+            'Etiqueta a.one'
+        );
+        await row.get('input[value="digest"]').trigger('change');
+
+        expect(wrapper.emitted('change')).toEqual([['a.one', 'digest']]);
     });
 
     it('draws the icon a module names and falls back to a mail icon for an unknown one', () => {

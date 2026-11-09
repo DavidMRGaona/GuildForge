@@ -8,6 +8,7 @@ return [
         'person_body' => 'Has dejado de ser socio, así que estos roles no funcionan por ahora: :roles. Volverán a funcionar en cuanto renueves.',
         'manager_subject' => ':name tiene roles en pausa',
         'manager_body' => ':name ha dejado de ser socio y estos roles no funcionan por ahora: :roles. Si hay que nombrar a otra persona, quítaselos antes desde su ficha.',
+        'manager_digest_line' => ':name tiene roles en pausa: :roles',
     ],
     'tabs' => [
         'content' => 'Contenido',

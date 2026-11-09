@@ -33,6 +33,8 @@ const SECTIONS: MailPreferenceSection[] = [
                 mandatory: true,
                 mandatoryReason: 'Siempre se envía: confirma algo que has hecho tú.',
                 enabled: true,
+                digestible: false,
+                delivery: 'immediate',
             },
         ],
     },
@@ -48,6 +50,8 @@ const SECTIONS: MailPreferenceSection[] = [
                 mandatory: false,
                 mandatoryReason: null,
                 enabled: true,
+                digestible: false,
+                delivery: 'immediate',
             },
             {
                 key: 'game-tables.news',
@@ -56,6 +60,18 @@ const SECTIONS: MailPreferenceSection[] = [
                 mandatory: false,
                 mandatoryReason: null,
                 enabled: false,
+                digestible: false,
+                delivery: 'none',
+            },
+            {
+                key: 'game-tables.sign-ups',
+                label: 'Inscripciones en tus mesas',
+                description: 'Cuando alguien se apunta o se da de baja.',
+                mandatory: false,
+                mandatoryReason: null,
+                enabled: true,
+                digestible: true,
+                delivery: 'digest',
             },
         ],
     },
@@ -68,13 +84,17 @@ function mountTab(mustVerifyEmail = false, pause: MailPause = NO_PAUSE): VueWrap
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
     return mount(ProfileMailTab, {
-        props: { sections: SECTIONS, pause },
+        props: { sections: SECTIONS, pause, digestTime: '19:00' },
         global: { plugins: [i18n], stubs: { HelpLink: true } },
     });
 }
 
 function switchFor(wrapper: VueWrapper, key: string): ReturnType<VueWrapper['find']> {
     return wrapper.find(`[data-category="${key}"] [role="switch"]`);
+}
+
+function deliveryRadios(wrapper: VueWrapper, key: string): ReturnType<VueWrapper['findAll']> {
+    return wrapper.findAll(`[data-category="${key}"] input[type="radio"]`);
 }
 
 describe('ProfileMailTab', () => {
@@ -315,5 +335,63 @@ describe('ProfileMailTab', () => {
         expect(
             wrapper.find('[data-testid="mail-pause-form"] button').attributes('disabled')
         ).toBeDefined();
+    });
+
+    it('offers three choices instead of a switch where the daily digest is possible', () => {
+        const wrapper = mountTab();
+
+        const row = wrapper.find('[data-category="game-tables.sign-ups"]');
+        expect(row.find('[role="switch"]').exists()).toBe(false);
+        const fieldset = row.get('fieldset');
+        expect(wrapper.get(`#${fieldset.attributes('aria-labelledby') ?? ''}`).text()).toBe(
+            'Inscripciones en tus mesas'
+        );
+        const radios = deliveryRadios(wrapper, 'game-tables.sign-ups');
+        expect(radios.map((radio) => (radio.element as HTMLInputElement).value)).toEqual([
+            'immediate',
+            'digest',
+            'none',
+        ]);
+        expect(radios.map((radio) => (radio.element as HTMLInputElement).checked)).toEqual([
+            false,
+            true,
+            false,
+        ]);
+        expect(row.text()).toContain('Al momento');
+        expect(row.text()).toContain('Resumen diario');
+        expect(row.text()).toContain('No recibir');
+    });
+
+    it('says when the digest arrives, read with the choices', () => {
+        const wrapper = mountTab();
+
+        const fieldset = wrapper.find('[data-category="game-tables.sign-ups"] fieldset');
+        const describedBy = (fieldset.attributes('aria-describedby') ?? '').split(' ');
+        const described = describedBy.map((id) => wrapper.find(`#${id}`).text()).join(' ');
+        expect(described).toContain('Cuando alguien se apunta o se da de baja.');
+        expect(described).toContain('hacia las 19:00');
+    });
+
+    it('sends the delivery of a digestible category and the switch of the others', async () => {
+        const wrapper = mountTab();
+
+        await deliveryRadios(wrapper, 'game-tables.sign-ups')[2]?.trigger('change');
+        await switchFor(wrapper, 'game-tables.news').trigger('click');
+        expect(wrapper.text()).not.toContain('hacia las 19:00');
+        await wrapper.find('form').trigger('submit');
+
+        const [, data] = router.put.mock.calls[0] as [string, unknown];
+        expect(data).toEqual({
+            preferences: { 'game-tables.sign-ups': 'none', 'game-tables.news': true },
+        });
+    });
+
+    it('locks the three choices for an account that must verify its email', async () => {
+        const wrapper = mountTab(true);
+
+        const radios = deliveryRadios(wrapper, 'game-tables.sign-ups');
+        radios.forEach((radio) => expect(radio.attributes('disabled')).toBeDefined());
+        await radios[0]?.trigger('change');
+        expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBeDefined();
     });
 });

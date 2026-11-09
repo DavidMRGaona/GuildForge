@@ -7,6 +7,7 @@ namespace App\Application\Mail\Services;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailPreferenceSectionDTO;
 use App\Application\Mail\DTOs\MailSubjectDTO;
+use App\Domain\Mail\Enums\MailDelivery;
 use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
 
 /**
@@ -24,10 +25,12 @@ interface MailPreferenceServiceInterface
     public function sectionsFor(object $user): array;
 
     /**
-     * Save the person's choices (key => enabled). All or nothing: if one key is unknown,
-     * mandatory or not shown to the person, nothing is saved.
+     * Save the person's choices. A boolean is the switch (true at once, false not at all); a
+     * MailDelivery also offers the daily digest, only for digestible categories (core#333).
+     * All or nothing: if one key is unknown, mandatory, not shown to the person or asks for a
+     * digest it does not offer, nothing is saved.
      *
-     * @param  array<string, bool>  $changes
+     * @param  array<string, bool|MailDelivery>  $changes
      *
      * @throws MailPreferenceNotEditableException
      */

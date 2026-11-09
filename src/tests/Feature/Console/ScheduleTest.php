@@ -30,4 +30,15 @@ final class ScheduleTest extends TestCase
                 && $event->expression === '0 0 * * *'
         ));
     }
+
+    public function test_daily_mail_digests_are_asked_for_every_hour(): void
+    {
+        $events = collect(app(Schedule::class)->events());
+
+        // Hourly, so the digest hour of the display zone is honoured whatever the scheduler zone
+        $this->assertTrue($events->contains(
+            fn (Event $event): bool => str_contains($event->command ?? '', 'mail:send-digests')
+                && $event->expression === '5 * * * *'
+        ));
+    }
 }
