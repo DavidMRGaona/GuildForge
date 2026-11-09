@@ -17,7 +17,7 @@ related: [core.account.change-email, core.account.complete-profile]
 3. Activa o desactiva los interruptores de cada tipo de correo.
 4. Pulsa **Guardar cambios**.
 
-Los correos están agrupados por sección (**Cuenta**, **Partidas**, **Torneos**…). Solo ves los tipos que te pueden llegar a ti: por ejemplo, los avisos de moderación solo aparecen si puedes moderar.
+Los correos están agrupados en una tarjeta por sección (**Cuenta**, **Partidas**, **Torneos**…). Cada tarjeta te dice cuántos tienes activados, por ejemplo «2 de 3 activados». Solo ves los tipos que te pueden llegar a ti: por ejemplo, los avisos de moderación solo aparecen si puedes moderar.
 
 ## Pausar los correos optativos
 
@@ -30,7 +30,7 @@ Si te vas de vacaciones o pasas una temporada sin jugar, no hace falta ir tipo p
 
 ## Qué son los correos obligatorios
 
-Algunos tipos aparecen con un candado y el interruptor activado, y no se pueden desactivar. Junto a cada uno se explica el motivo. Son los correos que:
+Algunos tipos aparecen al final de su tarjeta, con un candado y sin interruptor, porque no se pueden desactivar. Junto a cada uno se explica el motivo. Son los correos que:
 
 - confirman algo que has hecho tú, como una inscripción o un cambio de contraseña;
 - te avisan de algo que cambia tus planes, como una cancelación;

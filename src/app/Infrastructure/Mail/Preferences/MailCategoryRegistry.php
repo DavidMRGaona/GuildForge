@@ -101,5 +101,9 @@ final class MailCategoryRegistry implements MailCategoryRegistryInterface
         if ($category->isMandatory() && trim((string) $category->mandatoryReason) === '') {
             throw InvalidMailCategoryException::mandatoryWithoutReason($category->key);
         }
+
+        if ($category->icon !== null && preg_match(MailCategoryDTO::ICON_PATTERN, $category->icon) !== 1) {
+            throw InvalidMailCategoryException::invalidIcon($category->key, $category->icon);
+        }
     }
 }

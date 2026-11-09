@@ -520,7 +520,13 @@ export default {
             },
             mail: {
                 title: 'Correos que recibes',
-                intro: 'Elige qué correos quieres recibir de {appName}. Los marcados como obligatorios siempre se envían, porque confirman algo que has hecho tú o te avisan de algo que cambia tus planes.',
+                intro: 'Elige qué correos quieres recibir de {appName}. Los que aparecen al final de cada tarjeta, con un candado, siempre se envían, porque confirman algo que has hecho tú o te avisan de algo que cambia tus planes.',
+                section: {
+                    summary: '{enabled} de {total} activado | {enabled} de {total} activados',
+                },
+                mandatory: {
+                    label: 'Siempre se envían',
+                },
                 save: 'Guardar cambios',
                 unsaved: 'Tienes cambios sin guardar.',
                 error: 'No se han podido guardar los cambios. Inténtalo de nuevo.',

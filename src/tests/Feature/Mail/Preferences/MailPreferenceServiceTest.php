@@ -91,6 +91,36 @@ final class MailPreferenceServiceTest extends TestCase
         ], $sections);
     }
 
+    public function test_a_section_takes_the_icon_of_the_first_category_that_declares_one(): void
+    {
+        $this->registry->registerMany([
+            MailCategoryDTO::optional(
+                key: 'iconic.first',
+                section: 'Iconic section',
+                label: 'First',
+                description: 'No icon here',
+            ),
+            MailCategoryDTO::optional(
+                key: 'iconic.second',
+                section: 'Iconic section',
+                label: 'Second',
+                description: 'Icon here',
+                icon: 'dices',
+            ),
+            MailCategoryDTO::optional(
+                key: 'iconic.third',
+                section: 'Iconic section',
+                label: 'Third',
+                description: 'Another icon',
+                icon: 'trophy',
+            ),
+        ], 'iconic');
+
+        $sections = $this->service()->sectionsFor(UserModel::factory()->create());
+
+        $this->assertSame([null, 'dices'], [$sections[0]->icon, $sections[1]->icon]);
+    }
+
     public function test_a_category_shows_only_to_its_audience(): void
     {
         $moderator = UserModel::factory()->create(['name' => 'Moderator']);

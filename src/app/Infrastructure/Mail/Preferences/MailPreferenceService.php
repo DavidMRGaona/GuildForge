@@ -40,9 +40,15 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
 
         /** @var array<string, list<MailPreferenceDTO>> $sections */
         $sections = [];
+        /** @var array<string, string> $icons */
+        $icons = [];
         foreach ($this->categories->all() as $category) {
             if (! $this->isVisibleTo($category, $user)) {
                 continue;
+            }
+
+            if ($category->icon !== null && ! isset($icons[$category->section])) {
+                $icons[$category->section] = $category->icon;
             }
 
             $sections[$category->section][] = new MailPreferenceDTO(
@@ -57,7 +63,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
 
         $result = [];
         foreach ($sections as $section => $preferences) {
-            $result[] = new MailPreferenceSectionDTO(key: $section, label: $this->translate($section), categories: $preferences);
+            $result[] = new MailPreferenceSectionDTO(key: $section, label: $this->translate($section), categories: $preferences, icon: $icons[$section] ?? null);
         }
 
         return $result;

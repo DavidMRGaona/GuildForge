@@ -31,6 +31,7 @@ final class CoreMailCategories
                 label: 'mail.preferences.categories.account.label',
                 description: 'mail.preferences.categories.account.description',
                 reason: 'mail.preferences.categories.account.reason',
+                icon: 'circle-user-round',
             ),
             MailCategoryDTO::optional(
                 key: self::ROLE_MANAGEMENT,
@@ -40,6 +41,7 @@ final class CoreMailCategories
                 // The same permission that picks who gets InactiveRolesManagerNotification
                 audience: static fn (object $user): bool => app(AuthorizationServiceInterface::class)
                     ->can($user, RoleGrantPolicy::ASSIGN_ROLES_PERMISSION),
+                icon: 'shield-check',
             ),
         ]);
 

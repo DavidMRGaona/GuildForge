@@ -14,6 +14,8 @@ export interface MailPreference {
 export interface MailPreferenceSection {
     key: string;
     label: string;
+    /** Lucide icon name (kebab case) a module declares for its section; null falls back to a mail icon. */
+    icon: string | null;
     categories: MailPreference[];
 }
 
