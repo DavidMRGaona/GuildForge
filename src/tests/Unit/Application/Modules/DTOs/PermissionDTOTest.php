@@ -101,6 +101,7 @@ final class PermissionDTOTest extends TestCase
             'description' => 'Full event management access',
             'module' => 'events',
             'roles' => ['organizer', 'admin'],
+            'admin_only' => false,
         ];
 
         $this->assertEquals($expected, $array);

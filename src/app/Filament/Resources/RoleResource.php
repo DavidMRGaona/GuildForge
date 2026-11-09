@@ -13,6 +13,7 @@ use App\Application\Authorization\Services\RoleGrantPolicy;
 use App\Application\Authorization\Services\RoleRestrictionRule;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Authorization\ValueObjects\RoleName;
+use App\Domain\Enums\UserRole;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\RoleResource\Pages\CreateRole;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
@@ -344,6 +345,14 @@ class RoleResource extends BaseResource
      * Whether the role is "member", the base role of every account: deleting or renaming it
      * would strip every account of it at once.
      */
+    /**
+     * The administrator role: the only one that may hold admin-only permissions.
+     */
+    public static function isAdminRole(?RoleModel $record): bool
+    {
+        return $record instanceof RoleModel && $record->name === UserRole::Admin->value;
+    }
+
     public static function isBaseRole(?RoleModel $record): bool
     {
         return $record instanceof RoleModel && app(BaseRoleRule::class)->isBaseRoleName($record->name);
@@ -422,10 +431,19 @@ class RoleResource extends BaseResource
     {
         $options = [];
         $keys = [];
+        $adminOnlyIds = [];
         foreach ($section->permissions as $option) {
             $options[$option->id] = $option->label;
             $keys[$option->id] = $option->key;
+            if ($option->adminOnly) {
+                $adminOnlyIds[$option->id] = true;
+            }
         }
+
+        // What the actor does not hold stays as it is (the pages keep it when saving), and an
+        // admin-only permission is never ticked outside the administrator role
+        $locked = static fn (string $id, ?RoleModel $record): bool => ($editable !== null && ! in_array($keys[$id] ?? '', $editable, true))
+            || (isset($adminOnlyIds[$id]) && ! self::isAdminRole($record));
 
         return Fieldset::make($section->label)
             ->extraAttributes(['data-permission-section' => "{$tab->key}.{$section->key}"])
@@ -436,15 +454,16 @@ class RoleResource extends BaseResource
                     ->hiddenLabel()
                     ->options($options)
                     ->descriptions(static fn (?RoleModel $record): array => self::permissionDescriptions($section, $record))
-                    // What the actor does not hold stays as it is: the pages keep it when saving
-                    ->disableOptionWhen(static fn (mixed $value): bool => $editable !== null
-                        && ! in_array($keys[is_scalar($value) ? (string) $value : ''] ?? '', $editable, true))
+                    ->disableOptionWhen(static fn (mixed $value, ?RoleModel $record): bool => $locked(is_scalar($value) ? (string) $value : '', $record))
                     // Filament only accepts enabled options by default, which would reject a
                     // ticked disabled box: the server check decides on those
                     ->in(static fn (CheckboxList $component): array => array_keys($component->getOptions()))
                     // Filament labels the toggle from "all boxes ticked", which a locked box never is:
                     // with one in the section the button would alternately untick what the actor holds
-                    ->bulkToggleable($editable === null || array_diff($keys, $editable) === [])
+                    ->bulkToggleable(static fn (?RoleModel $record): bool => ! array_any(
+                        array_map(strval(...), array_keys($keys)),
+                        static fn (string $id): bool => $locked($id, $record),
+                    ))
                     ->selectAllAction(static fn (Action $action): Action => $action->label(__('filament.roles.fields.selectAllPermissions')))
                     ->deselectAllAction(static fn (Action $action): Action => $action->label(__('filament.roles.fields.deselectAllPermissions')))
                     ->columns(2)
@@ -455,19 +474,22 @@ class RoleResource extends BaseResource
     }
 
     /**
-     * Each permission's description, marked when the core or its module suggests it for this
-     * role. Only marked: a suggestion is never granted without an admin ticking it.
+     * Each permission's description, marked when only the administrator role may hold it and
+     * when the core or its module suggests it for this role. Only marked: a suggestion is never
+     * granted without an admin ticking it.
      *
      * @return array<string, string>
      */
     private static function permissionDescriptions(PermissionSection $section, ?RoleModel $record): array
     {
         $suggested = (string) __('filament.roles.fields.suggestedForRole');
+        $adminOnly = (string) __('filament.roles.fields.adminOnlyPermission');
         $descriptions = [];
 
         foreach ($section->permissions as $option) {
             $parts = array_filter([
                 $option->description,
+                $option->adminOnly ? $adminOnly : null,
                 $record instanceof RoleModel && in_array($record->name, $option->suggestedFor, true) ? $suggested : null,
             ], filled(...));
 

@@ -35,6 +35,20 @@ final class RoleProtectedException extends DomainException
         return new self(__('authorization.errors.cannot_restrict_role', ['role' => $roleName]));
     }
 
+    /**
+     * Only the administrator role holds the permissions that run code on the server
+     * (installing modules, applying updates).
+     *
+     * @param  list<string>  $permissionKeys
+     */
+    public static function adminOnlyPermissions(string $roleName, array $permissionKeys): self
+    {
+        return new self(__('authorization.errors.admin_only_permissions', [
+            'role' => $roleName,
+            'permissions' => implode(', ', $permissionKeys),
+        ]));
+    }
+
     public static function cannotModify(string $roleName): self
     {
         return new self("Cannot modify protected role: {$roleName}");

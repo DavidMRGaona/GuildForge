@@ -5,13 +5,21 @@ summary: Crea roles con los permisos justos, limita cuántas personas pueden ten
 category: users-and-roles
 audience: panel
 order: 20
-keywords: [roles, rol, permisos, permiso, cargos, cargo, presidencia, junta, editor, acceso al panel, crear rol, máximo de personas, requiere ser socio, protegido, member]
+keywords: [roles, rol, permisos, permiso, cargos, cargo, presidencia, junta, editor, acceso al panel, crear rol, máximo de personas, requiere ser socio, protegido, member, administración, administrador, solo para la administración, instalar módulos, actualizaciones]
 related: [core.panel.manage-users, core.panel.association-role, core.panel.modules]
 conditions:
   permissions:
     all: [roles.view_any]
 ---
 Un rol es un conjunto de permisos. Cada persona tiene los permisos de todos sus roles activos.
+
+Los roles solo sirven para repartir permisos dentro de la web. No se muestran en ninguna página pública: solo se ven aquí, en la gestión de roles. Dar a alguien el rol «Presidencia» le da sus permisos, pero no le presenta como presidente ante nadie.
+
+## Un rol para cada tarea
+
+Lo más cómodo y seguro es que cada rol tenga los permisos justos para una tarea, y dárselo a quien se encargue de ella. Por ejemplo, un rol para dar de alta a los socios o uno para mantener los eventos y las noticias.
+
+Si alguien necesita hacer algo concreto, aunque sea por poco tiempo, crea o usa un rol para esa tarea en vez de darle un cargo con muchos más permisos. Cuando termine, quítaselo.
 
 ## Crear un rol
 
@@ -29,6 +37,14 @@ Un rol es un conjunto de permisos. Cada persona tiene los permisos de todos sus 
 > Solo das lo que tienes. Si no tienes un permiso, no puedes añadirlo a un rol ni quitárselo. El rol de administración solo lo edita una persona administradora.
 
 «Sugerido para este rol» indica lo que el núcleo o un módulo proponen para ese rol. Nunca se concede solo: tienes que marcarlo.
+
+## Permisos solo para la administración
+
+Instalar y actualizar módulos y aplicar actualizaciones son permisos solo del rol de administración. Un módulo ejecuta código en el servidor: un error al instalarlo puede romper la web o borrar sus datos, y arreglarlo requiere a quien se encarga de la parte técnica.
+
+Por eso, en cualquier otro rol esos permisos aparecen como «Solo para la administración» y no se pueden marcar. Nadie, ni siquiera una persona administradora, puede ponerlos en otro rol. Así, quien puede crear roles nunca puede crear otro rol de administración.
+
+El rol de administración queda para el mantenimiento técnico, así que no conviene dárselo a nadie para el día a día. Para todo lo demás, incluido poner la web en modo mantenimiento, usa roles con los permisos justos.
 
 ## Cargos: roles con requisitos
 

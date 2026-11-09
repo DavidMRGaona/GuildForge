@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\RoleResource\Pages;
 
+use App\Application\Authorization\Services\AdminOnlyPermissionRule;
 use App\Application\Authorization\Services\AssociationMemberRoleRule;
 use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\Authorization\Services\RoleGrantPolicy;
@@ -50,6 +51,15 @@ trait GuardsRolePermissions
         }
 
         $submittedKeys = array_map(static fn (string $id): string => $keysById[$id] ?? $id, $submittedIds);
+
+        // Not even an admin puts these in another role; the role's current and submitted names
+        // both count, so a rename cannot carry them out of the administrator role
+        $adminOnly = app(AdminOnlyPermissionRule::class);
+        foreach ($roleNames as $roleName) {
+            if ($adminOnly->notAllowedFor($roleName, $submittedKeys) !== []) {
+                $this->refuse((string) __('filament.roles.notifications.adminOnlyPermissions'));
+            }
+        }
 
         if (in_array('admin.access', $submittedKeys, true)) {
             $association = app(AssociationMemberRoleRule::class);

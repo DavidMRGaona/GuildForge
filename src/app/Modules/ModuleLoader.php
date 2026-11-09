@@ -331,6 +331,7 @@ final class ModuleLoader
             defaultRoles: $dto->roles,
             description: $dto->description,
             group: $dto->group,
+            adminOnly: $dto->adminOnly,
         );
     }
 
