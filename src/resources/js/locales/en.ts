@@ -510,6 +510,23 @@ export default {
                 unsaved: 'You have unsaved changes.',
                 error: 'The changes could not be saved. Try again.',
                 verifyFirst: 'To change which mail you receive, verify your email.',
+                pause: {
+                    title: 'Pause optional mail',
+                    description:
+                        'Silence all optional mail at once. Mandatory mail is still sent and your choices below do not change.',
+                    durations: {
+                        week: 'One week',
+                        month: 'One month',
+                        indefinite: 'Until I turn it back on',
+                    },
+                    start: 'Pause mail',
+                    activeUntil: 'Paused until {date}',
+                    activeIndefinite: 'Paused until you turn it back on',
+                    activeHint:
+                        'We will not send you optional mail while it lasts. Your choices below are kept.',
+                    resume: 'Resume now',
+                    error: 'The pause could not be changed. Try again.',
+                },
             },
             tabs: {
                 account: 'Account',

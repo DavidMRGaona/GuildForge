@@ -514,6 +514,23 @@ export default {
                 unsaved: 'Tienes cambios sin guardar.',
                 error: 'No se han podido guardar los cambios. Inténtalo de nuevo.',
                 verifyFirst: 'Para cambiar qué correos recibes, verifica tu email.',
+                pause: {
+                    title: 'Pausar los correos optativos',
+                    description:
+                        'Silencia todos los correos optativos a la vez. Los obligatorios se siguen enviando y tus elecciones de abajo no cambian.',
+                    durations: {
+                        week: 'Una semana',
+                        month: 'Un mes',
+                        indefinite: 'Hasta que los reactive',
+                    },
+                    start: 'Pausar correos',
+                    activeUntil: 'En pausa hasta el {date}',
+                    activeIndefinite: 'En pausa hasta que los reactives',
+                    activeHint:
+                        'No te enviaremos correos optativos mientras dure. Tus elecciones de abajo se conservan.',
+                    resume: 'Reanudar ahora',
+                    error: 'No se ha podido cambiar la pausa. Inténtalo de nuevo.',
+                },
             },
             tabs: {
                 account: 'Cuenta',

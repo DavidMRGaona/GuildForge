@@ -77,7 +77,11 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
 
                 <!-- Which optional mail the person receives -->
                 <template v-if="activeTabId === MAIL_TAB">
-                    <ProfileMailTab v-if="mailPreferences" :sections="mailPreferences.sections" />
+                    <ProfileMailTab
+                        v-if="mailPreferences"
+                        :sections="mailPreferences.sections"
+                        :pause="mailPreferences.pause"
+                    />
                     <div v-else class="flex items-center justify-center py-12">
                         <div
                             class="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"

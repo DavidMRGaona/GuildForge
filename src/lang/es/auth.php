@@ -15,6 +15,8 @@ return [
     'password_incorrect' => 'La contraseña actual no es correcta.',
     'password_changed' => 'Contraseña actualizada correctamente.',
     'mail_preferences_saved' => 'Preferencias de correo guardadas.',
+    'mail_pause_started' => 'Correos optativos en pausa.',
+    'mail_pause_ended' => 'Has reanudado los correos optativos.',
     'mail_preferences_not_editable' => 'Esa categoría de correo no se puede cambiar.',
     'email_change_verification_failed' => 'El enlace de verificación no es válido o ha expirado.',
     'email_changed' => 'Tu correo electrónico ha sido actualizado correctamente.',

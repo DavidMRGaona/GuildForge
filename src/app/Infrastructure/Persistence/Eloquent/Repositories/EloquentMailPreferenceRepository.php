@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
+use App\Infrastructure\Persistence\Eloquent\Models\UserMailPauseModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserMailPreferenceModel;
 use Illuminate\Support\Facades\DB;
 
@@ -36,5 +37,7 @@ final class EloquentMailPreferenceRepository implements MailPreferenceRepository
     public function deleteForUser(UserId $userId): void
     {
         UserMailPreferenceModel::query()->where('user_id', $userId->value())->delete();
+        // The pause is one more of the person's mail choices
+        UserMailPauseModel::query()->where('user_id', $userId->value())->delete();
     }
 }

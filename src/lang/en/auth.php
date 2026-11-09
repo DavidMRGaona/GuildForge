@@ -12,6 +12,8 @@ return [
     'password_incorrect' => 'The current password is incorrect.',
     'password_changed' => 'Password updated successfully.',
     'mail_preferences_saved' => 'Mail preferences saved.',
+    'mail_pause_started' => 'Optional mail paused.',
+    'mail_pause_ended' => 'You have resumed optional mail.',
     'mail_preferences_not_editable' => 'That mail category cannot be changed.',
     'email_change_verification_failed' => 'The verification link is invalid or has expired.',
     'email_changed' => 'Your email has been updated successfully.',

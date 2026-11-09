@@ -8,6 +8,7 @@ use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
+use App\Domain\Mail\Repositories\MailPauseRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
@@ -82,6 +83,24 @@ final class UserServiceAnonymizeTest extends TestCase
 
         $this->assertSame([], $preferences->disabledFor(UserId::fromString($user->id)));
         $this->assertSame(['example.reminders'], $preferences->disabledFor(UserId::fromString($other->id)));
+    }
+
+    /**
+     * @param  Closure(UserServiceInterface, string): void  $anonymize
+     */
+    #[DataProvider('anonymizers')]
+    public function test_anonymizing_deletes_the_mail_pause(Closure $anonymize): void
+    {
+        $user = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        $pauses = app(MailPauseRepositoryInterface::class);
+        $pauses->pause(UserId::fromString($user->id), null);
+        $pauses->pause(UserId::fromString($other->id), null);
+
+        $anonymize(app(UserServiceInterface::class), (string) $user->id);
+
+        $this->assertNull($pauses->find(UserId::fromString($user->id)));
+        $this->assertNotNull($pauses->find(UserId::fromString($other->id)));
     }
 
     /**
