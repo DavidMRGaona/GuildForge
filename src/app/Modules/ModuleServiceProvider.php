@@ -178,21 +178,6 @@ abstract class ModuleServiceProvider extends ServiceProvider
     }
 
     /**
-     * Register Filament navigation groups provided by this module.
-     * Groups will only be added if they don't already exist.
-     *
-     * @deprecated Modules place their entries in the core's groups with
-     *             `PanelNavigationGroup::X->getLabel()` (docs/modules/README.md). Groups returned
-     *             here are shown after the core ones until every module has migrated.
-     *
-     * @return array<string, array{icon?: string, sort?: int}> Map of group label to options
-     */
-    public function registerNavigationGroups(): array
-    {
-        return [];
-    }
-
-    /**
      * Register permissions provided by this module.
      *
      * @return array<PermissionDTO>

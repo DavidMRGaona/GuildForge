@@ -78,6 +78,8 @@ final class ModuleLoader
         /** @var ModuleServiceProvider $provider */
         $provider = new $providerClass($this->app);
 
+        $this->registerTranslationNamespace($provider->moduleName(), $modulePath.'/lang');
+
         $this->app->register($provider);
         $this->loadedProviders[$module->name()->value] = $provider;
 
@@ -110,6 +112,21 @@ final class ModuleLoader
 
         // Register navigation from the provider
         $this->registerProviderNavigation($provider);
+    }
+
+    /**
+     * The module's hooks (permissions, navigation…) translate their labels as soon as they are
+     * read. While the application boots, a provider registered from another provider's boot()
+     * is only booted after that one finishes, so the module's own loadTranslations() has not
+     * run yet; a key asked before its namespace exists is cached as an empty group and stays
+     * untranslated for the whole request. Registering the namespace here, before the hooks,
+     * avoids it (core#429).
+     */
+    private function registerTranslationNamespace(string $namespace, string $langPath): void
+    {
+        if (is_dir($langPath)) {
+            $this->app->make('translator')->addNamespace($namespace, $langPath);
+        }
     }
 
     /**
