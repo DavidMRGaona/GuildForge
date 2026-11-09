@@ -14,6 +14,7 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
+use App\Application\Publications\Contracts\PublicationSourceInterface;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use Filament\Pages\Page;
@@ -284,6 +285,17 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<SurveySubjectSourceInterface>>
      */
     public function registerSurveySubjectSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register publication sources provided by this module.
+     * Lets other modules announce the module's records elsewhere (a forum, a channel) and follow their changes.
+     *
+     * @return array<class-string<PublicationSourceInterface>>
+     */
+    public function registerPublicationSources(): array
     {
         return [];
     }
