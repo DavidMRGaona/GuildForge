@@ -129,7 +129,7 @@ Immutable objects without identity that represent domain concepts:
 
 Events that notify significant state changes:
 
-- **User**: `UserRegistered`, `UserLoggedIn`, `UserLoggedOut`, `UserPasswordChanged`, `UserProfileUpdated`
+- **User**: `UserRegistered`, `UserLoggedIn`, `UserLoggedOut`, `UserPasswordChanged`, `UserProfileUpdated`, `UserAnonymized`, `UserDeactivated`, `UserRestored`, `UserRolesChanged`, `AssociationRoleLost`; `RolePermissionsChanged` (see [Account and role events](./modules/account-events.md))
 - **Modules**: `ModuleEnabled`, `ModuleDisabled`, `ModuleInstalled`, `ModuleUninstalled`, `ModuleUpdated`, `ModuleDiscovered`, `ModuleMigrated`
 - **Updates**: `ModuleUpdateStarted`, `ModuleUpdateCompleted`, `ModuleUpdateFailed`, `UpdatesAvailable`
 - **Mail**: `MailConfigurationUpdated`, `QuotaLimitReached`, `QuotaThresholdReached`, `SesBounceReceived`, `SesComplaintReceived`

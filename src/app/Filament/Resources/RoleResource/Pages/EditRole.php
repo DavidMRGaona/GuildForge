@@ -105,6 +105,8 @@ class EditRole extends EditRecord
 
         // Every holder of the role is affected by its permissions
         app(AuthorizationServiceInterface::class)->invalidateCache();
+
+        $this->announcePermissionChange($record);
     }
 
     protected function getRedirectUrl(): string

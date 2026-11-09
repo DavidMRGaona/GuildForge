@@ -11,12 +11,14 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Domain\Events\UserAnonymized;
 use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -73,6 +75,7 @@ final readonly class UserService implements UserServiceInterface
         });
 
         $this->authService->invalidateCacheFor($userModel);
+        $this->announceAnonymized((string) $userModel->id);
     }
 
     public function isAdmin(string $userId): bool
@@ -127,6 +130,18 @@ final readonly class UserService implements UserServiceInterface
         });
 
         $this->authService->invalidateCacheFor($userModel);
+        $this->announceAnonymized((string) $userModel->id);
+    }
+
+    /**
+     * After the commit, and after the cache invalidation registered before it: modules that
+     * mirror accounts elsewhere anonymize their copy at once.
+     */
+    private function announceAnonymized(string $userId): void
+    {
+        DB::afterCommit(static function () use ($userId): void {
+            Event::dispatch(new UserAnonymized($userId));
+        });
     }
 
     /**

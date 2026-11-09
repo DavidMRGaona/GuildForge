@@ -9,11 +9,13 @@ use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Domain\Authorization\Exceptions\RoleNotFoundException;
 use App\Domain\Enums\UserRole;
+use App\Domain\Events\UserRolesChanged;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 
 final readonly class MemberRoleService implements MemberRoleServiceInterface
@@ -72,6 +74,9 @@ final readonly class MemberRoleService implements MemberRoleServiceInterface
 
                     $now = now();
 
+                    // Read before the insert: the roles each account holds now
+                    $before = $this->storedRoleNames($missing);
+
                     // Direct inserts instead of assignRole(): one cache invalidation for the whole run
                     $inserted = DB::table('user_role')->insertOrIgnore(array_map(
                         static fn (string $userId): array => [
@@ -86,6 +91,8 @@ final readonly class MemberRoleService implements MemberRoleServiceInterface
                     // One insert into the history per chunk, in the same transaction as the roles
                     $this->audit->roleAssignedToMany($missing, UserRole::Member->value);
 
+                    $this->announce($missing, $before);
+
                     return $inserted;
                 });
             },
@@ -98,5 +105,46 @@ final readonly class MemberRoleService implements MemberRoleServiceInterface
         }
 
         return $assigned;
+    }
+
+    /**
+     * @param  list<string>  $userIds
+     * @return array<string, list<string>> user id => stored role names, sorted
+     */
+    private function storedRoleNames(array $userIds): array
+    {
+        $names = array_fill_keys($userIds, []);
+
+        $rows = DB::table('user_role')
+            ->join('roles', 'roles.id', '=', 'user_role.role_id')
+            ->whereIn('user_role.user_id', $userIds)
+            ->orderBy('roles.name')
+            ->get(['user_role.user_id', 'roles.name']);
+
+        foreach ($rows as $row) {
+            $names[(string) $row->user_id][] = (string) $row->name;
+        }
+
+        return $names;
+    }
+
+    /**
+     * One event per account, after the chunk commits. The cache is invalidated once at the end
+     * of the run, so a listener must take the roles from the event, not from the cache.
+     *
+     * @param  list<string>  $userIds
+     * @param  array<string, list<string>>  $before
+     */
+    private function announce(array $userIds, array $before): void
+    {
+        DB::afterCommit(static function () use ($userIds, $before): void {
+            foreach ($userIds as $userId) {
+                $roles = $before[$userId] ?? [];
+                $after = [...$roles, UserRole::Member->value];
+                sort($after);
+
+                Event::dispatch(new UserRolesChanged($userId, $roles, $after));
+            }
+        });
     }
 }

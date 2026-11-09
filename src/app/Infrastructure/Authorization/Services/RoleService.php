@@ -23,7 +23,9 @@ use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
 use App\Domain\Authorization\ValueObjects\RoleId;
 use App\Domain\Authorization\ValueObjects\RoleName;
+use App\Domain\Events\RolePermissionsChanged;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 final readonly class RoleService implements RoleServiceInterface
 {
@@ -132,17 +134,20 @@ final readonly class RoleService implements RoleServiceInterface
         $this->guardRestrictions($role);
         $this->guardAdminOnlyPermissions($role, $dto->permissionKeys ?? []);
 
-        DB::transaction(function () use ($role, $dto): void {
+        $changed = null;
+
+        DB::transaction(function () use ($role, $dto, &$changed): void {
             $this->roleRepository->save($role);
 
             // Sync permissions if provided (null means don't update)
             if ($dto->permissionKeys !== null) {
-                $this->changePermissions($role, $dto->permissionKeys, detach: true);
+                $changed = $this->changePermissions($role, $dto->permissionKeys, detach: true);
             }
         });
 
         if ($dto->permissionKeys !== null) {
             $this->authorization->invalidateCache();
+            $this->announce($changed);
         }
 
         return $this->toResponseDTO($role);
@@ -185,8 +190,9 @@ final readonly class RoleService implements RoleServiceInterface
      */
     public function assignPermissions(string $roleId, array $permissionKeys): void
     {
-        $this->changePermissionsOf($roleId, $permissionKeys, detach: false);
+        $changed = $this->changePermissionsOf($roleId, $permissionKeys, detach: false);
         $this->authorization->invalidateCache();
+        $this->announce($changed);
     }
 
     /**
@@ -194,41 +200,80 @@ final readonly class RoleService implements RoleServiceInterface
      */
     public function syncPermissions(string $roleId, array $permissionKeys): void
     {
-        $this->changePermissionsOf($roleId, $permissionKeys, detach: true);
+        $changed = $this->changePermissionsOf($roleId, $permissionKeys, detach: true);
         $this->authorization->invalidateCache();
+        $this->announce($changed);
     }
 
     /**
      * @param  array<string>  $permissionKeys
      */
-    private function changePermissionsOf(string $roleId, array $permissionKeys, bool $detach): void
+    private function changePermissionsOf(string $roleId, array $permissionKeys, bool $detach): ?RolePermissionsChanged
     {
         $role = $this->roleRepository->findById(RoleId::fromString($roleId));
 
         if (! $role instanceof Role) {
             // Nothing to change: the repository leaves an unknown role alone too
-            return;
+            return null;
         }
 
         $this->guardAdminOnlyPermissions($role, $permissionKeys);
 
-        DB::transaction(fn () => $this->changePermissions($role, $permissionKeys, $detach));
+        return DB::transaction(fn (): ?RolePermissionsChanged => $this->changePermissions($role, $permissionKeys, $detach));
+    }
+
+    /**
+     * After the commit, and after the cache invalidation registered before it, so a listener
+     * never reads stale permissions.
+     */
+    private function announce(?RolePermissionsChanged $event): void
+    {
+        if (! $event instanceof RolePermissionsChanged) {
+            return;
+        }
+
+        DB::afterCommit(static function () use ($event): void {
+            Event::dispatch($event);
+        });
     }
 
     /**
      * Writes the permissions and, when they changed, the history entry. Run it in a transaction.
+     * Returns the event to announce once the change is out, or null when nothing changed.
      *
      * @param  array<string>  $permissionKeys
      */
-    private function changePermissions(Role $role, array $permissionKeys, bool $detach): void
+    private function changePermissions(Role $role, array $permissionKeys, bool $detach): ?RolePermissionsChanged
     {
         $before = $this->roleRepository->getPermissionKeys($role->id());
         $this->writePermissions($role->id(), $permissionKeys, $detach);
-        $changes = $this->definitionChanges->between($before, $this->roleRepository->getPermissionKeys($role->id()));
+        $after = $this->roleRepository->getPermissionKeys($role->id());
+        $changes = $this->definitionChanges->between($before, $after);
 
-        if ($changes !== []) {
-            $this->audit->roleChanged($role->id()->value, $role->name()->value, RoleAuditEvent::RoleUpdated, $changes);
+        if ($changes === []) {
+            return null;
         }
+
+        $this->audit->roleChanged($role->id()->value, $role->name()->value, RoleAuditEvent::RoleUpdated, $changes);
+
+        return new RolePermissionsChanged(
+            $role->id()->value,
+            $role->name()->value,
+            $this->sortedKeys($before),
+            $this->sortedKeys($after),
+        );
+    }
+
+    /**
+     * @param  array<string>  $keys
+     * @return list<string>
+     */
+    private function sortedKeys(array $keys): array
+    {
+        $sorted = array_values(array_map(strval(...), $keys));
+        sort($sorted);
+
+        return $sorted;
     }
 
     /**

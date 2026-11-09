@@ -6,6 +6,7 @@ namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
+use App\Domain\Events\UserProfileUpdated;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Concerns\SavesRolesThroughTheGrantRule;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -19,12 +20,17 @@ use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 class EditUser extends EditRecord
 {
     use SavesRolesThroughTheGrantRule;
 
     protected static string $resource = UserResource::class;
+
+    /** @var list<string> */
+    private const array PROFILE_FIELDS = ['name', 'display_name', 'email', 'avatar_public_id'];
 
     /**
      * @param  array<string, mixed>  $data
@@ -51,6 +57,15 @@ class EditUser extends EditRecord
 
         return $this->saveAccountWithRoles($record, $submittedRoles, static function () use ($record, $data): UserModel {
             $record->update($data);
+
+            // The same event as when the person edits their own profile, once and after the
+            // commit; saving only roles, a password or nothing leaves it out
+            if ($record->wasChanged(self::PROFILE_FIELDS)) {
+                $userId = (string) $record->getKey();
+                DB::afterCommit(static function () use ($userId): void {
+                    Event::dispatch(new UserProfileUpdated($userId));
+                });
+            }
 
             return $record;
         });
