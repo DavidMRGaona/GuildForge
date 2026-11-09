@@ -44,6 +44,7 @@ final class WelcomeNotification extends Notification implements HasMailCategory,
             ->line(__('auth.welcome_line1', ['app' => $this->appName]))
             ->line(__('auth.welcome_line2'))
             ->action(__('auth.welcome_action'), $loginUrl)
+            ->line(__('auth.welcome_preferences'))
             ->line(__('auth.welcome_line3', ['app' => $this->appName]));
     }
 

@@ -96,6 +96,26 @@ When a notification is about to go out by mail to an account, the core:
 
 The check runs when the mail is delivered, inside the queue worker for queued notifications, so a choice made while the mail was waiting counts.
 
+## What every mail to an account carries
+
+A module gets this for free, with nothing in its notifications, as long as `toMail()` returns a `MailMessage` (the core template or a Markdown view built on `<x-mail::message>`) and the notification goes to the account:
+
+- **A footer** in the core template, HTML and text:
+  - optional category: «¿No quieres recibir más correos como este? Darte de baja de «<category>» · Elegir qué correos recibes»;
+  - mandatory category: «Este correo siempre se envía. Puedes elegir qué otros recibes en tu perfil»;
+  - no registered category: only «Puedes elegir qué correos recibes en tu perfil».
+- **The `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers** (RFC 8058) on optional categories only, so mail clients show their own unsubscribe button.
+
+The unsubscribe link is signed for that account and that category, never expires and opens nothing else: no sign-in, no other category. Opening it only shows a confirmation page (spam filters open the links of a mail), where the person confirms with a button and can undo afterwards. A mandatory category can never be turned off by a link. It also works while the site is in maintenance and for accounts that still have to verify their email.
+
+What does **not** get them:
+
+- mail to a plain address (`Notification::route('mail', …)`: guests, the organization's mailbox), since there is no account to choose for;
+- a `Mailable` returned from `toMail()`, since it may be addressed to anyone;
+- a custom HTML view (`MailMessage::view()`) that does not use `<x-mail::message>`: it gets the headers, but not the footer.
+
+To build these addresses yourself (for example in a page of the module), use `MailUnsubscribeLinksInterface`: `unsubscribeUrl($userId, $categoryKey)`, `oneClickUrl($userId, $categoryKey)` and `preferencesUrl()` (the «Correos» tab of the profile).
+
 ## Reading the categories
 
 - `MailCategoryRegistryInterface` lists every category (`all()`, `find()`) and tells which one a notification belongs to (`forNotification()`).

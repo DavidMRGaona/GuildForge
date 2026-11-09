@@ -21,6 +21,15 @@
 {{-- Footer --}}
 <x-slot:footer>
 <x-mail::footer>
+{{-- What the person can choose (mail to an account only; MailFooterDTO, core#330) --}}
+@isset($mailFooter)
+@if($mailFooter->isOptional())
+{{ __('mail.footer.optional') }} [{{ __('mail.footer.unsubscribe', ['category' => \App\Notifications\Support\EscapesMarkdown::escape((string) $mailFooter->categoryLabel)]) }}]({{ $mailFooter->unsubscribeUrl }}) · [{{ __('mail.footer.choose') }}]({{ $mailFooter->preferencesUrl }})
+@else
+{{ __($mailFooter->mandatory ? 'mail.footer.mandatory' : 'mail.footer.without_category', ['profile' => '['.__('mail.footer.profile_link').']('.$mailFooter->preferencesUrl.')']) }}
+@endif
+
+@endisset
 © {{ date('Y') }} [{{ $mailBranding->siteName }}]({{ $mailBranding->siteUrl }}). {{ __('All rights reserved.') }}
 </x-mail::footer>
 </x-slot:footer>

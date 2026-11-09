@@ -32,5 +32,6 @@ return [
     'welcome_line1' => 'Gracias por registrarte en :app. Estamos encantados de tenerte con nosotros.',
     'welcome_line2' => 'Ya puedes acceder a tu cuenta y disfrutar de todas las funcionalidades de nuestra comunidad.',
     'welcome_action' => 'Iniciar sesión',
+    'welcome_preferences' => 'En tu perfil puedes elegir qué correos quieres recibir.',
     'welcome_line3' => '¡Esperamos verte pronto en nuestros eventos!',
 ];

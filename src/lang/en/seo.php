@@ -26,6 +26,7 @@ return [
         'reset_password' => 'Reset password',
         'verify_email' => 'Verify email',
         'profile' => 'My profile',
+        'mail_unsubscribe' => 'Unsubscribe from a kind of email',
         'maintenance' => "We're under maintenance",
     ],
     'descriptions' => [

@@ -39,6 +39,8 @@ final readonly class EnsureSiteIsNotInMaintenance
         'admin/*',
         'up',
         'iniciar-sesion',
+        // Unsubscribing from a mail must work whatever the site is doing
+        'correos/baja/*',
     ];
 
     public function __construct(

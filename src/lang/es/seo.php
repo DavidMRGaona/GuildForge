@@ -27,6 +27,7 @@ return [
         'reset_password' => 'Restablecer contraseña',
         'verify_email' => 'Verificar correo',
         'profile' => 'Mi perfil',
+        'mail_unsubscribe' => 'Darte de baja de un tipo de correo',
         'maintenance' => 'Estamos en mantenimiento',
     ],
     'descriptions' => [

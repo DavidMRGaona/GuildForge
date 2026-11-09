@@ -24,6 +24,8 @@ use App\Http\Controllers\Knowledge\KnowledgeFeedbackController;
 use App\Http\Controllers\Knowledge\KnowledgeSearchController;
 use App\Http\Controllers\Knowledge\KnowledgeVisibleGuidesController;
 use App\Http\Controllers\LegalPageController;
+use App\Http\Controllers\MailUnsubscribeController;
+use App\Http\Controllers\OneClickMailUnsubscribeController;
 use App\Http\Controllers\PersonalCalendarFeedController;
 use App\Http\Controllers\PublicCalendarFeedController;
 use App\Http\Controllers\SearchController;
@@ -57,6 +59,29 @@ Route::get('/calendario/personal/{token}.ics', PersonalCalendarFeedController::c
 Route::get('/calendario/{source}/{id}.ics', CalendarEntryICalendarController::class)
     ->where(['source' => '[a-z0-9-]+', 'id' => '[A-Za-z0-9_-]+'])
     ->name('calendar.entry.ics');
+
+// Unsubscribe links of the mail footer and the List-Unsubscribe header: signed per account and
+// category, no expiry, no sign-in. Throttled before the signature, so guessing counts too.
+Route::middleware(['throttle:mail-unsubscribe', 'signed'])
+    ->where(['user' => '[0-9a-fA-F-]{36}', 'category' => '[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*'])
+    ->group(function (): void {
+        // Opening only asks to confirm: spam filters open the links of a mail
+        Route::get('/correos/baja/{user}/{category}', [MailUnsubscribeController::class, 'show'])->name('mail.unsubscribe');
+        Route::post('/correos/baja/{user}/{category}', [MailUnsubscribeController::class, 'store'])->name('mail.unsubscribe.store');
+        Route::delete('/correos/baja/{user}/{category}', [MailUnsubscribeController::class, 'destroy'])->name('mail.unsubscribe.destroy');
+
+        // RFC 8058: the mail client posts with no session nor CSRF token. The only route without CSRF
+        Route::post('/correos/baja/{user}/{category}/un-clic', [OneClickMailUnsubscribeController::class, 'store'])
+            ->withoutMiddleware([
+                StartSession::class,
+                ShareErrorsFromSession::class,
+                PreventRequestForgery::class,
+                AddQueuedCookiesToResponse::class,
+            ])
+            ->name('mail.unsubscribe.one-click');
+        Route::get('/correos/baja/{user}/{category}/un-clic', [OneClickMailUnsubscribeController::class, 'show'])
+            ->name('mail.unsubscribe.one-click.show');
+    });
 
 Route::get('/eventos/calendario', [CalendarController::class, 'index'])->name('events.calendar');
 Route::get('/eventos', [EventController::class, 'index'])->name('events.index');

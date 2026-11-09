@@ -7,16 +7,23 @@ namespace App\Providers;
 use App\Application\Mail\Contracts\MailDeliveryRuleInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
+use App\Application\Mail\Services\MailUnsubscribeLinksInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
+use App\Infrastructure\Mail\Channels\PreferenceAwareMailChannel;
+use App\Infrastructure\Mail\Footer\CurrentMailFooter;
 use App\Infrastructure\Mail\Listeners\FilterMailByPreferences;
 use App\Infrastructure\Mail\Preferences\CoreMailCategories;
 use App\Infrastructure\Mail\Preferences\MailCategoryRegistry;
 use App\Infrastructure\Mail\Preferences\MailPreferenceService;
 use App\Infrastructure\Mail\Preferences\Rules\CategoryPreferenceRule;
+use App\Infrastructure\Mail\Unsubscribe\SignedMailUnsubscribeLinks;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailPreferenceRepository;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\View as ViewContract;
+use Illuminate\Notifications\Channels\MailChannel;
 use Illuminate\Notifications\Events\NotificationSending;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -46,10 +53,20 @@ final class MailPreferencesServiceProvider extends ServiceProvider
         ));
 
         $this->app->scoped(FilterMailByPreferences::class);
+
+        // Footer and List-Unsubscribe headers of every mail to an account (core#330)
+        $this->app->bind(MailUnsubscribeLinksInterface::class, SignedMailUnsubscribeLinks::class);
+        $this->app->singleton(CurrentMailFooter::class);
+        $this->app->bind(MailChannel::class, PreferenceAwareMailChannel::class);
     }
 
     public function boot(): void
     {
         Event::listen(NotificationSending::class, FilterMailByPreferences::class);
+
+        // The HTML and text templates of the core both draw the footer from it
+        View::composer('mail::message', static function (ViewContract $view): void {
+            $view->with('mailFooter', app(CurrentMailFooter::class)->current());
+        });
     }
 }

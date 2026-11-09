@@ -233,6 +233,19 @@ export default {
         serverError: 'Server error',
         forbidden: 'Access denied',
     },
+    mailUnsubscribe: {
+        title: 'Unsubscribe',
+        confirm: 'Do you want to stop receiving emails of «{category}»?',
+        confirmHint:
+            'You will still receive the emails that are always sent, such as those about your account.',
+        submit: 'Unsubscribe me',
+        doneTitle: 'You have unsubscribed',
+        done: 'You will no longer receive emails of «{category}».',
+        undo: 'Undo',
+        mandatoryTitle: 'This email is always sent',
+        mandatory: 'Emails of «{category}» are always sent.',
+        choose: 'Choose which emails you receive',
+    },
     maintenance: {
         title: "We're under maintenance",
         defaultMessage: "We're making improvements to the site. Please try again in a few minutes.",
