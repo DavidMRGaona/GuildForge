@@ -79,6 +79,7 @@ function switchFor(wrapper: VueWrapper, key: string): ReturnType<VueWrapper['fin
 
 describe('ProfileMailTab', () => {
     beforeEach(() => {
+        window.localStorage.clear();
         router.put.mockReset();
         router.delete.mockReset();
     });
@@ -315,5 +316,60 @@ describe('ProfileMailTab', () => {
         expect(
             wrapper.find('[data-testid="mail-pause-form"] button').attributes('disabled')
         ).toBeDefined();
+    });
+
+    describe('view', () => {
+        it('starts on the cards, with the cards pressed in the switch', () => {
+            const wrapper = mountTab();
+
+            expect(wrapper.find('[data-testid="mail-preference-tabs"]').exists()).toBe(false);
+            const pressed = wrapper
+                .findAll('[data-testid="mail-view-switch"] button')
+                .map((button) => button.attributes('aria-pressed'));
+            expect(pressed).toEqual(['true', 'false']);
+        });
+
+        it('shows one section at a time in the tabs view, in a labelled panel', async () => {
+            const wrapper = mountTab();
+
+            await wrapper.findAll('[data-testid="mail-view-switch"] button')[1]?.trigger('click');
+
+            expect(wrapper.find('[data-testid="mail-preference-sections"]').exists()).toBe(false);
+            const panel = wrapper.get('[role="tabpanel"]');
+            expect(panel.findAll('section')).toHaveLength(1);
+            expect(wrapper.get(`#${panel.attributes('aria-labelledby') ?? ''}`).text()).toContain(
+                'Cuenta'
+            );
+
+            await wrapper.get('#mail-tab-Partidas').trigger('click');
+            expect(wrapper.get('[role="tabpanel"]').text()).toContain('Recordatorios');
+            expect(wrapper.get('#mail-tab-Partidas').text()).toContain('1/2');
+        });
+
+        it('keeps unsaved choices when the view changes, and sends them once', async () => {
+            const wrapper = mountTab();
+            await switchFor(wrapper, 'game-tables.reminders').trigger('click');
+
+            await wrapper.findAll('[data-testid="mail-view-switch"] button')[1]?.trigger('click');
+            await wrapper.get('#mail-tab-Partidas').trigger('click');
+            expect(switchFor(wrapper, 'game-tables.reminders').attributes('aria-checked')).toBe(
+                'false'
+            );
+            expect(wrapper.get('#mail-tab-Partidas').text()).toContain('0/2');
+
+            await wrapper.findAll('[data-testid="mail-view-switch"] button')[0]?.trigger('click');
+            await wrapper.find('form').trigger('submit');
+
+            expect((router.put.mock.calls[0] as [string, unknown])[1]).toEqual({
+                preferences: { 'game-tables.reminders': false },
+            });
+        });
+
+        it('remembers the view for the next visit', async () => {
+            const wrapper = mountTab();
+            await wrapper.findAll('[data-testid="mail-view-switch"] button')[1]?.trigger('click');
+
+            expect(mountTab().find('[data-testid="mail-preference-tabs"]').exists()).toBe(true);
+        });
     });
 });

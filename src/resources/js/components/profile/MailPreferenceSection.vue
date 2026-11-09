@@ -5,6 +5,7 @@ import MailMandatoryList from '@/components/profile/MailMandatoryList.vue';
 import MailPreferenceRow from '@/components/profile/MailPreferenceRow.vue';
 import type { MailPreferenceSection } from '@/types/mailPreferences';
 import { resolveMailSectionIcon } from '@/utils/icons';
+import { countOptionalOn, optionalCategories } from '@/utils/mailPreferences';
 
 /**
  * A section of the «Correos» tab as a card: icon, name and «2 de 3 activados» on top, the
@@ -28,16 +29,14 @@ const { t } = useI18n();
 const headingId = computed(() => `mail-section-${props.section.key.replace(/[^a-z0-9-]/gi, '-')}`);
 const icon = computed(() => resolveMailSectionIcon(props.section.icon));
 
-const optional = computed(() => props.section.categories.filter((category) => !category.mandatory));
+const optional = computed(() => optionalCategories(props.section));
 const mandatory = computed(() => props.section.categories.filter((category) => category.mandatory));
 
 function isOn(key: string, saved: boolean): boolean {
     return props.choices[key] ?? saved;
 }
 
-const enabledCount = computed(
-    () => optional.value.filter((category) => isOn(category.key, category.enabled)).length
-);
+const enabledCount = computed(() => countOptionalOn(props.section, props.choices));
 // Plural on the total («1 de 1 activado», «2 de 3 activados»)
 const summary = computed(() =>
     t(

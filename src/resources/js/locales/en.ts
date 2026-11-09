@@ -523,6 +523,12 @@ export default {
                 mandatory: {
                     label: 'Always sent',
                 },
+                view: {
+                    label: 'How to see the mail',
+                    cards: 'Cards',
+                    tabs: 'Tabs',
+                    sections: 'Mail sections',
+                },
                 save: 'Save changes',
                 unsaved: 'You have unsaved changes.',
                 error: 'The changes could not be saved. Try again.',

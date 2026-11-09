@@ -8,7 +8,10 @@ import BaseCard from '@/components/ui/BaseCard.vue';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
 import MailPauseBlock from '@/components/profile/MailPauseBlock.vue';
 import MailPreferenceSection from '@/components/profile/MailPreferenceSection.vue';
+import MailSectionTabs from '@/components/profile/MailSectionTabs.vue';
+import MailViewSwitch from '@/components/profile/MailViewSwitch.vue';
 import MutedMailSubjectsBlock from '@/components/profile/MutedMailSubjectsBlock.vue';
+import { useMailPreferencesView } from '@/composables/useMailPreferencesView';
 import { useVerificationGate } from '@/composables/useVerificationGate';
 import type {
     MailPause,
@@ -45,6 +48,14 @@ const saved = computed<Record<string, boolean>>(() => {
 
     return state;
 });
+
+// Cards (all at a glance) or tabs (one section at a time); the choices and the save are the same
+const { view } = useMailPreferencesView();
+const selectedKey = ref<string>(props.sections[0]?.key ?? '');
+const selectedSection = computed(
+    () => props.sections.find((section) => section.key === selectedKey.value) ?? props.sections[0]
+);
+const PANEL_ID = 'mail-section-panel';
 
 const choices = ref<Record<string, boolean>>({ ...saved.value });
 const processing = ref(false);
@@ -149,7 +160,11 @@ function save(): void {
                 <MailPauseBlock :pause="pause" :blocked="gate.blocked.value" />
             </div>
 
-            <div class="space-y-4" data-testid="mail-preference-sections">
+            <div v-if="sections.length > 1" class="flex justify-end">
+                <MailViewSwitch v-model="view" />
+            </div>
+
+            <div v-if="view === 'cards'" class="space-y-4" data-testid="mail-preference-sections">
                 <MailPreferenceSection
                     v-for="section in sections"
                     :key="section.key"
@@ -159,6 +174,31 @@ function save(): void {
                     :errors="errors"
                     @change="setChoice"
                 />
+            </div>
+
+            <div v-else-if="selectedSection" data-testid="mail-preference-tabs">
+                <MailSectionTabs
+                    v-model="selectedKey"
+                    :sections="sections"
+                    :choices="choices"
+                    :panel-id="PANEL_ID"
+                />
+                <div
+                    :id="PANEL_ID"
+                    role="tabpanel"
+                    tabindex="0"
+                    :aria-labelledby="`mail-tab-${selectedSection.key.replace(/[^a-z0-9-]/gi, '-')}`"
+                    class="mt-4 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
+                    <MailPreferenceSection
+                        :key="selectedSection.key"
+                        :section="selectedSection"
+                        :choices="choices"
+                        :busy="locked"
+                        :errors="errors"
+                        @change="setChoice"
+                    />
+                </div>
             </div>
 
             <p v-if="generalError" role="alert" class="text-sm text-error">{{ generalError }}</p>

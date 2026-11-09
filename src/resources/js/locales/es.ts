@@ -527,6 +527,12 @@ export default {
                 mandatory: {
                     label: 'Siempre se envían',
                 },
+                view: {
+                    label: 'Cómo ver los correos',
+                    cards: 'Tarjetas',
+                    tabs: 'Pestañas',
+                    sections: 'Secciones de correo',
+                },
                 save: 'Guardar cambios',
                 unsaved: 'Tienes cambios sin guardar.',
                 error: 'No se han podido guardar los cambios. Inténtalo de nuevo.',
