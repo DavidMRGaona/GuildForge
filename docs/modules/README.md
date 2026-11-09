@@ -773,7 +773,7 @@ protected static ?string $cluster = SettingsCluster::class;
 protected static ?int $navigationSort = 130;
 ```
 
-Core settings use 10–40. Module slots: Banner de cookies 110 · Encuestas 120 · Mesas 130 · Notificaciones a canales 140 · Página de enlaces 150 · Reservas 160 · Socios 170. A clustered page's path and route name gain the cluster prefix (`/admin/configuracion/<slug>`, `filament.admin.configuracion.pages.<slug>`). The core keeps a redirect under the old path and route name, query string included, so existing links and guides keep working; new guides use the new name.
+Core settings use 10–40. Module slots: Banner de cookies 110 · Encuestas 120 · Foro 125 · Mesas 130 · Notificaciones a canales 140 · Página de enlaces 150 · Reservas 160 · Socios 170. A clustered page's path and route name gain the cluster prefix (`/admin/configuracion/<slug>`, `filament.admin.configuracion.pages.<slug>`). The core keeps a redirect under the old path and route name, query string included, so existing links and guides keep working; new guides use the new name.
 
 Modules declare no groups of their own: `registerNavigationGroups()` was removed from `ModuleServiceProvider` once every module had migrated (core#429).
 
