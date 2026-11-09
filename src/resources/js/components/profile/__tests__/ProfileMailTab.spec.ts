@@ -204,6 +204,37 @@ describe('ProfileMailTab', () => {
         expect(wrapper.find('fieldset legend').text()).toBe('Pausar los correos optativos');
     });
 
+    it('draws the duration choices like the site radios, not the browser ones', async () => {
+        const wrapper = mountTab();
+        const dots = (): string[] =>
+            wrapper
+                .findAll('[data-testid="mail-pause-form"] label > span[aria-hidden="true"] > span')
+                .map((dot) => dot.classes().join(' '));
+
+        const radios = wrapper.findAll('input[name="mail-pause-duration"]');
+        radios.forEach((radio) => expect(radio.classes()).toContain('sr-only'));
+        expect(dots().map((classes) => classes.includes('scale-100'))).toEqual([
+            true,
+            false,
+            false,
+        ]);
+
+        await radios[1]?.setValue(true);
+
+        expect(dots().map((classes) => classes.includes('scale-100'))).toEqual([
+            false,
+            true,
+            false,
+        ]);
+    });
+
+    it('keeps the switch knob centred inside the bordered track', () => {
+        const wrapper = mountTab();
+
+        const knob = wrapper.find('[role="switch"] span[aria-hidden="true"] > span');
+        expect(knob.classes()).toEqual(expect.arrayContaining(['left-px', 'top-px', 'h-5', 'w-5']));
+    });
+
     it('pauses with the chosen duration and does not touch the category choices', async () => {
         const wrapper = mountTab();
 

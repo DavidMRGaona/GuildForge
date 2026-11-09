@@ -90,8 +90,9 @@ function toggle(): void {
                 ]"
                 aria-hidden="true"
             >
+                <!-- Offsets count from inside the 1 px border (22 x 42 px): 1 px each side keeps it centred -->
                 <span
-                    class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out"
+                    class="absolute left-px top-px h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out"
                     :class="checked ? 'translate-x-5' : 'translate-x-0'"
                 />
             </span>
