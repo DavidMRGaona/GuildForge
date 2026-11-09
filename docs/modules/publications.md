@@ -40,3 +40,14 @@ The core offers its events (type `event`): published or not, start and end, publ
 Listen to `PublicationChanged` and `PublicationRemoved` with an ordinary listener and queue the work. Read the record again with `PublicationSourceRegistryInterface::source($type)?->find($id)` when the job runs, never from the event: events carry no data, so late or out-of-order deliveries never bring back an old state. An unknown type (its module disabled) means there is nothing to read; keep what you announced.
 
 Nothing in the core listens to them: without an announcer they do nothing.
+
+## Discussion activity on pages
+
+A page that shows a publication (an event, a game table, a campaign) may show the activity of its discussion elsewhere: messages, the last one, a button to comment, and topics such as its game system. Requirement: the core release with core#470.
+
+- Ask `App\Application\Discussions\Contracts\SubjectDiscussionInterface::forSubject($type, $id, $userId)` (the publication's type and id, and the signed-in account or null) in the page's controller and pass `->toArray($timezone)` as the `discussion` prop. Catch any `Throwable`, report it and pass null: the page always shows, without the block when something fails.
+- Render it with the shared component `@/components/discussions/SubjectDiscussion.vue` (`<SubjectDiscussion :discussion="discussion" />`, types `SubjectDiscussion`, `DiscussionActivity` and `TopicActivity` in `@/types/models`). With null it renders nothing.
+- `SubjectDiscussionDTO` holds `discussion` (`DiscussionActivityDTO`: `url`, `actionUrl`, `commentCount`, `lastPostedAt`) and `topics` (`TopicActivityDTO`: `label`, `url`, `discussionCount`, `lastPostedAt`); links are absolute http(s) URLs. With nothing to show the answer is null, never an empty DTO.
+- The core binds `NullSubjectDiscussion` (always null); a forum module replaces it and decides what each person may see. Every page view asks it, so it must be cheap: it reads what it keeps and never calls the forum while answering a page.
+
+The core's event page does it already.

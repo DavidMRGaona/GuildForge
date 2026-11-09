@@ -334,6 +334,14 @@ export default {
             updated: 'Updated',
         },
     },
+    discussions: {
+        title: 'On the forum',
+        messages: 'No messages | 1 message | {count} messages',
+        lastPostedAt: 'last on {date}',
+        comment: 'Comment on the forum',
+        opensInNewTab: 'opens in a new tab',
+        topic: 'No discussions about {label} | 1 discussion about {label} | {count} discussions about {label}',
+    },
     tags: {
         all: 'All',
         filter: 'Filter by tag',

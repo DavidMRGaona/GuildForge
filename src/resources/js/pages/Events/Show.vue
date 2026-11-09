@@ -3,8 +3,13 @@ import { Calendar, ChevronLeft, Clock, Download, MapPin, Ticket } from '@lucide/
 import { computed, useTemplateRef } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import type { AddToCalendarLinks, Event } from '@/types/models';
+import type {
+    AddToCalendarLinks,
+    Event,
+    SubjectDiscussion as SubjectDiscussionData,
+} from '@/types/models';
 import AddToCalendarMenu from '@/components/calendar/AddToCalendarMenu.vue';
+import SubjectDiscussion from '@/components/discussions/SubjectDiscussion.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import TagBadge from '@/components/ui/TagBadge.vue';
 import TagList from '@/components/ui/TagList.vue';
@@ -18,6 +23,8 @@ import { useFitsViewportHeight } from '@/composables/useFitsViewportHeight';
 interface Props {
     event: Event;
     calendarLinks?: AddToCalendarLinks | null;
+    /** Activity of its forum discussion, when a forum module offers one */
+    discussion?: SubjectDiscussionData | null;
 }
 
 const props = defineProps<Props>();
@@ -172,6 +179,10 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
                         <!-- Secondary action: after signing up, not before -->
                         <div v-if="props.calendarLinks && isUpcoming(props.event)" class="mb-6">
                             <AddToCalendarMenu :links="props.calendarLinks" />
+                        </div>
+
+                        <div v-if="props.discussion" class="mb-6">
+                            <SubjectDiscussion :discussion="props.discussion" />
                         </div>
 
                         <!-- Download links -->

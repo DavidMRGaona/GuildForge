@@ -335,6 +335,14 @@ export default {
             updated: 'Actualizada',
         },
     },
+    discussions: {
+        title: 'En el foro',
+        messages: 'Sin mensajes | 1 mensaje | {count} mensajes',
+        lastPostedAt: 'último el {date}',
+        comment: 'Comentar en el foro',
+        opensInNewTab: 'se abre en una pestaña nueva',
+        topic: 'Sin temas sobre {label} | 1 tema sobre {label} | {count} temas sobre {label}',
+    },
     tags: {
         all: 'Todos',
         filter: 'Filtrar por etiqueta',
