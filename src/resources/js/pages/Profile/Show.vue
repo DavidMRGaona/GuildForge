@@ -81,6 +81,7 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                         v-if="mailPreferences"
                         :sections="mailPreferences.sections"
                         :pause="mailPreferences.pause"
+                        :muted-subjects="mailPreferences.mutedSubjects"
                     />
                     <div v-else class="flex items-center justify-center py-12">
                         <div

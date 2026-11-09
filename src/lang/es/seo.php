@@ -28,6 +28,7 @@ return [
         'verify_email' => 'Verificar correo',
         'profile' => 'Mi perfil',
         'mail_unsubscribe' => 'Darte de baja de un tipo de correo',
+        'mail_mute_subject' => 'Dejar de recibir avisos de algo concreto',
         'maintenance' => 'Estamos en mantenimiento',
     ],
     'descriptions' => [

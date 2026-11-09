@@ -10,14 +10,17 @@ use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
+use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Mail\ValueObjects\MailPause;
+use App\Domain\Mail\ValueObjects\MutedMailSubject;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Infrastructure\Mail\Preferences\MailSubjectTypeLabel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +41,7 @@ final class ProfileController extends Controller
         private readonly TimezoneServiceInterface $timezone,
         private readonly MailPreferenceServiceInterface $mailPreferences,
         private readonly MailPauseServiceInterface $mailPause,
+        private readonly MailSubjectMuteServiceInterface $mailSubjectMutes,
     ) {}
 
     public function show(Request $request): Response
@@ -71,6 +75,14 @@ final class ProfileController extends Controller
                     // Last day the pause covers, as the person sees it: the end is where the next day starts
                     'lastDay' => $pause?->until instanceof \DateTimeImmutable ? $this->timezone->format($pause->until->modify('-1 second'), 'Y-m-d') : null,
                 ],
+                // Things muted from a mail footer (core#334), with the names stored when muted
+                'mutedSubjects' => array_map(fn (MutedMailSubject $muted): array => [
+                    'type' => $muted->type,
+                    'id' => $muted->id,
+                    'label' => $muted->label,
+                    'typeLabel' => MailSubjectTypeLabel::translate($muted->typeLabel),
+                    'mutedAt' => $this->timezone->iso($muted->mutedAt),
+                ], $this->mailSubjectMutes->mutedFor($user)),
             ];
         }
 

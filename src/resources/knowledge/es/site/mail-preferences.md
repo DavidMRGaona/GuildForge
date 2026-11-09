@@ -5,7 +5,7 @@ summary: Decide qué correos opcionales quieres recibir y entiende cuáles se en
 category: account
 audience: site
 order: 40
-keywords: [correos, emails, avisos, notificaciones, darme de baja, baja, dejar de recibir, cancelar suscripción, no quiero recibir, demasiados correos, spam, recordatorios, novedades, preferencias de correo, categorías, obligatorios]
+keywords: [correos, emails, avisos, notificaciones, darme de baja, baja, dejar de recibir, cancelar suscripción, no quiero recibir, demasiados correos, spam, recordatorios, novedades, preferencias de correo, categorías, obligatorios, silenciar, avisos silenciados, una partida concreta, volver a recibir]
 related: [core.account.change-email, core.account.complete-profile]
 ---
 {{site_name}} te manda correos de varios tipos. Tú decides cuáles quieres recibir, salvo los que son imprescindibles.
@@ -49,9 +49,18 @@ Todo lo opcional empieza activado. Desactiva lo que no quieras y deja el resto. 
 
 Los correos opcionales traen al final un enlace para dejar de recibir ese tipo de correo sin entrar en tu cuenta. Si lo pulsas, el cambio se refleja aquí, en la pestaña **Correos**, donde puedes volver a activarlo cuando quieras.
 
+## Silenciar los avisos de algo concreto
+
+A veces lo que sobra no es un tipo de correo entero, sino los avisos de una partida, una campaña o un torneo en particular. Los correos opcionales que hablan de algo concreto traen al final el enlace **No recibir más avisos de «…»**.
+
+- Al abrirlo te pedimos que lo confirmes, y desde la misma página puedes deshacerlo.
+- Dejas de recibir los correos opcionales sobre eso, sean del tipo que sean. Los obligatorios, como una cancelación, te siguen llegando.
+- Lo que hayas silenciado aparece en la pestaña **Correos**, en **Avisos silenciados**, con la fecha y el botón **Volver a recibir**. Se queda ahí con el nombre que tenía, aunque ya haya terminado; si se borra, desaparece de la lista.
+
 ## Si algo no sale bien
 
 - **No me deja guardar**: si tu cuenta aún no tiene el email verificado, primero tienes que verificarlo.
 - **Sigo recibiendo un correo que desactivé**: comprueba que no sea uno obligatorio. Los que tienen candado se envían siempre.
+- **Sigo recibiendo correos de algo que silencié**: silenciar algo concreto no apaga los correos obligatorios sobre ello.
 
 [[action:profile.show?tab=mail|Elegir mis correos]]

@@ -8,6 +8,7 @@ use App\Application\Mail\Contracts\MailDeliveryRuleInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailPreferenceDTO;
 use App\Application\Mail\DTOs\MailPreferenceSectionDTO;
+use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
@@ -205,6 +206,22 @@ final class MailPreferenceServiceTest extends TestCase
         $log->shouldHaveReceived('warning')->once();
     }
 
+    public function test_the_rules_are_told_what_the_mail_is_about(): void
+    {
+        $seen = [];
+        $this->addRule(static function (?MailSubjectDTO $subject) use (&$seen): bool {
+            $seen[] = $subject?->id;
+
+            return true;
+        });
+        $user = UserModel::factory()->create();
+
+        $this->service()->receives($user, $this->category('example.reminders'), new MailSubjectDTO('example.campaign', 'c-1', 'La tumba'));
+        $this->service()->receives($user, $this->category('example.reminders'));
+
+        $this->assertSame(['c-1', null], $seen);
+    }
+
     public function test_something_that_is_not_an_account_has_no_preferences(): void
     {
         $guest = new stdClass;
@@ -214,20 +231,20 @@ final class MailPreferenceServiceTest extends TestCase
     }
 
     /**
-     * @param  Closure(): bool  $allows
+     * @param  Closure(?MailSubjectDTO): bool  $allows
      */
     private function addRule(Closure $allows): void
     {
         $rule = new readonly class($allows) implements MailDeliveryRuleInterface
         {
             /**
-             * @param  Closure(): bool  $allows
+             * @param  Closure(?MailSubjectDTO): bool  $allows
              */
             public function __construct(private Closure $allows) {}
 
-            public function allows(object $user, MailCategoryDTO $category): bool
+            public function allows(object $user, MailCategoryDTO $category, ?MailSubjectDTO $subject = null): bool
             {
-                return ($this->allows)();
+                return ($this->allows)($subject);
             }
         };
         $this->app->instance('test.mail-rule', $rule);

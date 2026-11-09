@@ -6,6 +6,7 @@ namespace App\Infrastructure\Mail\Preferences\Rules;
 
 use App\Application\Mail\Contracts\MailDeliveryRuleInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
+use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Domain\Mail\ValueObjects\MailPause;
 
@@ -19,7 +20,7 @@ final readonly class PausedMailRule implements MailDeliveryRuleInterface
         private MailPauseServiceInterface $pauses,
     ) {}
 
-    public function allows(object $user, MailCategoryDTO $category): bool
+    public function allows(object $user, MailCategoryDTO $category, ?MailSubjectDTO $subject = null): bool
     {
         return ! $this->pauses->current($user) instanceof MailPause;
     }

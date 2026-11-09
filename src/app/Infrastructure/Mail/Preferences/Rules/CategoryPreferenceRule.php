@@ -6,6 +6,7 @@ namespace App\Infrastructure\Mail\Preferences\Rules;
 
 use App\Application\Mail\Contracts\MailDeliveryRuleInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
+use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -19,7 +20,7 @@ final readonly class CategoryPreferenceRule implements MailDeliveryRuleInterface
         private MailPreferenceRepositoryInterface $preferences,
     ) {}
 
-    public function allows(object $user, MailCategoryDTO $category): bool
+    public function allows(object $user, MailCategoryDTO $category, ?MailSubjectDTO $subject = null): bool
     {
         if (! $user instanceof UserModel) {
             return true;

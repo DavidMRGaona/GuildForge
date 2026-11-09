@@ -24,6 +24,10 @@
 {{-- What the person can choose (mail to an account only; MailFooterDTO, core#330) --}}
 @isset($mailFooter)
 @if($mailFooter->isOptional())
+@if($mailFooter->offersToMuteSubject())
+[{{ __('mail.footer.mute_subject', ['subject' => \App\Notifications\Support\EscapesMarkdown::escape((string) $mailFooter->subjectLabel)]) }}]({{ $mailFooter->muteSubjectUrl }})
+
+@endif
 {{ __('mail.footer.optional') }} [{{ __('mail.footer.unsubscribe', ['category' => \App\Notifications\Support\EscapesMarkdown::escape((string) $mailFooter->categoryLabel)]) }}]({{ $mailFooter->unsubscribeUrl }}) · [{{ __('mail.footer.choose') }}]({{ $mailFooter->preferencesUrl }})
 @else
 {{ __($mailFooter->mandatory ? 'mail.footer.mandatory' : 'mail.footer.without_category', ['profile' => '['.__('mail.footer.profile_link').']('.$mailFooter->preferencesUrl.')']) }}

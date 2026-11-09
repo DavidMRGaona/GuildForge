@@ -6,9 +6,11 @@ namespace App\Infrastructure\Mail\Channels;
 
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailFooterDTO;
+use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailUnsubscribeLinksInterface;
 use App\Infrastructure\Mail\Footer\CurrentMailFooter;
+use App\Infrastructure\Mail\Preferences\NotificationMailSubject;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Contracts\Mail\Factory as MailFactory;
 use Illuminate\Mail\Markdown;
@@ -111,12 +113,19 @@ final class PreferenceAwareMailChannel extends MailChannel
 
             $label = __($category->label);
 
-            return MailFooterDTO::optional(
+            $footer = MailFooterDTO::optional(
                 categoryLabel: is_string($label) ? $label : $category->label,
                 unsubscribeUrl: $this->links->unsubscribeUrl($notifiable->id, $category->key),
                 oneClickUrl: $this->links->oneClickUrl($notifiable->id, $category->key),
                 preferencesUrl: $preferencesUrl,
             );
+
+            // The one thing it is about can be muted too (core#334)
+            $subject = NotificationMailSubject::of($notification);
+
+            return $subject instanceof MailSubjectDTO
+                ? $footer->withSubject($subject->label, $this->links->muteSubjectUrl($notifiable->id, $subject))
+                : $footer;
         } catch (Throwable $exception) {
             // The footer never keeps a mail from going out
             Log::warning('Could not build the mail preferences footer; the mail is sent without it.', [

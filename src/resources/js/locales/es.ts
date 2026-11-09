@@ -247,6 +247,17 @@ export default {
         mandatory: 'Los correos de «{category}» siempre se envían.',
         choose: 'Elegir qué correos recibes',
     },
+    mailMuteSubject: {
+        title: 'Dejar de recibir avisos',
+        confirm: '¿Quieres dejar de recibir los avisos de «{subject}»?',
+        confirmHint:
+            'Seguirás recibiendo los correos que siempre se envían, como las confirmaciones o las cancelaciones.',
+        submit: 'No recibir más avisos',
+        doneTitle: 'Avisos silenciados',
+        done: 'Ya no recibirás avisos de «{subject}».',
+        undo: 'Deshacer',
+        choose: 'Elegir qué correos recibes',
+    },
     maintenance: {
         title: 'Estamos en mantenimiento',
         defaultMessage: 'Estamos haciendo mejoras en la web. Vuelve a intentarlo en unos minutos.',
@@ -530,6 +541,16 @@ export default {
                         'No te enviaremos correos optativos mientras dure. Tus elecciones de abajo se conservan.',
                     resume: 'Reanudar ahora',
                     error: 'No se ha podido cambiar la pausa. Inténtalo de nuevo.',
+                },
+                muted: {
+                    title: 'Avisos silenciados',
+                    description:
+                        'Partidas, campañas u otras cosas concretas de las que no recibes avisos optativos. Los correos obligatorios se siguen enviando.',
+                    empty: 'No has silenciado nada. Puedes hacerlo desde el pie de un correo que hable de algo concreto.',
+                    since: 'Desde el {date}',
+                    unmute: 'Volver a recibir',
+                    unmuteLabel: 'Volver a recibir avisos de «{subject}»',
+                    error: 'No se ha podido deshacer. Inténtalo de nuevo.',
                 },
             },
             tabs: {

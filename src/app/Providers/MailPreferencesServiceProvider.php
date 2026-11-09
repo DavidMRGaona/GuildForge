@@ -9,9 +9,11 @@ use App\Application\Mail\Services\MailCategoryOptOutStatisticsInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
+use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\Mail\Services\MailUnsubscribeLinksInterface;
 use App\Domain\Mail\Repositories\MailPauseRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
+use App\Domain\Mail\Repositories\MailSubjectMuteRepositoryInterface;
 use App\Infrastructure\Mail\Channels\PreferenceAwareMailChannel;
 use App\Infrastructure\Mail\Footer\CurrentMailFooter;
 use App\Infrastructure\Mail\Listeners\FilterMailByPreferences;
@@ -20,11 +22,14 @@ use App\Infrastructure\Mail\Preferences\MailCategoryOptOutStatistics;
 use App\Infrastructure\Mail\Preferences\MailCategoryRegistry;
 use App\Infrastructure\Mail\Preferences\MailPauseService;
 use App\Infrastructure\Mail\Preferences\MailPreferenceService;
+use App\Infrastructure\Mail\Preferences\MailSubjectMuteService;
 use App\Infrastructure\Mail\Preferences\Rules\CategoryPreferenceRule;
+use App\Infrastructure\Mail\Preferences\Rules\MutedSubjectRule;
 use App\Infrastructure\Mail\Preferences\Rules\PausedMailRule;
 use App\Infrastructure\Mail\Unsubscribe\SignedMailUnsubscribeLinks;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailPauseRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailPreferenceRepository;
+use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailSubjectMuteRepository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Notifications\Channels\MailChannel;
@@ -54,7 +59,10 @@ final class MailPreferencesServiceProvider extends ServiceProvider
         // Another reason to hold optional mail back is one more tagged rule
         $this->app->bind(MailPauseRepositoryInterface::class, EloquentMailPauseRepository::class);
         $this->app->bind(MailPauseServiceInterface::class, MailPauseService::class);
-        $this->app->tag([CategoryPreferenceRule::class, PausedMailRule::class], MailDeliveryRuleInterface::TAG);
+        // Things muted from a mail footer (core#334)
+        $this->app->bind(MailSubjectMuteRepositoryInterface::class, EloquentMailSubjectMuteRepository::class);
+        $this->app->bind(MailSubjectMuteServiceInterface::class, MailSubjectMuteService::class);
+        $this->app->tag([CategoryPreferenceRule::class, PausedMailRule::class, MutedSubjectRule::class], MailDeliveryRuleInterface::TAG);
         $this->app->bind(MailPreferenceServiceInterface::class, fn (Application $app): MailPreferenceService => new MailPreferenceService(
             $app->make(MailCategoryRegistryInterface::class),
             $app->make(MailPreferenceRepositoryInterface::class),

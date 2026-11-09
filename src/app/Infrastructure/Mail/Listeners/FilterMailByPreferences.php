@@ -8,6 +8,7 @@ use App\Application\Mail\Contracts\HasMailCategory;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
+use App\Infrastructure\Mail\Preferences\NotificationMailSubject;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Notifications\Channels\MailChannel;
 use Illuminate\Notifications\Events\NotificationSending;
@@ -55,7 +56,9 @@ final class FilterMailByPreferences
                 return null;
             }
 
-            return $this->preferences->receives($event->notifiable, $category) ? null : false;
+            $subject = NotificationMailSubject::of($event->notification);
+
+            return $this->preferences->receives($event->notifiable, $category, $subject) ? null : false;
         } catch (Throwable $exception) {
             Log::warning('Could not check the mail preferences; the mail is sent.', [
                 'notification' => $event->notification::class,

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\ArticleController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MailPauseController;
 use App\Http\Controllers\Auth\MailPreferencesController;
+use App\Http\Controllers\Auth\MutedMailSubjectsController;
 use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
@@ -25,6 +27,7 @@ use App\Http\Controllers\Knowledge\KnowledgeFeedbackController;
 use App\Http\Controllers\Knowledge\KnowledgeSearchController;
 use App\Http\Controllers\Knowledge\KnowledgeVisibleGuidesController;
 use App\Http\Controllers\LegalPageController;
+use App\Http\Controllers\MailSubjectMuteController;
 use App\Http\Controllers\MailUnsubscribeController;
 use App\Http\Controllers\OneClickMailUnsubscribeController;
 use App\Http\Controllers\PersonalCalendarFeedController;
@@ -82,6 +85,17 @@ Route::middleware(['throttle:mail-unsubscribe', 'signed'])
             ->name('mail.unsubscribe.one-click');
         Route::get('/correos/baja/{user}/{category}/un-clic', [OneClickMailUnsubscribeController::class, 'show'])
             ->name('mail.unsubscribe.one-click.show');
+    });
+
+// Muting one thing (a game, a tournament...) from a mail footer (core#334): signed per account,
+// thing and names (query string), no expiry, no sign-in. Same rate limit as the unsubscribe links
+Route::middleware(['throttle:mail-unsubscribe', 'signed'])
+    ->where(['user' => '[0-9a-fA-F-]{36}', 'type' => MailSubjectDTO::TYPE_PATTERN, 'subject' => MailSubjectDTO::ID_PATTERN])
+    ->group(function (): void {
+        // Opening only asks to confirm: spam filters open the links of a mail
+        Route::get('/correos/silenciar/{user}/{type}/{subject}', [MailSubjectMuteController::class, 'show'])->name('mail.subject-mute');
+        Route::post('/correos/silenciar/{user}/{type}/{subject}', [MailSubjectMuteController::class, 'store'])->name('mail.subject-mute.store');
+        Route::delete('/correos/silenciar/{user}/{type}/{subject}', [MailSubjectMuteController::class, 'destroy'])->name('mail.subject-mute.destroy');
     });
 
 Route::get('/eventos/calendario', [CalendarController::class, 'index'])->name('events.calendar');
@@ -164,6 +178,10 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/perfil/correos/pausa', [MailPauseController::class, 'destroy'])
         ->middleware('throttle:30,1,profile-mail-preferences')
         ->name('profile.mail-pause.destroy');
+    // «Volver a recibir» a thing muted from a mail footer (core#334). Same middleware and limit
+    Route::delete('/perfil/correos/silenciados', [MutedMailSubjectsController::class, 'destroy'])
+        ->middleware('throttle:30,1,profile-mail-preferences')
+        ->name('profile.mail-subject-mutes.destroy');
     // Personal calendar address: issued (or regenerated) and revoked from the profile
     Route::post('/perfil/calendario', [CalendarFeedTokenController::class, 'store'])
         ->middleware('throttle:6,1,calendar-feed-token')

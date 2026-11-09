@@ -6,6 +6,8 @@ namespace Tests\Integration\Infrastructure\Services;
 
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
+use App\Application\Mail\DTOs\MailSubjectDTO;
+use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Mail\Repositories\MailPauseRepositoryInterface;
@@ -101,6 +103,24 @@ final class UserServiceAnonymizeTest extends TestCase
 
         $this->assertNull($pauses->find(UserId::fromString($user->id)));
         $this->assertNotNull($pauses->find(UserId::fromString($other->id)));
+    }
+
+    /**
+     * @param  Closure(UserServiceInterface, string): void  $anonymize
+     */
+    #[DataProvider('anonymizers')]
+    public function test_anonymizing_deletes_the_muted_mail_subjects(Closure $anonymize): void
+    {
+        $user = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        $mutes = app(MailSubjectMuteServiceInterface::class);
+        $mutes->mute($user, new MailSubjectDTO('example.campaign', 'c-1', 'La tumba'));
+        $mutes->mute($other, new MailSubjectDTO('example.campaign', 'c-1', 'La tumba'));
+
+        $anonymize(app(UserServiceInterface::class), (string) $user->id);
+
+        $this->assertSame([], $mutes->mutedFor($user));
+        $this->assertCount(1, $mutes->mutedFor($other));
     }
 
     /**

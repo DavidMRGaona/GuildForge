@@ -8,15 +8,22 @@ import BaseCard from '@/components/ui/BaseCard.vue';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
 import MailPauseBlock from '@/components/profile/MailPauseBlock.vue';
 import MailPreferenceSection from '@/components/profile/MailPreferenceSection.vue';
+import MutedMailSubjectsBlock from '@/components/profile/MutedMailSubjectsBlock.vue';
 import { useVerificationGate } from '@/composables/useVerificationGate';
-import type { MailPause, MailPreferenceSection as Section } from '@/types/mailPreferences';
+import type {
+    MailPause,
+    MailPreferenceSection as Section,
+    MutedMailSubject,
+} from '@/types/mailPreferences';
 
 interface Props {
     sections: Section[];
     pause: MailPause;
+    /** Things muted from a mail footer (core#334). */
+    mutedSubjects?: MutedMailSubject[];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { mutedSubjects: () => [] });
 
 const ENDPOINT = '/perfil/correos';
 // Laravel names the errors of the submitted map `preferences.<category key>`
@@ -176,5 +183,10 @@ function save(): void {
                 </p>
             </div>
         </form>
+
+        <!-- Things muted from a mail footer (core#334): each one is undone at once, outside the form -->
+        <div class="mt-8 border-t border-default pt-6">
+            <MutedMailSubjectsBlock :subjects="mutedSubjects" :blocked="gate.blocked.value" />
+        </div>
     </BaseCard>
 </template>

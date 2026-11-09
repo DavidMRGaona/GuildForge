@@ -27,8 +27,22 @@ export interface MailPause {
     lastDay: string | null;
 }
 
+/** One thing (a game, a campaign, a tournament...) muted from a mail footer. */
+export interface MutedMailSubject {
+    /** `<module>.<kind>`, sent back with `id` to unmute it. */
+    type: string;
+    id: string;
+    /** Name stored when it was muted: it stays even once the thing is gone. */
+    label: string;
+    /** Kind of thing («Campaña»); null when its module no longer translates it. */
+    typeLabel: string | null;
+    /** Instant it was muted, ISO 8601 in the display zone. */
+    mutedAt: string | null;
+}
+
 /** Prop of the profile page, present only when the «Correos» tab is open. */
 export interface MailPreferencesProps {
     sections: MailPreferenceSection[];
     pause: MailPause;
+    mutedSubjects: MutedMailSubject[];
 }

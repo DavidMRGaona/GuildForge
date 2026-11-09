@@ -35,11 +35,15 @@ return [
         'mandatory' => 'Este correo siempre se envía. Puedes elegir qué otros recibes :profile.',
         'without_category' => 'Puedes elegir qué correos recibes :profile.',
         'profile_link' => 'en tu perfil',
+        'mute_subject' => 'No recibir más avisos de «:subject»',
     ],
     'unsubscribe' => [
         'done' => 'Ya no recibirás correos de «:category».',
         'resubscribed' => 'Vuelves a recibir correos de «:category».',
         'mandatory' => 'Los correos de «:category» siempre se envían.',
         'one_click_not_found' => 'Este enlace ya no sirve para darse de baja.',
+    ],
+    'mute_subject' => [
+        'unmuted' => 'Vuelves a recibir avisos de «:subject».',
     ],
 ];
