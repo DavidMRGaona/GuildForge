@@ -75,6 +75,56 @@ Keep the keys in constants of the module (for example, on the provider) so the d
 
 A notification with no category, or with a key that is not registered, is still sent and leaves one warning per class in the log: that is how a module that was not adapted shows up.
 
+## Saying what a mail is about
+
+Sometimes what a person wants to stop is not a whole category but the notices about one game, campaign or tournament. A notification that is about one such thing also implements `HasMailSubject` and says which:
+
+```php
+use App\Application\Mail\Contracts\HasMailCategory;
+use App\Application\Mail\Contracts\HasMailSubject;
+use App\Application\Mail\DTOs\MailSubjectDTO;
+use Illuminate\Notifications\Notification;
+
+final class TableReminderNotification extends Notification implements HasMailCategory, HasMailSubject
+{
+    public function mailCategory(): string
+    {
+        return 'my-module.reminders';
+    }
+
+    public function mailSubject(): ?MailSubjectDTO
+    {
+        return new MailSubjectDTO(
+            type: 'my-module.table',
+            id: $this->table->id,
+            label: $this->table->title,
+            typeLabel: 'my-module::mail.subjects.table', // «Mesa», shown before the name in the profile
+        );
+    }
+}
+```
+
+- `type` is `<module>.<kind>`, with the same grammar as category keys; `id` matches `[A-Za-z0-9_-]{1,64}` (a UUID, a number or a slug). Both are stored with the person's choice and signed into a link, so they never change while the thing exists. Use one `type` per kind of thing, shared by every notification about it: the mute covers them all.
+- `label` is the name people see. It is put on one line, cut to 160 characters and escaped wherever it is shown, so pass it as it is. `typeLabel` is an optional translation key, never free text.
+- The constructor throws `InvalidArgumentException` for values it cannot store; return `null` when a mail is about nothing in particular. If `mailSubject()` throws, the mail is sent as if it had no subject (one warning in the log).
+- Implementing it needs the core release with core#334: set `requires.core` accordingly.
+
+What the core does with it:
+
+- **Delivery**: muting a thing holds back every **optional** mail about it, whatever its category. Mandatory mail about it is always sent, and a mail without a subject is never held by a mute. If the mutes cannot be read, the mail goes out.
+- **Footer**: an optional mail with a subject, to an account, adds «No recibir más avisos de «<label>»» above the category line, in HTML and text. The `List-Unsubscribe` header still unsubscribes from the category.
+- **Link**: `/correos/silenciar/{user}/{type}/{id}?nombre=…&tipo=…`, signed for the account, the thing and its names, with no expiry. Opening it (`GET`) only asks to confirm, `POST` mutes and `DELETE` undoes; changing any part gives 403. It signs nobody in, works in maintenance and for accounts that still have to verify their email, and has the same rate limit as the unsubscribe links. Build it with `MailUnsubscribeLinksInterface::muteSubjectUrl($userId, $subject)`.
+- **Profile**: the «Correos» tab lists what the person muted under «Avisos silenciados» (newest first, with the date), each with «Volver a recibir» (`DELETE /perfil/correos/silenciados` with `type` and `id`). The names are the ones stored when the person muted it (refreshed if they mute it again), so the row stays readable once the thing ended or its module is disabled; a `typeLabel` nobody translates any more is left out.
+- **Anonymizing** an account deletes what it muted.
+
+**When the module deletes the thing**, it forgets the mutes so the profile stops listing them:
+
+```php
+app(MailSubjectMuteServiceInterface::class)->forgetSubject('my-module.table', $table->id);
+```
+
+`MailSubjectMuteServiceInterface` also answers `isMuted($user, $subject)` and `mutedFor($user)`; never read `user_mail_subject_mutes` directly. The table holds one row per account and thing (`unique(user_id, subject_type, subject_id)`, plus an index on `(subject_type, subject_id)` for `forgetSubject()`); the account's deletion cascades.
+
 ## Notify the account, not its address
 
 The core recognises the person only when the notification goes to the account:
@@ -91,8 +141,10 @@ When a notification is about to go out by mail to an account, the core:
 
 1. Sends nothing to an anonymized account.
 2. Sends mail of a mandatory category always.
-3. Holds back mail of an optional category the person turned off.
+3. Holds back mail of an optional category the person turned off, while their optional mail is paused, or about a thing they muted.
 4. Sends the mail if the preferences cannot be read: missing a cancellation is worse than one reminder too many.
+
+Each reason to hold optional mail back is a `MailDeliveryRuleInterface` tagged `mail.delivery_rules`: `allows($user, $category, $subject)`, where `$subject` is the `MailSubjectDTO` of the notification or `null`. Mandatory categories never reach the rules, and a rule that throws lets the mail through.
 
 The check runs when the mail is delivered, inside the queue worker for queued notifications, so a choice made while the mail was waiting counts.
 

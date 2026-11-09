@@ -246,6 +246,17 @@ export default {
         mandatory: 'Emails of «{category}» are always sent.',
         choose: 'Choose which emails you receive',
     },
+    mailMuteSubject: {
+        title: 'Stop notices',
+        confirm: 'Do you want to stop receiving notices about «{subject}»?',
+        confirmHint:
+            'You will still receive the emails that are always sent, such as confirmations or cancellations.',
+        submit: 'Stop notices',
+        doneTitle: 'Notices muted',
+        done: 'You will no longer receive notices about «{subject}».',
+        undo: 'Undo',
+        choose: 'Choose which emails you receive',
+    },
     maintenance: {
         title: "We're under maintenance",
         defaultMessage: "We're making improvements to the site. Please try again in a few minutes.",
@@ -526,6 +537,16 @@ export default {
                         'We will not send you optional mail while it lasts. Your choices below are kept.',
                     resume: 'Resume now',
                     error: 'The pause could not be changed. Try again.',
+                },
+                muted: {
+                    title: 'Muted notices',
+                    description:
+                        'Games, campaigns or other specific things you get no optional notices about. Mandatory emails are still sent.',
+                    empty: 'You have not muted anything. You can do it from the footer of an email about something specific.',
+                    since: 'Since {date}',
+                    unmute: 'Receive again',
+                    unmuteLabel: 'Receive notices about «{subject}» again',
+                    error: 'It could not be undone. Try again.',
                 },
             },
             tabs: {

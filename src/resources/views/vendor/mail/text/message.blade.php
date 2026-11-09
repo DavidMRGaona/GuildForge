@@ -24,6 +24,9 @@
 {{-- What the person can choose (mail to an account only; MailFooterDTO, core#330) --}}
 @isset($mailFooter)
 @if($mailFooter->isOptional())
+@if($mailFooter->offersToMuteSubject())
+{{ __('mail.footer.mute_subject', ['subject' => (string) $mailFooter->subjectLabel]) }}: {{ $mailFooter->muteSubjectUrl }}
+@endif
 {{ __('mail.footer.optional') }}
 {{ __('mail.footer.unsubscribe', ['category' => (string) $mailFooter->categoryLabel]) }}: {{ $mailFooter->unsubscribeUrl }}
 {{ __('mail.footer.choose') }}: {{ $mailFooter->preferencesUrl }}

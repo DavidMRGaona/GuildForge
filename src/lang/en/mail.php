@@ -35,11 +35,15 @@ return [
         'mandatory' => 'This email is always sent. You can choose which others you receive :profile.',
         'without_category' => 'You can choose which emails you receive :profile.',
         'profile_link' => 'in your profile',
+        'mute_subject' => 'Stop notices about «:subject»',
     ],
     'unsubscribe' => [
         'done' => 'You will no longer receive emails of «:category».',
         'resubscribed' => 'You will receive emails of «:category» again.',
         'mandatory' => 'Emails of «:category» are always sent.',
         'one_click_not_found' => 'This link can no longer be used to unsubscribe.',
+    ],
+    'mute_subject' => [
+        'unmuted' => 'You will receive notices about «:subject» again.',
     ],
 ];

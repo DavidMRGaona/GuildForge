@@ -6,6 +6,7 @@ namespace App\Application\Mail\Services;
 
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailPreferenceSectionDTO;
+use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
 
 /**
@@ -36,6 +37,9 @@ interface MailPreferenceServiceInterface
      * Whether a mail of this category reaches the person. Mandatory categories always do; an
      * optional one does unless a delivery rule holds it back. When the preferences cannot be
      * read, the mail goes out.
+     *
+     * @param  MailSubjectDTO|null  $subject  The one thing the mail is about, when it says so: the
+     *                                        person may have muted it (core#334).
      */
-    public function receives(object $user, MailCategoryDTO $category): bool;
+    public function receives(object $user, MailCategoryDTO $category, ?MailSubjectDTO $subject = null): bool;
 }

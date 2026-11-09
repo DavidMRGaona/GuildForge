@@ -84,7 +84,9 @@ describe('ProfileMailTab', () => {
     it('draws a labelled switch per category, grouped by section', () => {
         const wrapper = mountTab();
 
-        expect(wrapper.findAll('section')).toHaveLength(2);
+        expect(
+            wrapper.find('[data-testid="mail-preference-sections"]').findAll('section')
+        ).toHaveLength(2);
         expect(wrapper.findAll('[role="switch"]')).toHaveLength(3);
 
         const reminders = switchFor(wrapper, 'game-tables.reminders');
@@ -280,6 +282,31 @@ describe('ProfileMailTab', () => {
         expect(wrapper.find('[data-testid="mail-pause-form"] [role="alert"]').text()).toContain(
             'No se ha podido cambiar la pausa'
         );
+    });
+
+    it('lists the muted things below the categories, outside the form', () => {
+        page.props = { appName: 'Mi sitio', auth: { user: { id: '1', mustVerifyEmail: false } } };
+        const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
+        const wrapper = mount(ProfileMailTab, {
+            props: {
+                sections: SECTIONS,
+                pause: NO_PAUSE,
+                mutedSubjects: [
+                    {
+                        type: 'game-tables.campaign',
+                        id: 'c-1',
+                        label: 'La tumba',
+                        typeLabel: 'Campaña',
+                        mutedAt: '2026-12-01T10:00:00+01:00',
+                    },
+                ],
+            },
+            global: { plugins: [i18n], stubs: { HelpLink: true } },
+        });
+
+        const block = wrapper.find('[data-testid="muted-mail-subjects"]');
+        expect(block.text()).toContain('La tumba');
+        expect(wrapper.find('form [data-testid="muted-mail-subjects"]').exists()).toBe(false);
     });
 
     it('does not pause an account that must verify its email', async () => {

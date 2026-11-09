@@ -8,6 +8,7 @@ use App\Application\Mail\Contracts\MailDeliveryRuleInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailPreferenceDTO;
 use App\Application\Mail\DTOs\MailPreferenceSectionDTO;
+use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
@@ -90,7 +91,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
         }
     }
 
-    public function receives(object $user, MailCategoryDTO $category): bool
+    public function receives(object $user, MailCategoryDTO $category, ?MailSubjectDTO $subject = null): bool
     {
         if ($category->isMandatory() || ! $user instanceof UserModel) {
             return true;
@@ -98,7 +99,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
 
         foreach ($this->rules as $rule) {
             try {
-                if (! $rule->allows($user, $category)) {
+                if (! $rule->allows($user, $category, $subject)) {
                     return false;
                 }
             } catch (Throwable $exception) {

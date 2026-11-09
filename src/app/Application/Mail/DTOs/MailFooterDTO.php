@@ -11,6 +11,8 @@ namespace App\Application\Mail\DTOs;
  *   client, the one-click address of the List-Unsubscribe header;
  * - mandatory: the mail is always sent;
  * - without a category (a module not adapted yet): only where to choose.
+ *
+ * An optional mail about one thing (HasMailSubject) also offers to mute that thing (core#334).
  */
 final readonly class MailFooterDTO
 {
@@ -20,6 +22,8 @@ final readonly class MailFooterDTO
         public ?string $categoryLabel,
         public ?string $unsubscribeUrl,
         public ?string $oneClickUrl,
+        public ?string $subjectLabel = null,
+        public ?string $muteSubjectUrl = null,
     ) {}
 
     public static function optional(string $categoryLabel, string $unsubscribeUrl, string $oneClickUrl, string $preferencesUrl): self
@@ -35,6 +39,32 @@ final readonly class MailFooterDTO
     public static function withoutCategory(string $preferencesUrl): self
     {
         return new self($preferencesUrl, false, null, null, null);
+    }
+
+    /**
+     * The same footer, plus the line to stop the notices of one thing. Only an optional mail
+     * offers it: a mandatory one is always sent.
+     */
+    public function withSubject(string $subjectLabel, string $muteSubjectUrl): self
+    {
+        if (! $this->isOptional()) {
+            return $this;
+        }
+
+        return new self(
+            $this->preferencesUrl,
+            $this->mandatory,
+            $this->categoryLabel,
+            $this->unsubscribeUrl,
+            $this->oneClickUrl,
+            $subjectLabel,
+            $muteSubjectUrl,
+        );
+    }
+
+    public function offersToMuteSubject(): bool
+    {
+        return $this->muteSubjectUrl !== null;
     }
 
     public function isOptional(): bool
