@@ -49,8 +49,12 @@ function toggle(): void {
 </script>
 
 <template>
-    <li class="flex items-start justify-between gap-4 py-4" :data-category="category.key">
-        <div class="min-w-0 flex-1">
+    <li
+        class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 py-4"
+        :data-category="category.key"
+    >
+        <!-- The text takes the room left; a control wider than the switch wraps under it on narrow screens -->
+        <div class="min-w-40 flex-1 basis-0">
             <p :id="labelId" class="text-sm font-medium text-base-primary">
                 {{ category.label }}
             </p>
