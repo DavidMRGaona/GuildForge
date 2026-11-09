@@ -6,12 +6,14 @@ import { useI18n } from 'vue-i18n';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import BaseCard from '@/components/ui/BaseCard.vue';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
+import MailPauseBlock from '@/components/profile/MailPauseBlock.vue';
 import MailPreferenceSection from '@/components/profile/MailPreferenceSection.vue';
 import { useVerificationGate } from '@/composables/useVerificationGate';
-import type { MailPreferenceSection as Section } from '@/types/mailPreferences';
+import type { MailPause, MailPreferenceSection as Section } from '@/types/mailPreferences';
 
 interface Props {
     sections: Section[];
+    pause: MailPause;
 }
 
 const props = defineProps<Props>();
@@ -135,12 +137,9 @@ function save(): void {
                 }}</a>
             </p>
 
-            <!--
-                Room for the pause block (core#331): a «Pausar correos» control goes here, above
-                the categories, and is filled through this slot or by a component placed here.
-            -->
+            <!-- Pause of every optional mail (core#331), above the per-category choices -->
             <div data-slot="mail-pause">
-                <slot name="pause" />
+                <MailPauseBlock :pause="pause" :blocked="gate.blocked.value" />
             </div>
 
             <div class="space-y-8" data-testid="mail-preference-sections">

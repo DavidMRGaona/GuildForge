@@ -6,17 +6,22 @@ namespace App\Providers;
 
 use App\Application\Mail\Contracts\MailDeliveryRuleInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\Mail\Services\MailUnsubscribeLinksInterface;
+use App\Domain\Mail\Repositories\MailPauseRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Infrastructure\Mail\Channels\PreferenceAwareMailChannel;
 use App\Infrastructure\Mail\Footer\CurrentMailFooter;
 use App\Infrastructure\Mail\Listeners\FilterMailByPreferences;
 use App\Infrastructure\Mail\Preferences\CoreMailCategories;
 use App\Infrastructure\Mail\Preferences\MailCategoryRegistry;
+use App\Infrastructure\Mail\Preferences\MailPauseService;
 use App\Infrastructure\Mail\Preferences\MailPreferenceService;
 use App\Infrastructure\Mail\Preferences\Rules\CategoryPreferenceRule;
+use App\Infrastructure\Mail\Preferences\Rules\PausedMailRule;
 use App\Infrastructure\Mail\Unsubscribe\SignedMailUnsubscribeLinks;
+use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailPauseRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentMailPreferenceRepository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\View as ViewContract;
@@ -45,7 +50,9 @@ final class MailPreferencesServiceProvider extends ServiceProvider
         $this->app->bind(MailPreferenceRepositoryInterface::class, EloquentMailPreferenceRepository::class);
 
         // Another reason to hold optional mail back is one more tagged rule
-        $this->app->tag([CategoryPreferenceRule::class], MailDeliveryRuleInterface::TAG);
+        $this->app->bind(MailPauseRepositoryInterface::class, EloquentMailPauseRepository::class);
+        $this->app->bind(MailPauseServiceInterface::class, MailPauseService::class);
+        $this->app->tag([CategoryPreferenceRule::class, PausedMailRule::class], MailDeliveryRuleInterface::TAG);
         $this->app->bind(MailPreferenceServiceInterface::class, fn (Application $app): MailPreferenceService => new MailPreferenceService(
             $app->make(MailCategoryRegistryInterface::class),
             $app->make(MailPreferenceRepositoryInterface::class),

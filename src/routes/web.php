@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\CalendarFeedTokenController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\MailPauseController;
 use App\Http\Controllers\Auth\MailPreferencesController;
 use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -156,6 +157,13 @@ Route::middleware('auth')->group(function (): void {
     Route::put('/perfil/correos', [MailPreferencesController::class, 'update'])
         ->middleware('throttle:30,1,profile-mail-preferences')
         ->name('profile.mail-preferences.update');
+    // Pause every optional mail for a while, or resume. Same middleware and limit as the choices
+    Route::put('/perfil/correos/pausa', [MailPauseController::class, 'update'])
+        ->middleware('throttle:30,1,profile-mail-preferences')
+        ->name('profile.mail-pause.update');
+    Route::delete('/perfil/correos/pausa', [MailPauseController::class, 'destroy'])
+        ->middleware('throttle:30,1,profile-mail-preferences')
+        ->name('profile.mail-pause.destroy');
     // Personal calendar address: issued (or regenerated) and revoked from the profile
     Route::post('/perfil/calendario', [CalendarFeedTokenController::class, 'store'])
         ->middleware('throttle:6,1,calendar-feed-token')

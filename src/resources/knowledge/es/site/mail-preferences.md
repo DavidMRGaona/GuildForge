@@ -19,6 +19,15 @@ related: [core.account.change-email, core.account.complete-profile]
 
 Los correos están agrupados por sección (**Cuenta**, **Partidas**, **Torneos**…). Solo ves los tipos que te pueden llegar a ti: por ejemplo, los avisos de moderación solo aparecen si puedes moderar.
 
+## Pausar los correos optativos
+
+Si te vas de vacaciones o pasas una temporada sin jugar, no hace falta ir tipo por tipo. En la parte de arriba de la pestaña **Correos**, elige **Una semana**, **Un mes** o **Hasta que los reactive** y pulsa **Pausar correos**.
+
+- Mientras dure la pausa no recibirás ningún correo optativo, pero los obligatorios se siguen enviando.
+- Verás el aviso **En pausa hasta el…** con el botón **Reanudar ahora**. Si elegiste la opción sin fecha, la pausa dura hasta que la quites tú.
+- Al llegar la fecha, los correos se reanudan solos. La pausa incluye el último día que se indica.
+- La pausa no cambia lo que tienes elegido en cada tipo: al terminar, todo vuelve a estar como lo dejaste.
+
 ## Qué son los correos obligatorios
 
 Algunos tipos aparecen con un candado y el interruptor activado, y no se pueden desactivar. Junto a cada uno se explica el motivo. Son los correos que:

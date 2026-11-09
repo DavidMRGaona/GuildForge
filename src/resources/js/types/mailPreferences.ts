@@ -17,7 +17,18 @@ export interface MailPreferenceSection {
     categories: MailPreference[];
 }
 
+/** State of the pause of every optional mail. */
+export interface MailPause {
+    /** Whether optional mail is held back right now (a pause that is over is not active). */
+    active: boolean;
+    /** Instant it ends, ISO 8601 in the display zone; null while paused = until the person resumes. */
+    until: string | null;
+    /** Last day it covers (`YYYY-MM-DD`, display zone), for «hasta el …»; null like `until`. */
+    lastDay: string | null;
+}
+
 /** Prop of the profile page, present only when the «Correos» tab is open. */
 export interface MailPreferencesProps {
     sections: MailPreferenceSection[];
+    pause: MailPause;
 }

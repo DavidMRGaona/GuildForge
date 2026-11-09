@@ -4,7 +4,7 @@ import { createI18n } from 'vue-i18n';
 import ProfileMailTab from '../ProfileMailTab.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
-import type { MailPreferenceSection } from '@/types/mailPreferences';
+import type { MailPause, MailPreferenceSection } from '@/types/mailPreferences';
 
 type PutOptions = {
     onStart?: () => void;
@@ -13,7 +13,7 @@ type PutOptions = {
 };
 
 const page = vi.hoisted(() => ({ props: {} as Record<string, unknown> }));
-const router = vi.hoisted(() => ({ put: vi.fn(), visit: vi.fn() }));
+const router = vi.hoisted(() => ({ put: vi.fn(), delete: vi.fn(), visit: vi.fn() }));
 
 vi.mock('@inertiajs/vue3', () => ({
     router,
@@ -59,12 +59,14 @@ const SECTIONS: MailPreferenceSection[] = [
     },
 ];
 
-function mountTab(mustVerifyEmail = false): VueWrapper {
+const NO_PAUSE: MailPause = { active: false, until: null, lastDay: null };
+
+function mountTab(mustVerifyEmail = false, pause: MailPause = NO_PAUSE): VueWrapper {
     page.props = { appName: 'Mi sitio', auth: { user: { id: '1', mustVerifyEmail } } };
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
     return mount(ProfileMailTab, {
-        props: { sections: SECTIONS },
+        props: { sections: SECTIONS, pause },
         global: { plugins: [i18n], stubs: { HelpLink: true } },
     });
 }
@@ -76,6 +78,7 @@ function switchFor(wrapper: VueWrapper, key: string): ReturnType<VueWrapper['fin
 describe('ProfileMailTab', () => {
     beforeEach(() => {
         router.put.mockReset();
+        router.delete.mockReset();
     });
 
     it('draws a labelled switch per category, grouped by section', () => {
@@ -177,9 +180,85 @@ describe('ProfileMailTab', () => {
         expect(wrapper.text()).toContain('verifica tu email');
     });
 
-    it('leaves a slot for the pause block', () => {
+    it('keeps the pause block above the categories', () => {
         const wrapper = mountTab();
 
-        expect(wrapper.find('[data-slot="mail-pause"]').exists()).toBe(true);
+        const slot = wrapper.find('[data-slot="mail-pause"]');
+        expect(slot.exists()).toBe(true);
+        expect(slot.find('[data-testid="mail-pause-form"]').exists()).toBe(true);
+        expect(slot.element.compareDocumentPosition(wrapper.find('section').element)).toBe(
+            Node.DOCUMENT_POSITION_FOLLOWING
+        );
+    });
+
+    it('offers a week, a month or until the person resumes, with the week chosen', () => {
+        const wrapper = mountTab();
+
+        const radios = wrapper.findAll('input[name="mail-pause-duration"]');
+        expect(radios.map((radio) => (radio.element as HTMLInputElement).value)).toEqual([
+            'week',
+            'month',
+            'indefinite',
+        ]);
+        expect((radios[0]?.element as HTMLInputElement).checked).toBe(true);
+        expect(wrapper.find('fieldset legend').text()).toBe('Pausar los correos optativos');
+    });
+
+    it('pauses with the chosen duration and does not touch the category choices', async () => {
+        const wrapper = mountTab();
+
+        await wrapper.find('input[value="month"]').setValue(true);
+        await wrapper.find('[data-testid="mail-pause-form"] button').trigger('click');
+
+        expect(router.put).toHaveBeenCalledTimes(1);
+        const [url, data] = router.put.mock.calls[0] as [string, unknown];
+        expect(url).toBe('/perfil/correos/pausa');
+        expect(data).toEqual({ duration: 'month' });
+    });
+
+    it('says until when it is paused and resumes with one button', async () => {
+        const wrapper = mountTab(false, {
+            active: true,
+            until: '2026-12-13T00:00:00+01:00',
+            lastDay: '2026-12-12',
+        });
+
+        const active = wrapper.find('[data-testid="mail-pause-active"]');
+        expect(active.find('[role="status"]').text()).toBe('En pausa hasta el 12 de diciembre');
+        expect(wrapper.find('[data-testid="mail-pause-form"]').exists()).toBe(false);
+
+        await active.find('button').trigger('click');
+        expect(router.delete).toHaveBeenCalledTimes(1);
+        expect((router.delete.mock.calls[0] as [string])[0]).toBe('/perfil/correos/pausa');
+    });
+
+    it('says an indefinite pause lasts until the person resumes', () => {
+        const wrapper = mountTab(false, { active: true, until: null, lastDay: null });
+
+        expect(wrapper.find('[role="status"]').text()).toBe('En pausa hasta que los reactives');
+    });
+
+    it('shows an alert when the pause cannot be changed', async () => {
+        const wrapper = mountTab();
+        await wrapper.find('[data-testid="mail-pause-form"] button').trigger('click');
+
+        const options = (router.put.mock.calls[0] as [string, unknown, PutOptions])[2];
+        options.onError?.({ duration: 'Inválido.' });
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('[data-testid="mail-pause-form"] [role="alert"]').text()).toContain(
+            'No se ha podido cambiar la pausa'
+        );
+    });
+
+    it('does not pause an account that must verify its email', async () => {
+        const wrapper = mountTab(true);
+
+        await wrapper.find('[data-testid="mail-pause-form"] button').trigger('click');
+
+        expect(router.put).not.toHaveBeenCalled();
+        expect(
+            wrapper.find('[data-testid="mail-pause-form"] button').attributes('disabled')
+        ).toBeDefined();
     });
 });

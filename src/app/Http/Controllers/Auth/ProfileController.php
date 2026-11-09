@@ -8,11 +8,13 @@ use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
 use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
+use App\Domain\Mail\ValueObjects\MailPause;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
@@ -35,6 +37,7 @@ final class ProfileController extends Controller
         private readonly CalendarFeedTokenServiceInterface $calendarFeedTokens,
         private readonly TimezoneServiceInterface $timezone,
         private readonly MailPreferenceServiceInterface $mailPreferences,
+        private readonly MailPauseServiceInterface $mailPause,
     ) {}
 
     public function show(Request $request): Response
@@ -58,7 +61,17 @@ final class ProfileController extends Controller
         // Only for the «Correos» tab (`?tab=mail`): listing the categories evaluates each one's
         // audience (permissions), which the other tabs never need
         if ($request->query('tab') === self::MAIL_TAB) {
-            $props['mailPreferences'] = ['sections' => $this->mailPreferences->sectionsFor($user)];
+            $pause = $this->mailPause->current($user);
+            $props['mailPreferences'] = [
+                'sections' => $this->mailPreferences->sectionsFor($user),
+                'pause' => [
+                    'active' => $pause instanceof MailPause,
+                    // Null while paused means «until the person resumes»
+                    'until' => $this->timezone->iso($pause?->until),
+                    // Last day the pause covers, as the person sees it: the end is where the next day starts
+                    'lastDay' => $pause?->until instanceof \DateTimeImmutable ? $this->timezone->format($pause->until->modify('-1 second'), 'Y-m-d') : null,
+                ],
+            ];
         }
 
         return Inertia::render('Profile/Show', $props);

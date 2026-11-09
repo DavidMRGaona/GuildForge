@@ -23,5 +23,8 @@ interface MailPreferenceRepositoryInterface
      */
     public function save(UserId $userId, array $preferences): void;
 
+    /**
+     * Forget every mail choice of the person: category preferences and the pause.
+     */
     public function deleteForUser(UserId $userId): void;
 }
