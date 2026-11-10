@@ -32,7 +32,7 @@ A source implements `App\Application\Media\Contracts\MediaUsageSourceInterface`:
 
 ### Rules
 
-1. **Prefix the type with the module.** The registry keeps the first source registered for a type and skips (and logs) any later one, and modules register before the core. A module type called `events` would take the place of the core events.
+1. **Prefix the type with the module.** The registry keeps the first source registered for a type and skips (and logs) any later one; whichever registers first, a duplicate type is a broken source, and while one exists the library refuses to delete any file. A module type called `events` would collide with the core events.
 2. **Claim your own folders, with a trailing slash.** `gametables/` matches `gametables/a.jpg` but not `gametables-old/a.jpg`. A file belongs to the source with the longest matching folder. A source with an empty folder claims nothing.
 3. **Leave `content/` to the sources that read rich text.** Images the editor puts inside a record's text live in a `content/` subfolder of the claimed folder; `EloquentColumnMediaSource` excludes it (`['content/']`), so a text source can claim it without fighting the column source.
 4. **Count soft-deleted records.** A trashed record can be restored, and its image must still count as used. `EloquentColumnMediaSource` already queries with trashed records.
@@ -84,7 +84,7 @@ public function registerMediaSources(): array
 }
 ```
 
-The core registers them when the module loads, with the module's name, and removes them when the module is disabled.
+The core registers them when the module loads, with the module's name; a disabled module does not register its sources.
 
 ## Keeping the index up to date
 

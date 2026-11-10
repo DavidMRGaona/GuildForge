@@ -4,7 +4,7 @@ title: Biblioteca de medios
 summary: Mira qué imágenes hay guardadas, quién las usa y borra las que ya no usa nadie para liberar espacio.
 category: content
 audience: panel
-order: 40
+order: 45
 keywords: [biblioteca, medios, imágenes, archivos, sin usar, borrar, Cloudinary, espacio, huérfanas, fotos]
 related: [core.panel.manage-galleries]
 conditions:
@@ -26,7 +26,7 @@ En el menú lateral, abre **Contenido** y elige **Biblioteca de medios**. Arriba
 
 La biblioteca muestra las imágenes que suben la web y los módulos: eventos, artículos, galerías, hero slides, logos y favicon del sitio, y las de los módulos activos.
 
-No aparecen los **avatares** de las cuentas ni nada que sea privado: no se muestran y nunca se pueden borrar desde aquí.
+No aparecen los **avatares** de las cuentas: no se muestran y nunca se pueden borrar desde aquí.
 
 ## Estados
 
@@ -40,7 +40,7 @@ No aparecen los **avatares** de las cuentas ni nada que sea privado: no se muest
 > [!IMPORTANT]
 > Un archivo en **Origen desconocido** nunca se puede borrar, aunque parezca que nadie lo usa. Suele ser un archivo de un módulo que está desactivado o de una carpeta que no pertenece a la web.
 
-Los registros en la papelera cuentan como uso: un archivo de un evento o un artículo borrado, pero recuperable, sigue **En uso**.
+Si un módulo guarda sus registros en una papelera, los registros que se pueden recuperar de ella siguen contando como uso.
 
 ## Borrar archivos
 
