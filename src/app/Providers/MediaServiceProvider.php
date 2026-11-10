@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
+use App\Infrastructure\Media\Cloudinary\CloudinaryMediaCatalog;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
 use App\Infrastructure\Media\Services\MediaSourceRegistry;
+use Cloudinary\Cloudinary;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -22,6 +25,13 @@ final class MediaServiceProvider extends ServiceProvider
             MediaFileIdResolverInterface::class,
             static fn (): MediaFileIdResolverInterface => new CloudinaryMediaFileIdResolver(
                 is_string($prefix = config('filesystems.disks.images.prefix')) ? $prefix : null,
+            ),
+        );
+        $this->app->singleton(
+            MediaCatalogInterface::class,
+            fn ($app): MediaCatalogInterface => new CloudinaryMediaCatalog(
+                new Cloudinary(config('filesystems.disks.images.url') ?? config('cloudinary.cloud_url')),
+                $app->make(MediaFileIdResolverInterface::class),
             ),
         );
     }
