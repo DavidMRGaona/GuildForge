@@ -47,7 +47,7 @@
                     <li class="flex items-start justify-between gap-3 py-2">
                         <div class="min-w-0">
                             <p class="text-sm font-medium break-words text-gray-950 dark:text-white">{{ $usage['title'] }}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $usage['origin'] }} · {{ $usage['role'] }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ $usage['origin'] }}@if ($usage['role'] !== $usage['title']) · {{ $usage['role'] }}@endif</p>
                         </div>
                         @if ($usage['editUrl'] !== null)
                             <a

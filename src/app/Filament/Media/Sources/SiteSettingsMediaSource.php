@@ -126,11 +126,14 @@ final readonly class SiteSettingsMediaSource implements MediaUsageSourceInterfac
             return null;
         }
 
+        $field = __('filament.media_library.roles.'.$key);
+
+        // Several fields often hold copies of one logo: the field tells their cards apart
         return new MediaUsageDTO(
             storedPath: $value,
             recordId: $key,
-            role: __('filament.media_library.roles.'.$key),
-            title: $this->label(),
+            role: $field,
+            title: $field,
         );
     }
 }

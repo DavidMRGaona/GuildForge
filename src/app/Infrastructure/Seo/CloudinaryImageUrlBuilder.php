@@ -62,19 +62,19 @@ final readonly class CloudinaryImageUrlBuilder
 
     /**
      * Square thumbnail of a media library file (an id relative to the prefix, without extension),
-     * cropped around what Cloudinary finds most relevant.
+     * cropped around what Cloudinary finds most relevant. An SVG is served as uploaded (see isVector()).
      */
-    public function mediaThumbnail(string $fileId, int $size): ?string
+    public function mediaThumbnail(string $fileId, int $size, ?string $format = null): ?string
     {
-        return $this->buildMedia($fileId, 'image', "w_{$size},h_{$size},c_fill,g_auto,q_auto,f_auto");
+        return $this->buildMedia($fileId, 'image', $this->isVector($format) ? null : "w_{$size},h_{$size},c_fill,g_auto,q_auto,f_auto");
     }
 
     /**
      * A media library file scaled down to the given width at most, uncropped.
      */
-    public function mediaPreview(string $fileId, int $width): ?string
+    public function mediaPreview(string $fileId, int $width, ?string $format = null): ?string
     {
-        return $this->buildMedia($fileId, 'image', "w_{$width},c_limit,q_auto,f_auto");
+        return $this->buildMedia($fileId, 'image', $this->isVector($format) ? null : "w_{$width},c_limit,q_auto,f_auto");
     }
 
     /**
@@ -83,6 +83,15 @@ final readonly class CloudinaryImageUrlBuilder
     public function mediaOriginal(string $fileId, string $resourceType = 'image'): ?string
     {
         return $this->buildMedia($fileId, $resourceType, null);
+    }
+
+    /**
+     * Browsers draw an SVG at any size, and Cloudinary refuses to rasterize some that browsers accept
+     * (a width such as "210mmpx" answers 400 «Invalid image file»), so vector files skip the transformations.
+     */
+    private function isVector(?string $format): bool
+    {
+        return $format !== null && strtolower($format) === 'svg';
     }
 
     /**
