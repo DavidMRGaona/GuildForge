@@ -35,6 +35,8 @@ Making a module's records searchable from the site search is covered in [Search 
 
 Telling the panel media library which stored files a module's records use, so unused ones can be found and deleted safely, is covered in [Media sources](./media-sources.md).
 
+Uploading the images of a module's rich editors to the media storage, moving the ones stored on the local disk before and reading the URLs in its texts is covered in [Editor images](./editor-images.md).
+
 Letting other modules announce a module's records elsewhere (a forum, a channel) and follow their changes is covered in [Publication sources](./publications.md).
 
 Putting a module's entries in the public calendar and in each person's personal calendar is covered in [Calendar sources, the public feed and the personal calendar](./calendar.md), which also shows how to offer the public calendar subscription (`PublicCalendarFeedInterface`).
@@ -2294,6 +2296,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerCalendarAttendanceSources()` | `class-string<CalendarAttendanceSourceInterface>[]` | Which public calendar entries each person is confirmed in or runs, for their personal calendar; core ≥ 3.38 (see [Calendar sources](./calendar.md#the-personal-calendar)) |
 | `registerSearchSources()` | `class-string<IndexedSearchSourceInterface>[]` | Indexed sources of the site search; types prefixed with the module (see [Search sources](./search-sources.md)) |
 | `registerMediaSources()` | `class-string<MediaUsageSourceInterface>[]` | Sources of the panel media library: which records use stored files and which folders the module claims; types prefixed with the module (see [Media sources](./media-sources.md)) |
+| `registerEditorTextSources()` | `class-string<EditorTextSourceInterface>[]` | Texts written with a rich editor, whose old local images the core moves to the media storage; types prefixed with the module (see [Editor images](./editor-images.md)) |
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerPublicationSources()` | `class-string<PublicationSourceInterface>[]` | Published records other modules may announce elsewhere (see [Publication sources](./publications.md)) |
 | `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |

@@ -10,6 +10,7 @@ use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaFileReleaserInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
+use App\Application\Media\Services\MediaUrlExtractorInterface;
 use App\Domain\Knowledge\Enums\GuideSource;
 use App\Filament\Media\Sources\ArticleMediaSource;
 use App\Filament\Media\Sources\EventMediaSource;
@@ -28,6 +29,7 @@ use App\Infrastructure\Media\Services\MediaFileReleaser;
 use App\Infrastructure\Media\Services\MediaIndexer;
 use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
 use App\Infrastructure\Media\Services\MediaSourceRegistry;
+use App\Infrastructure\Media\Services\MediaUrlExtractor;
 use App\Infrastructure\Media\Sources\AvatarMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
@@ -53,6 +55,8 @@ final class MediaServiceProvider extends ServiceProvider
                 is_string($prefix = config('filesystems.disks.images.prefix')) ? $prefix : null,
             ),
         );
+        // The files a stored text names, for every source that reads rich text (core and modules)
+        $this->app->bind(MediaUrlExtractorInterface::class, MediaUrlExtractor::class);
         // The Cloudinary client is built on first use: without valid settings it throws, and that must only
         // make the catalog unavailable, never break whatever resolved it
         $this->app->singleton(

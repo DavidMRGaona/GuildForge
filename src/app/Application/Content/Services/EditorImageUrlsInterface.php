@@ -10,8 +10,9 @@ namespace App\Application\Content\Services;
 interface EditorImageUrlsInterface
 {
     /**
-     * Full delivery URL of an editor image ("<origin>/content/<year>/<month>/<file>"), built
-     * without asking the image service whether it exists; null for any other path.
+     * Full delivery URL of an editor image ("<scope>/content/<year>/<month>/<file>", of the core or
+     * of a module: EditorImageFolder::ofPath()), built without asking the image service whether it
+     * exists; null for any other path.
      */
     public function urlFor(string $path): ?string;
 }

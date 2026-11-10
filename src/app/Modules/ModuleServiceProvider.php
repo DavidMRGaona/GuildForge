@@ -6,6 +6,7 @@ namespace App\Modules;
 
 use App\Application\Calendar\Contracts\CalendarAttendanceSourceInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
+use App\Application\Content\Contracts\EditorTextSourceInterface;
 use App\Application\Knowledge\Contracts\KnowledgeCapabilityInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
@@ -287,6 +288,19 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<MediaUsageSourceInterface>>
      */
     public function registerMediaSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register editor text sources provided by this module.
+     * Tells the core which of the module's texts are written with a rich editor, so the command that moves
+     * editor images to Cloudinary moves theirs too and never deletes a local copy one of them still names;
+     * each type is prefixed with the module.
+     *
+     * @return array<class-string<EditorTextSourceInterface>>
+     */
+    public function registerEditorTextSources(): array
     {
         return [];
     }

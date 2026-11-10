@@ -16,6 +16,7 @@ use App\Application\Calendar\Services\PublicCalendarFeedDocumentInterface;
 use App\Application\Calendar\Services\PublicCalendarFeedInterface;
 use App\Application\Content\Services\EditorImageMoverInterface;
 use App\Application\Content\Services\EditorImageUrlsInterface;
+use App\Application\Content\Services\EditorTextSourceRegistryInterface;
 use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Cookies\Services\CookieDeclarationRegistryInterface;
@@ -111,8 +112,14 @@ use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
 use App\Infrastructure\Calendar\Services\PersonalCalendarService;
 use App\Infrastructure\Content\Services\EditorImageMover;
 use App\Infrastructure\Content\Services\EditorImageUrls;
+use App\Infrastructure\Content\Services\EditorTextSourceRegistry;
 use App\Infrastructure\Content\Services\TrixContentMigrator;
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
+use App\Infrastructure\Content\Sources\AboutHistoryTextSource;
+use App\Infrastructure\Content\Sources\ArticleContentTextSource;
+use App\Infrastructure\Content\Sources\EventDescriptionTextSource;
+use App\Infrastructure\Content\Sources\LegalPagesTextSource;
+use App\Infrastructure\Content\Sources\SiteGuideBodyTextSource;
 use App\Infrastructure\Cookies\CookieDeclarationRegistry;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
@@ -424,6 +431,19 @@ class AppServiceProvider extends ServiceProvider
         // Images inserted with the rich editors: Cloudinary URLs built locally (core#481)
         $this->app->singleton(EditorImageUrlsInterface::class, EditorImageUrls::class);
         $this->app->bind(EditorImageMoverInterface::class, EditorImageMover::class);
+        // Texts written with a rich editor: the core's come first, the modules add theirs as they load
+        $this->app->singleton(EditorTextSourceRegistryInterface::class, static function ($app): EditorTextSourceRegistryInterface {
+            $registry = new EditorTextSourceRegistry($app);
+            $registry->registerMany([
+                EventDescriptionTextSource::class,
+                ArticleContentTextSource::class,
+                SiteGuideBodyTextSource::class,
+                AboutHistoryTextSource::class,
+                LegalPagesTextSource::class,
+            ]);
+
+            return $registry;
+        });
 
         // Rich text written with the Trix editor (admin panel before core 3.0)
         $this->app->singleton(TrixHtmlConverterInterface::class, TrixHtmlConverter::class);
