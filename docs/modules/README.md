@@ -1680,6 +1680,17 @@ if (hasCookieConsent('preferences')) {
 - The cookie consent module is the provider: it calls `registerCookieConsentProvider({ hasConsent })` once its configuration is known and `notifyCookieConsentChanged()` after the visitor saves a choice. A later registration replaces the earlier one.
 - In Vitest the contract resolves to the core's source through the `@` alias of `defineModuleTestConfig`: register a provider in the test instead of faking globals.
 
+## Announcing forum discussions
+
+When someone starts a discussion in the forum linked to the site, the forum module dispatches the core event `App\Domain\Forum\Events\ForumDiscussionStarted` (the core release with core#475), once per discussion, only for discussions a guest can see and only for the tags its settings choose. It carries `discussionId`, `title`, `url` (absolute http(s)), `excerpt` (plain text, may be empty) and `tags` (names): no author and nothing personal. A module that posts to external channels listens to it; neither side imports the other, and with no listener nothing happens.
+
+```php
+use App\Domain\Forum\Events\ForumDiscussionStarted;
+use Illuminate\Support\Facades\Event;
+
+Event::listen(ForumDiscussionStarted::class, AnnounceForumDiscussion::class);
+```
+
 ## Announcing general surveys
 
 When a general survey (one not about a module's record) opens and whoever made it asked to announce it, the surveys module dispatches the core event `App\Domain\Surveys\Events\GeneralSurveyOpened` (core ^3.30) once the opening has committed. A module that posts to external channels listens to it; neither side imports the other, and with no listener nothing happens.
