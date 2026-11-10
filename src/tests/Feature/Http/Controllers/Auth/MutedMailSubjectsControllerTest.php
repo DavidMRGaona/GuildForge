@@ -14,7 +14,7 @@ use Tests\Support\Time\UsesUtcStorage;
 use Tests\TestCase;
 
 /**
- * The muted subjects listed in the «Correos» tab, each with «Volver a recibir».
+ * The muted subjects listed in the «Avisos» tab, each with «Volver a recibir».
  */
 final class MutedMailSubjectsControllerTest extends TestCase
 {

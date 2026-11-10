@@ -10,7 +10,7 @@ import { resolveMailSectionIcon } from '@/utils/icons';
 import { countOptionalOn, hasSiteNotices, optionalCategories } from '@/utils/mailPreferences';
 
 /**
- * A section of the «Correos» tab as a card: icon, name and «2 de 3 activados» on top, the
+ * A section of the «Avisos» tab as a card: icon, name and «2 de 3 activados» on top, the
  * optional categories each with its control, and the ones that are always sent as a list at the end.
  * A category with site notices gets its two channels, «En la web» and «Por correo» (core#491).
  */

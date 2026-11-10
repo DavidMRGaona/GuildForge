@@ -1,6 +1,6 @@
 ---
 id: core.account.mail-preferences
-title: Elegir qué correos recibes
+title: Elegir qué avisos y correos recibes
 summary: Decide qué correos opcionales quieres recibir y entiende cuáles se envían siempre.
 category: account
 audience: site
@@ -13,7 +13,7 @@ related: [core.account.change-email, core.account.complete-profile, core.account
 ## Dónde se elige
 
 1. Pulsa tu nombre en la cabecera y elige **Mi perfil**.
-2. Abre la pestaña **Correos**.
+2. Abre la pestaña **Avisos**.
 3. Activa o desactiva los interruptores de cada tipo de correo. Algunos tipos ofrecen tres opciones en lugar del interruptor (lo explicamos más abajo).
 4. Pulsa **Guardar cambios**.
 
@@ -36,7 +36,7 @@ Los correos obligatorios nunca van al resumen: te llegan siempre al momento.
 
 ## Pausar los correos optativos
 
-Si te vas de vacaciones o pasas una temporada sin jugar, no hace falta ir tipo por tipo. En la parte de arriba de la pestaña **Correos**, elige **Una semana**, **Un mes** o **Hasta que los reactive** y pulsa **Pausar correos**.
+Si te vas de vacaciones o pasas una temporada sin jugar, no hace falta ir tipo por tipo. En la parte de arriba de la pestaña **Avisos**, elige **Una semana**, **Un mes** o **Hasta que los reactive** y pulsa **Pausar correos**.
 
 - Mientras dure la pausa no recibirás ningún correo optativo, pero los obligatorios se siguen enviando.
 - Verás el aviso **En pausa hasta el…** con el botón **Reanudar ahora**. Si elegiste la opción sin fecha, la pausa dura hasta que la quites tú.
@@ -66,7 +66,7 @@ Todo lo opcional empieza activado. Desactiva lo que no quieras y deja el resto. 
 
 ## Darte de baja desde un correo
 
-Los correos opcionales traen al final un enlace para dejar de recibir ese tipo de correo sin entrar en tu cuenta. Si lo pulsas, el cambio se refleja aquí, en la pestaña **Correos**, donde puedes volver a activarlo cuando quieras.
+Los correos opcionales traen al final un enlace para dejar de recibir ese tipo de correo sin entrar en tu cuenta. Si lo pulsas, el cambio se refleja aquí, en la pestaña **Avisos**, donde puedes volver a activarlo cuando quieras.
 
 ## Silenciar los avisos de algo concreto
 
@@ -74,7 +74,7 @@ A veces lo que sobra no es un tipo de correo entero, sino los avisos de una part
 
 - Al abrirlo te pedimos que lo confirmes, y desde la misma página puedes deshacerlo.
 - Dejas de recibir los correos opcionales sobre eso, sean del tipo que sean. Los obligatorios, como una cancelación, te siguen llegando.
-- Lo que hayas silenciado aparece en la pestaña **Correos**, en **Avisos silenciados**, con la fecha y el botón **Volver a recibir**. Se queda ahí con el nombre que tenía, aunque ya haya terminado; si se borra, desaparece de la lista.
+- Lo que hayas silenciado aparece en la pestaña **Avisos**, en **Avisos silenciados**, con la fecha y el botón **Volver a recibir**. Se queda ahí con el nombre que tenía, aunque ya haya terminado; si se borra, desaparece de la lista.
 
 ## Si algo no sale bien
 

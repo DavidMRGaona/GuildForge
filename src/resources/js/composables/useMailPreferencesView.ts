@@ -24,7 +24,7 @@ function write(view: MailPreferencesView): void {
     }
 }
 
-/** Which way the person reads the sections of the «Correos» tab, remembered in their browser. */
+/** Which way the person reads the sections of the «Avisos» tab, remembered in their browser. */
 export function useMailPreferencesView(): { view: Ref<MailPreferencesView> } {
     const view = ref<MailPreferencesView>(read());
 

@@ -548,8 +548,8 @@ export default {
                 cancel: 'Cancelar',
             },
             mail: {
-                title: 'Correos que recibes',
-                intro: 'Elige qué correos quieres recibir de {appName}. Los que aparecen al final de cada tarjeta, con un candado, siempre se envían, porque confirman algo que has hecho tú o te avisan de algo que cambia tus planes.',
+                title: 'Avisos y correos que recibes',
+                intro: 'Elige qué avisos y correos quieres recibir de {appName}. Algunos tipos también te avisan en la web, en la campana de la cabecera, y puedes elegir cada canal por separado. Los que aparecen al final de cada tarjeta, con un candado, siempre se envían, porque confirman algo que has hecho tú o te avisan de algo que cambia tus planes.',
                 section: {
                     summary: '{enabled} de {total} activado | {enabled} de {total} activados',
                 },
@@ -611,7 +611,7 @@ export default {
             tabs: {
                 account: 'Cuenta',
                 calendar: 'Mi calendario',
-                mail: 'Correos',
+                mail: 'Avisos',
                 gameTables: 'Mesas',
             },
         },

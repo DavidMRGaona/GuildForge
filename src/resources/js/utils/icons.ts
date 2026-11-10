@@ -116,7 +116,7 @@ export function resolveCalendarMetaIcon(icon: string): Component {
 }
 
 /**
- * Lucide icons a module may name for its section of the «Correos» tab (`MailCategoryDTO::$icon`).
+ * Lucide icons a module may name for its section of the «Avisos» tab (`MailCategoryDTO::$icon`).
  * A closed list keeps the bundle small: the rest of the library is never imported.
  */
 export const mailSectionIconMap: Record<string, Component> = {

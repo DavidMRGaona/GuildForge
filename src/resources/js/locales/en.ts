@@ -545,8 +545,8 @@ export default {
                 cancel: 'Cancel',
             },
             mail: {
-                title: 'Mail you receive',
-                intro: 'Choose which mail you want to receive from {appName}. The ones at the end of each card, with a padlock, are always sent, because they confirm something you did or warn you of something that changes your plans.',
+                title: 'Notifications and mail you receive',
+                intro: 'Choose which notifications and mail you want to receive from {appName}. Some kinds also notify you on the site, in the bell of the header, and you can choose each channel apart. The ones at the end of each card, with a padlock, are always sent, because they confirm something you did or warn you of something that changes your plans.',
                 section: {
                     summary: '{enabled} of {total} turned on | {enabled} of {total} turned on',
                 },
@@ -608,7 +608,7 @@ export default {
             tabs: {
                 account: 'Account',
                 calendar: 'My calendar',
-                mail: 'Mail',
+                mail: 'Notifications',
                 gameTables: 'Tables',
             },
         },

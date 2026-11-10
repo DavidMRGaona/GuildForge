@@ -22,7 +22,7 @@ final readonly class SignedMailUnsubscribeLinks implements MailUnsubscribeLinksI
     public const string TYPE_LABEL_PARAMETER = 'tipo';
 
     /**
-     * Id of the «Correos» tab of the profile (core#329).
+     * Id of the «Avisos» tab of the profile (core#329).
      */
     public const string PREFERENCES_TAB = 'mail';
 

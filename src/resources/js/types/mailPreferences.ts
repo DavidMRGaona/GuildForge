@@ -1,7 +1,7 @@
 /** How a category is received (core#333): `digest` only where the category is digestible. */
 export type MailDelivery = 'immediate' | 'digest' | 'none';
 
-/** One mail category as the «Correos» tab of the profile receives it (texts already translated). */
+/** One mail category as the «Avisos» tab of the profile receives it (texts already translated). */
 export interface MailPreference {
     /** Stable `<module>.<name>` key, the one sent back when saving. */
     key: string;
@@ -55,7 +55,7 @@ export interface MutedMailSubject {
     mutedAt: string | null;
 }
 
-/** Prop of the profile page, present only when the «Correos» tab is open. */
+/** Prop of the profile page, present only when the «Avisos» tab is open. */
 export interface MailPreferencesProps {
     sections: MailPreferenceSection[];
     pause: MailPause;

@@ -29,7 +29,7 @@ Cuando pasan varias cosas seguidas sobre lo mismo, como muchas respuestas en un 
 
 ## Elegir qué avisos recibes
 
-Los avisos siguen los mismos tipos que los correos. En **Mi perfil**, pestaña **Correos**, los tipos que también avisan en la web tienen dos interruptores:
+Los avisos siguen los mismos tipos que los correos. En **Mi perfil**, pestaña **Avisos**, los tipos que también avisan en la web tienen dos interruptores:
 
 - **En la web**: los avisos de la campana.
 - **Por correo**: los correos de ese tipo.
@@ -45,7 +45,7 @@ Los avisos que ya has leído se borran a los 90 días, y los que no has leído, 
 ## Si algo no sale bien
 
 - **No veo la campana**: solo aparece con la sesión iniciada y el email verificado.
-- **No me llegan los avisos de algo**: comprueba en la pestaña **Correos** que el interruptor **En la web** de ese tipo esté activado y que no lo hayas silenciado.
+- **No me llegan los avisos de algo**: comprueba en la pestaña **Avisos** que el interruptor **En la web** de ese tipo esté activado y que no lo hayas silenciado.
 - **Nunca me avisa de lo que hago yo**: es así a propósito. No te avisamos de tus propias respuestas ni de tus propios «me gusta».
 
 [[action:site-notifications.index|Ver mis avisos]]

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Saves which optional mail the signed-in person receives (the «Correos» tab of the profile), and
+ * Saves which optional mail the signed-in person receives (the «Avisos» tab of the profile), and
  * which notices they see in the notification centre (core#491). Both or nothing.
  * Like any signed-in route, it stays closed to accounts that must still verify their email.
  */

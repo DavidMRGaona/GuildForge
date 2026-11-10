@@ -32,7 +32,7 @@ interface MailUnsubscribeLinksInterface
     public function muteSubjectUrl(string $userId, MailSubjectDTO $subject): string;
 
     /**
-     * The «Correos» tab of the profile.
+     * The «Avisos» tab of the profile.
      */
     public function preferencesUrl(): string;
 }

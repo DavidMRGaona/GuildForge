@@ -12,7 +12,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * «Volver a recibir» in the list of muted things of the «Correos» tab. Like any signed-in route,
+ * «Volver a recibir» in the list of muted things of the «Avisos» tab. Like any signed-in route,
  * it stays closed to accounts that must still verify their email.
  */
 final class MutedMailSubjectsController extends Controller

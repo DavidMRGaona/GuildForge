@@ -12,7 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
- * Pauses and resumes the optional mail of the signed-in person (the «Correos» tab of the
+ * Pauses and resumes the optional mail of the signed-in person (the «Avisos» tab of the
  * profile). Like any signed-in route, it stays closed to accounts that must still verify their
  * email.
  */

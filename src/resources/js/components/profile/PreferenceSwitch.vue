@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The on/off switch of the «Correos» tab. aria-disabled (not `disabled`) keeps a locked switch
+ * The on/off switch of the «Avisos» tab. aria-disabled (not `disabled`) keeps a locked switch
  * in the tab order, so a screen reader user reaches it and hears that it cannot be changed now.
  */
 interface Props {
