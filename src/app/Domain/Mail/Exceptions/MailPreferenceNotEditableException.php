@@ -34,6 +34,16 @@ final class MailPreferenceNotEditableException extends DomainException
         return new self(sprintf('The mail category "%s" is not offered to this person.', $key), $key);
     }
 
+    public static function notByMail(string $key): self
+    {
+        return new self(sprintf('The mail category "%s" is not sent by mail.', $key), $key);
+    }
+
+    public static function notOnSite(string $key): self
+    {
+        return new self(sprintf('The mail category "%s" has no notices on the site.', $key), $key);
+    }
+
     public static function notDigestible(string $key): self
     {
         return new self(sprintf('The mail category "%s" cannot be received as a daily digest.', $key), $key);

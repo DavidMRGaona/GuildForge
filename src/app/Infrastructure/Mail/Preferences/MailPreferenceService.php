@@ -14,6 +14,7 @@ use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Domain\Mail\Enums\MailDelivery;
 use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
+use App\Domain\SiteNotifications\Repositories\SiteNotificationPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +30,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
         private MailCategoryRegistryInterface $categories,
         private MailPreferenceRepositoryInterface $preferences,
         private iterable $rules,
+        private SiteNotificationPreferenceRepositoryInterface $sitePreferences,
     ) {}
 
     public function sectionsFor(object $user): array
@@ -40,6 +42,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
         $userId = UserId::fromString($user->id);
         $disabled = $this->preferences->disabledFor($userId);
         $digest = $this->preferences->digestFor($userId);
+        $siteDisabled = $this->sitePreferences->disabledFor($userId);
 
         /** @var array<string, list<MailPreferenceDTO>> $sections */
         $sections = [];
@@ -65,6 +68,9 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
                 enabled: $delivery !== MailDelivery::None,
                 digestible: $this->offersDigest($category),
                 delivery: $delivery->value,
+                mail: $category->mail,
+                site: $category->site,
+                siteEnabled: $category->site && ($category->isMandatory() || ! in_array($category->key, $siteDisabled, true)),
             );
         }
 
@@ -90,6 +96,10 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
                 throw MailPreferenceNotEditableException::unknown($key);
             }
 
+            if (! $category->mail) {
+                throw MailPreferenceNotEditableException::notByMail($key);
+            }
+
             if ($category->isMandatory()) {
                 throw MailPreferenceNotEditableException::mandatory($key);
             }
@@ -110,6 +120,11 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
 
     public function receives(object $user, MailCategoryDTO $category, ?MailSubjectDTO $subject = null): bool
     {
+        // A category shown only on the site is never mailed (core#491)
+        if (! $category->mail) {
+            return false;
+        }
+
         if ($category->isMandatory() || ! $user instanceof UserModel) {
             return true;
         }
@@ -162,22 +177,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
 
     private function isVisibleTo(MailCategoryDTO $category, UserModel $user): bool
     {
-        if (! $category->audience instanceof \Closure) {
-            return true;
-        }
-
-        try {
-            return ($category->audience)($user) === true;
-        } catch (Throwable $exception) {
-            // Hidden from the list only: whether the mail goes out never depends on it
-            Log::warning('The audience check of a mail category failed; it is not shown.', [
-                'category' => $category->key,
-                'user_id' => $user->id,
-                'exception' => $exception,
-            ]);
-
-            return false;
-        }
+        return MailCategoryAudience::includes($category, $user);
     }
 
     private function translate(string $key): string

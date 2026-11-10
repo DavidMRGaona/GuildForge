@@ -15,6 +15,12 @@ export interface MailPreference {
     /** Offers «al momento», «resumen diario» and «no recibir» instead of a switch. */
     digestible: boolean;
     delivery: MailDelivery;
+    /** Sent by mail at all; false for a category shown only in the notification centre (core#491). Missing = true. */
+    mail?: boolean;
+    /** Also shown in the notification centre, with its own switch (core#491). Missing = false. */
+    site?: boolean;
+    /** Whether the person sees its notices there; always true for a mandatory one. */
+    siteEnabled?: boolean;
 }
 
 /** A group of categories under one heading («Cuenta», «Partidas»…). */

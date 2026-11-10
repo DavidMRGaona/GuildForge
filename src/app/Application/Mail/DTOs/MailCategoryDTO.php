@@ -28,6 +28,8 @@ final readonly class MailCategoryDTO
      *                             the first category of a section that declares one decides. The profile falls back to a
      *                             generic mail icon for a missing or unknown name.
      * @param  bool  $digestible  Whether a person may get it as a daily digest instead (core#333). Never mandatory.
+     * @param  bool  $mail  Whether it is sent by mail (every category before core#491 is).
+     * @param  bool  $site  Whether it also appears in the site's notification centre, the bell (core#491).
      */
     private function __construct(
         public string $key,
@@ -38,6 +40,8 @@ final readonly class MailCategoryDTO
         public ?Closure $audience,
         public ?string $icon = null,
         public bool $digestible = false,
+        public bool $mail = true,
+        public bool $site = false,
     ) {}
 
     /**
@@ -46,6 +50,9 @@ final readonly class MailCategoryDTO
      * A digestible one offers three choices instead of a switch: at once, a daily digest or not
      * at all. Mark as digestible the notices that come in bursts and can wait a day (someone
      * joined, someone left), never those that ask to act soon.
+     *
+     * With `site: true` it also appears in the notification centre (core#491), with its own
+     * switch; `mail: false` keeps it out of mail altogether («me gusta»).
      *
      * @param  (Closure(object): bool)|null  $audience
      */
@@ -57,13 +64,16 @@ final readonly class MailCategoryDTO
         ?Closure $audience = null,
         ?string $icon = null,
         bool $digestible = false,
+        bool $site = false,
+        bool $mail = true,
     ): self {
-        return new self($key, $section, $label, $description, null, $audience, $icon, $digestible);
+        return new self($key, $section, $label, $description, null, $audience, $icon, $digestible, $mail, $site);
     }
 
     /**
      * A category that is always sent: it confirms something the person did, changes their
-     * plans or asks them to act. The reason is shown next to the locked switch.
+     * plans or asks them to act. The reason is shown next to the locked switch. With `site: true`
+     * its notices in the notification centre are always shown too (core#491).
      *
      * @param  (Closure(object): bool)|null  $audience
      */
@@ -75,8 +85,10 @@ final readonly class MailCategoryDTO
         string $reason,
         ?Closure $audience = null,
         ?string $icon = null,
+        bool $site = false,
+        bool $mail = true,
     ): self {
-        return new self($key, $section, $label, $description, $reason, $audience, $icon);
+        return new self($key, $section, $label, $description, $reason, $audience, $icon, false, $mail, $site);
     }
 
     public function isMandatory(): bool

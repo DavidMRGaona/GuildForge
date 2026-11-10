@@ -21,5 +21,11 @@ final readonly class MailPreferenceDTO
         public bool $digestible = false,
         /** "immediate", "digest" or "none" (MailDelivery); "immediate" for a mandatory category. */
         public string $delivery = 'immediate',
+        /** Whether it is sent by mail at all; false for a category shown only on the site (core#491). */
+        public bool $mail = true,
+        /** Whether it also appears in the notification centre (core#491). */
+        public bool $site = false,
+        /** Whether the person sees its notices there; always true for a mandatory one, false without `site`. */
+        public bool $siteEnabled = false,
     ) {}
 }

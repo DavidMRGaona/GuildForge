@@ -32,8 +32,10 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), { mutedSubjects: () => [], digestTime: '08:00' });
 
 const ENDPOINT = '/perfil/correos';
-// Laravel names the errors of the submitted map `preferences.<category key>`
+// Laravel names the errors of the submitted maps `preferences.<category key>` (mail) and
+// `site.<category key>` (notification centre, core#491)
 const ERROR_PREFIX = 'preferences.';
+const SITE_ERROR_PREFIX = 'site.';
 
 const { t } = useI18n();
 const page = usePage();
@@ -46,6 +48,20 @@ const saved = computed<Record<string, MailDelivery>>(() => {
     for (const section of props.sections) {
         for (const category of section.categories) {
             state[category.key] = category.delivery;
+        }
+    }
+
+    return state;
+});
+
+/** Saved web switch of the optional categories with site notices (core#491). */
+const siteSaved = computed<Record<string, boolean>>(() => {
+    const state: Record<string, boolean> = {};
+    for (const section of props.sections) {
+        for (const category of section.categories) {
+            if (category.site === true && !category.mandatory) {
+                state[category.key] = category.siteEnabled === true;
+            }
         }
     }
 
@@ -75,6 +91,7 @@ const digestible = computed<Set<string>>(() => {
 });
 
 const choices = ref<Record<string, MailDelivery>>({ ...saved.value });
+const siteChoices = ref<Record<string, boolean>>({ ...siteSaved.value });
 const processing = ref(false);
 const errors = ref<Record<string, string>>({});
 const generalError = ref<string | null>(null);
@@ -82,6 +99,9 @@ const generalError = ref<string | null>(null);
 // A reload brings the saved state again (after saving, or from another tab of the browser)
 watch(saved, (state) => {
     choices.value = { ...state };
+});
+watch(siteSaved, (state) => {
+    siteChoices.value = { ...state };
 });
 
 /** Only what differs from the saved state travels: the server keeps the rest as it is. */
@@ -95,13 +115,44 @@ const changes = computed<Record<string, boolean | MailDelivery>>(() => {
 
     return diff;
 });
-const hasChanges = computed(() => Object.keys(changes.value).length > 0);
+const siteChanges = computed<Record<string, boolean>>(() => {
+    const diff: Record<string, boolean> = {};
+    for (const [key, value] of Object.entries(siteChoices.value)) {
+        if (siteSaved.value[key] !== undefined && siteSaved.value[key] !== value) {
+            diff[key] = value;
+        }
+    }
+
+    return diff;
+});
+const hasChanges = computed(
+    () => Object.keys(changes.value).length > 0 || Object.keys(siteChanges.value).length > 0
+);
 const locked = computed(() => processing.value || gate.blocked.value);
 
 function setChoice(key: string, value: MailDelivery): void {
     choices.value = { ...choices.value, [key]: value };
     errors.value = {};
     generalError.value = null;
+}
+
+function setSiteChoice(key: string, value: boolean): void {
+    siteChoices.value = { ...siteChoices.value, [key]: value };
+    errors.value = {};
+    generalError.value = null;
+}
+
+/** Only the maps that changed travel: the server keeps the rest as it is. */
+function payload(): Record<string, Record<string, boolean | MailDelivery>> {
+    const data: Record<string, Record<string, boolean | MailDelivery>> = {};
+    if (Object.keys(changes.value).length > 0) {
+        data.preferences = changes.value;
+    }
+    if (Object.keys(siteChanges.value).length > 0) {
+        data.site = siteChanges.value;
+    }
+
+    return data;
 }
 
 function save(): void {
@@ -112,31 +163,29 @@ function save(): void {
     errors.value = {};
     generalError.value = null;
 
-    router.put(
-        ENDPOINT,
-        { preferences: changes.value },
-        {
-            preserveScroll: true,
-            preserveState: true,
-            onStart: () => {
-                processing.value = true;
-            },
-            onFinish: () => {
-                processing.value = false;
-            },
-            onError: (received) => {
-                const byCategory: Record<string, string> = {};
-                for (const [field, message] of Object.entries(received)) {
-                    if (field.startsWith(ERROR_PREFIX)) {
-                        byCategory[field.slice(ERROR_PREFIX.length)] = message;
-                    }
+    router.put(ENDPOINT, payload(), {
+        preserveScroll: true,
+        preserveState: true,
+        onStart: () => {
+            processing.value = true;
+        },
+        onFinish: () => {
+            processing.value = false;
+        },
+        onError: (received) => {
+            const byCategory: Record<string, string> = {};
+            for (const [field, message] of Object.entries(received)) {
+                if (field.startsWith(ERROR_PREFIX)) {
+                    byCategory[field.slice(ERROR_PREFIX.length)] = message;
+                } else if (field.startsWith(SITE_ERROR_PREFIX)) {
+                    byCategory[field.slice(SITE_ERROR_PREFIX.length)] = message;
                 }
-                errors.value = byCategory;
-                generalError.value =
-                    Object.keys(byCategory).length === 0 ? t('auth.profile.mail.error') : null;
-            },
-        }
-    );
+            }
+            errors.value = byCategory;
+            generalError.value =
+                Object.keys(byCategory).length === 0 ? t('auth.profile.mail.error') : null;
+        },
+    });
 }
 </script>
 
@@ -187,10 +236,12 @@ function save(): void {
                     :key="section.key"
                     :section="section"
                     :choices="choices"
+                    :site-choices="siteChoices"
                     :busy="locked"
                     :errors="errors"
                     :digest-time="digestTime"
                     @change="setChoice"
+                    @site-change="setSiteChoice"
                 />
             </div>
 
@@ -199,6 +250,7 @@ function save(): void {
                     v-model="selectedKey"
                     :sections="sections"
                     :choices="choices"
+                    :site-choices="siteChoices"
                     :panel-id="PANEL_ID"
                 />
                 <div
@@ -212,10 +264,12 @@ function save(): void {
                         :key="selectedSection.key"
                         :section="selectedSection"
                         :choices="choices"
+                        :site-choices="siteChoices"
                         :busy="locked"
                         :errors="errors"
                         :digest-time="digestTime"
                         @change="setChoice"
+                        @site-change="setSiteChoice"
                     />
                 </div>
             </div>

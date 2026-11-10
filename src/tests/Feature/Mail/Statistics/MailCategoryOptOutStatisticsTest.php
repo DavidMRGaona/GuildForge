@@ -92,6 +92,27 @@ final class MailCategoryOptOutStatisticsTest extends TestCase
         $this->assertNotContains('gone-module.reminders', $keys);
     }
 
+    public function test_categories_shown_only_on_the_site_are_not_listed(): void
+    {
+        $this->registerNews();
+        $this->registry->register(MailCategoryDTO::optional(
+            key: 'test.likes',
+            section: 'Test',
+            label: 'Likes',
+            description: 'Only in the notification centre',
+            site: true,
+            mail: false,
+        ), 'test');
+
+        $keys = array_map(
+            static fn (MailCategoryOptOutDTO $row): string => $row->key,
+            $this->service()->report()->categories,
+        );
+
+        $this->assertContains('test.news', $keys);
+        $this->assertNotContains('test.likes', $keys);
+    }
+
     public function test_the_percentage_is_zero_when_nobody_can_receive_the_category(): void
     {
         $this->registerNews();

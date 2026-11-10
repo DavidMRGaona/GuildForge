@@ -13,10 +13,11 @@ import { useSiteLogo } from '@/composables/useSiteLogo';
 import SearchPanel from '@/components/search/SearchPanel.vue';
 import TheNavigation from './TheNavigation.vue';
 import UserDropdown from './UserDropdown.vue';
+import NotificationBell from './NotificationBell.vue';
 import AuthLinks from './AuthLinks.vue';
 
 const { t } = useI18n();
-const { isAuthenticated } = useAuth();
+const { isAuthenticated, mustVerifyEmail } = useAuth();
 const routes = useRoutes();
 const page = usePage();
 const appStore = useAppStore();
@@ -53,6 +54,15 @@ watch(isSearchOpen, (isOpen) => {
 });
 
 const appName = computed(() => page.props.appName as string);
+
+// The bell (core#491): signed in, and not while the account must verify its email (its routes are
+// closed until then)
+const showBell = computed(
+    () =>
+        isAuthenticated.value &&
+        !mustVerifyEmail.value &&
+        (page.props as { siteNotifications?: unknown }).siteNotifications != null
+);
 const { logo: currentLogo, markFailed: markLogoFailed } = useSiteLogo();
 
 function toggleMobileMenu(): void {
@@ -208,13 +218,16 @@ function selectTheme(mode: ThemeMode): void {
                         </div>
                     </div>
 
+                    <NotificationBell v-if="showBell" />
+
                     <!-- Auth: User dropdown or login/register links -->
                     <UserDropdown v-if="isAuthenticated" />
                     <AuthLinks v-else />
                 </div>
 
-                <!-- Mobile menu button -->
-                <div :class="{ 'md:hidden': fitsFullBar }">
+                <!-- Mobile menu button, with the bell beside it so it never hides in the menu -->
+                <div class="flex items-center gap-1" :class="{ 'md:hidden': fitsFullBar }">
+                    <NotificationBell v-if="showBell" panel-id="site-notifications-panel-narrow" />
                     <button
                         ref="menuButton"
                         type="button"

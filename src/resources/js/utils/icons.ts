@@ -3,6 +3,7 @@ import type { ActivityIcon, CalendarEntryMetaIcon } from '@/types/models';
 import type { ProfileTabIcon as ProfileTabIconType } from '@/types/profile';
 import type { NotificationType } from '@/composables/useNotifications';
 import {
+    AtSign,
     Bell,
     BookOpen,
     Building2,
@@ -27,20 +28,26 @@ import {
     Map,
     MapPin,
     Megaphone,
+    MessageCircle,
+    MessageSquare,
     Monitor,
     Newspaper,
     Puzzle,
+    Quote,
     Settings,
     Settings2,
     ShieldCheck,
     Sparkles,
     SquarePen,
     Swords,
+    ThumbsUp,
     Ticket,
     TriangleAlert,
     Trophy,
     User,
+    UserPlus,
     Users,
+    Vote,
 } from '@lucide/vue';
 
 export const activityIconMap: Record<ActivityIcon, Component> = {
@@ -143,5 +150,29 @@ export function resolveMailSectionIcon(icon: string | null): Component {
         (icon !== null && Object.hasOwn(mailSectionIconMap, icon)
             ? mailSectionIconMap[icon]
             : undefined) ?? Mail
+    );
+}
+
+/**
+ * Icons a module may name for its notices in the notification centre (core#491): the mail
+ * section ones plus a few for conversations. A closed list, like the mail sections.
+ */
+export const siteNotificationIconMap: Record<string, Component> = {
+    ...mailSectionIconMap,
+    'at-sign': AtSign,
+    'message-circle': MessageCircle,
+    'message-square': MessageSquare,
+    quote: Quote,
+    'thumbs-up': ThumbsUp,
+    'user-plus': UserPlus,
+    vote: Vote,
+};
+
+/** Resolve the icon a module names for a notice, falling back to a bell. */
+export function resolveSiteNotificationIcon(icon: string | null): Component {
+    return (
+        (icon !== null && Object.hasOwn(siteNotificationIconMap, icon)
+            ? siteNotificationIconMap[icon]
+            : undefined) ?? Bell
     );
 }

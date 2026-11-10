@@ -108,6 +108,87 @@ final class MailCategoryRegistryTest extends TestCase
         $this->assertSame('calendar-check', $registry->find('example.first')?->icon);
     }
 
+    public function test_a_category_is_mail_only_unless_it_says_otherwise(): void
+    {
+        $category = $this->optional('example.first');
+
+        $this->assertTrue($category->mail);
+        $this->assertFalse($category->site);
+    }
+
+    public function test_a_category_may_offer_site_notices_with_mail_or_without_it(): void
+    {
+        $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);
+
+        $registry->registerMany([
+            MailCategoryDTO::optional(
+                key: 'example.replies',
+                section: 'example::mail.section',
+                label: 'Label',
+                description: 'Description',
+                site: true,
+            ),
+            MailCategoryDTO::optional(
+                key: 'example.likes',
+                section: 'example::mail.section',
+                label: 'Label',
+                description: 'Description',
+                site: true,
+                mail: false,
+            ),
+            MailCategoryDTO::mandatory(
+                key: 'example.mentions',
+                section: 'example::mail.section',
+                label: 'Label',
+                description: 'Description',
+                reason: 'Reason',
+                site: true,
+            ),
+        ], 'example');
+
+        $replies = $registry->find('example.replies');
+        $likes = $registry->find('example.likes');
+        $mentions = $registry->find('example.mentions');
+        $this->assertNotNull($replies);
+        $this->assertNotNull($likes);
+        $this->assertNotNull($mentions);
+
+        $this->assertTrue($replies->site);
+        $this->assertTrue($replies->mail);
+        $this->assertFalse($likes->mail);
+        $this->assertTrue($mentions->site);
+    }
+
+    public function test_a_category_without_any_channel_is_rejected(): void
+    {
+        $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);
+
+        $this->expectException(InvalidMailCategoryException::class);
+        $registry->register(MailCategoryDTO::optional(
+            key: 'example.first',
+            section: 'example::mail.section',
+            label: 'Label',
+            description: 'Description',
+            mail: false,
+        ), 'example');
+    }
+
+    public function test_a_digest_needs_mail(): void
+    {
+        $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);
+
+        $this->expectException(InvalidMailCategoryException::class);
+        $registry->register(MailCategoryDTO::optional(
+            key: 'example.first',
+            section: 'example::mail.section',
+            label: 'Label',
+            description: 'Description',
+            digestible: true,
+            site: true,
+            mail: false,
+        ), 'example');
+    }
+
     public function test_outside_local_and_testing_an_invalid_category_is_skipped_with_a_warning(): void
     {
         $log = Log::spy();

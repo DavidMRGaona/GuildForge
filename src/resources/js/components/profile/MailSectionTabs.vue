@@ -13,13 +13,15 @@ interface Props {
     sections: MailPreferenceSection[];
     /** Current choice of every category, by key. */
     choices: Record<string, MailDelivery>;
+    /** Current web switch of the categories with site notices, by key (core#491). */
+    siteChoices?: Record<string, boolean>;
     /** Key of the selected section. */
     modelValue: string;
     /** Id of the panel the tabs control. */
     panelId: string;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { siteChoices: () => ({}) });
 
 const emit = defineEmits<{ 'update:modelValue': [key: string] }>();
 
@@ -30,7 +32,7 @@ const buttons = ref<HTMLButtonElement[]>([]);
 const tabs = computed(() =>
     props.sections.map((section) => {
         const total = optionalCategories(section).length;
-        const enabled = countOptionalOn(section, props.choices);
+        const enabled = countOptionalOn(section, props.choices, props.siteChoices);
 
         return {
             key: section.key,

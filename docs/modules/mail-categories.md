@@ -4,6 +4,8 @@ Every mail the site sends to an account belongs to a category. Each person sees 
 
 Requirement: set `requires.core` in `module.json` to the core release that introduces mail categories (the one with core#328). An older core has no `HasMailCategory`, so a notification implementing it would not load.
 
+The same categories decide the notices of the notification centre (the bell in the header): a category says whether it is mailed, shown on the site or both. See [Site notifications](./site-notifications.md).
+
 ## Choosing categories
 
 Group the module's mail into a few categories under one section, the module's visible name («Partidas», «Torneos»…). Never one category per mail: people should understand the whole list at a glance.
@@ -127,6 +129,8 @@ What the core does with it:
 ```php
 app(MailSubjectMuteServiceInterface::class)->forgetSubject('my-module.table', $table->id);
 ```
+
+It also deletes the notices about the thing in the notification centre (core#491).
 
 `MailSubjectMuteServiceInterface` also answers `isMuted($user, $subject)` and `mutedFor($user)`; never read `user_mail_subject_mutes` directly. The table holds one row per account and thing (`unique(user_id, subject_type, subject_id)`, plus an index on `(subject_type, subject_id)` for `forgetSubject()`); the account's deletion cascades.
 

@@ -13,6 +13,8 @@ use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
+use App\Domain\SiteNotifications\Repositories\SiteNotificationPreferenceRepositoryInterface;
+use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Services\UserService;
@@ -37,6 +39,10 @@ final class UserServiceTest extends TestCase
 
     private MailPreferenceRepositoryInterface&MockInterface $mailPreferences;
 
+    private SiteNotificationRepositoryInterface&MockInterface $siteNotifications;
+
+    private SiteNotificationPreferenceRepositoryInterface&MockInterface $siteNotificationPreferences;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -47,6 +53,8 @@ final class UserServiceTest extends TestCase
         $this->audit = Mockery::mock(RoleAuditLoggerInterface::class);
         $this->calendarFeedTokens = Mockery::mock(CalendarFeedTokenServiceInterface::class);
         $this->mailPreferences = Mockery::mock(MailPreferenceRepositoryInterface::class);
+        $this->siteNotifications = Mockery::mock(SiteNotificationRepositoryInterface::class);
+        $this->siteNotificationPreferences = Mockery::mock(SiteNotificationPreferenceRepositoryInterface::class);
 
         $this->service = new UserService(
             $this->userModelQuery,
@@ -55,6 +63,8 @@ final class UserServiceTest extends TestCase
             $this->audit,
             $this->calendarFeedTokens,
             $this->mailPreferences,
+            $this->siteNotifications,
+            $this->siteNotificationPreferences,
         );
     }
 
@@ -158,6 +168,9 @@ final class UserServiceTest extends TestCase
         $this->calendarFeedTokens->shouldReceive('revoke')->once()->with($userId->value());
         // And the mail preferences, which would still describe the person
         $this->mailPreferences->shouldReceive('deleteForUser')->once()->with(Mockery::on(fn (UserId $id): bool => $id->value() === $userId->value()));
+        // And the notification centre with its choices (core#491)
+        $this->siteNotifications->shouldReceive('deleteForUser')->once()->with(Mockery::on(fn (UserId $id): bool => $id->value() === $userId->value()));
+        $this->siteNotificationPreferences->shouldReceive('deleteForUser')->once()->with(Mockery::on(fn (UserId $id): bool => $id->value() === $userId->value()));
 
         $this->service->anonymize($userId->value());
 

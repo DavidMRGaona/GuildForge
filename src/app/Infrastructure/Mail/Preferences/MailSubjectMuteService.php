@@ -8,6 +8,7 @@ use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Domain\Mail\Repositories\MailSubjectMuteRepositoryInterface;
 use App\Domain\Mail\ValueObjects\MutedMailSubject;
+use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 
@@ -15,6 +16,7 @@ final readonly class MailSubjectMuteService implements MailSubjectMuteServiceInt
 {
     public function __construct(
         private MailSubjectMuteRepositoryInterface $mutes,
+        private SiteNotificationRepositoryInterface $siteNotifications,
     ) {}
 
     public function mutedFor(object $user): array
@@ -45,5 +47,7 @@ final readonly class MailSubjectMuteService implements MailSubjectMuteServiceInt
     public function forgetSubject(string $type, string $id): void
     {
         $this->mutes->forgetSubject($type, $id);
+        // Its notices in the notification centre would lead nowhere (core#491)
+        $this->siteNotifications->deleteForSubject($type, $id);
     }
 }

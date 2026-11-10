@@ -6,7 +6,7 @@ category: account
 audience: site
 order: 40
 keywords: [correos, emails, avisos, notificaciones, resumen diario, un correo al día, todos juntos, demasiados avisos, darme de baja, baja, dejar de recibir, cancelar suscripción, no quiero recibir, demasiados correos, spam, recordatorios, novedades, preferencias de correo, categorías, obligatorios, silenciar, avisos silenciados, una partida concreta, volver a recibir]
-related: [core.account.change-email, core.account.complete-profile]
+related: [core.account.change-email, core.account.complete-profile, core.account.site-notifications]
 ---
 {{site_name}} te manda correos de varios tipos. Tú decides cuáles quieres recibir, salvo los que son imprescindibles.
 
@@ -42,6 +42,10 @@ Si te vas de vacaciones o pasas una temporada sin jugar, no hace falta ir tipo p
 - Verás el aviso **En pausa hasta el…** con el botón **Reanudar ahora**. Si elegiste la opción sin fecha, la pausa dura hasta que la quites tú.
 - Al llegar la fecha, los correos se reanudan solos. La pausa incluye el último día que se indica.
 - La pausa no cambia lo que tienes elegido en cada tipo: al terminar, todo vuelve a estar como lo dejaste.
+
+## Avisos en la web
+
+Algunos tipos también te avisan en la campana de la cabecera. Esos tipos tienen dos interruptores, **En la web** y **Por correo**, y puedes elegir cada uno por separado. Algunos, como los «me gusta», solo avisan en la web, y entonces solo verás **En la web**. La pausa de los correos no pausa los avisos de la web; silenciar algo concreto, sí. Más detalles en la guía de los avisos en la web.
 
 ## Qué son los correos obligatorios
 
