@@ -488,6 +488,61 @@ final class MediaLibraryPageTest extends TestCase
         $this->assertArrayHasKey('events/in-use', $this->catalog->assets);
     }
 
+    public function test_selection_is_limited_to_the_current_page(): void
+    {
+        $this->actingAs($this->deleter());
+
+        foreach (['grid', 'list'] as $layout) {
+            $page = Livewire::test(MediaLibraryPage::class)->set('display', $layout);
+            $this->assertTrue($this->table($page)->selectsCurrentPageOnly(), "Selection spans every page in {$layout}");
+        }
+    }
+
+    public function test_the_bulk_dialog_states_the_limit(): void
+    {
+        $file = $this->file('events/unused');
+        $this->actingAs($this->deleter());
+
+        $this->listPage()
+            ->mountTableBulkAction('deleteSelected', [$file])
+            ->assertMountedActionModalSee('como mucho '.MediaLibraryPage::MAX_BULK_DELETE.' archivos');
+    }
+
+    public function test_a_bulk_call_above_the_limit_deletes_nothing(): void
+    {
+        $files = [];
+        for ($i = 0; $i <= MediaLibraryPage::MAX_BULK_DELETE; $i++) {
+            $files[] = $this->file(sprintf('events/unused-%02d', $i));
+        }
+        $this->assertCount(MediaLibraryPage::MAX_BULK_DELETE + 1, $files);
+        $this->assertStringContainsString('como mucho 50 archivos', __('filament.media_library.notifications.too_many', ['max' => 50]));
+        $this->actingAs($this->deleter());
+
+        $this->listPage()
+            ->callTableBulkAction('deleteSelected', $files, ['confirmation' => true])
+            ->assertNotified(__('filament.media_library.notifications.too_many', ['max' => MediaLibraryPage::MAX_BULK_DELETE]));
+
+        $this->assertCount(MediaLibraryPage::MAX_BULK_DELETE + 1, $this->catalog->assets);
+        $this->assertSame(MediaLibraryPage::MAX_BULK_DELETE + 1, MediaFileModel::query()->count());
+        $this->assertSame(0, MediaDeletionModel::query()->count());
+    }
+
+    public function test_a_crafted_select_all_deletes_nothing(): void
+    {
+        $file = $this->file('events/unused');
+        $this->actingAs($this->deleter());
+
+        // «Every record but these» is never sent by a page-only selection
+        $this->listPage()
+            ->set('isTrackingDeselectedTableRecords', true)
+            ->set('deselectedTableRecords', [])
+            ->callAction([TestAction::make('deleteSelected')->table()->bulk()], ['confirmation' => true])
+            ->assertNotified(__('filament.media_library.notifications.too_many', ['max' => MediaLibraryPage::MAX_BULK_DELETE]));
+
+        $this->assertArrayHasKey('events/unused', $this->catalog->assets);
+        $this->assertNotNull($file->fresh());
+    }
+
     public function test_refresh_queues_sync_job(): void
     {
         Queue::fake();

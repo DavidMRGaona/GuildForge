@@ -49,7 +49,6 @@ use Filament\Tables\Table;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Js;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
@@ -88,6 +87,12 @@ final class MediaLibraryPage extends Page implements HasTable
 
     /** Refused files listed by name in the notification; the rest are counted */
     private const int REFUSALS_LISTED = 5;
+
+    /**
+     * Files one bulk deletion takes: each is checked against every source and destroyed in Cloudinary one by one,
+     * which must end well inside the request time limit.
+     */
+    public const int MAX_BULK_DELETE = 50;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-photo';
 
@@ -197,6 +202,8 @@ final class MediaLibraryPage extends Page implements HasTable
             ->recordAction('viewDetails')
             ->recordUrl(null)
             ->checkIfRecordIsSelectableUsing(fn (MediaFileModel $record): bool => $this->library()->statusOf($record) === MediaFileStatus::Unused)
+            // Otherwise every render loads the whole library to count what «Seleccionar todos» would take
+            ->selectCurrentPageOnly()
             ->toolbarActions([$this->bulkDeleteAction()])
             ->paginationPageOptions([12, 24, 48, 96])
             ->defaultPaginationPageOption(24)
@@ -538,10 +545,19 @@ final class MediaLibraryPage extends Page implements HasTable
             ->tooltip(fn (): ?string => $this->isDeletionEnabled() ? null : (string) __('filament.media_library.disabled_reasons.switch_off'))
             ->requiresConfirmation()
             ->modalHeading(__('filament.media_library.delete.bulk_heading'))
-            ->modalDescription(fn (Collection $records): string => trans_choice('filament.media_library.delete.bulk_description', $records->count(), [
-                'count' => $records->count(),
-                'size' => FileSize::format((int) $records->sum(fn (MediaFileModel $record): int => $record->bytes)),
-            ]))
+            // The records are only loaded once the selection is known to be within the limit
+            ->modalDescription(function (BulkAction $action): string {
+                if ($this->selectionExceedsBulkLimit()) {
+                    return __('filament.media_library.notifications.too_many', ['max' => self::MAX_BULK_DELETE]);
+                }
+
+                $records = $action->getSelectedRecords();
+
+                return trans_choice('filament.media_library.delete.bulk_description', $records->count(), [
+                    'count' => $records->count(),
+                    'size' => FileSize::format((int) $records->sum(fn (MediaFileModel $record): int => $record->bytes)),
+                ]).' '.__('filament.media_library.delete.bulk_limit', ['max' => self::MAX_BULK_DELETE]);
+            })
             ->schema([
                 Checkbox::make('confirmation')
                     ->label(__('filament.media_library.delete.bulk_confirmation_check'))
@@ -550,9 +566,25 @@ final class MediaLibraryPage extends Page implements HasTable
             ])
             ->modalSubmitActionLabel(__('filament.media_library.delete.submit'))
             ->deselectRecordsAfterCompletion()
-            ->action(function (Collection $records): void {
-                $this->deleteFiles($records->all());
+            ->action(function (BulkAction $action): void {
+                // Checked again here: the page never sends more, a crafted request may
+                if ($this->selectionExceedsBulkLimit()) {
+                    $this->notifyFailure(__('filament.media_library.notifications.too_many', ['max' => self::MAX_BULK_DELETE]));
+
+                    return;
+                }
+
+                $this->deleteFiles($action->getSelectedRecords()->all());
             });
+    }
+
+    /**
+     * Read from the raw selection, before any record is loaded: «every record but these» is never sent by a
+     * selection limited to the current page.
+     */
+    private function selectionExceedsBulkLimit(): bool
+    {
+        return $this->isTrackingDeselectedTableRecords || count($this->selectedTableRecords) > self::MAX_BULK_DELETE;
     }
 
     /**
