@@ -63,4 +63,39 @@ final class CloudinaryMediaFileIdResolverTest extends TestCase
     {
         $this->assertSame('guildforge', $this->resolver()->prefix());
     }
+
+    public function test_nested_prefix_is_kept_with_version(): void
+    {
+        $url = 'https://res.cloudinary.com/demo/image/upload/v1/org/guildforge/events/a.jpg';
+
+        $this->assertSame('events/a', $this->resolver('org/guildforge')->fromStoredPath($url)?->value);
+    }
+
+    public function test_nested_prefix_is_kept_with_transformations_and_version(): void
+    {
+        $url = 'https://res.cloudinary.com/demo/image/upload/c_fill,w_300/v12/org/guildforge/events/a.jpg';
+
+        $this->assertSame('events/a', $this->resolver('org/guildforge')->fromStoredPath($url)?->value);
+    }
+
+    public function test_nested_prefix_without_version_is_kept(): void
+    {
+        $url = 'https://res.cloudinary.com/demo/image/upload/my_org/guildforge/events/a.jpg';
+
+        $this->assertSame('events/a', $this->resolver('my_org/guildforge')->fromStoredPath($url)?->value);
+    }
+
+    public function test_prefix_that_looks_like_a_transformation_is_kept(): void
+    {
+        $url = 'https://res.cloudinary.com/demo/image/upload/v1/my_site/events/a.jpg';
+
+        $this->assertSame('events/a', $this->resolver('my_site')->fromStoredPath($url)?->value);
+    }
+
+    public function test_nested_prefix_of_another_site_is_null(): void
+    {
+        $url = 'https://res.cloudinary.com/demo/image/upload/v1/org/other/events/a.jpg';
+
+        $this->assertNull($this->resolver('org/guildforge')->fromStoredPath($url));
+    }
 }

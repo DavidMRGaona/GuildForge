@@ -91,7 +91,7 @@ final readonly class CloudinaryMediaFileIdResolver implements MediaFileIdResolve
         $segments = explode('/', substr($urlPath, $marker + strlen('/upload/')));
 
         // Transformation sets ("c_fill,w_300") and the version ("v12") come before the public id
-        while (count($segments) > 1 && $this->isDeliveryDecoration($segments[0])) {
+        while (count($segments) > 1 && ! $this->startsWithPrefix(implode('/', $segments)) && $this->isDeliveryDecoration($segments[0])) {
             array_shift($segments);
         }
 
@@ -105,12 +105,13 @@ final readonly class CloudinaryMediaFileIdResolver implements MediaFileIdResolve
         return $rest;
     }
 
+    private function startsWithPrefix(string $path): bool
+    {
+        return $this->prefix !== '' && str_starts_with($path, $this->prefix.'/');
+    }
+
     private function isDeliveryDecoration(string $segment): bool
     {
-        if ($this->prefix !== '' && $segment === $this->prefix) {
-            return false;
-        }
-
         return preg_match('/^v\d+$/', $segment) === 1
             || str_contains($segment, ',')
             || preg_match('/^[a-z]{1,3}_[^\/]*$/i', $segment) === 1;
