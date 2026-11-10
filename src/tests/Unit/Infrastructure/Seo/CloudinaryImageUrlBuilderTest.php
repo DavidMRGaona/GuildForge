@@ -119,6 +119,20 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         $this->assertSame('https://res.cloudinary.com/demo/image/upload/site/events/abc', $builder->mediaOriginal('events/abc'));
     }
 
+    public function test_svg_files_are_shown_as_uploaded_because_cloudinary_refuses_to_rasterize_some_that_browsers_draw(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'site');
+        $original = 'https://res.cloudinary.com/demo/image/upload/site/branding/logo';
+
+        $this->assertSame($original, $builder->mediaThumbnail('branding/logo', 400, 'svg'));
+        $this->assertSame($original, $builder->mediaPreview('branding/logo', 1200, 'SVG'));
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_400,h_400,c_fill,g_auto,q_auto,f_auto/site/events/abc',
+            $builder->mediaThumbnail('events/abc', 400, 'png'),
+        );
+        $this->assertNull((new CloudinaryImageUrlBuilder('', 'site'))->mediaThumbnail('branding/logo', 400, 'svg'));
+    }
+
     public function test_media_library_urls_always_add_the_prefix_and_encode_each_segment(): void
     {
         $builder = new CloudinaryImageUrlBuilder('demo', 'site');

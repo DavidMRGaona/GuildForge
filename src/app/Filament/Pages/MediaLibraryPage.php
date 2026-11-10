@@ -388,7 +388,7 @@ final class MediaLibraryPage extends Page implements HasTable
     private function thumbnailColumn(): ImageColumn
     {
         return ImageColumn::make('thumbnail')
-            ->state(fn (MediaFileModel $record): ?string => $this->urls()->mediaThumbnail($record->file_id, self::THUMBNAIL_SIZE));
+            ->state(fn (MediaFileModel $record): ?string => $this->urls()->mediaThumbnail($record->file_id, self::THUMBNAIL_SIZE, $record->format));
     }
 
     /**
@@ -781,7 +781,7 @@ final class MediaLibraryPage extends Page implements HasTable
             ->all();
 
         return [
-            'imageUrl' => $this->urls()->mediaPreview($file->file_id, self::PREVIEW_WIDTH),
+            'imageUrl' => $this->urls()->mediaPreview($file->file_id, self::PREVIEW_WIDTH, $file->format),
             'fileId' => $file->file_id,
             'dimensions' => $file->width !== null && $file->height !== null ? $file->width.' × '.$file->height : null,
             'size' => FileSize::format($file->bytes),

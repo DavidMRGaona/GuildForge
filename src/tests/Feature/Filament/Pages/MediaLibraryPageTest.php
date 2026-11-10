@@ -139,6 +139,23 @@ final class MediaLibraryPageTest extends TestCase
         $this->assertMatchesRegularExpression('#/image/upload/[^/]*c_fill[^/]*/site/events/a$#', $url);
     }
 
+    public function test_an_svg_is_shown_as_uploaded_in_the_grid_and_the_details(): void
+    {
+        $file = $this->file('events/logo');
+        $file->update(['format' => 'svg']);
+        $this->usage('events/logo', 'Logo', 'record-1');
+        $this->actingAs($this->viewer());
+
+        $thumbnail = $this->table(Livewire::test(MediaLibraryPage::class))->getColumn('thumbnail');
+        $this->assertNotNull($thumbnail);
+        $thumbnail->record($file);
+
+        // Cloudinary refuses to rasterize some SVG files that browsers draw
+        $original = 'https://res.cloudinary.com/demo/image/upload/site/events/logo';
+        $this->assertSame($original, $thumbnail->getState());
+        $this->assertStringContainsString('src="'.$original.'"', $this->detailsHtml($file));
+    }
+
     public function test_a_file_without_usages_shows_its_origin_and_upload_day(): void
     {
         $file = $this->file('events/a', uploadedAt: CarbonImmutable::parse('2026-11-02 10:00:00'));

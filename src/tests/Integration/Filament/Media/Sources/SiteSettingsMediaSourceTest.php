@@ -51,6 +51,19 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $this->assertSame('Imagen de Nosotros', $usages[1]->role);
     }
 
+    public function test_each_usage_is_titled_by_its_field_so_copies_of_one_logo_can_be_told_apart(): void
+    {
+        $this->set('site_logo_light', 'branding/logo-light.svg');
+        $this->set('site_favicon_dark', 'branding/favicon-dark.svg');
+
+        $titles = array_map(
+            fn ($usage): string => $usage->title,
+            iterator_to_array($this->source()->usages(), false),
+        );
+
+        $this->assertSame(['Logo claro', 'Favicon oscuro'], $titles);
+    }
+
     public function test_usages_for_one_key_and_unknown_key(): void
     {
         $this->set('site_favicon_dark', 'branding/f.png');
