@@ -27,6 +27,7 @@ use App\Http\Controllers\Knowledge\KnowledgeFeedbackController;
 use App\Http\Controllers\Knowledge\KnowledgeSearchController;
 use App\Http\Controllers\Knowledge\KnowledgeVisibleGuidesController;
 use App\Http\Controllers\LegalPageController;
+use App\Http\Controllers\MailLogoController;
 use App\Http\Controllers\MailSubjectMuteController;
 use App\Http\Controllers\MailUnsubscribeController;
 use App\Http\Controllers\OneClickMailUnsubscribeController;
@@ -64,6 +65,17 @@ Route::get('/calendario/personal/{token}.ics', PersonalCalendarFeedController::c
 Route::get('/calendario/{source}/{id}.ics', CalendarEntryICalendarController::class)
     ->where(['source' => '[a-z0-9-]+', 'id' => '[A-Za-z0-9_-]+'])
     ->name('calendar.entry.ics');
+
+// The SVG mail logo drawn as a PNG (#500). Same for everyone and no session, so the image proxies
+// of mail clients can keep it; not throttled, since they fetch for many readers from few addresses
+Route::get('/correos/logo.png', MailLogoController::class)
+    ->withoutMiddleware([
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        PreventRequestForgery::class,
+        AddQueuedCookiesToResponse::class,
+    ])
+    ->name('mail.logo');
 
 // Unsubscribe links of the mail footer and the List-Unsubscribe header: signed per account and
 // category, no expiry, no sign-in. Throttled before the signature, so guessing counts too.

@@ -42,6 +42,8 @@ final readonly class EnsureSiteIsNotInMaintenance
         // Unsubscribing from a mail must work whatever the site is doing
         'correos/baja/*',
         'correos/silenciar/*',
+        // Mails sent meanwhile keep their logo
+        'correos/logo.png',
     ];
 
     public function __construct(

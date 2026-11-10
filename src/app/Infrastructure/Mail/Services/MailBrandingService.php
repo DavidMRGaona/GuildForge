@@ -6,7 +6,7 @@ namespace App\Infrastructure\Mail\Services;
 
 use App\Application\Mail\DTOs\Response\MailBrandingDTO;
 use App\Application\Mail\Services\MailBrandingServiceInterface;
-use App\Application\Services\SettingsServiceInterface;
+use App\Application\Mail\Services\MailLogoServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Domain\ValueObjects\ColorPalette;
@@ -35,9 +35,9 @@ final class MailBrandingService implements MailBrandingServiceInterface
     private ?MailBrandingDTO $branding = null;
 
     public function __construct(
-        private readonly SettingsServiceInterface $settings,
         private readonly ThemeSettingsServiceInterface $theme,
         private readonly SiteBrandingServiceInterface $site,
+        private readonly MailLogoServiceInterface $logo,
     ) {}
 
     public function branding(): MailBrandingDTO
@@ -74,7 +74,7 @@ final class MailBrandingService implements MailBrandingServiceInterface
         return new MailBrandingDTO(
             siteName: $this->site->siteName(),
             siteUrl: $this->siteUrl(),
-            logoUrl: $this->settings->getEmailLogoUrl(),
+            logoUrl: $this->logo->url(),
             primaryColor: $button->value,
             onPrimaryColor: $onButton,
             linkColor: $this->firstReadableShade($primary, [700, 800, 900, 950], $white) ?? $this->shade($neutral, 900),

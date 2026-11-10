@@ -25,6 +25,7 @@ use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
 use App\Application\Mail\Services\MailBrandingServiceInterface;
 use App\Application\Mail\Services\MailConfigurationServiceInterface;
+use App\Application\Mail\Services\MailLogoServiceInterface;
 use App\Application\Mail\Services\MailStatisticsServiceInterface;
 use App\Application\Mail\Services\MailTestServiceInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
@@ -123,6 +124,7 @@ use App\Infrastructure\Mail\Listeners\LogSentEmail;
 use App\Infrastructure\Mail\Services\EmailQuotaService;
 use App\Infrastructure\Mail\Services\MailBrandingService;
 use App\Infrastructure\Mail\Services\MailConfigurationService;
+use App\Infrastructure\Mail\Services\MailLogoService;
 use App\Infrastructure\Mail\Services\MailStatisticsService;
 use App\Infrastructure\Mail\Services\MailTestService;
 use App\Infrastructure\Mail\Ses\SnsMessageValidator;
@@ -300,6 +302,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(MailConfigurationServiceInterface::class, MailConfigurationService::class);
         $this->app->singleton(MailTestServiceInterface::class, MailTestService::class);
         $this->app->scoped(MailBrandingServiceInterface::class, MailBrandingService::class);
+        // bind: CloudinaryImageUrlBuilder reads the config when built
+        $this->app->bind(MailLogoServiceInterface::class, MailLogoService::class);
         $this->app->bind(EmailLogRepositoryInterface::class, EloquentEmailLogRepository::class);
         $this->app->singleton(EmailQuotaServiceInterface::class, EmailQuotaService::class);
         $this->app->singleton(MailStatisticsServiceInterface::class, MailStatisticsService::class);

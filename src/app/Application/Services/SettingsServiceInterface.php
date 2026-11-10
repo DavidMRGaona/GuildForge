@@ -69,9 +69,4 @@ interface SettingsServiceInterface
      * Get the message shown to visitors during maintenance, if any.
      */
     public function getMaintenanceMessage(): ?string;
-
-    /**
-     * Get the email logo URL with fallback to light logo.
-     */
-    public function getEmailLogoUrl(): ?string;
 }

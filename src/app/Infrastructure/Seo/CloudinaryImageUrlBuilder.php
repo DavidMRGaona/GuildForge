@@ -18,7 +18,7 @@ final readonly class CloudinaryImageUrlBuilder
 
     private const string ANIMATED_AVATAR_SUFFIX = '-animated';
 
-    private const array STRIPPED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+    private const array STRIPPED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp'];
 
     public function __construct(
         private string $cloudName,
@@ -44,6 +44,15 @@ final readonly class CloudinaryImageUrlBuilder
         $background = $darkBackground ? 'b_black' : 'b_white';
 
         return $this->build($publicId, 'w_'.self::LOGO_SIZE.',h_'.self::LOGO_SIZE.",c_pad,{$background},q_auto,f_png");
+    }
+
+    /**
+     * A raster logo as a PNG that fits the box, for mail clients that do not show its format
+     * (Outlook and WebP, most of them and AVIF). Not for SVG: see isVector().
+     */
+    public function emailLogo(string $publicId, int $height, int $maxWidth): ?string
+    {
+        return $this->build($publicId, "h_{$height},w_{$maxWidth},c_limit,f_png");
     }
 
     /**

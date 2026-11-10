@@ -147,8 +147,8 @@ RUN php -m | grep -qx 'Zend OPcache' \
 # English month names). Fail the build if it is missing
 RUN php -r 'exit((new NumberFormatter("es", NumberFormatter::DECIMAL))->format(1.5) === "1,5" ? 0 : 1);'
 
-# SVG logos of QR codes are rasterized for the PNG output by rsvg-convert, in a process of its
-# own (GD reads no SVG). Its own layer, so the extension build above stays cached. Fail the
+# SVG logos of QR codes (for the PNG output) and the SVG mail logo are rasterized by rsvg-convert,
+# in a process of its own (GD reads no SVG). Its own layer, so the extension build above stays cached. Fail the
 # build if it cannot turn a small SVG into a PNG
 RUN apk add --no-cache rsvg-convert \
     && printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><rect width="2" height="1"/></svg>' \
