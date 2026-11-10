@@ -332,11 +332,13 @@ final class MediaLibraryPage extends Page implements HasTable
                     $this->sizeColumn()
                         ->size(TextSize::Small)
                         ->color('gray')
+                        ->extraAttributes(['class' => 'whitespace-nowrap'])
                         ->alignEnd(),
                     $this->usagesCountColumn()
                         ->formatStateUsing(fn (int $state): string => trans_choice('filament.media_library.usages_count', $state, ['count' => $state]))
                         ->size(TextSize::Small)
                         ->color('gray')
+                        ->extraAttributes(['class' => 'whitespace-nowrap'])
                         ->alignEnd()
                         ->grow(false),
                 ]),

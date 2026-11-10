@@ -112,7 +112,7 @@ final class MediaLibraryPageTest extends TestCase
         $this->actingAs($this->deleter());
 
         $page = Livewire::test(MediaLibraryPage::class);
-        $page->assertSeeHtml('media-library-grid');
+        $page->assertSeeHtml('media-library-grid')->assertSeeHtml('whitespace-nowrap');
 
         $page->callAction('toggleLayout')->assertDontSeeHtml('media-library-grid');
     }
