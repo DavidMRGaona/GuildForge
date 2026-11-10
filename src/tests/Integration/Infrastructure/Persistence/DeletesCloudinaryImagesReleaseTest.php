@@ -6,6 +6,8 @@ namespace Tests\Integration\Infrastructure\Persistence;
 
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
+use App\Application\Media\Services\MediaSourceRegistryInterface;
+use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaDeletionModel;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
@@ -20,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\TestCase;
 
@@ -109,8 +112,14 @@ final class DeletesCloudinaryImagesReleaseTest extends TestCase
     {
         $this->catalog->add('events/2026/11/a');
         $event = EventModel::factory()->create(['image_public_id' => 'events/2026/11/a.jpg']);
-        // The articles table is gone: its source cannot say whether it uses the file
-        Schema::drop('articles');
+        // A source that cannot say whether it uses the file (its database is down, say)
+        $this->registerSource('test.media.release.failing', new class extends FakeMediaSource
+        {
+            public function usesFile(MediaFileId $file): bool
+            {
+                throw new RuntimeException('database down');
+            }
+        });
 
         $event->update(['image_public_id' => null]);
 
@@ -158,6 +167,13 @@ final class DeletesCloudinaryImagesReleaseTest extends TestCase
 
         Storage::disk('images')->assertMissing('avatars/a.jpg');
         $this->assertSame(0, MediaDeletionModel::query()->count());
+    }
+
+    private function registerSource(string $alias, FakeMediaSource $source): void
+    {
+        $this->app->instance($alias, $source);
+        /** @var class-string $alias */
+        $this->app->make(MediaSourceRegistryInterface::class)->register($alias);
     }
 }
 
