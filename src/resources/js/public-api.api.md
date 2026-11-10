@@ -43,18 +43,6 @@ declare const _default: typeof __VLS_export;
 export default _default;
 ```
 
-## resources/js/components/discussions/SubjectDiscussion.vue
-
-```ts
-import type { SubjectDiscussion } from '@/types/models';
-interface Props {
-    discussion: SubjectDiscussion | null | undefined;
-}
-declare const __VLS_export: import("vue").DefineComponent<Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
-declare const _default: typeof __VLS_export;
-export default _default;
-```
-
 ## resources/js/components/form/FormCheckbox.vue
 
 ```ts
@@ -1081,22 +1069,6 @@ export interface SocialMediaLinks {
     whatsapp?: string | undefined;
     youtube?: string | undefined;
     twitch?: string | undefined;
-}
-export interface DiscussionActivity {
-    url: string;
-    actionUrl: string;
-    commentCount: number;
-    lastPostedAt: string | null;
-}
-export interface TopicActivity {
-    label: string;
-    url: string;
-    discussionCount: number;
-    lastPostedAt: string | null;
-}
-export interface SubjectDiscussion {
-    discussion: DiscussionActivity | null;
-    topics: TopicActivity[];
 }
 ```
 

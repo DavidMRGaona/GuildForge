@@ -8,7 +8,6 @@ const SRC = resolve(import.meta.dirname, '../..');
 const ENTRIES = [
     '@/components/calendar/AddToCalendarMenu.vue',
     '@/components/calendar/ModuleEventCalendar.vue',
-    '@/components/discussions/SubjectDiscussion.vue',
     '@/components/form',
     '@/components/knowledge/HelpLink.vue',
     '@/components/layout/ModuleSlot.vue',
