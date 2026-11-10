@@ -106,6 +106,17 @@ final class MediaLibraryPageTest extends TestCase
         $page->callAction('toggleLayout')->assertSet('display', 'grid');
     }
 
+    public function test_grid_wrapper_carries_the_scoping_class_and_list_does_not(): void
+    {
+        $this->file('events/a');
+        $this->actingAs($this->deleter());
+
+        $page = Livewire::test(MediaLibraryPage::class);
+        $page->assertSeeHtml('media-library-grid')->assertSeeHtml('whitespace-nowrap');
+
+        $page->callAction('toggleLayout')->assertDontSeeHtml('media-library-grid');
+    }
+
     public function test_grid_shows_thumbnail_title_origin_and_status(): void
     {
         $file = $this->file('events/a');

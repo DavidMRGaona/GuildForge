@@ -227,6 +227,8 @@ final class MediaLibraryPage extends Page implements HasTable
         // Cards hide no column, so they need no «Ver detalles»
         return $table
             ->contentGrid(['md' => 3, 'xl' => 4])
+            // Scopes the theme rules that lay the selection checkbox over the thumbnail (core#495)
+            ->extraAttributes(['class' => 'media-library-grid'])
             ->recordActions([ActionGroup::make([$this->viewDetailsAction(), $rowDelete])]);
     }
 
@@ -330,11 +332,13 @@ final class MediaLibraryPage extends Page implements HasTable
                     $this->sizeColumn()
                         ->size(TextSize::Small)
                         ->color('gray')
+                        ->extraAttributes(['class' => 'whitespace-nowrap'])
                         ->alignEnd(),
                     $this->usagesCountColumn()
                         ->formatStateUsing(fn (int $state): string => trans_choice('filament.media_library.usages_count', $state, ['count' => $state]))
                         ->size(TextSize::Small)
                         ->color('gray')
+                        ->extraAttributes(['class' => 'whitespace-nowrap'])
                         ->alignEnd()
                         ->grow(false),
                 ]),
