@@ -61,13 +61,14 @@ Offering it:
 
 Listening: check the capability with `instanceof` on the source from `PublicationSourceRegistryInterface::source($type)`. Read `roster()` and `rostersOf()` again when the queued job runs, never from the event. The registry does not change: a source without the capability simply has no roster.
 
-## Discussion activity on pages
+## Conversation of a record
 
-A page that shows a publication (an event, a game table, a campaign) may show the activity of its discussion elsewhere: messages, the last one, a button to comment, and topics such as its game system. Requirement: the core release with core#470.
+The conversation of a record (comments, replies) is drawn by a module, not by the core. A page offers the `subject-discussion` slot with the record's publication type and id, and a forum module fills it with `registerSlots()`:
 
-- Ask `App\Application\Discussions\Contracts\SubjectDiscussionInterface::forSubject($type, $id, $userId)` (the publication's type and id, and the signed-in account or null) in the page's controller and pass `->toArray($timezone)` as the `discussion` prop. Catch any `Throwable`, report it and pass null: the page always shows, without the block when something fails.
-- Render it with the shared component `@/components/discussions/SubjectDiscussion.vue` (`<SubjectDiscussion :discussion="discussion" />`, types `SubjectDiscussion`, `DiscussionActivity` and `TopicActivity` in `@/types/models`). With null it renders nothing.
-- `SubjectDiscussionDTO` holds `discussion` (`DiscussionActivityDTO`: `url`, `actionUrl`, `commentCount`, `lastPostedAt`) and `topics` (`TopicActivityDTO`: `label`, `url`, `discussionCount`, `lastPostedAt`); links are absolute http(s) URLs. With nothing to show the answer is null, never an empty DTO.
-- The core binds `NullSubjectDiscussion` (always null); a forum module replaces it and decides what each person may see. Every page view asks it, so it must be cheap: it reads what it keeps and never calls the forum while answering a page.
+```vue
+<ModuleSlot name="subject-discussion" :props="{ subjectType: 'game-table', subjectId: table.id }" />
+```
 
-The core's event page does it already.
+- `subjectType` and `subjectId` are the type and id of the record's publication source, and reach the registered component as props. Wrap the slot in a box that hides itself when empty (`class="empty:hidden"`): with no module filling it, nothing is drawn.
+- The core page of an event does it with `subjectType: 'event'`. The core offers no summary of a discussion any more (`SubjectDiscussionInterface` and its component are gone): a module that wants one in its page draws it itself.
+

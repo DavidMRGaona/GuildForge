@@ -264,30 +264,3 @@ export interface SocialMediaLinks {
     youtube?: string | undefined;
     twitch?: string | undefined;
 }
-
-/**
- * A record's own discussion elsewhere (a forum), as `SubjectDiscussionInterface` gives it:
- * `actionUrl` is where to go to comment (it may sign the person in first).
- */
-export interface DiscussionActivity {
-    url: string;
-    actionUrl: string;
-    commentCount: number;
-    /** ISO 8601 in the display zone */
-    lastPostedAt: string | null;
-}
-
-/** Activity about something the record is about (its game system, for instance). */
-export interface TopicActivity {
-    label: string;
-    url: string;
-    discussionCount: number;
-    /** ISO 8601 in the display zone */
-    lastPostedAt: string | null;
-}
-
-/** The `discussion` prop of record pages; null when there is nothing to show. */
-export interface SubjectDiscussion {
-    discussion: DiscussionActivity | null;
-    topics: TopicActivity[];
-}

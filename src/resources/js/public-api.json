@@ -15,7 +15,6 @@
     "entries": {
         "@/components/calendar/AddToCalendarMenu.vue": "resources/js/components/calendar/AddToCalendarMenu.vue",
         "@/components/calendar/ModuleEventCalendar.vue": "resources/js/components/calendar/ModuleEventCalendar.vue",
-        "@/components/discussions/SubjectDiscussion.vue": "resources/js/components/discussions/SubjectDiscussion.vue",
         "@/components/form": "resources/js/components/form/index.ts",
         "@/components/knowledge/HelpLink.vue": "resources/js/components/knowledge/HelpLink.vue",
         "@/components/layout/ModuleSlot.vue": "resources/js/components/layout/ModuleSlot.vue",

@@ -5,9 +5,6 @@
     "@/components/calendar/ModuleEventCalendar.vue": [
         "default"
     ],
-    "@/components/discussions/SubjectDiscussion.vue": [
-        "default"
-    ],
     "@/components/form": [
         "FormCheckbox",
         "FormCheckboxGroup",
