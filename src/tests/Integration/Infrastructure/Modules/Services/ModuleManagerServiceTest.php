@@ -10,6 +10,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
+use App\Domain\Modules\Exceptions\ModuleCannotUninstallException;
 use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
@@ -20,6 +21,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -540,6 +542,55 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertDatabaseMissing('modules', [
             'name' => 'test-module',
         ]);
+    }
+
+    public function test_uninstall_with_delete_data_says_so_when_a_migration_cannot_be_undone_and_keeps_the_module(): void
+    {
+        $this->createTestModule('test-module');
+        $migrations = "{$this->testModulesPath}/test-module/database/migrations";
+        mkdir($migrations, 0755, true);
+        file_put_contents("{$migrations}/2026_01_01_000000_failing.php", <<<'PHP'
+            <?php
+
+            use Illuminate\Database\Migrations\Migration;
+            use Illuminate\Support\Facades\Schema;
+
+            return new class extends Migration
+            {
+                public function up(): void
+                {
+                    Schema::create('uninstall_failing_widgets', fn ($table) => $table->id());
+                }
+
+                public function down(): void
+                {
+                    throw new RuntimeException('Down failed on purpose');
+                }
+            };
+            PHP);
+        ModuleModel::create([
+            'name' => 'test-module',
+            'path' => "{$this->testModulesPath}/test-module",
+            'display_name' => 'Test Module',
+            'version' => '1.0.0',
+            'description' => 'Test module',
+            'author' => 'Test Author',
+            'status' => ModuleStatus::Disabled->value,
+            'requires' => null,
+            'installed_at' => now(),
+        ]);
+        Artisan::call('migrate', ['--path' => $migrations, '--realpath' => true, '--force' => true]);
+
+        try {
+            $this->service->uninstall(ModuleName::fromString('test-module'), true);
+            $this->fail('The uninstall should have failed');
+        } catch (ModuleCannotUninstallException $e) {
+            $this->assertStringContainsString('Down failed on purpose', $e->getMessage());
+        }
+
+        // Nothing was deleted: the module is still there to try again
+        $this->assertDatabaseHas('modules', ['name' => 'test-module']);
+        $this->assertDirectoryExists("{$this->testModulesPath}/test-module");
     }
 
     public function test_disable_keeps_the_module_permissions_on_the_roles_that_hold_them(): void

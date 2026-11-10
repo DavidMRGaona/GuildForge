@@ -88,6 +88,56 @@ final class ModuleMigrationRunnerErrorsTest extends TestCase
         $this->runner->rollback($this->module());
     }
 
+    public function test_rolling_back_everything_undoes_the_migrations_of_the_module_whenever_they_ran(): void
+    {
+        // Three migrations of the module, then more from another module and the module's own, later on
+        foreach ([1, 2, 3] as $n) {
+            $this->writeMigration(
+                up: "Schema::create('mmr_test_t{$n}', fn (\$table) => \$table->id());",
+                down: "Schema::dropIfExists('mmr_test_t{$n}');",
+                name: "2026_01_01_00000{$n}_mmr_test_{$n}",
+            );
+        }
+        $this->runner->run($this->module());
+
+        $other = 'mmr-other';
+        File::makeDirectory($this->modulesPath.'/'.$other.'/database/migrations', 0755, true);
+        foreach ([1, 2, 3, 4, 5] as $n) {
+            $this->writeMigration(
+                up: "Schema::create('mmr_other_t{$n}', fn (\$table) => \$table->id());",
+                down: "Schema::dropIfExists('mmr_other_t{$n}');",
+                name: "2026_02_01_00000{$n}_mmr_other_{$n}",
+                module: $other,
+            );
+        }
+        $this->runner->run($this->moduleNamed($other));
+
+        $this->runner->rollbackAll($this->module());
+
+        foreach ([1, 2, 3] as $n) {
+            $this->assertFalse(Schema::hasTable("mmr_test_t{$n}"), "mmr_test_t{$n} is still there");
+            $this->assertDatabaseMissing('migrations', ['migration' => "2026_01_01_00000{$n}_mmr_test_{$n}"]);
+        }
+        foreach ([1, 2, 3, 4, 5] as $n) {
+            $this->assertTrue(Schema::hasTable("mmr_other_t{$n}"), "mmr_other_t{$n} was removed");
+            $this->assertDatabaseHas('migrations', ['migration' => "2026_02_01_00000{$n}_mmr_other_{$n}"]);
+        }
+    }
+
+    public function test_a_failing_rollback_of_everything_reaches_the_caller(): void
+    {
+        $this->writeMigration(
+            up: "Schema::create('mmr_test_widgets', fn (\$table) => \$table->id());",
+            down: "throw new RuntimeException('Rollback failed on purpose');",
+        );
+        $this->runner->run($this->module());
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Rollback failed on purpose');
+
+        $this->runner->rollbackAll($this->module());
+    }
+
     public function test_falling_back_to_the_default_path_logs_a_warning(): void
     {
         $log = Log::spy();
@@ -101,10 +151,10 @@ final class ModuleMigrationRunnerErrorsTest extends TestCase
                 && $context === ['stored_path' => $stalePath, 'path' => $this->modulesPath.'/'.self::MODULE]);
     }
 
-    private function writeMigration(string $up, string $down = ''): void
+    private function writeMigration(string $up, string $down = '', string $name = '2026_01_01_000000_mmr_test', string $module = self::MODULE): void
     {
         File::put(
-            $this->modulesPath.'/'.self::MODULE.'/database/migrations/2026_01_01_000000_mmr_test.php',
+            $this->modulesPath.'/'.$module.'/database/migrations/'.$name.'.php',
             <<<PHP
             <?php
 
@@ -129,9 +179,14 @@ final class ModuleMigrationRunnerErrorsTest extends TestCase
 
     private function module(?string $path = null): Module
     {
+        return $this->moduleNamed(self::MODULE, $path);
+    }
+
+    private function moduleNamed(string $name, ?string $path = null): Module
+    {
         return new Module(
             id: ModuleId::generate(),
-            name: new ModuleName(self::MODULE),
+            name: new ModuleName($name),
             displayName: 'Migration runner test',
             description: 'Module whose migrations the test writes',
             version: ModuleVersion::fromString('1.0.0'),
@@ -143,7 +198,7 @@ final class ModuleMigrationRunnerErrorsTest extends TestCase
                 requiredExtensions: [],
             ),
             status: ModuleStatus::Enabled,
-            path: $path ?? $this->modulesPath.'/'.self::MODULE,
+            path: $path ?? $this->modulesPath.'/'.$name,
         );
     }
 }
