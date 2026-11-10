@@ -77,12 +77,15 @@ final class EventModelFactory extends Factory
     }
 
     /**
-     * Indicate that the event is in the past.
+     * Indicate that the event is in the past: it has always ended.
+     *
+     * The start is drawn at least four days back, so even the longest end
+     * (start + 72 hours, or start + 2 days with multiDay()) lies behind now.
      */
     public function past(): static
     {
         return $this->state(function (array $attributes): array {
-            $startDate = $this->faker->dateTimeBetween('-3 months', '-1 day');
+            $startDate = $this->faker->dateTimeBetween('-3 months', '-4 days');
 
             return [
                 'start_date' => $startDate,
