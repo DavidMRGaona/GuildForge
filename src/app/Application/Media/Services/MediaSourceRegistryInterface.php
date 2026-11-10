@@ -33,6 +33,14 @@ interface MediaSourceRegistryInterface
     public function source(string $type): ?MediaUsageSourceInterface;
 
     /**
+     * Registered classes that may own files but could not be loaded: they failed to resolve, are no media
+     * usage source, or their type() threw. A source skipped because its type was taken is not listed.
+     *
+     * @return list<class-string>
+     */
+    public function unresolved(): array;
+
+    /**
      * The source whose claimed folder is the longest prefix of the file's path, ignoring matches
      * that fall inside one of that source's excluded subfolders.
      */

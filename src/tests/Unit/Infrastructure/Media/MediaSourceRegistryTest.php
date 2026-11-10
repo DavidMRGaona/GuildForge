@@ -9,6 +9,8 @@ use App\Infrastructure\Media\Services\MediaSourceRegistry;
 use ArrayObject;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
+use stdClass;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\UnresolvableMediaSource;
 use Tests\TestCase;
@@ -113,6 +115,47 @@ final class MediaSourceRegistryTest extends TestCase
 
         $this->assertCount(1, $this->registry->sources());
         $log->shouldHaveReceived('warning')->once();
+    }
+
+    #[Test]
+    public function test_unresolved_lists_the_classes_that_could_not_be_loaded(): void
+    {
+        $this->app->bind('test.media.not-a-source', static fn (): stdClass => new stdClass);
+        $this->app->bind('test.media.broken-type', static fn (): FakeMediaSource => new class extends FakeMediaSource
+        {
+            public function type(): string
+            {
+                throw new RuntimeException('no type');
+            }
+        });
+        $this->registry->registerMany([
+            UnresolvableMediaSource::class,
+            $this->alias('test.media.not-a-source'),
+            $this->alias('test.media.broken-type'),
+            $this->fake('ok', ['ok/']),
+        ]);
+        // A source skipped because its type is taken is a configuration warning, not a broken source
+        $this->app->bind('test.media.ok-again', static fn (): FakeMediaSource => new FakeMediaSource('ok', ['again/']));
+        $this->registry->register($this->alias('test.media.ok-again'));
+
+        $this->assertSame([
+            UnresolvableMediaSource::class,
+            'test.media.not-a-source',
+            'test.media.broken-type',
+        ], $this->registry->unresolved());
+        $this->assertCount(1, $this->registry->sources());
+
+        $this->registry->clear();
+
+        $this->assertSame([], $this->registry->unresolved());
+    }
+
+    #[Test]
+    public function test_unresolved_is_empty_when_every_source_loads(): void
+    {
+        $this->registry->register($this->fake('ok', ['ok/']));
+
+        $this->assertSame([], $this->registry->unresolved());
     }
 
     #[Test]

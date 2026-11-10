@@ -343,7 +343,6 @@ final class CorePermissionDefinitions
                 label: __('authorization.permissions.media.delete'),
                 resource: 'media',
                 action: 'delete',
-                defaultRoles: ['editor'],
             ),
 
             // Knowledge base

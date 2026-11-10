@@ -26,6 +26,7 @@ use RuntimeException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\InMemoryMediaCatalog;
+use Tests\Support\Media\UnresolvableMediaSource;
 use Tests\TestCase;
 
 final class MediaDeletionServiceTest extends TestCase
@@ -162,6 +163,18 @@ final class MediaDeletionServiceTest extends TestCase
         $this->source('events');
         $this->source('articles', usesFile: static fn (): bool => throw new RuntimeException('database down'));
         $this->file('events/a');
+
+        $result = $this->service()->delete([new MediaFileId('events/a')], $this->deleter());
+
+        $this->assertRefused($result, 'events/a', MediaDeletionRefusal::CheckFailed);
+    }
+
+    public function test_a_broken_source_refuses_every_file(): void
+    {
+        // A source that cannot be built cannot be asked whether it uses the file
+        $this->source('events');
+        $this->file('events/a');
+        $this->registry->register(UnresolvableMediaSource::class);
 
         $result = $this->service()->delete([new MediaFileId('events/a')], $this->deleter());
 

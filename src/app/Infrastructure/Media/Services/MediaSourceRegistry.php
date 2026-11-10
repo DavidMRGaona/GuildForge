@@ -24,6 +24,9 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
      */
     private ?array $resolved = null;
 
+    /** @var list<class-string> Classes that could not be loaded, found by the same pass that resolves the sources */
+    private array $unresolved = [];
+
     /** @var array<string, true> Problems already logged, by source class and kind, so each is reported once */
     private array $warned = [];
 
@@ -78,6 +81,16 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         return $this->resolveAll()[$type]['source'] ?? null;
     }
 
+    /**
+     * @return list<class-string>
+     */
+    public function unresolved(): array
+    {
+        $this->resolveAll();
+
+        return $this->unresolved;
+    }
+
     public function claimingSource(MediaFileId $file): ?MediaUsageSourceInterface
     {
         $path = $file->value;
@@ -125,7 +138,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
 
     /**
      * Resolved sources by type with their module and folders, skipping the ones that cannot be loaded
-     * and any whose type is already taken. Built once until the registrations change.
+     * (kept in $unresolved) and any whose type is already taken. Built once until the registrations change.
      *
      * @return array<string, array{source: MediaUsageSourceInterface, module: ?string, folders: list<string>, excluded: list<string>|null}>
      */
@@ -136,11 +149,14 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         }
 
         $resolved = [];
+        $unresolved = [];
 
         foreach ($this->sources as $sourceClass => $module) {
             $source = $this->resolve($sourceClass, $module);
 
             if (! $source instanceof MediaUsageSourceInterface) {
+                $unresolved[] = $sourceClass;
+
                 continue;
             }
 
@@ -152,6 +168,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
                     'module' => $module,
                     'error' => $exception->getMessage(),
                 ]);
+                $unresolved[] = $sourceClass;
 
                 continue;
             }
@@ -174,6 +191,8 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
                 'excluded' => $this->excludedSubfolders($source),
             ];
         }
+
+        $this->unresolved = $unresolved;
 
         return $this->resolved = $resolved;
     }

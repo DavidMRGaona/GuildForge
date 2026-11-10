@@ -34,6 +34,9 @@ use Throwable;
  * Deletes media files only when they are provably unused right now. The index may be stale (a refresh or
  * a sync can be running), so each file is checked again against the live sources, and any check that
  * fails or cannot be made keeps the file. Nothing is written unless the remote store confirms.
+ *
+ * A record saved between the checks and the remote deletion could still start using the file; that window
+ * (milliseconds per file) is accepted, since closing it would mean locking every source.
  */
 final readonly class MediaDeletionService implements MediaDeletionServiceInterface
 {
@@ -125,6 +128,11 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
 
             if ($file === null) {
                 return MediaDeletionRefusal::NotIndexed;
+            }
+
+            // A source that cannot be built cannot say whether it uses the file: nothing is deleted meanwhile
+            if ($this->registry->unresolved() !== []) {
+                return MediaDeletionRefusal::CheckFailed;
             }
 
             if ($this->inHiddenFolder($id)) {
