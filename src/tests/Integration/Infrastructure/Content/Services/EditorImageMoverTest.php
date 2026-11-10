@@ -284,7 +284,7 @@ final class EditorImageMoverTest extends TestCase
             'body_format' => 'html',
             'body' => $body,
             'body_text' => 'Cuerpo.',
-            'content_hash' => hash('sha256', $body),
+            'content_hash' => sha1($body),
             'conditions' => [],
             'related' => [],
         ]);
