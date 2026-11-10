@@ -8,6 +8,7 @@ use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
+use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Media\Enums\MediaDeletionRefusal;
 use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Filament\Pages\MediaLibraryPage;
@@ -16,6 +17,7 @@ use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaDeletionModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
+use App\Infrastructure\Media\Services\MediaIndexer;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
@@ -420,6 +422,43 @@ final class MediaLibraryPageTest extends TestCase
         $this->actingAs($this->deleter());
 
         Livewire::test(MediaLibraryPage::class)->assertDontSee(__('filament.media_library.deletion_disabled.body'));
+    }
+
+    public function test_a_failed_reconciliation_newer_than_the_last_success_is_warned(): void
+    {
+        $settings = $this->app->make(SettingsServiceInterface::class);
+        $settings->set(MediaIndexer::LAST_SYNCED_KEY, '2026-11-08T03:00:00+00:00');
+        $settings->set(MediaIndexer::LAST_SYNC_FAILED_KEY, '2026-11-10T03:00:00+00:00');
+        $this->actingAs($this->viewer());
+
+        Livewire::test(MediaLibraryPage::class)
+            ->assertSee(__('filament.media_library.sync_failed.title'))
+            ->assertSeeHtml('data-media-sync-failed');
+    }
+
+    public function test_a_failure_without_any_success_is_warned(): void
+    {
+        $this->app->make(SettingsServiceInterface::class)->set(MediaIndexer::LAST_SYNC_FAILED_KEY, '2026-11-10T03:00:00+00:00');
+        $this->actingAs($this->viewer());
+
+        Livewire::test(MediaLibraryPage::class)->assertSeeHtml('data-media-sync-failed');
+    }
+
+    public function test_a_failure_older_than_the_last_success_is_not_warned(): void
+    {
+        $settings = $this->app->make(SettingsServiceInterface::class);
+        $settings->set(MediaIndexer::LAST_SYNCED_KEY, '2026-11-10T03:00:00+00:00');
+        $settings->set(MediaIndexer::LAST_SYNC_FAILED_KEY, '2026-11-08T03:00:00+00:00');
+        $this->actingAs($this->viewer());
+
+        Livewire::test(MediaLibraryPage::class)->assertDontSeeHtml('data-media-sync-failed');
+    }
+
+    public function test_no_failure_is_not_warned(): void
+    {
+        $this->actingAs($this->viewer());
+
+        Livewire::test(MediaLibraryPage::class)->assertDontSeeHtml('data-media-sync-failed');
     }
 
     public function test_delete_hidden_without_permission(): void

@@ -171,6 +171,46 @@ final class MediaIndexerTest extends TestCase
 
         $this->assertSame('2026-11-10T03:15:00+00:00', $this->app->make(SettingsServiceInterface::class)->get('media_library_last_synced_at'));
         $this->assertSame('2026-11-10T03:15:00+00:00', $this->indexer()->lastSyncedAt()?->format(DATE_ATOM));
+        $this->assertNull($this->indexer()->lastSyncFailedAt());
+    }
+
+    public function test_a_sync_whose_catalog_fails_is_not_a_reconciliation(): void
+    {
+        $settings = $this->app->make(SettingsServiceInterface::class);
+        $settings->set('media_library_last_synced_at', '2026-11-09T03:00:00+00:00');
+        Carbon::setTestNow(Carbon::parse('2026-11-10 03:15:00', 'UTC'));
+        $this->catalog->unavailable = true;
+
+        $this->indexer()->sync();
+
+        $this->assertSame('2026-11-09T03:00:00+00:00', $this->indexer()->lastSyncedAt()?->format(DATE_ATOM));
+        $this->assertSame('2026-11-10T03:15:00+00:00', $settings->get('media_library_last_sync_failed_at'));
+        $this->assertSame('2026-11-10T03:15:00+00:00', $this->indexer()->lastSyncFailedAt()?->format(DATE_ATOM));
+    }
+
+    public function test_a_sync_with_a_failing_source_is_not_a_reconciliation(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-10 03:15:00', 'UTC'));
+        $this->source('broken')->failing = true;
+
+        $this->indexer()->sync();
+
+        $this->assertNull($this->indexer()->lastSyncedAt());
+        $this->assertSame('2026-11-10T03:15:00+00:00', $this->indexer()->lastSyncFailedAt()?->format(DATE_ATOM));
+    }
+
+    public function test_a_later_success_keeps_the_failure_but_is_newer(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-10 03:15:00', 'UTC'));
+        $this->catalog->unavailable = true;
+        $this->indexer()->sync();
+
+        Carbon::setTestNow(Carbon::parse('2026-11-10 04:00:00', 'UTC'));
+        $this->catalog->unavailable = false;
+        $this->indexer()->sync();
+
+        $this->assertSame('2026-11-10T04:00:00+00:00', $this->indexer()->lastSyncedAt()?->format(DATE_ATOM));
+        $this->assertSame('2026-11-10T03:15:00+00:00', $this->indexer()->lastSyncFailedAt()?->format(DATE_ATOM));
     }
 
     public function test_sync_replaces_the_usages_of_each_active_source(): void

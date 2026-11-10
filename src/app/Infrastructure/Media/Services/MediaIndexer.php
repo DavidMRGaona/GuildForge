@@ -29,7 +29,11 @@ use Throwable;
  */
 final readonly class MediaIndexer implements MediaIndexerInterface
 {
+    /** When the last complete reconciliation ended: the whole catalog listed and every source read */
     public const string LAST_SYNCED_KEY = 'media_library_last_synced_at';
+
+    /** When the last reconciliation that was not complete ended */
+    public const string LAST_SYNC_FAILED_KEY = 'media_library_last_sync_failed_at';
 
     public function __construct(
         private MediaSourceRegistryInterface $registry,
@@ -70,7 +74,11 @@ final readonly class MediaIndexer implements MediaIndexerInterface
             }
         }
 
-        $this->settings->set(self::LAST_SYNCED_KEY, CarbonImmutable::now('UTC')->toIso8601String());
+        // A partial run must not look like a reconciliation: the page warns while the failure is the newest
+        $this->settings->set(
+            $catalogComplete && $failedSources === [] ? self::LAST_SYNCED_KEY : self::LAST_SYNC_FAILED_KEY,
+            CarbonImmutable::now('UTC')->toIso8601String(),
+        );
 
         return new MediaSyncResultDTO(
             catalogComplete: $catalogComplete,
@@ -83,7 +91,17 @@ final readonly class MediaIndexer implements MediaIndexerInterface
 
     public function lastSyncedAt(): ?DateTimeImmutable
     {
-        $value = $this->settings->get(self::LAST_SYNCED_KEY);
+        return $this->instant(self::LAST_SYNCED_KEY);
+    }
+
+    public function lastSyncFailedAt(): ?DateTimeImmutable
+    {
+        return $this->instant(self::LAST_SYNC_FAILED_KEY);
+    }
+
+    private function instant(string $key): ?DateTimeImmutable
+    {
+        $value = $this->settings->get($key);
 
         if (! is_string($value) || trim($value) === '') {
             return null;

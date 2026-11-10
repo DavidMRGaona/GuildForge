@@ -12,6 +12,16 @@
             />
         @endunless
 
+        @if ($stats['lastSyncFailedAt'] !== null)
+            <x-filament::section
+                icon="heroicon-o-exclamation-triangle"
+                icon-color="danger"
+                :heading="__('filament.media_library.sync_failed.title')"
+                :description="__('filament.media_library.sync_failed.body', ['date' => $stats['lastSyncFailedAt']])"
+                data-media-sync-failed
+            />
+        @endif
+
         <dl class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5" data-media-library-stats>
             @foreach ([
                 'files' => $stats['files'],

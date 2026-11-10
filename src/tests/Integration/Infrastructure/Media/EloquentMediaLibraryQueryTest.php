@@ -172,8 +172,16 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $stats = $this->library()->stats();
 
         $this->assertSame('2026-11-09T03:00:00+00:00', $stats->lastSyncedAt?->format(DATE_ATOM));
+        $this->assertNull($stats->lastSyncFailedAt);
         $this->assertSame(0, $stats->files);
         $this->assertSame(0, $stats->bytes);
+    }
+
+    public function test_stats_carry_the_last_failed_sync(): void
+    {
+        $this->app->make(SettingsServiceInterface::class)->set(MediaIndexer::LAST_SYNC_FAILED_KEY, '2026-11-10T03:00:00+00:00');
+
+        $this->assertSame('2026-11-10T03:00:00+00:00', $this->library()->stats()->lastSyncFailedAt?->format(DATE_ATOM));
     }
 
     public function test_a_source_whose_folders_cannot_be_read_claims_nothing(): void

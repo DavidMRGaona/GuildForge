@@ -992,6 +992,10 @@ return [
             'title' => 'Borrado desactivado',
             'body' => 'En esta instalación no se pueden borrar archivos de la biblioteca. Se activa en la configuración del servidor (MEDIA_LIBRARY_DELETE_ENABLED).',
         ],
+        'sync_failed' => [
+            'title' => 'La última reconciliación no ha terminado bien',
+            'body' => 'El :date no se pudo leer Cloudinary entero o algún origen falló, así que los totales y los estados pueden estar desfasados. Borrar sigue comprobándolo todo de nuevo. Revisa el registro del servidor y pulsa «Actualizar».',
+        ],
         'actions' => [
             'refresh' => 'Actualizar',
             'deletions' => 'Borrados',

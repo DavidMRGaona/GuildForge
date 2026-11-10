@@ -154,12 +154,13 @@ final class MediaLibraryPage extends Page implements HasTable
     /**
      * Totals above the table, formatted.
      *
-     * @return array{files: string, bytes: string, unusedFiles: string, unusedBytes: string, lastSyncedAt: string}
+     * @return array{files: string, bytes: string, unusedFiles: string, unusedBytes: string, lastSyncedAt: string, lastSyncFailedAt: ?string}
      */
     public function getStats(): array
     {
         $stats = $this->library()->stats();
         $locale = app()->getLocale();
+        $timezone = resolve(TimezoneServiceInterface::class);
 
         return [
             'files' => (string) Number::format($stats->files, locale: $locale),
@@ -167,8 +168,12 @@ final class MediaLibraryPage extends Page implements HasTable
             'unusedFiles' => (string) Number::format($stats->unusedFiles, locale: $locale),
             'unusedBytes' => FileSize::format($stats->unusedBytes),
             'lastSyncedAt' => $stats->lastSyncedAt instanceof DateTimeImmutable
-                ? resolve(TimezoneServiceInterface::class)->format($stats->lastSyncedAt)
+                ? $timezone->format($stats->lastSyncedAt)
                 : __('filament.media_library.stats.never'),
+            // Only while the newest reconciliation is the failed one
+            'lastSyncFailedAt' => $stats->lastSyncFailed() && $stats->lastSyncFailedAt instanceof DateTimeImmutable
+                ? $timezone->format($stats->lastSyncFailedAt)
+                : null,
         ];
     }
 

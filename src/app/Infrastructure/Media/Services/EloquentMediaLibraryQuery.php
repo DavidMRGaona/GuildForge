@@ -92,6 +92,7 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
             unusedFiles: (clone $unused)->count(),
             unusedBytes: (int) $unused->sum('bytes'),
             lastSyncedAt: $this->indexer->lastSyncedAt(),
+            lastSyncFailedAt: $this->indexer->lastSyncFailedAt(),
         );
     }
 

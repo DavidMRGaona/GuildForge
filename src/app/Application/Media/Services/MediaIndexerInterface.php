@@ -20,12 +20,19 @@ interface MediaIndexerInterface
 
     /**
      * Reconciles the whole index: files from a complete remote listing (none added or removed otherwise)
-     * and the usages of every active source (a failing source keeps its rows).
+     * and the usages of every active source (a failing source keeps its rows). Only a complete run counts as
+     * the last sync; any other is recorded as the last failed one.
      */
     public function sync(): MediaSyncResultDTO;
 
     /**
-     * When the last sync ended, or null when it never ran.
+     * When the last complete sync ended (the whole remote listing applied and every source read), or null
+     * when none has.
      */
     public function lastSyncedAt(): ?DateTimeImmutable;
+
+    /**
+     * When the last sync that was not complete ended, or null when none failed.
+     */
+    public function lastSyncFailedAt(): ?DateTimeImmutable;
 }
