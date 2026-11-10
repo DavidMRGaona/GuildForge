@@ -21,7 +21,7 @@ A source implements `App\Application\Media\Contracts\MediaUsageSourceInterface`:
 |--------|---------|
 | `type()` | Stable identifier of the source, prefixed with the module (`<module>.<things>`, such as `gametables.tables`) and unique across every source. Stored with each usage: never rename it |
 | `label()` | Plural, user-facing name of the origin («Partidas»), translated |
-| `folders()` | The folders the source claims, each **with a trailing slash** (`gametables/tables/`) |
+| `folders()` | The folders the source claims, each **with a trailing slash** (`game-tables/`; a campaigns source of the same module claims `campaigns/`) |
 | `excludedSubfolders()` | Subfolders of the claimed folders the source does not claim, relative to each folder and with a trailing slash; `[]` when there are none |
 | `hidden()` | `true` only for sources whose files must not be listed (avatars); their files can never be deleted |
 | `usages()` | Every use of a file, as an `iterable<MediaUsageDTO>` |
@@ -34,7 +34,7 @@ A source implements `App\Application\Media\Contracts\MediaUsageSourceInterface`:
 ### Rules
 
 1. **Prefix the type with the module.** The registry keeps the first source registered for a type and skips (and logs) any later one; whichever registers first, a duplicate type is a broken source, and while one exists the library refuses to delete any file. A module type called `events` would collide with the core events.
-2. **Claim your own folders, with a trailing slash.** `gametables/` matches `gametables/a.jpg` but not `gametables-old/a.jpg`. A file belongs to the source with the longest matching folder. A source with an empty folder claims nothing.
+2. **Claim your own folders, with a trailing slash.** `game-tables/` matches `game-tables/2026/11/a.jpg` but not `game-tables-old/a.jpg`. A file belongs to the source with the longest matching folder. A source with an empty folder claims nothing.
 3. **Leave `content/` to the sources that read rich text.** Images uploaded from the editor into a record's text go to a `content/` subfolder of the claimed folder; `EloquentColumnMediaSource` excludes it (`['content/']`), so the source that reads the text can claim it without fighting the column source. Until one claims it, those files have an unknown origin and are never deleted.
 4. **Read your rich text too.** A URL of this site pasted into a module's text protects the file only when a source of the module reads that text. Extract every delivery URL from the HTML and resolve it with `MediaFileIdResolverInterface::fromStoredPath()` (it returns `null` for other hosts and prefixes); in `usesFile()`, prefilter with `App\Infrastructure\Media\Sources\StoredMediaIdPrefilter::likeClause()` and confirm in PHP. `RichTextMediaSource` is the example.
 5. **Count soft-deleted records.** A trashed record can be restored, and its image must still count as used. `EloquentColumnMediaSource` already queries with trashed records.
@@ -52,15 +52,15 @@ final class TableMediaSource extends EloquentColumnMediaSource
 {
     public function type(): string { return 'gametables.tables'; }
 
-    public function label(): string { return __('gametables::media.sources.tables'); }
+    public function label(): string { return __('game-tables::media.sources.tables'); }
 
-    public function folders(): array { return ['gametables/tables/']; }
+    public function folders(): array { return ['game-tables/']; }
 
     protected function modelClass(): string { return TableModel::class; }
 
     protected function column(): string { return 'image_public_id'; }
 
-    protected function role(): string { return __('gametables::media.roles.image'); }
+    protected function role(): string { return __('game-tables::media.roles.image'); }
 
     protected function titleOf(Model $record): string { return (string) $record->getAttribute('title'); }
 
@@ -110,15 +110,15 @@ You can also call `MediaIndexerInterface::refresh($type, $recordId)` directly.
 
 | Command | What it does |
 |---------|--------------|
-| `media:sync` | Reconciles the index with the stored files and with the usages of every active source. Runs daily. A source that fails is reported and its rows are left as they were; the file listing adds or removes files only when it was read completely |
-| `media:forget-source {type} [--force]` | Deletes the usage rows of a type that no active source owns |
+| `media:sync` | Reconciles the index with the stored files and with the usages of every active source. Runs daily. A source that fails is reported and its rows are left as they were; the file listing adds or removes files only when it was read completely. Only a complete run updates «Última reconciliación»; any other is stored as the last failed one, and the page warns while it is the newest |
+| `media:forget-source {type} [--force]` | Deletes the usage rows of a type that no active source owns and whose module is no longer installed |
 
 ## Disabling or uninstalling a module
 
 The usage rows a source wrote stay in the index when its module is disabled or uninstalled. They are **kept on purpose**: the module's files then count as used by an inactive source and are refused for deletion («lo usaba un módulo que ahora no está activo»), because nobody can say whether the module will come back.
 
 - Enabling the module again makes its source active, and its rows are rewritten on the next sync.
-- When the module is gone for good, run `php artisan media:forget-source <type>` for each of its types. It refuses a type that still belongs to an active source. After that, its files count as unused (or as unknown origin if no source claims their folder).
+- When the module is gone for good, run `php artisan media:forget-source <type>` for each of its types. It refuses a type that still belongs to an active source, and a type whose rows belong to a module that is still installed (disabled modules included): uninstall the module first. After that, its files count as unused (or as unknown origin if no source claims their folder).
 
 ## Failing closed
 

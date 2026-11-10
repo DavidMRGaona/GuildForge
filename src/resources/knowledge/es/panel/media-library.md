@@ -21,6 +21,7 @@ En el menú lateral, abre **Contenido** y elige **Biblioteca de medios**. Arriba
 - Filtra por **Origen** (eventos, artículos, galerías…) y por **Estado**.
 - Pulsa **Ver ficha** en un archivo para ver su tamaño, sus dimensiones, su carpeta y los registros que lo usan. Si puedes editar uno de esos registros, la ficha te lleva a él con **Editar**.
 - Pulsa **Actualizar** para que la biblioteca vuelva a leer Cloudinary. Tarda unos minutos en ponerse al día. También se actualiza sola cada día.
+- Si la última actualización no termina bien (no se pudo leer Cloudinary entero o falló algún origen), arriba aparece un aviso y «Última reconciliación» conserva la fecha de la última que sí terminó. Mientras tanto, los totales pueden estar desfasados.
 
 ## Qué aparece y qué no
 
@@ -47,7 +48,7 @@ Si un módulo guarda sus registros en una papelera, los registros que se pueden 
 ## Borrar archivos
 
 1. Busca archivos con estado **Sin usar**. Puedes filtrar por **Estado**.
-2. Pulsa **Borrar** en uno, o marca varios y pulsa **Borrar seleccionados**.
+2. Pulsa **Borrar** en uno, o marca varios y pulsa **Borrar seleccionados**. Se marcan los de la página que estás viendo, y se borran como mucho 50 cada vez.
 3. Marca la casilla que confirma que entiendes que se borran para siempre y pulsa **Borrar para siempre**.
 
 > [!IMPORTANT]
