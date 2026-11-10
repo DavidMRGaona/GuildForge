@@ -63,10 +63,11 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
         private MimeTypeDetector $mimeTypes = new FinfoMimeTypeDetector,
     ) {}
 
-    public function move(bool $dryRun = false): EditorImageMoveReportDTO
+    public function move(bool $dryRun = false, array $hosts = []): EditorImageMoveReportDTO
     {
         $values = $this->values();
-        $moved = $broken = $failed = [];
+        $hosts = $this->siteHosts($hosts);
+        $moved = $broken = $failed = $otherHosts = [];
 
         /** @var list<array{value: array{label: string, table: string, column: string, id: string, html: string, origin: EditorImageOrigin}, images: list<array{tag: string, shown: string, path: string}>}> $plans */
         $plans = [];
@@ -77,13 +78,22 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
             $images = [];
 
             foreach ($this->tags->read($value['html']) as $tag) {
-                $path = $this->localPath($tag['src'], $tag['id']);
+                $shown = $tag['src'] ?? $tag['id'] ?? '';
+                $foreign = $tag['src'] !== null ? $this->storageUrlOnOtherHost($tag['src'], $hosts) : null;
+
+                if ($foreign !== null) {
+                    $otherHosts[] = $value['label'].': '.$shown.($this->isMovable($foreign['path'])
+                        ? ' (file found here: pass --host='.$foreign['host'].')'
+                        : ' (no such file here)');
+
+                    continue;
+                }
+
+                $path = $this->localPath($tag['src'], $tag['id'], $hosts);
 
                 if ($path === null) {
                     continue;
                 }
-
-                $shown = $tag['src'] ?? $tag['id'] ?? '';
 
                 if (! $this->isMovable($path)) {
                     $broken[] = $value['label'].': '.$shown;
@@ -150,7 +160,7 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
             }
         }
 
-        return new EditorImageMoveReportDTO(count($values), $moved, $broken, $failed);
+        return new EditorImageMoveReportDTO(count($values), $moved, $broken, $failed, $otherHosts);
     }
 
     /**
@@ -196,13 +206,16 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
      * The path on the local disk an image points at, or null when it is not a local image. Images
      * already in a content folder are on Cloudinary; the src wins over data-id, which Trix never wrote.
      */
-    private function localPath(?string $src, ?string $id): ?string
+    /**
+     * @param  list<string>  $hosts
+     */
+    private function localPath(?string $src, ?string $id, array $hosts): ?string
     {
         if ($id !== null && EditorImageOrigin::ofPath($id) instanceof EditorImageOrigin) {
             return null;
         }
 
-        $fromSrc = $src !== null ? $this->pathOfLocalUrl($src) : null;
+        $fromSrc = $src !== null ? $this->pathOfLocalUrl($src, $hosts) : null;
 
         if ($fromSrc !== null) {
             return $fromSrc;
@@ -216,28 +229,81 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
     }
 
     /**
-     * "/storage/<path>", relative or on the site's own host, as the local disk serves it.
+     * "/storage/<path>", relative or on a host of the site, as the local disk serves it.
+     *
+     * @param  list<string>  $hosts
      */
-    private function pathOfLocalUrl(string $src): ?string
+    private function pathOfLocalUrl(string $src, array $hosts): ?string
     {
-        $base = (string) config('filesystems.disks.'.self::LOCAL_DISK.'.url');
-        $prefix = rtrim((string) (parse_url($base, PHP_URL_PATH) ?? ''), '/').'/';
+        $url = $this->storageUrl($src);
+
+        if ($url === null || ($url['host'] !== null && ! in_array($url['host'], $hosts, true))) {
+            return null;
+        }
+
+        return $url['path'];
+    }
+
+    /**
+     * A "/storage/<path>" URL on a host that is not one of the site's: maybe a previous domain.
+     *
+     * @param  list<string>  $hosts
+     * @return array{host: string, path: string}|null
+     */
+    private function storageUrlOnOtherHost(string $src, array $hosts): ?array
+    {
+        $url = $this->storageUrl($src);
+
+        if ($url === null || $url['host'] === null || in_array($url['host'], $hosts, true)) {
+            return null;
+        }
+
+        return ['host' => $url['host'], 'path' => $url['path']];
+    }
+
+    /**
+     * The lowercase host (null when relative) and disk path of a "/storage/<path>" http(s) URL.
+     *
+     * @return array{host: ?string, path: string}|null
+     */
+    private function storageUrl(string $src): ?array
+    {
+        $prefix = rtrim((string) (parse_url($this->localBaseUrl(), PHP_URL_PATH) ?? ''), '/').'/';
         $url = parse_url($src);
 
         if ($url === false || $prefix === '/' || isset($url['scheme']) && ! in_array(strtolower($url['scheme']), ['http', 'https'], true)) {
             return null;
         }
 
-        $hosts = array_filter([parse_url($base, PHP_URL_HOST), parse_url((string) config('app.url'), PHP_URL_HOST)]);
-        $host = $url['host'] ?? null;
+        $path = $url['path'] ?? '';
 
-        if ($host !== null && ! in_array(strtolower($host), array_map(strtolower(...), $hosts), true)) {
+        if (! str_starts_with($path, $prefix)) {
             return null;
         }
 
-        $path = $url['path'] ?? '';
+        return [
+            'host' => isset($url['host']) ? strtolower($url['host']) : null,
+            'path' => rawurldecode(substr($path, strlen($prefix))),
+        ];
+    }
 
-        return str_starts_with($path, $prefix) ? rawurldecode(substr($path, strlen($prefix))) : null;
+    /**
+     * Hosts whose "/storage/" URLs are this site's: the local disk's, the application's and the
+     * previous ones passed in.
+     *
+     * @param  list<string>  $extra
+     * @return list<string>
+     */
+    private function siteHosts(array $extra): array
+    {
+        $hosts = [parse_url($this->localBaseUrl(), PHP_URL_HOST), parse_url((string) config('app.url'), PHP_URL_HOST), ...$extra];
+
+        return array_values(array_unique(array_map(strtolower(...), array_filter($hosts, is_string(...)))));
+    }
+
+    private function localBaseUrl(): string
+    {
+        return (string) config('filesystems.disks.'.self::LOCAL_DISK.'.url');
     }
 
     /**

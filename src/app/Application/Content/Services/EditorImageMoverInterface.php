@@ -16,6 +16,12 @@ interface EditorImageMoverInterface
      * Uploads every local image referenced in the stored HTML, points the HTML at it and deletes
      * the local copy once every value using it is saved. Running it again moves nothing new; with
      * $dryRun nothing is uploaded, written or deleted.
+     *
+     * Images count as local when their URL is relative or on the site's host; $hosts adds previous
+     * hosts of the site (lowercase host names). A "/storage/" URL on any other host is left alone and
+     * reported, saying whether its file is here.
+     *
+     * @param  list<string>  $hosts
      */
-    public function move(bool $dryRun = false): EditorImageMoveReportDTO;
+    public function move(bool $dryRun = false, array $hosts = []): EditorImageMoveReportDTO;
 }
