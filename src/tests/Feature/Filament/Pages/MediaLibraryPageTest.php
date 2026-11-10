@@ -657,6 +657,8 @@ final class MediaLibraryPageTest extends TestCase
 
     public function test_the_help_action_is_the_last_header_action(): void
     {
+        // The guide core.panel.media-library comes from the core catalog
+        $this->artisanCommand('knowledge:sync')->assertSuccessful()->run();
         $this->actingAs($this->deleter());
 
         $page = Livewire::test(MediaLibraryPage::class);
@@ -667,10 +669,7 @@ final class MediaLibraryPageTest extends TestCase
             array_values(array_filter($component->getCachedHeaderActions(), static fn (mixed $action): bool => $action instanceof Action)),
         );
 
-        $this->assertSame(['toggleLayout', 'refresh', 'deletions'], array_slice($names, 0, 3));
-        if (count($names) > 3) {
-            $this->assertSame('contextualHelp', $names[3]);
-        }
+        $this->assertSame(['toggleLayout', 'refresh', 'deletions', 'contextualHelp'], $names);
     }
 
     private function registerSource(): void

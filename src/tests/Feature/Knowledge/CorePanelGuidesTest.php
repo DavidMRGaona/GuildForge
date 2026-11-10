@@ -10,6 +10,7 @@ use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Filament\Pages\CoreUpdatesPage;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\KnowledgeBasePage;
+use App\Filament\Pages\MediaLibraryPage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\ModuleUpdatesPage;
 use App\Filament\Pages\Settings\AboutPageSettings;
@@ -56,6 +57,7 @@ final class CorePanelGuidesTest extends TestCase
         'core.panel.mail',
         'core.panel.modules',
         'core.panel.updates',
+        'core.panel.media-library',
     ];
 
     protected function setUp(): void
@@ -174,6 +176,7 @@ final class CorePanelGuidesTest extends TestCase
             ListMenuItems::class,
             ListUsers::class,
             ListRoles::class,
+            MediaLibraryPage::class,
         ] as $page) {
             yield class_basename($page) => [$page];
         }
