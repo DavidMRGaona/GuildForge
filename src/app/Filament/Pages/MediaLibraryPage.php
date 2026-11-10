@@ -10,6 +10,7 @@ use App\Application\Media\Services\MediaDeletionServiceInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\TimezoneServiceInterface;
+use App\Domain\Media\Enums\MediaDeletionKind;
 use App\Domain\Media\Enums\MediaDeletionRefusal;
 use App\Domain\Media\Enums\MediaFileStatus;
 use App\Domain\Media\Exceptions\InvalidMediaFileIdException;
@@ -806,7 +807,7 @@ final class MediaLibraryPage extends Page implements HasTable
     }
 
     /**
-     * @return list<array{fileId: string, origin: string, size: string, dimensions: ?string, outcome: string, deletedBy: string, deletedAt: string}>
+     * @return list<array{fileId: string, origin: string, size: string, dimensions: ?string, outcome: string, automatic: bool, deletedBy: ?string, deletedAt: string}>
      */
     private function deletionRows(): array
     {
@@ -827,8 +828,14 @@ final class MediaLibraryPage extends Page implements HasTable
                 'size' => $row->bytes !== null ? FileSize::format($row->bytes) : '—',
                 'dimensions' => $row->width !== null && $row->height !== null ? $row->width.' × '.$row->height : null,
                 'outcome' => (string) __('filament.media_library.deletions.outcomes.'.($row->outcome === 'missing' ? 'missing' : 'deleted')),
-                // The account may have been deleted since (the key is set to null then)
-                'deletedBy' => $row->deletedBy instanceof UserModel ? $row->deletedBy->name : (string) __('filament.media_library.deletions.removed_account'),
+                'automatic' => $row->kind === MediaDeletionKind::Automatic,
+                // The account may have been deleted since (the key is set to null then); a file released
+                // while nobody was signed in (a command) was never deleted by anyone
+                'deletedBy' => match (true) {
+                    $row->deletedBy instanceof UserModel => $row->deletedBy->name,
+                    $row->kind === MediaDeletionKind::Automatic && $row->getRawOriginal('deleted_by') === null => null,
+                    default => (string) __('filament.media_library.deletions.removed_account'),
+                },
                 'deletedAt' => $timezone->format($row->deleted_at),
             ])
             ->all());

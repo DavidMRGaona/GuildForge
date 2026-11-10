@@ -1066,7 +1066,9 @@ return [
             'empty' => 'Todavía no se ha borrado ningún archivo.',
             'limit' => '{1} Se muestra el último borrado.|[2,*] Se muestran los últimos :count borrados.',
             'by' => 'Por :name, el :date',
+            'by_nobody' => 'Automáticamente, el :date',
             'removed_account' => 'una cuenta eliminada',
+            'automatic' => 'al quitarlo de un registro',
             'outcomes' => [
                 'deleted' => 'borrado',
                 'missing' => 'ya no existía',
