@@ -16,6 +16,17 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
     /** @var array<class-string, ?string> Map of source class to owning module (null for core). */
     private array $sources = [];
 
+    /**
+     * Sources resolved since the registrations last changed: the sync and the panel ask for the claiming
+     * source of every file, so building them on each call would rebuild every source thousands of times.
+     *
+     * @var array<string, array{source: MediaUsageSourceInterface, module: ?string, folders: list<string>, excluded: list<string>|null}>|null
+     */
+    private ?array $resolved = null;
+
+    /** @var array<string, true> Problems already logged, by source class and kind, so each is reported once */
+    private array $warned = [];
+
     public function __construct(
         private readonly Container $container,
     ) {}
@@ -23,6 +34,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
     public function register(string $sourceClass, ?string $module = null): void
     {
         $this->sources[$sourceClass] = $module;
+        $this->resolved = null;
     }
 
     /**
@@ -41,11 +53,13 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
             $this->sources,
             static fn (?string $sourceModule): bool => $sourceModule !== $module
         );
+        $this->resolved = null;
     }
 
     public function clear(): void
     {
         $this->sources = [];
+        $this->resolved = null;
     }
 
     /**
@@ -54,14 +68,14 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
     public function sources(): array
     {
         return array_values(array_map(
-            static fn (array $entry): MediaUsageSourceInterface => $entry[0],
+            static fn (array $entry): MediaUsageSourceInterface => $entry['source'],
             $this->resolveAll(),
         ));
     }
 
     public function source(string $type): ?MediaUsageSourceInterface
     {
-        return $this->resolveAll()[$type][0] ?? null;
+        return $this->resolveAll()[$type]['source'] ?? null;
     }
 
     public function claimingSource(MediaFileId $file): ?MediaUsageSourceInterface
@@ -70,17 +84,17 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         $best = null;
         $bestLength = -1;
 
-        foreach ($this->resolveAll() as [$source]) {
-            foreach ($this->folders($source) as $folder) {
+        foreach ($this->resolveAll() as $entry) {
+            foreach ($entry['folders'] as $folder) {
                 if ($folder === '' || ! str_starts_with($path, $folder) || strlen($folder) <= $bestLength) {
                     continue;
                 }
 
-                if ($this->isExcluded(substr($path, strlen($folder)), $source)) {
+                if ($this->isExcluded(substr($path, strlen($folder)), $entry['excluded'])) {
                     continue;
                 }
 
-                $best = $source;
+                $best = $entry['source'];
                 $bestLength = strlen($folder);
             }
         }
@@ -90,7 +104,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
 
     public function moduleOf(string $type): ?string
     {
-        return $this->resolveAll()[$type][1] ?? null;
+        return $this->resolveAll()[$type]['module'] ?? null;
     }
 
     /**
@@ -100,9 +114,9 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
     {
         $folders = [];
 
-        foreach ($this->resolveAll() as [$source]) {
-            if ($source->hidden()) {
-                array_push($folders, ...$this->folders($source));
+        foreach ($this->resolveAll() as $entry) {
+            if ($entry['source']->hidden()) {
+                array_push($folders, ...$entry['folders']);
             }
         }
 
@@ -110,13 +124,17 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
     }
 
     /**
-     * Resolved sources by type with their module, skipping the ones that cannot be loaded
-     * and any whose type is already taken.
+     * Resolved sources by type with their module and folders, skipping the ones that cannot be loaded
+     * and any whose type is already taken. Built once until the registrations change.
      *
-     * @return array<string, array{MediaUsageSourceInterface, ?string}>
+     * @return array<string, array{source: MediaUsageSourceInterface, module: ?string, folders: list<string>, excluded: list<string>|null}>
      */
     private function resolveAll(): array
     {
+        if ($this->resolved !== null) {
+            return $this->resolved;
+        }
+
         $resolved = [];
 
         foreach ($this->sources as $sourceClass => $module) {
@@ -129,7 +147,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
             try {
                 $type = $source->type();
             } catch (Throwable $exception) {
-                Log::warning('[MediaSourceRegistry] Failed to read media source type', [
+                $this->warnOnce($sourceClass, 'type', '[MediaSourceRegistry] Failed to read media source type', [
                     'source' => $sourceClass,
                     'module' => $module,
                     'error' => $exception->getMessage(),
@@ -139,20 +157,25 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
             }
 
             if (isset($resolved[$type])) {
-                Log::warning('[MediaSourceRegistry] Media source type already taken, source skipped', [
+                $this->warnOnce($sourceClass, 'duplicate', '[MediaSourceRegistry] Media source type already taken, source skipped', [
                     'source' => $sourceClass,
                     'module' => $module,
                     'type' => $type,
-                    'takenBy' => $resolved[$type][0]::class,
+                    'takenBy' => $resolved[$type]['source']::class,
                 ]);
 
                 continue;
             }
 
-            $resolved[$type] = [$source, $module];
+            $resolved[$type] = [
+                'source' => $source,
+                'module' => $module,
+                'folders' => $this->folders($source),
+                'excluded' => $this->excludedSubfolders($source),
+            ];
         }
 
-        return $resolved;
+        return $this->resolved = $resolved;
     }
 
     private function resolve(string $sourceClass, ?string $module): ?MediaUsageSourceInterface
@@ -160,7 +183,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         try {
             $source = $this->container->make($sourceClass);
         } catch (Throwable $exception) {
-            Log::warning('[MediaSourceRegistry] Failed to resolve media source', [
+            $this->warnOnce($sourceClass, 'resolve', '[MediaSourceRegistry] Failed to resolve media source', [
                 'source' => $sourceClass,
                 'module' => $module,
                 'error' => $exception->getMessage(),
@@ -170,7 +193,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         }
 
         if (! $source instanceof MediaUsageSourceInterface) {
-            Log::warning('[MediaSourceRegistry] Registered class is not a media usage source', [
+            $this->warnOnce($sourceClass, 'contract', '[MediaSourceRegistry] Registered class is not a media usage source', [
                 'source' => $sourceClass,
                 'module' => $module,
             ]);
@@ -189,7 +212,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         try {
             return $source->folders();
         } catch (Throwable $exception) {
-            Log::warning('[MediaSourceRegistry] Failed to read media source folders', [
+            $this->warnOnce($source::class, 'folders', '[MediaSourceRegistry] Failed to read media source folders', [
                 'source' => $source::class,
                 'error' => $exception->getMessage(),
             ]);
@@ -198,20 +221,48 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         }
     }
 
-    private function isExcluded(string $rest, MediaUsageSourceInterface $source): bool
+    /**
+     * @return list<string>|null null when they cannot be read
+     */
+    private function excludedSubfolders(MediaUsageSourceInterface $source): ?array
     {
         try {
-            $excluded = $source->excludedSubfolders();
+            return $source->excludedSubfolders();
         } catch (Throwable $exception) {
-            Log::warning('[MediaSourceRegistry] Failed to read media source excluded subfolders', [
+            $this->warnOnce($source::class, 'excluded', '[MediaSourceRegistry] Failed to read media source excluded subfolders', [
                 'source' => $source::class,
                 'error' => $exception->getMessage(),
             ]);
 
-            // Fail closed: do not claim anything we cannot tell is ours
+            return null;
+        }
+    }
+
+    /**
+     * @param  list<string>|null  $excluded
+     */
+    private function isExcluded(string $rest, ?array $excluded): bool
+    {
+        // Fail closed: do not claim anything we cannot tell is ours
+        if ($excluded === null) {
             return true;
         }
 
         return array_any($excluded, fn ($subfolder) => $subfolder !== '' && str_starts_with($rest, $subfolder));
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function warnOnce(string $sourceClass, string $kind, string $message, array $context): void
+    {
+        $key = $sourceClass.'|'.$kind;
+
+        if (isset($this->warned[$key])) {
+            return;
+        }
+
+        $this->warned[$key] = true;
+        Log::warning($message, $context);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Concerns;
 
+use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Services\SettingsServiceInterface;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Storage;
@@ -116,6 +117,7 @@ trait ManagesPageSettings
         $jsonFields = $this->getJsonFields();
         $imageFields = $this->getImageFields();
         $encryptedFields = $this->getEncryptedFields();
+        $savedImageKeys = [];
 
         foreach ($this->getSettingsKeys() as $key) {
             $value = $formData[$key] ?? '';
@@ -125,6 +127,7 @@ trait ManagesPageSettings
                 $newValue = (string) $value;
                 $this->cleanupOldImage($settingsService, $key, $newValue);
                 $settingsService->set($key, $newValue);
+                $savedImageKeys[] = $key;
 
                 continue;
             }
@@ -151,6 +154,25 @@ trait ManagesPageSettings
 
             // Handle regular string values
             $settingsService->set($key, (string) $value);
+        }
+
+        // The media library tracks each image setting as a record of the settings source, keyed by its name
+        $this->refreshMediaUsages($savedImageKeys);
+    }
+
+    /**
+     * @param  list<string>  $imageKeys
+     */
+    private function refreshMediaUsages(array $imageKeys): void
+    {
+        if ($imageKeys === []) {
+            return;
+        }
+
+        $indexer = resolve(MediaIndexerInterface::class);
+
+        foreach ($imageKeys as $key) {
+            $indexer->refresh('settings', $key);
         }
     }
 

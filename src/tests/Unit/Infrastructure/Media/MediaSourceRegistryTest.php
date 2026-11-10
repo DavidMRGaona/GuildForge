@@ -6,6 +6,7 @@ namespace Tests\Unit\Infrastructure\Media;
 
 use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Infrastructure\Media\Services\MediaSourceRegistry;
+use ArrayObject;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Support\Media\FakeMediaSource;
@@ -139,5 +140,49 @@ final class MediaSourceRegistryTest extends TestCase
         $this->assertCount(1, $this->registry->sources());
         $this->assertNull($this->registry->source('mod'));
         $this->assertSame('core', $this->registry->source('core')?->type());
+    }
+
+    #[Test]
+    public function test_resolving_twice_builds_each_source_once_and_logs_a_broken_class_once(): void
+    {
+        $log = Log::spy();
+        $builds = new ArrayObject;
+        $this->app->bind('test.media.counted', function () use ($builds): FakeMediaSource {
+            $builds->append(true);
+
+            return new FakeMediaSource('counted', ['counted/']);
+        });
+        $this->registry->registerMany([UnresolvableMediaSource::class, $this->alias('test.media.counted')]);
+
+        $this->registry->sources();
+        $this->registry->claimingSource(new MediaFileId('counted/a'));
+        $this->registry->source('counted');
+        $this->registry->hiddenFolders();
+
+        $this->assertCount(1, $builds);
+        $log->shouldHaveReceived('warning')->once();
+
+        // Registering again resolves again, but the broken class is not reported twice
+        $this->registry->register($this->fake('other', ['other/']));
+
+        $this->assertCount(2, $this->registry->sources());
+        $this->assertCount(2, $builds);
+        $log->shouldHaveReceived('warning')->once();
+    }
+
+    #[Test]
+    public function test_every_change_to_the_registrations_clears_the_resolved_sources(): void
+    {
+        $this->registry->register($this->fake('core', ['core/']));
+        $this->assertCount(1, $this->registry->sources());
+
+        $this->registry->registerMany([$this->fake('mod', ['mod/'])], 'demo');
+        $this->assertCount(2, $this->registry->sources());
+
+        $this->registry->unregisterModule('demo');
+        $this->assertCount(1, $this->registry->sources());
+
+        $this->registry->clear();
+        $this->assertSame([], $this->registry->sources());
     }
 }

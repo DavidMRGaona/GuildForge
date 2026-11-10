@@ -42,6 +42,12 @@ Schedule::command('search:sync')
     ->daily()
     ->withoutOverlapping();
 
+// Reconcile the media library index daily: picks up uploads and changes the observers miss, and only a
+// complete Cloudinary listing adds or removes files
+Schedule::command('media:sync')
+    ->daily()
+    ->withoutOverlapping();
+
 // Daily mail digests (core#333): asked every hour, each run sends what was kept before the last
 // digest hour of the display zone, so a missed run is caught up and a repeated one sends nothing
 Schedule::command('mail:send-digests')

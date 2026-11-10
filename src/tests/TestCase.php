@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use App\Application\Authorization\Services\PermissionSyncRunnerInterface;
+use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Search\Services\SearchSyncRunnerInterface;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Testing\PendingCommand;
@@ -15,6 +16,7 @@ use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\AssertionFailedError;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Authorization\FakePermissionSyncRunner;
+use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\Support\Search\FakeSearchSyncRunner;
 
 abstract class TestCase extends BaseTestCase
@@ -50,6 +52,7 @@ abstract class TestCase extends BaseTestCase
 
         $this->app->instance(PermissionSyncRunnerInterface::class, new FakePermissionSyncRunner);
         $this->app->instance(SearchSyncRunnerInterface::class, new FakeSearchSyncRunner);
+        $this->app->instance(MediaCatalogInterface::class, new InMemoryMediaCatalog);
 
         // Override Inertia's assertInertia macro to preserve float types in JSON round-trip.
         // Inertia 3 omits encryptHistory and clearHistory when they are false.
