@@ -31,6 +31,8 @@ Si pegas el enlace de una imagen de la web en un texto (la descripción de un ev
 
 Lo mismo pasa con las imágenes que insertas con el editor de esos textos: cuentan como uso «En el texto» del registro donde las pusiste.
 
+Las tarjetas salen de la subida más reciente a la más antigua (**Más recientes** en «Ordenar por»), y cada una dice cuándo se subió. También puedes ordenarlas por **Tamaño** o por **Usos**.
+
 No aparecen los **avatares** de las cuentas: no se muestran y nunca se pueden borrar desde aquí.
 
 ## Estados
@@ -50,7 +52,7 @@ Si un módulo guarda sus registros en una papelera, los registros que se pueden 
 ## Borrar archivos
 
 1. Busca archivos con estado **Sin usar**. Puedes filtrar por **Estado**.
-2. Pulsa **Borrar** en uno, o marca varios y pulsa **Borrar seleccionados**. Se marcan los de la página que estás viendo, y se borran como mucho 50 cada vez.
+2. Pulsa **Borrar** en uno, o marca varios y pulsa **Borrar seleccionados**. En la cuadrícula, **Seleccionar los sin usar** marca de una vez los de la página que estás viendo. Se borran como mucho 50 cada vez.
 3. Marca la casilla que confirma que entiendes que se borran para siempre y pulsa **Borrar para siempre**.
 
 > [!IMPORTANT]

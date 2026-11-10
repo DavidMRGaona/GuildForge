@@ -975,6 +975,10 @@ return [
         'no_usages' => 'Sin usos',
         'title_more' => ':title +:count',
         'uploaded_on' => ':origin · subido el :date',
+        'select_unused' => 'Seleccionar los sin usar',
+        'sort' => [
+            'newest' => 'Más recientes',
+        ],
         'usages_count' => '{0} Sin usos|{1} :count uso|[2,*] :count usos',
         'empty' => [
             'heading' => 'No hay archivos',
