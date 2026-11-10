@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Media\DTOs;
+namespace App\Infrastructure\Media\Services;
 
 use DateTimeImmutable;
 

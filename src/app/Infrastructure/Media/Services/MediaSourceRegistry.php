@@ -20,7 +20,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
      * Sources resolved since the registrations last changed: the sync and the panel ask for the claiming
      * source of every file, so building them on each call would rebuild every source thousands of times.
      *
-     * @var array<string, array{source: MediaUsageSourceInterface, module: ?string, folders: list<string>, excluded: list<string>|null}>|null
+     * @var array<string, array{source: MediaUsageSourceInterface, module: ?string, folders: list<string>, excluded: list<string>|null, hidden: bool}>|null
      */
     private ?array $resolved = null;
 
@@ -128,7 +128,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         $folders = [];
 
         foreach ($this->resolveAll() as $entry) {
-            if ($entry['source']->hidden()) {
+            if ($entry['hidden']) {
                 array_push($folders, ...$entry['folders']);
             }
         }
@@ -140,7 +140,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
      * Resolved sources by type with their module and folders, skipping (and keeping in $unresolved) the ones
      * that cannot be loaded and any whose type is already taken. Built once until the registrations change.
      *
-     * @return array<string, array{source: MediaUsageSourceInterface, module: ?string, folders: list<string>, excluded: list<string>|null}>
+     * @return array<string, array{source: MediaUsageSourceInterface, module: ?string, folders: list<string>, excluded: list<string>|null, hidden: bool}>
      */
     private function resolveAll(): array
     {
@@ -191,6 +191,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
                 'module' => $module,
                 'folders' => $this->folders($source),
                 'excluded' => $this->excludedSubfolders($source),
+                'hidden' => $this->hidden($source),
             ];
         }
 
@@ -256,6 +257,24 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
             ]);
 
             return null;
+        }
+    }
+
+    /**
+     * Fails closed: a source that cannot say whether it is hidden is taken as hidden, so its files stay out
+     * of the library and can never be deleted.
+     */
+    private function hidden(MediaUsageSourceInterface $source): bool
+    {
+        try {
+            return $source->hidden();
+        } catch (Throwable $exception) {
+            $this->warnOnce($source::class, 'hidden', '[MediaSourceRegistry] Failed to read whether a media source is hidden; treated as hidden', [
+                'source' => $source::class,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return true;
         }
     }
 

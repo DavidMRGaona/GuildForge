@@ -171,6 +171,27 @@ final class MediaSourceRegistryTest extends TestCase
     }
 
     #[Test]
+    public function test_a_source_whose_hidden_throws_is_treated_as_hidden_and_logged_once(): void
+    {
+        $log = Log::spy();
+        $this->app->bind('test.media.moody', fn (): FakeMediaSource => new class('moody', ['moody/']) extends FakeMediaSource
+        {
+            public function hidden(): bool
+            {
+                throw new RuntimeException('cannot tell');
+            }
+        });
+        $this->registry->registerMany([$this->fake('events', ['events/']), $this->alias('test.media.moody')]);
+
+        // Its files must stay out of the library and never be deleted: fail closed
+        $this->assertSame(['moody/'], $this->registry->hiddenFolders());
+        $this->assertSame(['moody/'], $this->registry->hiddenFolders());
+        $this->registry->claimingSource(new MediaFileId('moody/a'));
+
+        $log->shouldHaveReceived('warning')->once();
+    }
+
+    #[Test]
     public function test_unregister_module_drops_its_sources(): void
     {
         $this->registry->register($this->fake('core', ['core/']));

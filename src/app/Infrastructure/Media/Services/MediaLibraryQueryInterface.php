@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Media\Services;
+namespace App\Infrastructure\Media\Services;
 
-use App\Application\Media\DTOs\MediaLibraryStatsDTO;
 use App\Domain\Media\Enums\MediaFileStatus;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * What the panel media library lists. It works on the Eloquent query because the panel table pages, sorts,
- * searches and filters it (as UserModelQueryServiceInterface, a bridge to the framework). Statuses follow
- * MediaFileStatusRule, in SQL and per file, and are only for display: deleting checks everything again.
+ * What the panel media library lists. It hands out the Eloquent query, because the panel table pages, sorts,
+ * searches and filters it, so it lives in Infrastructure beside the model and only the panel uses it.
+ * Statuses follow MediaFileStatusRule, in SQL and per file, and are only for display: deleting goes through
+ * MediaDeletionServiceInterface, which checks everything again.
  */
 interface MediaLibraryQueryInterface
 {

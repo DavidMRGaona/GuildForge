@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Media\Services;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
-use App\Application\Media\DTOs\MediaLibraryStatsDTO;
 use App\Application\Media\Services\MediaIndexerInterface;
-use App\Application\Media\Services\MediaLibraryQueryInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Media\Enums\MediaFileStatus;

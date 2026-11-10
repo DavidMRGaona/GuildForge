@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Media;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
-use App\Application\Media\Services\MediaLibraryQueryInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Media\Enums\MediaFileStatus;
@@ -14,6 +13,7 @@ use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Media\Services\MediaIndexer;
+use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;

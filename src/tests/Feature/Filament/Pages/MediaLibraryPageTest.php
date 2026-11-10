@@ -216,6 +216,26 @@ final class MediaLibraryPageTest extends TestCase
             ->assertCanNotSeeTableRecords([$avatar]);
     }
 
+    public function test_a_source_that_cannot_tell_whether_it_is_hidden_does_not_break_the_page(): void
+    {
+        $this->register(new class('moody', ['moody/']) extends FakeMediaSource
+        {
+            public function hidden(): bool
+            {
+                throw new \RuntimeException('cannot tell');
+            }
+        });
+        $visible = $this->file('events/a');
+        $moody = $this->file('moody/a');
+        $this->actingAs($this->deleter());
+
+        $this->get(MediaLibraryPage::getUrl())->assertOk();
+        // Taken as hidden: its files are not listed, so they can never be deleted from here
+        Livewire::test(MediaLibraryPage::class)
+            ->assertCanSeeTableRecords([$visible])
+            ->assertCanNotSeeTableRecords([$moody]);
+    }
+
     public function test_clicking_a_record_opens_its_details(): void
     {
         $file = $this->file('events/a');

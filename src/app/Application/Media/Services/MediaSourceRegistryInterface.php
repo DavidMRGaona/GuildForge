@@ -52,7 +52,7 @@ interface MediaSourceRegistryInterface
     public function moduleOf(string $type): ?string;
 
     /**
-     * Folders claimed by hidden sources.
+     * Folders claimed by hidden sources, and by sources that cannot tell whether they are hidden (fail closed).
      *
      * @return list<string>
      */
