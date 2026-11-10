@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Concerns;
 
+use App\Application\Media\Services\MediaFileReleaserInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Media\Sources\RichTextMediaSource;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use JsonException;
 use Throwable;
 
@@ -121,14 +121,21 @@ trait ManagesPageSettings
         $imageFields = $this->getImageFields();
         $encryptedFields = $this->getEncryptedFields();
         $savedImageKeys = [];
+        /** @var list<string> $replacedImages */
+        $replacedImages = [];
 
         foreach ($this->getSettingsKeys() as $key) {
             $value = $formData[$key] ?? '';
 
-            // Handle image cleanup before saving
+            // A replaced image is released once every key is saved: it may have moved to another key
             if (in_array($key, $imageFields, true)) {
                 $newValue = (string) $value;
-                $this->cleanupOldImage($settingsService, $key, $newValue);
+                $oldValue = (string) $settingsService->get($key, '');
+
+                if ($oldValue !== '' && $oldValue !== $newValue) {
+                    $replacedImages[] = $oldValue;
+                }
+
                 $settingsService->set($key, $newValue);
                 $savedImageKeys[] = $key;
 
@@ -157,6 +164,11 @@ trait ManagesPageSettings
 
             // Handle regular string values
             $settingsService->set($key, (string) $value);
+        }
+
+        // Deleted only if nobody uses it any more, these settings included
+        foreach (array_unique($replacedImages) as $path) {
+            resolve(MediaFileReleaserInterface::class)->release($path);
         }
 
         // The media library tracks each image setting as a record of the settings source, keyed by its name,
@@ -235,7 +247,22 @@ trait ManagesPageSettings
     }
 
     /**
-     * Delete old image from storage if the value has changed.
+     * The image a setting holds now, which its field always accepts back when saving (a settings page has no
+     * record, and the file may not be in the media library yet).
+     *
+     * @return list<string>
+     */
+    protected static function storedImagePaths(string $key): array
+    {
+        $value = (string) resolve(SettingsServiceInterface::class)->get($key, '');
+
+        return $value !== '' ? [$value] : [];
+    }
+
+    /**
+     * Release the old image if the value has changed: it is deleted later, only if nobody uses it.
+     *
+     * @deprecated saveSettings() releases replaced images itself, after every key is saved
      */
     protected function cleanupOldImage(
         SettingsServiceInterface $settingsService,
@@ -245,7 +272,7 @@ trait ManagesPageSettings
         $oldValue = (string) $settingsService->get($key, '');
 
         if ($oldValue !== '' && $oldValue !== $newValue) {
-            Storage::disk('images')->delete($oldValue);
+            resolve(MediaFileReleaserInterface::class)->release($oldValue);
         }
     }
 

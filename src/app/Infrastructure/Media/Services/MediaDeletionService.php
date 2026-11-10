@@ -11,6 +11,7 @@ use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaDeletionServiceInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
+use App\Domain\Media\Enums\MediaDeletionKind;
 use App\Domain\Media\Enums\MediaDeletionRefusal;
 use App\Domain\Media\Enums\MediaDestroyOutcome;
 use App\Domain\Media\Enums\MediaFileStatus;
@@ -95,7 +96,7 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
             }
 
             [$file, $sourceType] = $checked;
-            $outcome = $this->destroy($id, $file);
+            $outcome = $this->destroy($id, $file->resource_type);
 
             if (! $outcome instanceof MediaDestroyOutcome) {
                 $refused[$id->value] = MediaDeletionRefusal::CatalogFailed;
@@ -103,7 +104,7 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
                 continue;
             }
 
-            $this->record($file, $sourceType, $outcome, $actorId);
+            $this->record($id, $file, $file->resource_type, $sourceType, $outcome, $actorId, MediaDeletionKind::Manual);
 
             if ($outcome === MediaDestroyOutcome::Deleted) {
                 $deleted++;
@@ -116,8 +117,42 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
         return new MediaDeletionResultDTO($deleted, $missing, $freedBytes, $refused);
     }
 
+    public function releaseIfUnused(MediaFileId $id, string $resourceType, ?string $actorId): ?MediaDeletionRefusal
+    {
+        try {
+            if ($this->resolver->prefix() === '') {
+                return MediaDeletionRefusal::CheckFailed;
+            }
+
+            $file = MediaFileModel::query()->where('file_id', $id->value)->first();
+        } catch (Throwable $e) {
+            Log::warning('[Media] A released file could not be checked; it was kept.', [
+                'file_id' => $id->value,
+                'exception' => $e,
+            ]);
+
+            return MediaDeletionRefusal::CheckFailed;
+        }
+
+        $checked = $this->liveCheck($id);
+
+        if ($checked instanceof MediaDeletionRefusal) {
+            return $checked;
+        }
+
+        $outcome = $this->destroy($id, $file instanceof MediaFileModel ? $file->resource_type : $resourceType);
+
+        if (! $outcome instanceof MediaDestroyOutcome) {
+            return MediaDeletionRefusal::CatalogFailed;
+        }
+
+        $this->record($id, $file, $resourceType, $checked, $outcome, $actorId, MediaDeletionKind::Automatic);
+
+        return null;
+    }
+
     /**
-     * Every check, in order, made now and not taken from the index.
+     * Every check of the library, in order, made now and not taken from the index.
      *
      * @return MediaDeletionRefusal|array{MediaFileModel, string} the refusal, or the indexed file and the type of the source claiming it
      */
@@ -125,11 +160,49 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
     {
         try {
             $file = MediaFileModel::query()->where('file_id', $id->value)->first();
+        } catch (Throwable $e) {
+            return $this->checkFailed($id, $e);
+        }
 
-            if ($file === null) {
-                return MediaDeletionRefusal::NotIndexed;
-            }
+        if ($file === null) {
+            return MediaDeletionRefusal::NotIndexed;
+        }
 
+        $claimerType = $this->liveCheck($id);
+
+        if ($claimerType instanceof MediaDeletionRefusal) {
+            return $claimerType;
+        }
+
+        try {
+            // A use still in the index of an active source is a doubt too: the file stays until a sync clears it
+            $status = MediaFileStatusRule::for(
+                hasUsages: MediaUsageModel::query()->where('file_id', $id->value)->exists(),
+                claimedByActiveSource: true,
+                uploadedAt: $file->uploaded_at->toImmutable(),
+                now: CarbonImmutable::now(),
+            );
+        } catch (Throwable $e) {
+            return $this->checkFailed($id, $e);
+        }
+
+        return match ($status) {
+            MediaFileStatus::Unused => [$file, $claimerType],
+            MediaFileStatus::InUse => MediaDeletionRefusal::InUse,
+            MediaFileStatus::Recent => MediaDeletionRefusal::Recent,
+            MediaFileStatus::UnknownOrigin => MediaDeletionRefusal::Unclaimed,
+        };
+    }
+
+    /**
+     * The checks that do not depend on the index entry: every source resolved, the folder not hidden and
+     * claimed by an active source, no use kept from an inactive one, and no active source using the file.
+     *
+     * @return MediaDeletionRefusal|string the refusal, or the type of the source claiming the file
+     */
+    private function liveCheck(MediaFileId $id): MediaDeletionRefusal|string
+    {
+        try {
             // A source that cannot be built cannot say whether it uses the file: nothing is deleted meanwhile
             if ($this->registry->unresolved() !== []) {
                 return MediaDeletionRefusal::CheckFailed;
@@ -179,28 +252,20 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
                 }
             }
 
-            // A use still in the index of an active source is a doubt too: the file stays until a sync clears it
-            $status = MediaFileStatusRule::for(
-                hasUsages: $indexedTypes !== [],
-                claimedByActiveSource: true,
-                uploadedAt: $file->uploaded_at->toImmutable(),
-                now: CarbonImmutable::now(),
-            );
-
-            return match ($status) {
-                MediaFileStatus::Unused => [$file, $claimerType],
-                MediaFileStatus::InUse => MediaDeletionRefusal::InUse,
-                MediaFileStatus::Recent => MediaDeletionRefusal::Recent,
-                MediaFileStatus::UnknownOrigin => MediaDeletionRefusal::Unclaimed,
-            };
+            return $claimerType;
         } catch (Throwable $e) {
-            Log::warning('[Media] A file could not be checked before deleting it; it was kept.', [
-                'file_id' => $id->value,
-                'exception' => $e,
-            ]);
-
-            return MediaDeletionRefusal::CheckFailed;
+            return $this->checkFailed($id, $e);
         }
+    }
+
+    private function checkFailed(MediaFileId $id, Throwable $e): MediaDeletionRefusal
+    {
+        Log::warning('[Media] A file could not be checked before deleting it; it was kept.', [
+            'file_id' => $id->value,
+            'exception' => $e,
+        ]);
+
+        return MediaDeletionRefusal::CheckFailed;
     }
 
     private function inHiddenFolder(MediaFileId $id): bool
@@ -226,10 +291,10 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
     /**
      * @return MediaDestroyOutcome|null null when the store did not confirm
      */
-    private function destroy(MediaFileId $id, MediaFileModel $file): ?MediaDestroyOutcome
+    private function destroy(MediaFileId $id, string $resourceType): ?MediaDestroyOutcome
     {
         try {
-            return $this->container->make(MediaCatalogInterface::class)->destroy($id, $file->resource_type);
+            return $this->container->make(MediaCatalogInterface::class)->destroy($id, $resourceType);
         } catch (Throwable $e) {
             Log::warning('[Media] The media store did not confirm a deletion; the file was kept in the index.', [
                 'file_id' => $id->value,
@@ -243,27 +308,36 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
     /**
      * Writes the deletion and drops the file from the index in one transaction. The remote file is gone by
      * now, so a failure here cannot be undone: it is logged with everything the record would have held.
+     * A released file may not be indexed yet: its row only holds what the id tells.
      */
-    private function record(MediaFileModel $file, string $sourceType, MediaDestroyOutcome $outcome, string $actorId): void
-    {
+    private function record(
+        MediaFileId $id,
+        ?MediaFileModel $file,
+        string $resourceType,
+        string $sourceType,
+        MediaDestroyOutcome $outcome,
+        ?string $actorId,
+        MediaDeletionKind $kind,
+    ): void {
         $row = [
-            'file_id' => $file->file_id,
-            'resource_type' => $file->resource_type,
-            'folder' => $file->folder,
+            'file_id' => $id->value,
+            'resource_type' => $file instanceof MediaFileModel ? $file->resource_type : $resourceType,
+            'folder' => $file instanceof MediaFileModel ? $file->folder : $id->folder(),
             'source_type' => $sourceType,
-            'bytes' => $file->bytes,
-            'width' => $file->width,
-            'height' => $file->height,
+            'bytes' => $file?->bytes,
+            'width' => $file?->width,
+            'height' => $file?->height,
             'outcome' => $outcome->value,
+            'kind' => $kind->value,
             'deleted_by' => $actorId,
             'deleted_at' => CarbonImmutable::now(),
         ];
 
         try {
-            DB::transaction(static function () use ($row, $file): void {
+            DB::transaction(static function () use ($row, $id): void {
                 MediaDeletionModel::query()->create($row);
-                MediaUsageModel::query()->where('file_id', $file->file_id)->delete();
-                MediaFileModel::query()->where('file_id', $file->file_id)->delete();
+                MediaUsageModel::query()->where('file_id', $id->value)->delete();
+                MediaFileModel::query()->where('file_id', $id->value)->delete();
             });
         } catch (Throwable $e) {
             Log::error('[Media] A file was removed from the media store but its deletion could not be recorded.', [

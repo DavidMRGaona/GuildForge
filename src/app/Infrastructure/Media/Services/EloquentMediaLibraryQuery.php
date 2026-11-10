@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Media\Services;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
+use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\TimezoneServiceInterface;
@@ -70,6 +71,38 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
         $ofType = array_filter($visible, static fn (array $claim): bool => $claim['type'] === $type);
 
         return $this->whereClaimed($query, $ofType, $claims, negate: false);
+    }
+
+    public function applySearch(Builder $query, string $search): Builder
+    {
+        return $query->where(
+            fn (Builder $matches): Builder => $matches
+                ->whereHas('usages', fn (Builder $usages): Builder => $usages->whereLike('title', '%'.$search.'%'))
+                ->orWhereLike('media_files.folder', '%'.$search.'%'),
+        );
+    }
+
+    public function applyReusable(Builder $query): Builder
+    {
+        $claims = $this->claims();
+        $reusable = array_filter($this->visible($claims), static fn (array $claim): bool => $claim['releasesThroughCore']);
+
+        $query->where('media_files.resource_type', 'image')->whereNotNull('media_files.format');
+
+        return $this->whereClaimed($query, $reusable, $claims, negate: false);
+    }
+
+    public function isReusableFolder(string $folder): bool
+    {
+        try {
+            $folder = trim($folder, '/');
+            $claimer = $this->registry->claimingSource(new MediaFileId($folder === '' ? 'probe' : $folder.'/probe'));
+
+            return $claimer instanceof ReleasesMediaThroughCoreInterface && ! $claimer->hidden();
+        } catch (Throwable) {
+            // An odd folder, or a source that cannot say whether it is hidden: nothing is reused
+            return false;
+        }
     }
 
     public function statusOf(MediaFileModel $file): MediaFileStatus
@@ -141,7 +174,7 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
      * Every claimed folder of the active sources, in registration order. A source whose folders or
      * excluded subfolders cannot be read claims nothing, as in the registry.
      *
-     * @return list<array{type: string, hidden: bool, folder: string, excluded: list<string>}>
+     * @return list<array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>
      */
     private function claims(): array
     {
@@ -159,7 +192,13 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
 
             foreach ($folders as $folder) {
                 if ($folder !== '') {
-                    $claims[] = ['type' => $type, 'hidden' => $hidden, 'folder' => $folder, 'excluded' => $excluded];
+                    $claims[] = [
+                        'type' => $type,
+                        'hidden' => $hidden,
+                        'releasesThroughCore' => $source instanceof ReleasesMediaThroughCoreInterface,
+                        'folder' => $folder,
+                        'excluded' => $excluded,
+                    ];
                 }
             }
         }
@@ -168,8 +207,8 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
     }
 
     /**
-     * @param  list<array{type: string, hidden: bool, folder: string, excluded: list<string>}>  $claims
-     * @return array<int, array{type: string, hidden: bool, folder: string, excluded: list<string>}>
+     * @param  list<array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>  $claims
+     * @return array<int, array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>
      */
     private function visible(array $claims): array
     {
@@ -180,8 +219,8 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
      * Files claimed through any of the given claims (or, negated, through none of them).
      *
      * @param  Builder<MediaFileModel>  $query
-     * @param  array<int, array{type: string, hidden: bool, folder: string, excluded: list<string>}>  $selected  keyed by position in $claims
-     * @param  list<array{type: string, hidden: bool, folder: string, excluded: list<string>}>  $claims
+     * @param  array<int, array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>  $selected  keyed by position in $claims
+     * @param  list<array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>  $claims
      * @return Builder<MediaFileModel>
      */
     private function whereClaimed(Builder $query, array $selected, array $claims, bool $negate): Builder
@@ -209,8 +248,8 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
     }
 
     /**
-     * @param  array{type: string, hidden: bool, folder: string, excluded: list<string>}  $other
-     * @param  array{type: string, hidden: bool, folder: string, excluded: list<string>}  $claim
+     * @param  array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}  $other
+     * @param  array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}  $claim
      */
     private function beats(array $other, int $otherPosition, array $claim, int $position): bool
     {
@@ -224,7 +263,7 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
 
     /**
      * @param  Builder<MediaFileModel>  $query
-     * @param  array{type: string, hidden: bool, folder: string, excluded: list<string>}  $claim
+     * @param  array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}  $claim
      * @return Builder<MediaFileModel>
      */
     private function whereMatches(Builder $query, array $claim): Builder

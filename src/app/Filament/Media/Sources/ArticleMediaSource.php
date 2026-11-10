@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Media\Sources;
 
+use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Filament\Resources\ArticleResource;
 use App\Infrastructure\Media\Sources\EloquentColumnMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 
-final class ArticleMediaSource extends EloquentColumnMediaSource
+final class ArticleMediaSource extends EloquentColumnMediaSource implements ReleasesMediaThroughCoreInterface
 {
     public function type(): string
     {

@@ -13,10 +13,14 @@
                 <li class="flex flex-col gap-1 py-2.5 first:pt-0">
                     <p class="text-sm font-medium break-all text-gray-950 dark:text-white">{{ $row['fileId'] }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ $row['origin'] }} · {{ $row['size'] }}@if ($row['dimensions'] !== null) · {{ $row['dimensions'] }}@endif · {{ $row['outcome'] }}
+                        {{ $row['origin'] }} · {{ $row['size'] }}@if ($row['dimensions'] !== null) · {{ $row['dimensions'] }}@endif · {{ $row['outcome'] }}@if ($row['automatic']) · {{ __('filament.media_library.deletions.automatic') }}@endif
                     </p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ __('filament.media_library.deletions.by', ['name' => $row['deletedBy'], 'date' => $row['deletedAt']]) }}
+                        @if ($row['deletedBy'] === null)
+                            {{ __('filament.media_library.deletions.by_nobody', ['date' => $row['deletedAt']]) }}
+                        @else
+                            {{ __('filament.media_library.deletions.by', ['name' => $row['deletedBy'], 'date' => $row['deletedAt']]) }}
+                        @endif
                     </p>
                 </li>
             @endforeach

@@ -5,7 +5,7 @@ summary: Mira qué imágenes hay guardadas, quién las usa y borra las que ya no
 category: content
 audience: panel
 order: 45
-keywords: [biblioteca, medios, imágenes, archivos, sin usar, borrar, Cloudinary, espacio, huérfanas, fotos]
+keywords: [biblioteca, medios, imágenes, archivos, sin usar, borrar, Cloudinary, espacio, huérfanas, fotos, elegir, reutilizar, compartir]
 related: [core.panel.manage-galleries]
 conditions:
   permissions:
@@ -65,6 +65,23 @@ Puede que no veas el botón **Borrar** o que salga desactivado:
 - **El borrado está desactivado en esta instalación.** Una persona administradora debe activarlo con el ajuste `MEDIA_LIBRARY_DELETE_ENABLED=true` en la configuración del servidor. Hasta entonces la biblioteca solo se consulta.
 - **No tienes permiso para borrar archivos.** El permiso «Borrar archivos sin usar» no se da a ningún rol por defecto: se concede a mano en **Personas → Roles**. Ver la biblioteca es un permiso aparte.
 - **Solo se pueden borrar archivos sin usar.**
+
+## Elegir una imagen de la biblioteca
+
+En los formularios con imagen (eventos, artículos, fotos de galerías, hero slides, logos y favicons del sitio, imagen de «Nosotros» y los de los módulos que lo ofrezcan), junto al campo aparece **Elegir de la biblioteca**. Sirve para usar una imagen que ya está en la web sin volver a subirla.
+
+1. Pulsa **Elegir de la biblioteca**.
+2. Busca la imagen por título o carpeta, o filtra por **Origen** y **Estado**.
+3. Pulsa una miniatura para verla en grande, con sus medidas y dónde se usa.
+4. Pulsa **Usar esta imagen** y guarda el formulario.
+
+Solo aparecen las imágenes que ese campo admite (por ejemplo, el favicon solo admite PNG, ICO o SVG) y las de orígenes que no borran archivos por su cuenta. Las de **Origen desconocido** no se ofrecen. Para elegir hace falta el permiso de ver la biblioteca. Subir un archivo nuevo sigue funcionando como siempre.
+
+## Imágenes compartidas
+
+Una imagen elegida de la biblioteca se comparte: los dos registros usan el mismo archivo. Por eso, cuando quitas o cambias la imagen de un registro (o lo borras), el archivo anterior solo se borra si ya no lo usa nadie más. Si lo usa otro registro, o no se puede comprobar, se conserva y aparecerá en la biblioteca como **Sin usar** cuando nadie lo use.
+
+Estos borrados automáticos aparecen en **Borrados** como «al quitarlo de un registro».
 
 ## Registro de borrados
 

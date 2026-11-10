@@ -9,6 +9,7 @@ use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Concerns\HasExtendableFormSections;
 use App\Filament\Concerns\HasExtendableRelations;
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Resources\EventResource\Pages\CreateEvent;
 use App\Filament\Resources\EventResource\Pages\EditEvent;
@@ -117,16 +118,18 @@ class EventResource extends BaseResource
                             ->minValue(0)
                             ->step(0.01),
                     ])->columns(2),
-                FileUpload::make('image_public_id')
-                    ->label(__('Imagen'))
-                    ->image()
-                    ->disk('images')
-                    ->directory(fn (): string => 'events/'.now()->format('Y/m'))
-                    ->getUploadedFileNameForStorageUsing(
-                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                    )
-                    ->maxSize(2048)
-                    ->nullable(),
+                MediaLibraryPicker::attachTo(
+                    FileUpload::make('image_public_id')
+                        ->label(__('Imagen'))
+                        ->image()
+                        ->disk('images')
+                        ->directory(fn (): string => 'events/'.now()->format('Y/m'))
+                        ->getUploadedFileNameForStorageUsing(
+                            fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                        )
+                        ->maxSize(2048)
+                        ->nullable(),
+                ),
                 Section::make(__('Enlaces de descarga'))
                     ->schema([
                         Repeater::make('download_links')

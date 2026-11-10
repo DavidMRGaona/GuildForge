@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\RowDetailsAction;
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Resources\HeroSlideResource\Pages\CreateHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\EditHeroSlide;
 use App\Filament\Resources\HeroSlideResource\Pages\ListHeroSlides;
@@ -66,17 +67,19 @@ class HeroSlideResource extends BaseResource
                 TextInput::make('button_url')
                     ->label(__('URL del botón'))
                     ->maxLength(255),
-                FileUpload::make('image_public_id')
-                    ->label(__('Imagen'))
-                    ->image()
-                    ->disk('images')
-                    ->directory(fn (): string => 'hero-slides/'.now()->format('Y/m'))
-                    ->getUploadedFileNameForStorageUsing(
-                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                    )
-                    ->maxSize(2048)
-                    ->nullable()
-                    ->columnSpanFull(),
+                MediaLibraryPicker::attachTo(
+                    FileUpload::make('image_public_id')
+                        ->label(__('Imagen'))
+                        ->image()
+                        ->disk('images')
+                        ->directory(fn (): string => 'hero-slides/'.now()->format('Y/m'))
+                        ->getUploadedFileNameForStorageUsing(
+                            fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                        )
+                        ->maxSize(2048)
+                        ->nullable()
+                        ->columnSpanFull(),
+                ),
                 Toggle::make('is_active')
                     ->label(__('Activo'))
                     ->default(false),

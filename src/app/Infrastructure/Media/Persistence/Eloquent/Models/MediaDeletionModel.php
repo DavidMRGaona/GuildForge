@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Media\Persistence\Eloquent\Models;
 
+use App\Domain\Media\Enums\MediaDeletionKind;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $width
  * @property int|null $height
  * @property string $outcome
+ * @property MediaDeletionKind $kind
  * @property string|null $deleted_by
  * @property Carbon $deleted_at
  */
@@ -45,6 +47,7 @@ final class MediaDeletionModel extends Model
         'width',
         'height',
         'outcome',
+        'kind',
         'deleted_by',
         'deleted_at',
     ];
@@ -59,6 +62,7 @@ final class MediaDeletionModel extends Model
             'width' => 'integer',
             'height' => 'integer',
             'deleted_at' => 'datetime',
+            'kind' => MediaDeletionKind::class,
         ];
     }
 

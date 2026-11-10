@@ -690,6 +690,43 @@ final class MediaLibraryPageTest extends TestCase
         $this->assertStringNotContainsString('Se muestran los últimos', $html);
     }
 
+    public function test_the_deletions_log_marks_files_released_by_a_record(): void
+    {
+        $deleter = $this->deleter();
+        MediaDeletionModel::query()->create([
+            'file_id' => 'events/released',
+            'resource_type' => 'image',
+            'folder' => 'events/',
+            'source_type' => 'events',
+            'outcome' => 'deleted',
+            'kind' => 'automatic',
+            'deleted_by' => $deleter->id,
+            'deleted_at' => CarbonImmutable::now()->subHour(),
+        ]);
+        MediaDeletionModel::query()->create([
+            'file_id' => 'events/released-by-nobody',
+            'resource_type' => 'image',
+            'folder' => 'events/',
+            'source_type' => 'events',
+            'outcome' => 'deleted',
+            'kind' => 'automatic',
+            'deleted_by' => null,
+            'deleted_at' => CarbonImmutable::now()->subHours(2),
+        ]);
+        $this->actingAs($deleter);
+
+        $page = Livewire::test(MediaLibraryPage::class)->mountAction('deletions');
+        $content = $this->mountedAction($page)->getModalContent();
+        $this->assertInstanceOf(View::class, $content);
+        $html = $content->render();
+
+        $this->assertSame(2, substr_count($html, 'al quitarlo de un registro'));
+        $this->assertStringContainsString('Por '.$deleter->name, $html);
+        // Saved with nobody signed in (a command): it was not an account that was removed since
+        $this->assertStringContainsString('Automáticamente, el', $html);
+        $this->assertStringNotContainsString('una cuenta eliminada', $html);
+    }
+
     public function test_the_deletions_log_says_when_it_shows_only_the_latest(): void
     {
         $deleter = $this->deleter();
