@@ -170,6 +170,40 @@ final class MediaLibraryPageTest extends TestCase
         $this->listPage()->assertTableColumnFormattedStateSet('origin', 'Eventos', $file);
     }
 
+    public function test_every_card_shows_its_upload_day_so_the_order_can_be_read(): void
+    {
+        $file = $this->file('events/a', uploadedAt: CarbonImmutable::parse('2026-11-02 10:00:00'));
+        $this->usage('events/a', 'Torneo de otoño', 'record-1');
+        $this->actingAs($this->viewer());
+
+        Livewire::test(MediaLibraryPage::class)
+            ->set('display', 'grid')
+            ->assertTableColumnFormattedStateSet('origin', 'Eventos · subido el 02/11/2026', $file);
+    }
+
+    public function test_grid_sort_options_are_named_in_spanish(): void
+    {
+        $this->actingAs($this->viewer());
+
+        $table = $this->table(Livewire::test(MediaLibraryPage::class)->set('display', 'grid'));
+
+        // The default order, newest upload first, is the «-» option of the sort select
+        $this->assertSame('Más recientes', $table->getDefaultSortOptionLabel());
+        $this->assertSame('Tamaño', $table->getColumn('bytes')?->getLabel());
+        $this->assertSame('Usos', $table->getColumn('usages_count')?->getLabel());
+    }
+
+    public function test_grid_names_its_select_all_checkbox(): void
+    {
+        $this->file('events/a');
+        $this->actingAs($this->deleter());
+
+        // The theme shows it next to the checkbox, which it hides when no card on the page is selectable
+        Livewire::test(MediaLibraryPage::class)
+            ->set('display', 'grid')
+            ->assertSeeHtml("--media-library-select-label: 'Seleccionar los sin usar'");
+    }
+
     public function test_totals_are_shown_above_the_table(): void
     {
         $this->file('events/a', bytes: 1_572_864);

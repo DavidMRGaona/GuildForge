@@ -201,6 +201,8 @@ final class MediaLibraryPage extends Page implements HasTable
                     }),
             ])
             ->defaultSort('uploaded_at', 'desc')
+            // The grid has no date column: its sort select shows the default order under this name
+            ->defaultSortOptionLabel(__('filament.media_library.sort.newest'))
             // Files uploaded in the same second keep one order, which «‹ ›» in the details follow
             ->defaultKeySort()
             // A click runs «Ver ficha», which hands over to the page action: «‹ ›» replace it there
@@ -227,8 +229,12 @@ final class MediaLibraryPage extends Page implements HasTable
         // Cards hide no column, so they need no «Ver detalles»
         return $table
             ->contentGrid(['md' => 3, 'xl' => 4])
-            // Scopes the theme rules that lay the selection checkbox over the thumbnail (core#495)
-            ->extraAttributes(['class' => 'media-library-grid'])
+            // Scopes the theme rules that lay the selection checkbox over the thumbnail (core#495) and name the
+            // select-all one, which has no visible label of its own (core#508)
+            ->extraAttributes([
+                'class' => 'media-library-grid',
+                'style' => '--media-library-select-label: '.$this->cssString(__('filament.media_library.select_unused')),
+            ])
             ->recordActions([ActionGroup::make([$this->viewDetailsAction(), $rowDelete])]);
     }
 
@@ -316,14 +322,12 @@ final class MediaLibraryPage extends Page implements HasTable
                 $this->titleColumn()
                     ->weight(FontWeight::Medium)
                     ->wrap(),
-                // A card of a file nobody uses has no title: its origin line carries the upload day
+                // The origin line carries the upload day, the order the grid follows by default
                 $this->originColumn()
-                    ->formatStateUsing(fn (string $state, MediaFileModel $record): string => $record->usages->isEmpty()
-                        ? __('filament.media_library.uploaded_on', [
-                            'origin' => $state,
-                            'date' => resolve(TimezoneServiceInterface::class)->format($record->uploaded_at, 'd/m/Y'),
-                        ])
-                        : $state)
+                    ->formatStateUsing(fn (string $state, MediaFileModel $record): string => __('filament.media_library.uploaded_on', [
+                        'origin' => $state,
+                        'date' => resolve(TimezoneServiceInterface::class)->format($record->uploaded_at, 'd/m/Y'),
+                    ]))
                     ->size(TextSize::Small)
                     ->color('gray'),
                 // Size and uses are here so the grid can be sorted by them too
@@ -368,10 +372,8 @@ final class MediaLibraryPage extends Page implements HasTable
                 ->wrap()
                 ->visibleFrom('xl'),
             $this->sizeColumn()
-                ->label(__('filament.media_library.columns.bytes'))
                 ->visibleFrom('sm'),
             $this->usagesCountColumn()
-                ->label(__('filament.media_library.columns.usages_count'))
                 ->alignCenter()
                 ->visibleFrom('xl'),
             TextColumn::make('uploaded_at')
@@ -425,16 +427,29 @@ final class MediaLibraryPage extends Page implements HasTable
             ->state(fn (MediaFileModel $record): string => $this->originLabel($record));
     }
 
+    /**
+     * A quoted CSS string, for text the theme shows through a custom property.
+     */
+    private function cssString(string $text): string
+    {
+        // The attribute bag writes the style between double quotes without escaping them: a double quote
+        // in the text becomes the CSS escape \22
+        return "'".str_replace(['\\', "'", '"'], ['\\\\', "\\'", '\\22 '], $text)."'";
+    }
+
     private function sizeColumn(): TextColumn
     {
         return TextColumn::make('bytes')
+            ->label(__('filament.media_library.columns.bytes'))
             ->formatStateUsing(fn (int $state): string => FileSize::format($state))
             ->sortable();
     }
 
     private function usagesCountColumn(): TextColumn
     {
-        return TextColumn::make('usages_count')->sortable();
+        return TextColumn::make('usages_count')
+            ->label(__('filament.media_library.columns.usages_count'))
+            ->sortable();
     }
 
     private function statusColumn(): TextColumn

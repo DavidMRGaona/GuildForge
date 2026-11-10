@@ -259,3 +259,33 @@
     flex-wrap: wrap;
     row-gap: 0.25rem;
 }
+
+/* Media library grid (core#508): the select-all checkbox of the grid has no visible label, so the page names
+   it through --media-library-select-label, shown between the checkbox and the sort select. Both hide while
+   no card on the page is selectable */
+.media-library-grid .fi-ta-content-header {
+    /* On a phone the sort select goes to its own line instead of squeezing its value out of view */
+    flex-wrap: wrap;
+}
+
+.media-library-grid .fi-ta-content-header::before {
+    content: var(--media-library-select-label);
+    order: 1;
+    white-space: nowrap;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--gray-700);
+}
+
+.dark .media-library-grid .fi-ta-content-header::before {
+    color: var(--gray-300);
+}
+
+.media-library-grid .fi-ta-content-header > :not(.fi-ta-page-checkbox) {
+    order: 2;
+}
+
+.media-library-grid:not(:has(.fi-ta-record-checkbox)) .fi-ta-content-header::before,
+.media-library-grid:not(:has(.fi-ta-record-checkbox)) .fi-ta-content-header .fi-ta-page-checkbox {
+    display: none;
+}
