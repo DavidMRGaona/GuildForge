@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Actions\RowDetailsAction;
+use App\Filament\Pages\MediaLibraryPage;
 use App\Filament\Resources\ArticleResource\Pages\ListArticles;
 use App\Filament\Resources\EventResource\Pages\ListEvents;
 use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
@@ -304,6 +305,60 @@ final class PanelTablesFitTest extends TestCase
         $this->assertInstanceOf(TextColumn::class, $textColumn);
 
         $this->assertTrue($textColumn->canWrap());
+    }
+
+    /**
+     * The media library list (its grid is a content grid of cards): one menu with «Ver detalles»
+     * first, secondary columns from the width where they fit, the title wrapping and the usage
+     * counter centred.
+     */
+    public function test_media_library_list_fits(): void
+    {
+        $component = Livewire::test(MediaLibraryPage::class)->callAction('toggleLayout')->instance();
+        $this->assertInstanceOf(HasTable::class, $component);
+        $table = $component->getTable();
+
+        $actions = $table->getRecordActions();
+        $this->assertCount(1, $actions);
+        $this->assertInstanceOf(ActionGroup::class, $actions[0]);
+        $this->assertSame([RowDetailsAction::NAME, 'viewDetails', 'delete'], array_keys($actions[0]->getFlatActions()));
+
+        $breakpoints = [];
+        foreach ($table->getColumns() as $column) {
+            $breakpoints[$column->getName()] = $column->getVisibleFrom();
+        }
+        $this->assertSame([
+            'thumbnail' => null,
+            'title' => null,
+            'origin' => 'md',
+            'bytes' => 'sm',
+            'usages_count' => null,
+            'uploaded_at' => 'xl',
+            'status' => null,
+        ], $breakpoints);
+
+        $title = $table->getColumn('title');
+        $this->assertInstanceOf(TextColumn::class, $title);
+        $this->assertTrue($title->canWrap());
+        $this->assertSame(Alignment::Center, $table->getColumn('usages_count')?->getAlignment());
+        $this->assertSame('xl:hidden', RowDetailsAction::hiddenFromClass($table));
+    }
+
+    /**
+     * The grid shows cards (three from md, four from xl); a card opens its details and its menu has no
+     * «Ver detalles», since cards hide no column.
+     */
+    public function test_media_library_grid_uses_cards(): void
+    {
+        $component = Livewire::test(MediaLibraryPage::class)->instance();
+        $this->assertInstanceOf(HasTable::class, $component);
+        $table = $component->getTable();
+
+        $this->assertSame(['md' => 3, 'xl' => 4], $table->getContentGrid());
+        $actions = $table->getRecordActions();
+        $this->assertCount(1, $actions);
+        $this->assertInstanceOf(ActionGroup::class, $actions[0]);
+        $this->assertSame(['viewDetails', 'delete'], array_keys($actions[0]->getFlatActions()));
     }
 
     /**

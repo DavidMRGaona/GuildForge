@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Pages;
 
+use App\Filament\Pages\MediaLibraryPage;
 use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\Settings\AboutPageSettings;
@@ -40,6 +41,7 @@ final class PermissionGatedPagesTest extends TestCase
             'mail health widget' => [MailHealthWidget::class, 'mail.configure', 'canView'],
             'mail statistics' => [MailStatisticsPage::class, 'mail.view_stats', 'canAccess'],
             'mail stats widget' => [MailStatsOverviewWidget::class, 'mail.view_stats', 'canView'],
+            'media library' => [MediaLibraryPage::class, 'media.view_any', 'canAccess'],
         ];
     }
 

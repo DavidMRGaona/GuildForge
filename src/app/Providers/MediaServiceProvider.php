@@ -8,6 +8,7 @@ use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaDeletionServiceInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
+use App\Application\Media\Services\MediaLibraryQueryInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Filament\Media\Sources\ArticleMediaSource;
 use App\Filament\Media\Sources\EventMediaSource;
@@ -18,6 +19,7 @@ use App\Infrastructure\Media\Cloudinary\CloudinaryMediaCatalog;
 use App\Infrastructure\Media\Cloudinary\DeferredMediaCatalog;
 use App\Infrastructure\Media\Observers\RefreshMediaUsagesObserver;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
+use App\Infrastructure\Media\Services\EloquentMediaLibraryQuery;
 use App\Infrastructure\Media\Services\MediaDeletionService;
 use App\Infrastructure\Media\Services\MediaIndexer;
 use App\Infrastructure\Media\Services\MediaSourceRegistry;
@@ -61,6 +63,8 @@ final class MediaServiceProvider extends ServiceProvider
         $this->app->bind(MediaIndexerInterface::class, MediaIndexer::class);
         // Not a singleton either: the catalog and the switch are read when it deletes, never cached
         $this->app->bind(MediaDeletionServiceInterface::class, MediaDeletionService::class);
+        // What the panel library lists; it reads the sources and the clock on every call
+        $this->app->bind(MediaLibraryQueryInterface::class, EloquentMediaLibraryQuery::class);
     }
 
     public function boot(): void

@@ -721,7 +721,7 @@ The sidebar groups belong to the core (`App\Filament\Support\PanelNavigationGrou
 
 | Group | Holds |
 |---|---|
-| Contenido | Events, articles, galleries, help guides |
+| Contenido | Events, articles, galleries, media library, help guides |
 | Actividades | What people play or book: tables, tournaments, venue bookings |
 | Comunicación | Announcements, surveys |
 | Personas | Users, roles, association members |
@@ -746,7 +746,7 @@ Sort slots, so modules never depend on each other's numbers (core entries in bra
 
 | Group | Entries (sort) |
 |---|---|
-| Contenido | [Eventos 10 · Artículos 20 · Galerías 30 · Guías de ayuda 90] |
+| Contenido | [Eventos 10 · Artículos 20 · Galerías 30 · Biblioteca de medios 40 · Guías de ayuda 90] |
 | Actividades | game-tables Mesas 10 · tournaments Torneos 20 · venue-bookings Reservas 30 |
 | Comunicación | announcements Anuncios 10 · surveys Encuestas 20 |
 | Personas | [Usuarios 10 · Roles 20] · memberships Socios 30 |

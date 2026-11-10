@@ -79,7 +79,7 @@ final class PanelNavigationTest extends TestCase
 
         $this->assertSame([
             '' => ['Escritorio'],
-            'Contenido' => ['Eventos', 'Artículos', 'Galerías', 'Guías de ayuda'],
+            'Contenido' => ['Eventos', 'Artículos', 'Galerías', 'Biblioteca de medios', 'Guías de ayuda'],
             'Personas' => ['Usuarios', 'Roles'],
             'Sitio web' => ['Hero slides', 'Navegación', 'Nosotros', 'Páginas legales'],
             'Catálogos' => ['Etiquetas'],

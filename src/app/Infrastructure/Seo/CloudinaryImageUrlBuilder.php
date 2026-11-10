@@ -6,7 +6,7 @@ namespace App\Infrastructure\Seo;
 
 /**
  * Server-side counterpart of resources/js/utils/cloudinary.ts, limited to the
- * presets link previews need. Keep the public ID normalization in sync.
+ * presets link previews and the panel media library need. Keep the public ID normalization in sync.
  */
 final readonly class CloudinaryImageUrlBuilder
 {
@@ -58,6 +58,52 @@ final readonly class CloudinaryImageUrlBuilder
         $animated = str_ends_with($baseName, self::ANIMATED_AVATAR_SUFFIX) ? ',fl_animated' : '';
 
         return $this->build($publicId, "w_{$size},h_{$size},c_fill,g_face,q_auto,f_auto{$animated}");
+    }
+
+    /**
+     * Square thumbnail of a media library file (an id relative to the prefix, without extension),
+     * cropped around what Cloudinary finds most relevant.
+     */
+    public function mediaThumbnail(string $fileId, int $size): ?string
+    {
+        return $this->buildMedia($fileId, 'image', "w_{$size},h_{$size},c_fill,g_auto,q_auto,f_auto");
+    }
+
+    /**
+     * A media library file scaled down to the given width at most, uncropped.
+     */
+    public function mediaPreview(string $fileId, int $width): ?string
+    {
+        return $this->buildMedia($fileId, 'image', "w_{$width},c_limit,q_auto,f_auto");
+    }
+
+    /**
+     * The file as it was uploaded.
+     */
+    public function mediaOriginal(string $fileId, string $resourceType = 'image'): ?string
+    {
+        return $this->buildMedia($fileId, $resourceType, null);
+    }
+
+    /**
+     * Library ids are always relative to the prefix, so it is always added (an id may itself start with
+     * the prefix's name), and each segment is encoded.
+     */
+    private function buildMedia(string $fileId, string $resourceType, ?string $transformations): ?string
+    {
+        if ($this->cloudName === '' || $fileId === '' || preg_match('/^[a-z]+$/', $resourceType) !== 1) {
+            return null;
+        }
+
+        $path = implode('/', array_map(rawurlencode(...), explode('/', $fileId)));
+
+        return sprintf(
+            'https://res.cloudinary.com/%s/%s/upload/%s%s',
+            $this->cloudName,
+            $resourceType,
+            $transformations !== null ? $transformations.'/' : '',
+            $this->prefix !== '' ? $this->prefix.'/'.$path : $path,
+        );
     }
 
     private function build(string $publicId, string $transformations): ?string
