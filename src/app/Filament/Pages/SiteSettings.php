@@ -16,6 +16,7 @@ use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
 use App\Filament\Support\PanelSidebarMode;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
+use App\Infrastructure\Authorization\Services\RoleChangeAnnouncer;
 use App\Infrastructure\Knowledge\Jobs\SyncKnowledgeCatalogJob;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Actions\Action;
@@ -795,6 +796,12 @@ final class SiteSettings extends Page implements HasForms
         if ($associationRoleAfter !== $associationRoleBefore) {
             app(AuthorizationServiceInterface::class)->invalidateCache();
         }
+
+        // Who was a member under the role in force before and is not under the one in force now
+        app(RoleChangeAnnouncer::class)->announceAssociationRoleSwitch(
+            $associationRoleNameBefore,
+            app(AssociationMembershipServiceInterface::class)->roleName(),
+        );
 
         // The guides' plain text carries the site name and the association role name
         if (app(SiteBrandingServiceInterface::class)->siteName() !== $siteNameBefore

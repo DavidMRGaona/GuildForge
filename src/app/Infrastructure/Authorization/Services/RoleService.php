@@ -39,6 +39,7 @@ final readonly class RoleService implements RoleServiceInterface
         private RoleAuditLoggerInterface $audit,
         private AdminOnlyPermissionRule $adminOnly,
         private RoleDefinitionChanges $definitionChanges = new RoleDefinitionChanges,
+        private RoleChangeAnnouncer $announcer = new RoleChangeAnnouncer,
     ) {}
 
     /**
@@ -174,15 +175,20 @@ final readonly class RoleService implements RoleServiceInterface
         }
 
         DB::transaction(function () use ($role): void {
-            // Before deleting: the history also records the role taken from each holder
+            $permissionKeys = $this->roleRepository->getPermissionKeys($role->id());
+
+            // Before deleting: the history also records the role taken from each holder, and
+            // the pivot rows with the holders go with the role
+            $event = $this->announcer->captureDeletion($role->id()->value, $role->name()->value, array_values($permissionKeys));
             $this->audit->roleChanged($role->id()->value, $role->name()->value, RoleAuditEvent::RoleDeleted, $this->definitionChanges->between(
-                $this->roleRepository->getPermissionKeys($role->id()),
+                $permissionKeys,
                 [],
             ));
             $this->roleRepository->delete($role->id());
+            // Registered before the announcement: the cache is fresh when a listener runs
+            $this->authorization->invalidateCache();
+            $this->announcer->announceDeletion($event);
         });
-
-        $this->authorization->invalidateCache();
     }
 
     /**

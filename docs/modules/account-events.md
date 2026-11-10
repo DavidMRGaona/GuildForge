@@ -2,7 +2,7 @@
 
 A module that mirrors accounts in another system (the forum bridge is the first) has to hear about account and role changes as they happen, not at the next sign-in. The core publishes them as domain events. For the rest of the module SDK, see the [module development guide](./README.md).
 
-Requirement: set `requires.core` in `module.json` to the core release that introduces them (the one with core#461). An older core only has `UserProfileUpdated` (from the person's own profile), `UserLoggedIn`, `UserLoggedOut` and `AssociationRoleLost`.
+Requirement: set `requires.core` in `module.json` to the core release that introduces them (the one with core#461; `RoleDeleted` and `UserActiveRolesChanged` come with core#466, a later one). An older core only has `UserProfileUpdated` (from the person's own profile), `UserLoggedIn`, `UserLoggedOut` and `AssociationRoleLost`.
 
 ## Guarantees
 
@@ -20,6 +20,8 @@ Requirement: set `requires.core` in `module.json` to the core release that intro
 | `UserAnonymized` | `userId` | An account is anonymized (`UserService::anonymize()` and `anonymizeWithContentTransfer()`, so also from the panel). Personal data and every role are already gone. |
 | `UserRolesChanged` | `userId`, `rolesBefore`, `rolesAfter` | The roles stored for an account change: `assignRole()`, `removeRole()`, `syncRoles()` (user form of the panel included, also when creating an account), the holder limit dropping roles after a restore and `users:assign-member-role` (one event per account). |
 | `RolePermissionsChanged` | `roleId`, `roleName`, `permissionsBefore`, `permissionsAfter` | The permissions of a role change: `RoleService` (`update`, `assignPermissions`, `syncPermissions`, so also `RolePermissionGrants` in migrations) and the role form of the panel. |
+| `RoleDeleted` | `roleId`, `roleName`, `permissions`, `holderIds` | A role is deleted (`RoleService::delete()` and the panel's delete actions). One event per deletion, with the role as it was (permission keys, sorted) and the ids of every account that held it, deactivated ones included. Its holders get no `UserRolesChanged`: revoke what the role granted from `holderIds`. Take the ids in chunks if the role has many holders. |
+| `UserActiveRolesChanged` | `userId`, `rolesActivated`, `rolesPaused` | Roles that require the association member role turn on or off for an account without being granted or taken away: the association member role setting changes (accounts that stop or start being members), or a role gains or loses «Requiere ser socio» (its holders who are not members). One event per affected live account, only when something really turned on or off. The roles stored for the account do not change, so there is no `UserRolesChanged`. |
 | `UserDeactivated` | `userId` | An account is deactivated (soft deleted), from wherever. A permanent deletion does not dispatch it. |
 | `UserRestored` | `userId` | A deactivated account is restored. Roles dropped because they filled up meanwhile come afterwards as a `UserRolesChanged`. |
 | `UserProfileUpdated` | `userId` | Already existing. Now also when the panel's user form changes `name`, `display_name`, `email` or `avatar_public_id`; saving only roles, a password or nothing does not dispatch it. |
@@ -29,8 +31,9 @@ Role lists are role **names**, sorted, and are the roles stored for the account,
 ## What does not come through
 
 - Anonymizing: the roles it removes come with `UserAnonymized`, not as `UserRolesChanged`.
-- Creating, renaming or deleting a role: deleting one removes it from its holders without a `UserRolesChanged`.
-- Changing the association member role in the site settings.
+- Creating or renaming a role.
+- Deleting a role: it comes as one `RoleDeleted`, not as a `UserRolesChanged` per holder.
+- Changing the association member role or a role's requirement: it comes as `UserActiveRolesChanged`, not as `UserRolesChanged`, because the stored roles stay the same. Changes made outside the panel (a seeder, tinker, a migration that writes `roles.requires_association_member`) are not announced.
 - Creating an account from the panel: it dispatches `UserRolesChanged` (it gets `member`), not `UserProfileUpdated`.
 
 ## Example

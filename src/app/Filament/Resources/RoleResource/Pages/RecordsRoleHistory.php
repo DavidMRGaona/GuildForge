@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\RoleResource\Pages;
 
+use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Authorization\Services\RoleDefinitionChanges;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Events\RolePermissionsChanged;
+use App\Infrastructure\Authorization\Services\RoleChangeAnnouncer;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -76,6 +78,28 @@ trait RecordsRoleHistory
         DB::afterCommit(static function () use ($event): void {
             Event::dispatch($event);
         });
+    }
+
+    /**
+     * Tells the modules, after the page's transaction commits, which holders had the role turned
+     * on or off because it gained or lost the «Requiere ser socio» requirement. Nothing is
+     * dispatched when the requirement stayed the same.
+     */
+    private function announceRequirementChange(RoleModel $record): void
+    {
+        $fresh = $record->fresh() ?? $record;
+        $before = (bool) ($this->fieldsBeforeSave['requires_association_member'] ?? false);
+        $after = $fresh->requires_association_member;
+
+        if ($before === $after) {
+            return;
+        }
+
+        app(RoleChangeAnnouncer::class)->announceRequirementChange(
+            $fresh->name,
+            $after,
+            app(AssociationMembershipServiceInterface::class)->roleName(),
+        );
     }
 
     /**
