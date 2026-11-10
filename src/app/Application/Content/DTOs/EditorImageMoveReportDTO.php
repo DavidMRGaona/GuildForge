@@ -11,11 +11,13 @@ final readonly class EditorImageMoveReportDTO
      * @param  list<string>  $moved  "<value>: <local URL> → <Cloudinary path>" of every image moved (or that would move)
      * @param  list<string>  $broken  "<value>: <URL>" of local images that are missing or unsafe, left as they are
      * @param  list<string>  $failed  "<value>: <URL> (<reason>)" of images not moved, whose value and local copy are kept
+     * @param  list<string>  $otherHosts  "<value>: <URL> (<whether the file is here>)" of "/storage/" URLs on hosts not passed, left as they are
      */
     public function __construct(
         public int $checked,
         public array $moved,
         public array $broken,
         public array $failed,
+        public array $otherHosts = [],
     ) {}
 }

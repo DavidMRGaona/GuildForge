@@ -231,6 +231,63 @@ final class EditorImageMoverTest extends TestCase
         $this->assertCount(1, $report->moved);
     }
 
+    public function test_an_image_on_a_previous_host_of_the_site_is_reported_with_the_host_to_pass(): void
+    {
+        $this->localFile('3fJk2Lm9Qx.png', 'png-bytes');
+        $html = '<p><img src="https://old.example/storage/3fJk2Lm9Qx.png"></p>';
+        $article = $this->article($html);
+
+        $report = $this->mover()->move();
+
+        $this->assertSame($html, $this->column('articles', 'content', $article->id));
+        Storage::disk('public')->assertExists('3fJk2Lm9Qx.png');
+        $this->assertSame([], $report->moved);
+        $this->assertSame([], $report->broken);
+        $this->assertSame(['articles.content#'.$article->id.': https://old.example/storage/3fJk2Lm9Qx.png (file found here: pass --host=old.example)'], $report->otherHosts);
+    }
+
+    public function test_an_image_on_a_host_passed_moves(): void
+    {
+        $this->localFile('a.png', 'a');
+        $this->localFile('b.png', 'b');
+        $first = $this->article('<p><img src="https://old.example/storage/a.png"></p>');
+        // Hosts compare without case and port
+        $second = $this->article('<p><img src="http://OLD.example:8443/storage/b.png"></p>');
+
+        $report = $this->mover()->move(hosts: ['old.example']);
+
+        $this->assertStringContainsString('/articles/content/2026/11/', $this->column('articles', 'content', $first->id));
+        $this->assertStringContainsString('/articles/content/2026/11/', $this->column('articles', 'content', $second->id));
+        Storage::disk('public')->assertMissing('a.png');
+        Storage::disk('public')->assertMissing('b.png');
+        $this->assertCount(2, $report->moved);
+        $this->assertSame([], $report->otherHosts);
+    }
+
+    public function test_an_image_of_another_site_without_a_local_file_is_reported_and_left_alone(): void
+    {
+        $html = '<p><img src="https://elsewhere.example/storage/photo.png"></p>';
+        $article = $this->article($html);
+
+        $report = $this->mover()->move();
+
+        $this->assertSame($html, $this->column('articles', 'content', $article->id));
+        $this->assertSame([], $report->broken);
+        $this->assertSame(['articles.content#'.$article->id.': https://elsewhere.example/storage/photo.png (no such file here)'], $report->otherHosts);
+    }
+
+    public function test_a_missing_file_on_a_host_passed_is_a_broken_reference(): void
+    {
+        $html = '<p><img src="https://old.example/storage/missing.png"></p>';
+        $article = $this->article($html);
+
+        $report = $this->mover()->move(hosts: ['old.example']);
+
+        $this->assertSame($html, $this->column('articles', 'content', $article->id));
+        $this->assertSame(['articles.content#'.$article->id.': https://old.example/storage/missing.png'], $report->broken);
+        $this->assertSame([], $report->otherHosts);
+    }
+
     public function test_other_images_are_not_touched(): void
     {
         $cloudinary = $this->images->url('articles/content/2026/11/0b7e7c1e-6a0f-4c56-9d0e-1b2f3a4c5d6e.png');
