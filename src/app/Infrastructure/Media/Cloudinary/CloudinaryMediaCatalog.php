@@ -38,6 +38,8 @@ final readonly class CloudinaryMediaCatalog implements MediaCatalogInterface
 
         $assets = [];
         $cursor = null;
+        /** @var array<string, true> $seenCursors */
+        $seenCursors = [];
 
         try {
             do {
@@ -69,6 +71,15 @@ final readonly class CloudinaryMediaCatalog implements MediaCatalogInterface
 
                 $next = $response['next_cursor'] ?? null;
                 $cursor = is_string($next) && $next !== '' ? $next : null;
+
+                // A cursor handed out twice would page forever: the listing is not trusted
+                if ($cursor !== null) {
+                    if (isset($seenCursors[$cursor])) {
+                        throw MediaCatalogUnavailableException::because('repeated listing cursor');
+                    }
+
+                    $seenCursors[$cursor] = true;
+                }
             } while ($cursor !== null);
         } catch (MediaCatalogUnavailableException $e) {
             throw $e;

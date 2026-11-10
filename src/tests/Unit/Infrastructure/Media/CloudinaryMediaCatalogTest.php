@@ -83,6 +83,23 @@ final class CloudinaryMediaCatalogTest extends TestCase
         $this->catalog(admin: $admin)->all();
     }
 
+    public function test_a_repeated_cursor_throws_instead_of_looping(): void
+    {
+        $admin = $this->createMock(AdminApi::class);
+        // c1 → c2 → c1 again: the listing would never end
+        $admin->expects($this->exactly(3))->method('assets')->willReturnCallback(
+            fn (array $options): ApiResponse => match ($options['next_cursor'] ?? null) {
+                null => $this->page(2, 0, 'c1'),
+                'c1' => $this->page(2, 2, 'c2'),
+                default => $this->page(2, 4, 'c1'),
+            },
+        );
+
+        $this->expectException(MediaCatalogUnavailableException::class);
+
+        $this->catalog(admin: $admin)->all();
+    }
+
     public function test_destroy_ok_is_deleted(): void
     {
         $this->assertSame(MediaDestroyOutcome::Deleted, $this->destroyWith(new ApiResponse(['result' => 'ok'], [])));
