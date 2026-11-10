@@ -15,7 +15,7 @@ use InvalidArgumentException;
  * no audience.
  *
  * `$discussionId` identifies the discussion in the forum. `$url` is its public address.
- * `$excerpt` is plain text and may be empty. `$tags` are the names of its tags.
+ * `$excerpt` is plain text and may be empty. `$tags` are labels of its tags (their names or short names, as the forum module has them).
  */
 final readonly class ForumDiscussionStarted
 {
