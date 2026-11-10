@@ -5,11 +5,13 @@ import type { SlotPosition } from '@/types/slots';
 
 const props = defineProps<{
     name: SlotPosition;
+    /** Props the page hands to every component in the slot (e.g. `subjectType` and `subjectId`) */
+    props?: Record<string, unknown>;
 }>();
 
 const { getSlotComponents, hasSlotComponents } = useModuleSlots();
 
-const components = computed(() => getSlotComponents(props.name));
+const components = computed(() => getSlotComponents(props.name, props.props));
 const hasComponents = computed(() => hasSlotComponents(props.name));
 
 const slotErrors = ref<Map<string, Error>>(new Map());
