@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class AvatarMediaSource extends EloquentColumnMediaSource
 {
+    /** Folders of the profile pictures: the panel uploads to avatars/, the profile page to users/ */
+    public const array FOLDERS = ['avatars/', 'users/'];
+
     public function type(): string
     {
         return 'avatars';
@@ -24,7 +27,7 @@ final class AvatarMediaSource extends EloquentColumnMediaSource
 
     public function folders(): array
     {
-        return ['avatars/', 'users/'];
+        return self::FOLDERS;
     }
 
     public function excludedSubfolders(): array

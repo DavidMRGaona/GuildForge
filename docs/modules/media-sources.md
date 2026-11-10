@@ -137,6 +137,8 @@ When a record lets go of a file (it is replaced, cleared, or the record is delet
 - Models that use `App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages` already do: since core#480 the trait releases the old file after the save commits.
 - Anything else calls `App\Application\Media\Services\MediaFileReleaserInterface::release($storedPath)` after it has saved the new value. A queued check deletes the file only if no active source uses it right now (the same live checks as the library, without the 7-day grace period or the deletion switch) and records it in the deletions log as automatic. Any doubt keeps the file, which then shows as unused.
 
+A release waits for the open transaction to commit; with none open it runs at once. A page whose save writes several records with image fields (a repeater of photos, for instance) must run in one transaction, or a record written later in the same save that chose the released file would find it gone. On a Filament page: `protected ?bool $hasDatabaseTransactions = true;`, as the core resource pages with image fields do.
+
 Never call `Storage::disk('images')->delete()` on a file of a claimed folder.
 
 ### 2. Mark the source

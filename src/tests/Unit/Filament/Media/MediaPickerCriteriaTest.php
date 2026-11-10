@@ -21,10 +21,13 @@ final class MediaPickerCriteriaTest extends TestCase
         $this->assertSame(512 * 1024, $criteria->maxBytes);
     }
 
-    public function test_any_image_type_accepts_every_format(): void
+    public function test_any_image_type_accepts_web_raster_formats_only(): void
     {
-        $this->assertNull(MediaPickerCriteria::fromField(FileUpload::make('image')->image(), null)->formats);
-        $this->assertNull(MediaPickerCriteria::fromField(FileUpload::make('image'), null)->formats);
+        // Cloudinary keeps PDF, PSD or AI files as image resources too; an SVG is only taken where a field asks for it
+        $raster = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'];
+
+        $this->assertSame($raster, MediaPickerCriteria::fromField(FileUpload::make('image')->image(), null)->formats);
+        $this->assertSame($raster, MediaPickerCriteria::fromField(FileUpload::make('image'), null)->formats);
         $this->assertNull(MediaPickerCriteria::fromField(FileUpload::make('image'), null)->maxBytes);
     }
 

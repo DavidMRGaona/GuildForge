@@ -176,10 +176,14 @@ final class MediaLibraryPicker
             return false;
         }
 
-        return MediaPickerCriteria::fromField($component, $constrain)
+        $chosen = MediaPickerCriteria::fromField($component, $constrain)
             ->apply(resolve(MediaLibraryQueryInterface::class)->query())
             ->where('media_files.file_id', $id->value)
-            ->exists();
+            ->first();
+
+        // Only the path an upload would have stored: another spelling of the same file (other extension,
+        // a URL, a leading slash) would break its resource type or its delivery URL
+        return $chosen instanceof MediaFileModel && $file === self::storedPathOf($chosen);
     }
 
     /**

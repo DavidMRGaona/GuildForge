@@ -170,6 +170,21 @@ final class MediaLibraryPickerTest extends TestCase
         }
     }
 
+    public function test_save_accepts_only_the_path_an_upload_would_store(): void
+    {
+        $this->image('events/a');
+
+        // The same file, written another way: an upload would never store these
+        foreach (['events/a.mp4', '/events/a.jpg', 'events\\a.jpg', 'https://res.cloudinary.com/demo/image/upload/site/events/a.jpg'] as $path) {
+            $this->assertSaveRejected($path, missing: false);
+        }
+
+        Livewire::test(MediaPickerFixturePage::class)
+            ->set('data.image_public_id', ['a' => 'events/a.jpg'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+    }
+
     public function test_save_rejects_a_library_path_without_media_view_any(): void
     {
         $this->image('events/a');

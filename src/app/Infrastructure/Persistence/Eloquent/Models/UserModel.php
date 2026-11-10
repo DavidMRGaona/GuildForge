@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Media\Services\MediaFileReleaserInterface;
 use App\Domain\Events\UserDeactivated;
 use App\Domain\Events\UserRestored;
+use App\Infrastructure\Media\Sources\AvatarMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
@@ -28,6 +30,7 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property string $id
@@ -92,6 +95,23 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
     protected function sharesCloudinaryImages(): bool
     {
         return false;
+    }
+
+    /**
+     * Only a file in the avatar folders goes at once; any other path (never an upload of this field) may be
+     * shared, so it is released and kept while anyone uses it.
+     */
+    protected function deleteFromCloudinary(string $publicId): void
+    {
+        $path = ltrim(str_replace('\\', '/', $publicId), '/');
+
+        if (array_any(AvatarMediaSource::FOLDERS, static fn (string $folder): bool => str_starts_with($path, $folder) && ! str_contains($path, '..'))) {
+            Storage::disk('images')->delete($publicId);
+
+            return;
+        }
+
+        resolve(MediaFileReleaserInterface::class)->release($publicId);
     }
 
     /**

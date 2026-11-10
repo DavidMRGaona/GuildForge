@@ -133,6 +133,21 @@ final class DeletesCloudinaryImagesReleaseTest extends TestCase
         $this->assertSame(['deleted', 'missing'], MediaDeletionModel::query()->orderBy('outcome')->pluck('outcome')->all());
     }
 
+    public function test_an_avatar_path_outside_the_avatar_folders_is_only_released(): void
+    {
+        // A forged avatar pointing at an event image: replacing it must not delete the shared file at once
+        Storage::fake('images');
+        Storage::disk('images')->put('events/2026/11/shared.jpg', 'x');
+        $this->catalog->add('events/2026/11/shared');
+        EventModel::factory()->create(['image_public_id' => 'events/2026/11/shared.jpg']);
+        $user = UserModel::factory()->create(['avatar_public_id' => 'events/2026/11/shared.jpg']);
+
+        $user->update(['avatar_public_id' => null]);
+
+        Storage::disk('images')->assertExists('events/2026/11/shared.jpg');
+        $this->assertArrayHasKey('events/2026/11/shared', $this->catalog->assets);
+    }
+
     public function test_avatar_is_still_deleted_right_away(): void
     {
         Storage::fake('images');

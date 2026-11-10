@@ -29,8 +29,11 @@ final readonly class MediaPickerCriteria
         'image/avif' => ['avif'],
     ];
 
+    /** What a field that takes any image accepts: web raster formats, never a PDF, PSD or SVG kept as an image */
+    private const array ANY_IMAGE = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'];
+
     /**
-     * @param  list<string>|null  $formats  null for any image
+     * @param  list<string>|null  $formats  null for no restriction (only when built by hand)
      * @param  (Closure(Builder<MediaFileModel>): Builder<MediaFileModel>)|null  $constrain  the field's own rule, if any
      */
     public function __construct(
@@ -45,7 +48,7 @@ final readonly class MediaPickerCriteria
     public static function fromField(FileUpload $field, ?Closure $constrain): self
     {
         $types = $field->getAcceptedFileTypes();
-        $formats = null;
+        $formats = self::ANY_IMAGE;
 
         if ($types !== null && ! in_array('image/*', $types, true)) {
             $formats = [];

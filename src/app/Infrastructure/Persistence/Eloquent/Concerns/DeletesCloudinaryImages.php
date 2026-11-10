@@ -10,8 +10,9 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Lets go of the Cloudinary images of a model when it is deleted or an image is replaced or cleared.
  *
- * A file can be chosen from the media library, so it may be shared with other records: once the save
- * commits, it is released through MediaFileReleaserInterface, which deletes it only if nobody uses it.
+ * A file can be chosen from the media library, so it may be shared with other records: it is released through
+ * MediaFileReleaserInterface, which deletes it only if nobody uses it. The release waits for the open transaction
+ * to commit (with none, it runs at once), so pages that write several records in one save run in a transaction.
  * Models whose files are never shared (avatars, which must go at once when an account is anonymized)
  * override sharesCloudinaryImages() to delete them right away, as before.
  *
