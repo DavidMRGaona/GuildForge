@@ -123,3 +123,54 @@ The usage rows a source wrote stay in the index when its module is disabled or u
 ## Failing closed
 
 The library refuses to delete any file while a registered source cannot be built or reports a type already taken by another source (the duplicate is skipped and logged). It would not know whether that source uses the file. The problem is logged once per class; fix the source (or the duplicated type) and deletion works again. A source whose `hidden()` throws is treated as hidden.
+
+## Choosing a file from the library in module fields
+
+A panel image field can offer «Elegir de la biblioteca»: the person picks a file already in the library, and the record points to the same file instead of uploading it again. A chosen file is therefore **shared** between records, and no code may delete it by hand any more.
+
+Requirement: `requires.core` must allow the core release that brings the picker (the one after 3.53.0, with core#480); with an older core the classes below do not exist.
+
+### 1. Release files through the core, never delete them
+
+When a record lets go of a file (it is replaced, cleared, or the record is deleted), hand it to the core instead of deleting it:
+
+- Models that use `App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages` already do: since core#480 the trait releases the old file after the save commits.
+- Anything else calls `App\Application\Media\Services\MediaFileReleaserInterface::release($storedPath)` after it has saved the new value. A queued check deletes the file only if no active source uses it right now (the same live checks as the library, without the 7-day grace period or the deletion switch) and records it in the deletions log as automatic. Any doubt keeps the file, which then shows as unused.
+
+Never call `Storage::disk('images')->delete()` on a file of a claimed folder.
+
+### 2. Mark the source
+
+Once no code of the module deletes files of its folders by hand, the source implements the marker interface `App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface` (no methods):
+
+```php
+final class TableMediaSource extends EloquentColumnMediaSource implements ReleasesMediaThroughCoreInterface
+```
+
+Only files whose folder is claimed by an active, visible source with the marker are offered by the picker or accepted when a form is saved. Files of an unmarked source, of a disabled module or of unknown origin are never offered, so a record of another module cannot end up sharing a file this module would delete. Do not add the marker before step 1 is done everywhere in the module.
+
+### 3. Attach the picker to the field
+
+```php
+use App\Filament\Forms\Components\MediaLibraryPicker;
+
+MediaLibraryPicker::attachTo(
+    FileUpload::make('image_public_id')
+        ->image()
+        ->disk('images')
+        ->directory(fn (): string => 'game-tables/'.now()->format('Y/m'))
+        ->maxSize(2048),
+)
+```
+
+`attachTo()` adds the hint action `chooseFromLibrary` (`MediaLibraryPicker::ACTION`) and Filament's `preventFilePathTampering()`. The action shows only to people with `media.view_any`, and only when a marked source claims the field's `directory()`. Saving accepts the record's own path, or a reusable file of the library that the field accepts. Any other path, a forged one included, fails validation. A chosen file that was deleted meanwhile fails with «La imagen elegida ya no está en la biblioteca».
+
+- The picker offers only files that match the field's `acceptedFileTypes()` (any image with just `->image()`) and `maxSize()`. A field's own upload rules never reach a chosen file, so add anything else as `constrain`, a closure over the `media_files` query used both to list and to validate:
+
+  ```php
+  MediaLibraryPicker::attachTo($field, constrain: fn (Builder $query): Builder => $query->where('media_files.width', '>=', 1200));
+  ```
+
+  A field that only accepts files the module itself produced (sanitized SVGs, for instance) can restrict the picker to its own folder this way, or simply not attach it.
+- On a page without a record (a settings page), pass `storedPaths: fn (): array => [...]` with the values the fields hold now. Filament only accepts the record's original paths on its own, so without them a stored file that is not in the index yet would fail validation.
+- Never attach it to fields of hidden sources (avatars).
