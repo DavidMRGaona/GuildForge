@@ -26,6 +26,9 @@ use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\TestCase;
@@ -134,6 +137,53 @@ final class RichTextMediaSourceTest extends TestCase
         ]);
 
         $this->assertTrue($this->source()->usesFile(new MediaFileId('events/cartel')));
+    }
+
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function bareUrlsWithoutExtension(): iterable
+    {
+        $url = self::BASE.'v12/guildforge/events/2026/11/0b6f2c4e-5d1a-4c3b-9e7f-1a2b3c4d5e6f';
+
+        yield 'inside guillemets' => ['<p>Mira «'.$url.'» antes del sábado.</p>'];
+        yield 'inside curly quotes' => ['<p>El cartel: “'.$url.'”.</p>'];
+        yield 'before a non-breaking space' => ['<p>'.$url.'&nbsp;ahora mismo</p>'];
+        yield 'before an ellipsis' => ['<p>Está en '.$url.'… o eso creo</p>'];
+        yield 'at the end of a paragraph' => ['<p>Está en '.$url.'</p><p>Otro párrafo</p>'];
+    }
+
+    #[DataProvider('bareUrlsWithoutExtension')]
+    public function test_a_bare_url_without_extension_ends_where_the_url_ends(string $html): void
+    {
+        $event = EventModel::factory()->create(['title' => 'Cartel', 'description' => $html]);
+        $file = 'events/2026/11/0b6f2c4e-5d1a-4c3b-9e7f-1a2b3c4d5e6f';
+
+        $this->assertTrue($this->source()->usesFile(new MediaFileId($file)));
+        $this->assertContains([$file, 'events:'.$event->id, 'En el texto', 'Cartel'], $this->usages());
+    }
+
+    public function test_a_text_the_pattern_cannot_read_fails_instead_of_looking_unused(): void
+    {
+        // Settings from memory: the query builder also relies on PCRE and would fail first
+        $settings = Mockery::mock(SettingsServiceInterface::class);
+        $settings->shouldReceive('get')->with('legal_terms_content')->andReturn('<img src="'.self::BASE.'guildforge/events/a.jpg">');
+        $this->app->instance(SettingsServiceInterface::class, $settings);
+        $source = $this->source();
+        $jit = ini_get('pcre.jit');
+        $limit = ini_get('pcre.backtrack_limit');
+        // Any match now fails with a PCRE error, as a huge text could
+        ini_set('pcre.jit', '0');
+        ini_set('pcre.backtrack_limit', '0');
+
+        try {
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('could not be read for media URLs');
+            $source->usagesFor('settings:legal_terms_content');
+        } finally {
+            ini_set('pcre.jit', (string) $jit);
+            ini_set('pcre.backtrack_limit', (string) $limit);
+        }
     }
 
     public function test_a_srcset_and_an_encoded_url_count(): void

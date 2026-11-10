@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Files of this site whose delivery URL sits inside a core rich text: event descriptions, article contents,
@@ -62,6 +63,12 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface
 
     /** Punctuation that may follow a bare URL in a sentence or a srcset list */
     private const string TRAILING_PUNCTUATION = '.,;:!?)]';
+
+    /**
+     * The longest start of a match made of characters a URL may hold (RFC 3986, `%` for encoded ones). What
+     * follows a bare URL in Spanish text («», “”, a non-breaking space, an ellipsis) is outside it.
+     */
+    private const string URL_CHARACTERS_PATTERN = '~^[A-Za-z0-9\-._\~:/?#\[\]@!$&\'()*+,;=%]+~';
 
     public function __construct(
         private MediaFileIdResolverInterface $resolver,
@@ -286,8 +293,9 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface
         // JSON-escaped slashes and HTML entities (&amp;, &#47;…) would hide a URL from the pattern
         $decoded = html_entity_decode(str_replace('\\/', '/', $text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
+        // A text that cannot be read must never look as if it used nothing: the caller fails, and a deletion is refused
         if (preg_match_all(self::URL_PATTERN, $decoded, $matches) === false) {
-            return [];
+            throw $this->unreadable();
         }
 
         $found = [];
@@ -295,8 +303,22 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface
         foreach ($matches[0] as $match) {
             $url = str_starts_with($match, '//') ? 'https:'.$match : $match;
 
-            // Both forms are tried: a closing mark may be part of the URL or of the sentence around it
-            foreach (array_unique([$url, rtrim($url, self::TRAILING_PUNCTUATION)]) as $candidate) {
+            if (preg_match(self::URL_CHARACTERS_PATTERN, $url, $plain) === false) {
+                throw $this->unreadable();
+            }
+
+            $cut = $plain[0] ?? $url;
+
+            // Every form is tried, as more forms only protect more files: a closing mark may be part of the URL
+            // or of the sentence around it, and a bare URL without extension ends where URL characters end
+            $candidates = array_unique([
+                $url,
+                rtrim($url, self::TRAILING_PUNCTUATION),
+                $cut,
+                rtrim($cut, self::TRAILING_PUNCTUATION),
+            ]);
+
+            foreach ($candidates as $candidate) {
                 $id = $this->resolver->fromStoredPath($candidate);
 
                 if ($id instanceof MediaFileId) {
@@ -306,5 +328,10 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface
         }
 
         return $found;
+    }
+
+    private function unreadable(): RuntimeException
+    {
+        return new RuntimeException('A rich text could not be read for media URLs: '.preg_last_error_msg());
     }
 }
