@@ -64,7 +64,8 @@ final class DashboardWidgetVisibilityTest extends TestCase
 
     public function test_recent_article_links_to_edit_only_for_who_may_edit(): void
     {
-        $article = ArticleModel::factory()->published()->create();
+        // A fixed title under the column's 50-character limit: a random one can be cut (core#478)
+        $article = ArticleModel::factory()->published()->create(['title' => 'Recent article']);
         $editUrl = ArticleResource::getUrl('edit', ['record' => $article]);
 
         $this->actingAs($this->editorWithPermissions(['articles.view_any']));
