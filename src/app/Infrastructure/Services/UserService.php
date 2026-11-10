@@ -14,6 +14,8 @@ use App\Application\Services\UserServiceInterface;
 use App\Domain\Events\UserAnonymized;
 use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
+use App\Domain\SiteNotifications\Repositories\SiteNotificationPreferenceRepositoryInterface;
+use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -31,6 +33,8 @@ final readonly class UserService implements UserServiceInterface
         private RoleAuditLoggerInterface $audit,
         private CalendarFeedTokenServiceInterface $calendarFeedTokens,
         private MailPreferenceRepositoryInterface $mailPreferences,
+        private SiteNotificationRepositoryInterface $siteNotifications,
+        private SiteNotificationPreferenceRepositoryInterface $siteNotificationPreferences,
     ) {}
 
     public function canAccessPanel(string $userId): bool
@@ -62,6 +66,8 @@ final readonly class UserService implements UserServiceInterface
             $this->calendarFeedTokens->revoke($userId);
             // So do the mail preferences
             $this->mailPreferences->deleteForUser(UserId::fromString($userId));
+            // And the notification centre, with its choices (core#491)
+            $this->forgetSiteNotifications(UserId::fromString($userId));
 
             $userModel->update([
                 'name' => $anonymousName,
@@ -117,6 +123,7 @@ final readonly class UserService implements UserServiceInterface
             // The personal calendar address would still tell what the person attends
             $this->calendarFeedTokens->revoke($dto->userId);
             $this->mailPreferences->deleteForUser(UserId::fromString($dto->userId));
+            $this->forgetSiteNotifications(UserId::fromString($dto->userId));
 
             $userModel->update([
                 'name' => $anonymousName,
@@ -131,6 +138,12 @@ final readonly class UserService implements UserServiceInterface
 
         $this->authService->invalidateCacheFor($userModel);
         $this->announceAnonymized((string) $userModel->id);
+    }
+
+    private function forgetSiteNotifications(UserId $userId): void
+    {
+        $this->siteNotifications->deleteForUser($userId);
+        $this->siteNotificationPreferences->deleteForUser($userId);
     }
 
     /**

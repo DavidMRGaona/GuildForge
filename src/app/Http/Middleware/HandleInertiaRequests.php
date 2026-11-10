@@ -15,8 +15,10 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
+use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Application\Social\SocialNetwork;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Social\SocialLinkResolver;
 use App\Modules\ModuleLoader;
 use Closure;
@@ -80,6 +82,8 @@ final class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => fn () => $this->getAuthUser($request),
             ],
+            // Unread notices of the bell (core#491); the bell refreshes it on its own afterwards
+            'siteNotifications' => fn (): ?array => $this->getSiteNotifications($request),
             'authSettings' => $this->getAuthSettings(...),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -195,6 +199,29 @@ final class HandleInertiaRequests extends Middleware
                 'fontHeading' => 'Inter',
                 'fontBody' => 'Inter',
             ];
+        }
+    }
+
+    /**
+     * Unread notices of the bell (core#491), for a signed-in account.
+     *
+     * @return array{unread: int}|null
+     */
+    private function getSiteNotifications(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if (! $user instanceof UserModel) {
+            return null;
+        }
+
+        try {
+            return ['unread' => app(SiteNotificationServiceInterface::class)->unreadCount($user)];
+        } catch (\Throwable $e) {
+            // The bell is not worth a broken page
+            $this->logDebugError('getSiteNotifications', $e);
+
+            return null;
         }
     }
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import PreferenceSwitch from '@/components/profile/PreferenceSwitch.vue';
 import type { MailDelivery, MailPreference } from '@/types/mailPreferences';
 
 /**
@@ -29,8 +30,6 @@ const labelId = computed(() => `${baseId.value}-label`);
 const descriptionId = computed(() => `${baseId.value}-description`);
 const errorId = computed(() => `${baseId.value}-error`);
 
-// aria-disabled (not `disabled`) keeps a locked switch in the tab order, so a screen reader
-// user reaches it and hears that it cannot be changed right now
 const locked = computed(() => props.busy);
 const checked = computed(() => props.modelValue !== 'none');
 
@@ -72,35 +71,13 @@ function toggle(): void {
             :described-by="describedBy"
             :locked="locked"
         >
-            <!-- 44 px tall hit area around the 24 px track -->
-            <button
-                type="button"
-                role="switch"
-                :aria-checked="checked"
-                :aria-disabled="locked"
-                :aria-labelledby="labelId"
-                :aria-describedby="describedBy"
-                class="-my-2 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
-                :class="locked ? 'cursor-not-allowed' : 'cursor-pointer'"
-                @click="toggle"
-            >
-                <span
-                    class="relative block h-6 w-11 rounded-full border transition-colors duration-200"
-                    :class="[
-                        checked
-                            ? 'border-primary-600 bg-primary-600 dark:border-primary-500 dark:bg-primary-500'
-                            : 'border-neutral-300 bg-neutral-200 dark:border-neutral-600 dark:bg-neutral-700',
-                        locked ? 'opacity-60' : '',
-                    ]"
-                    aria-hidden="true"
-                >
-                    <!-- Offsets count from inside the 1 px border (22 x 42 px): 1 px each side keeps it centred -->
-                    <span
-                        class="absolute left-px top-px h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out"
-                        :class="checked ? 'translate-x-5' : 'translate-x-0'"
-                    />
-                </span>
-            </button>
+            <PreferenceSwitch
+                :checked="checked"
+                :locked="locked"
+                :labelled-by="labelId"
+                :described-by="describedBy"
+                @toggle="toggle"
+            />
         </slot>
     </li>
 </template>

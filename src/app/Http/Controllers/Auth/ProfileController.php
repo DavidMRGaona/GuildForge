@@ -64,7 +64,7 @@ final class ProfileController extends Controller
             ],
         ];
 
-        // Only for the «Correos» tab (`?tab=mail`): listing the categories evaluates each one's
+        // Only for the «Avisos» tab (`?tab=mail`): listing the categories evaluates each one's
         // audience (permissions), which the other tabs never need
         if ($request->query('tab') === self::MAIL_TAB) {
             $pause = $this->mailPause->current($user);

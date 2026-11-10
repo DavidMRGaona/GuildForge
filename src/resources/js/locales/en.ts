@@ -287,6 +287,28 @@ export default {
         openPhoto: 'Open photo {number}: {caption}',
         photoCounter: 'Photo {current} of {total}',
     },
+    notifications: {
+        title: 'Notifications',
+        bell: 'Notifications',
+        bellWithUnread: 'Notifications, {count} unread | Notifications, {count} unread',
+        liveUnread: 'You have {count} unread notification | You have {count} unread notifications',
+        latest: 'Latest notifications',
+        unreadLabel: 'Unread:',
+        moreInGroup: 'and {count} more | and {count} more',
+        markAllRead: 'Mark all as read',
+        allRead: 'All notifications are read.',
+        markAllReadError: 'The notifications could not be marked as read. Please try again.',
+        loading: 'Loading notifications…',
+        loadError: 'The notifications could not be loaded.',
+        retry: 'Retry',
+        empty: 'You have no notifications',
+        emptyHint: 'What happens while you browse shows up here: replies, mentions, free seats…',
+        seeAll: 'See all notifications',
+        unreadSummary:
+            'You have {count} unread notification. | You have {count} unread notifications.',
+        allCaughtUp: 'You are all caught up.',
+        choose: 'Choose which notifications and mail you get',
+    },
     search: {
         title: 'Search',
         placeholder: 'Search events, tables, articles…',
@@ -523,8 +545,8 @@ export default {
                 cancel: 'Cancel',
             },
             mail: {
-                title: 'Mail you receive',
-                intro: 'Choose which mail you want to receive from {appName}. The ones at the end of each card, with a padlock, are always sent, because they confirm something you did or warn you of something that changes your plans.',
+                title: 'Notifications and mail you receive',
+                intro: 'Choose which notifications and mail you want to receive from {appName}. Some kinds also notify you on the site, in the bell of the header, and you can choose each channel apart. The ones at the end of each card, with a padlock, are always sent, because they confirm something you did or warn you of something that changes your plans.',
                 section: {
                     summary: '{enabled} of {total} turned on | {enabled} of {total} turned on',
                 },
@@ -541,6 +563,12 @@ export default {
                 unsaved: 'You have unsaved changes.',
                 error: 'The changes could not be saved. Try again.',
                 verifyFirst: 'To change which mail you receive, verify your email.',
+                channels: {
+                    site: 'On the site',
+                    mail: 'By mail',
+                    alsoOnSite: 'Also shown on the site.',
+                    siteOnly: 'Only shown on the site.',
+                },
                 delivery: {
                     immediate: 'Right away',
                     digest: 'Daily digest',
@@ -580,7 +608,7 @@ export default {
             tabs: {
                 account: 'Account',
                 calendar: 'My calendar',
-                mail: 'Mail',
+                mail: 'Notifications',
                 gameTables: 'Tables',
             },
         },

@@ -32,6 +32,13 @@ const { t } = useI18n();
                 <p v-if="category.mandatoryReason" class="mt-0.5 text-base-secondary">
                     {{ category.mandatoryReason }}
                 </p>
+                <p v-if="category.site" class="mt-0.5 text-base-secondary">
+                    {{
+                        category.mail === false
+                            ? t('auth.profile.mail.channels.siteOnly')
+                            : t('auth.profile.mail.channels.alsoOnSite')
+                    }}
+                </p>
             </div>
         </li>
     </ul>

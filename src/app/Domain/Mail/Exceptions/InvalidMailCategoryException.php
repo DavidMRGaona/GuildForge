@@ -30,6 +30,16 @@ final class InvalidMailCategoryException extends DomainException
         ));
     }
 
+    public static function withoutChannel(string $key): self
+    {
+        return new self(sprintf('The mail category "%s" must be sent by mail, shown on the site, or both.', $key));
+    }
+
+    public static function digestWithoutMail(string $key): self
+    {
+        return new self(sprintf('The mail category "%s" offers a daily digest, which needs mail.', $key));
+    }
+
     public static function mandatoryWithoutReason(string $key): self
     {
         return new self(sprintf('The mandatory mail category "%s" needs the reason it is always sent.', $key));

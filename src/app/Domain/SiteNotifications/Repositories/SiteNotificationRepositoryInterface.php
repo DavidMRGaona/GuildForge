@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\SiteNotifications\Repositories;
+
+use App\Domain\SiteNotifications\ValueObjects\SiteNotice;
+use App\Domain\SiteNotifications\ValueObjects\StoredSiteNotice;
+use App\Domain\ValueObjects\UserId;
+use DateTimeInterface;
+
+/**
+ * The rows of each person's notification centre.
+ */
+interface SiteNotificationRepositoryInterface
+{
+    /**
+     * Store the notice. With a group key, an unread row of the person with the same key takes it
+     * instead: one more notice, its actor counted, and the newest notice's texts and link.
+     */
+    public function deliver(UserId $userId, SiteNotice $notice): void;
+
+    public function unreadCount(UserId $userId): int;
+
+    public function count(UserId $userId): int;
+
+    /**
+     * @return list<StoredSiteNotice> Newest first, by their latest notice.
+     */
+    public function latest(UserId $userId, int $limit, int $offset): array;
+
+    /**
+     * Mark the person's row as read (once: a read row keeps its first read instant).
+     */
+    public function markRead(UserId $userId, string $id): ?StoredSiteNotice;
+
+    public function markAllRead(UserId $userId): int;
+
+    public function deleteForUser(UserId $userId): void;
+
+    public function deleteForSubject(string $type, string $id): void;
+
+    /**
+     * Delete rows read before $readBefore, and unread rows whose latest notice is older than
+     * $unreadBefore.
+     */
+    public function prune(DateTimeInterface $readBefore, DateTimeInterface $unreadBefore): int;
+}

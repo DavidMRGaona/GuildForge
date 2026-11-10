@@ -35,6 +35,7 @@ use App\Http\Controllers\PublicCalendarFeedController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SearchSuggestionsController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\SiteNotificationsController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Session\Middleware\StartSession;
@@ -189,6 +190,22 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/perfil/calendario', [CalendarFeedTokenController::class, 'destroy'])
         ->middleware('throttle:6,1,calendar-feed-token')
         ->name('profile.calendar-feed.destroy');
+
+    // Notification centre (core#491). The bell asks for the counter every minute: its own limit
+    Route::get('/avisos', [SiteNotificationsController::class, 'index'])->name('site-notifications.index');
+    Route::get('/avisos/contador', [SiteNotificationsController::class, 'count'])
+        ->middleware('throttle:120,1,site-notifications')
+        ->name('site-notifications.count');
+    Route::get('/avisos/recientes', [SiteNotificationsController::class, 'recent'])
+        ->middleware('throttle:120,1,site-notifications')
+        ->name('site-notifications.recent');
+    Route::post('/avisos/leidos', [SiteNotificationsController::class, 'markAllRead'])
+        ->middleware('throttle:30,1,site-notifications-read')
+        ->name('site-notifications.read-all');
+    // Opening a notice marks it read, then goes where it leads
+    Route::get('/avisos/{notification}', [SiteNotificationsController::class, 'open'])
+        ->whereUuid('notification')
+        ->name('site-notifications.open');
 
     // Help centre. Literal routes go before /ayuda/{guide}, whose pattern would swallow them
     Route::get('/ayuda', [KnowledgeController::class, 'index'])->name('knowledge.index');

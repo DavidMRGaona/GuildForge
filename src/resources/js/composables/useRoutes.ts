@@ -56,6 +56,13 @@ export interface RouteDefinitions {
 
     // User
     profile: string;
+    // Notification centre (core#491)
+    notifications: {
+        index: string;
+        count: string;
+        recent: string;
+        readAll: string;
+    };
 
     // Admin
     admin: string;
@@ -117,6 +124,12 @@ const routes: RouteDefinitions = {
 
     // User
     profile: '/perfil',
+    notifications: {
+        index: '/avisos',
+        count: '/avisos/contador',
+        recent: '/avisos/recientes',
+        readAll: '/avisos/leidos',
+    },
 
     // Admin
     admin: '/admin',

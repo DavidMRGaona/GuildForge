@@ -35,7 +35,8 @@ interface MailSubjectMuteServiceInterface
 
     /**
      * Forget a thing that no longer exists, for everybody. Modules call it when they delete the
-     * thing, so the profile does not keep listing it.
+     * thing, so the profile does not keep listing it; its notices in the notification centre go
+     * too (core#491).
      */
     public function forgetSubject(string $type, string $id): void;
 }

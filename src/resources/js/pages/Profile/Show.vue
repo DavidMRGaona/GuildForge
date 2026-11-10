@@ -18,7 +18,7 @@ import type { MailPreferencesProps } from '@/types/mailPreferences';
 interface Props {
     user: User;
     calendarFeed?: CalendarFeedStatus;
-    /** Only sent while the «Correos» tab is open (`?tab=mail`). */
+    /** Only sent while the «Avisos» tab is open (`?tab=mail`). */
     mailPreferences?: MailPreferencesProps | null;
 }
 

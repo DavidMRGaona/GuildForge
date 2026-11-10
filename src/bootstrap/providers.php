@@ -11,6 +11,7 @@ use App\Providers\MailPreferencesServiceProvider;
 use App\Providers\MediaServiceProvider;
 use App\Providers\PublicationServiceProvider;
 use App\Providers\SearchServiceProvider;
+use App\Providers\SiteNotificationsServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -22,4 +23,5 @@ return [
     MediaServiceProvider::class,
     PublicationServiceProvider::class,
     SearchServiceProvider::class,
+    SiteNotificationsServiceProvider::class,
 ];

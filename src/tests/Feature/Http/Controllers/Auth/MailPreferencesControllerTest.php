@@ -287,6 +287,114 @@ final class MailPreferencesControllerTest extends TestCase
         $this->assertSame(0, DB::table('user_mail_preferences')->count());
     }
 
+    public function test_the_mail_tab_says_which_categories_have_site_notices_and_their_switch(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+        DB::table('user_site_notification_preferences')->insert([
+            'id' => (string) Str::uuid(), 'user_id' => $user->id, 'category' => 'example.replies',
+            'enabled' => false, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->get('/perfil?tab=mail')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('mailPreferences.sections.0.categories.1.key', 'example.reminders')
+                ->where('mailPreferences.sections.0.categories.1.mail', true)
+                ->where('mailPreferences.sections.0.categories.1.site', false)
+                ->where('mailPreferences.sections.0.categories.3.key', 'example.replies')
+                ->where('mailPreferences.sections.0.categories.3.site', true)
+                ->where('mailPreferences.sections.0.categories.3.siteEnabled', false)
+                ->where('mailPreferences.sections.0.categories.3.enabled', true)
+                ->where('mailPreferences.sections.0.categories.4.key', 'example.likes')
+                ->where('mailPreferences.sections.0.categories.4.mail', false)
+                ->where('mailPreferences.sections.0.categories.4.siteEnabled', true));
+    }
+
+    public function test_it_saves_the_site_switches_with_the_mail_ones(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', [
+                'preferences' => ['example.replies' => false],
+                'site' => ['example.likes' => false],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame(['example.likes'], DB::table('user_site_notification_preferences')->where('enabled', false)->pluck('category')->all());
+        $this->assertSame(['example.replies'], DB::table('user_mail_preferences')->where('enabled', false)->pluck('category')->all());
+
+        // The site switches alone are enough
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['site' => ['example.likes' => true]])
+            ->assertSessionHas('success');
+
+        $this->assertSame(0, DB::table('user_site_notification_preferences')->where('enabled', false)->count());
+    }
+
+    public function test_a_refused_site_switch_saves_nothing_at_all(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', [
+                'preferences' => ['example.reminders' => false],
+                'site' => ['example.likes' => false, 'example.reminders' => false],
+            ])
+            ->assertSessionHasErrors('site.example.reminders');
+
+        $this->assertSame(0, DB::table('user_mail_preferences')->count());
+        $this->assertSame(0, DB::table('user_site_notification_preferences')->count());
+    }
+
+    public function test_a_category_shown_only_on_the_site_has_no_mail_choice(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['preferences' => ['example.likes' => false]])
+            ->assertSessionHasErrors('preferences.example.likes');
+    }
+
+    public function test_site_switches_must_be_booleans(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['site' => ['example.likes' => 'digest']])
+            ->assertSessionHasErrors('site.example.likes');
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['site' => 'everything'])
+            ->assertSessionHasErrors('site');
+    }
+
+    private function registerSiteCategories(): void
+    {
+        $this->app->make(MailCategoryRegistryInterface::class)->registerMany([
+            MailCategoryDTO::optional(
+                key: 'example.replies',
+                section: 'Example section',
+                label: 'Replies',
+                description: 'In topics you follow',
+                site: true,
+            ),
+            MailCategoryDTO::optional(
+                key: 'example.likes',
+                section: 'Example section',
+                label: 'Likes',
+                description: 'On your posts',
+                site: true,
+                mail: false,
+            ),
+        ], 'example');
+    }
+
     private function disable(UserModel $user, string $category): void
     {
         DB::table('user_mail_preferences')->insert([

@@ -40,7 +40,8 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
     {
         $optional = array_values(array_filter(
             $this->categories->all(),
-            static fn (MailCategoryDTO $category): bool => ! $category->isMandatory(),
+            // A category shown only on the site has no mail to turn off (core#491)
+            static fn (MailCategoryDTO $category): bool => ! $category->isMandatory() && $category->mail,
         ));
 
         if ($optional === []) {

@@ -1,35 +1,46 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import CategoryChannels from '@/components/profile/CategoryChannels.vue';
 import MailDeliveryChoice from '@/components/profile/MailDeliveryChoice.vue';
 import MailMandatoryList from '@/components/profile/MailMandatoryList.vue';
 import MailPreferenceRow from '@/components/profile/MailPreferenceRow.vue';
 import type { MailDelivery, MailPreferenceSection } from '@/types/mailPreferences';
 import { resolveMailSectionIcon } from '@/utils/icons';
-import { countOptionalOn, optionalCategories } from '@/utils/mailPreferences';
+import { countOptionalOn, hasSiteNotices, optionalCategories } from '@/utils/mailPreferences';
 
 /**
- * A section of the «Correos» tab as a card: icon, name and «2 de 3 activados» on top, the
+ * A section of the «Avisos» tab as a card: icon, name and «2 de 3 activados» on top, the
  * optional categories each with its control, and the ones that are always sent as a list at the end.
+ * A category with site notices gets its two channels, «En la web» and «Por correo» (core#491).
  */
 interface Props {
     section: MailPreferenceSection;
     /** Current choice of every category, by key. */
     choices: Record<string, MailDelivery>;
+    /** Current web switch of the categories with site notices, by key (core#491). */
+    siteChoices?: Record<string, boolean>;
     busy?: boolean;
-    /** Translated errors by category key. */
+    /** Translated errors of the mail choice, by category key. */
     errors?: Record<string, string>;
+    /** Translated errors of the web switch, by category key (core#491). */
+    siteErrors?: Record<string, string>;
     /** When the daily digest goes out (`HH:MM`), for the categories that offer it (core#333). */
     digestTime?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     busy: false,
+    siteChoices: () => ({}),
     errors: () => ({}),
+    siteErrors: () => ({}),
     digestTime: '08:00',
 });
 
-const emit = defineEmits<{ change: [key: string, value: MailDelivery] }>();
+const emit = defineEmits<{
+    change: [key: string, value: MailDelivery];
+    'site-change': [key: string, value: boolean];
+}>();
 
 const { t } = useI18n();
 
@@ -43,8 +54,14 @@ function choiceOf(key: string, saved: MailDelivery): MailDelivery {
     return props.choices[key] ?? saved;
 }
 
+function siteChoiceOf(key: string, saved: boolean | undefined): boolean {
+    return props.siteChoices[key] ?? saved === true;
+}
+
 // Received at once or in the daily digest: everything but «no recibir» counts as on
-const enabledCount = computed(() => countOptionalOn(props.section, props.choices));
+const enabledCount = computed(() =>
+    countOptionalOn(props.section, props.choices, props.siteChoices)
+);
 // Plural on the total («1 de 1 activado», «2 de 3 activados»)
 const summary = computed(() =>
     t(
@@ -95,7 +112,22 @@ const summary = computed(() =>
                 :error="errors[category.key] ?? ''"
                 @update:model-value="emit('change', category.key, $event)"
             >
-                <template v-if="category.digestible" #control="control">
+                <template v-if="hasSiteNotices(category)" #control="control">
+                    <CategoryChannels
+                        :category="category"
+                        :delivery="choiceOf(category.key, category.delivery)"
+                        :site="siteChoiceOf(category.key, category.siteEnabled)"
+                        :site-error="siteErrors[category.key] ?? ''"
+                        :base-id="control.baseId"
+                        :label-id="control.labelId"
+                        :described-by="control.describedBy"
+                        :locked="control.locked"
+                        :digest-time="digestTime"
+                        @update:delivery="emit('change', category.key, $event)"
+                        @update:site="emit('site-change', category.key, $event)"
+                    />
+                </template>
+                <template v-else-if="category.digestible" #control="control">
                     <MailDeliveryChoice
                         :model-value="choiceOf(category.key, category.delivery)"
                         :base-id="control.baseId"

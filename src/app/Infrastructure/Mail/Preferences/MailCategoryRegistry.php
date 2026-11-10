@@ -105,5 +105,13 @@ final class MailCategoryRegistry implements MailCategoryRegistryInterface
         if ($category->icon !== null && preg_match(MailCategoryDTO::ICON_PATTERN, $category->icon) !== 1) {
             throw InvalidMailCategoryException::invalidIcon($category->key, $category->icon);
         }
+
+        if (! $category->mail && ! $category->site) {
+            throw InvalidMailCategoryException::withoutChannel($category->key);
+        }
+
+        if ($category->digestible && ! $category->mail) {
+            throw InvalidMailCategoryException::digestWithoutMail($category->key);
+        }
     }
 }

@@ -45,6 +45,8 @@ Mirroring accounts and roles in another system is covered in [Account and role e
 
 Letting people choose which of the module's mail they receive is covered in [Mail categories](./mail-categories.md): declare the categories, mark each notification and notify the account with `$user->notify()`.
 
+Showing notices in the notification centre (the bell in the header) is covered in [Site notifications](./site-notifications.md): mark a mail category with `site: true`, implement `HasSiteNotification` and add the `site` channel to `via()`.
+
 ---
 
 ## Getting started
