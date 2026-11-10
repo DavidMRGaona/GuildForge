@@ -8,18 +8,24 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
+use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Domain\Events\RoleDeleted;
 use App\Domain\Events\RolePermissionsChanged;
+use App\Domain\Events\UserActiveRolesChanged;
 use App\Domain\Events\UserAnonymized;
 use App\Domain\Events\UserDeactivated;
 use App\Domain\Events\UserProfileUpdated;
 use App\Domain\Events\UserRestored;
 use App\Domain\Events\UserRolesChanged;
+use App\Filament\Pages\SiteSettings;
 use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\UserResource\Pages\EditUser;
+use App\Infrastructure\Authorization\Services\RoleChangeAnnouncer;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -236,6 +242,204 @@ final class AccountEventsTest extends TestCase
         Event::assertDispatchedTimes(RolePermissionsChanged::class, 1);
     }
 
+    public function test_deleting_a_role_dispatches_one_event_with_its_holders_and_no_roles_event(): void
+    {
+        $role = $this->role('moderator');
+        $role->permissions()->attach([$this->permission('events.create')->id, $this->permission('events.view_any')->id]);
+        $first = UserModel::factory()->create();
+        $second = UserModel::factory()->create();
+        $this->authorization->assignRole($first, 'moderator');
+        $this->authorization->assignRole($second, 'moderator');
+        Event::fake([RoleDeleted::class, UserRolesChanged::class]);
+
+        app(RoleServiceInterface::class)->delete($role->id);
+
+        Event::assertDispatchedTimes(RoleDeleted::class, 1);
+        Event::assertDispatched(RoleDeleted::class, static function (RoleDeleted $event) use ($role, $first, $second): bool {
+            $ids = [$first->id, $second->id];
+            sort($ids);
+
+            return $event->roleId === $role->id
+                && $event->roleName === 'moderator'
+                && $event->permissions === ['events.create', 'events.view_any']
+                && $event->holderIds === $ids;
+        });
+        Event::assertNotDispatched(UserRolesChanged::class);
+    }
+
+    public function test_a_rolled_back_role_deletion_dispatches_nothing(): void
+    {
+        $role = $this->role('moderator');
+        Event::fake([RoleDeleted::class]);
+
+        try {
+            DB::transaction(function () use ($role): void {
+                app(RoleServiceInterface::class)->delete($role->id);
+
+                throw new RuntimeException('rolled back');
+            });
+        } catch (RuntimeException) {
+        }
+
+        Event::assertNotDispatched(RoleDeleted::class);
+        $this->assertDatabaseHas('roles', ['id' => $role->id]);
+    }
+
+    public function test_deleting_a_role_from_the_panel_dispatches_one_event(): void
+    {
+        $this->signInAsAdminOnThePanel();
+        $role = $this->role('moderator');
+        $holder = UserModel::factory()->create();
+        $this->authorization->assignRole($holder, 'moderator');
+        Event::fake([RoleDeleted::class]);
+
+        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
+            ->callAction(DeleteAction::class);
+
+        Event::assertDispatchedTimes(RoleDeleted::class, 1);
+        Event::assertDispatched(
+            RoleDeleted::class,
+            static fn (RoleDeleted $event): bool => $event->roleName === 'moderator' && $event->holderIds === [$holder->id],
+        );
+    }
+
+    public function test_switching_the_association_role_announces_the_accounts_whose_roles_turn_on_or_off(): void
+    {
+        $this->signInAsAdminOnThePanel();
+        app(SettingsServiceInterface::class)->set('association_member_role', 'socio');
+        $this->role('socio');
+        $this->role('junta');
+        $this->role('tutor')->update(['requires_association_member' => true]);
+        $this->role('other')->update(['requires_association_member' => true]);
+        $paused = UserModel::factory()->create();
+        $activated = UserModel::factory()->create();
+        $both = UserModel::factory()->create();
+        $plain = UserModel::factory()->create();
+        $this->authorization->assignRole($paused, 'socio');
+        $this->authorization->assignRole($paused, 'tutor');
+        $this->authorization->assignRole($paused, 'other');
+        $this->authorization->assignRole($activated, 'junta');
+        $this->authorization->assignRole($activated, 'tutor');
+        $this->authorization->assignRole($both, 'socio');
+        $this->authorization->assignRole($both, 'junta');
+        $this->authorization->assignRole($both, 'tutor');
+        $this->authorization->assignRole($plain, 'socio');
+        Event::fake([UserActiveRolesChanged::class, UserRolesChanged::class]);
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm(['association_member_role' => 'junta'])
+            ->call('save');
+
+        Event::assertDispatchedTimes(UserActiveRolesChanged::class, 2);
+        Event::assertDispatched(
+            UserActiveRolesChanged::class,
+            static fn (UserActiveRolesChanged $event): bool => $event->userId === $paused->id
+                && $event->rolesPaused === ['other', 'tutor']
+                && $event->rolesActivated === [],
+        );
+        Event::assertDispatched(
+            UserActiveRolesChanged::class,
+            static fn (UserActiveRolesChanged $event): bool => $event->userId === $activated->id
+                && $event->rolesActivated === ['tutor']
+                && $event->rolesPaused === [],
+        );
+        Event::assertNotDispatched(UserRolesChanged::class);
+    }
+
+    public function test_saving_the_site_settings_without_changing_the_association_role_dispatches_nothing(): void
+    {
+        $this->signInAsAdminOnThePanel();
+        app(SettingsServiceInterface::class)->set('association_member_role', 'socio');
+        $this->role('socio');
+        $this->role('tutor')->update(['requires_association_member' => true]);
+        $holder = UserModel::factory()->create();
+        $this->authorization->assignRole($holder, 'tutor');
+        Event::fake([UserActiveRolesChanged::class]);
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm(['association_member_role' => 'socio', 'maintenance_message' => 'Volvemos pronto'])
+            ->call('save');
+
+        Event::assertNotDispatched(UserActiveRolesChanged::class);
+    }
+
+    public function test_a_rolled_back_association_role_switch_dispatches_nothing(): void
+    {
+        $this->role('socio');
+        $this->role('junta');
+        $this->role('tutor')->update(['requires_association_member' => true]);
+        $holder = UserModel::factory()->create();
+        $this->authorization->assignRole($holder, 'socio');
+        $this->authorization->assignRole($holder, 'tutor');
+        Event::fake([UserActiveRolesChanged::class]);
+
+        try {
+            DB::transaction(function (): void {
+                app(RoleChangeAnnouncer::class)->announceAssociationRoleSwitch('socio', 'junta');
+
+                throw new RuntimeException('rolled back');
+            });
+        } catch (RuntimeException) {
+        }
+
+        Event::assertNotDispatched(UserActiveRolesChanged::class);
+    }
+
+    public function test_requiring_membership_pauses_the_role_for_non_members_and_dropping_it_activates_it(): void
+    {
+        $this->signInAsAdminOnThePanel();
+        app(SettingsServiceInterface::class)->set('association_member_role', 'socio');
+        $this->role('socio');
+        $tutor = $this->role('tutor');
+        $member = UserModel::factory()->create();
+        $outsider = UserModel::factory()->create();
+        $this->authorization->assignRole($member, 'socio');
+        $this->authorization->assignRole($member, 'tutor');
+        $this->authorization->assignRole($outsider, 'tutor');
+        Event::fake([UserActiveRolesChanged::class]);
+
+        Livewire::test(EditRole::class, ['record' => $tutor->getRouteKey()])
+            ->fillForm(['requires_association_member' => true])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        Event::assertDispatchedTimes(UserActiveRolesChanged::class, 1);
+        Event::assertDispatched(
+            UserActiveRolesChanged::class,
+            static fn (UserActiveRolesChanged $event): bool => $event->userId === $outsider->id
+                && $event->rolesPaused === ['tutor']
+                && $event->rolesActivated === [],
+        );
+
+        Livewire::test(EditRole::class, ['record' => $tutor->getRouteKey()])
+            ->fillForm(['requires_association_member' => false])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        Event::assertDispatchedTimes(UserActiveRolesChanged::class, 2);
+        Event::assertDispatched(
+            UserActiveRolesChanged::class,
+            static fn (UserActiveRolesChanged $event): bool => $event->userId === $outsider->id
+                && $event->rolesActivated === ['tutor']
+                && $event->rolesPaused === [],
+        );
+    }
+
+    public function test_saving_a_role_without_changing_its_requirement_dispatches_no_active_roles_event(): void
+    {
+        $this->signInAsAdminOnThePanel();
+        $tutor = $this->role('tutor');
+        $this->authorization->assignRole(UserModel::factory()->create(), 'tutor');
+        Event::fake([UserActiveRolesChanged::class]);
+
+        Livewire::test(EditRole::class, ['record' => $tutor->getRouteKey()])
+            ->fillForm(['display_name' => 'Tutor nuevo'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        Event::assertNotDispatched(UserActiveRolesChanged::class);
+    }
+
     public function test_anonymizing_dispatches_one_event_and_no_roles_event(): void
     {
         $service = app(UserServiceInterface::class);
@@ -349,7 +553,7 @@ final class AccountEventsTest extends TestCase
 
     private function role(string $name): RoleModel
     {
-        return RoleModel::query()->create(['name' => $name, 'display_name' => ucfirst($name)]);
+        return RoleModel::query()->firstOrCreate(['name' => $name], ['display_name' => ucfirst($name)]);
     }
 
     private function permission(string $key): PermissionModel

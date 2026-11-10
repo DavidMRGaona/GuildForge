@@ -25,6 +25,7 @@ use App\Filament\Resources\RoleResource\PermissionTab;
 use App\Filament\Resources\RoleResource\RelationManagers\RoleAuditRelationManager;
 use App\Filament\Resources\RoleResource\RoleRequirementImpact;
 use App\Filament\Support\PanelNavigationGroup;
+use App\Infrastructure\Authorization\Services\RoleChangeAnnouncer;
 use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -252,17 +253,22 @@ class RoleResource extends BaseResource
     {
         return DeleteAction::make()
             ->using(static fn (RoleModel $record): bool => DB::transaction(static function () use ($record): bool {
+                $permissionKeys = array_values($record->permissions()->pluck('permissions.key')->map(strval(...))->all());
+                $announcer = app(RoleChangeAnnouncer::class);
+                // Before deleting: the pivot rows with the holders go with the role
+                $event = $announcer->captureDeletion($record->id, $record->name, $permissionKeys);
+
                 app(RoleAuditLoggerInterface::class)->roleChanged(
                     $record->id,
                     $record->name,
                     RoleAuditEvent::RoleDeleted,
-                    app(RoleDefinitionChanges::class)->between(
-                        array_values($record->permissions()->pluck('permissions.key')->map(strval(...))->all()),
-                        [],
-                    ),
+                    app(RoleDefinitionChanges::class)->between($permissionKeys, []),
                 );
 
-                return (bool) $record->delete();
+                $deleted = (bool) $record->delete();
+                $announcer->announceDeletion($event);
+
+                return $deleted;
             }))
             ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache());
     }

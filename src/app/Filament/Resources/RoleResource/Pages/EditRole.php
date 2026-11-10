@@ -107,6 +107,7 @@ class EditRole extends EditRecord
         app(AuthorizationServiceInterface::class)->invalidateCache();
 
         $this->announcePermissionChange($record);
+        $this->announceRequirementChange($record);
     }
 
     protected function getRedirectUrl(): string
