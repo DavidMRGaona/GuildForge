@@ -17,9 +17,17 @@ import { useSiteNotifications } from '@/composables/useSiteNotifications';
 interface Props {
     /** Unique per bell on the page (the desktop bar and the narrow header each have one). */
     panelId?: string;
+    /**
+     * The bell of the narrow header sits left of the menu button (40 px and a 4 px gap): the list
+     * then reaches past the bell to the edge of the header, or on a phone it would leave the screen.
+     */
+    besideMenuButton?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), { panelId: 'site-notifications-panel' });
+const props = withDefaults(defineProps<Props>(), {
+    panelId: 'site-notifications-panel',
+    besideMenuButton: false,
+});
 
 const { t } = useI18n();
 const routes = useRoutes();
@@ -164,7 +172,8 @@ async function markAllRead(): Promise<void> {
             :id="panelId"
             role="region"
             :aria-labelledby="headingId"
-            class="absolute right-0 z-50 mt-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-default bg-surface shadow-lg"
+            class="absolute z-50 mt-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-default bg-surface shadow-lg"
+            :class="besideMenuButton ? '-right-11' : 'right-0'"
         >
             <div class="flex items-center justify-between gap-3 border-b border-default px-4 py-3">
                 <h2 :id="headingId" class="text-sm font-semibold text-base-primary">

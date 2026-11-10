@@ -227,7 +227,11 @@ function selectTheme(mode: ThemeMode): void {
 
                 <!-- Mobile menu button, with the bell beside it so it never hides in the menu -->
                 <div class="flex items-center gap-1" :class="{ 'md:hidden': fitsFullBar }">
-                    <NotificationBell v-if="showBell" panel-id="site-notifications-panel-narrow" />
+                    <NotificationBell
+                        v-if="showBell"
+                        panel-id="site-notifications-panel-narrow"
+                        beside-menu-button
+                    />
                     <button
                         ref="menuButton"
                         type="button"
