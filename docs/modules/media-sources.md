@@ -11,7 +11,7 @@ The panel media library (**Contenido → Biblioteca de medios**) lists the image
 - The core sources (`EventMediaSource`, `ArticleMediaSource`, `GalleryPhotoMediaSource`, `HeroSlideMediaSource`, `SiteSettingsMediaSource` in `app/Filament/Media/Sources/`) and `AvatarMediaSource` follow the rules below and are the best examples.
 - `RichTextMediaSource` (type `rich_text`, «Textos», role «En el texto») reads the core rich texts: event descriptions, article contents, the body of the site's own guides, the legal texts and the «Nosotros» history. Every delivery URL of this site in them (in `src`, `href` or `srcset`, or as bare text, with or without transformation and version) counts as a use, whatever folder the file lives in. It claims no folder.
 
-Requirement: set `requires.core` in `module.json` to the core release that introduces the media library, otherwise an older core does not know `registerMediaSources()` and the module's files would show as unknown origin (and stay undeletable).
+Requirement: set `requires.core` in `module.json` to the core release that introduces the media library (3.53.0), for instance `^3.53`; otherwise an older core does not know `registerMediaSources()` and the module's files would show as unknown origin (and stay undeletable).
 
 ## The contract
 
