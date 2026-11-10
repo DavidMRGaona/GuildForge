@@ -9,6 +9,7 @@ The panel media library (**Contenido → Biblioteca de medios**) lists the image
 - A file whose folder no active source claims has an **unknown origin** («Origen desconocido») and is never deleted.
 - Deletion is off until the installation sets `MEDIA_LIBRARY_DELETE_ENABLED=true`, and it needs the permission `media.delete`, which is not granted to any role by default (the `media.view_any` permission, suggested for editors, only shows the library). Before each deletion the service checks the file again against the live sources, not the index, and keeps the file when any check fails.
 - The core sources (`EventMediaSource`, `ArticleMediaSource`, `GalleryPhotoMediaSource`, `HeroSlideMediaSource`, `SiteSettingsMediaSource` in `app/Filament/Media/Sources/`) and `AvatarMediaSource` follow the rules below and are the best examples.
+- `RichTextMediaSource` (type `rich_text`, «Textos», role «En el texto») reads the core rich texts: event descriptions, article contents, the body of the site's own guides, the legal texts and the «Nosotros» history. Every delivery URL of this site in them (in `src`, `href` or `srcset`, or as bare text, with or without transformation and version) counts as a use, whatever folder the file lives in. It claims no folder.
 
 Requirement: set `requires.core` in `module.json` to the core release that introduces the media library, otherwise an older core does not know `registerMediaSources()` and the module's files would show as unknown origin (and stay undeletable).
 
@@ -34,12 +35,13 @@ A source implements `App\Application\Media\Contracts\MediaUsageSourceInterface`:
 
 1. **Prefix the type with the module.** The registry keeps the first source registered for a type and skips (and logs) any later one; whichever registers first, a duplicate type is a broken source, and while one exists the library refuses to delete any file. A module type called `events` would collide with the core events.
 2. **Claim your own folders, with a trailing slash.** `gametables/` matches `gametables/a.jpg` but not `gametables-old/a.jpg`. A file belongs to the source with the longest matching folder. A source with an empty folder claims nothing.
-3. **Leave `content/` to the sources that read rich text.** Images the editor puts inside a record's text live in a `content/` subfolder of the claimed folder; `EloquentColumnMediaSource` excludes it (`['content/']`), so a text source can claim it without fighting the column source.
-4. **Count soft-deleted records.** A trashed record can be restored, and its image must still count as used. `EloquentColumnMediaSource` already queries with trashed records.
-5. **`usesFile()` must be exact and live.** It answers from the module's own tables, not from the index. The deletion service asks every active source, even one that does not claim the file's folder, because a record may point at a file outside its own folders.
-6. **`usages()` must chunk** (`lazyById()` or `chunkById()`, yielding one usage at a time): it runs on every sync.
-7. **`editUrl()` is decided for the given user.** Return `null` when the person cannot edit the record (check the policy or the permission with `Gate::forUser($user)`), never a link they would be refused. The library shows the link only when it is not `null`.
-8. **Ids that are not valid for the source return empty results.** With PostgreSQL a malformed uuid in a query throws, so check the shape first (`Str::isUuid()`).
+3. **Leave `content/` to the sources that read rich text.** Images uploaded from the editor into a record's text go to a `content/` subfolder of the claimed folder; `EloquentColumnMediaSource` excludes it (`['content/']`), so the source that reads the text can claim it without fighting the column source. Until one claims it, those files have an unknown origin and are never deleted.
+4. **Read your rich text too.** A URL of this site pasted into a module's text protects the file only when a source of the module reads that text. Extract every delivery URL from the HTML and resolve it with `MediaFileIdResolverInterface::fromStoredPath()` (it returns `null` for other hosts and prefixes); in `usesFile()`, prefilter with `App\Infrastructure\Media\Sources\StoredMediaIdPrefilter::likeClause()` and confirm in PHP. `RichTextMediaSource` is the example.
+5. **Count soft-deleted records.** A trashed record can be restored, and its image must still count as used. `EloquentColumnMediaSource` already queries with trashed records.
+6. **`usesFile()` must be exact and live.** It answers from the module's own tables, not from the index. The deletion service asks every active source, even one that does not claim the file's folder, because a record may point at a file outside its own folders.
+7. **`usages()` must chunk** (`lazyById()` or `chunkById()`, yielding one usage at a time): it runs on every sync.
+8. **`editUrl()` is decided for the given user.** Return `null` when the person cannot edit the record (check the policy or the permission with `Gate::forUser($user)`), never a link they would be refused. The library shows the link only when it is not `null`.
+9. **Ids that are not valid for the source return empty results.** With PostgreSQL a malformed uuid in a query throws, so check the shape first (`Str::isUuid()`).
 
 ## `EloquentColumnMediaSource`
 

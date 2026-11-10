@@ -94,21 +94,16 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
         $column = $this->column();
         $query = $this->query()->select($column);
 
-        // Prefilter in SQL as wide as the resolver: stored forms may be URLs without extension, URL-encoded
-        // or with backslashes, so only the longest run of characters that survive all of those is matched.
-        // The exact id is confirmed in PHP below.
-        $piece = $this->longestPlainRun($file->value);
+        // Prefilter in SQL as wide as the resolver; the exact id is confirmed in PHP below
+        $like = StoredMediaIdPrefilter::likeClause($query->getQuery()->getGrammar(), $column, $file);
 
-        if ($piece !== '') {
-            $wrapped = $query->getQuery()->getGrammar()->wrap($column);
-            // The wrapped identifier comes from the source's own column(), never from input
-            $sql = "{$wrapped} LIKE ? ESCAPE '\\'";
-            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $piece);
+        if ($like !== null) {
+            [$sql, $bindings] = $like;
 
-            $query->where(function (Builder $inner) use ($column, $file, $sql, $escaped): void {
+            $query->where(function (Builder $inner) use ($column, $file, $sql, $bindings): void {
                 $inner->where($column, $file->value)
                     // @phpstan-ignore argument.type
-                    ->orWhereRaw($sql, ['%'.$escaped.'%']);
+                    ->orWhereRaw($sql, $bindings);
             });
         }
 
@@ -153,23 +148,6 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
         }
 
         return $query;
-    }
-
-    /**
-     * Longest run of letters, digits, hyphens and underscores: never encoded, never case-folded by the resolver.
-     */
-    private function longestPlainRun(string $id): string
-    {
-        $runs = preg_split('/[^A-Za-z0-9_-]+/', $id, -1, PREG_SPLIT_NO_EMPTY);
-        $best = '';
-
-        foreach ($runs === false ? [] : $runs as $run) {
-            if (strlen($run) > strlen($best)) {
-                $best = $run;
-            }
-        }
-
-        return $best;
     }
 
     private function usageOf(Model $record): ?MediaUsageDTO

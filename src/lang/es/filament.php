@@ -1079,6 +1079,14 @@ return [
             'hero_slides' => 'Hero slides',
             'settings' => 'Configuración del sitio',
             'avatars' => 'Avatares',
+            'rich_text' => 'Textos',
+        ],
+        'rich_text_titles' => [
+            'legal_privacy_content' => 'Política de privacidad',
+            'legal_notice_content' => 'Aviso legal',
+            'legal_cookies_content' => 'Política de cookies',
+            'legal_terms_content' => 'Términos y condiciones',
+            'about_history' => 'Nosotros · Historia',
         ],
         'roles' => [
             'image' => 'Imagen',
@@ -1091,6 +1099,7 @@ return [
             'site_favicon_light' => 'Favicon claro',
             'site_favicon_dark' => 'Favicon oscuro',
             'about_hero_image' => 'Imagen de Nosotros',
+            'in_text' => 'En el texto',
         ],
     ],
 ];

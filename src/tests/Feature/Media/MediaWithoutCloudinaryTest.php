@@ -108,7 +108,8 @@ final class MediaWithoutCloudinaryTest extends TestCase
         $event = EventModel::factory()->create(['image_public_id' => 'events/2026/11/a.jpg']);
 
         $this->assertTrue($event->exists);
-        $log->shouldHaveReceived('warning')->once();
+        // Once for its image and once for its text
+        $log->shouldHaveReceived('warning')->twice();
     }
 
     public function test_a_save_with_nothing_to_refresh_does_not_build_the_indexer(): void

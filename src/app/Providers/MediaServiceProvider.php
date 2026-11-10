@@ -9,11 +9,14 @@ use App\Application\Media\Services\MediaDeletionServiceInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
+use App\Domain\Knowledge\Enums\GuideSource;
 use App\Filament\Media\Sources\ArticleMediaSource;
 use App\Filament\Media\Sources\EventMediaSource;
 use App\Filament\Media\Sources\GalleryPhotoMediaSource;
 use App\Filament\Media\Sources\HeroSlideMediaSource;
+use App\Filament\Media\Sources\RichTextMediaSource;
 use App\Filament\Media\Sources\SiteSettingsMediaSource;
+use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Media\Cloudinary\CloudinaryMediaCatalog;
 use App\Infrastructure\Media\Cloudinary\DeferredMediaCatalog;
 use App\Infrastructure\Media\Observers\RefreshMediaUsagesObserver;
@@ -76,6 +79,7 @@ final class MediaServiceProvider extends ServiceProvider
             HeroSlideMediaSource::class,
             SiteSettingsMediaSource::class,
             AvatarMediaSource::class,
+            RichTextMediaSource::class,
         ]);
 
         // Observer instances carry their arguments, so they are attached as model event listeners
@@ -83,6 +87,14 @@ final class MediaServiceProvider extends ServiceProvider
         $this->refreshOnChange(EventModel::class, new RefreshMediaUsagesObserver('events', $own));
         $this->refreshOnChange(ArticleModel::class, new RefreshMediaUsagesObserver('articles', $own));
         $this->refreshOnChange(HeroSlideModel::class, new RefreshMediaUsagesObserver('hero_slides', $own));
+        // The texts of the same records feed the rich text source, under ids prefixed with their kind
+        $this->refreshOnChange(EventModel::class, new RefreshMediaUsagesObserver(RichTextMediaSource::TYPE, static fn (Model $event): array => ['events:'.$event->getKey()]));
+        $this->refreshOnChange(ArticleModel::class, new RefreshMediaUsagesObserver(RichTextMediaSource::TYPE, static fn (Model $article): array => ['articles:'.$article->getKey()]));
+        // Only the site's own guides are read; the catalog sync writes official ones in bulk
+        $this->refreshOnChange(KnowledgeGuideModel::class, new RefreshMediaUsagesObserver(
+            RichTextMediaSource::TYPE,
+            static fn (Model $guide): array => $guide->getAttribute('source') === GuideSource::Site->value ? ['guides:'.$guide->getKey()] : [],
+        ));
         // Each gallery photo is its own record of the galleries source
         $this->refreshOnChange(PhotoModel::class, new RefreshMediaUsagesObserver('galleries', $own));
         // Accounts are saved on every sign-in: only a change to what the avatars source stores is refreshed

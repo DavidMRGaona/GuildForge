@@ -6,10 +6,13 @@ namespace Tests\Feature\Media;
 
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
+use App\Filament\Pages\Settings\AboutPageSettings;
+use App\Filament\Pages\Settings\LegalPagesSettings;
 use App\Filament\Pages\SiteSettings;
 use App\Infrastructure\Media\Jobs\RefreshMediaUsagesJob;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
+use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -81,7 +84,8 @@ final class RefreshMediaOnSaveTest extends TestCase
 
         $event->delete();
 
-        Bus::assertDispatchedTimes(RefreshMediaUsagesJob::class, 2);
+        // One for its image and one for its text, on create and on delete
+        Bus::assertDispatchedTimes(RefreshMediaUsagesJob::class, 4);
     }
 
     public function test_saving_a_photo_refreshes_the_photo_as_a_gallery_usage(): void
@@ -252,5 +256,59 @@ final class RefreshMediaOnSaveTest extends TestCase
             $indexer->shouldHaveReceived('refresh')->with('settings', $key)->once();
         }
         $indexer->shouldNotHaveReceived('refresh', ['settings', 'guild_name']);
+    }
+
+    public function test_saving_the_legal_pages_refreshes_their_texts(): void
+    {
+        $indexer = Mockery::spy(MediaIndexerInterface::class);
+        $this->app->instance(MediaIndexerInterface::class, $indexer);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(LegalPagesSettings::class)->call('save');
+
+        foreach (['legal_privacy_content', 'legal_notice_content', 'legal_cookies_content', 'legal_terms_content'] as $key) {
+            $indexer->shouldHaveReceived('refresh')->with('rich_text', 'settings:'.$key)->once();
+        }
+        $indexer->shouldNotHaveReceived('refresh', ['rich_text', 'settings:legal_entity_name']);
+    }
+
+    public function test_saving_the_about_page_refreshes_its_history(): void
+    {
+        $indexer = Mockery::spy(MediaIndexerInterface::class);
+        $this->app->instance(MediaIndexerInterface::class, $indexer);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(AboutPageSettings::class)
+            ->fillForm([
+                'location_name' => 'Local de ejemplo',
+                'location_address' => 'Calle de ejemplo, 1',
+                'location_lat' => '40.4',
+                'location_lng' => '-3.7',
+                'location_zoom' => '15',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $indexer->shouldHaveReceived('refresh')->with('rich_text', 'settings:about_history')->once();
+        $indexer->shouldHaveReceived('refresh')->with('settings', 'about_hero_image')->once();
+    }
+
+    public function test_saving_an_article_refreshes_its_text(): void
+    {
+        Bus::fake();
+
+        $article = ArticleModel::factory()->create();
+
+        Bus::assertDispatched(RefreshMediaUsagesJob::class, fn (RefreshMediaUsagesJob $job): bool => $job->type === 'rich_text'
+            && $job->recordId === 'articles:'.$article->id);
+    }
+
+    public function test_official_guides_written_by_the_catalog_sync_queue_nothing(): void
+    {
+        Bus::fake();
+
+        $this->artisanCommand('knowledge:sync')->assertSuccessful()->run();
+
+        Bus::assertNotDispatched(RefreshMediaUsagesJob::class, fn (RefreshMediaUsagesJob $job): bool => $job->type === 'rich_text');
     }
 }

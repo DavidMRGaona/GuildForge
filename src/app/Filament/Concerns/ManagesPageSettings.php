@@ -6,6 +6,7 @@ namespace App\Filament\Concerns;
 
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Filament\Media\Sources\RichTextMediaSource;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -158,16 +159,21 @@ trait ManagesPageSettings
             $settingsService->set($key, (string) $value);
         }
 
-        // The media library tracks each image setting as a record of the settings source, keyed by its name
-        $this->refreshMediaUsages($savedImageKeys);
+        // The media library tracks each image setting as a record of the settings source, keyed by its name,
+        // and each rich text setting as a record of the rich text source
+        $textKeys = array_values(array_intersect($this->getSettingsKeys(), array_keys(RichTextMediaSource::SETTING_PAGES)));
+        $this->refreshMediaUsages([
+            ...array_map(static fn (string $key): array => ['settings', $key], $savedImageKeys),
+            ...array_map(static fn (string $key): array => [RichTextMediaSource::TYPE, 'settings:'.$key], $textKeys),
+        ]);
     }
 
     /**
-     * @param  list<string>  $imageKeys
+     * @param  list<array{0: string, 1: string}>  $records  type and record id of each
      */
-    private function refreshMediaUsages(array $imageKeys): void
+    private function refreshMediaUsages(array $records): void
     {
-        if ($imageKeys === []) {
+        if ($records === []) {
             return;
         }
 
@@ -175,12 +181,12 @@ trait ManagesPageSettings
         try {
             $indexer = resolve(MediaIndexerInterface::class);
 
-            foreach ($imageKeys as $key) {
-                $indexer->refresh('settings', $key);
+            foreach ($records as [$type, $recordId]) {
+                $indexer->refresh($type, $recordId);
             }
         } catch (Throwable $e) {
-            Log::warning('[Media] Could not refresh the media usages of the image settings.', [
-                'keys' => $imageKeys,
+            Log::warning('[Media] Could not refresh the media usages of the saved settings.', [
+                'records' => $records,
                 'exception' => $e,
             ]);
         }

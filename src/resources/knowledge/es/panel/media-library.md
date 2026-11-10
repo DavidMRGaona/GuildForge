@@ -26,6 +26,8 @@ En el menú lateral, abre **Contenido** y elige **Biblioteca de medios**. Arriba
 
 La biblioteca muestra las imágenes que suben la web y los módulos: eventos, artículos, galerías, hero slides, logos y favicon del sitio, y las de los módulos activos.
 
+Si pegas el enlace de una imagen de la web en un texto (la descripción de un evento, un artículo, una guía propia, una página legal o la historia de «Nosotros»), ese texto cuenta como uso «En el texto», aunque la imagen sea de otra carpeta. Así no se borra una imagen que se ve en una página.
+
 No aparecen los **avatares** de las cuentas: no se muestran y nunca se pueden borrar desde aquí.
 
 ## Estados

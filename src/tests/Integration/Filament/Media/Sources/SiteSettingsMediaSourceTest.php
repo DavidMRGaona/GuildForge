@@ -84,7 +84,7 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $this->assertNull($source->editUrl('unknown', $settings));
     }
 
-    public function test_editor_content_folder_is_unclaimed_until_text_sources_exist(): void
+    public function test_editor_content_folder_is_unclaimed_until_editor_uploads_move_there(): void
     {
         $registry = app(MediaSourceRegistryInterface::class);
 
@@ -92,6 +92,8 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $this->assertSame('articles', $registry->claimingSource(new MediaFileId('articles/2026/11/x'))?->type());
         $this->assertSame('settings', $registry->claimingSource(new MediaFileId('branding/x'))?->type());
         $this->assertSame('avatars', $registry->claimingSource(new MediaFileId('users/x'))?->type());
-        $this->assertCount(6, $registry->sources());
+        // The rich text source claims no folder
+        $this->assertSame('rich_text', $registry->source('rich_text')?->type());
+        $this->assertCount(7, $registry->sources());
     }
 }
