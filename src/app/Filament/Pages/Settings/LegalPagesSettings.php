@@ -7,9 +7,11 @@ namespace App\Filament\Pages\Settings;
 use App\Application\Legal\DTOs\LegalMailNoticeDTO;
 use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Support\PanelNavigationGroup;
 use Filament\Actions\Action;
 use Filament\Forms\Components\RichEditor;
@@ -250,40 +252,40 @@ final class LegalPagesSettings extends Page implements HasForms
                             ->schema([
                                 Toggle::make('legal_privacy_published')
                                     ->label(__('filament.pages.legal.fields.published')),
-                                RichEditor::make('legal_privacy_content')
+                                EditorImages::configure(RichEditor::make('legal_privacy_content')
                                     ->label(__('filament.pages.legal.fields.content'))
                                     ->helperText(__('filament.pages.legal.fields.content_help'))
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull(), EditorImageOrigin::Legal),
                             ]),
 
                         Tab::make(__('filament.pages.legal.tabs.notice'))
                             ->schema([
                                 Toggle::make('legal_notice_published')
                                     ->label(__('filament.pages.legal.fields.published')),
-                                RichEditor::make('legal_notice_content')
+                                EditorImages::configure(RichEditor::make('legal_notice_content')
                                     ->label(__('filament.pages.legal.fields.content'))
                                     ->helperText(__('filament.pages.legal.fields.content_help'))
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull(), EditorImageOrigin::Legal),
                             ]),
 
                         Tab::make(__('filament.pages.legal.tabs.cookies'))
                             ->schema([
                                 Toggle::make('legal_cookies_published')
                                     ->label(__('filament.pages.legal.fields.published')),
-                                RichEditor::make('legal_cookies_content')
+                                EditorImages::configure(RichEditor::make('legal_cookies_content')
                                     ->label(__('filament.pages.legal.fields.content'))
                                     ->helperText(__('filament.pages.legal.fields.content_help'))
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull(), EditorImageOrigin::Legal),
                             ]),
 
                         Tab::make(__('filament.pages.legal.tabs.terms'))
                             ->schema([
                                 Toggle::make('legal_terms_published')
                                     ->label(__('filament.pages.legal.fields.published')),
-                                RichEditor::make('legal_terms_content')
+                                EditorImages::configure(RichEditor::make('legal_terms_content')
                                     ->label(__('filament.pages.legal.fields.content'))
                                     ->helperText(__('filament.pages.legal.fields.content_help'))
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull(), EditorImageOrigin::Legal),
                             ]),
 
                         $this->mailNoticesTab(),

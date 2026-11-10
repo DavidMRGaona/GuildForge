@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Knowledge\Rendering\RichContent;
 
+use App\Infrastructure\Content\Services\EditorImageAttachmentProvider;
 use App\Infrastructure\Knowledge\Rendering\ActionLinkResolver;
 use App\Infrastructure\Knowledge\Rendering\KnowledgePlaceholders;
 use Filament\Forms\Components\RichEditor\RichContentRenderer;
 
 /**
  * Bodies written in the panel's rich editor (the site's own guides): markers and action buttons
- * resolved, everything else sanitized by the renderer. Only the button markup skips the sanitizer,
- * and it is built here with every value escaped.
+ * resolved, images pointed at Cloudinary, everything else sanitized by the renderer. Only the
+ * button markup skips the sanitizer, and it is built here with every value escaped.
  */
 final readonly class GuideRichContent
 {
@@ -20,6 +21,7 @@ final readonly class GuideRichContent
 
     public function __construct(
         private KnowledgePlaceholders $placeholders,
+        private EditorImageAttachmentProvider $images,
     ) {}
 
     public function toHtml(string $html, ActionLinkResolver $actions, object $user, ?string $module): string
@@ -43,7 +45,9 @@ final readonly class GuideRichContent
 
     private function renderer(string $html): RichContentRenderer
     {
-        return RichContentRenderer::make($html)->mergeTags($this->placeholders->values());
+        return RichContentRenderer::make($html)
+            ->mergeTags($this->placeholders->values())
+            ->fileAttachmentProvider($this->images);
     }
 
     /**

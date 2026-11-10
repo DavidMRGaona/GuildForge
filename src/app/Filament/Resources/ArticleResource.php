@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Filament\Actions\RowDetailsAction;
+use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Resources\ArticleResource\Pages\CreateArticle;
 use App\Filament\Resources\ArticleResource\Pages\EditArticle;
 use App\Filament\Resources\ArticleResource\Pages\ListArticles;
@@ -74,10 +76,10 @@ class ArticleResource extends BaseResource
                     ->maxLength(255)
                     ->unique(ignoreRecord: true)
                     ->rules(['alpha_dash']),
-                RichEditor::make('content')
+                EditorImages::configure(RichEditor::make('content')
                     ->label(__('Contenido'))
                     ->required()
-                    ->columnSpanFull(),
+                    ->columnSpanFull(), EditorImageOrigin::Articles),
                 Textarea::make('excerpt')
                     ->label(__('Extracto'))
                     ->rows(3)

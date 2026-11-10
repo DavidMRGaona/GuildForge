@@ -9,10 +9,12 @@ use App\Application\Knowledge\Services\GuideOverrideServiceInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeMetricsServiceInterface;
 use App\Application\Knowledge\Services\SiteGuideServiceInterface;
+use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Domain\Knowledge\Enums\GuideAudience;
 use App\Domain\Knowledge\Enums\GuideSource;
 use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Filament\Actions\RowDetailsAction;
+use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Forms\RichEditor\KnowledgeActionBlock;
 use App\Filament\Resources\KnowledgeGuideResource\Pages\CreateKnowledgeGuide;
 use App\Filament\Resources\KnowledgeGuideResource\Pages\EditKnowledgeGuide;
@@ -150,7 +152,7 @@ class KnowledgeGuideResource extends BaseResource
                     ]),
                 Section::make(__('filament.knowledge_guides.sections.body'))
                     ->schema([
-                        RichEditor::make('body')
+                        EditorImages::configure(RichEditor::make('body')
                             ->label(__('filament.knowledge_guides.fields.body'))
                             ->helperText(__('filament.knowledge_guides.fields.body_help'))
                             ->toolbarButtons([
@@ -166,7 +168,7 @@ class KnowledgeGuideResource extends BaseResource
                                 'association_role' => __('filament.knowledge_guides.merge_tags.association_role'),
                             ])
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpanFull(), EditorImageOrigin::Knowledge),
                     ]),
                 Section::make(__('filament.knowledge_guides.sections.audience'))
                     ->description(__('filament.knowledge_guides.sections.audience_description'))

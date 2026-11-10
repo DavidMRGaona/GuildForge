@@ -600,6 +600,22 @@ The migration runs once: after a rollback to core 2.8 that keeps the database, i
 
 Modules convert their own rich text fields in a migration of their first release for core 3, with the same converter (see [Panel code for core 3](modules/README.md#panel-code-for-core-3-filament-5)).
 
+### Images of the rich text editors (core#481)
+
+Until the release with #481 the rich editors of the panel (events, articles, the site's own help guides, legal pages and «Nosotros») stored their images on the local `public` disk (`storage/app/public`, served under `/storage`). They now upload to Cloudinary, in `<origin>/content/<Y>/<m>/<uuid>.<ext>` (`events`, `articles`, `knowledge`, `legal`, `about`), and the HTML keeps the full delivery URL. Images stored before keep showing from the local disk until they are moved. Once after deploying, on each site:
+
+```bash
+php artisan content:move-editor-images-to-cloudinary --dry-run   # lists "<value>: <local URL> → <Cloudinary path>", changes nothing
+php artisan content:move-editor-images-to-cloudinary
+```
+
+- It reads `events.description`, `articles.content`, the bodies of the site's own guides and the settings `about_history` and `legal_{privacy,notice,cookies,terms}_content`, and finds the images served from the local disk (a `/storage/…` URL, relative or on the site's host, or a `data-id` of a file on that disk).
+- Each one is uploaded to the content folder of its origin and the month of the local file, and its `src` and `data-id` are rewritten. Values are written directly (no `updated_at`, no model events), and only if nobody saved them meanwhile; settings go through the settings service.
+- The local copy is deleted only once every value using it is saved. A failed upload or save leaves that value and its local copy as they were and makes the command end with an error: run it again.
+- It is idempotent: images already on Cloudinary are skipped, and a moved file is named after its content, so an upload repeated after an interrupted run overwrites the same image. It is isolated by default: a second run started while one is going stops at once.
+- Local images that are missing or point outside the disk are listed as broken references and left untouched.
+- In the media library, editor images (moved or uploaded) count as used «En el texto» by the record whose text shows them (`RichTextMediaSource`); the column sources leave `content/` folders alone, so those files are never offered for deletion.
+
 ### Member role and email verification (core 3.8)
 
 Core 3.8 gives every account the base role `member`, adds the association member role setting and enforces the required email verification on the server (see [Base role and association member role](architecture.md#base-role-and-association-member-role) and [Required email verification](architecture.md#required-email-verification)). The entrypoint's `migrate --force` runs three data migrations, each of them once:

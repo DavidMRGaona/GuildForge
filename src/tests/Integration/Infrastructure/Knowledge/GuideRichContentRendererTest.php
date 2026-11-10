@@ -15,6 +15,7 @@ use App\Domain\Knowledge\ValueObjects\GuideConditions;
 use App\Domain\Knowledge\ValueObjects\GuideId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\Knowledge\DeniedKnowledgeCapability;
 use Tests\Support\Knowledge\FakeKnowledgeCapability;
 use Tests\TestCase;
@@ -91,6 +92,27 @@ final class GuideRichContentRendererTest extends TestCase
         $this->assertStringNotContainsString('kb-action', $this->html($this->button(['target' => 'events.index', 'label' => 'Ver', 'condition' => 'fake.can_do_it', 'negate' => true])));
         $this->assertStringContainsString('kb-action', $this->html($this->button(['target' => 'events.index', 'label' => 'Ver', 'condition' => 'events.create', 'negate' => true])));
         $this->assertStringNotContainsString('kb-action', $this->html($this->button(['target' => 'events.index', 'label' => 'Ver', 'condition' => 'events.create'])));
+    }
+
+    public function test_an_editor_image_shows_its_cloudinary_url(): void
+    {
+        $path = 'knowledge/content/2026/11/0b7e7c1e-6a0f-4c56-9d0e-1b2f3a4c5d6e.png';
+
+        $html = $this->html('<p><img src="https://example.org/stale.png" data-id="'.$path.'" alt="Plano"></p>');
+
+        // The sanitizer may write the query's "=" as an entity: the browser reads the same URL
+        $this->assertStringContainsString('src="'.Storage::disk('images')->url($path).'"', html_entity_decode($html));
+        $this->assertStringNotContainsString('stale.png', $html);
+    }
+
+    public function test_an_image_still_on_the_local_disk_keeps_showing(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('3fJk2Lm9Qx.png', 'png');
+
+        $html = $this->html('<p><img src="/storage/3fJk2Lm9Qx.png" data-id="3fJk2Lm9Qx.png" alt="Plano"></p>');
+
+        $this->assertStringContainsString('src="'.Storage::disk('public')->url('3fJk2Lm9Qx.png').'"', $html);
     }
 
     public function test_plain_text_keeps_button_labels_and_resolved_markers(): void

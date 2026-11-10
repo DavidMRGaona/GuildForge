@@ -29,6 +29,8 @@ La biblioteca muestra las imágenes que suben la web y los módulos: eventos, ar
 
 Si pegas el enlace de una imagen de la web en un texto (la descripción de un evento, un artículo, una guía propia, una página legal o la historia de «Nosotros»), ese texto cuenta como uso «En el texto», aunque la imagen sea de otra carpeta. Así no se borra una imagen que se ve en una página.
 
+Lo mismo pasa con las imágenes que insertas con el editor de esos textos: cuentan como uso «En el texto» del registro donde las pusiste.
+
 No aparecen los **avatares** de las cuentas: no se muestran y nunca se pueden borrar desde aquí.
 
 ## Estados
