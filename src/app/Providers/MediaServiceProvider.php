@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Application\Media\Services\MediaCatalogInterface;
+use App\Application\Media\Services\MediaDeletionServiceInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
@@ -17,6 +18,7 @@ use App\Infrastructure\Media\Cloudinary\CloudinaryMediaCatalog;
 use App\Infrastructure\Media\Cloudinary\DeferredMediaCatalog;
 use App\Infrastructure\Media\Observers\RefreshMediaUsagesObserver;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
+use App\Infrastructure\Media\Services\MediaDeletionService;
 use App\Infrastructure\Media\Services\MediaIndexer;
 use App\Infrastructure\Media\Services\MediaSourceRegistry;
 use App\Infrastructure\Media\Sources\AvatarMediaSource;
@@ -57,6 +59,8 @@ final class MediaServiceProvider extends ServiceProvider
         );
         // Not a singleton: it takes the bus dispatcher at resolution time, so Bus::fake() reaches it
         $this->app->bind(MediaIndexerInterface::class, MediaIndexer::class);
+        // Not a singleton either: the catalog and the switch are read when it deletes, never cached
+        $this->app->bind(MediaDeletionServiceInterface::class, MediaDeletionService::class);
     }
 
     public function boot(): void

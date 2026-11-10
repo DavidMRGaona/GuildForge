@@ -330,6 +330,22 @@ final class CorePermissionDefinitions
                 defaultRoles: ['editor'],
             ),
 
+            // Media library
+            new PermissionDefinitionDTO(
+                key: 'media.view_any',
+                label: __('authorization.permissions.media.view_any'),
+                resource: 'media',
+                action: 'view_any',
+                defaultRoles: ['editor'],
+            ),
+            new PermissionDefinitionDTO(
+                key: 'media.delete',
+                label: __('authorization.permissions.media.delete'),
+                resource: 'media',
+                action: 'delete',
+                defaultRoles: ['editor'],
+            ),
+
             // Knowledge base
             new PermissionDefinitionDTO(
                 key: 'knowledge.manage',
