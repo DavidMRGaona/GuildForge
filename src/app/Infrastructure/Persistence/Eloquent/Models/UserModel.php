@@ -86,6 +86,15 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
     protected array $cloudinaryImageFields = ['avatar_public_id'];
 
     /**
+     * Avatars are never chosen from the media library, so never shared: they go at once, which anonymizing
+     * an account relies on.
+     */
+    protected function sharesCloudinaryImages(): bool
+    {
+        return false;
+    }
+
+    /**
      * The table associated with the model.
      */
     protected $table = 'users';
