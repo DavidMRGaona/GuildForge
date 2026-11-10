@@ -946,6 +946,26 @@ return [
             'empty' => 'Nadie se ha quedado sin respuesta en estos días.',
         ],
     ],
+    'media_picker' => [
+        'action' => 'Elegir de la biblioteca',
+        'heading' => 'Elegir de la biblioteca',
+        'submit' => 'Usar esta imagen',
+        'search' => 'Buscar',
+        'search_placeholder' => 'Título o carpeta',
+        'empty' => 'No hay ninguna imagen de la biblioteca que este campo acepte.',
+        'no_preview' => 'Elige una imagen para verla en grande.',
+        'usages' => 'Se usa en',
+        'no_usages' => 'No la usa ningún registro.',
+        'previous_page' => 'Página anterior',
+        'next_page' => 'Página siguiente',
+        'page' => 'Página :page de :pages',
+        'chosen' => 'Elegida',
+        'errors' => [
+            'required' => 'Elige una imagen.',
+            'unavailable' => 'Esa imagen ya no se puede usar en este campo.',
+            'missing' => 'La imagen elegida ya no está en la biblioteca.',
+        ],
+    ],
     'media_library' => [
         'title' => 'Biblioteca de medios',
         'layout' => [

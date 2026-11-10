@@ -140,7 +140,7 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
             return $checked;
         }
 
-        $outcome = $this->destroy($id, $file?->resource_type ?? $resourceType);
+        $outcome = $this->destroy($id, $file instanceof MediaFileModel ? $file->resource_type : $resourceType);
 
         if (! $outcome instanceof MediaDestroyOutcome) {
             return MediaDeletionRefusal::CatalogFailed;
@@ -321,8 +321,8 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
     ): void {
         $row = [
             'file_id' => $id->value,
-            'resource_type' => $file?->resource_type ?? $resourceType,
-            'folder' => $file?->folder ?? $id->folder(),
+            'resource_type' => $file instanceof MediaFileModel ? $file->resource_type : $resourceType,
+            'folder' => $file instanceof MediaFileModel ? $file->folder : $id->folder(),
             'source_type' => $sourceType,
             'bytes' => $file?->bytes,
             'width' => $file?->width,
