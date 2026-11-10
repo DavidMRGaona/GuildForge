@@ -614,6 +614,7 @@ php artisan content:move-editor-images-to-cloudinary
 - The local copy is deleted only once every value using it is saved. A failed upload or save leaves that value and its local copy as they were and makes the command end with an error: run it again.
 - It is idempotent: images already on Cloudinary are skipped, and a moved file is named after its content, so an upload repeated after an interrupted run overwrites the same image. It is isolated by default: a second run started while one is going stops at once.
 - Local images that are missing or point outside the disk are listed as broken references and left untouched.
+- In the media library, editor images (moved or uploaded) count as used «En el texto» by the record whose text shows them (`RichTextMediaSource`); the column sources leave `content/` folders alone, so those files are never offered for deletion.
 
 ### Member role and email verification (core 3.8)
 

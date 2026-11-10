@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Content;
 
+use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Filament\Pages\Settings\AboutPageSettings;
 use App\Filament\Pages\Settings\LegalPagesSettings;
 use App\Filament\Resources\ArticleResource\Pages\CreateArticle;
@@ -100,6 +101,18 @@ final class EditorImageUploadsTest extends TestCase
         $this->assertSame(Storage::disk('images')->url('articles/content/2026/11/0b7e7c1e-6a0f-4c56-9d0e-1b2f3a4c5d6e.png'), $url);
         $this->assertStringStartsWith('https://res.cloudinary.com/', (string) $url);
         $this->assertStringContainsString('/guildforge/articles/content/2026/11/0b7e7c1e-6a0f-4c56-9d0e-1b2f3a4c5d6e', (string) $url);
+    }
+
+    public function test_the_media_library_reads_the_stored_url_as_the_uploaded_file(): void
+    {
+        $path = 'articles/content/2026/11/0b7e7c1e-6a0f-4c56-9d0e-1b2f3a4c5d6e.png';
+        $url = (string) $this->editor(CreateArticle::class, 'content')->getFileAttachmentUrl($path);
+        $resolver = app(MediaFileIdResolverInterface::class);
+
+        $fromUrl = $resolver->fromStoredPath($url);
+
+        $this->assertNotNull($fromUrl);
+        $this->assertSame($resolver->fromStoredPath($path)?->value, $fromUrl->value);
     }
 
     public function test_an_image_still_on_the_local_disk_keeps_its_stored_url(): void
