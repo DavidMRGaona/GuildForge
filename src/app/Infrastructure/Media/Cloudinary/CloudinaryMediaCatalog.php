@@ -34,6 +34,8 @@ final readonly class CloudinaryMediaCatalog implements MediaCatalogInterface
 
     public function all(): array
     {
+        $this->assertScoped();
+
         $assets = [];
         $cursor = null;
 
@@ -79,6 +81,8 @@ final readonly class CloudinaryMediaCatalog implements MediaCatalogInterface
 
     public function find(MediaFileId $id, string $resourceType): ?MediaAssetDTO
     {
+        $this->assertScoped();
+
         try {
             $response = $this->cloudinary->adminApi()->asset($this->publicId($id), ['resource_type' => $resourceType]);
 
@@ -94,6 +98,8 @@ final readonly class CloudinaryMediaCatalog implements MediaCatalogInterface
 
     public function destroy(MediaFileId $id, string $resourceType): MediaDestroyOutcome
     {
+        $this->assertScoped();
+
         try {
             $response = $this->cloudinary->uploadApi()->destroy($this->publicId($id), [
                 'resource_type' => $resourceType,
@@ -117,9 +123,18 @@ final readonly class CloudinaryMediaCatalog implements MediaCatalogInterface
 
     private function publicId(MediaFileId $id): string
     {
-        $prefix = $this->resolver->prefix();
+        return $this->resolver->prefix().'/'.$id->value;
+    }
 
-        return $prefix === '' ? $id->value : $prefix.'/'.$id->value;
+    /**
+     * Without a prefix nothing is scoped to this site: an unscoped listing would look empty
+     * (and make a sync drop every row) and an unscoped delete could hit another site's files.
+     */
+    private function assertScoped(): void
+    {
+        if ($this->resolver->prefix() === '') {
+            throw MediaCatalogUnavailableException::because('empty prefix: the catalog would not be scoped to the site');
+        }
     }
 
     /**

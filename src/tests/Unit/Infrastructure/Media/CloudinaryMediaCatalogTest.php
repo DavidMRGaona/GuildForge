@@ -154,6 +154,30 @@ final class CloudinaryMediaCatalogTest extends TestCase
         $this->catalog(admin: $broken)->find(new MediaFileId('events/a'), 'image');
     }
 
+    public function test_every_operation_refuses_an_empty_prefix_before_calling_the_api(): void
+    {
+        $admin = $this->createMock(AdminApi::class);
+        $admin->expects($this->never())->method('assets');
+        $admin->expects($this->never())->method('asset');
+        $upload = $this->createMock(UploadApi::class);
+        $upload->expects($this->never())->method('destroy');
+        $catalog = $this->catalog($admin, $upload, '');
+        $id = new MediaFileId('events/a');
+
+        foreach ([
+            $catalog->all(...),
+            static fn () => $catalog->find($id, 'image'),
+            static fn () => $catalog->destroy($id, 'image'),
+        ] as $call) {
+            try {
+                $call();
+                $this->fail('Expected exception');
+            } catch (MediaCatalogUnavailableException $e) {
+                $this->assertStringContainsString('empty prefix', $e->getMessage());
+            }
+        }
+    }
+
     private function destroyWith(ApiResponse $response): MediaDestroyOutcome
     {
         $upload = $this->createStub(UploadApi::class);
@@ -180,12 +204,12 @@ final class CloudinaryMediaCatalogTest extends TestCase
         return new ApiResponse($next === null ? ['resources' => $resources] : ['resources' => $resources, 'next_cursor' => $next], []);
     }
 
-    private function catalog(?AdminApi $admin = null, ?UploadApi $upload = null): CloudinaryMediaCatalog
+    private function catalog(?AdminApi $admin = null, ?UploadApi $upload = null, string $prefix = 'guildforge'): CloudinaryMediaCatalog
     {
         $cloudinary = $this->createStub(Cloudinary::class);
         $cloudinary->method('adminApi')->willReturn($admin ?? $this->createStub(AdminApi::class));
         $cloudinary->method('uploadApi')->willReturn($upload ?? $this->createStub(UploadApi::class));
 
-        return new CloudinaryMediaCatalog($cloudinary, new CloudinaryMediaFileIdResolver('guildforge'));
+        return new CloudinaryMediaCatalog($cloudinary, new CloudinaryMediaFileIdResolver($prefix));
     }
 }
