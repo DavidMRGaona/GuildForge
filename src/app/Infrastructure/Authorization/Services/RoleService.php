@@ -185,10 +185,10 @@ final readonly class RoleService implements RoleServiceInterface
                 [],
             ));
             $this->roleRepository->delete($role->id());
+            // Registered before the announcement: the cache is fresh when a listener runs
+            $this->authorization->invalidateCache();
             $this->announcer->announceDeletion($event);
         });
-
-        $this->authorization->invalidateCache();
     }
 
     /**

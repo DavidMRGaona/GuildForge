@@ -266,11 +266,12 @@ class RoleResource extends BaseResource
                 );
 
                 $deleted = (bool) $record->delete();
+                // Registered before the announcement: the cache is fresh when a listener runs
+                app(AuthorizationServiceInterface::class)->invalidateCache();
                 $announcer->announceDeletion($event);
 
                 return $deleted;
-            }))
-            ->after(static fn () => app(AuthorizationServiceInterface::class)->invalidateCache());
+            }));
     }
 
     /**
