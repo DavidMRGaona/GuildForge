@@ -436,10 +436,14 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
 
         // Rollback migrations only if deleteData is true
         if ($deleteData) {
+            // A failure stops the uninstall with the module still installed (disabled), so nobody
+            // is told its data is gone when tables are left, and it can be tried again
             try {
                 $this->migrationRunner->rollbackAll($module);
             } catch (\Throwable $e) {
-                Log::warning("Failed to rollback migrations for module {$name->value}: {$e->getMessage()}");
+                Log::error("Failed to rollback migrations for module {$name->value}: {$e->getMessage()}");
+
+                throw ModuleCannotUninstallException::deletionFailed($name->value, "its migrations could not be undone ({$e->getMessage()})");
             }
 
             // The seeded data is gone with the tables: a reinstall must seed again

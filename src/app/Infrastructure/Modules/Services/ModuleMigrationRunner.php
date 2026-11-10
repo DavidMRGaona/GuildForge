@@ -9,6 +9,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleMigrationViolationException;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use Illuminate\Support\Facades\Artisan;
+use RuntimeException;
 
 final readonly class ModuleMigrationRunner
 {
@@ -72,29 +73,64 @@ final readonly class ModuleMigrationRunner
     }
 
     /**
-     * Rollback all migrations for a module.
+     * Undo every migration of a module, whenever it ran. `migrate:reset` goes through all the
+     * migrations that ran and undoes only the ones in the module's path; `rollback --step` would
+     * take the last N of the whole table, and migrations of the core or other modules run later
+     * would leave some of the module's behind.
      *
-     * @param  Module  $module  The module to rollback all migrations for
-     * @return int The number of migrations rolled back
+     * @param  Module  $module  The module to undo all migrations for
+     * @return int The number of migrations undone
      *
      * @throws ModuleNotFoundException If the module directory does not exist
+     * @throws RuntimeException If the migrator reports a failure without throwing
      */
     public function rollbackAll(Module $module): int
     {
         $migrationsPath = $this->resolveModulePath($module).'/database/migrations';
 
-        if (! is_dir($migrationsPath)) {
+        if (! is_dir($migrationsPath) || ! app()->bound('migrator')) {
             return 0;
         }
 
-        $migrationFiles = glob($migrationsPath.'/*.php');
-        $count = $migrationFiles !== false ? count($migrationFiles) : 0;
+        $names = array_map(
+            static fn (string $file): string => basename($file, '.php'),
+            glob($migrationsPath.'/*.php') ?: [],
+        );
 
-        if ($count === 0) {
+        if ($names === []) {
             return 0;
         }
 
-        return $this->rollbackMigrationsIfPossible($migrationsPath, $count);
+        $before = $this->ranCount($names);
+
+        $exitCode = Artisan::call('migrate:reset', [
+            // Absolute and real: a module outside base_path() resets too (tests)
+            '--path' => $migrationsPath,
+            '--realpath' => true,
+            '--force' => true,
+        ]);
+
+        if ($exitCode !== 0) {
+            throw new RuntimeException(trim(Artisan::output()) ?: "migrate:reset exited with code {$exitCode}");
+        }
+
+        $left = $this->ranCount($names);
+
+        if ($left > 0) {
+            throw new RuntimeException("{$left} migration(s) of the module could not be undone");
+        }
+
+        return $before;
+    }
+
+    /**
+     * How many of the named migrations are recorded as run.
+     *
+     * @param  list<string>  $names
+     */
+    private function ranCount(array $names): int
+    {
+        return count(array_intersect($names, app('migrator')->getRepository()->getRan()));
     }
 
     /**

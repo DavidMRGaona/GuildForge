@@ -1263,10 +1263,12 @@ $moduleManager->uninstall(new ModuleName('my-module'), deleteData: false);
 Steps:
 1. Fail if an enabled module depends on it.
 2. Disable it.
-3. Only with `deleteData: true`: roll back its migrations, forget which seeders ran and delete its saved settings.
+3. Only with `deleteData: true`: undo all its migrations (`migrate:reset --path`: every migration of the module, whenever it ran and whatever the core or other modules migrated after it), forget which seeders ran and delete its saved settings. If a migration cannot be undone the uninstall stops here with `ModuleCannotUninstallException` and the module stays installed (disabled), so it can be tried again.
 4. Delete the module directory.
 5. Delete its database record.
 6. Dispatch `ModuleUninstalled`; the menu items that carry the module's name are deleted.
+
+Uninstalling with data only cleans what the module keeps in its own tables and in `module_settings:<name>`: store every setting of your own there (or in a table of the module), never under other keys of `settings`, or it stays behind.
 
 ### Module events
 
