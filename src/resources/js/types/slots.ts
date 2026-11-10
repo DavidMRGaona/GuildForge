@@ -9,6 +9,7 @@ export type SlotPosition =
     | 'after-footer'
     // Page-specific slots
     | 'event-detail-actions'
+    | 'subject-discussion'
     | 'game-table-registration'
     | 'campaign-detail-actions'
     | 'profile-sections';

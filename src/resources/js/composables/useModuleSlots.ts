@@ -53,7 +53,10 @@ export interface ResolvedSlotComponent {
 
 interface ModuleSlotsComposable {
     moduleSlots: ComputedRef<Record<string, SlotRegistration[]>>;
-    getSlotComponents: (slotName: SlotPosition) => ResolvedSlotComponent[];
+    getSlotComponents: (
+        slotName: SlotPosition,
+        slotProps?: Record<string, unknown>
+    ) => ResolvedSlotComponent[];
     hasSlotComponents: (slotName: SlotPosition) => boolean;
 }
 
@@ -224,7 +227,8 @@ function createAsyncComponent(module: string, componentPath: string): Component 
  */
 function getComponentProps(
     registration: SlotRegistration,
-    pageProps: Record<string, unknown>
+    pageProps: Record<string, unknown>,
+    slotProps: Record<string, unknown> = {}
 ): Record<string, unknown> {
     const props: Record<string, unknown> = { ...registration.props };
 
@@ -235,7 +239,8 @@ function getComponentProps(
         }
     }
 
-    return props;
+    // What the page passes to the slot (e.g. the subject of a discussion) wins over the rest
+    return { ...props, ...slotProps };
 }
 
 /**
@@ -251,13 +256,20 @@ export function useModuleSlots(): ModuleSlotsComposable {
     /**
      * Get resolved components for a specific slot position
      */
-    function getSlotComponents(slotName: SlotPosition): ResolvedSlotComponent[] {
+    function getSlotComponents(
+        slotName: SlotPosition,
+        slotProps: Record<string, unknown> = {}
+    ): ResolvedSlotComponent[] {
         const registrations = moduleSlots.value[slotName] ?? [];
 
         return registrations.map((registration) => ({
             key: `${registration.module}-${registration.component}-${registration.order}`,
             component: resolveComponent(registration.module, registration.component),
-            props: getComponentProps(registration, page.props as Record<string, unknown>),
+            props: getComponentProps(
+                registration,
+                page.props as Record<string, unknown>,
+                slotProps
+            ),
             registration,
         }));
     }

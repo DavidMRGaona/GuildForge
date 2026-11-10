@@ -446,6 +446,7 @@ export default _default;
 import type { SlotPosition } from '@/types/slots';
 type __VLS_Props = {
     name: SlotPosition;
+    props?: Record<string, unknown>;
 };
 declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
@@ -1122,7 +1123,7 @@ export interface ProfileTabMetadata {
 
 ```ts
 import type { ProfileTabIcon } from './profile';
-export type SlotPosition = 'before-header' | 'after-header' | 'before-content' | 'after-content' | 'before-footer' | 'after-footer' | 'event-detail-actions' | 'game-table-registration' | 'campaign-detail-actions' | 'profile-sections';
+export type SlotPosition = 'before-header' | 'after-header' | 'before-content' | 'after-content' | 'before-footer' | 'after-footer' | 'event-detail-actions' | 'subject-discussion' | 'game-table-registration' | 'campaign-detail-actions' | 'profile-sections';
 export interface ProfileTabMeta {
     tabId?: string;
     icon: ProfileTabIcon;

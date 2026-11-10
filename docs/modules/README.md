@@ -937,6 +937,7 @@ Slots let modules put Vue components into predefined positions of the public sit
 | `before-content`, `after-content` | Around the page content (`DefaultLayout`) |
 | `before-footer`, `after-footer` | Around the site footer (`DefaultLayout`) |
 | `event-detail-actions` | Event detail page |
+| `subject-discussion` | Conversation of a record (event page; game-tables puts it on its table and campaign pages). The page passes `subjectType` and `subjectId` as props of the slot (`<ModuleSlot name="subject-discussion" :props="{ subjectType, subjectId }" />`), which reach the registered component; with no module filling it, nothing is drawn |
 | `game-table-registration`, `campaign-detail-actions` | Game table and campaign pages of the game-tables module |
 | `profile-sections` | Tabs of the user profile (uses `profileTab`) |
 

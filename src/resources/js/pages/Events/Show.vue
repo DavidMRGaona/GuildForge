@@ -185,6 +185,12 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
                             <SubjectDiscussion :discussion="props.discussion" />
                         </div>
 
+                        <!-- Conversation about the event, filled by a forum module -->
+                        <ModuleSlot
+                            name="subject-discussion"
+                            :props="{ subjectType: 'event', subjectId: props.event.id }"
+                        />
+
                         <!-- Download links -->
                         <div
                             v-if="props.event.downloadLinks.length > 0"
