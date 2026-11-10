@@ -27,6 +27,7 @@ return [
         'settings' => 'Configuración',
         'search' => 'Búsqueda',
         'knowledge' => 'Guías de ayuda',
+        'media' => 'Biblioteca de medios',
         'mail' => 'Correo electrónico',
         'updates' => 'Actualizaciones',
         'admin' => 'Administración',
@@ -118,6 +119,10 @@ return [
         ],
         'knowledge' => [
             'manage' => 'Gestionar las guías de ayuda',
+        ],
+        'media' => [
+            'view_any' => 'Ver la biblioteca de medios',
+            'delete' => 'Borrar archivos sin usar',
         ],
         'mail' => [
             'configure' => 'Configurar correo electrónico',

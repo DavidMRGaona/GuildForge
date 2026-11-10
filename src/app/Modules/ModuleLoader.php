@@ -10,6 +10,7 @@ use App\Application\Calendar\Services\CalendarAttendanceSourceRegistryInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
@@ -105,6 +106,9 @@ final class ModuleLoader
 
         // Register indexed search sources from the provider
         $this->registerProviderSearchSources($provider, $module->name()->value);
+
+        // Register media usage sources from the provider
+        $this->registerProviderMediaSources($provider, $module->name()->value);
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
@@ -261,6 +265,22 @@ final class ModuleLoader
 
         if ($this->app->bound(SearchSourceRegistryInterface::class)) {
             $this->app->make(SearchSourceRegistryInterface::class)->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register media usage sources from a module provider.
+     */
+    private function registerProviderMediaSources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerMediaSources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(MediaSourceRegistryInterface::class)) {
+            $this->app->make(MediaSourceRegistryInterface::class)->registerMany($sources, $moduleName);
         }
     }
 

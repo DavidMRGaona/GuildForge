@@ -103,4 +103,30 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         yield 'no cloud name' => ['', 'events/abc.jpg'];
         yield 'empty public id' => ['demo', ''];
     }
+
+    public function test_media_library_urls_are_built_from_the_file_id(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'site');
+
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_400,h_400,c_fill,g_auto,q_auto,f_auto/site/events/2026/11/abc',
+            $builder->mediaThumbnail('events/2026/11/abc', 400),
+        );
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_1200,c_limit,q_auto,f_auto/site/events/abc',
+            $builder->mediaPreview('events/abc', 1200),
+        );
+        $this->assertSame('https://res.cloudinary.com/demo/image/upload/site/events/abc', $builder->mediaOriginal('events/abc'));
+    }
+
+    public function test_media_library_urls_always_add_the_prefix_and_encode_each_segment(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'site');
+
+        // Library ids are relative to the prefix, even one whose first folder is named like it
+        $this->assertSame('https://res.cloudinary.com/demo/image/upload/site/site/a%20b%23c', $builder->mediaOriginal('site/a b#c'));
+        $this->assertSame('https://res.cloudinary.com/demo/raw/upload/site/docs/a', $builder->mediaOriginal('docs/a', 'raw'));
+        $this->assertNull($builder->mediaOriginal('docs/a', 'raw/../x'));
+        $this->assertNull((new CloudinaryImageUrlBuilder('', 'site'))->mediaThumbnail('events/a', 400));
+    }
 }

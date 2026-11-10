@@ -20,6 +20,7 @@ return [
         'settings' => 'Settings',
         'search' => 'Search',
         'knowledge' => 'Help guides',
+        'media' => 'Media library',
         'mail' => 'Email',
         'updates' => 'Updates',
         'admin' => 'Administration',
@@ -111,6 +112,10 @@ return [
         ],
         'knowledge' => [
             'manage' => 'Manage help guides',
+        ],
+        'media' => [
+            'view_any' => 'View the media library',
+            'delete' => 'Delete unused files',
         ],
         'mail' => [
             'configure' => 'Configure email',

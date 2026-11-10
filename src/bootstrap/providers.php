@@ -8,6 +8,7 @@ use App\Providers\AuthorizationServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\KnowledgeServiceProvider;
 use App\Providers\MailPreferencesServiceProvider;
+use App\Providers\MediaServiceProvider;
 use App\Providers\PublicationServiceProvider;
 use App\Providers\SearchServiceProvider;
 
@@ -18,6 +19,7 @@ return [
     AdminPanelProvider::class,
     KnowledgeServiceProvider::class,
     MailPreferencesServiceProvider::class,
+    MediaServiceProvider::class,
     PublicationServiceProvider::class,
     SearchServiceProvider::class,
 ];

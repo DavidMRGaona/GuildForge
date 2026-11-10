@@ -17,6 +17,12 @@ final class CorePermissionDefinitionsTest extends TestCase
         }
     }
 
+    public function test_media_deletion_is_never_suggested_nor_seeded(): void
+    {
+        $this->assertSame(['editor'], $this->findDefinition('media.view_any')->defaultRoles);
+        $this->assertSame([], $this->findDefinition('media.delete')->defaultRoles);
+    }
+
     public function test_sensitive_core_permissions_have_a_description(): void
     {
         foreach (['settings.manage', 'users.assign_roles', 'modules.configure', 'modules.manage', 'pages.manage', 'admin.access'] as $key) {
