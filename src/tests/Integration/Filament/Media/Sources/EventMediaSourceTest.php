@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tests\Integration\Infrastructure\Media\Sources;
+namespace Tests\Integration\Filament\Media\Sources;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
-use App\Infrastructure\Media\Sources\EventMediaSource;
+use App\Filament\Media\Sources\EventMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;

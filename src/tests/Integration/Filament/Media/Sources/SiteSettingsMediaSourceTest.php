@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Tests\Integration\Infrastructure\Media\Sources;
+namespace Tests\Integration\Filament\Media\Sources;
 
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Media\ValueObjects\MediaFileId;
+use App\Filament\Media\Sources\SiteSettingsMediaSource;
 use App\Filament\Pages\Settings\AboutPageSettings;
 use App\Filament\Pages\SiteSettings;
-use App\Infrastructure\Media\Sources\SiteSettingsMediaSource;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;

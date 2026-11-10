@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Media\Sources;
+namespace App\Filament\Media\Sources;
 
 use App\Filament\Resources\HeroSlideResource;
+use App\Infrastructure\Media\Sources\EloquentColumnMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;

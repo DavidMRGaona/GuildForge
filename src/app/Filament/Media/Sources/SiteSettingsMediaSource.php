@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Media\Sources;
+namespace App\Filament\Media\Sources;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;

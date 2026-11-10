@@ -92,24 +92,27 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
     public function usesFile(MediaFileId $file): bool
     {
         $column = $this->column();
-        $wrapped = $this->query()->getQuery()->getGrammar()->wrap($column);
-        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $file->value);
+        $query = $this->query()->select($column);
 
-        // Prefilter in SQL (case-insensitive on some engines); the exact id is confirmed in PHP below.
-        // The second pattern catches full delivery URLs, which carry the id after a slash.
-        $candidates = $this->query()
-            ->select($column)
-            ->where(function (Builder $query) use ($column, $wrapped, $file, $escaped): void {
-                // The wrapped identifier comes from the source's own column(), never from input
-                $sql = "{$wrapped} LIKE ? ESCAPE '\\'";
+        // Prefilter in SQL as wide as the resolver: stored forms may be URLs without extension, URL-encoded
+        // or with backslashes, so only the longest run of characters that survive all of those is matched.
+        // The exact id is confirmed in PHP below.
+        $piece = $this->longestPlainRun($file->value);
 
-                $query->where($column, $file->value)
+        if ($piece !== '') {
+            $wrapped = $query->getQuery()->getGrammar()->wrap($column);
+            // The wrapped identifier comes from the source's own column(), never from input
+            $sql = "{$wrapped} LIKE ? ESCAPE '\\'";
+            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $piece);
+
+            $query->where(function (Builder $inner) use ($column, $file, $sql, $escaped): void {
+                $inner->where($column, $file->value)
                     // @phpstan-ignore argument.type
-                    ->orWhereRaw($sql, [$escaped.'.%'])
-                    // @phpstan-ignore argument.type
-                    ->orWhereRaw($sql, ['%/'.$escaped.'.%']);
-            })
-            ->lazy(self::CHUNK_SIZE);
+                    ->orWhereRaw($sql, ['%'.$escaped.'%']);
+            });
+        }
+
+        $candidates = $query->lazy(self::CHUNK_SIZE);
 
         foreach ($candidates as $candidate) {
             $stored = $candidate->getAttribute($column);
@@ -150,6 +153,23 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
         }
 
         return $query;
+    }
+
+    /**
+     * Longest run of letters, digits, hyphens and underscores: never encoded, never case-folded by the resolver.
+     */
+    private function longestPlainRun(string $id): string
+    {
+        $runs = preg_split('/[^A-Za-z0-9_-]+/', $id, -1, PREG_SPLIT_NO_EMPTY);
+        $best = '';
+
+        foreach ($runs === false ? [] : $runs as $run) {
+            if (strlen($run) > strlen($best)) {
+                $best = $run;
+            }
+        }
+
+        return $best;
     }
 
     private function usageOf(Model $record): ?MediaUsageDTO

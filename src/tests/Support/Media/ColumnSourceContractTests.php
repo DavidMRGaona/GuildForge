@@ -79,6 +79,28 @@ trait ColumnSourceContractTests
         $this->assertTrue($this->source()->usesFile(new MediaFileId('events/2026/a')));
     }
 
+    public function test_uses_file_matches_ids_containing_like_wildcards(): void
+    {
+        $this->makeRecord('events/my_file.jpg');
+        $this->makeRecord('events/50%off.jpg');
+
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('events/my_file')));
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('events/50%off')));
+        $this->assertFalse($this->source()->usesFile(new MediaFileId('events/myxfile')));
+    }
+
+    public function test_uses_file_matches_extensionless_and_encoded_delivery_urls(): void
+    {
+        $this->makeRecord('https://res.cloudinary.com/demo/image/upload/v1/guildforge/events/plain');
+        $this->makeRecord('https://res.cloudinary.com/demo/image/upload/c_fill,w_300/guildforge/events/my%20photo.jpg');
+        $this->makeRecord('events\\win\\back.jpg');
+
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('events/plain')));
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('events/my photo')));
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('events/win/back')));
+        $this->assertFalse($this->source()->usesFile(new MediaFileId('events/plai')));
+    }
+
     public function test_edit_url_is_null_without_permission(): void
     {
         $record = $this->makeRecord('x/a.jpg');

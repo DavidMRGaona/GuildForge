@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests\Integration\Infrastructure\Media\Sources;
+namespace Tests\Integration\Filament\Media\Sources;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
+use App\Filament\Media\Sources\GalleryPhotoMediaSource;
 use App\Filament\Resources\GalleryResource;
-use App\Infrastructure\Media\Sources\GalleryPhotoMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use Illuminate\Database\Eloquent\Model;
