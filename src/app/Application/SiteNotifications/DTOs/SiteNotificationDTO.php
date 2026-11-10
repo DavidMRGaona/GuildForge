@@ -22,14 +22,16 @@ final readonly class SiteNotificationDTO
 
     public const int URL_MAX_LENGTH = 2048;
 
+    // Every pattern ends in \z, not $: PCRE lets $ match before a final newline
+
     /** Lucide icon name in kebab case, as for mail sections. */
-    public const string ICON_PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
+    public const string ICON_PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*\z/';
 
     /** Stored and compared as it is: letters, digits and . _ : - only. */
-    public const string GROUP_KEY_PATTERN = '/^[A-Za-z0-9._:-]{1,191}$/';
+    public const string GROUP_KEY_PATTERN = '/^[A-Za-z0-9._:-]{1,191}\z/';
 
     /** An account id, as stored (a UUID). */
-    public const string ACTOR_ID_PATTERN = '/^[A-Za-z0-9_-]{1,64}$/';
+    public const string ACTOR_ID_PATTERN = '/^[A-Za-z0-9_-]{1,64}\z/';
 
     public string $title;
 
@@ -107,7 +109,7 @@ final readonly class SiteNotificationDTO
     public static function isSitePath(string $url): bool
     {
         return strlen($url) <= self::URL_MAX_LENGTH
-            && preg_match('#^/(?![/\\\\])[^\s\p{Cc}\\\\]*$#u', $url) === 1;
+            && preg_match('#^/(?![/\\\\])[^\s\p{Cc}\\\\]*\z#u', $url) === 1;
     }
 
     private function oneLine(string $text, int $maxLength): string

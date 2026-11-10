@@ -90,7 +90,39 @@ final class SiteNotificationDTOTest extends TestCase
             'relative without slash' => ['foro/temas'],
             'empty' => [''],
             'control characters' => ["/foro\n/temas"],
+            'trailing newline' => ["/foro/x\n"],
+            'another host' => ['//evil.com'],
+            'another host with a backslash' => ['/\\evil.com'],
         ];
+    }
+
+    public function test_a_trailing_newline_is_never_accepted_as_a_path(): void
+    {
+        $this->assertFalse(SiteNotificationDTO::isSitePath("/foro/x\n"));
+        $this->assertTrue(SiteNotificationDTO::isSitePath('/foro/x'));
+    }
+
+    /**
+     * @return array<string, array{array<string, string>}>
+     */
+    public static function valuesWithATrailingNewline(): array
+    {
+        return [
+            'icon' => [['icon' => "message-square\n"]],
+            'group key' => [['groupKey' => "forum.topic:1\n"]],
+            'actor id' => [['actorId' => "0193b2c4\n"]],
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $field
+     */
+    #[DataProvider('valuesWithATrailingNewline')]
+    public function test_a_trailing_newline_is_rejected_in_every_stored_value(array $field): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new SiteNotificationDTO('Título', '/', ...$field);
     }
 
     #[DataProvider('urlsOutsideTheSite')]

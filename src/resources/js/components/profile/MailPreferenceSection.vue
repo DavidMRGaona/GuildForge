@@ -21,8 +21,10 @@ interface Props {
     /** Current web switch of the categories with site notices, by key (core#491). */
     siteChoices?: Record<string, boolean>;
     busy?: boolean;
-    /** Translated errors by category key. */
+    /** Translated errors of the mail choice, by category key. */
     errors?: Record<string, string>;
+    /** Translated errors of the web switch, by category key (core#491). */
+    siteErrors?: Record<string, string>;
     /** When the daily digest goes out (`HH:MM`), for the categories that offer it (core#333). */
     digestTime?: string;
 }
@@ -31,6 +33,7 @@ const props = withDefaults(defineProps<Props>(), {
     busy: false,
     siteChoices: () => ({}),
     errors: () => ({}),
+    siteErrors: () => ({}),
     digestTime: '08:00',
 });
 
@@ -114,6 +117,7 @@ const summary = computed(() =>
                         :category="category"
                         :delivery="choiceOf(category.key, category.delivery)"
                         :site="siteChoiceOf(category.key, category.siteEnabled)"
+                        :site-error="siteErrors[category.key] ?? ''"
                         :base-id="control.baseId"
                         :label-id="control.labelId"
                         :described-by="control.describedBy"

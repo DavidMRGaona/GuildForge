@@ -189,6 +189,40 @@ describe('ProfileMailTab — site notices (core#491)', () => {
         expect(summary()).toBe('1 de 3 activados');
     });
 
+    it('keeps the mail error and the web error of one category apart', async () => {
+        router.put.mockImplementation((_url: string, _data: unknown, options: PutOptions) => {
+            options.onError?.({
+                'preferences.forum.replies': 'No puedes cambiar este correo.',
+                'site.forum.replies': 'No puedes cambiar este aviso.',
+            });
+        });
+        const wrapper = mountTab();
+
+        await channelSwitch(wrapper, 'forum.replies', 'mail').trigger('click');
+        await channelSwitch(wrapper, 'forum.replies', 'site').trigger('click');
+        await wrapper.find('form').trigger('submit');
+
+        const row = wrapper.get('[data-category="forum.replies"]');
+        const siteError = row.get('[data-testid="site-channel-error"]');
+        expect(siteError.text()).toBe('No puedes cambiar este aviso.');
+        expect(row.text()).toContain('No puedes cambiar este correo.');
+
+        // Each switch is described by its own error only
+        const siteDescribedBy =
+            channelSwitch(wrapper, 'forum.replies', 'site').attributes('aria-describedby') ?? '';
+        const mailDescribedBy =
+            channelSwitch(wrapper, 'forum.replies', 'mail').attributes('aria-describedby') ?? '';
+        const describedText = (ids: string): string =>
+            ids
+                .split(' ')
+                .map((id) => wrapper.find(`#${id}`).text())
+                .join(' | ');
+        expect(describedText(siteDescribedBy)).toContain('No puedes cambiar este aviso.');
+        expect(describedText(siteDescribedBy)).not.toContain('No puedes cambiar este correo.');
+        expect(describedText(mailDescribedBy)).toContain('No puedes cambiar este correo.');
+        expect(describedText(mailDescribedBy)).not.toContain('No puedes cambiar este aviso.');
+    });
+
     it('shows a refused web switch under its category', async () => {
         router.put.mockImplementation((_url: string, _data: unknown, options: PutOptions) => {
             options.onError?.({ 'site.forum.likes': 'No puedes cambiar este aviso.' });

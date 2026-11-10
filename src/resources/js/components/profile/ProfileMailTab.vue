@@ -93,7 +93,9 @@ const digestible = computed<Set<string>>(() => {
 const choices = ref<Record<string, MailDelivery>>({ ...saved.value });
 const siteChoices = ref<Record<string, boolean>>({ ...siteSaved.value });
 const processing = ref(false);
+/** Translated errors by category key: the mail choice and the web switch each keep their own. */
 const errors = ref<Record<string, string>>({});
+const siteErrors = ref<Record<string, string>>({});
 const generalError = ref<string | null>(null);
 
 // A reload brings the saved state again (after saving, or from another tab of the browser)
@@ -133,12 +135,14 @@ const locked = computed(() => processing.value || gate.blocked.value);
 function setChoice(key: string, value: MailDelivery): void {
     choices.value = { ...choices.value, [key]: value };
     errors.value = {};
+    siteErrors.value = {};
     generalError.value = null;
 }
 
 function setSiteChoice(key: string, value: boolean): void {
     siteChoices.value = { ...siteChoices.value, [key]: value };
     errors.value = {};
+    siteErrors.value = {};
     generalError.value = null;
 }
 
@@ -161,6 +165,7 @@ function save(): void {
     }
 
     errors.value = {};
+    siteErrors.value = {};
     generalError.value = null;
 
     router.put(ENDPOINT, payload(), {
@@ -174,16 +179,20 @@ function save(): void {
         },
         onError: (received) => {
             const byCategory: Record<string, string> = {};
+            const siteByCategory: Record<string, string> = {};
             for (const [field, message] of Object.entries(received)) {
                 if (field.startsWith(ERROR_PREFIX)) {
                     byCategory[field.slice(ERROR_PREFIX.length)] = message;
                 } else if (field.startsWith(SITE_ERROR_PREFIX)) {
-                    byCategory[field.slice(SITE_ERROR_PREFIX.length)] = message;
+                    siteByCategory[field.slice(SITE_ERROR_PREFIX.length)] = message;
                 }
             }
             errors.value = byCategory;
+            siteErrors.value = siteByCategory;
             generalError.value =
-                Object.keys(byCategory).length === 0 ? t('auth.profile.mail.error') : null;
+                Object.keys(byCategory).length === 0 && Object.keys(siteByCategory).length === 0
+                    ? t('auth.profile.mail.error')
+                    : null;
         },
     });
 }
@@ -239,6 +248,7 @@ function save(): void {
                     :site-choices="siteChoices"
                     :busy="locked"
                     :errors="errors"
+                    :site-errors="siteErrors"
                     :digest-time="digestTime"
                     @change="setChoice"
                     @site-change="setSiteChoice"
@@ -267,6 +277,7 @@ function save(): void {
                         :site-choices="siteChoices"
                         :busy="locked"
                         :errors="errors"
+                        :site-errors="siteErrors"
                         :digest-time="digestTime"
                         @change="setChoice"
                         @site-change="setSiteChoice"
