@@ -946,4 +946,26 @@ return [
             'empty' => 'Nadie se ha quedado sin respuesta en estos días.',
         ],
     ],
+    'media_library' => [
+        'sources' => [
+            'events' => 'Eventos',
+            'articles' => 'Artículos',
+            'galleries' => 'Galerías',
+            'hero_slides' => 'Hero slides',
+            'settings' => 'Configuración del sitio',
+            'avatars' => 'Avatares',
+        ],
+        'roles' => [
+            'image' => 'Imagen',
+            'featured_image' => 'Imagen destacada',
+            'photo' => 'Foto',
+            'avatar' => 'Avatar',
+            'site_logo_light' => 'Logo claro',
+            'site_logo_dark' => 'Logo oscuro',
+            'site_logo_email' => 'Logo del correo',
+            'site_favicon_light' => 'Favicon claro',
+            'site_favicon_dark' => 'Favicon oscuro',
+            'about_hero_image' => 'Imagen de Nosotros',
+        ],
+    ],
 ];

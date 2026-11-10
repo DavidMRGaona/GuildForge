@@ -10,6 +10,12 @@ use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Infrastructure\Media\Cloudinary\CloudinaryMediaCatalog;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
 use App\Infrastructure\Media\Services\MediaSourceRegistry;
+use App\Infrastructure\Media\Sources\ArticleMediaSource;
+use App\Infrastructure\Media\Sources\AvatarMediaSource;
+use App\Infrastructure\Media\Sources\EventMediaSource;
+use App\Infrastructure\Media\Sources\GalleryPhotoMediaSource;
+use App\Infrastructure\Media\Sources\HeroSlideMediaSource;
+use App\Infrastructure\Media\Sources\SiteSettingsMediaSource;
 use Cloudinary\Cloudinary;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,5 +40,17 @@ final class MediaServiceProvider extends ServiceProvider
                 $app->make(MediaFileIdResolverInterface::class),
             ),
         );
+    }
+
+    public function boot(): void
+    {
+        $this->app->make(MediaSourceRegistryInterface::class)->registerMany([
+            EventMediaSource::class,
+            ArticleMediaSource::class,
+            GalleryPhotoMediaSource::class,
+            HeroSlideMediaSource::class,
+            SiteSettingsMediaSource::class,
+            AvatarMediaSource::class,
+        ]);
     }
 }
