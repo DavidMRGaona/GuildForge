@@ -14,6 +14,8 @@ use App\Application\Calendar\Services\ICalendarWriterInterface;
 use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
 use App\Application\Calendar\Services\PublicCalendarFeedDocumentInterface;
 use App\Application\Calendar\Services\PublicCalendarFeedInterface;
+use App\Application\Content\Services\EditorImageMoverInterface;
+use App\Application\Content\Services\EditorImageUrlsInterface;
 use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Cookies\Services\CookieDeclarationRegistryInterface;
@@ -107,6 +109,8 @@ use App\Infrastructure\Calendar\Services\CalendarAggregatorService;
 use App\Infrastructure\Calendar\Services\CalendarAttendanceSourceRegistry;
 use App\Infrastructure\Calendar\Services\CalendarSourceRegistry;
 use App\Infrastructure\Calendar\Services\PersonalCalendarService;
+use App\Infrastructure\Content\Services\EditorImageMover;
+use App\Infrastructure\Content\Services\EditorImageUrls;
 use App\Infrastructure\Content\Services\TrixContentMigrator;
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Cookies\CookieDeclarationRegistry;
@@ -416,6 +420,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(MenuItemHrefResolverInterface::class, MenuItemHrefResolver::class);
         $this->app->singleton(MenuServiceInterface::class, MenuService::class);
         $this->app->singleton(RouteRegistryInterface::class, RouteRegistry::class);
+
+        // Images inserted with the rich editors: Cloudinary URLs built locally (core#481)
+        $this->app->singleton(EditorImageUrlsInterface::class, EditorImageUrls::class);
+        $this->app->bind(EditorImageMoverInterface::class, EditorImageMover::class);
 
         // Rich text written with the Trix editor (admin panel before core 3.0)
         $this->app->singleton(TrixHtmlConverterInterface::class, TrixHtmlConverter::class);

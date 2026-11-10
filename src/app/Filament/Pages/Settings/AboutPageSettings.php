@@ -7,9 +7,11 @@ namespace App\Filament\Pages\Settings;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Social\SocialNetwork;
 use App\Application\Social\SocialUrl;
+use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Support\PanelNavigationGroup;
 use Closure;
 use Filament\Actions\Action;
@@ -133,10 +135,10 @@ final class AboutPageSettings extends Page implements HasForms
                                     ->maxItems(8)
                                     ->columnSpanFull(),
 
-                                RichEditor::make('about_history')
+                                EditorImages::configure(RichEditor::make('about_history')
                                     ->label(__('filament.settings.about.history'))
                                     ->helperText(__('filament.settings.about.history_help'))
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull(), EditorImageOrigin::About),
                             ]),
 
                         Tab::make(__('filament.pages.about.tabs.join'))

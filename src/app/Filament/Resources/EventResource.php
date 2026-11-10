@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources;
 
 use App\Application\Services\TimezoneServiceInterface;
+use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Concerns\HasExtendableFormSections;
 use App\Filament\Concerns\HasExtendableRelations;
+use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Resources\EventResource\Pages\CreateEvent;
 use App\Filament\Resources\EventResource\Pages\EditEvent;
 use App\Filament\Resources\EventResource\Pages\ListEvents;
@@ -79,10 +81,10 @@ class EventResource extends BaseResource
                     ->maxLength(255)
                     ->unique(ignoreRecord: true)
                     ->rules(['alpha_dash']),
-                RichEditor::make('description')
+                EditorImages::configure(RichEditor::make('description')
                     ->label(__('Descripción'))
                     ->required()
-                    ->columnSpanFull(),
+                    ->columnSpanFull(), EditorImageOrigin::Events),
                 Section::make(__('Fechas'))
                     ->schema([
                         DateTimePicker::make('start_date')
