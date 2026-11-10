@@ -253,3 +253,9 @@
 .dark .media-library-grid .fi-ta-record > .fi-ta-record-checkbox {
     box-shadow: 0 0 0 0.25rem var(--gray-900);
 }
+
+/* The status, size and uses row of a card wraps as a whole instead of overflowing a narrow card */
+.media-library-grid .fi-ta-split {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+}
