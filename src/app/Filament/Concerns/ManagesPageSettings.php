@@ -7,8 +7,10 @@ namespace App\Filament\Concerns;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Services\SettingsServiceInterface;
 use Filament\Actions\Action;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
+use Throwable;
 
 /**
  * Shared functionality for Filament settings pages.
@@ -169,10 +171,18 @@ trait ManagesPageSettings
             return;
         }
 
-        $indexer = resolve(MediaIndexerInterface::class);
+        // Never fails the save: the nightly sync settles what was not refreshed
+        try {
+            $indexer = resolve(MediaIndexerInterface::class);
 
-        foreach ($imageKeys as $key) {
-            $indexer->refresh('settings', $key);
+            foreach ($imageKeys as $key) {
+                $indexer->refresh('settings', $key);
+            }
+        } catch (Throwable $e) {
+            Log::warning('[Media] Could not refresh the media usages of the image settings.', [
+                'keys' => $imageKeys,
+                'exception' => $e,
+            ]);
         }
     }
 

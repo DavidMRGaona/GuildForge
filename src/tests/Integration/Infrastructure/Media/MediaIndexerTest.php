@@ -28,9 +28,8 @@ final class MediaIndexerTest extends TestCase
     {
         parent::setUp();
 
-        $catalog = $this->app->make(MediaCatalogInterface::class);
-        $this->assertInstanceOf(InMemoryMediaCatalog::class, $catalog);
-        $this->catalog = $catalog;
+        $this->catalog = new InMemoryMediaCatalog;
+        $this->app->instance(MediaCatalogInterface::class, $this->catalog);
         $this->registry = $this->app->make(MediaSourceRegistryInterface::class);
         $this->registry->clear();
     }
@@ -127,18 +126,25 @@ final class MediaIndexerTest extends TestCase
 
     public function test_failing_source_keeps_its_rows(): void
     {
+        // One row the stream still offers (with a new title) and one it no longer offers
+        $this->usage('broken/kept', 'broken', 'r0');
         $this->usage('broken/old', 'broken', 'r1');
-        $broken = $this->source('broken')->use('broken/new.jpg', 'r2');
+        $broken = $this->source('broken')->use('broken/kept.jpg', 'r0', title: 'Título nuevo');
+
+        // More than one chunk is written before the source fails
+        for ($i = 0; $i < 600; $i++) {
+            $broken->use("broken/new{$i}.jpg", "n{$i}");
+        }
+
         $broken->failing = true;
         $this->source('events')->use('events/a.jpg', 'e1');
 
         $result = $this->indexer()->sync();
 
         $this->assertSame(['broken'], $result->failedSources);
-        $rows = MediaUsageModel::query()->where('source_type', 'broken')->get();
-        $this->assertCount(1, $rows);
-        $this->assertSame('broken/old', $rows->firstOrFail()->file_id);
-        $this->assertSame('Registro antiguo', $rows->firstOrFail()->title);
+        $rows = MediaUsageModel::query()->where('source_type', 'broken')->orderBy('file_id')->get();
+        $this->assertSame(['broken/kept', 'broken/old'], $rows->pluck('file_id')->all());
+        $this->assertSame(['Registro antiguo', 'Registro antiguo'], $rows->pluck('title')->all());
         $this->assertTrue(MediaUsageModel::query()->where('source_type', 'events')->where('file_id', 'events/a')->exists());
     }
 

@@ -17,6 +17,7 @@ use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use Exception;
 use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -32,10 +33,11 @@ final readonly class MediaIndexer implements MediaIndexerInterface
 
     public function __construct(
         private MediaSourceRegistryInterface $registry,
-        private MediaCatalogInterface $catalog,
         private MediaIndexWriter $writer,
         private SettingsServiceInterface $settings,
         private Dispatcher $bus,
+        // The catalog is resolved only by sync(): refresh() runs on every save and must not depend on it
+        private Container $container,
     ) {}
 
     public function refresh(string $type, string $recordId): void
@@ -103,7 +105,7 @@ final readonly class MediaIndexer implements MediaIndexerInterface
     private function syncFiles(CarbonImmutable $startedAt): array
     {
         try {
-            $assets = $this->catalog->all();
+            $assets = $this->container->make(MediaCatalogInterface::class)->all();
         } catch (Throwable $e) {
             Log::warning('[Media] The media catalog could not be listed; no file was added or removed.', ['exception' => $e]);
 

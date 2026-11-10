@@ -51,7 +51,6 @@ final class RefreshMediaUsagesJob implements ShouldQueue
         MediaSourceRegistryInterface $registry,
         MediaIndexWriter $writer,
         MediaFileIdResolverInterface $resolver,
-        MediaCatalogInterface $catalog,
     ): void {
         try {
             $source = $registry->source($this->type);
@@ -103,8 +102,8 @@ final class RefreshMediaUsagesJob implements ShouldQueue
                 return $before;
             });
 
-            $this->addMissingFiles($paths, $writer, $resolver, $catalog);
-            $this->dropLostFiles(array_keys(array_diff_key($before, $paths)), $catalog);
+            $this->addMissingFiles($paths, $writer, $resolver);
+            $this->dropLostFiles(array_keys(array_diff_key($before, $paths)));
         } catch (Throwable $e) {
             $this->warn('[Media] The media usages of a record could not be refreshed; the nightly sync will settle them.', $e);
         }
@@ -113,7 +112,7 @@ final class RefreshMediaUsagesJob implements ShouldQueue
     /**
      * @param  array<string, string>  $paths
      */
-    private function addMissingFiles(array $paths, MediaIndexWriter $writer, MediaFileIdResolverInterface $resolver, MediaCatalogInterface $catalog): void
+    private function addMissingFiles(array $paths, MediaIndexWriter $writer, MediaFileIdResolverInterface $resolver): void
     {
         if ($paths === []) {
             return;
@@ -127,7 +126,7 @@ final class RefreshMediaUsagesJob implements ShouldQueue
             }
 
             try {
-                $asset = $catalog->find(new MediaFileId((string) $fileId), self::LISTED_RESOURCE_TYPE);
+                $asset = $this->catalog()->find(new MediaFileId((string) $fileId), self::LISTED_RESOURCE_TYPE);
             } catch (Throwable $e) {
                 // The catalog is down: the nightly sync adds what is left
                 $this->warn('[Media] A used file could not be looked up; it is added by the nightly sync.', $e);
@@ -144,7 +143,7 @@ final class RefreshMediaUsagesJob implements ShouldQueue
     /**
      * @param  list<array-key>  $fileIds
      */
-    private function dropLostFiles(array $fileIds, MediaCatalogInterface $catalog): void
+    private function dropLostFiles(array $fileIds): void
     {
         foreach ($fileIds as $fileId) {
             $fileId = (string) $fileId;
@@ -160,7 +159,7 @@ final class RefreshMediaUsagesJob implements ShouldQueue
             }
 
             try {
-                $asset = $catalog->find(new MediaFileId($fileId), $file->resource_type);
+                $asset = $this->catalog()->find(new MediaFileId($fileId), $file->resource_type);
             } catch (Throwable $e) {
                 // Kept: an unused file the catalog cannot vouch for stays listed until the nightly sync
                 $this->warn('[Media] A file that lost its last usage could not be looked up; it was kept.', $e);
@@ -173,6 +172,15 @@ final class RefreshMediaUsagesJob implements ShouldQueue
                 MediaFileModel::query()->where('file_id', $fileId)->whereDoesntHave('usages')->delete();
             }
         }
+    }
+
+    /**
+     * Resolved only when a file has to be looked up, inside the callers' try: a catalog that cannot be
+     * built is treated as an unavailable one and every file is kept.
+     */
+    private function catalog(): MediaCatalogInterface
+    {
+        return resolve(MediaCatalogInterface::class);
     }
 
     private function warn(string $message, Throwable $e): void

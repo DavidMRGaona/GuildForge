@@ -7,11 +7,15 @@ namespace App\Infrastructure\Media\Observers;
 use App\Application\Media\Services\MediaIndexerInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Keeps the media usages of a record in line with the model it comes from: saving or deleting it queues a
  * refresh, which reads the record again (a deleted record has no usages). Public so modules can attach it to
  * their own models as model event listeners.
+ *
+ * It never fails the save: anything that goes wrong is logged and the nightly sync settles the record.
  */
 final readonly class RefreshMediaUsagesObserver
 {
@@ -35,10 +39,25 @@ final readonly class RefreshMediaUsagesObserver
 
     private function refresh(Model $model): void
     {
-        $indexer = resolve(MediaIndexerInterface::class);
+        try {
+            $ids = ($this->recordIds)($model);
 
-        foreach (($this->recordIds)($model) as $id) {
-            $indexer->refresh($this->type, $id);
+            // Most saves of some models (accounts on every sign-in) have nothing to refresh
+            if ($ids === []) {
+                return;
+            }
+
+            $indexer = resolve(MediaIndexerInterface::class);
+
+            foreach ($ids as $id) {
+                $indexer->refresh($this->type, $id);
+            }
+        } catch (Throwable $e) {
+            Log::warning('[Media] Could not refresh the media usages of a saved record.', [
+                'type' => $this->type,
+                'model' => $model::class,
+                'exception' => $e,
+            ]);
         }
     }
 }

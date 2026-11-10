@@ -14,6 +14,7 @@ use App\Filament\Media\Sources\GalleryPhotoMediaSource;
 use App\Filament\Media\Sources\HeroSlideMediaSource;
 use App\Filament\Media\Sources\SiteSettingsMediaSource;
 use App\Infrastructure\Media\Cloudinary\CloudinaryMediaCatalog;
+use App\Infrastructure\Media\Cloudinary\DeferredMediaCatalog;
 use App\Infrastructure\Media\Observers\RefreshMediaUsagesObserver;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
 use App\Infrastructure\Media\Services\MediaIndexer;
@@ -43,11 +44,15 @@ final class MediaServiceProvider extends ServiceProvider
                 is_string($prefix = config('filesystems.disks.images.prefix')) ? $prefix : null,
             ),
         );
+        // The Cloudinary client is built on first use: without valid settings it throws, and that must only
+        // make the catalog unavailable, never break whatever resolved it
         $this->app->singleton(
             MediaCatalogInterface::class,
-            fn ($app): MediaCatalogInterface => new CloudinaryMediaCatalog(
-                new Cloudinary(config('filesystems.disks.images.url') ?? config('cloudinary.cloud_url')),
-                $app->make(MediaFileIdResolverInterface::class),
+            static fn ($app): MediaCatalogInterface => new DeferredMediaCatalog(
+                static fn (): MediaCatalogInterface => new CloudinaryMediaCatalog(
+                    new Cloudinary(config('filesystems.disks.images.url') ?? config('cloudinary.cloud_url')),
+                    $app->make(MediaFileIdResolverInterface::class),
+                ),
             ),
         );
         // Not a singleton: it takes the bus dispatcher at resolution time, so Bus::fake() reaches it

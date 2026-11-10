@@ -36,9 +36,8 @@ final class RefreshMediaOnSaveTest extends TestCase
 
         // Models delete replaced images from the disk on save
         Storage::fake('images');
-        $catalog = $this->app->make(MediaCatalogInterface::class);
-        $this->assertInstanceOf(InMemoryMediaCatalog::class, $catalog);
-        $this->catalog = $catalog;
+        $this->catalog = new InMemoryMediaCatalog;
+        $this->app->instance(MediaCatalogInterface::class, $this->catalog);
     }
 
     private function runJob(string $type, string $recordId): void
