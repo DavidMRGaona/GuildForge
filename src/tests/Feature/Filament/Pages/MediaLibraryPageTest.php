@@ -132,8 +132,12 @@ final class MediaLibraryPageTest extends TestCase
         $this->actingAs($this->viewer());
 
         Livewire::test(MediaLibraryPage::class)
+            ->set('display', 'grid')
             ->assertTableColumnStateSet('title', null, $file)
             ->assertTableColumnFormattedStateSet('origin', 'Eventos · subido el 02/11/2026', $file);
+
+        // The list has its own «Subido» column: the origin stays short so the table fits
+        $this->listPage()->assertTableColumnFormattedStateSet('origin', 'Eventos', $file);
     }
 
     public function test_totals_are_shown_above_the_table(): void

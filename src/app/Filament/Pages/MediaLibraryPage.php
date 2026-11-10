@@ -302,7 +302,14 @@ final class MediaLibraryPage extends Page implements HasTable
                 $this->titleColumn()
                     ->weight(FontWeight::Medium)
                     ->wrap(),
+                // A card of a file nobody uses has no title: its origin line carries the upload day
                 $this->originColumn()
+                    ->formatStateUsing(fn (string $state, MediaFileModel $record): string => $record->usages->isEmpty()
+                        ? __('filament.media_library.uploaded_on', [
+                            'origin' => $state,
+                            'date' => resolve(TimezoneServiceInterface::class)->format($record->uploaded_at, 'd/m/Y'),
+                        ])
+                        : $state)
                     ->size(TextSize::Small)
                     ->color('gray'),
                 // Size and uses are here so the grid can be sorted by them too
@@ -338,22 +345,27 @@ final class MediaLibraryPage extends Page implements HasTable
                 ->label(__('filament.media_library.columns.title'))
                 ->placeholder(__('filament.media_library.no_usages'))
                 ->wrap(),
+            // Room with the sidebar open (core#383): ~343 px on a phone, 608-640 from sm to lg, 896 from xl,
+            // 1152 from 2xl. A phone shows the picture, the title and the menu; «Ver detalles» shows the rest
             $this->originColumn()
                 ->label(__('filament.media_library.columns.origin'))
-                ->visibleFrom('md'),
+                ->wrap()
+                ->visibleFrom('xl'),
             $this->sizeColumn()
                 ->label(__('filament.media_library.columns.bytes'))
                 ->visibleFrom('sm'),
             $this->usagesCountColumn()
                 ->label(__('filament.media_library.columns.usages_count'))
-                ->alignCenter(),
+                ->alignCenter()
+                ->visibleFrom('xl'),
             TextColumn::make('uploaded_at')
                 ->label(__('filament.media_library.columns.uploaded_at'))
                 ->dateTime('d/m/Y H:i')
                 ->sortable()
-                ->visibleFrom('xl'),
+                ->visibleFrom('2xl'),
             $this->statusColumn()
-                ->label(__('filament.media_library.columns.status')),
+                ->label(__('filament.media_library.columns.status'))
+                ->visibleFrom('sm'),
         ];
     }
 
@@ -389,18 +401,12 @@ final class MediaLibraryPage extends Page implements HasTable
     }
 
     /**
-     * The source claiming the folder; for a file nobody uses, also the day it was uploaded.
+     * The source claiming the folder.
      */
     private function originColumn(): TextColumn
     {
         return TextColumn::make('origin')
-            ->state(fn (MediaFileModel $record): string => $this->originLabel($record))
-            ->formatStateUsing(fn (string $state, MediaFileModel $record): string => $record->usages->isEmpty()
-                ? __('filament.media_library.uploaded_on', [
-                    'origin' => $state,
-                    'date' => resolve(TimezoneServiceInterface::class)->format($record->uploaded_at, 'd/m/Y'),
-                ])
-                : $state);
+            ->state(fn (MediaFileModel $record): string => $this->originLabel($record));
     }
 
     private function sizeColumn(): TextColumn

@@ -330,18 +330,21 @@ final class PanelTablesFitTest extends TestCase
         $this->assertSame([
             'thumbnail' => null,
             'title' => null,
-            'origin' => 'md',
+            'origin' => 'xl',
             'bytes' => 'sm',
-            'usages_count' => null,
-            'uploaded_at' => 'xl',
-            'status' => null,
+            'usages_count' => 'xl',
+            'uploaded_at' => '2xl',
+            'status' => 'sm',
         ], $breakpoints);
 
         $title = $table->getColumn('title');
         $this->assertInstanceOf(TextColumn::class, $title);
         $this->assertTrue($title->canWrap());
+        $origin = $table->getColumn('origin');
+        $this->assertInstanceOf(TextColumn::class, $origin);
+        $this->assertTrue($origin->canWrap());
         $this->assertSame(Alignment::Center, $table->getColumn('usages_count')?->getAlignment());
-        $this->assertSame('xl:hidden', RowDetailsAction::hiddenFromClass($table));
+        $this->assertSame('2xl:hidden', RowDetailsAction::hiddenFromClass($table));
     }
 
     /**
