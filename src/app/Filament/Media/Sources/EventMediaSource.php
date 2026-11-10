@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Media\Sources;
 
+use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Filament\Resources\EventResource;
 use App\Infrastructure\Media\Sources\EloquentColumnMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 
-final class EventMediaSource extends EloquentColumnMediaSource
+final class EventMediaSource extends EloquentColumnMediaSource implements ReleasesMediaThroughCoreInterface
 {
     public function type(): string
     {

@@ -41,6 +41,28 @@ interface MediaLibraryQueryInterface
      */
     public function applyOrigin(Builder $query, ?string $type): Builder;
 
+    /**
+     * Narrows the query to the files with the search in the title of a use or in the folder.
+     *
+     * @param  Builder<MediaFileModel>  $query
+     * @return Builder<MediaFileModel>
+     */
+    public function applySearch(Builder $query, string $search): Builder;
+
+    /**
+     * Narrows the query to the images a form may reuse: their folder is claimed by an active, visible source
+     * that releases files through the core (ReleasesMediaThroughCoreInterface), and they have a format.
+     *
+     * @param  Builder<MediaFileModel>  $query
+     * @return Builder<MediaFileModel>
+     */
+    public function applyReusable(Builder $query): Builder;
+
+    /**
+     * Whether files stored in the folder (with or without a trailing slash) could be reused, by the same rule.
+     */
+    public function isReusableFolder(string $folder): bool;
+
     public function statusOf(MediaFileModel $file): MediaFileStatus;
 
     public function stats(): MediaLibraryStatsDTO;

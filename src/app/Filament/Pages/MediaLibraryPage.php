@@ -405,11 +405,7 @@ final class MediaLibraryPage extends Page implements HasTable
                     ? __('filament.media_library.title_more', ['title' => $first->title, 'count' => $usages->count() - 1])
                     : $first->title;
             })
-            ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(
-                fn (Builder $matches): Builder => $matches
-                    ->whereHas('usages', fn (Builder $usages): Builder => $usages->whereLike('title', '%'.$search.'%'))
-                    ->orWhereLike('media_files.folder', '%'.$search.'%'),
-            ));
+            ->searchable(query: fn (Builder $query, string $search): Builder => $this->library()->applySearch($query, $search));
     }
 
     /**

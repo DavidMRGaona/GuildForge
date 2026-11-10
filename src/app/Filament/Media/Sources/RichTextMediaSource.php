@@ -6,6 +6,7 @@ namespace App\Filament\Media\Sources;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
+use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Application\Media\DTOs\MediaUsageDTO;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
@@ -34,7 +35,7 @@ use RuntimeException;
  * The record id is `<kind>:<id>` (`events:<uuid>`, `settings:legal_terms_content`). It claims no folder:
  * the images it protects belong to the folders of other sources.
  */
-final readonly class RichTextMediaSource implements MediaUsageSourceInterface
+final readonly class RichTextMediaSource implements MediaUsageSourceInterface, ReleasesMediaThroughCoreInterface
 {
     public const string TYPE = 'rich_text';
 

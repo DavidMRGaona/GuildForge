@@ -17,6 +17,7 @@ use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
+use Tests\Support\Media\FakeMarkedMediaSource;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\TestCase;
 
@@ -203,6 +204,72 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->assertSame(['broken/a'], $query->applyStatus($query->query(), MediaFileStatus::UnknownOrigin)->pluck('file_id')->all());
     }
 
+    public function test_apply_reusable_keeps_images_of_marked_sources_only(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->register('link', new FakeMediaSource('link', ['link-page/']));
+        $this->register('avatars', new FakeMarkedMediaSource('avatars', ['avatars/'], hidden: true));
+        $this->file('events/a');
+        $this->file('link-page/b');
+        $this->file('unknown/c');
+        $this->file('avatars/d');
+        $this->file('events/raw', resourceType: 'raw');
+        $this->file('events/no-format', format: null);
+
+        $query = $this->library();
+
+        $this->assertSame(['events/a'], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_apply_reusable_respects_excluded_subfolders(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/'], excludedSubfolders: ['content/']));
+        $this->file('events/a');
+        $this->file('events/content/b');
+
+        $query = $this->library();
+
+        $this->assertSame(['events/a'], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_is_reusable_folder(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->register('link', new FakeMediaSource('link', ['link-page/']));
+        $this->register('avatars', new FakeMarkedMediaSource('avatars', ['avatars/'], hidden: true));
+
+        $query = $this->library();
+
+        $this->assertTrue($query->isReusableFolder('events/2026/11/'));
+        // A field directory has no trailing slash
+        $this->assertTrue($query->isReusableFolder('events'));
+        $this->assertFalse($query->isReusableFolder('link-page/2026/11/'));
+        $this->assertFalse($query->isReusableFolder('unknown/'));
+        $this->assertFalse($query->isReusableFolder('avatars/'));
+    }
+
+    public function test_apply_search_matches_usage_title_or_folder(): void
+    {
+        $this->file('events/2026/a');
+        $this->file('hero_slides/b');
+        $this->file('galleries/c');
+        MediaUsageModel::query()->create([
+            'file_id' => 'hero_slides/b',
+            'source_type' => 'hero_slides',
+            'record_id' => 'record-2',
+            'role' => 'Imagen',
+            'title' => 'Torneo de otoño',
+        ]);
+
+        $query = $this->library();
+
+        $this->assertSame(['hero_slides/b'], $query->applySearch($query->query(), 'otoño')->pluck('file_id')->all());
+        $this->assertSame(['events/2026/a'], $query->applySearch($query->query(), 'events/2026')->pluck('file_id')->all());
+    }
+
     private function library(): MediaLibraryQueryInterface
     {
         return $this->app->make(MediaLibraryQueryInterface::class);
@@ -225,13 +292,13 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->registry->register($alias);
     }
 
-    private function file(string $id, int $bytes = 1000, ?CarbonImmutable $uploadedAt = null): void
+    private function file(string $id, int $bytes = 1000, ?CarbonImmutable $uploadedAt = null, string $resourceType = 'image', ?string $format = 'jpg'): void
     {
         MediaFileModel::query()->create([
             'file_id' => $id,
-            'resource_type' => 'image',
+            'resource_type' => $resourceType,
             'folder' => substr($id, 0, (int) strrpos($id, '/') + 1),
-            'format' => 'jpg',
+            'format' => $format,
             'bytes' => $bytes,
             'width' => 800,
             'height' => 600,
