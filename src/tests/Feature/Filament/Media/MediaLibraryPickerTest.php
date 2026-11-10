@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ViewErrorBag;
+use Livewire\Component;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
@@ -127,7 +128,7 @@ final class MediaLibraryPickerTest extends TestCase
         /** @var array<string, string> $state */
         $state = $page->get('data.image_public_id');
         $this->assertSame(['articles/2026/11/shared.png'], array_values($state));
-        $id = $this->app->make(MediaFileIdResolverInterface::class)->fromStoredPath(array_first($state));
+        $id = $this->app->make(MediaFileIdResolverInterface::class)->fromStoredPath((string) array_first($state));
         $this->assertSame('articles/2026/11/shared', $id?->value);
 
         $page->call('save')->assertHasNoFormErrors();
@@ -248,6 +249,8 @@ final class MediaLibraryPickerTest extends TestCase
 
     /**
      * A hidden hint action is not registered on its field, so it cannot be mounted at all.
+     *
+     * @param  Testable<Component>  $page
      */
     private function assertCannotPick(Testable $page): void
     {
@@ -257,10 +260,13 @@ final class MediaLibraryPickerTest extends TestCase
 
     /**
      * Action modals render outside the component HTML: the browser of the mounted action is rendered alone.
+     *
+     * @param  Testable<Component>  $page
      */
     private function browserHtml(Testable $page): string
     {
         $component = $page->instance();
+        $this->assertInstanceOf(MediaPickerFixturePage::class, $component);
         $schema = (fn (): ?Schema => $this->getMountedActionSchema())->call($component);
         $this->assertInstanceOf(Schema::class, $schema);
         $browser = $schema->getFlatFields()['file'] ?? null;

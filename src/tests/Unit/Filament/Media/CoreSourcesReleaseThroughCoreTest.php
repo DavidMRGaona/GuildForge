@@ -26,12 +26,12 @@ final class CoreSourcesReleaseThroughCoreTest extends TestCase
             RichTextMediaSource::class,
             SiteSettingsMediaSource::class,
         ] as $source) {
-            $this->assertTrue(is_subclass_of($source, ReleasesMediaThroughCoreInterface::class), $source);
+            $this->assertContains(ReleasesMediaThroughCoreInterface::class, (array) class_implements($source), $source);
         }
     }
 
     public function test_avatars_are_not_reusable(): void
     {
-        $this->assertFalse(is_subclass_of(AvatarMediaSource::class, ReleasesMediaThroughCoreInterface::class));
+        $this->assertNotContains(ReleasesMediaThroughCoreInterface::class, (array) class_implements(AvatarMediaSource::class));
     }
 }

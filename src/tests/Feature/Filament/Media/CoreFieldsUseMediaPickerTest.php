@@ -21,10 +21,12 @@ use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Actions\Testing\TestAction;
 use Filament\Forms\Components\FileUpload;
+use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Livewire\Component;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -94,6 +96,9 @@ final class CoreFieldsUseMediaPickerTest extends TestCase
         $this->assertSame('articles/2026/11/cover.png', $event->refresh()->image_public_id);
     }
 
+    /**
+     * @param  Testable<Component>  $page
+     */
     private function assertOffersLibrary(Testable $page, string $name): void
     {
         $field = $this->field($page, $name);
@@ -103,9 +108,14 @@ final class CoreFieldsUseMediaPickerTest extends TestCase
         $this->assertTrue($field->shouldPreventFilePathTampering(), $name);
     }
 
+    /**
+     * @param  Testable<Component>  $page
+     */
     private function field(Testable $page, string $name): FileUpload
     {
-        $form = $page->instance()->getSchema('form');
+        $component = $page->instance();
+        $this->assertInstanceOf(HasSchemas::class, $component);
+        $form = $component->getSchema('form');
         $this->assertInstanceOf(Schema::class, $form);
 
         foreach ($form->getFlatFields(withHidden: true) as $field) {
