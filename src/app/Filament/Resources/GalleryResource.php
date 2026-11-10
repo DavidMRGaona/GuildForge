@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources;
 
 use App\Filament\Actions\RowDetailsAction;
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Resources\GalleryResource\Pages\CreateGallery;
 use App\Filament\Resources\GalleryResource\Pages\EditGallery;
 use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
@@ -129,16 +130,18 @@ class GalleryResource extends BaseResource
                     ->helperText(__('La primera foto será la portada de la galería. Arrastra para reordenar.'))
                     ->relationship()
                     ->schema([
-                        FileUpload::make('image_public_id')
-                            ->label(__('Imagen'))
-                            ->image()
-                            ->disk('images')
-                            ->directory(fn (): string => 'galleries/'.now()->format('Y/m'))
-                            ->getUploadedFileNameForStorageUsing(
-                                fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                            )
-                            ->maxSize(10240)
-                            ->required(),
+                        MediaLibraryPicker::attachTo(
+                            FileUpload::make('image_public_id')
+                                ->label(__('Imagen'))
+                                ->image()
+                                ->disk('images')
+                                ->directory(fn (): string => 'galleries/'.now()->format('Y/m'))
+                                ->getUploadedFileNameForStorageUsing(
+                                    fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                )
+                                ->maxSize(10240)
+                                ->required(),
+                        ),
                         TextInput::make('caption')
                             ->label(__('Descripción'))
                             ->maxLength(255),

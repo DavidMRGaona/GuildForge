@@ -247,6 +247,19 @@ trait ManagesPageSettings
     }
 
     /**
+     * The image a setting holds now, which its field always accepts back when saving (a settings page has no
+     * record, and the file may not be in the media library yet).
+     *
+     * @return list<string>
+     */
+    protected static function storedImagePaths(string $key): array
+    {
+        $value = (string) resolve(SettingsServiceInterface::class)->get($key, '');
+
+        return $value !== '' ? [$value] : [];
+    }
+
+    /**
      * Release the old image if the value has changed: it is deleted later, only if nobody uses it.
      *
      * @deprecated saveSettings() releases replaced images itself, after every key is saved

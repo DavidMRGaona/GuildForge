@@ -6,6 +6,7 @@ namespace App\Filament\Resources;
 
 use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Filament\Actions\RowDetailsAction;
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Resources\ArticleResource\Pages\CreateArticle;
 use App\Filament\Resources\ArticleResource\Pages\EditArticle;
@@ -85,16 +86,18 @@ class ArticleResource extends BaseResource
                     ->rows(3)
                     ->maxLength(255)
                     ->columnSpanFull(),
-                FileUpload::make('featured_image_public_id')
-                    ->label(__('Imagen destacada'))
-                    ->image()
-                    ->disk('images')
-                    ->directory(fn (): string => 'articles/'.now()->format('Y/m'))
-                    ->getUploadedFileNameForStorageUsing(
-                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                    )
-                    ->maxSize(2048)
-                    ->nullable(),
+                MediaLibraryPicker::attachTo(
+                    FileUpload::make('featured_image_public_id')
+                        ->label(__('Imagen destacada'))
+                        ->image()
+                        ->disk('images')
+                        ->directory(fn (): string => 'articles/'.now()->format('Y/m'))
+                        ->getUploadedFileNameForStorageUsing(
+                            fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                        )
+                        ->maxSize(2048)
+                        ->nullable(),
+                ),
                 Select::make('author_id')
                     ->label(__('Autor'))
                     ->relationship('author', 'display_name')

@@ -11,6 +11,7 @@ use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Support\PanelNavigationGroup;
 use Closure;
@@ -87,18 +88,21 @@ final class AboutPageSettings extends Page implements HasForms
                     ->tabs([
                         Tab::make(__('filament.pages.about.tabs.hero'))
                             ->schema([
-                                FileUpload::make('about_hero_image')
-                                    ->label(__('filament.settings.about.hero_image'))
-                                    ->helperText(__('filament.settings.about.hero_image_help'))
-                                    ->image()
-                                    ->disk('images')
-                                    ->directory('about')
-                                    ->getUploadedFileNameForStorageUsing(
-                                        fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                                    )
-                                    ->maxSize(2048)
-                                    ->nullable()
-                                    ->columnSpanFull(),
+                                MediaLibraryPicker::attachTo(
+                                    FileUpload::make('about_hero_image')
+                                        ->label(__('filament.settings.about.hero_image'))
+                                        ->helperText(__('filament.settings.about.hero_image_help'))
+                                        ->image()
+                                        ->disk('images')
+                                        ->directory('about')
+                                        ->getUploadedFileNameForStorageUsing(
+                                            fn (TemporaryUploadedFile $file): string => Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                        )
+                                        ->maxSize(2048)
+                                        ->nullable()
+                                        ->columnSpanFull(),
+                                    storedPaths: fn (): array => self::storedImagePaths('about_hero_image'),
+                                ),
 
                                 TextInput::make('about_tagline')
                                     ->label(__('filament.settings.about.tagline'))

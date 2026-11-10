@@ -14,6 +14,7 @@ use App\Filament\Clusters\SettingsCluster;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Concerns\ManagesPageSettings;
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Support\PanelSidebarMode;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Authorization\Services\RoleChangeAnnouncer;
@@ -281,44 +282,53 @@ final class SiteSettings extends Page implements HasForms
                             ->schema([
                                 Section::make(__('filament.settings.branding.logos_section'))
                                     ->schema([
-                                        FileUpload::make('site_logo_light')
-                                            ->label(__('filament.settings.general.logo_light'))
-                                            ->helperText(__('filament.settings.general.logo_light_help'))
-                                            ->image()
-                                            ->disk('images')
-                                            ->directory('branding')
-                                            ->getUploadedFileNameForStorageUsing(
-                                                fn (TemporaryUploadedFile $file): string => 'logo-light-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                                            )
-                                            ->maxSize(1024)
-                                            ->nullable()
-                                            ->columnSpanFull(),
+                                        MediaLibraryPicker::attachTo(
+                                            FileUpload::make('site_logo_light')
+                                                ->label(__('filament.settings.general.logo_light'))
+                                                ->helperText(__('filament.settings.general.logo_light_help'))
+                                                ->image()
+                                                ->disk('images')
+                                                ->directory('branding')
+                                                ->getUploadedFileNameForStorageUsing(
+                                                    fn (TemporaryUploadedFile $file): string => 'logo-light-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                                )
+                                                ->maxSize(1024)
+                                                ->nullable()
+                                                ->columnSpanFull(),
+                                            storedPaths: fn (): array => self::storedImagePaths('site_logo_light'),
+                                        ),
 
-                                        FileUpload::make('site_logo_dark')
-                                            ->label(__('filament.settings.general.logo_dark'))
-                                            ->helperText(__('filament.settings.general.logo_dark_help'))
-                                            ->image()
-                                            ->disk('images')
-                                            ->directory('branding')
-                                            ->getUploadedFileNameForStorageUsing(
-                                                fn (TemporaryUploadedFile $file): string => 'logo-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                                            )
-                                            ->maxSize(1024)
-                                            ->nullable()
-                                            ->columnSpanFull(),
+                                        MediaLibraryPicker::attachTo(
+                                            FileUpload::make('site_logo_dark')
+                                                ->label(__('filament.settings.general.logo_dark'))
+                                                ->helperText(__('filament.settings.general.logo_dark_help'))
+                                                ->image()
+                                                ->disk('images')
+                                                ->directory('branding')
+                                                ->getUploadedFileNameForStorageUsing(
+                                                    fn (TemporaryUploadedFile $file): string => 'logo-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                                )
+                                                ->maxSize(1024)
+                                                ->nullable()
+                                                ->columnSpanFull(),
+                                            storedPaths: fn (): array => self::storedImagePaths('site_logo_dark'),
+                                        ),
 
-                                        FileUpload::make('site_logo_email')
-                                            ->label(__('filament.settings.general.logo_email'))
-                                            ->helperText(__('filament.settings.general.logo_email_help'))
-                                            ->image()
-                                            ->disk('images')
-                                            ->directory('branding')
-                                            ->getUploadedFileNameForStorageUsing(
-                                                fn (TemporaryUploadedFile $file): string => 'logo-email-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                                            )
-                                            ->maxSize(1024)
-                                            ->nullable()
-                                            ->columnSpanFull(),
+                                        MediaLibraryPicker::attachTo(
+                                            FileUpload::make('site_logo_email')
+                                                ->label(__('filament.settings.general.logo_email'))
+                                                ->helperText(__('filament.settings.general.logo_email_help'))
+                                                ->image()
+                                                ->disk('images')
+                                                ->directory('branding')
+                                                ->getUploadedFileNameForStorageUsing(
+                                                    fn (TemporaryUploadedFile $file): string => 'logo-email-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                                )
+                                                ->maxSize(1024)
+                                                ->nullable()
+                                                ->columnSpanFull(),
+                                            storedPaths: fn (): array => self::storedImagePaths('site_logo_email'),
+                                        ),
                                     ]),
 
                                 Section::make(__('filament.settings.branding.favicons_section'))
@@ -326,31 +336,37 @@ final class SiteSettings extends Page implements HasForms
                                     ->schema([
                                         Grid::make(2)
                                             ->schema([
-                                                FileUpload::make('site_favicon_light')
-                                                    ->label(__('filament.settings.branding.favicon_light'))
-                                                    ->helperText(__('filament.settings.branding.favicon_light_help'))
-                                                    ->image()
-                                                    ->disk('images')
-                                                    ->directory('branding')
-                                                    ->getUploadedFileNameForStorageUsing(
-                                                        fn (TemporaryUploadedFile $file): string => 'favicon-light-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                                                    )
-                                                    ->maxSize(512)
-                                                    ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'])
-                                                    ->nullable(),
+                                                MediaLibraryPicker::attachTo(
+                                                    FileUpload::make('site_favicon_light')
+                                                        ->label(__('filament.settings.branding.favicon_light'))
+                                                        ->helperText(__('filament.settings.branding.favicon_light_help'))
+                                                        ->image()
+                                                        ->disk('images')
+                                                        ->directory('branding')
+                                                        ->getUploadedFileNameForStorageUsing(
+                                                            fn (TemporaryUploadedFile $file): string => 'favicon-light-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                                        )
+                                                        ->maxSize(512)
+                                                        ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'])
+                                                        ->nullable(),
+                                                    storedPaths: fn (): array => self::storedImagePaths('site_favicon_light'),
+                                                ),
 
-                                                FileUpload::make('site_favicon_dark')
-                                                    ->label(__('filament.settings.branding.favicon_dark'))
-                                                    ->helperText(__('filament.settings.branding.favicon_dark_help'))
-                                                    ->image()
-                                                    ->disk('images')
-                                                    ->directory('branding')
-                                                    ->getUploadedFileNameForStorageUsing(
-                                                        fn (TemporaryUploadedFile $file): string => 'favicon-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
-                                                    )
-                                                    ->maxSize(512)
-                                                    ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'])
-                                                    ->nullable(),
+                                                MediaLibraryPicker::attachTo(
+                                                    FileUpload::make('site_favicon_dark')
+                                                        ->label(__('filament.settings.branding.favicon_dark'))
+                                                        ->helperText(__('filament.settings.branding.favicon_dark_help'))
+                                                        ->image()
+                                                        ->disk('images')
+                                                        ->directory('branding')
+                                                        ->getUploadedFileNameForStorageUsing(
+                                                            fn (TemporaryUploadedFile $file): string => 'favicon-dark-'.Str::uuid()->toString().'.'.$file->getClientOriginalExtension()
+                                                        )
+                                                        ->maxSize(512)
+                                                        ->acceptedFileTypes(['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'])
+                                                        ->nullable(),
+                                                    storedPaths: fn (): array => self::storedImagePaths('site_favicon_dark'),
+                                                ),
                                             ]),
                                     ]),
                             ]),
