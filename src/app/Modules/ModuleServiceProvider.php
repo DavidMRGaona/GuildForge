@@ -8,6 +8,7 @@ use App\Application\Calendar\Contracts\CalendarAttendanceSourceInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Knowledge\Contracts\KnowledgeCapabilityInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
+use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Modules\DTOs\ModuleRouteDTO;
 use App\Application\Modules\DTOs\NavigationItemDTO;
 use App\Application\Modules\DTOs\PagePrefixDTO;
@@ -274,6 +275,18 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<IndexedSearchSourceInterface>>
      */
     public function registerSearchSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register media usage sources provided by this module.
+     * Tells the panel media library which of the module's records use stored files and which folders it claims;
+     * each type is prefixed with the module.
+     *
+     * @return array<class-string<MediaUsageSourceInterface>>
+     */
+    public function registerMediaSources(): array
     {
         return [];
     }
