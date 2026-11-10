@@ -181,6 +181,19 @@ final class MediaDeletionServiceTest extends TestCase
         $this->assertRefused($result, 'events/a', MediaDeletionRefusal::CheckFailed);
     }
 
+    public function test_a_source_shadowed_by_a_duplicate_type_refuses_every_file(): void
+    {
+        // The second "events" source is skipped by the registry, so it is never asked whether it uses the file
+        $this->source('events');
+        $this->file('events/a');
+        $this->app->instance('test.media.deletion.shadowed', new FakeMediaSource('events', ['elsewhere/']));
+        $this->registry->register($this->classString('test.media.deletion.shadowed'));
+
+        $result = $this->service()->delete([new MediaFileId('events/a')], $this->deleter());
+
+        $this->assertRefused($result, 'events/a', MediaDeletionRefusal::CheckFailed);
+    }
+
     public function test_usage_of_inactive_source_refuses(): void
     {
         // A disabled module keeps its usage rows; no active source answers for them
@@ -340,6 +353,15 @@ final class MediaDeletionServiceTest extends TestCase
     private function service(): MediaDeletionServiceInterface
     {
         return $this->app->make(MediaDeletionServiceInterface::class);
+    }
+
+    /**
+     * @return class-string
+     */
+    private function classString(string $alias): string
+    {
+        /** @var class-string $alias */
+        return $alias;
     }
 
     private function deleter(): UserModel

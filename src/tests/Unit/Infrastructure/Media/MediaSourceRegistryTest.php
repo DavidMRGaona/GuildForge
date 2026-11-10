@@ -134,7 +134,7 @@ final class MediaSourceRegistryTest extends TestCase
             $this->alias('test.media.broken-type'),
             $this->fake('ok', ['ok/']),
         ]);
-        // A source skipped because its type is taken is a configuration warning, not a broken source
+        // A source skipped because its type is taken cannot be asked either, so it is listed too
         $this->app->bind('test.media.ok-again', static fn (): FakeMediaSource => new FakeMediaSource('ok', ['again/']));
         $this->registry->register($this->alias('test.media.ok-again'));
 
@@ -142,6 +142,7 @@ final class MediaSourceRegistryTest extends TestCase
             UnresolvableMediaSource::class,
             'test.media.not-a-source',
             'test.media.broken-type',
+            'test.media.ok-again',
         ], $this->registry->unresolved());
         $this->assertCount(1, $this->registry->sources());
 

@@ -33,8 +33,8 @@ interface MediaSourceRegistryInterface
     public function source(string $type): ?MediaUsageSourceInterface;
 
     /**
-     * Registered classes that may own files but could not be loaded: they failed to resolve, are no media
-     * usage source, or their type() threw. A source skipped because its type was taken is not listed.
+     * Registered classes that may use files but are left out of sources(), so nobody can ask them: they
+     * failed to resolve, are no media usage source, their type() threw, or their type was already taken.
      *
      * @return list<class-string>
      */

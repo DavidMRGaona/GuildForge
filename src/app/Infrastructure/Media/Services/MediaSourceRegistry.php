@@ -24,7 +24,7 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
      */
     private ?array $resolved = null;
 
-    /** @var list<class-string> Classes that could not be loaded, found by the same pass that resolves the sources */
+    /** @var list<class-string> Classes left out of the sources, found by the same pass that resolves them */
     private array $unresolved = [];
 
     /** @var array<string, true> Problems already logged, by source class and kind, so each is reported once */
@@ -137,8 +137,8 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
     }
 
     /**
-     * Resolved sources by type with their module and folders, skipping the ones that cannot be loaded
-     * (kept in $unresolved) and any whose type is already taken. Built once until the registrations change.
+     * Resolved sources by type with their module and folders, skipping (and keeping in $unresolved) the ones
+     * that cannot be loaded and any whose type is already taken. Built once until the registrations change.
      *
      * @return array<string, array{source: MediaUsageSourceInterface, module: ?string, folders: list<string>, excluded: list<string>|null}>
      */
@@ -180,6 +180,8 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
                     'type' => $type,
                     'takenBy' => $resolved[$type]['source']::class,
                 ]);
+
+                $unresolved[] = $sourceClass;
 
                 continue;
             }
