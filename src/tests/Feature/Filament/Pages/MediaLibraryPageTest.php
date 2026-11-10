@@ -624,6 +624,35 @@ final class MediaLibraryPageTest extends TestCase
         $this->assertStringContainsString($deleter->name, $html);
         $this->assertStringContainsString('Eventos', $html);
         $this->assertStringContainsString('2 KB', $html);
+        // Only one row: nothing was left out
+        $this->assertStringNotContainsString('Se muestran los últimos', $html);
+    }
+
+    public function test_the_deletions_log_says_when_it_shows_only_the_latest(): void
+    {
+        $deleter = $this->deleter();
+        for ($i = 0; $i < 101; $i++) {
+            MediaDeletionModel::query()->create([
+                'file_id' => sprintf('events/gone-%03d', $i),
+                'resource_type' => 'image',
+                'folder' => 'events/',
+                'source_type' => 'events',
+                'bytes' => 2048,
+                'outcome' => 'deleted',
+                'deleted_by' => $deleter->id,
+                'deleted_at' => CarbonImmutable::now()->subMinutes($i + 1),
+            ]);
+        }
+        $this->actingAs($deleter);
+
+        $page = Livewire::test(MediaLibraryPage::class)->mountAction('deletions');
+        $content = $this->mountedAction($page)->getModalContent();
+        $this->assertInstanceOf(View::class, $content);
+        $html = $content->render();
+
+        $this->assertStringContainsString('Se muestran los últimos 100 borrados', $html);
+        $this->assertStringContainsString('events/gone-000', $html);
+        $this->assertStringNotContainsString('events/gone-100', $html);
     }
 
     public function test_the_help_action_is_the_last_header_action(): void

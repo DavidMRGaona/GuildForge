@@ -3,7 +3,10 @@
     @if ($rows === [])
         <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('filament.media_library.deletions.empty') }}</p>
     @else
-        <p class="text-xs text-gray-500 dark:text-gray-400">{{ trans_choice('filament.media_library.deletions.limit', $limit, ['count' => $limit]) }}</p>
+        @if (count($rows) >= $limit)
+            {{-- Only when older deletions were left out --}}
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ trans_choice('filament.media_library.deletions.limit', $limit, ['count' => $limit]) }}</p>
+        @endif
 
         <ul class="divide-y divide-gray-200 dark:divide-white/10">
             @foreach ($rows as $row)
