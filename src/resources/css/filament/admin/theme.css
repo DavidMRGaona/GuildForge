@@ -233,3 +233,23 @@
         text-align: center;
     }
 }
+
+/* Media library grid (core#495): the selection checkbox of a selectable card lies over the top-left
+   corner of the thumbnail instead of taking a column, so every card has the same layout */
+.media-library-grid .fi-ta-record {
+    position: relative;
+}
+
+.media-library-grid .fi-ta-record > .fi-ta-record-checkbox {
+    position: absolute;
+    inset-block-start: 1rem;
+    inset-inline-start: 1rem;
+    z-index: 10;
+    /* A padded halo (not padding, which the checked mark would stretch into) keeps it visible over any image */
+    border-radius: 0.25rem;
+    box-shadow: 0 0 0 0.25rem var(--color-white);
+}
+
+.dark .media-library-grid .fi-ta-record > .fi-ta-record-checkbox {
+    box-shadow: 0 0 0 0.25rem var(--gray-900);
+}
