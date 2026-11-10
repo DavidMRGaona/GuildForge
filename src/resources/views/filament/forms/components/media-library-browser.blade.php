@@ -21,7 +21,8 @@
                             <button
                                 type="button"
                                 data-media-file="{{ $item['fileId'] }}"
-                                x-on:click="$wire.set({{ Js::from($statePath) }}, {{ Js::from($item['fileId']) }})"
+                                {{-- On narrow screens the preview sits above the grid: bring it into view once chosen --}}
+                                x-on:click="$wire.set({{ Js::from($statePath) }}, {{ Js::from($item['fileId']) }}).then(() => window.matchMedia('(max-width: 767px)').matches && $el.closest('[data-media-browser]').querySelector('[data-media-preview]')?.scrollIntoView({ block: 'start', behavior: 'smooth' }))"
                                 @class([
                                     'flex w-full min-w-0 flex-col gap-1.5 rounded-lg p-1.5 text-start ring-1 transition hover:bg-gray-50 dark:hover:bg-white/5',
                                     'ring-2 ring-primary-600 dark:ring-primary-500' => $isChosen,
@@ -68,7 +69,7 @@
             @endif
         </div>
 
-        <aside class="flex min-w-0 flex-col gap-3 rounded-lg bg-gray-50 p-3 dark:bg-white/5" data-media-preview="{{ $preview['fileId'] ?? '' }}">
+        <aside class="order-first flex min-w-0 flex-col gap-3 rounded-lg bg-gray-50 p-3 md:sticky md:top-4 md:order-none md:self-start dark:bg-white/5" data-media-preview="{{ $preview['fileId'] ?? '' }}">
             @if ($preview === null)
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('filament.media_picker.no_preview') }}</p>
             @else
