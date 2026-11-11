@@ -58,10 +58,15 @@ final class ModuleLoader
     }
 
     /**
-     * Boot a specific module.
+     * Boot a specific module, once: a module booted already (e.g. to run its seeders while
+     * it was being enabled) keeps its provider and hooks.
      */
     public function bootModule(Module $module): void
     {
+        if ($this->isLoaded($module->name()->value)) {
+            return;
+        }
+
         $providerClass = $module->namespace().'\\'.$module->provider();
         try {
             $modulePath = $this->paths->resolve($module);
@@ -421,6 +426,19 @@ final class ModuleLoader
     public function getProvider(string $moduleName): ?ModuleServiceProvider
     {
         return $this->loadedProviders[$moduleName] ?? null;
+    }
+
+    /**
+     * Whether boot() would load the module now: enabled and compatible. Read afresh, since the
+     * list this process booted with may be stale (another process may have enabled or disabled
+     * it since, e.g. while a queue worker runs). It resets the resolver for the whole process,
+     * so it is for one-off decisions (once per seeding), never for every request or listener.
+     */
+    public function loads(string $moduleName): bool
+    {
+        $this->resolver->reset();
+
+        return in_array($moduleName, $this->resolver->names(), true);
     }
 
     /**

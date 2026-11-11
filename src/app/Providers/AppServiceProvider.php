@@ -373,6 +373,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ModuleSeederRunner::class, fn ($app) => new ModuleSeederRunner(
             modulesPath: config('modules.path'),
             analyzer: $app->make(ModuleMigrationAnalyzerInterface::class),
+            loader: $app->make(ModuleLoader::class),
         ));
 
         $this->app->singleton(ModuleManagerServiceInterface::class, ModuleManagerService::class);

@@ -69,6 +69,16 @@ PHP);
         $this->assertFalse(class_exists('Modules\\SeedGateModule\\Database\\Seeders\\SeedGateModuleSeeder', false));
     }
 
+    public function test_it_refuses_to_seed_a_disabled_module(): void
+    {
+        $this->moduleOnDisk('seed-gate-module', enabled: false);
+
+        $this->artisanCommand('module:seed', ['module' => 'seed-gate-module'])
+            ->expectsOutput('Module "seed-gate-module" is disabled: its seeders run when it is enabled.')
+            ->doesntExpectOutputToContain('Running seeders')
+            ->assertExitCode(1);
+    }
+
     public function test_it_reports_an_unknown_module(): void
     {
         $this->artisanCommand('module:seed', ['module' => 'missing-module'])
@@ -79,7 +89,7 @@ PHP);
     /**
      * @param  array<string, mixed>  $requires
      */
-    private function moduleOnDisk(string $name, array $requires = []): void
+    private function moduleOnDisk(string $name, array $requires = [], bool $enabled = true): void
     {
         File::ensureDirectoryExists("{$this->modulesPath}/{$name}");
         File::put("{$this->modulesPath}/{$name}/module.json", json_encode([
@@ -90,7 +100,7 @@ PHP);
             'provider' => str_replace('-', '', ucwords($name, '-')).'ServiceProvider',
             'requires' => $requires + ['core' => '>=2.0'],
         ], JSON_THROW_ON_ERROR));
-        ModuleModel::factory()->enabled()->create([
+        ($enabled ? ModuleModel::factory()->enabled() : ModuleModel::factory()->disabled())->create([
             'name' => $name,
             'version' => '1.0.0',
             'path' => "{$this->modulesPath}/{$name}",

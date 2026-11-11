@@ -221,17 +221,25 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
             );
         }
 
-        // Run migrations and seeders only if the module has not been installed yet
-        // This prevents re-running migrations/seeders when enabling a previously disabled module
+        // Run migrations only if the module has not been installed yet
+        // This prevents re-running migrations when enabling a previously disabled module
         if (! $module->isInstalled()) {
             try {
                 $this->migrate($name);
-                $this->seed($name);
+                $this->seederRunner->run($module, enabling: true);
                 $module->markInstalled();
             } catch (ModuleNotFoundException) {
                 // Module directory doesn't exist yet, that's okay
                 // Still mark as installed since there are no migrations to run
                 $module->markInstalled();
+            }
+        } else {
+            // Each seeder runs once: only those a version brought while the module was disabled,
+            // which were left pending then
+            try {
+                $this->seederRunner->run($module, enabling: true);
+            } catch (ModuleNotFoundException) {
+                // No module directory, so no seeders
             }
         }
 

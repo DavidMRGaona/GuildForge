@@ -23,6 +23,7 @@ use App\Infrastructure\Modules\Services\ModuleManagerService;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use App\Infrastructure\Modules\Services\ModuleSchemaGuard;
 use App\Infrastructure\Modules\Services\ModuleSeederRunner;
+use App\Modules\ModuleLoader;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -67,7 +68,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
         $analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $migrationRunner = new ModuleMigrationRunner($this->tempModulesPath, $analyzer, $schemaGuard);
-        $seederRunner = new ModuleSeederRunner($this->tempModulesPath, $analyzer);
+        $seederRunner = new ModuleSeederRunner($this->tempModulesPath, $analyzer, $this->app->make(ModuleLoader::class));
 
         $service = new ModuleManagerService(
             $repository,
@@ -137,7 +138,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
         $analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $migrationRunner = new ModuleMigrationRunner($this->tempModulesPath, $analyzer, $schemaGuard);
-        $seederRunner = new ModuleSeederRunner($this->tempModulesPath, $analyzer);
+        $seederRunner = new ModuleSeederRunner($this->tempModulesPath, $analyzer, $this->app->make(ModuleLoader::class));
 
         $service = new ModuleManagerService(
             $repository,
@@ -203,7 +204,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
         $analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $migrationRunner = new ModuleMigrationRunner($nonExistentRunnerPath, $analyzer, $schemaGuard);
-        $seederRunner = new ModuleSeederRunner($nonExistentRunnerPath, $analyzer);
+        $seederRunner = new ModuleSeederRunner($nonExistentRunnerPath, $analyzer, $this->app->make(ModuleLoader::class));
 
         $service = new ModuleManagerService(
             $repository,

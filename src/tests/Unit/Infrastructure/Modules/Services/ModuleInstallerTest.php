@@ -27,6 +27,7 @@ use App\Infrastructure\Modules\Services\ModuleInstaller;
 use App\Infrastructure\Modules\Services\ModuleMigrationRunner;
 use App\Infrastructure\Modules\Services\ModuleSchemaGuard;
 use App\Infrastructure\Modules\Services\ModuleSeederRunner;
+use App\Modules\ModuleLoader;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -94,7 +95,7 @@ final class ModuleInstallerTest extends TestCase
         $analyzer = $this->createStub(ModuleMigrationAnalyzerInterface::class);
         $schemaGuard = new ModuleSchemaGuard(new CoreTableRegistry);
         $this->migrationRunner = new ModuleMigrationRunner($this->modulesPath, $analyzer, $schemaGuard);
-        $this->seederRunner = new ModuleSeederRunner($this->modulesPath, $analyzer);
+        $this->seederRunner = new ModuleSeederRunner($this->modulesPath, $analyzer, $this->app->make(ModuleLoader::class));
 
         $this->compatibility = Mockery::mock(ModuleCompatibilityServiceInterface::class);
         $this->compatibility->shouldReceive('checkManifest')->andReturn(CompatibilityResult::compatible())->byDefault();
