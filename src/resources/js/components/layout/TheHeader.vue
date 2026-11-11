@@ -174,7 +174,7 @@ function selectTheme(mode: ThemeMode): void {
                         <!-- Dropdown menu -->
                         <div
                             v-if="isThemeMenuOpen"
-                            class="absolute right-0 mt-2 w-36 rounded-md bg-surface shadow-lg ring-1 ring-black ring-opacity-5 border-default z-50"
+                            class="absolute right-0 mt-2 w-36 rounded-lg border border-default bg-surface shadow-lg z-50"
                             role="menu"
                             :aria-label="t('layout.selectTheme')"
                             @mousedown.prevent

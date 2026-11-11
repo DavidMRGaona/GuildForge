@@ -71,7 +71,7 @@ onUnmounted(() => {
         <!-- Dropdown menu -->
         <div
             v-if="isOpen"
-            class="absolute right-0 mt-2 w-48 rounded-md bg-surface shadow-lg ring-1 ring-black ring-opacity-5 border-default z-50"
+            class="absolute right-0 mt-2 w-48 rounded-lg border border-default bg-surface shadow-lg z-50"
         >
             <div class="py-1" role="menu">
                 <!-- Profile link -->

@@ -6,6 +6,8 @@ import BaseButton from '@/components/ui/BaseButton.vue';
 import TagFilter from '@/components/ui/TagFilter.vue';
 import { usePagination } from '@/composables/usePagination';
 import { useRoutes } from '@/composables/useRoutes';
+import HelpLink from '@/components/knowledge/HelpLink.vue';
+import EventsViewToggle from '@/components/events/EventsViewToggle.vue';
 
 interface Props {
     events: PaginatedResponse<Event>;
@@ -34,14 +36,23 @@ const {
 </script>
 
 <template>
-    <div class="bg-surface shadow dark:shadow-neutral-900/50">
+    <div data-testid="page-band" class="page-band">
         <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold tracking-tight text-base-primary">
-                {{ t('events.title') }}
-            </h1>
-            <p class="mt-2 text-lg text-base-secondary">
-                {{ t('home.subtitle') }}
-            </p>
+            <!-- The list/calendar toggle stays at the top right, also on phones -->
+            <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-3xl font-bold tracking-tight text-base-primary">
+                            {{ t('events.title') }}
+                        </h1>
+                        <HelpLink guide="core.events.find-events" />
+                    </div>
+                    <p class="mt-2 text-lg text-base-secondary">
+                        {{ t('events.subtitle') }}
+                    </p>
+                </div>
+                <EventsViewToggle current="list" />
+            </div>
         </div>
     </div>
 

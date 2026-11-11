@@ -6,6 +6,7 @@ import BaseButton from '@/components/ui/BaseButton.vue';
 import TagFilter from '@/components/ui/TagFilter.vue';
 import { usePagination } from '@/composables/usePagination';
 import { useRoutes } from '@/composables/useRoutes';
+import HelpLink from '@/components/knowledge/HelpLink.vue';
 
 interface Props {
     galleries: PaginatedResponse<Gallery>;
@@ -34,11 +35,14 @@ const {
 </script>
 
 <template>
-    <div class="bg-surface shadow dark:shadow-neutral-900/50">
+    <div data-testid="page-band" class="page-band">
         <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold tracking-tight text-base-primary">
-                {{ t('gallery.title') }}
-            </h1>
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-bold tracking-tight text-base-primary">
+                    {{ t('gallery.title') }}
+                </h1>
+                <HelpLink guide="core.content.browse-galleries" />
+            </div>
             <p class="mt-2 text-lg text-base-secondary">
                 {{ t('gallery.subtitle') }}
             </p>

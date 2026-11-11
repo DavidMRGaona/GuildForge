@@ -51,7 +51,7 @@ function markAllRead(): void {
 </script>
 
 <template>
-    <div class="bg-surface shadow dark:shadow-neutral-900/50">
+    <div data-testid="page-band" class="page-band">
         <div
             class="mx-auto flex max-w-3xl flex-wrap items-end justify-between gap-4 px-4 py-6 sm:px-6 lg:px-8"
         >
