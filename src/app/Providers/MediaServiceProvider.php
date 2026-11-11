@@ -12,6 +12,11 @@ use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Media\Services\MediaUrlExtractorInterface;
 use App\Domain\Knowledge\Enums\GuideSource;
+use App\Domain\Modules\Events\ModuleDisabled;
+use App\Domain\Modules\Events\ModuleEnabled;
+use App\Domain\Modules\Events\ModuleUninstalled;
+use App\Domain\Modules\Events\ModuleUpdated;
+use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Filament\Media\Sources\ArticleMediaSource;
 use App\Filament\Media\Sources\EventMediaSource;
 use App\Filament\Media\Sources\GalleryPhotoMediaSource;
@@ -21,6 +26,7 @@ use App\Filament\Media\Sources\SiteSettingsMediaSource;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Media\Cloudinary\CloudinaryMediaCatalog;
 use App\Infrastructure\Media\Cloudinary\DeferredMediaCatalog;
+use App\Infrastructure\Media\Listeners\SyncMediaLibraryOnModuleChange;
 use App\Infrastructure\Media\Observers\RefreshMediaUsagesObserver;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
 use App\Infrastructure\Media\Services\EloquentMediaLibraryQuery;
@@ -38,6 +44,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Cloudinary\Cloudinary;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -114,6 +121,11 @@ final class MediaServiceProvider extends ServiceProvider
 
             return $relevant ? [(string) $user->getKey()] : [];
         }));
+
+        // A module's sources come and go with it: the library syncs instead of waiting for the night (core#517)
+        foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {
+            Event::listen($event, SyncMediaLibraryOnModuleChange::class);
+        }
     }
 
     /**

@@ -110,7 +110,7 @@ You can also call `MediaIndexerInterface::refresh($type, $recordId)` directly.
 
 | Command | What it does |
 |---------|--------------|
-| `media:sync` | Reconciles the index with the stored files and with the usages of every active source. Runs daily. A source that fails is reported and its rows are left as they were; the file listing adds or removes files only when it was read completely. Only a complete run updates «Última reconciliación»; any other is stored as the last failed one, and the page warns while it is the newest |
+| `media:sync` | Reconciles the index with the stored files and with the usages of every active source. Runs daily, and is also queued whenever a module is enabled, disabled, updated or uninstalled, so a module's files are not shown as unused until the night. A source that fails is reported and its rows are left as they were; the file listing adds or removes files only when it was read completely. Only a complete run updates «Última reconciliación»; any other is stored as the last failed one, and the page warns while it is the newest |
 | `media:forget-source {type} [--force]` | Deletes the usage rows of a type that no active source owns and whose module is no longer installed |
 
 ## Disabling or uninstalling a module
