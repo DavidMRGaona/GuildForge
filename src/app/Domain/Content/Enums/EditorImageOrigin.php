@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Content\Enums;
 
+use App\Domain\Content\ValueObjects\EditorImageFolder;
 use DateTimeInterface;
 
 /**
@@ -19,11 +20,16 @@ enum EditorImageOrigin: string
     case Legal = 'legal';
     case About = 'about';
 
-    public const string FOLDER = 'content';
+    public const string FOLDER = EditorImageFolder::FOLDER;
+
+    public function folder(): EditorImageFolder
+    {
+        return EditorImageFolder::of($this->value);
+    }
 
     public function directory(DateTimeInterface $month): string
     {
-        return $this->value.'/'.self::FOLDER.'/'.$month->format('Y/m');
+        return $this->folder()->directory($month);
     }
 
     /**
@@ -31,10 +37,8 @@ enum EditorImageOrigin: string
      */
     public static function ofPath(string $path): ?self
     {
-        if (preg_match('~^([a-z]+)/'.self::FOLDER.'/\d{4}/\d{2}/[^/]+$~', $path, $match) !== 1) {
-            return null;
-        }
+        $folder = EditorImageFolder::ofPath($path);
 
-        return self::tryFrom($match[1]);
+        return $folder instanceof EditorImageFolder ? self::tryFrom($folder->scope) : null;
     }
 }

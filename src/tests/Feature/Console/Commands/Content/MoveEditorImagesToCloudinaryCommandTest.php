@@ -6,7 +6,9 @@ namespace Tests\Feature\Console\Commands\Content;
 
 use App\Application\Content\DTOs\EditorImageMoveReportDTO;
 use App\Application\Content\Services\EditorImageMoverInterface;
+use App\Application\Content\Services\EditorTextSourceRegistryInterface;
 use Mockery;
+use Tests\Support\Content\NotesEditorTextSource;
 use Tests\TestCase;
 
 final class MoveEditorImagesToCloudinaryCommandTest extends TestCase
@@ -19,7 +21,7 @@ final class MoveEditorImagesToCloudinaryCommandTest extends TestCase
             ->expectsOutput('  articles.content#a1: /storage/x.png → articles/content/2026/11/u.png')
             ->expectsOutput('Broken references (left as they are):')
             ->expectsOutput('  events.description#e1: /storage/missing.png')
-            ->expectsOutput('4 value(s) checked, 1 image(s) would move, 1 broken reference(s), 0 on other hosts, 0 failure(s).')
+            ->expectsOutput('4 value(s) checked, 1 image(s) would move, 1 broken reference(s), 0 on other hosts, 0 kept locally, 0 failure(s).')
             ->assertExitCode(0);
     }
 
@@ -30,7 +32,7 @@ final class MoveEditorImagesToCloudinaryCommandTest extends TestCase
         $this->artisanCommand('content:move-editor-images-to-cloudinary')
             ->expectsOutput('  articles.content#a1: /storage/x.png → articles/content/2026/11/u.png')
             ->doesntExpectOutput('Broken references (left as they are):')
-            ->expectsOutput('4 value(s) checked, 1 image(s) moved, 0 broken reference(s), 0 on other hosts, 0 failure(s).')
+            ->expectsOutput('4 value(s) checked, 1 image(s) moved, 0 broken reference(s), 0 on other hosts, 0 kept locally, 0 failure(s).')
             ->assertExitCode(0);
     }
 
@@ -41,7 +43,7 @@ final class MoveEditorImagesToCloudinaryCommandTest extends TestCase
         $this->artisanCommand('content:move-editor-images-to-cloudinary')
             ->expectsOutput('Not moved (the value and its local copy are kept; run the command again):')
             ->expectsOutput('  articles.content#a1: /storage/x.png (Upload refused)')
-            ->expectsOutput('4 value(s) checked, 0 image(s) moved, 0 broken reference(s), 0 on other hosts, 1 failure(s).')
+            ->expectsOutput('4 value(s) checked, 0 image(s) moved, 0 broken reference(s), 0 on other hosts, 0 kept locally, 1 failure(s).')
             ->assertExitCode(1);
     }
 
@@ -52,7 +54,7 @@ final class MoveEditorImagesToCloudinaryCommandTest extends TestCase
         $this->artisanCommand('content:move-editor-images-to-cloudinary', ['--dry-run' => true])
             ->expectsOutput('On other hosts (left as they are; pass the previous hosts of the site with --host):')
             ->expectsOutput('  articles.content#a1: https://old.example/storage/x.png (file found here: pass --host=old.example)')
-            ->expectsOutput('4 value(s) checked, 0 image(s) would move, 0 broken reference(s), 1 on other hosts, 0 failure(s).')
+            ->expectsOutput('4 value(s) checked, 0 image(s) would move, 0 broken reference(s), 1 on other hosts, 0 kept locally, 0 failure(s).')
             ->assertExitCode(0);
     }
 
@@ -61,6 +63,47 @@ final class MoveEditorImagesToCloudinaryCommandTest extends TestCase
         $this->mover(false, new EditorImageMoveReportDTO(4, [], [], []), ['old.example', 'older.example']);
 
         $this->artisanCommand('content:move-editor-images-to-cloudinary', ['--host' => ['OLD.example', ' older.example ', 'old.example']])
+            ->assertExitCode(0);
+    }
+
+    public function test_the_source_asked_for_reaches_the_mover(): void
+    {
+        $this->mover(false, new EditorImageMoveReportDTO(1, [], [], []), [], 'articles');
+
+        $this->artisanCommand('content:move-editor-images-to-cloudinary', ['--source' => 'articles'])
+            ->assertExitCode(0);
+    }
+
+    public function test_an_unknown_source_changes_nothing_and_lists_the_sources(): void
+    {
+        app(EditorTextSourceRegistryInterface::class)->register(NotesEditorTextSource::class, 'testing');
+        $mover = Mockery::mock(EditorImageMoverInterface::class);
+        $mover->shouldNotReceive('move');
+        $this->app->instance(EditorImageMoverInterface::class, $mover);
+
+        $this->artisanCommand('content:move-editor-images-to-cloudinary', ['--source' => 'nope'])
+            ->expectsOutput('Unknown source: nope. Nothing was changed. Sources: events, articles, guides, about, legal, testing.notes.')
+            ->assertExitCode(1);
+    }
+
+    public function test_kept_copies_and_held_deletions_are_listed(): void
+    {
+        $this->mover(false, new EditorImageMoveReportDTO(
+            4,
+            ['articles.content#a1: /storage/x.png → articles/content/2026/11/u.png'],
+            [],
+            [],
+            [],
+            ['x.png (deletion held)'],
+            ['The module dormant is installed but not loaded (disabled or incompatible): its texts cannot be read'],
+        ));
+
+        $this->artisanCommand('content:move-editor-images-to-cloudinary')
+            ->expectsOutput('Kept on the local disk (moved, but the local copy stays):')
+            ->expectsOutput('  x.png (deletion held)')
+            ->expectsOutput('No local copy is deleted in this run, because:')
+            ->expectsOutput('  The module dormant is installed but not loaded (disabled or incompatible): its texts cannot be read')
+            ->expectsOutput('4 value(s) checked, 1 image(s) moved, 0 broken reference(s), 0 on other hosts, 1 kept locally, 0 failure(s).')
             ->assertExitCode(0);
     }
 
@@ -78,10 +121,10 @@ final class MoveEditorImagesToCloudinaryCommandTest extends TestCase
     /**
      * @param  list<string>  $hosts
      */
-    private function mover(bool $dryRun, EditorImageMoveReportDTO $report, array $hosts = []): void
+    private function mover(bool $dryRun, EditorImageMoveReportDTO $report, array $hosts = [], ?string $source = null): void
     {
         $mover = Mockery::mock(EditorImageMoverInterface::class);
-        $mover->shouldReceive('move')->once()->with($dryRun, $hosts)->andReturn($report);
+        $mover->shouldReceive('move')->once()->with($dryRun, $hosts, $source)->andReturn($report);
         $this->app->instance(EditorImageMoverInterface::class, $mover);
     }
 }

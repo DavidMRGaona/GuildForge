@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Content\Services;
 
+use App\Application\Content\Contracts\EditorTextSourceInterface;
 use App\Application\Content\DTOs\EditorImageMoveReportDTO;
+use App\Application\Content\DTOs\EditorTextDTO;
 use App\Application\Content\Services\EditorImageMoverInterface;
-use App\Application\Services\SettingsServiceInterface;
-use App\Domain\Content\Enums\EditorImageOrigin;
-use App\Domain\Knowledge\Enums\GuideSource;
+use App\Application\Content\Services\EditorTextSourceRegistryInterface;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Domain\Content\ValueObjects\EditorImageFolder;
+use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Filesystem\Cloud;
 use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use InvalidArgumentException;
 use League\MimeTypeDetection\FinfoMimeTypeDetector;
 use League\MimeTypeDetection\MimeTypeDetector;
 use Ramsey\Uuid\Uuid;
@@ -21,16 +25,20 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Before core#481 the rich editors stored their images on the local "public" disk (Filament's
- * default). Each image found in the stored HTML is uploaded to the "images" disk, in the content
- * folder of its origin, and the HTML is pointed at it there.
+ * Before core#481 the rich editors, of the core and of the modules, stored their images at the root of
+ * the local "public" disk (Filament's default). Each image found in the texts of the registered editor
+ * text sources is uploaded to the "images" disk, in the content folder of its source, and the text is
+ * pointed at it there (core#496).
  *
- * - Safe to run again: images already on Cloudinary are skipped, and a moved file is named after
- *   its content, so an upload repeated after an interrupted run overwrites the same asset.
- * - A local copy is deleted only once every value using it is saved; a failed upload or save
- *   leaves the value and its local copy as they were.
- * - Values are written straight to the table, as the Trix conversion does: moving an image is not
- *   an edit (no updated_at, no model events), and only if nobody saved the value meanwhile.
+ * - Safe to run again: images already in a content folder are skipped, and a moved file is named after
+ *   its folder and content, so an upload repeated after an interrupted run overwrites the same asset.
+ * - One local copy may be named by texts of several sources (an image copied from an article to an
+ *   announcement keeps its URL). It is deleted only once every text naming it, in every source, is
+ *   saved. A failed upload or save leaves the text and its local copy as they were.
+ * - Fails closed: while some texts cannot be read (a source that cannot be built or read, a module
+ *   installed but not loaded), no local copy is deleted at all.
+ * - Texts are written by their source, straight to the table: moving an image is not an edit (no
+ *   updated_at, no model events), and only if nobody saved the text meanwhile.
  */
 final readonly class EditorImageMover implements EditorImageMoverInterface
 {
@@ -38,109 +46,134 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
 
     private const string CLOUD_DISK = 'images';
 
-    /** Name space of the moved files' UUIDs (version 5): same origin and content, same name */
+    /** Name space of the moved files' UUIDs (version 5): same folder and content, same name */
     private const string NAMESPACE = '6f1d9a4e-3c2b-5e8f-9a7d-0b4c1e2f3a5d';
 
-    /** Columns edited with the panel's rich editors */
-    private const array COLUMNS = [
-        ['table' => 'events', 'column' => 'description', 'origin' => EditorImageOrigin::Events],
-        ['table' => 'articles', 'column' => 'content', 'origin' => EditorImageOrigin::Articles],
-        ['table' => 'knowledge_guides', 'column' => 'body', 'origin' => EditorImageOrigin::Knowledge],
-    ];
-
-    /** Settings edited with the panel's rich editors */
-    private const array SETTINGS = [
-        'about_history' => EditorImageOrigin::About,
-        'legal_privacy_content' => EditorImageOrigin::Legal,
-        'legal_notice_content' => EditorImageOrigin::Legal,
-        'legal_cookies_content' => EditorImageOrigin::Legal,
-        'legal_terms_content' => EditorImageOrigin::Legal,
-    ];
-
     public function __construct(
-        private SettingsServiceInterface $settings,
+        private EditorTextSourceRegistryInterface $sources,
+        private ModuleRepositoryInterface $modules,
+        private EnabledModulesResolverInterface $loadedModules,
         private EditorImageTags $tags,
         private MimeTypeDetector $mimeTypes = new FinfoMimeTypeDetector,
     ) {}
 
-    public function move(bool $dryRun = false, array $hosts = []): EditorImageMoveReportDTO
+    public function move(bool $dryRun = false, array $hosts = [], ?string $source = null): EditorImageMoveReportDTO
     {
-        $values = $this->values();
+        if ($source !== null && ! $this->sources->source($source) instanceof EditorTextSourceInterface) {
+            throw new InvalidArgumentException('Unknown editor text source: '.$source);
+        }
+
         $hosts = $this->siteHosts($hosts);
-        $moved = $broken = $failed = $otherHosts = [];
+        $moved = $broken = $failed = $otherHosts = $kept = [];
+        $held = $this->unreadableModules();
 
-        /** @var list<array{value: array{label: string, table: string, column: string, id: string, html: string, origin: EditorImageOrigin}, images: list<array{tag: string, shown: string, path: string}>}> $plans */
+        foreach ($this->sources->unresolved() as $class) {
+            $held[] = 'The editor text source '.$class.' could not be loaded';
+        }
+
+        /** @var list<array{source: EditorTextSourceInterface, text: EditorTextDTO, images: list<array{tag: string, shown: string, path: string}>}> $plans */
         $plans = [];
-        /** @var array<string, int> $references values using each local file */
-        $references = [];
+        /** @var array<string, list<string>> $namedBy labels of the texts naming each local file, in every source */
+        $namedBy = [];
+        $checked = 0;
 
-        foreach ($values as $value) {
-            $images = [];
+        foreach ($this->sources->sources() as $textSource) {
+            $selected = $source === null || $textSource->type() === $source;
 
-            foreach ($this->tags->read($value['html']) as $tag) {
-                $shown = $tag['src'] ?? $tag['id'] ?? '';
-                $foreign = $tag['src'] !== null ? $this->storageUrlOnOtherHost($tag['src'], $hosts) : null;
+            try {
+                $texts = $this->read($textSource);
+            } catch (Throwable $e) {
+                $held[] = 'The texts of '.$textSource->type().' could not be read';
 
-                if ($foreign !== null) {
-                    $otherHosts[] = $value['label'].': '.$shown.($this->isMovable($foreign['path'])
-                        ? ' (file found here: pass --host='.$foreign['host'].')'
-                        : ' (no such file here)');
-
-                    continue;
+                if ($selected) {
+                    $failed[] = $textSource->type().' (could not be read: '.$e->getMessage().')';
                 }
 
-                $path = $this->localPath($tag['src'], $tag['id'], $hosts);
-
-                if ($path === null) {
-                    continue;
-                }
-
-                if (! $this->isMovable($path)) {
-                    $broken[] = $value['label'].': '.$shown;
-
-                    continue;
-                }
-
-                $images[] = ['tag' => $tag['tag'], 'shown' => $shown, 'path' => $path];
-            }
-
-            if ($images === []) {
                 continue;
             }
 
-            $plans[] = ['value' => $value, 'images' => $images];
+            foreach ($texts as $text) {
+                $images = $named = [];
 
-            foreach (array_unique(array_column($images, 'path')) as $path) {
-                $references[$path] = ($references[$path] ?? 0) + 1;
+                foreach ($this->tags->read($text->html) as $tag) {
+                    $shown = $tag['src'] ?? $tag['id'] ?? '';
+                    $foreign = $tag['src'] !== null ? $this->storageUrlOnOtherHost($tag['src'], $hosts) : null;
+
+                    if ($foreign !== null) {
+                        $here = $this->isMovable($foreign['path']);
+
+                        // Maybe a previous domain of the site: its copy is not deleted under it
+                        if ($here) {
+                            $named[] = $foreign['path'];
+                        }
+
+                        if ($selected) {
+                            $otherHosts[] = $text->label.': '.$shown.($here
+                                ? ' (file found here: pass --host='.$foreign['host'].')'
+                                : ' (no such file here)');
+                        }
+
+                        continue;
+                    }
+
+                    $path = $this->localPath($tag['src'], $tag['id'], $hosts);
+
+                    if ($path === null) {
+                        continue;
+                    }
+
+                    if (! $this->isMovable($path)) {
+                        if ($selected) {
+                            $broken[] = $text->label.': '.$shown;
+                        }
+
+                        continue;
+                    }
+
+                    $images[] = ['tag' => $tag['tag'], 'shown' => $shown, 'path' => $path];
+                }
+
+                foreach (array_unique([...array_column($images, 'path'), ...$named]) as $path) {
+                    $namedBy[$path][] = $text->label;
+                }
+
+                if ($selected) {
+                    $checked++;
+
+                    if ($images !== []) {
+                        $plans[] = ['source' => $textSource, 'text' => $text, 'images' => $images];
+                    }
+                }
             }
         }
 
-        /** @var array<string, string> $uploaded Cloudinary path of each origin and local file already uploaded */
+        /** @var array<string, string> $uploaded Cloudinary path of each folder and local file already uploaded */
         $uploaded = [];
-        /** @var array<string, int> $saved values saved with each local file moved */
+        /** @var array<string, list<string>> $saved labels of the texts saved with each local file moved */
         $saved = [];
 
-        foreach ($plans as ['value' => $value, 'images' => $images]) {
+        foreach ($plans as ['source' => $textSource, 'text' => $text, 'images' => $images]) {
             $rewrites = $lines = [];
             $current = null;
+            $folder = $textSource->folder();
 
             try {
                 foreach ($images as $image) {
                     $current = $image['shown'];
-                    $key = $value['origin']->value.'|'.$image['path'];
-                    $target = $uploaded[$key] ?? $this->upload($image['path'], $value['origin'], $dryRun);
+                    $key = $folder->scope.'|'.$image['path'];
+                    $target = $uploaded[$key] ?? $this->upload($image['path'], $folder, $dryRun);
                     $uploaded[$key] = $target;
                     $rewrites[$image['tag']] = ['src' => $this->cloud()->url($target), 'id' => $target];
-                    $lines[] = $value['label'].': '.$image['shown'].' → '.$target;
+                    $lines[] = $text->label.': '.$image['shown'].' → '.$target;
                 }
 
                 $current = null;
 
-                if (! $dryRun) {
-                    $this->write($value, $this->tags->rewrite($value['html'], $rewrites));
+                if (! $dryRun && ! $textSource->replace($text, $this->tags->rewrite($text->html, $rewrites))) {
+                    throw new RuntimeException('Changed while moving');
                 }
             } catch (Throwable $e) {
-                $failed[] = $value['label'].($current !== null ? ': '.$current : '').' ('.$e->getMessage().')';
+                $failed[] = $text->label.($current !== null ? ': '.$current : '').' ('.$e->getMessage().')';
 
                 continue;
             }
@@ -148,58 +181,66 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
             array_push($moved, ...$lines);
 
             foreach (array_unique(array_column($images, 'path')) as $path) {
-                $saved[$path] = ($saved[$path] ?? 0) + 1;
+                $saved[$path][] = $text->label;
             }
         }
 
-        if (! $dryRun) {
-            foreach ($saved as $path => $count) {
-                if ($count === $references[$path] && ! $this->local()->delete($path)) {
-                    $failed[] = $path.' (moved, but the local copy could not be deleted)';
-                }
+        foreach ($saved as $path => $labels) {
+            $pending = array_values(array_diff($namedBy[$path] ?? [], $labels));
+
+            if ($held !== []) {
+                $kept[] = $path.' (deletion held)';
+            } elseif ($pending !== []) {
+                $kept[] = $path.' (still named by '.implode(', ', $pending).')';
+            } elseif (! $dryRun && ! $this->local()->delete($path)) {
+                $failed[] = $path.' (moved, but the local copy could not be deleted)';
             }
         }
 
-        return new EditorImageMoveReportDTO(count($values), $moved, $broken, $failed, $otherHosts);
+        return new EditorImageMoveReportDTO($checked, $moved, $broken, $failed, $otherHosts, $kept, $held);
     }
 
     /**
-     * @return list<array{label: string, table: string, column: string, id: string, html: string, origin: EditorImageOrigin}>
+     * Every text of a source, read whole before anything moves: a source that fails halfway counts as
+     * unread, never as a source naming fewer files.
+     *
+     * @return list<EditorTextDTO>
      */
-    private function values(): array
+    private function read(EditorTextSourceInterface $source): array
     {
-        $values = [];
+        $texts = [];
 
-        foreach (self::COLUMNS as ['table' => $table, 'column' => $column, 'origin' => $origin]) {
-            $query = DB::table($table)->whereNotNull($column)->orderBy('id');
+        foreach ($source->texts() as $text) {
+            $texts[] = $text;
+        }
 
-            // Official guides come from Markdown files, not from the editor
-            if ($table === 'knowledge_guides') {
-                $query->where('source', GuideSource::Site->value);
-            }
+        return $texts;
+    }
 
-            foreach ($query->get(['id', $column]) as $row) {
-                $values[] = [
-                    'label' => $table.'.'.$column.'#'.$row->id,
-                    'table' => $table,
-                    'column' => $column,
-                    'id' => (string) $row->id,
-                    'html' => (string) $row->{$column},
-                    'origin' => $origin,
-                ];
+    /**
+     * Modules installed on the site whose provider did not load (disabled, or enabled but incompatible):
+     * their texts may name local copies nobody can read now.
+     *
+     * @return list<string>
+     */
+    private function unreadableModules(): array
+    {
+        try {
+            $loaded = $this->loadedModules->names();
+            $installed = array_filter($this->modules->all()->all(), static fn (Module $module): bool => $module->isInstalled());
+        } catch (Throwable $e) {
+            return ['The installed modules could not be read ('.$e->getMessage().')'];
+        }
+
+        $held = [];
+
+        foreach ($installed as $module) {
+            if (! in_array($module->name()->value, $loaded, true)) {
+                $held[] = 'The module '.$module->name()->value.' is installed but not loaded (disabled or incompatible): its texts cannot be read';
             }
         }
 
-        foreach (self::SETTINGS as $key => $origin) {
-            // From the table, not the settings cache, which may be stale
-            $html = $this->setting($key);
-
-            if ($html !== null) {
-                $values[] = ['label' => 'settings#'.$key, 'table' => 'settings', 'column' => 'value', 'id' => $key, 'html' => $html, 'origin' => $origin];
-            }
-        }
-
-        return $values;
+        return $held;
     }
 
     /**
@@ -211,7 +252,7 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
      */
     private function localPath(?string $src, ?string $id, array $hosts): ?string
     {
-        if ($id !== null && EditorImageOrigin::ofPath($id) instanceof EditorImageOrigin) {
+        if ($id !== null && EditorImageFolder::ofPath($id) instanceof EditorImageFolder) {
             return null;
         }
 
@@ -323,51 +364,19 @@ final readonly class EditorImageMover implements EditorImageMoverInterface
         }
     }
 
-    private function upload(string $path, EditorImageOrigin $origin, bool $dryRun): string
+    private function upload(string $path, EditorImageFolder $folder, bool $dryRun): string
     {
         $contents = $this->local()->get($path) ?? throw new RuntimeException('Could not read the local copy');
         $month = CarbonImmutable::createFromTimestamp($this->local()->lastModified($path), (string) config('app.timezone'));
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $name = Uuid::uuid5(self::NAMESPACE, $origin->value.':'.hash('sha256', $contents))->toString();
-        $target = $origin->directory($month).'/'.$name.($extension !== '' ? '.'.$extension : '');
+        $name = Uuid::uuid5(self::NAMESPACE, $folder->scope.':'.hash('sha256', $contents))->toString();
+        $target = $folder->directory($month).'/'.$name.($extension !== '' ? '.'.$extension : '');
 
         if (! $dryRun && $this->cloud()->put($target, $contents) !== true) {
             throw new RuntimeException('Upload refused');
         }
 
         return $target;
-    }
-
-    /**
-     * @param  array{table: string, column: string, id: string, html: string}  $value
-     */
-    private function write(array $value, string $html): void
-    {
-        if ($value['table'] === 'settings') {
-            if ($this->setting($value['id']) !== $value['html']) {
-                throw new RuntimeException('Changed while moving');
-            }
-
-            $this->settings->set($value['id'], $html);
-
-            return;
-        }
-
-        $updated = DB::table($value['table'])
-            ->where('id', $value['id'])
-            ->where($value['column'], $value['html'])
-            ->update([$value['column'] => $html]);
-
-        if ($updated !== 1) {
-            throw new RuntimeException('Changed while moving');
-        }
-    }
-
-    private function setting(string $key): ?string
-    {
-        $value = DB::table('settings')->where('key', $key)->value('value');
-
-        return is_string($value) ? $value : null;
     }
 
     private function local(): Filesystem

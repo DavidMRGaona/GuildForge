@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament\Content;
 
 use App\Application\Media\Services\MediaFileIdResolverInterface;
+use App\Domain\Content\ValueObjects\EditorImageFolder;
+use App\Filament\Forms\RichEditor\EditorImages;
 use App\Filament\Pages\Settings\AboutPageSettings;
 use App\Filament\Pages\Settings\LegalPagesSettings;
 use App\Filament\Resources\ArticleResource\Pages\CreateArticle;
@@ -101,6 +103,32 @@ final class EditorImageUploadsTest extends TestCase
         $this->assertSame(Storage::disk('images')->url('articles/content/2026/11/0b7e7c1e-6a0f-4c56-9d0e-1b2f3a4c5d6e.png'), $url);
         $this->assertStringStartsWith('https://res.cloudinary.com/', (string) $url);
         $this->assertStringContainsString('/guildforge/articles/content/2026/11/0b7e7c1e-6a0f-4c56-9d0e-1b2f3a4c5d6e', (string) $url);
+    }
+
+    public function test_a_module_editor_uploads_images_to_its_own_content_folder(): void
+    {
+        Storage::fake('images');
+        Storage::fake('public');
+        $editor = EditorImages::configure(RichEditor::make('content'), EditorImageFolder::of('announcements'));
+
+        $path = $editor->saveUploadedFileAttachment($this->upload('Cartel.png'));
+
+        $this->assertSame('images', $editor->getFileAttachmentsDiskName());
+        $this->assertSame('announcements/content/2026/11', $editor->getFileAttachmentsDirectory());
+        $this->assertSame(['image/jpeg', 'image/png', 'image/webp', 'image/gif'], $editor->getFileAttachmentsAcceptedFileTypes());
+        $this->assertSame(2048, $editor->getFileAttachmentsMaxSize());
+        $this->assertIsString($path);
+        $this->assertMatchesRegularExpression('~^announcements/content/2026/11/'.self::UUID.'\.png$~', $path);
+        Storage::disk('images')->assertExists($path);
+        $this->assertSame(Storage::disk('images')->url($path), $editor->getFileAttachmentUrl($path));
+    }
+
+    public function test_an_image_of_a_module_content_folder_gets_its_cloudinary_url_in_any_editor(): void
+    {
+        $path = 'announcements/content/2026/11/0b7e7c1e-6a0f-4c56-9d0e-1b2f3a4c5d6e.png';
+
+        // Pasted from an announcement into an article: the article's editor shows it too
+        $this->assertSame(Storage::disk('images')->url($path), $this->editor(CreateArticle::class, 'content')->getFileAttachmentUrl($path));
     }
 
     public function test_the_media_library_reads_the_stored_url_as_the_uploaded_file(): void

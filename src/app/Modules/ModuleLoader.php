@@ -8,6 +8,7 @@ use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Calendar\Services\CalendarAttendanceSourceRegistryInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
+use App\Application\Content\Services\EditorTextSourceRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
@@ -109,6 +110,9 @@ final class ModuleLoader
 
         // Register media usage sources from the provider
         $this->registerProviderMediaSources($provider, $module->name()->value);
+
+        // Register editor text sources from the provider
+        $this->registerProviderEditorTextSources($provider, $module->name()->value);
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
@@ -281,6 +285,22 @@ final class ModuleLoader
 
         if ($this->app->bound(MediaSourceRegistryInterface::class)) {
             $this->app->make(MediaSourceRegistryInterface::class)->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register editor text sources from a module provider.
+     */
+    private function registerProviderEditorTextSources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerEditorTextSources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(EditorTextSourceRegistryInterface::class)) {
+            $this->app->make(EditorTextSourceRegistryInterface::class)->registerMany($sources, $moduleName);
         }
     }
 

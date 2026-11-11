@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Content\Services;
 
 use App\Application\Content\Services\EditorImageUrlsInterface;
-use App\Domain\Content\Enums\EditorImageOrigin;
+use App\Domain\Content\ValueObjects\EditorImageFolder;
 use Illuminate\Support\Facades\Storage;
 
 final readonly class EditorImageUrls implements EditorImageUrlsInterface
@@ -14,7 +14,7 @@ final readonly class EditorImageUrls implements EditorImageUrlsInterface
 
     public function urlFor(string $path): ?string
     {
-        if (! EditorImageOrigin::ofPath($path) instanceof EditorImageOrigin) {
+        if (! EditorImageFolder::ofPath($path) instanceof EditorImageFolder) {
             return null;
         }
 
