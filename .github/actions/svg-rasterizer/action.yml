@@ -11,14 +11,20 @@ inputs:
 runs:
   using: composite
   steps:
+    # ImageOS (ubuntu26…) is a variable of the runner, not of the env context: read it in the shell
+    - name: Name the rsvg-convert cache
+      id: key
+      shell: bash
+      run: echo "key=svg-rasterizer-${RUNNER_OS}-${RUNNER_ARCH}-${ImageOS:-unknown}-v1" >> "$GITHUB_OUTPUT"
+
     # The packages apt downloaded the last time it worked, so a runner that cannot reach the
-    # Ubuntu mirrors (DNS failures on security.ubuntu.com, #531) still installs it
+    # Ubuntu mirrors (DNS failures on every *.ubuntu.com host, #531) still installs it
     - name: Restore rsvg-convert packages
       id: restore
       uses: actions/cache/restore@v6
       with:
         path: ${{ runner.temp }}/svg-rasterizer-debs
-        key: svg-rasterizer-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}-v1
+        key: ${{ steps.key.outputs.key }}
 
     - name: Install rsvg-convert
       id: install
@@ -84,4 +90,4 @@ runs:
       uses: actions/cache/save@v6
       with:
         path: ${{ runner.temp }}/svg-rasterizer-debs
-        key: svg-rasterizer-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}-v1
+        key: ${{ steps.key.outputs.key }}
