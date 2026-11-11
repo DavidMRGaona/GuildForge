@@ -108,7 +108,9 @@ function selectTheme(mode: ThemeMode): void {
 </script>
 
 <template>
-    <header class="bg-surface shadow-sm dark:shadow-neutral-800/50">
+    <header
+        class="relative z-30 bg-surface shadow-sm dark:border-b dark:border-white/10 dark:shadow-black/40"
+    >
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div ref="headerRow" class="flex h-16 items-center justify-between">
                 <!-- Logo -->
@@ -140,7 +142,7 @@ function selectTheme(mode: ThemeMode): void {
                         :aria-label="t('search.title')"
                         aria-haspopup="dialog"
                         :aria-expanded="isSearchOpen"
-                        class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         @click="openSearch"
                     >
                         <Search class="h-5 w-5" aria-hidden="true" />
@@ -152,7 +154,7 @@ function selectTheme(mode: ThemeMode): void {
                             type="button"
                             :aria-label="t('layout.selectTheme')"
                             :aria-expanded="isThemeMenuOpen"
-                            class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            class="p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                             @click="toggleThemeMenu"
                             @blur="closeThemeMenu"
                         >
@@ -236,7 +238,7 @@ function selectTheme(mode: ThemeMode): void {
                         ref="menuButton"
                         type="button"
                         aria-controls="mobile-menu"
-                        class="inline-flex items-center justify-center rounded-md p-2 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                        class="inline-flex items-center justify-center rounded-md p-2 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                         :aria-expanded="isMobileMenuOpen"
                         @click="toggleMobileMenu"
                     >

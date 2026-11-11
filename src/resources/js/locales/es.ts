@@ -104,6 +104,7 @@ export default {
     },
     calendar: {
         title: 'Calendario de eventos',
+        subtitle: 'Todas las actividades de la asociación de un vistazo',
         viewFull: 'Ver calendario completo',
         viewFullCalendar: 'Ver calendario completo',
         loading: 'Cargando calendario...',
