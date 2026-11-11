@@ -85,7 +85,7 @@ function handleKeydown(event: KeyboardEvent): void {
         >
             <div
                 v-show="isOpen"
-                class="absolute left-0 z-50 mt-2 w-48 origin-top-left rounded-md bg-surface shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none border-default"
+                class="absolute left-0 z-50 mt-2 w-48 origin-top-left rounded-lg border border-default bg-surface shadow-lg"
             >
                 <div class="py-1">
                     <Link

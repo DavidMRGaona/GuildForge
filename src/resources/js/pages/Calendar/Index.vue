@@ -8,6 +8,7 @@ import EventCalendar from '@/components/calendar/EventCalendar.vue';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel.vue';
 import CalendarSubscribeMenu from '@/components/calendar/CalendarSubscribeMenu.vue';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
+import EventsViewToggle from '@/components/events/EventsViewToggle.vue';
 import FormToggle from '@/components/form/FormToggle.vue';
 import { extractLegend, type CalendarLegendItem } from '@/utils/calendarEntries';
 import { useMediaQuery } from '@/composables/useMediaQuery';
@@ -87,34 +88,52 @@ const closeMobileModal = (): void => {
 </script>
 
 <template>
-    <!-- Title band, as in the other lists; the filter sits over the detail panel's column -->
-    <div data-testid="page-band" class="bg-surface shadow dark:shadow-neutral-900/50">
+    <!--
+        Title band, as in the other lists. The list/calendar toggle sits at the top right, where
+        the event list has it, so it does not move between the two views; on desktop the filter
+        goes below it, over the detail panel's column.
+    -->
+    <div data-testid="page-band" class="page-band">
         <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            <div class="lg:grid lg:grid-cols-3 lg:items-center lg:gap-x-8">
-                <div class="lg:col-span-2">
-                    <div class="flex items-center gap-3">
-                        <h1 class="text-3xl font-bold tracking-tight text-base-primary">
-                            {{ t('calendar.title') }}
-                        </h1>
-                        <HelpLink guide="core.events.find-events" />
+            <div class="lg:grid lg:grid-cols-3 lg:gap-x-8">
+                <div class="flex items-start justify-between gap-4 lg:col-span-2">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-3">
+                            <h1 class="text-3xl font-bold tracking-tight text-base-primary">
+                                {{ t('calendar.title') }}
+                            </h1>
+                            <HelpLink guide="core.events.find-events" />
+                        </div>
+                        <p class="mt-2 text-lg text-base-secondary">
+                            {{ t('calendar.subtitle') }}
+                        </p>
                     </div>
-                    <p class="mt-2 text-lg text-base-secondary">
-                        {{ t('calendar.subtitle') }}
-                    </p>
+                    <div class="lg:hidden">
+                        <EventsViewToggle current="calendar" />
+                    </div>
                 </div>
 
-                <div v-if="personalCalendar" class="mt-4 max-w-sm lg:mt-0 lg:max-w-none">
-                    <div class="flex min-h-9 items-center gap-2">
-                        <FormToggle
-                            id="calendar-only-mine"
-                            v-model="onlyMine"
-                            :label="t('calendar.onlyMine')"
-                        />
-                        <HelpLink guide="core.events.personal-calendar" />
+                <div class="lg:flex lg:flex-col lg:items-end">
+                    <div class="hidden lg:block">
+                        <EventsViewToggle current="calendar" />
                     </div>
-                    <p class="mt-1 text-xs text-base-muted">
-                        {{ t('calendar.onlyMineHint') }}
-                    </p>
+
+                    <div
+                        v-if="personalCalendar"
+                        class="mt-4 max-w-sm lg:mt-3 lg:max-w-none lg:self-stretch"
+                    >
+                        <div class="flex min-h-9 items-center gap-2">
+                            <FormToggle
+                                id="calendar-only-mine"
+                                v-model="onlyMine"
+                                :label="t('calendar.onlyMine')"
+                            />
+                            <HelpLink guide="core.events.personal-calendar" />
+                        </div>
+                        <p class="mt-1 text-xs text-base-muted">
+                            {{ t('calendar.onlyMineHint') }}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

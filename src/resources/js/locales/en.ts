@@ -48,6 +48,12 @@ export default {
     },
     events: {
         title: 'Events',
+        subtitle: 'Gatherings, meet-ups and activities of the association',
+        views: {
+            switch: 'Switch view',
+            list: 'View as list',
+            calendar: 'View as calendar',
+        },
         upcoming: 'Upcoming events',
         past: 'Past events',
         date: 'Date',

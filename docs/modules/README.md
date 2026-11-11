@@ -1155,6 +1155,21 @@ The site adds the stylesheet once, when it loads a page or slot component of tha
 
 Under the dev server the stylesheet follows the sources: a change to a module's `.vue` or `.ts` makes Tailwind rescan them, and the core imports the sheet again without reloading the page; a change to `module.css` itself reloads the page. The test suite attaches no module stylesheet.
 
+### Page title band
+
+A list page opens with a title band: the core's `page-band` class (background, shadow and its dark-mode colour, defined in `resources/css/app.css`, so a module uses it without compiling anything and without a `dark:` variant). Inside, the same container as the header and a `py-6` padding:
+
+```vue
+<div data-testid="page-band" class="page-band">
+    <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-bold tracking-tight text-base-primary">…</h1>
+        <p class="mt-2 text-lg text-base-secondary">…</p>
+    </div>
+</div>
+```
+
+Actions for the whole list (a list/calendar toggle, «create» buttons) go at the top right of the band, also on phones.
+
 ### Core safelist
 
 The core also safelists common utilities and the semantic design tokens, at a cost of +15-25KB gzipped CSS shared by all modules. These classes exist without the module stylesheet, including in dynamic bindings.

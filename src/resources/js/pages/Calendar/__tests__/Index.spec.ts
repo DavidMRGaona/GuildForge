@@ -1,11 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import Index from '../Index.vue';
 import CalendarSubscribeMenu from '@/components/calendar/CalendarSubscribeMenu.vue';
 import EventCalendar from '@/components/calendar/EventCalendar.vue';
+import EventsViewToggle from '@/components/events/EventsViewToggle.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
+
+vi.mock('@inertiajs/vue3', () => ({
+    usePage: (): { url: string; props: Record<string, unknown> } => ({ url: '/', props: {} }),
+    Link: { props: ['href'], template: '<a :href="href"><slot /></a>' },
+}));
 
 function mountPage(props: Record<string, unknown> = {}): ReturnType<typeof mount> {
     return mount(Index, {
@@ -27,9 +33,15 @@ describe('Calendar/Index', () => {
     it('opens with the same title band as the other lists', () => {
         const band = mountPage().get('[data-testid="page-band"]');
 
-        expect(band.classes()).toEqual(expect.arrayContaining(['bg-surface', 'shadow']));
+        expect(band.classes()).toContain('page-band');
         expect(band.get('h1').text()).toBe('Calendario de eventos');
         expect(band.text()).toContain('Todas las actividades de la asociación de un vistazo');
+    });
+
+    it('offers the event list from its band', () => {
+        const band = mountPage().get('[data-testid="page-band"]');
+
+        expect(band.findComponent(EventsViewToggle).props('current')).toBe('calendar');
     });
 
     it('puts the personal filter in the title band', () => {

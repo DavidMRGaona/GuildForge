@@ -48,6 +48,12 @@ export default {
     },
     events: {
         title: 'Eventos',
+        subtitle: 'Jornadas, quedadas y actividades de la asociación',
+        views: {
+            switch: 'Cambiar de vista',
+            list: 'Ver en lista',
+            calendar: 'Ver en calendario',
+        },
         upcoming: 'Próximos eventos',
         past: 'Eventos pasados',
         date: 'Fecha',
