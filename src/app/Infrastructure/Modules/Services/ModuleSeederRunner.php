@@ -18,20 +18,21 @@ final readonly class ModuleSeederRunner
     public function __construct(
         private string $modulesPath,
         private ModuleMigrationAnalyzerInterface $analyzer,
-        private ?ModuleLoader $loader = null,
+        private ModuleLoader $loader,
     ) {}
 
     /**
      * Runs seeders for a module.
      *
      * @param  Module  $module  The module to run seeders for
+     * @param  bool  $enabling  Whether this process is enabling the module right now
      * @return int The number of seeders run
      *
      * @throws ModuleNotFoundException If the module directory does not exist
      */
-    public function run(Module $module): int
+    public function run(Module $module, bool $enabling = false): int
     {
-        return count($this->seed($module));
+        return count($this->seed($module, $enabling));
     }
 
     /**
@@ -41,13 +42,16 @@ final readonly class ModuleSeederRunner
      * overwrite what admins edited or bring back what they deleted. A new version that
      * needs more default data ships a new seeder (or a data migration).
      *
-     * Seeders are module code: before the first pending one runs, the module's provider is
-     * booted when it was not yet (enabling a module for the first time runs its seeders before
-     * the module is enabled), so they can resolve what it binds.
+     * Seeders are module code: they run with the module's provider booted, so they can resolve
+     * what it binds. A provider not loaded yet is booted only for a module this process is
+     * enabling ($enabling: its seeders run before it is enabled) or one that is enabled and
+     * compatible. A disabled module is never booted, since a long-running process (a queue
+     * worker) would keep its listeners, routes and slots: its pending seeders are left for
+     * when it is enabled, which runs them.
      *
      * @return array<string>
      */
-    public function seed(Module $module): array
+    public function seed(Module $module, bool $enabling = false): array
     {
         $modulePath = (new ModulePathResolver($this->modulesPath))->resolve($module);
 
@@ -67,7 +71,7 @@ final readonly class ModuleSeederRunner
         $this->analyzer->analyzeSeeders($module->name()->value, $seedersPath);
 
         // Run seeders if Laravel is fully booted
-        return $this->runSeedersIfPossible($module, $seederFiles);
+        return $this->runSeedersIfPossible($module, $seederFiles, $enabling);
     }
 
     /**
@@ -77,7 +81,7 @@ final readonly class ModuleSeederRunner
      * @param  array<string>  $seederFiles  The seeder files to run
      * @return array<string> The seeder classes run
      */
-    private function runSeedersIfPossible(Module $module, array $seederFiles): array
+    private function runSeedersIfPossible(Module $module, array $seederFiles, bool $enabling): array
     {
         try {
             // Check if we're in a Laravel application context
@@ -123,15 +127,22 @@ final readonly class ModuleSeederRunner
             }
 
             $alreadyExecuted = ModuleSeederHistoryModel::getExecutedSeeders($module->name()->value);
+            $pending = array_values(array_diff($validSeeders, $alreadyExecuted));
+
+            if ($pending === []) {
+                return [];
+            }
+
+            if (! $this->provideModule($module, $enabling)) {
+                Log::warning("Seeders of module {$module->name()->value} left pending: it is not enabled, they run when it is", [
+                    'seeders' => $pending,
+                ]);
+
+                return [];
+            }
 
             // Now run the valid seeders that have not run yet (all loaded above, so they can call each other)
-            foreach ($validSeeders as $fullClassName) {
-                if (in_array($fullClassName, $alreadyExecuted, true)) {
-                    continue;
-                }
-
-                $this->bootModuleProvider($module);
-
+            foreach ($pending as $fullClassName) {
                 $seeder = $app->make($fullClassName);
                 $this->executeSeeder($seeder);
                 ModuleSeederHistoryModel::markExecuted($module->name()->value, $fullClassName);
@@ -154,15 +165,24 @@ final readonly class ModuleSeederRunner
     }
 
     /**
-     * Boot the module's provider unless it is loaded already.
+     * Make sure the module's provider is loaded before its seeders run; false when the module
+     * may not be booted in this process (see seed()).
      */
-    private function bootModuleProvider(Module $module): void
+    private function provideModule(Module $module, bool $enabling): bool
     {
-        if (! $this->loader instanceof ModuleLoader || $this->loader->isLoaded($module->name()->value)) {
-            return;
+        $name = $module->name()->value;
+
+        if ($this->loader->isLoaded($name)) {
+            return true;
+        }
+
+        if (! $enabling && ! $this->loader->loads($name)) {
+            return false;
         }
 
         $this->loader->bootModule($module);
+
+        return true;
     }
 
     /**

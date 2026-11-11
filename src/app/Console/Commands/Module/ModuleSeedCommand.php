@@ -61,6 +61,13 @@ final class ModuleSeedCommand extends Command
                 throw ModuleIncompatibleException::forModule($moduleName, $module->version()->value(), $compatibility);
             }
 
+            // Seeding boots the module's provider, which a disabled module never gets
+            if (! $module->isEnabled()) {
+                $this->error("Module \"{$moduleName}\" is disabled: its seeders run when it is enabled.");
+
+                return self::FAILURE;
+            }
+
             $this->info("Running seeders for module: {$moduleName}");
 
             $count = $this->moduleManager->seed($name);

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Modules\Services;
 
+use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Entities\Module;
+use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Modules\Services\ModuleSeederRunner;
@@ -15,6 +17,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -46,6 +49,15 @@ final class ModuleSeederRunnerTest extends TestCase
         });
 
         File::ensureDirectoryExists($this->modulesPath.'/seed-mod/database/seeders');
+        // A compatible manifest: only an enabled and compatible module is booted to seed it
+        File::put($this->modulesPath.'/seed-mod/module.json', json_encode([
+            'name' => 'seed-mod',
+            'version' => '1.0.0',
+            'storesUtc' => true,
+            'namespace' => $this->namespace,
+            'provider' => 'SeedModServiceProvider',
+            'requires' => ['core' => '>=2.0'],
+        ], JSON_THROW_ON_ERROR));
         $this->writeSeeder('ItemsSeeder', "DB::table('seedmod_items')->insert(['name' => 'default']);");
 
         ModuleModel::factory()->enabled()->create([
@@ -128,6 +140,46 @@ final class ModuleSeederRunnerTest extends TestCase
         $this->assertSame([], $this->runner()->seed($this->module()));
 
         $this->assertFalse($this->loader()->isLoaded('seed-mod'));
+    }
+
+    /**
+     * A long-running process (a queue worker) would keep a disabled module's listeners, routes
+     * and slots: its seeders wait until it is enabled.
+     */
+    public function test_a_disabled_module_is_not_booted_and_its_seeders_stay_pending(): void
+    {
+        $this->writeProvider();
+        ModuleModel::query()->where('name', 'seed-mod')->update(['status' => ModuleStatus::Disabled->value]);
+        $log = Log::spy();
+
+        $this->assertSame([], $this->runner()->seed($this->module()));
+
+        $this->assertFalse($this->loader()->isLoaded('seed-mod'));
+        $this->assertSame(0, DB::table('seedmod_items')->count());
+        $this->assertFalse(ModuleSeederHistoryModel::wasExecuted('seed-mod', "{$this->namespace}\\Database\\Seeders\\ItemsSeeder"));
+        $log->shouldHaveReceived('warning')->withArgs(static fn (string $message): bool => str_contains($message, 'left pending'))->once();
+    }
+
+    public function test_a_module_being_enabled_is_booted_to_run_its_seeders(): void
+    {
+        $this->writeProvider();
+        ModuleModel::query()->where('name', 'seed-mod')->update(['status' => ModuleStatus::Disabled->value]);
+
+        $this->assertCount(1, $this->runner()->seed($this->module(), enabling: true));
+
+        $this->assertTrue($this->loader()->isLoaded('seed-mod'));
+    }
+
+    public function test_enabling_an_installed_module_runs_the_seeders_left_pending_while_it_was_disabled(): void
+    {
+        $this->writeProvider();
+        ModuleModel::query()->where('name', 'seed-mod')->update(['status' => ModuleStatus::Disabled->value]);
+        $this->runner()->seed($this->module());
+
+        $this->app->make(ModuleManagerServiceInterface::class)->enable(ModuleName::fromString('seed-mod'));
+
+        $this->assertSame(1, DB::table('seedmod_items')->count());
+        $this->assertTrue(ModuleSeederHistoryModel::wasExecuted('seed-mod', "{$this->namespace}\\Database\\Seeders\\ItemsSeeder"));
     }
 
     /**

@@ -429,6 +429,15 @@ final class ModuleLoader
     }
 
     /**
+     * Whether boot() loads the module: enabled and compatible (it may not be loaded yet, e.g.
+     * enabled by another process after this one booted).
+     */
+    public function loads(string $moduleName): bool
+    {
+        return in_array($moduleName, $this->resolver->names(), true);
+    }
+
+    /**
      * Check if a module is loaded.
      */
     public function isLoaded(string $moduleName): bool
