@@ -76,7 +76,7 @@ RUN php -m | grep -qx 'Zend OPcache' && php-fpm -m | grep -qx 'Zend OPcache'
 # Fail the build if it is missing, as in Dockerfile.prod
 RUN php -r 'exit((new NumberFormatter("es", NumberFormatter::DECIMAL))->format(1.5) === "1,5" ? 0 : 1);'
 
-# rsvg-convert rasterizes SVG logos of QR codes for the PNG output, as in Dockerfile.prod
+# rsvg-convert rasterizes SVG logos of QR codes for the PNG output and the SVG mail logo, as in Dockerfile.prod
 RUN apk add --no-cache rsvg-convert \
     && printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 1"><rect width="2" height="1"/></svg>' \
         | rsvg-convert --format=png --width=20 --height=10 | head -c 8 | od -An -tx1 | grep -q '89 50 4e 47'

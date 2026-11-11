@@ -11,7 +11,6 @@ use DateTimeImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Storage;
 
 final class SettingsService implements SettingsServiceInterface
 {
@@ -178,32 +177,5 @@ final class SettingsService implements SettingsServiceInterface
         }
 
         return $value === '1' || $value === 'true';
-    }
-
-    /**
-     * Get the email logo URL with fallback to light logo.
-     */
-    public function getEmailLogoUrl(): ?string
-    {
-        // Priority: email logo -> light logo -> null
-        $emailLogo = $this->get('site_logo_email');
-        if ($emailLogo !== null && $emailLogo !== '') {
-            return $this->getLogoUrl((string) $emailLogo);
-        }
-
-        $lightLogo = $this->get('site_logo_light');
-        if ($lightLogo !== null && $lightLogo !== '') {
-            return $this->getLogoUrl((string) $lightLogo);
-        }
-
-        return null;
-    }
-
-    /**
-     * Get the full URL for a logo path.
-     */
-    private function getLogoUrl(string $path): string
-    {
-        return Storage::disk('images')->url($path);
     }
 }

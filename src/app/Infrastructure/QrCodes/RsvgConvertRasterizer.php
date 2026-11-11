@@ -9,7 +9,8 @@ use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
 /**
- * Draws a sanitized SVG logo as a PNG for the QR code's PNG output, since GD reads no SVG.
+ * Draws an SVG logo as a PNG, since GD reads no SVG: the sanitized logo of a QR code's PNG
+ * output, and the SVG mail logo (MailLogoService), which mail clients do not show.
  * rsvg-convert (librsvg) runs in a process of its own, so a hostile or heavy SVG cannot take
  * the PHP worker down with it: a clean environment (no application secrets reach a parser of
  * untrusted input), a time and memory cap, and the SVG on stdin, which leaves no base path to

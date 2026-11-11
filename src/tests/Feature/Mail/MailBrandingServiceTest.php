@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Mail;
 
 use App\Application\Mail\Services\MailBrandingServiceInterface;
+use App\Application\Mail\Services\MailLogoServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
@@ -35,9 +36,9 @@ final class MailBrandingServiceTest extends TestCase
     private function service(): MailBrandingServiceInterface
     {
         return new MailBrandingService(
-            $this->settings(),
             app(ThemeSettingsServiceInterface::class),
             app(SiteBrandingServiceInterface::class),
+            app(MailLogoServiceInterface::class),
         );
     }
 
@@ -50,6 +51,16 @@ final class MailBrandingServiceTest extends TestCase
         $this->assertSame('Asociación de ejemplo', $branding->siteName);
         $this->assertSame('https://asociacion.example', $branding->siteUrl);
         $this->assertSame(Storage::disk('images')->url('settings/email-logo.png'), $branding->logoUrl);
+    }
+
+    public function test_an_svg_email_logo_is_linked_as_a_png_from_the_site(): void
+    {
+        Storage::disk('images')->put('branding/logo-email.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="10"><rect width="40" height="10"/></svg>');
+        $this->settings()->set('site_logo_email', 'branding/logo-email.svg');
+
+        $branding = $this->service()->branding();
+
+        $this->assertStringStartsWith('https://asociacion.example/correos/logo.png?v=', (string) $branding->logoUrl);
     }
 
     public function test_button_uses_the_primary_color_when_white_text_is_readable(): void
@@ -129,9 +140,8 @@ final class MailBrandingServiceTest extends TestCase
 
     public function test_it_falls_back_to_defaults_when_settings_fail(): void
     {
-        $settings = $this->createStub(SettingsServiceInterface::class);
-        $settings->method('get')->willThrowException(new RuntimeException('cache down'));
-        $settings->method('getEmailLogoUrl')->willThrowException(new RuntimeException('cache down'));
+        $logo = $this->createStub(MailLogoServiceInterface::class);
+        $logo->method('url')->willThrowException(new RuntimeException('cache down'));
         $theme = $this->createStub(ThemeSettingsServiceInterface::class);
         $theme->method('getPrimaryPalette')->willThrowException(new RuntimeException('cache down'));
         $theme->method('getNeutralPalette')->willThrowException(new RuntimeException('cache down'));
@@ -140,7 +150,7 @@ final class MailBrandingServiceTest extends TestCase
         $site = $this->createStub(SiteBrandingServiceInterface::class);
         $site->method('siteName')->willThrowException(new RuntimeException('cache down'));
 
-        $branding = (new MailBrandingService($settings, $theme, $site))->branding();
+        $branding = (new MailBrandingService($theme, $site, $logo))->branding();
 
         $this->assertSame('Asociación de ejemplo', $branding->siteName);
         $this->assertNull($branding->logoUrl);

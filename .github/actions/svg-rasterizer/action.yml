@@ -1,5 +1,5 @@
 name: SVG rasterizer
-description: rsvg-convert, which the QR code renderer runs to draw SVG logos for PNG codes (Dockerfile.prod and the development image install it too)
+description: rsvg-convert, which the QR code renderer runs to draw SVG logos for PNG codes and the mail logo service to draw an SVG mail logo (Dockerfile.prod and the development image install it too)
 
 runs:
   using: composite

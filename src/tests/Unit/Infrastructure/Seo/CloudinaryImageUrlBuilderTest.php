@@ -143,4 +143,19 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         $this->assertNull($builder->mediaOriginal('docs/a', 'raw/../x'));
         $this->assertNull((new CloudinaryImageUrlBuilder('', 'site'))->mediaThumbnail('events/a', 400));
     }
+
+    public function test_email_logo_is_a_png_that_fits_the_given_box(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'guildforge');
+
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/h_128,w_512,c_limit,f_png/guildforge/branding/logo-email',
+            $builder->emailLogo('branding/logo-email.webp', 128, 512),
+        );
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/h_128,w_512,c_limit,f_png/guildforge/branding/logo-email',
+            $builder->emailLogo('branding/logo-email.avif', 128, 512),
+        );
+        $this->assertNull((new CloudinaryImageUrlBuilder('', 'guildforge'))->emailLogo('branding/logo-email.webp', 128, 512));
+    }
 }
