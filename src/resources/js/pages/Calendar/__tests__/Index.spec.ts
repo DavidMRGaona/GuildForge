@@ -24,6 +24,20 @@ describe('Calendar/Index', () => {
         expect(link.attributes('guide')).toBe('core.events.find-events');
     });
 
+    it('opens with the same title band as the other lists', () => {
+        const band = mountPage().get('[data-testid="page-band"]');
+
+        expect(band.classes()).toEqual(expect.arrayContaining(['bg-surface', 'shadow']));
+        expect(band.get('h1').text()).toBe('Calendario de eventos');
+        expect(band.text()).toContain('Todas las actividades de la asociación de un vistazo');
+    });
+
+    it('puts the personal filter in the title band', () => {
+        const band = mountPage({ personalCalendar: true }).get('[data-testid="page-band"]');
+
+        expect(band.find('#calendar-only-mine').exists()).toBe(true);
+    });
+
     it('never offers the personal filter unless the page allows it', () => {
         const wrapper = mountPage();
 

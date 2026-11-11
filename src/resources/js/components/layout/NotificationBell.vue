@@ -150,7 +150,7 @@ async function markAllRead(): Promise<void> {
             :aria-label="buttonLabel"
             :aria-expanded="isOpen"
             :aria-controls="panelId"
-            class="relative p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+            class="relative p-2 rounded-md text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             data-testid="notification-bell"
             @click="toggle"
         >

@@ -119,4 +119,19 @@ describe('TheHeader', () => {
         expect(brand.find('img').exists()).toBe(false);
         expect(brand.text()).toBe('Example guild');
     });
+
+    it('sits above the page band below it, so its shadow is not painted over', () => {
+        const header = mountHeader().get('header');
+
+        expect(header.classes()).toEqual(
+            expect.arrayContaining(['relative', 'z-30', 'shadow-sm', 'dark:border-b'])
+        );
+    });
+
+    it('rings its buttons only on keyboard focus, not after a click', () => {
+        const search = mountHeader().get('button[aria-label="Buscar"]');
+
+        expect(search.classes()).toContain('focus-visible:ring-2');
+        expect(search.classes()).not.toContain('focus:ring-2');
+    });
 });

@@ -55,7 +55,7 @@ onUnmounted(() => {
     <div ref="dropdownRef" class="relative">
         <button
             type="button"
-            class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-base-primary hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+            class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-base-primary hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             :aria-expanded="isOpen"
             @click="toggleDropdown"
         >

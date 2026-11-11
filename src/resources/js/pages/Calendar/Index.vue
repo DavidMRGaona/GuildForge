@@ -87,44 +87,51 @@ const closeMobileModal = (): void => {
 </script>
 
 <template>
-    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <!--
-            Desktop: title over the calendar and the filter over the detail panel, in the
-            same three columns, so the filter lines up with the panel below it.
-        -->
-        <div class="lg:grid lg:grid-cols-3 lg:gap-x-8">
-            <!-- Page header -->
-            <div class="mb-8 flex items-center gap-3 lg:col-span-2 lg:self-start">
-                <h1 class="text-3xl font-bold tracking-tight text-base-primary">
-                    {{ t('calendar.title') }}
-                </h1>
-                <HelpLink guide="core.events.find-events" />
-            </div>
-
-            <!-- The toggle row is as tall as the title's line, so both share a centre line -->
-            <div v-if="personalCalendar" class="mb-6 max-w-sm lg:col-start-3 lg:mb-8 lg:max-w-none">
-                <div class="flex min-h-9 items-center gap-2">
-                    <FormToggle
-                        id="calendar-only-mine"
-                        v-model="onlyMine"
-                        :label="t('calendar.onlyMine')"
-                    />
-                    <HelpLink guide="core.events.personal-calendar" />
+    <!-- Title band, as in the other lists; the filter sits over the detail panel's column -->
+    <div data-testid="page-band" class="bg-surface shadow dark:shadow-neutral-900/50">
+        <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <div class="lg:grid lg:grid-cols-3 lg:items-center lg:gap-x-8">
+                <div class="lg:col-span-2">
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-3xl font-bold tracking-tight text-base-primary">
+                            {{ t('calendar.title') }}
+                        </h1>
+                        <HelpLink guide="core.events.find-events" />
+                    </div>
+                    <p class="mt-2 text-lg text-base-secondary">
+                        {{ t('calendar.subtitle') }}
+                    </p>
                 </div>
-                <p class="mt-1 text-xs text-base-muted">
-                    {{ t('calendar.onlyMineHint') }}
-                </p>
-                <p
-                    v-if="showOnlyMineEmpty"
-                    role="status"
-                    class="mt-3 rounded-lg bg-muted p-4 text-sm text-base-secondary"
-                >
-                    {{ t('calendar.onlyMineEmpty') }}
-                </p>
-            </div>
 
+                <div v-if="personalCalendar" class="mt-4 max-w-sm lg:mt-0 lg:max-w-none">
+                    <div class="flex min-h-9 items-center gap-2">
+                        <FormToggle
+                            id="calendar-only-mine"
+                            v-model="onlyMine"
+                            :label="t('calendar.onlyMine')"
+                        />
+                        <HelpLink guide="core.events.personal-calendar" />
+                    </div>
+                    <p class="mt-1 text-xs text-base-muted">
+                        {{ t('calendar.onlyMineHint') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <p
+            v-if="showOnlyMineEmpty"
+            role="status"
+            class="mb-6 rounded-lg bg-muted p-4 text-sm text-base-secondary"
+        >
+            {{ t('calendar.onlyMineEmpty') }}
+        </p>
+
+        <div class="lg:grid lg:grid-cols-3 lg:gap-x-8">
             <!-- Calendar (2/3 width on desktop) -->
-            <div class="lg:col-span-2 lg:col-start-1">
+            <div class="lg:col-span-2">
                 <div class="hidden lg:block">
                     <EventCalendar
                         show-tooltips
@@ -144,8 +151,8 @@ const closeMobileModal = (): void => {
                 </div>
 
                 <!--
-                    Legend and the public subscription, below the calendar: away from the
-                    "only mine" toggle beside the title. On phones the button takes its own row.
+                    Legend and the public subscription, below the calendar. On phones the
+                    button takes its own row.
                 -->
                 <div
                     v-if="legend.length > 0 || publicCalendarFeed"
