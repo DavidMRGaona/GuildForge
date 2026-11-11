@@ -429,11 +429,14 @@ final class ModuleLoader
     }
 
     /**
-     * Whether boot() loads the module: enabled and compatible (it may not be loaded yet, e.g.
-     * enabled by another process after this one booted).
+     * Whether boot() would load the module now: enabled and compatible. Read afresh, since the
+     * list this process booted with may be stale (another process may have enabled or disabled
+     * it since, e.g. while a queue worker runs).
      */
     public function loads(string $moduleName): bool
     {
+        $this->resolver->reset();
+
         return in_array($moduleName, $this->resolver->names(), true);
     }
 

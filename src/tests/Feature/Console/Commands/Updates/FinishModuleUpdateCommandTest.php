@@ -357,7 +357,15 @@ PHP);
         $root = $this->modulesPath.'/finish-mod';
         File::ensureDirectoryExists($root.'/database/migrations');
         File::ensureDirectoryExists($root.'/database/seeders');
-        File::put($root.'/module.json', json_encode(['name' => 'finish-mod', 'version' => '1.0.1-beta'], JSON_THROW_ON_ERROR));
+        // Compatible: the seeders of an enabled module run only when this site can load it
+        File::put($root.'/module.json', json_encode([
+            'name' => 'finish-mod',
+            'version' => '1.0.1-beta',
+            'namespace' => 'Modules\\FinishMod',
+            'provider' => 'FinishModServiceProvider',
+            'storesUtc' => true,
+            'requires' => ['core' => '>=2.0'],
+        ], JSON_THROW_ON_ERROR));
 
         File::put($root.'/database/migrations/2026_10_04_000000_create_finish_mod_items_table.php', <<<'PHP'
 <?php

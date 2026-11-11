@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Modules\Services;
 
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
@@ -59,6 +60,10 @@ final class ModuleSeederRunnerTest extends TestCase
             'requires' => ['core' => '>=2.0'],
         ], JSON_THROW_ON_ERROR));
         $this->writeSeeder('ItemsSeeder', "DB::table('seedmod_items')->insert(['name' => 'default']);");
+
+        // As in a booted process (or a queue worker): the list of modules to load was read before
+        // this one was enabled, and the runner must not trust that stale answer
+        $this->app->make(EnabledModulesResolverInterface::class)->names();
 
         ModuleModel::factory()->enabled()->create([
             'name' => 'seed-mod',
