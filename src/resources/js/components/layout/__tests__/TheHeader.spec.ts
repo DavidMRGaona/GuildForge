@@ -124,8 +124,20 @@ describe('TheHeader', () => {
         const header = mountHeader().get('header');
 
         expect(header.classes()).toEqual(
-            expect.arrayContaining(['relative', 'z-30', 'shadow-sm', 'dark:border-b'])
+            expect.arrayContaining(['relative', 'shadow-sm', 'dark:border-b'])
         );
+    });
+
+    // Its layer caps every submenu inside it: below the close layer that NavDropdown puts on
+    // <body> (z-40), a click on a submenu item would land on that layer instead
+    it('sits above the submenu close layer, so submenu items can be clicked', () => {
+        const layer = mountHeader()
+            .get('header')
+            .classes()
+            .map((name) => /^z-(\d+)$/.exec(name)?.[1])
+            .find((value) => value !== undefined);
+
+        expect(Number(layer)).toBeGreaterThan(40);
     });
 
     it('rings its buttons only on keyboard focus, not after a click', () => {
