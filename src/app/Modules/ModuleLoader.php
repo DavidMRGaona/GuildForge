@@ -431,7 +431,8 @@ final class ModuleLoader
     /**
      * Whether boot() would load the module now: enabled and compatible. Read afresh, since the
      * list this process booted with may be stale (another process may have enabled or disabled
-     * it since, e.g. while a queue worker runs).
+     * it since, e.g. while a queue worker runs). It resets the resolver for the whole process,
+     * so it is for one-off decisions (once per seeding), never for every request or listener.
      */
     public function loads(string $moduleName): bool
     {
