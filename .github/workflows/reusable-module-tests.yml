@@ -218,8 +218,12 @@ jobs:
       - name: Install host dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      # The core's QR code renderer runs it for SVG logos in PNG codes
+      # The core's QR code renderer runs it for SVG logos in PNG codes. Most module suites
+      # never draw one, so a runner that cannot install it only warns: a test that does
+      # draw one then fails on its own, naming rsvg-convert (#531)
       - uses: ./.github/actions/svg-rasterizer
+        with:
+          required: 'false'
 
       - name: Prepare environment
         run: |

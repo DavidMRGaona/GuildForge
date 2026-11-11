@@ -1,14 +1,87 @@
 name: SVG rasterizer
 description: rsvg-convert, which the QR code renderer runs to draw SVG logos for PNG codes and the mail logo service to draw an SVG mail logo (Dockerfile.prod and the development image install it too)
 
+inputs:
+  required:
+    description: >-
+      'true' fails the job when rsvg-convert cannot be installed. 'false' only warns, for suites
+      where few or no tests draw SVG logos: those tests then fail on their own, naming rsvg-convert.
+    default: 'true'
+
 runs:
   using: composite
   steps:
+    # The packages apt downloaded the last time it worked, so a runner that cannot reach the
+    # Ubuntu mirrors (DNS failures on security.ubuntu.com, #531) still installs it
+    - name: Restore rsvg-convert packages
+      id: restore
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ runner.temp }}/svg-rasterizer-debs
+        key: svg-rasterizer-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}-v1
+
     - name: Install rsvg-convert
+      id: install
       shell: bash
+      env:
+        DEBS: ${{ runner.temp }}/svg-rasterizer-debs
+        REQUIRED: ${{ inputs.required }}
       run: |
-        if ! command -v rsvg-convert >/dev/null; then
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends librsvg2-bin
+        set -uo pipefail
+        mkdir -p "$DEBS/partial"
+
+        installed=false
+        downloaded=false
+        if command -v rsvg-convert >/dev/null; then
+          installed=true
         fi
-        rsvg-convert --version
+
+        if [ "$installed" = false ] && compgen -G "$DEBS/*.deb" >/dev/null; then
+          if sudo apt-get install -y -qq --no-install-recommends --no-download "$DEBS"/*.deb; then
+            installed=true
+            echo "Installed from the cached packages"
+          else
+            echo "The cached packages do not fit this image; falling back to the mirrors"
+          fi
+        fi
+
+        apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=20)
+        for attempt in 1 2 3; do
+          [ "$installed" = true ] && break
+          [ "$attempt" -gt 1 ] && sleep $((attempt * 20))
+          echo "Installing librsvg2-bin from the mirrors (attempt $attempt of 3)"
+          sudo apt-get "${apt_options[@]}" update -qq || true
+          if sudo apt-get "${apt_options[@]}" install -y -qq --no-install-recommends --download-only \
+              -o Dir::Cache::Archives="$DEBS" librsvg2-bin \
+            && sudo apt-get install -y -qq --no-install-recommends --no-download "$DEBS"/*.deb; then
+            installed=true
+            downloaded=true
+          fi
+        done
+
+        if [ "$installed" = true ] && command -v rsvg-convert >/dev/null; then
+          rsvg-convert --version
+          sudo chmod -R a+rX "$DEBS"
+          echo "downloaded=$downloaded" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "--- apt mirrors this runner uses"
+        cat /etc/apt/apt-mirrors.txt 2>/dev/null || grep -rh '^URIs:' /etc/apt/sources.list.d 2>/dev/null || true
+        for host in $(grep -ohE 'https?://[^/ ]+' /etc/apt/apt-mirrors.txt /etc/apt/sources.list.d/* 2>/dev/null | sed -E 's#https?://##' | sort -u); do
+          echo "$host: $(getent hosts "$host" | head -1 || true)"
+        done
+
+        message="Could not install rsvg-convert (librsvg2-bin): the runner could not reach the Ubuntu package mirrors and no cached packages fit. This is the CI machine, not the tests."
+        if [ "$REQUIRED" = true ]; then
+          echo "::error title=rsvg-convert not installed::$message"
+          exit 1
+        fi
+        echo "::warning title=rsvg-convert not installed::$message Tests that draw SVG logos will fail, naming rsvg-convert."
+
+    - name: Save rsvg-convert packages
+      if: ${{ steps.install.outputs.downloaded == 'true' && steps.restore.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ runner.temp }}/svg-rasterizer-debs
+        key: svg-rasterizer-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}-v1
