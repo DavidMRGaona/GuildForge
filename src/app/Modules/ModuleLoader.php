@@ -58,10 +58,15 @@ final class ModuleLoader
     }
 
     /**
-     * Boot a specific module.
+     * Boot a specific module, once: a module booted already (e.g. to run its seeders while
+     * it was being enabled) keeps its provider and hooks.
      */
     public function bootModule(Module $module): void
     {
+        if ($this->isLoaded($module->name()->value)) {
+            return;
+        }
+
         $providerClass = $module->namespace().'\\'.$module->provider();
         try {
             $modulePath = $this->paths->resolve($module);

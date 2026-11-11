@@ -10,6 +10,7 @@ use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Modules\Services\ModuleSeederRunner;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
+use App\Modules\ModuleLoader;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,7 @@ final class ModuleSeederRunnerTest extends TestCase
             'name' => 'seed-mod',
             'path' => $this->modulesPath.'/seed-mod',
             'namespace' => $this->namespace,
+            'provider' => 'SeedModServiceProvider',
             'installed_at' => now(),
         ]);
     }
@@ -101,6 +103,53 @@ final class ModuleSeederRunnerTest extends TestCase
         $this->assertSame(["{$this->namespace}\\Database\\Seeders\\ItemsSeeder"], $this->runner()->seed($this->module()));
     }
 
+    /**
+     * A seeder is module code like any other: it may resolve what the module's provider binds,
+     * also when the module is enabled for the first time and its provider has not booted yet.
+     */
+    public function test_a_seeder_can_resolve_what_the_module_provider_binds(): void
+    {
+        $this->writeProvider();
+        $this->writeSeeder('NamedItemsSeeder', "DB::table('seedmod_items')->insert(['name' => app(\\{$this->namespace}\\Contracts\\ItemName::class)->value()]);");
+
+        $this->assertFalse($this->loader()->isLoaded('seed-mod'));
+
+        $this->runner()->seed($this->module());
+
+        $this->assertTrue($this->loader()->isLoaded('seed-mod'));
+        $this->assertSame(1, DB::table('seedmod_items')->where('name', 'from provider')->count());
+    }
+
+    public function test_the_provider_is_not_booted_when_no_seeder_is_pending(): void
+    {
+        $this->writeProvider();
+        ModuleSeederHistoryModel::markExecuted('seed-mod', "{$this->namespace}\\Database\\Seeders\\ItemsSeeder");
+
+        $this->assertSame([], $this->runner()->seed($this->module()));
+
+        $this->assertFalse($this->loader()->isLoaded('seed-mod'));
+    }
+
+    /**
+     * ModuleTestCase boots the module after enabling it, and enabling may already have booted it
+     * to run its seeders: the second boot must not register its hooks again.
+     */
+    public function test_booting_a_loaded_module_again_keeps_its_provider(): void
+    {
+        $this->writeProvider();
+        $this->runner()->seed($this->module());
+        $provider = $this->loader()->getProvider('seed-mod');
+
+        $this->loader()->bootModule($this->module());
+
+        $this->assertSame($provider, $this->loader()->getProvider('seed-mod'));
+    }
+
+    private function loader(): ModuleLoader
+    {
+        return $this->app->make(ModuleLoader::class);
+    }
+
     private function runner(): ModuleSeederRunner
     {
         return $this->app->make(ModuleSeederRunner::class);
@@ -112,6 +161,52 @@ final class ModuleSeederRunnerTest extends TestCase
         $this->assertNotNull($module);
 
         return $module;
+    }
+
+    private function writeProvider(): void
+    {
+        File::ensureDirectoryExists($this->modulesPath.'/seed-mod/src/Contracts');
+
+        File::put($this->modulesPath.'/seed-mod/src/Contracts/ItemName.php', <<<PHP
+<?php
+
+namespace {$this->namespace}\\Contracts;
+
+interface ItemName
+{
+    public function value(): string;
+}
+PHP);
+
+        File::put($this->modulesPath.'/seed-mod/src/SeedModServiceProvider.php', <<<PHP
+<?php
+
+namespace {$this->namespace};
+
+use App\\Modules\\ModuleServiceProvider;
+use {$this->namespace}\\Contracts\\ItemName;
+
+class SeedModServiceProvider extends ModuleServiceProvider
+{
+    public function moduleName(): string
+    {
+        return 'seed-mod';
+    }
+
+    public function register(): void
+    {
+        parent::register();
+
+        \$this->app->bind(ItemName::class, fn (): ItemName => new class implements ItemName
+        {
+            public function value(): string
+            {
+                return 'from provider';
+            }
+        });
+    }
+}
+PHP);
     }
 
     private function writeSeeder(string $class, string $body): void

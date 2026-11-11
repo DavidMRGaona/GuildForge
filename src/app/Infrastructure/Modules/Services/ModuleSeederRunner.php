@@ -9,6 +9,7 @@ use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryModel;
+use App\Modules\ModuleLoader;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Log;
 
@@ -17,6 +18,7 @@ final readonly class ModuleSeederRunner
     public function __construct(
         private string $modulesPath,
         private ModuleMigrationAnalyzerInterface $analyzer,
+        private ?ModuleLoader $loader = null,
     ) {}
 
     /**
@@ -38,6 +40,10 @@ final readonly class ModuleSeederRunner
      * Each seeder runs once per installation: running it again on every update would
      * overwrite what admins edited or bring back what they deleted. A new version that
      * needs more default data ships a new seeder (or a data migration).
+     *
+     * Seeders are module code: before the first pending one runs, the module's provider is
+     * booted when it was not yet (enabling a module for the first time runs its seeders before
+     * the module is enabled), so they can resolve what it binds.
      *
      * @return array<string>
      */
@@ -124,6 +130,8 @@ final readonly class ModuleSeederRunner
                     continue;
                 }
 
+                $this->bootModuleProvider($module);
+
                 $seeder = $app->make($fullClassName);
                 $this->executeSeeder($seeder);
                 ModuleSeederHistoryModel::markExecuted($module->name()->value, $fullClassName);
@@ -143,6 +151,18 @@ final readonly class ModuleSeederRunner
             // Re-throw seeder execution errors so they're visible
             throw $e;
         }
+    }
+
+    /**
+     * Boot the module's provider unless it is loaded already.
+     */
+    private function bootModuleProvider(Module $module): void
+    {
+        if (! $this->loader instanceof ModuleLoader || $this->loader->isLoaded($module->name()->value)) {
+            return;
+        }
+
+        $this->loader->bootModule($module);
     }
 
     /**
