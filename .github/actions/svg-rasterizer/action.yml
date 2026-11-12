@@ -34,7 +34,9 @@ runs:
         REQUIRED: ${{ inputs.required }}
       run: |
         set -uo pipefail
-        mkdir -p "$DEBS/partial"
+        # apt downloads as _apt, which must own partial/ (without it apt warns and downloads as root)
+        mkdir -p "$DEBS"
+        sudo install -d -o _apt -g root -m 0700 "$DEBS/partial"
 
         installed=false
         downloaded=false
@@ -57,7 +59,8 @@ runs:
           [ "$attempt" -gt 1 ] && sleep $((attempt * 20))
           echo "Installing librsvg2-bin from the mirrors (attempt $attempt of 3)"
           sudo apt-get "${apt_options[@]}" update -qq || true
-          if sudo apt-get "${apt_options[@]}" install -y -qq --no-install-recommends --download-only \
+          # -q, not -qq: a failed download must say which mirror and why
+          if sudo apt-get "${apt_options[@]}" install -y -q --no-install-recommends --download-only \
               -o Dir::Cache::Archives="$DEBS" librsvg2-bin \
             && sudo apt-get install -y -qq --no-install-recommends --no-download "$DEBS"/*.deb; then
             installed=true
