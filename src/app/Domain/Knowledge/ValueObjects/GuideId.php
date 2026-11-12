@@ -12,7 +12,7 @@ final readonly class GuideId implements Stringable
     /** Prefix of the site's own guides, written in the admin panel; files never use it */
     public const string SITE_PREFIX = 'site';
 
-    private const string PATTERN = '/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$/';
+    private const string PATTERN = '/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+\z/';
 
     private function __construct(private string $value) {}
 

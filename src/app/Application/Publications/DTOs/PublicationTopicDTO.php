@@ -13,7 +13,7 @@ use InvalidArgumentException;
 final readonly class PublicationTopicDTO
 {
     /** 1 to 64 characters from [a-z0-9._-], starting with a letter or digit. */
-    public const string KEY_PATTERN = '/^[a-z0-9][a-z0-9._-]{0,63}$/';
+    public const string KEY_PATTERN = '/^[a-z0-9][a-z0-9._-]{0,63}\z/';
 
     public function __construct(
         public string $key,

@@ -35,6 +35,15 @@ final class CalendarFeedTokenServiceTest extends TestCase
         $this->assertSame($user->id, $this->tokens->userIdFor($token));
     }
 
+    public function test_a_token_with_a_trailing_newline_finds_no_account(): void
+    {
+        $user = UserModel::factory()->create();
+
+        $token = $this->tokens->issue($user->id);
+
+        $this->assertNull($this->tokens->userIdFor($token."\n"));
+    }
+
     public function test_only_a_hash_of_the_token_is_stored(): void
     {
         $user = UserModel::factory()->create();

@@ -26,7 +26,7 @@ final class MailBrandingService implements MailBrandingServiceInterface
 
     private const string SYSTEM_FONTS = '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
 
-    private const string FONT_NAME_PATTERN = '/^[A-Za-z0-9 ]{1,40}$/';
+    private const string FONT_NAME_PATTERN = '/^[A-Za-z0-9 ]{1,40}\z/';
 
     private const int MAX_RADIUS_PX = 16;
 

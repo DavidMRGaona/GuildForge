@@ -202,6 +202,19 @@ final class RoleChangesRefreshAuthorizationTest extends TestCase
         $this->assertFalse($this->authorization->can($user, 'events.create'));
     }
 
+    public function test_a_version_key_with_a_trailing_newline_is_replaced(): void
+    {
+        $user = UserModel::factory()->create();
+        $malformed = str_repeat('a', 32)."\n";
+        Cache::forever('authorization_cache_version', $malformed);
+        $this->app->forgetScopedInstances();
+
+        $this->authorization->can($user, 'events.create');
+
+        $this->assertNotSame($malformed, Cache::get('authorization_cache_version'));
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{32}\z/', Cache::get('authorization_cache_version'));
+    }
+
     public function test_a_cached_lookup_of_an_unexpected_shape_is_read_again_from_the_database(): void
     {
         $role = $this->roleWith('events.create');

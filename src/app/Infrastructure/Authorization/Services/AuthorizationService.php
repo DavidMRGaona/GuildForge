@@ -39,7 +39,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
      */
     private const string USER_CACHE_VERSION_KEY_PREFIX = 'authorization_cache_version_user_';
 
-    private const string CACHE_VERSION_PATTERN = '/^[0-9a-f]{32}$/';
+    private const string CACHE_VERSION_PATTERN = '/^[0-9a-f]{32}\z/';
 
     public function __construct(
         private BaseRoleRule $baseRole = new BaseRoleRule,

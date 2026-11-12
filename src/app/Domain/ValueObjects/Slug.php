@@ -10,7 +10,7 @@ use Stringable;
 
 final readonly class Slug implements Stringable
 {
-    private const string PATTERN = '/^[a-z0-9]+(?:-[a-z0-9]+)*$/';
+    private const string PATTERN = '/^[a-z0-9]+(?:-[a-z0-9]+)*\z/';
 
     public function __construct(
         public string $value,
