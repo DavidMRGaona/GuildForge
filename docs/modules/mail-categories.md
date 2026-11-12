@@ -172,7 +172,7 @@ final class PlayerJoinedNotification extends Notification implements HasMailCate
 
 - `text` is put on one line and cut to 200 characters (ending in «…»). It is escaped wherever it is shown, so pass names as they are. It is written when the notice is kept, in the locale of that moment.
 - `url` is optional and must be an absolute `http(s)` address (`route()` gives one); anything else throws `InvalidArgumentException`.
-- `actorId` is optional: the account whose action the line tells about, when its name is in the text. The line is deleted when that account is anonymized (core#537); without it the line stays until it is sent or expires (a week). Pass it whenever the line names a person.
+- `actorId` is optional: the account whose action the line tells about, when its name is in the text. The line is deleted when that account is anonymized (core#537); without it the line is **not** deleted: it goes out in the next digest with the name inside (known gap for modules written before core#537, until they pass it). Pass it whenever the line names a person.
 - Without `HasMailDigestLine`, or when it returns `null` or throws, the digest uses the **subject** of the mail and the address of its **button** (`action()`): every notification has a subject, and it already says in one line what the mail is about. Implement the contract when the subject is too vague on its own («Nueva inscripción»).
 - A notification whose `toMail()` returns a `Mailable` is never kept: it is sent at once.
 - Both need the core release with core#333: set `requires.core` accordingly.

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * The account whose action a digest line tells about (core#537), so the line goes when that
- * account is anonymized. Lines kept before this have none and expire within a week.
+ * account is anonymized. Lines without one (kept before this, or by modules that do not pass it) are not deleted.
  */
 return new class extends Migration
 {
