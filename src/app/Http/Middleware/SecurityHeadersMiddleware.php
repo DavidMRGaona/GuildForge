@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Application\Security\Services\ContentSecurityPolicySourcesInterface;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SecurityHeadersMiddleware
 {
+    public function __construct(
+        private ContentSecurityPolicySourcesInterface $sources,
+    ) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         /** @var Response $response */
@@ -37,6 +42,7 @@ final readonly class SecurityHeadersMiddleware
             $this->imgSrc(),
             "font-src 'self' https://fonts.bunny.net data:",
             $this->connectSrc(),
+            $this->frameSrc(),
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
@@ -82,6 +88,15 @@ final readonly class SecurityHeadersMiddleware
         }
 
         return "img-src {$sources}";
+    }
+
+    /**
+     * Frames from the site itself, and from the exact https origins modules registered
+     * (ContentSecurityPolicySourcesInterface): the players of content the reader chose to load.
+     */
+    private function frameSrc(): string
+    {
+        return trim("frame-src 'self' ".implode(' ', $this->sources->frameOrigins()));
     }
 
     private function connectSrc(): string
