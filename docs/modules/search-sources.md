@@ -78,10 +78,10 @@ public function visibleSearchHits(array $ids, ?object $user): array;
 - **One query.** Answer with a single query over all the ids (`whereKey($ids)` plus the rule of `document()`), never one per id: it runs on every search.
 - **It only takes away.** Ids you did not receive are ignored; return the subset that is still visible. Ids that are not valid for the source (a malformed uuid) are simply left out, without querying.
 - **It fails closed.** If it throws, or answers with something that is not a list, no result of the type is shown on that page and the core logs an error. Make it as reliable as `document()`.
-- **Pages and counts.** Only the rows of the page are checked: the engine's offsets stay as they are, so a page may come back shorter, and the counts of the type and the total lose just the rows taken away. The next page carries on where the engine left off, without repeating or skipping results.
+- **Pages and counts.** Only the rows of the page are checked: the engine's offsets stay as they are, so a page may come back shorter, and the counts of the type and the total lose just the rows taken away. The next page carries on where the engine left off, without repeating or skipping results. When every row of a `/buscar` page is taken away, the results page goes on to the next ones (at most three) and shows the first that has rows.
 - **Keep refreshing.** This does not replace `refresh()`/`forget()`: the check hides a stale row, the refresh rewrites it (and the counts are exact again once it has run).
 
-Use the same rule as `document()`. If it depends on things that can change outside the record (a category becoming more private, a module that is no longer enabled), the check is also what keeps the results right until the queued refresh runs.
+Use the same rule as `document()`, ideally the same query (the core sources share one `searchable()` query between `document()`, `documents()` and the check). If it depends on things that can change outside the record (a category becoming more private, a module that is no longer enabled), the check is also what keeps the results right until the queued refresh runs.
 
 ```php
 use App\Application\Search\Contracts\ChecksSearchHits;
