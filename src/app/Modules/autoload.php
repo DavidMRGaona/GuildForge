@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\ModuleAutoloader;
 
 /**
  * Module Autoloader
@@ -39,18 +40,7 @@ declare(strict_types=1);
         $studlyName = str_replace(' ', '', ucwords(str_replace('-', ' ', $moduleName)));
         $namespace = 'Modules\\'.$studlyName.'\\';
 
-        // Register autoloader for this module
-        spl_autoload_register(static function (string $class) use ($namespace, $srcPath): void {
-            if (! str_starts_with($class, $namespace)) {
-                return;
-            }
-
-            $relativeClass = substr($class, strlen($namespace));
-            $file = $srcPath.'/'.str_replace('\\', '/', $relativeClass).'.php';
-
-            if (file_exists($file)) {
-                require_once $file;
-            }
-        });
+        // Register autoloader for this module (once per process, see ModuleAutoloader)
+        ModuleAutoloader::register($namespace, $srcPath);
     }
 })();
