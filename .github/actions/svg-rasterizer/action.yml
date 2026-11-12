@@ -34,9 +34,7 @@ runs:
         REQUIRED: ${{ inputs.required }}
       run: |
         set -uo pipefail
-        # apt downloads as _apt, which must own partial/ (without it apt warns and downloads as root)
-        mkdir -p "$DEBS"
-        sudo install -d -o _apt -g root -m 0700 "$DEBS/partial"
+        mkdir -p "$DEBS/partial"
 
         installed=false
         downloaded=false
@@ -45,15 +43,20 @@ runs:
         fi
 
         if [ "$installed" = false ] && compgen -G "$DEBS/*.deb" >/dev/null; then
-          if sudo apt-get install -y -qq --no-install-recommends --no-download "$DEBS"/*.deb; then
+          # dpkg, not apt: apt counts copying a local .deb as a download. The dependencies come
+          # with the image (only librsvg2-bin is missing); if one is not there, dpkg fails
+          if sudo dpkg -i "$DEBS"/*.deb; then
             installed=true
             echo "Installed from the cached packages"
           else
+            # A half-installed package would make apt refuse the next step
+            sudo dpkg --remove librsvg2-bin >/dev/null 2>&1 || true
             echo "The cached packages do not fit this image; falling back to the mirrors"
           fi
         fi
 
-        apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=20)
+        # The download folder is under the runner's home, which _apt cannot reach: download as root
+        apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o APT::Sandbox::User=root)
         for attempt in 1 2 3; do
           [ "$installed" = true ] && break
           [ "$attempt" -gt 1 ] && sleep $((attempt * 20))
@@ -62,7 +65,7 @@ runs:
           # -q, not -qq: a failed download must say which mirror and why
           if sudo apt-get "${apt_options[@]}" install -y -q --no-install-recommends --download-only \
               -o Dir::Cache::Archives="$DEBS" librsvg2-bin \
-            && sudo apt-get install -y -qq --no-install-recommends --no-download "$DEBS"/*.deb; then
+            && sudo dpkg -i "$DEBS"/*.deb; then
             installed=true
             downloaded=true
           fi
