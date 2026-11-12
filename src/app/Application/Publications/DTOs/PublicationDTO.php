@@ -20,7 +20,7 @@ use InvalidArgumentException;
 final readonly class PublicationDTO
 {
     /** Stable kebab-case type, as returned by PublicationSourceInterface::type(). */
-    public const string TYPE_PATTERN = '/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/';
+    public const string TYPE_PATTERN = '/^[a-z][a-z0-9]*(-[a-z0-9]+)*\z/';
 
     /** Longest id a source may use. */
     public const int MAX_ID_LENGTH = 100;

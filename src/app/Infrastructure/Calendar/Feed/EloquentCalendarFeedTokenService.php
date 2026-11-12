@@ -20,7 +20,7 @@ final readonly class EloquentCalendarFeedTokenService implements CalendarFeedTok
     private const int TOKEN_BYTES = 32;
 
     /** Length of a 32-byte token in base64url without padding. */
-    private const string TOKEN_PATTERN = '/^[A-Za-z0-9_-]{43}$/';
+    private const string TOKEN_PATTERN = '/^[A-Za-z0-9_-]{43}\z/';
 
     public function issue(string $userId): string
     {

@@ -77,7 +77,7 @@ final readonly class PermissionKey implements Stringable
     {
         // Check for module:resource.action or resource.action format
         // Allows lowercase letters, numbers, hyphens, and underscores
-        $pattern = '/^(?:([a-z0-9_-]+):)?([a-z0-9_-]+)\.([a-z0-9_-]+)$/';
+        $pattern = '/^(?:([a-z0-9_-]+):)?([a-z0-9_-]+)\.([a-z0-9_-]+)\z/';
 
         if (preg_match($pattern, $value, $matches) !== 1) {
             throw new InvalidArgumentException(

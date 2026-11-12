@@ -20,7 +20,7 @@ use InvalidArgumentException;
  */
 final readonly class SurveySubjectAttributeDTO
 {
-    private const string KEY_PATTERN = '/^[a-z][a-z0-9_]*$/';
+    private const string KEY_PATTERN = '/^[a-z][a-z0-9_]*\z/';
 
     public function __construct(
         public string $key,

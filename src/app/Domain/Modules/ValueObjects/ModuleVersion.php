@@ -11,7 +11,7 @@ use Stringable;
 
 final readonly class ModuleVersion implements Stringable
 {
-    private const string SEMVER_PATTERN = '/^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*))?$/';
+    private const string SEMVER_PATTERN = '/^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*))?\z/';
 
     public function __construct(
         public int $major,

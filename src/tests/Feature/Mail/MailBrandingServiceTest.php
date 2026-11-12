@@ -129,6 +129,16 @@ final class MailBrandingServiceTest extends TestCase
         $this->assertStringNotContainsString("'", $branding->fontBody);
     }
 
+    public function test_a_font_name_with_a_trailing_newline_falls_back_to_the_system_font(): void
+    {
+        $this->settings()->set('theme_font_body', "Montserrat\n");
+
+        $branding = $this->service()->branding();
+
+        $this->assertStringNotContainsString('Montserrat', $branding->fontBody);
+        $this->assertStringNotContainsString('montserrat', (string) $branding->fontStylesheetUrl);
+    }
+
     public function test_border_radius_follows_the_site_setting_in_pixels(): void
     {
         $this->settings()->set('theme_border_radius', 'large');

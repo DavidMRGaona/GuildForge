@@ -9,7 +9,7 @@ use Stringable;
 
 final readonly class RoleName implements Stringable
 {
-    public const string PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
+    public const string PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*\z/';
 
     private const int MIN_LENGTH = 2;
 

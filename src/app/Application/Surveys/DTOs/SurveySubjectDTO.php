@@ -21,7 +21,7 @@ use InvalidArgumentException;
 final readonly class SurveySubjectDTO
 {
     /** Stable kebab-case type, as returned by SurveySubjectSourceInterface::sourceType(). */
-    public const string SOURCE_TYPE_PATTERN = '/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/';
+    public const string SOURCE_TYPE_PATTERN = '/^[a-z][a-z0-9]*(-[a-z0-9]+)*\z/';
 
     /** @var list<string> */
     public array $organizerIds;

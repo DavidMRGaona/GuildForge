@@ -109,7 +109,7 @@ final readonly class CloudinaryImageUrlBuilder
      */
     private function buildMedia(string $fileId, string $resourceType, ?string $transformations): ?string
     {
-        if ($this->cloudName === '' || $fileId === '' || preg_match('/^[a-z]+$/', $resourceType) !== 1) {
+        if ($this->cloudName === '' || $fileId === '' || preg_match('/^[a-z]+\z/', $resourceType) !== 1) {
             return null;
         }
 

@@ -9,9 +9,9 @@ use Stringable;
 
 final readonly class HexColor implements Stringable
 {
-    private const string PATTERN_FULL = '/^#?([A-Fa-f0-9]{6})$/';
+    private const string PATTERN_FULL = '/^#?([A-Fa-f0-9]{6})\z/';
 
-    private const string PATTERN_SHORT = '/^#?([A-Fa-f0-9]{3})$/';
+    private const string PATTERN_SHORT = '/^#?([A-Fa-f0-9]{3})\z/';
 
     public string $value;
 

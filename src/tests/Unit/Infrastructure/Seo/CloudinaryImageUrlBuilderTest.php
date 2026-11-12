@@ -104,6 +104,14 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         yield 'empty public id' => ['demo', ''];
     }
 
+    public function test_a_resource_type_with_a_trailing_newline_builds_no_url(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'site');
+
+        $this->assertNotNull($builder->mediaOriginal('events/abc', 'image'));
+        $this->assertNull($builder->mediaOriginal('events/abc', "image\n"));
+    }
+
     public function test_media_library_urls_are_built_from_the_file_id(): void
     {
         $builder = new CloudinaryImageUrlBuilder('demo', 'site');
