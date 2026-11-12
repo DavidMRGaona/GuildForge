@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Search\Sources;
 
+use App\Application\Search\Contracts\ChecksSearchHits;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Search\Sources\Concerns\ChecksSearchableHits;
 use App\Infrastructure\Search\Support\PlainText;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
-final class EventSearchSource implements IndexedSearchSourceInterface
+final class EventSearchSource implements ChecksSearchHits, IndexedSearchSourceInterface
 {
+    use ChecksSearchableHits;
+
     public function type(): string
     {
         return 'events';
@@ -39,7 +44,7 @@ final class EventSearchSource implements IndexedSearchSourceInterface
             return null;
         }
 
-        $event = EventModel::query()->with('tags')->whereKey($id)->where('is_published', true)->first();
+        $event = $this->searchable()->with('tags')->whereKey($id)->first();
 
         return $event instanceof EventModel ? $this->toDocument($event) : null;
     }
@@ -49,9 +54,19 @@ final class EventSearchSource implements IndexedSearchSourceInterface
      */
     public function documents(): iterable
     {
-        foreach (EventModel::query()->with('tags')->where('is_published', true)->lazyById(200) as $event) {
+        foreach ($this->searchable()->with('tags')->lazyById(200) as $event) {
             yield $this->toDocument($event);
         }
+    }
+
+    /**
+     * The records that may be found: documents, full rebuilds and the check of results all read it.
+     *
+     * @return Builder<EventModel>
+     */
+    private function searchable(): Builder
+    {
+        return EventModel::query()->where('is_published', true);
     }
 
     private function toDocument(EventModel $event): SearchDocumentDTO

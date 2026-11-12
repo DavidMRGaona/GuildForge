@@ -11,6 +11,7 @@ use App\Application\Search\Services\SearchMetricsServiceInterface;
 use App\Application\Search\Services\SiteSearchInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Search\Enums\SearchAudience;
+use App\Http\Controllers\SearchController;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use Carbon\CarbonImmutable;
@@ -21,6 +22,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Mockery;
 use RuntimeException;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
+use Tests\Support\Search\PublishedSearchRecords;
 use Tests\TestCase;
 
 final class SearchControllerTest extends TestCase
@@ -128,6 +130,23 @@ final class SearchControllerTest extends TestCase
         );
     }
 
+    public function test_content_unpublished_before_its_document_is_refreshed_is_not_shown(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+        $this->document('articles', ['title' => 'Pintar dragones']);
+        // Unpublished while the queued refresh of its document has not run yet
+        $this->document('articles', ['title' => 'Dragones retirados', 'source_id' => PublishedSearchRecords::sourceId('articles', published: false)]);
+
+        $this->get('/buscar?q=dragones')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('total', 2)
+                ->where('tabs.0.count', 2)
+                ->where('tabs.2.count', 1)
+                ->has('results', 2)
+                ->where('hasMore', false)
+        );
+    }
+
     public function test_unknown_tab_falls_back_to_all(): void
     {
         $this->document('events', ['title' => 'Torneo de dragones']);
@@ -168,6 +187,38 @@ final class SearchControllerTest extends TestCase
         );
         $this->get('/buscar?q=dragones&pagina=9')->assertInertia(
             fn (Assert $page) => $page->where('page', 9)->where('hasMore', false)->where('results', [])->where('total', 25)
+        );
+    }
+
+    public function test_a_page_left_empty_by_the_check_is_gone_past(): void
+    {
+        // The whole first page was unpublished before its documents were refreshed
+        for ($i = 1; $i <= SearchController::PER_PAGE; $i++) {
+            $this->document('articles', [
+                'title' => 'Dragones retirados '.$i,
+                'published_at' => CarbonImmutable::parse('2026-11-14 12:00:00', 'UTC')->subMinutes($i),
+                'source_id' => PublishedSearchRecords::sourceId('articles', published: false),
+            ]);
+        }
+        $this->document('articles', ['title' => 'Dragones a la vista', 'published_at' => CarbonImmutable::parse('2026-11-01 12:00:00', 'UTC')]);
+
+        // The emptied page is gone past: the answer is the next page, so "show more" carries on from it
+        $this->get('/buscar?q=dragones')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('page', 2)
+                ->has('results', 1)
+                ->where('results.0.title', 'Dragones a la vista')
+                ->where('total', 21)
+                ->where('hasMore', false)
+        );
+
+        $this->get('/buscar?q=dragones&pagina=2')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('page', 2)
+                ->has('results', 1)
+                ->where('results.0.title', 'Dragones a la vista')
+                ->where('total', 21)
+                ->where('hasMore', false)
         );
     }
 
@@ -374,7 +425,8 @@ final class SearchControllerTest extends TestCase
     {
         SearchDocumentModel::query()->create([
             'type' => $type,
-            'source_id' => (string) Str::uuid(),
+            // The core types check their results against the record
+            'source_id' => PublishedSearchRecords::sourceId($type),
             'body' => '',
             'url' => '/'.Str::slug((string) ($attributes['title'] ?? Str::uuid())),
             'audience' => SearchAudience::Public->value,

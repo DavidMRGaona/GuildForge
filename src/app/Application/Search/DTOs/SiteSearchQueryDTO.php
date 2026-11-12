@@ -16,7 +16,7 @@ final readonly class SiteSearchQueryDTO
      * @param  list<SearchAudience>  $audiences  audiences the person belongs to
      * @param  list<string>  $types  registered types of enabled sources; rows of any other type are ignored
      * @param  string|null  $type  the tab; null searches every type in $types
-     * @param  object|null  $user  the signed-in person, for the help guides
+     * @param  object|null  $user  the signed-in person, for the help guides and the sources that check their results
      */
     public function __construct(
         public string $query,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Application\Search\DTOs\SiteSearchResultDTO;
 use App\Application\Search\Services\SearchMetricsServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
@@ -16,6 +17,9 @@ use Inertia\Response;
 final class SearchController extends Controller
 {
     public const int PER_PAGE = 20;
+
+    /** Empty pages gone past in one request before answering with an empty one (and "show more"). */
+    public const int MAX_EMPTY_PAGES_SKIPPED = 3;
 
     public function __construct(
         private readonly SiteSearchRunner $search,
@@ -33,12 +37,20 @@ final class SearchController extends Controller
         }
 
         $outcome = $this->search->run($query, $request->user(), $request->tab(), ($page - 1) * self::PER_PAGE, self::PER_PAGE);
-        $result = $outcome->result;
 
         // Only a real search of every tab counts: not a later page, not a tab, not a failure
-        if ($result->total === 0 && $page === 1 && $outcome->type === null && ! $outcome->failed) {
+        if ($outcome->result->total === 0 && $page === 1 && $outcome->type === null && ! $outcome->failed) {
             $this->metrics->recordMiss($query);
         }
+
+        // A page whose rows the sources all took away (stale documents) would end the list with more to come:
+        // go on to the next ones, and answer with the page actually shown so "show more" carries on from it
+        for ($skipped = 0; $skipped < self::MAX_EMPTY_PAGES_SKIPPED && $outcome->result->hits === [] && $this->hasMore($page, $outcome->result); $skipped++) {
+            $page++;
+            $outcome = $this->search->run($query, $request->user(), $request->tab(), ($page - 1) * self::PER_PAGE, self::PER_PAGE);
+        }
+
+        $result = $outcome->result;
 
         return $this->render(
             $query,
@@ -47,9 +59,16 @@ final class SearchController extends Controller
             tabs: $outcome->tabs((string) __('search.tabs.all')),
             results: SiteSearchHitResource::rows($result->hits, $outcome->labels),
             total: $result->total,
-            // The engine pages no further than the last page the request accepts
-            hasMore: $page < SearchRequest::MAX_PAGE && ($page - 1) * self::PER_PAGE + count($result->hits) < $result->total,
+            hasMore: $this->hasMore($page, $result),
         );
+    }
+
+    /**
+     * Whether a later page has results; the engine pages no further than the last page the request accepts.
+     */
+    private function hasMore(int $page, SiteSearchResultDTO $result): bool
+    {
+        return $page < SearchRequest::MAX_PAGE && ($page - 1) * self::PER_PAGE + count($result->hits) < $result->total;
     }
 
     /**

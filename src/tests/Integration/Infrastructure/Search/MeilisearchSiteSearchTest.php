@@ -8,6 +8,7 @@ use App\Application\Knowledge\Services\GuideVisibilityServiceInterface;
 use App\Application\Search\DTOs\SiteSearchHitDTO;
 use App\Application\Search\DTOs\SiteSearchQueryDTO;
 use App\Application\Search\DTOs\SiteSearchResultDTO;
+use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Domain\Knowledge\Entities\Guide;
 use App\Domain\Knowledge\Entities\KnowledgeCategory;
@@ -25,8 +26,12 @@ use Meilisearch\Contracts\MultiSearchFederation;
 use Meilisearch\Contracts\SearchQuery;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Psr\Log\LoggerInterface;
+use RuntimeException;
 use stdClass;
 use Tests\Support\Knowledge\KnowledgeGuides;
+use Tests\Support\Logging\RecordingLogger;
+use Tests\Support\Search\CheckingSearchSource;
 use Tests\TestCase;
 use UnexpectedValueException;
 
@@ -57,6 +62,8 @@ final class MeilisearchSiteSearchTest extends TestCase
             KnowledgeGuides::make('core.signup', title: 'Apuntarse a una partida'),
             KnowledgeGuides::make('core.password', title: 'Cambiar la contraseña'),
         ]);
+        // No source of these types checks its results unless a test registers one
+        $this->app->make(SearchSourceRegistryInterface::class)->clear();
     }
 
     public function test_builds_three_weighted_queries(): void
@@ -233,6 +240,57 @@ final class MeilisearchSiteSearchTest extends TestCase
         $this->assertSame([['text' => 'Sala de ', 'match' => false], ['text' => 'dragones', 'match' => true]], $upcomingHit->snippet);
     }
 
+    public function test_rows_the_source_no_longer_shows_are_left_out_of_hits_and_counts(): void
+    {
+        $event = $this->document(['title' => 'Dragones del evento']);
+        $visible = $this->document(['type' => 'articles', 'source_id' => 'a-visible', 'title' => 'Dragones visibles']);
+        $hidden = $this->document(['type' => 'articles', 'source_id' => 'a-hidden', 'title' => 'Dragones ocultos']);
+        $source = $this->checking(CheckingSearchSource::allowing('articles', ['a-visible']));
+        $user = new stdClass;
+        $this->engineAnswers(
+            federated: [
+                'hits' => [$this->documentHit($hidden, []), $this->documentHit($event, []), $this->documentHit($visible, [])],
+                'facetsByIndex' => [self::DOCUMENTS => ['distribution' => ['type' => ['events' => 1, 'articles' => 5]]]],
+            ],
+            counts: ['results' => [
+                ['indexUid' => self::DOCUMENTS, 'hits' => [], 'facetDistribution' => ['type' => ['events' => 1, 'articles' => 5]]],
+            ]],
+        );
+
+        $all = $this->search('dragones', user: $user, includeHelp: false);
+
+        $this->assertSame(['Dragones del evento', 'Dragones visibles'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->title, $all->hits));
+        $this->assertSame(['events' => 1, 'articles' => 4], $all->counts);
+        $this->assertSame(5, $all->total);
+        $this->assertCount(1, $source->checks);
+        $this->assertEqualsCanonicalizing(['a-hidden', 'a-visible'], $source->checks[0]['ids']);
+        $this->assertSame($user, $source->checks[0]['user']);
+
+        $tab = $this->search('dragones', type: 'articles', user: $user, includeHelp: false);
+        $this->assertSame(['events' => 1, 'articles' => 4], $tab->counts);
+        $this->assertSame(4, $tab->total);
+    }
+
+    public function test_a_check_that_fails_leaves_out_its_type_and_logs_an_error(): void
+    {
+        $logger = new RecordingLogger;
+        $this->app->instance(LoggerInterface::class, $logger);
+        $event = $this->document(['title' => 'Dragones del evento']);
+        $article = $this->document(['type' => 'articles', 'source_id' => 'a1', 'title' => 'Dragones uno']);
+        $this->checking(new CheckingSearchSource('articles', static fn (): never => throw new RuntimeException('Gone')));
+        $this->engineAnswers([
+            'hits' => [$this->documentHit($article, []), $this->documentHit($event, [])],
+            'facetsByIndex' => [self::DOCUMENTS => ['distribution' => ['type' => ['events' => 1, 'articles' => 1]]]],
+        ]);
+
+        $result = $this->search('dragones', includeHelp: false);
+
+        $this->assertSame(['Dragones del evento'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->title, $result->hits));
+        $this->assertSame(['events' => 1], $result->counts);
+        $this->assertSame(1, $result->total);
+        $this->assertSame(['error'], array_column($logger->records, 'level'));
+    }
+
     public function test_counts_come_from_type_facet_plus_help_hits(): void
     {
         $this->engineAnswers(
@@ -359,6 +417,14 @@ final class MeilisearchSiteSearchTest extends TestCase
         );
 
         $this->app->instance(Client::class, $client);
+    }
+
+    private function checking(CheckingSearchSource $source): CheckingSearchSource
+    {
+        $this->app->instance(CheckingSearchSource::class, $source);
+        $this->app->make(SearchSourceRegistryInterface::class)->register(CheckingSearchSource::class);
+
+        return $source;
     }
 
     /**

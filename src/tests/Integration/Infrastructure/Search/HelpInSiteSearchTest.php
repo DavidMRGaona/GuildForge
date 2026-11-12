@@ -25,6 +25,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
 use Tests\Support\Knowledge\RecordingLogger;
+use Tests\Support\Search\PublishedSearchRecords;
 use Tests\TestCase;
 
 final class HelpInSiteSearchTest extends TestCase
@@ -307,7 +308,8 @@ final class HelpInSiteSearchTest extends TestCase
     {
         SearchDocumentModel::query()->create([
             'type' => 'events',
-            'source_id' => (string) Str::uuid(),
+            // The core types check their results against the record
+            'source_id' => PublishedSearchRecords::sourceId(is_string($attributes['type'] ?? null) ? $attributes['type'] : 'events'),
             'body' => '',
             'keywords' => 'partida',
             'url' => '/'.Str::uuid(),

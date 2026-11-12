@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
 use Mockery;
 use RuntimeException;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
+use Tests\Support\Search\PublishedSearchRecords;
 use Tests\TestCase;
 
 final class SearchSuggestionsControllerTest extends TestCase
@@ -48,6 +49,19 @@ final class SearchSuggestionsControllerTest extends TestCase
             ->assertJsonPath('results.0.typeLabel', 'Evento')
             ->assertJsonPath('results.0.date', 'sáb 21 nov · 10:00')
             ->assertJsonStructure(['results' => [['type', 'typeLabel', 'title', 'url', 'meta', 'image', 'date', 'pastLabel', 'snippet']], 'total']);
+    }
+
+    public function test_content_unpublished_before_its_document_is_refreshed_is_not_suggested(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+        // Unpublished while the queued refresh of its document has not run yet
+        $this->document('events', ['title' => 'Dragones retirados', 'source_id' => PublishedSearchRecords::sourceId('events', published: false)]);
+
+        $this->getJson(route('search.suggestions', ['q' => 'dragones']))
+            ->assertOk()
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.title', 'Torneo de dragones')
+            ->assertJsonPath('total', 1);
     }
 
     public function test_short_query_returns_empty(): void
@@ -159,7 +173,8 @@ final class SearchSuggestionsControllerTest extends TestCase
     {
         SearchDocumentModel::query()->create([
             'type' => $type,
-            'source_id' => (string) Str::uuid(),
+            // The core types check their results against the record
+            'source_id' => PublishedSearchRecords::sourceId($type),
             'body' => '',
             'url' => '/'.Str::uuid(),
             'audience' => SearchAudience::Public->value,
