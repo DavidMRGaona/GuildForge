@@ -1,13 +1,6 @@
 name: SVG rasterizer
 description: rsvg-convert, which the QR code renderer runs to draw SVG logos for PNG codes and the mail logo service to draw an SVG mail logo (Dockerfile.prod and the development image install it too)
 
-inputs:
-  required:
-    description: >-
-      'true' fails the job when rsvg-convert cannot be installed. 'false' only warns, for suites
-      where few or no tests draw SVG logos: those tests then fail on their own, naming rsvg-convert.
-    default: 'true'
-
 runs:
   using: composite
   steps:
@@ -31,7 +24,6 @@ runs:
       shell: bash
       env:
         DEBS: ${{ runner.temp }}/svg-rasterizer-debs
-        REQUIRED: ${{ inputs.required }}
       run: |
         set -uo pipefail
         mkdir -p "$DEBS/partial"
@@ -84,12 +76,8 @@ runs:
           echo "$host: $(getent hosts "$host" | head -1 || true)"
         done
 
-        message="Could not install rsvg-convert (librsvg2-bin): the runner could not reach the Ubuntu package mirrors and no cached packages fit. This is the CI machine, not the tests."
-        if [ "$REQUIRED" = true ]; then
-          echo "::error title=rsvg-convert not installed::$message"
-          exit 1
-        fi
-        echo "::warning title=rsvg-convert not installed::$message Tests that draw SVG logos will fail, naming rsvg-convert."
+        echo "::error title=rsvg-convert not installed::Could not install rsvg-convert (librsvg2-bin): the runner could not reach the Ubuntu package mirrors and no cached packages fit. This is the CI machine, not the tests."
+        exit 1
 
     - name: Save rsvg-convert packages
       if: ${{ steps.install.outputs.downloaded == 'true' && steps.restore.outputs.cache-hit != 'true' }}
