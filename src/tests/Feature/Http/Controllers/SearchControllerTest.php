@@ -21,6 +21,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Mockery;
 use RuntimeException;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
+use Tests\Support\Search\PublishedSearchRecords;
 use Tests\TestCase;
 
 final class SearchControllerTest extends TestCase
@@ -125,6 +126,23 @@ final class SearchControllerTest extends TestCase
                 ->where('tabs.0.count', 2)
                 ->has('results', 1)
                 ->where('results.0.title', 'Pintar dragones')
+        );
+    }
+
+    public function test_content_unpublished_before_its_document_is_refreshed_is_not_shown(): void
+    {
+        $this->document('events', ['title' => 'Torneo de dragones']);
+        $this->document('articles', ['title' => 'Pintar dragones']);
+        // Unpublished while the queued refresh of its document has not run yet
+        $this->document('articles', ['title' => 'Dragones retirados', 'source_id' => PublishedSearchRecords::sourceId('articles', published: false)]);
+
+        $this->get('/buscar?q=dragones')->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('total', 2)
+                ->where('tabs.0.count', 2)
+                ->where('tabs.2.count', 1)
+                ->has('results', 2)
+                ->where('hasMore', false)
         );
     }
 
@@ -374,7 +392,8 @@ final class SearchControllerTest extends TestCase
     {
         SearchDocumentModel::query()->create([
             'type' => $type,
-            'source_id' => (string) Str::uuid(),
+            // The core types check their results against the record
+            'source_id' => PublishedSearchRecords::sourceId($type),
             'body' => '',
             'url' => '/'.Str::slug((string) ($attributes['title'] ?? Str::uuid())),
             'audience' => SearchAudience::Public->value,

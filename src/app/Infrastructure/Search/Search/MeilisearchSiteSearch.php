@@ -27,7 +27,8 @@ use UnexpectedValueException;
  * Searches the documents and the visible help guides in one federated Meilisearch request: what is not past
  * weighs more than what is past, so a good past match can still overtake a weak upcoming one.
  * Meilisearch only ranks: documents are read back from search_documents with the same type and audience
- * filter, guides from the visible ones, and any other hit is discarded.
+ * filter and checked again with the sources that check their results (SearchHitVisibility), guides from
+ * the visible ones, and any other hit is discarded.
  */
 final readonly class MeilisearchSiteSearch implements SiteSearchInterface
 {
@@ -55,6 +56,7 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
         private MeilisearchKnowledgeSearch $knowledgeSearch,
         private GuideVisibilityServiceInterface $visibility,
         private HelpHitsProvider $help,
+        private SearchHitVisibility $hitVisibility,
     ) {}
 
     public function search(SiteSearchQueryDTO $query): SiteSearchResultDTO
@@ -106,7 +108,10 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
             $response = $this->federated($text, $tabTypes, $audiences, $tabGuides, $now, $offset, $limit, withFacets: false);
         }
 
-        return new SiteSearchResultDTO($this->hits($response, $tabTypes, $audiences, $tabGuides, $query->user, $now), $counts, $total);
+        [$hits, $checked] = $this->hits($response, $tabTypes, $audiences, $tabGuides, $query->user, $now);
+
+        // Rows a source takes away leave this page shorter and the counts lower; the engine's offsets stay as they are
+        return new SiteSearchResultDTO($hits, $checked->adjust($counts), $total - $checked->droppedTotal());
     }
 
     /**
@@ -263,13 +268,14 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
     }
 
     /**
-     * The merged hits in engine order; documents without a visible row and guides that are not visible are dropped.
+     * The merged hits in engine order; documents without a visible row, rows their source no longer shows
+     * and guides that are not visible are dropped.
      *
      * @param  array<array-key, mixed>  $response
      * @param  list<string>  $types
      * @param  list<string>  $audiences
      * @param  list<Guide>  $guides
-     * @return list<SiteSearchHitDTO>
+     * @return array{list<SiteSearchHitDTO>, CheckedSearchRows<string>}
      */
     private function hits(array $response, array $types, array $audiences, array $guides, ?object $user, int $now): array
     {
@@ -297,7 +303,8 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
             }
         }
 
-        $documents = $this->documents($documentIds, $types, $audiences);
+        $checked = $this->hitVisibility->check($this->documents($documentIds, $types, $audiences), $user);
+        $documents = $checked->rows;
         $help = $user !== null && $guides !== [] ? $this->help->fromKnowledgeHits($this->mapper->map(['hits' => $guideHits], $guides, count($guideHits)), $user) : [];
 
         $hits = [];
@@ -314,7 +321,7 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
             }
         }
 
-        return array_values($hits);
+        return [array_values($hits), $checked];
     }
 
     /**

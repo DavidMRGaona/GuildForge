@@ -62,6 +62,46 @@ php artisan search:sync --type=mymodule.tables # one type
 
 `search:sync` also runs when a module is enabled, disabled, updated or uninstalled, so a module's documents appear and disappear with it. The stored query counters are pruned daily by `search:prune-metrics`.
 
+## Checking results when they are read
+
+The stored documents are rewritten by a queued job, so between a write and that job a record that has just become hidden (unpublished, hidden by moderation, moved somewhere more private) can still show up with its stored text. A source closes that gap by also implementing `App\Application\Search\Contracts\ChecksSearchHits` (optional, core ≥ the release with #533; the core sources do):
+
+```php
+/**
+ * @param  non-empty-list<string>  $ids  ids given by document() and documents(), of this source's type
+ * @return list<string>  the ids the person may still see
+ */
+public function visibleSearchHits(array $ids, ?object $user): array;
+```
+
+- **When it is called.** Every time results are read, by both engines (Meilisearch and the database one it falls back to), so `/buscar`, the header panel and any module that uses `SiteSearchInterface` get it. It is called once per page and type, with every id of that type on the page and the person searching (`null` for a guest).
+- **One query.** Answer with a single query over all the ids (`whereKey($ids)` plus the rule of `document()`), never one per id: it runs on every search.
+- **It only takes away.** Ids you did not receive are ignored; return the subset that is still visible. Ids that are not valid for the source (a malformed uuid) are simply left out, without querying.
+- **It fails closed.** If it throws, or answers with something that is not a list, no result of the type is shown on that page and the core logs an error. Make it as reliable as `document()`.
+- **Pages and counts.** Only the rows of the page are checked: the engine's offsets stay as they are, so a page may come back shorter, and the counts of the type and the total lose just the rows taken away. The next page carries on where the engine left off, without repeating or skipping results.
+- **Keep refreshing.** This does not replace `refresh()`/`forget()`: the check hides a stale row, the refresh rewrites it (and the counts are exact again once it has run).
+
+Use the same rule as `document()`. If it depends on things that can change outside the record (a category becoming more private, a module that is no longer enabled), the check is also what keeps the results right until the queued refresh runs.
+
+```php
+use App\Application\Search\Contracts\ChecksSearchHits;
+
+final class TableSearchSource implements ChecksSearchHits, IndexedSearchSourceInterface
+{
+    // ...
+
+    public function visibleSearchHits(array $ids, ?object $user): array
+    {
+        $uuids = array_values(array_filter($ids, Str::isUuid(...)));
+        if ($uuids === []) {
+            return [];
+        }
+
+        return $this->listed()->whereKey($uuids)->pluck('id')->map(fn (mixed $id): string => (string) $id)->all();
+    }
+}
+```
+
 ## Example
 
 ```php

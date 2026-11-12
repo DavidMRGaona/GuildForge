@@ -20,7 +20,8 @@ use Illuminate\Database\Eloquent\Builder;
  * Minimal search over the search_documents table, used when no search engine is configured or it fails.
  * Every term must appear, case-insensitively, in the title, keywords, meta or body; no typo tolerance,
  * accent folding or synonyms. Title matches go first, then what is not past, then the newest date.
- * The help guides (their own search) come after all the documents.
+ * The help guides (their own search) come after all the documents. The rows of a page are checked
+ * again with the sources that check their results (SearchHitVisibility).
  */
 final readonly class DatabaseSiteSearch implements SiteSearchInterface
 {
@@ -40,6 +41,7 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
         private QueryTerms $queryTerms,
         private TimezoneServiceInterface $timezone,
         private HelpHitsProvider $help,
+        private SearchHitVisibility $hitVisibility,
     ) {}
 
     public function search(SiteSearchQueryDTO $query): SiteSearchResultDTO
@@ -86,28 +88,34 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
         }
 
         // Documents fill the first pages and the help rows the pages after them
-        $hits = $offset < $documentTotal ? $this->documentHits($terms, $audiences, $tabTypes, $offset, $limit) : [];
-        $remaining = $limit - count($hits);
+        $rows = $offset < $documentTotal ? $this->documentRows($terms, $audiences, $tabTypes, $offset, $limit) : [];
+        // Positions stay the engine's: rows a source takes away leave the page shorter, the help does not move up
+        $remaining = $limit - count($rows);
+        $checked = $this->hitVisibility->check($rows, $query->user);
+        $hits = array_map(fn (SearchDocumentModel $row): SiteSearchHitDTO => $this->documentHit($row, $terms), array_values($checked->rows));
+
         $shownHelp = $remaining > 0 ? array_slice($tabHelp, max(0, $offset - $documentTotal), $remaining) : [];
         if ($user !== null && $shownHelp !== []) {
             array_push($hits, ...array_values($this->help->fromKnowledgeHits($shownHelp, $user)));
         }
 
-        return new SiteSearchResultDTO($hits, $counts, $total);
+        return new SiteSearchResultDTO($hits, $checked->adjust($counts), $total - $checked->droppedTotal());
     }
 
     /**
+     * The rows of one page, in ranking order; "is_past" is read back by documentHit().
+     *
      * @param  list<string>  $terms
      * @param  list<string>  $audiences
      * @param  list<string>  $types
-     * @return list<SiteSearchHitDTO>
+     * @return list<SearchDocumentModel>
      */
-    private function documentHits(array $terms, array $audiences, array $types, int $offset, int $limit): array
+    private function documentRows(array $terms, array $audiences, array $types, int $offset, int $limit): array
     {
         $now = $this->timezone->toStorage(now())->format('Y-m-d H:i:s');
         $titleMatches = implode(' + ', array_fill(0, count($terms), 'CASE WHEN LOWER(title)'.self::LIKE.' THEN 1 ELSE 0 END'));
 
-        $rows = $this->matching($terms, $audiences, $types)
+        return array_values($this->matching($terms, $audiences, $types)
             ->select('*')
             ->selectRaw("({$titleMatches}) AS title_matches", array_map($this->pattern(...), $terms))
             ->selectRaw(self::PAST.' AS is_past', [true, $now])
@@ -119,25 +127,27 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
             ->orderBy('id')
             ->offset($offset)
             ->limit($limit)
-            ->get();
+            ->get()
+            ->all());
+    }
 
-        $hits = [];
-        foreach ($rows as $row) {
-            $hits[] = new SiteSearchHitDTO(
-                type: $row->type,
-                title: $row->title,
-                url: $row->url,
-                meta: $row->meta,
-                imagePublicId: $row->image_public_id,
-                startsAt: $row->starts_at,
-                endsAt: $row->ends_at,
-                past: (int) $row->getAttribute('is_past') === 1,
-                snippet: $this->snippet($row, $terms),
-                publishedAt: $row->published_at,
-            );
-        }
-
-        return $hits;
+    /**
+     * @param  list<string>  $terms
+     */
+    private function documentHit(SearchDocumentModel $row, array $terms): SiteSearchHitDTO
+    {
+        return new SiteSearchHitDTO(
+            type: $row->type,
+            title: $row->title,
+            url: $row->url,
+            meta: $row->meta,
+            imagePublicId: $row->image_public_id,
+            startsAt: $row->starts_at,
+            endsAt: $row->ends_at,
+            past: (int) $row->getAttribute('is_past') === 1,
+            snippet: $this->snippet($row, $terms),
+            publishedAt: $row->published_at,
+        );
     }
 
     /**

@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Search\Sources;
 
+use App\Application\Search\Contracts\ChecksSearchHits;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
+use App\Infrastructure\Search\Sources\Concerns\ChecksPublishedHits;
 use App\Infrastructure\Search\Support\PlainText;
 use Illuminate\Support\Str;
 
-final class GallerySearchSource implements IndexedSearchSourceInterface
+final class GallerySearchSource implements ChecksSearchHits, IndexedSearchSourceInterface
 {
+    use ChecksPublishedHits;
+
     public function type(): string
     {
         return 'galleries';
@@ -53,6 +57,14 @@ final class GallerySearchSource implements IndexedSearchSourceInterface
         foreach (GalleryModel::query()->with(['photos', 'tags'])->where('is_published', true)->lazyById(100) as $gallery) {
             yield $this->toDocument($gallery);
         }
+    }
+
+    /**
+     * @return class-string<GalleryModel>
+     */
+    private function searchedModel(): string
+    {
+        return GalleryModel::class;
     }
 
     private function toDocument(GalleryModel $gallery): SearchDocumentDTO

@@ -9,6 +9,7 @@ use App\Application\Search\DTOs\SiteSearchQueryDTO;
 use App\Application\Search\DTOs\SiteSearchResultDTO;
 use App\Application\Search\Services\SiteSearchInterface;
 use App\Domain\Search\Enums\SearchAudience;
+use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use App\Infrastructure\Search\Search\DatabaseSiteSearch;
 use App\Infrastructure\Search\Search\FallbackSiteSearch;
@@ -59,15 +60,9 @@ final class FallbackSiteSearchTest extends TestCase
     public function test_an_unreachable_meilisearch_falls_back_to_the_database(): void
     {
         config(['scout.driver' => 'meilisearch', 'scout.meilisearch.host' => 'http://127.0.0.1:1', 'scout.meilisearch.key' => 'none']);
-        SearchDocumentModel::query()->create([
-            'type' => 'events',
-            'source_id' => (string) Str::uuid(),
-            'title' => 'Torneo de dragones',
-            'body' => '',
-            'url' => '/eventos/torneo',
-            'audience' => SearchAudience::Public->value,
-            'locale' => 'es',
-        ]);
+        $this->storedEvent('Torneo de dragones', published: true);
+        // Its document was not refreshed yet: the fallback checks it with the source too
+        $this->storedEvent('Liga de dragones retirada', published: false);
 
         $log = Log::spy();
 
@@ -75,8 +70,24 @@ final class FallbackSiteSearchTest extends TestCase
 
         $this->assertSame(['Torneo de dragones'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->title, $result->hits));
         $this->assertSame(['events' => 1], $result->counts);
+        $this->assertSame(1, $result->total);
         // The fallback is logged, so an engine that is down is noticed
         $log->shouldHaveReceived('warning')->once();
+    }
+
+    private function storedEvent(string $title, bool $published): void
+    {
+        $event = EventModel::withoutEvents(static fn (): EventModel => EventModel::factory()->create(['is_published' => $published]));
+
+        SearchDocumentModel::query()->create([
+            'type' => 'events',
+            'source_id' => $event->id,
+            'title' => $title,
+            'body' => '',
+            'url' => '/eventos/'.Str::uuid(),
+            'audience' => SearchAudience::Public->value,
+            'locale' => 'es',
+        ]);
     }
 
     private function resolvedClass(string $abstract): string

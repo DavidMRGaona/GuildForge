@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Search\Sources;
 
+use App\Application\Search\Contracts\ChecksSearchHits;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Search\Sources\Concerns\ChecksPublishedHits;
 use App\Infrastructure\Search\Support\PlainText;
 use Illuminate\Support\Str;
 
-final class EventSearchSource implements IndexedSearchSourceInterface
+final class EventSearchSource implements ChecksSearchHits, IndexedSearchSourceInterface
 {
+    use ChecksPublishedHits;
+
     public function type(): string
     {
         return 'events';
@@ -52,6 +56,14 @@ final class EventSearchSource implements IndexedSearchSourceInterface
         foreach (EventModel::query()->with('tags')->where('is_published', true)->lazyById(200) as $event) {
             yield $this->toDocument($event);
         }
+    }
+
+    /**
+     * @return class-string<EventModel>
+     */
+    private function searchedModel(): string
+    {
+        return EventModel::class;
     }
 
     private function toDocument(EventModel $event): SearchDocumentDTO

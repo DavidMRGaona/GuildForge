@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Search\Sources;
 
+use App\Application\Search\Contracts\ChecksSearchHits;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
+use App\Infrastructure\Search\Sources\Concerns\ChecksPublishedHits;
 use App\Infrastructure\Search\Support\PlainText;
 use Illuminate\Support\Str;
 
-final class ArticleSearchSource implements IndexedSearchSourceInterface
+final class ArticleSearchSource implements ChecksSearchHits, IndexedSearchSourceInterface
 {
+    use ChecksPublishedHits;
+
     public function type(): string
     {
         return 'articles';
@@ -52,6 +56,14 @@ final class ArticleSearchSource implements IndexedSearchSourceInterface
         foreach (ArticleModel::query()->with('tags')->where('is_published', true)->lazyById(200) as $article) {
             yield $this->toDocument($article);
         }
+    }
+
+    /**
+     * @return class-string<ArticleModel>
+     */
+    private function searchedModel(): string
+    {
+        return ArticleModel::class;
     }
 
     private function toDocument(ArticleModel $article): SearchDocumentDTO
