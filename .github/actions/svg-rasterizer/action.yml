@@ -4,11 +4,84 @@ description: rsvg-convert, which the QR code renderer runs to draw SVG logos for
 runs:
   using: composite
   steps:
-    - name: Install rsvg-convert
+    # ImageOS (ubuntu26…) is a variable of the runner, not of the env context: read it in the shell
+    - name: Name the rsvg-convert cache
+      id: key
       shell: bash
+      run: echo "key=svg-rasterizer-${RUNNER_OS}-${RUNNER_ARCH}-${ImageOS:-unknown}-v1" >> "$GITHUB_OUTPUT"
+
+    # The packages apt downloaded the last time it worked, so a runner that cannot reach the
+    # Ubuntu mirrors (DNS failures on every *.ubuntu.com host, #531) still installs it
+    - name: Restore rsvg-convert packages
+      id: restore
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ runner.temp }}/svg-rasterizer-debs
+        key: ${{ steps.key.outputs.key }}
+
+    - name: Install rsvg-convert
+      id: install
+      shell: bash
+      env:
+        DEBS: ${{ runner.temp }}/svg-rasterizer-debs
       run: |
-        if ! command -v rsvg-convert >/dev/null; then
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends librsvg2-bin
+        set -uo pipefail
+        mkdir -p "$DEBS/partial"
+
+        installed=false
+        downloaded=false
+        if command -v rsvg-convert >/dev/null; then
+          installed=true
         fi
-        rsvg-convert --version
+
+        if [ "$installed" = false ] && compgen -G "$DEBS/*.deb" >/dev/null; then
+          # dpkg, not apt: apt counts copying a local .deb as a download. The dependencies come
+          # with the image (only librsvg2-bin is missing); if one is not there, dpkg fails
+          if sudo dpkg -i "$DEBS"/*.deb; then
+            installed=true
+            echo "Installed from the cached packages"
+          else
+            # A half-installed package would make apt refuse the next step
+            sudo dpkg --remove librsvg2-bin >/dev/null 2>&1 || true
+            echo "The cached packages do not fit this image; falling back to the mirrors"
+          fi
+        fi
+
+        # The download folder is under the runner's home, which _apt cannot reach: download as root
+        apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o APT::Sandbox::User=root)
+        for attempt in 1 2 3; do
+          [ "$installed" = true ] && break
+          [ "$attempt" -gt 1 ] && sleep $((attempt * 20))
+          echo "Installing librsvg2-bin from the mirrors (attempt $attempt of 3)"
+          sudo apt-get "${apt_options[@]}" update -qq || true
+          # -q, not -qq: a failed download must say which mirror and why
+          if sudo apt-get "${apt_options[@]}" install -y -q --no-install-recommends --download-only \
+              -o Dir::Cache::Archives="$DEBS" librsvg2-bin \
+            && sudo dpkg -i "$DEBS"/*.deb; then
+            installed=true
+            downloaded=true
+          fi
+        done
+
+        if [ "$installed" = true ] && command -v rsvg-convert >/dev/null; then
+          rsvg-convert --version
+          sudo chmod -R a+rX "$DEBS"
+          echo "downloaded=$downloaded" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "--- apt mirrors this runner uses"
+        cat /etc/apt/apt-mirrors.txt 2>/dev/null || grep -rh '^URIs:' /etc/apt/sources.list.d 2>/dev/null || true
+        for host in $(grep -ohE 'https?://[^/ ]+' /etc/apt/apt-mirrors.txt /etc/apt/sources.list.d/* 2>/dev/null | sed -E 's#https?://##' | sort -u); do
+          echo "$host: $(getent hosts "$host" | head -1 || true)"
+        done
+
+        echo "::error title=rsvg-convert not installed::Could not install rsvg-convert (librsvg2-bin): the runner could not reach the Ubuntu package mirrors and no cached packages fit. This is the CI machine, not the tests."
+        exit 1
+
+    - name: Save rsvg-convert packages
+      if: ${{ steps.install.outputs.downloaded == 'true' && steps.restore.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ runner.temp }}/svg-rasterizer-debs
+        key: ${{ steps.key.outputs.key }}
