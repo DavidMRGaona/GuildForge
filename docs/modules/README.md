@@ -43,6 +43,8 @@ Putting a module's entries in the public calendar and in each person's personal 
 
 Drawing QR codes (SVG or PNG) for pages of the site is covered in [QR codes](./qr-codes.md).
 
+Letting the pages frame players of other services (a video, a post) is covered in [Content Security Policy](./content-security-policy.md): register the exact https origins for `frame-src`; without any, it stays `'self'`.
+
 Mirroring accounts and roles in another system is covered in [Account and role events](./account-events.md): the domain events the core dispatches when an account is anonymized, deactivated or restored, and when roles or role permissions change.
 
 Letting people choose which of the module's mail they receive is covered in [Mail categories](./mail-categories.md): declare the categories, mark each notification and notify the account with `$user->notify()`.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Middleware;
 
+use App\Application\Security\Services\ContentSecurityPolicySourcesInterface;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -143,6 +144,60 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
         $this->assertStringContainsString("font-src 'self' https://fonts.bunny.net data:", $csp);
+    }
+
+    public function test_csp_frame_src_is_self_when_no_module_adds_origins(): void
+    {
+        $response = $this->get('/test-security-headers');
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        $this->assertStringContainsString("frame-src 'self';", $csp);
+    }
+
+    public function test_csp_frame_src_lists_the_origins_modules_add(): void
+    {
+        $sources = $this->app->make(ContentSecurityPolicySourcesInterface::class);
+        $sources->allowFrames(fn (): array => ['https://player.example.com']);
+        $sources->allowFrames(fn (): array => ['https://embed.example.org', 'https://player.example.com']);
+
+        $response = $this->get('/test-security-headers');
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        $this->assertStringContainsString("frame-src 'self' https://embed.example.org https://player.example.com;", $csp);
+    }
+
+    public function test_csp_frame_src_never_takes_a_wildcard_or_another_directive(): void
+    {
+        $sources = $this->app->make(ContentSecurityPolicySourcesInterface::class);
+        $sources->allowFrames(fn (): array => [
+            '*',
+            'https://*.example.com',
+            'https:',
+            'http://player.example.com',
+            "https://player.example.com; script-src 'unsafe-inline'",
+        ]);
+
+        $response = $this->get('/test-security-headers');
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        $this->assertStringContainsString("frame-src 'self';", $csp);
+        $this->assertSame(1, substr_count($csp, 'script-src'));
+    }
+
+    public function test_csp_frame_src_stays_self_when_a_module_fails(): void
+    {
+        $sources = $this->app->make(ContentSecurityPolicySourcesInterface::class);
+        $sources->allowFrames(fn (): array => throw new \RuntimeException('settings unreadable'));
+
+        $response = $this->get('/test-security-headers');
+
+        $response->assertStatus(200);
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        $this->assertStringContainsString("frame-src 'self';", $csp);
     }
 
     public function test_it_does_not_add_hsts_header_for_non_secure_requests(): void
