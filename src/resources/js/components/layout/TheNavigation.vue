@@ -2,7 +2,9 @@
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
+import MenuBadge from './MenuBadge.vue';
 import NavDropdown from './NavDropdown.vue';
+import { useMenuBadges } from '@/composables/useMenuBadges';
 import type { MenuItem, Navigation } from '@/types/navigation';
 import { isActiveHref } from '@/utils/navigation';
 
@@ -20,6 +22,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const page = usePage();
+const { badges } = useMenuBadges();
 
 // Fallback navigation items if none configured
 const fallbackItems: MenuItem[] = [
@@ -31,6 +34,7 @@ const fallbackItems: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
     {
         id: 'events',
@@ -40,6 +44,7 @@ const fallbackItems: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
     {
         id: 'calendar',
@@ -49,6 +54,7 @@ const fallbackItems: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
     {
         id: 'articles',
@@ -58,6 +64,7 @@ const fallbackItems: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
     {
         id: 'gallery',
@@ -67,6 +74,7 @@ const fallbackItems: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
     {
         id: 'about',
@@ -76,6 +84,7 @@ const fallbackItems: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
 ];
 
@@ -121,6 +130,7 @@ function handleNavigate(): void {
                 @click="handleNavigate"
             >
                 {{ item.label }}
+                <MenuBadge v-if="item.key && badges[item.key]" :label="badges[item.key] ?? ''" />
             </Link>
         </template>
     </nav>

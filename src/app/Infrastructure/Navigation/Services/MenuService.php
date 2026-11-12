@@ -94,6 +94,7 @@ final readonly class MenuService implements MenuServiceInterface
                 icon: $item->icon(),
                 children: $children,
                 isActive: $item->isActive(),
+                key: MenuItemDTO::keyFor($item->module(), $item->route()),
             );
         }
 

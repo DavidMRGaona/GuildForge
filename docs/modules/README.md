@@ -610,6 +610,23 @@ public function registerRoutes(): array
 
 ---
 
+### Marking a menu link (badges)
+
+A module can mark one of its menu links to ask for attention (unread discussions, pending requests) with `useMenuBadges()`, a public-API entry (`@/composables/useMenuBadges`):
+
+```ts
+import { clearMenuBadge, setMenuBadge, useMenuBadges } from '@/composables/useMenuBadges';
+
+// Marks the link; the text is what screen readers read after its name
+setMenuBadge('forum:forum.index', 'hay 3 temas sin leer');
+clearMenuBadge('forum:forum.index');
+```
+
+- A link is named by its **key**, `<module>:<route>` (the `key` of each `MenuItem` the menu receives), never by its text or address: an admin can change those. Links with no module or no route (the admin's own) have no key and cannot be marked.
+- The core draws a dot in the desktop and mobile menus, and in the button of a dropdown that holds the link; the text sits inside the link, hidden for sighted users. The state lives outside the pages, so it survives Inertia visits and the menu being drawn again.
+- Announcing a change is the module's job: keep a visually hidden `role="status"` / `aria-live="polite"` region in a slot such as `after-header` (it must exist before its text changes) and never move the focus.
+- Switch the badge off when the module's component unmounts, and never ask for anything without a signed-in user.
+
 ## Module settings
 
 Modules can define settings that admins edit in the panel.

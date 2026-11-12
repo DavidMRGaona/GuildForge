@@ -22,6 +22,7 @@ const fallbackLinks: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
     {
         id: 'articles',
@@ -31,6 +32,7 @@ const fallbackLinks: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
     {
         id: 'gallery',
@@ -40,6 +42,7 @@ const fallbackLinks: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
     {
         id: 'about',
@@ -49,6 +52,7 @@ const fallbackLinks: MenuItem[] = [
         icon: null,
         children: [],
         isActive: true,
+        key: null,
     },
 ];
 
