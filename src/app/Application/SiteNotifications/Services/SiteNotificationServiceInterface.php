@@ -43,6 +43,13 @@ interface SiteNotificationServiceInterface
     public function forgetSubject(string $type, string $id): void;
 
     /**
+     * Forget every notice that has the account as one of its actors, for everybody: read or unread,
+     * single or grouped (a group's title may name the account, and its text cannot be rewritten
+     * here). Anonymizing an account calls it, inside the same transaction; idempotent.
+     */
+    public function forgetActor(string $actorId): void;
+
+    /**
      * Delete read notices older than $readDays and unread ones older than $unreadDays (by their
      * latest notice); how many rows went.
      */

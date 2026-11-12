@@ -86,6 +86,11 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
         $this->notices->deleteForSubject($type, $id);
     }
 
+    public function forgetActor(string $actorId): void
+    {
+        $this->notices->deleteForActor($actorId);
+    }
+
     public function prune(int $readDays, int $unreadDays): int
     {
         return $this->notices->prune(now()->subDays($readDays), now()->subDays($unreadDays));

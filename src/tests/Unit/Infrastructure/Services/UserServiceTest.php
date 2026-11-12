@@ -11,7 +11,9 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Domain\Exceptions\UserNotFoundException;
+use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationPreferenceRepositoryInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
@@ -43,6 +45,10 @@ final class UserServiceTest extends TestCase
 
     private SiteNotificationPreferenceRepositoryInterface&MockInterface $siteNotificationPreferences;
 
+    private SiteNotificationServiceInterface&MockInterface $siteNotificationService;
+
+    private MailDigestItemRepositoryInterface&MockInterface $mailDigestItems;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -55,6 +61,8 @@ final class UserServiceTest extends TestCase
         $this->mailPreferences = Mockery::mock(MailPreferenceRepositoryInterface::class);
         $this->siteNotifications = Mockery::mock(SiteNotificationRepositoryInterface::class);
         $this->siteNotificationPreferences = Mockery::mock(SiteNotificationPreferenceRepositoryInterface::class);
+        $this->siteNotificationService = Mockery::mock(SiteNotificationServiceInterface::class);
+        $this->mailDigestItems = Mockery::mock(MailDigestItemRepositoryInterface::class);
 
         $this->service = new UserService(
             $this->userModelQuery,
@@ -65,6 +73,8 @@ final class UserServiceTest extends TestCase
             $this->mailPreferences,
             $this->siteNotifications,
             $this->siteNotificationPreferences,
+            $this->siteNotificationService,
+            $this->mailDigestItems,
         );
     }
 
@@ -171,6 +181,8 @@ final class UserServiceTest extends TestCase
         // And the notification centre with its choices (core#491)
         $this->siteNotifications->shouldReceive('deleteForUser')->once()->with(Mockery::on(fn (UserId $id): bool => $id->value() === $userId->value()));
         $this->siteNotificationPreferences->shouldReceive('deleteForUser')->once()->with(Mockery::on(fn (UserId $id): bool => $id->value() === $userId->value()));
+        $this->siteNotificationService->shouldReceive('forgetActor')->once()->with($userId->value());
+        $this->mailDigestItems->shouldReceive('deleteForActor')->once()->with($userId->value());
 
         $this->service->anonymize($userId->value());
 

@@ -11,8 +11,10 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Domain\Events\UserAnonymized;
 use App\Domain\Exceptions\UserNotFoundException;
+use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationPreferenceRepositoryInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
@@ -35,6 +37,8 @@ final readonly class UserService implements UserServiceInterface
         private MailPreferenceRepositoryInterface $mailPreferences,
         private SiteNotificationRepositoryInterface $siteNotifications,
         private SiteNotificationPreferenceRepositoryInterface $siteNotificationPreferences,
+        private SiteNotificationServiceInterface $siteNotificationService,
+        private MailDigestItemRepositoryInterface $mailDigestItems,
     ) {}
 
     public function canAccessPanel(string $userId): bool
@@ -143,6 +147,9 @@ final readonly class UserService implements UserServiceInterface
     private function forgetSiteNotifications(UserId $userId): void
     {
         $this->siteNotifications->deleteForUser($userId);
+        // What other people got because of this account names it too (core#537)
+        $this->siteNotificationService->forgetActor($userId->value());
+        $this->mailDigestItems->deleteForActor($userId->value());
         $this->siteNotificationPreferences->deleteForUser($userId);
     }
 

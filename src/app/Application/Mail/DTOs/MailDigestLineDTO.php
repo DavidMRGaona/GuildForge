@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Mail\DTOs;
 
+use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use InvalidArgumentException;
 
 /**
@@ -22,11 +23,17 @@ final readonly class MailDigestLineDTO
 
     /**
      * @param  string|null  $url  Absolute http(s) address the line links to.
+     * @param  string|null  $actorId  Account whose action the line tells about (its name is in the text):
+     *                                the line is deleted when that account is anonymized.
      *
      * @throws InvalidArgumentException When the text is empty or the address cannot be linked.
      */
-    public function __construct(string $text, public ?string $url = null)
+    public function __construct(string $text, public ?string $url = null, public ?string $actorId = null)
     {
+        if ($actorId !== null && preg_match(SiteNotificationDTO::ACTOR_ID_PATTERN, $actorId) !== 1) {
+            throw new InvalidArgumentException('The digest line has an invalid actor id.');
+        }
+
         $this->text = $this->normalize($text);
 
         if ($url !== null && ! $this->isLinkable($url)) {

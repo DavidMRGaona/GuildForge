@@ -17,7 +17,7 @@ Requirement: set `requires.core` in `module.json` to the core release that intro
 
 | Event | Payload | Dispatched when |
 |---|---|---|
-| `UserAnonymized` | `userId` | An account is anonymized (`UserService::anonymize()` and `anonymizeWithContentTransfer()`, so also from the panel). Personal data and every role are already gone. |
+| `UserAnonymized` | `userId` | An account is anonymized (`UserService::anonymize()` and `anonymizeWithContentTransfer()`, so also from the panel). Personal data and every role are already gone, and so are the notices other people got because of the account (their notification-centre rows with it as `actorId` and the daily-digest lines that name it: core#537). |
 | `UserRolesChanged` | `userId`, `rolesBefore`, `rolesAfter` | The roles stored for an account change: `assignRole()`, `removeRole()`, `syncRoles()` (user form of the panel included, also when creating an account), the holder limit dropping roles after a restore and `users:assign-member-role` (one event per account). |
 | `RolePermissionsChanged` | `roleId`, `roleName`, `permissionsBefore`, `permissionsAfter` | The permissions of a role change: `RoleService` (`update`, `assignPermissions`, `syncPermissions`, so also `RolePermissionGrants` in migrations) and the role form of the panel. |
 | `RoleDeleted` | `roleId`, `roleName`, `permissions`, `holderIds` | A role is deleted (`RoleService::delete()` and the panel's delete actions). One event per deletion, with the role as it was (permission keys, sorted) and the ids of every account that held it, deactivated ones included. Its holders get no `UserRolesChanged`: revoke what the role granted from `holderIds`. Take the ids in chunks if the role has many holders. |

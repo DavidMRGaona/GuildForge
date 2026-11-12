@@ -41,6 +41,11 @@ interface SiteNotificationRepositoryInterface
     public function deleteForSubject(string $type, string $id): void;
 
     /**
+     * Delete every row, whoever it belongs to, that counts the account among its actors.
+     */
+    public function deleteForActor(string $actorId): void;
+
+    /**
      * Delete rows read before $readBefore, and unread rows whose latest notice is older than
      * $unreadBefore.
      */

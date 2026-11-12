@@ -20,7 +20,7 @@ final readonly class EloquentMailDigestItemRepository implements MailDigestItemR
         private TimezoneServiceInterface $timezone,
     ) {}
 
-    public function add(UserId $userId, string $category, string $line, ?string $url, ?string $subjectType, ?string $subjectId): void
+    public function add(UserId $userId, string $category, string $line, ?string $url, ?string $subjectType, ?string $subjectId, ?string $actorId = null): void
     {
         UserMailDigestItemModel::query()->create([
             'user_id' => $userId->value(),
@@ -29,7 +29,13 @@ final readonly class EloquentMailDigestItemRepository implements MailDigestItemR
             'url' => $url,
             'subject_type' => $subjectType,
             'subject_id' => $subjectId,
+            'actor_id' => $actorId,
         ]);
+    }
+
+    public function deleteForActor(string $actorId): void
+    {
+        UserMailDigestItemModel::query()->where('actor_id', $actorId)->delete();
     }
 
     public function userIdsWithItemsBefore(DateTimeInterface $before): array
