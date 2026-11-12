@@ -6,15 +6,19 @@ namespace Tests\Integration\Infrastructure\Services;
 
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
+use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailSubjectDTO;
+use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Domain\Authorization\Enums\RoleAuditEvent;
 use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPauseRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
+use App\Infrastructure\Persistence\Eloquent\Models\SiteNotificationModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -22,6 +26,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Tests\Support\SiteNotifications\SiteTestNotification;
 use Tests\TestCase;
 
 /**
@@ -142,6 +147,29 @@ final class UserServiceAnonymizeTest extends TestCase
 
         $this->assertSame(0, DB::table('user_mail_digest_items')->where('user_id', $user->id)->count());
         $this->assertSame(1, DB::table('user_mail_digest_items')->where('user_id', $other->id)->count());
+    }
+
+    /**
+     * @param  Closure(UserServiceInterface, string): void  $anonymize
+     */
+    #[DataProvider('anonymizers')]
+    public function test_anonymizing_forgets_the_notices_other_accounts_got_because_of_it(Closure $anonymize): void
+    {
+        $user = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        $this->app->make(MailCategoryRegistryInterface::class)->register(
+            MailCategoryDTO::optional(key: 'example.replies', section: 'Example', label: 'Replies', description: 'D', site: true),
+            'example',
+        );
+        $other->notify(new SiteTestNotification('example.replies', new SiteNotificationDTO(title: 'Ana te ha mencionado', url: '/a', actorId: (string) $user->id)));
+        $other->notify(new SiteTestNotification('example.replies', new SiteNotificationDTO(title: 'Luis te ha mencionado', url: '/b', actorId: $other->id.'x')));
+        $user->notify(new SiteTestNotification('example.replies', new SiteNotificationDTO(title: 'Propio', url: '/c', actorId: (string) $other->id)));
+        app(MailDigestItemRepositoryInterface::class)->add(UserId::fromString($other->id), 'example.sign-ups', 'Ana se ha apuntado', null, null, null, (string) $user->id);
+
+        $anonymize(app(UserServiceInterface::class), (string) $user->id);
+
+        $this->assertSame(['/b'], SiteNotificationModel::query()->pluck('url')->all());
+        $this->assertSame(0, DB::table('user_mail_digest_items')->count());
     }
 
     /**

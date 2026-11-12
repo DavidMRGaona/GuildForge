@@ -28,6 +28,15 @@ final class MailDigestLineDTOTest extends TestCase
         $this->assertNull($line->url);
     }
 
+    public function test_it_refuses_an_actor_id_that_cannot_be_stored(): void
+    {
+        $this->assertSame('abc-1', (new MailDigestLineDTO('Texto', null, 'abc-1'))->actorId);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        new MailDigestLineDTO('Texto', null, 'no vale!');
+    }
+
     /**
      * @return iterable<string, array{string, string|null}>
      */

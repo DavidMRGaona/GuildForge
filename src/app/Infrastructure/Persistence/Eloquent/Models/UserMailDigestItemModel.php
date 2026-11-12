@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $url
  * @property string|null $subject_type
  * @property string|null $subject_id
+ * @property string|null $actor_id
  * @property Carbon $created_at
  */
 final class UserMailDigestItemModel extends Model
@@ -35,5 +36,6 @@ final class UserMailDigestItemModel extends Model
         'url',
         'subject_type',
         'subject_id',
+        'actor_id',
     ];
 }

@@ -15,7 +15,12 @@ use DateTimeInterface;
  */
 interface MailDigestItemRepositoryInterface
 {
-    public function add(UserId $userId, string $category, string $line, ?string $url, ?string $subjectType, ?string $subjectId): void;
+    public function add(UserId $userId, string $category, string $line, ?string $url, ?string $subjectType, ?string $subjectId, ?string $actorId = null): void;
+
+    /**
+     * Delete the notices kept because of the account, whoever they belong to (core#537).
+     */
+    public function deleteForActor(string $actorId): void;
 
     /**
      * Accounts with notices kept before the instant.

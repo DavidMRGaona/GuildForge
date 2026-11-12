@@ -61,7 +61,7 @@ final readonly class MailDigestService implements MailDigestServiceInterface
             return false;
         }
 
-        $this->items->add($userId, $category->key, $line->text, $line->url, $subject?->type, $subject?->id);
+        $this->items->add($userId, $category->key, $line->text, $line->url, $subject?->type, $subject?->id, $line->actorId);
 
         return true;
     }

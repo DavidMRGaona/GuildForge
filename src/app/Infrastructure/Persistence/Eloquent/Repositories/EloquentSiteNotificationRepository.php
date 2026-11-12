@@ -134,6 +134,11 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
             ->delete();
     }
 
+    public function deleteForActor(string $actorId): void
+    {
+        SiteNotificationModel::query()->whereJsonContains('actor_ids', $actorId)->delete();
+    }
+
     public function prune(DateTimeInterface $readBefore, DateTimeInterface $unreadBefore): int
     {
         $read = SiteNotificationModel::query()

@@ -95,6 +95,16 @@ final class MailDigestHoldTest extends TestCase
         $this->assertSame('t-1', $item->subject_id);
     }
 
+    public function test_the_actor_of_the_line_is_kept_with_it(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->choose($user, 'example.sign-ups', MailDelivery::Digest);
+
+        $user->notify(new DigestLineTestNotification('example.sign-ups', new MailDigestLineDTO('Ana se ha apuntado', null, 'actor-1')));
+
+        $this->assertSame('actor-1', DB::table('user_mail_digest_items')->sole()->actor_id);
+    }
+
     public function test_by_default_the_notice_is_sent_at_once(): void
     {
         $user = UserModel::factory()->create();

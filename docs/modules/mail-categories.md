@@ -172,6 +172,7 @@ final class PlayerJoinedNotification extends Notification implements HasMailCate
 
 - `text` is put on one line and cut to 200 characters (ending in «…»). It is escaped wherever it is shown, so pass names as they are. It is written when the notice is kept, in the locale of that moment.
 - `url` is optional and must be an absolute `http(s)` address (`route()` gives one); anything else throws `InvalidArgumentException`.
+- `actorId` is optional: the account whose action the line tells about, when its name is in the text. The line is deleted when that account is anonymized (core#537); without it the line is **not** deleted: it goes out in the next digest with the name inside (known gap for modules written before core#537, until they pass it). Pass it whenever the line names a person.
 - Without `HasMailDigestLine`, or when it returns `null` or throws, the digest uses the **subject** of the mail and the address of its **button** (`action()`): every notification has a subject, and it already says in one line what the mail is about. Implement the contract when the subject is too vague on its own («Nueva inscripción»).
 - A notification whose `toMail()` returns a `Mailable` is never kept: it is sent at once.
 - Both need the core release with core#333: set `requires.core` accordingly.
@@ -181,7 +182,7 @@ What the core does with it:
 - **Keeping.** When the person chose the digest for the category, the notice is kept instead of sent, but only after every delivery rule let it through: a paused mail or one about a muted thing is dropped, not kept. If it cannot be kept, it is sent at once.
 - **Sending.** Every hour the scheduler runs `mail:send-digests`. It queues, for each person, a digest with what was kept before the last digest hour (*Sistema → Configuración → Correo electrónico → Hora del resumen diario*, 08:00 by default, in the display zone), so a missed run is caught up an hour later. Each notice is checked again: if the person turned its category off, paused their mail or muted its subject since, it is dropped, and so is one of a category that is no longer registered. The notices are deleted only once the mail went out: a failure keeps them for the next run, and running twice sends nothing twice. One digest shows the newest 100 notices and counts the rest.
 - **The digest mail** has no category of its own and only an anonymized account stops it. Its footer lists each category it gathers with its unsubscribe link; when it gathers just one, it also carries that category's `List-Unsubscribe` headers.
-- **Cleaning up.** A notice that could not be sent for a week is dropped, with a warning in the log. Anonymizing an account deletes its notices; deleting it cascades.
+- **Cleaning up.** A notice that could not be sent for a week is dropped, with a warning in the log. Anonymizing an account deletes its notices, and the lines that name it (`actorId`) in other people's; deleting it cascades.
 - Choosing «at once» again leaves what was already kept for the next digest.
 
 Never read `user_mail_digest_items` or the `digest` column of `user_mail_preferences` directly: `MailPreferenceServiceInterface::sectionsFor()` says how each category is received (`delivery`: `immediate`, `digest` or `none`; `enabled` is false only for `none`) and `MailDigestServiceInterface` keeps and sends the notices.
