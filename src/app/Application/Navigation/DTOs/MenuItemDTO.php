@@ -17,7 +17,17 @@ final readonly class MenuItemDTO
         public ?string $icon,
         public array $children = [],
         public bool $isActive = true,
+        public ?string $key = null,
     ) {}
+
+    /**
+     * What a module names a menu link by: its module and route ("forum:forum.index"), never its
+     * text or address, which an admin can change. Links without both have no key.
+     */
+    public static function keyFor(?string $module, ?string $route): ?string
+    {
+        return $module !== null && $module !== '' && $route !== null && $route !== '' ? "{$module}:{$route}" : null;
+    }
 
     /**
      * Convert to array for Inertia sharing.
@@ -37,6 +47,7 @@ final readonly class MenuItemDTO
                 $this->children
             ),
             'isActive' => $this->isActive,
+            'key' => $this->key,
         ];
     }
 }

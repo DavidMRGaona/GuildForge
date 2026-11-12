@@ -28,6 +28,7 @@
         "@/composables/useFlashMessages": "resources/js/composables/useFlashMessages.ts",
         "@/composables/useGridLayout": "resources/js/composables/useGridLayout.ts",
         "@/composables/useKnowledgeVisibility": "resources/js/composables/useKnowledgeVisibility.ts",
+        "@/composables/useMenuBadges": "resources/js/composables/useMenuBadges.ts",
         "@/composables/useNotifications": "resources/js/composables/useNotifications.ts",
         "@/composables/usePagination": "resources/js/composables/usePagination.ts",
         "@/composables/useRoutes": "resources/js/composables/useRoutes.ts",

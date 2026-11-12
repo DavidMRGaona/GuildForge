@@ -645,6 +645,20 @@ export declare function useKnowledgeVisibility(): KnowledgeVisibility;
 export {};
 ```
 
+## resources/js/composables/useMenuBadges.ts
+
+```ts
+import { type DeepReadonly, type Ref } from 'vue';
+export interface MenuBadges {
+    badges: Readonly<Ref<DeepReadonly<Record<string, string>>>>;
+    setBadge: (key: string, label: string) => void;
+    clearBadge: (key: string) => void;
+}
+export declare function setMenuBadge(key: string, label: string): void;
+export declare function clearMenuBadge(key: string): void;
+export declare function useMenuBadges(): MenuBadges;
+```
+
 ## resources/js/composables/useNotifications.ts
 
 ```ts

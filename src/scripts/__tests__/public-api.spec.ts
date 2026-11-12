@@ -21,6 +21,7 @@ const ENTRIES = [
     '@/composables/useFlashMessages',
     '@/composables/useGridLayout',
     '@/composables/useKnowledgeVisibility',
+    '@/composables/useMenuBadges',
     '@/composables/useNotifications',
     '@/composables/usePagination',
     '@/composables/useRoutes',

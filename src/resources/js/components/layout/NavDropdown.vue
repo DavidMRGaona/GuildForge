@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { ChevronDown } from '@lucide/vue';
+import MenuBadge from './MenuBadge.vue';
 import type { MenuItem } from '@/types/navigation';
+import { useMenuBadges } from '@/composables/useMenuBadges';
 import { isActiveHref } from '@/utils/navigation';
 import { useOnNavigate } from '@/composables/useOnNavigate';
 
@@ -21,6 +23,15 @@ const emit = defineEmits<{
 
 const page = usePage();
 const isOpen = ref(false);
+const { badges } = useMenuBadges();
+
+// A link of the dropdown with a mark also marks the button that opens it, so it is not hidden
+const triggerBadge = computed(() => {
+    const keys = [props.item, ...props.item.children].map((link) => link.key);
+    const marked = keys.find((key) => key !== null && badges.value[key] !== undefined);
+
+    return marked === undefined || marked === null ? null : (badges.value[marked] ?? null);
+});
 
 useOnNavigate(() => {
     isOpen.value = false;
@@ -70,6 +81,7 @@ function handleKeydown(event: KeyboardEvent): void {
             @click="toggleDropdown"
         >
             <span>{{ item.label }}</span>
+            <MenuBadge v-if="triggerBadge" :label="triggerBadge" />
             <ChevronDown class="h-4 w-4 transition-transform" :class="{ 'rotate-180': isOpen }" />
         </button>
 
@@ -103,6 +115,10 @@ function handleKeydown(event: KeyboardEvent): void {
                         @click="handleNavigate"
                     >
                         {{ child.label }}
+                        <MenuBadge
+                            v-if="child.key && badges[child.key]"
+                            :label="badges[child.key] ?? ''"
+                        />
                     </Link>
                 </div>
             </div>
@@ -134,6 +150,10 @@ function handleKeydown(event: KeyboardEvent): void {
                     @click="handleNavigate"
                 >
                     {{ child.label }}
+                    <MenuBadge
+                        v-if="child.key && badges[child.key]"
+                        :label="badges[child.key] ?? ''"
+                    />
                 </Link>
             </div>
         </Transition>
