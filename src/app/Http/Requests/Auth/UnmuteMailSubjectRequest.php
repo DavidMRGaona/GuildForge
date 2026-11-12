@@ -27,8 +27,8 @@ final class UnmuteMailSubjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', 'string', 'max:'.MailSubjectDTO::TYPE_MAX_LENGTH, 'regex:/^'.MailSubjectDTO::TYPE_PATTERN.'$/'],
-            'id' => ['required', 'string', 'regex:/^'.MailSubjectDTO::ID_PATTERN.'$/'],
+            'type' => ['required', 'string', 'max:'.MailSubjectDTO::TYPE_MAX_LENGTH, 'regex:/^'.MailSubjectDTO::TYPE_PATTERN.'\z/'],
+            'id' => ['required', 'string', 'regex:/^'.MailSubjectDTO::ID_PATTERN.'\z/'],
         ];
     }
 

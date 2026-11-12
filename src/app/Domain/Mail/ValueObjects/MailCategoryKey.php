@@ -13,7 +13,7 @@ use Stringable;
  */
 final readonly class MailCategoryKey implements Stringable
 {
-    private const string PATTERN = '/^([a-z0-9]+(?:-[a-z0-9]+)*)\.([a-z0-9]+(?:-[a-z0-9]+)*)$/';
+    private const string PATTERN = '/^([a-z0-9]+(?:-[a-z0-9]+)*)\.([a-z0-9]+(?:-[a-z0-9]+)*)\z/';
 
     private string $prefix;
 

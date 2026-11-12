@@ -61,6 +61,9 @@ final class MailSubjectDTOTest extends TestCase
             'invalid UTF-8 name' => ['game-tables.campaign', '1', "\xC3\x28", null],
             'type label with spaces' => ['game-tables.campaign', '1', 'Nombre', 'una campaña'],
             'type label too long' => ['game-tables.campaign', '1', 'Nombre', str_repeat('a', 151)],
+            'type with a trailing newline' => ["game-tables.campaign\n", '1', 'Nombre', null],
+            'id with a trailing newline' => ['game-tables.campaign', "abc\n", 'Nombre', null],
+            'type label with a trailing newline' => ['game-tables.campaign', '1', 'Nombre', "a.b\n"],
         ];
     }
 

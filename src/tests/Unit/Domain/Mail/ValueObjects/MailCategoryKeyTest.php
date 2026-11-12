@@ -31,6 +31,7 @@ final class MailCategoryKeyTest extends TestCase
         yield 'three parts' => ['game-tables.reminders.daily'];
         yield 'spaces' => ['game tables.reminders'];
         yield 'empty name' => ['game-tables.'];
+        yield 'trailing newline' => ["game-tables.reminders\n"];
     }
 
     #[DataProvider('invalidKeys')]
