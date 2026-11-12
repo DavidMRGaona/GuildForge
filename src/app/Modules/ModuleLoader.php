@@ -77,7 +77,7 @@ final class ModuleLoader
         }
 
         // Register autoloader for module namespace
-        $this->registerAutoloader($module->namespace(), $modulePath.'/src');
+        ModuleAutoloader::register($module->namespace(), $modulePath.'/src');
 
         if (! class_exists($providerClass)) {
             return;
@@ -477,26 +477,5 @@ final class ModuleLoader
     private function getEnabledModules(): array
     {
         return $this->resolver->modules();
-    }
-
-    /**
-     * Register SPL autoloader for module namespace.
-     */
-    private function registerAutoloader(string $namespace, string $path): void
-    {
-        spl_autoload_register(function (string $class) use ($namespace, $path): void {
-            $namespace = rtrim($namespace, '\\').'\\';
-
-            if (! str_starts_with($class, $namespace)) {
-                return;
-            }
-
-            $relativeClass = substr($class, strlen($namespace));
-            $file = $path.'/'.str_replace('\\', '/', $relativeClass).'.php';
-
-            if (file_exists($file)) {
-                require_once $file;
-            }
-        });
     }
 }

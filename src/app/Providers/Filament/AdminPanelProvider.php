@@ -17,6 +17,7 @@ use App\Filament\Support\InitialsAvatarProvider;
 use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
+use App\Modules\ModuleAutoloader;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Facades\Filament;
@@ -70,13 +71,6 @@ class AdminPanelProvider extends PanelProvider
      * @var array<string>|null
      */
     private ?array $enabledModuleNamesCache = null;
-
-    /**
-     * Track registered module autoloaders to avoid duplicates.
-     *
-     * @var array<string, bool>
-     */
-    private array $registeredAutoloaders = [];
 
     public function panel(Panel $panel): Panel
     {
@@ -440,35 +434,6 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * Register SPL autoloader for a module namespace (only once per namespace).
-     */
-    private function registerModuleAutoloader(string $namespace, string $path): void
-    {
-        // Skip if already registered
-        if (isset($this->registeredAutoloaders[$namespace])) {
-            return;
-        }
-
-        $this->registeredAutoloaders[$namespace] = true;
-
-        // Pre-calculate namespace prefix (done once at registration, not per class load)
-        $prefix = rtrim($namespace, '\\').'\\';
-        $prefixLength = strlen($prefix);
-
-        spl_autoload_register(static function (string $class) use ($prefix, $prefixLength, $path): void {
-            if (! str_starts_with($class, $prefix)) {
-                return;
-            }
-
-            $file = $path.'/'.str_replace('\\', '/', substr($class, $prefixLength)).'.php';
-
-            if (file_exists($file)) {
-                require_once $file;
-            }
-        });
-    }
-
-    /**
      * Discover and register Filament resources from enabled modules.
      */
     private function discoverModuleResources(Panel $panel): void
@@ -514,7 +479,7 @@ class AdminPanelProvider extends PanelProvider
                     $namespace = "Modules\\{$studlyName}\\Filament\\Resources";
 
                     // Register SPL autoloader for this module
-                    $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath.'/src');
+                    ModuleAutoloader::register("Modules\\{$studlyName}", $modulePath.'/src');
 
                     // Find all resource files
                     $resourceFiles = glob($resourcesPath.'/*Resource.php');
@@ -599,7 +564,7 @@ class AdminPanelProvider extends PanelProvider
                     }
 
                     // Register autoloader and load the provider
-                    $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath.'/src');
+                    ModuleAutoloader::register("Modules\\{$studlyName}", $modulePath.'/src');
 
                     $providerClass = "Modules\\{$studlyName}\\{$studlyName}ServiceProvider";
 
@@ -684,7 +649,7 @@ class AdminPanelProvider extends PanelProvider
                     }
 
                     // Register autoloader and load the provider
-                    $this->registerModuleAutoloader("Modules\\{$studlyName}", $modulePath.'/src');
+                    ModuleAutoloader::register("Modules\\{$studlyName}", $modulePath.'/src');
 
                     $providerClass = "Modules\\{$studlyName}\\{$studlyName}ServiceProvider";
 
