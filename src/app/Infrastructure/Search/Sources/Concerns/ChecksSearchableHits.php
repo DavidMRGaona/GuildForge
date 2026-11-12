@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Search\Sources\Concerns;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 /**
- * The search hits of a core source whose records are visible while they are published, as in its document().
+ * The search hits of a core source that are still visible, by the same query its document() reads.
  */
-trait ChecksPublishedHits
+trait ChecksSearchableHits
 {
     /**
      * @param  non-empty-list<string>  $ids
@@ -24,19 +25,18 @@ trait ChecksPublishedHits
             return [];
         }
 
-        $model = $this->searchedModel();
+        $query = $this->searchable();
 
         /** @var list<string> */
-        return $model::query()
+        return $query
             ->whereKey($uuids)
-            ->where('is_published', true)
-            ->pluck((new $model)->getKeyName())
+            ->pluck($query->getModel()->getKeyName())
             ->map(static fn (mixed $id): string => (string) $id)
             ->all();
     }
 
     /**
-     * @return class-string<Model>
+     * @return Builder<covariant Model>
      */
-    abstract private function searchedModel(): string;
+    abstract private function searchable(): Builder;
 }

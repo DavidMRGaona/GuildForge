@@ -8,13 +8,14 @@ use App\Application\Search\Contracts\ChecksSearchHits;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Search\DTOs\SearchDocumentDTO;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
-use App\Infrastructure\Search\Sources\Concerns\ChecksPublishedHits;
+use App\Infrastructure\Search\Sources\Concerns\ChecksSearchableHits;
 use App\Infrastructure\Search\Support\PlainText;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 final class ArticleSearchSource implements ChecksSearchHits, IndexedSearchSourceInterface
 {
-    use ChecksPublishedHits;
+    use ChecksSearchableHits;
 
     public function type(): string
     {
@@ -43,7 +44,7 @@ final class ArticleSearchSource implements ChecksSearchHits, IndexedSearchSource
             return null;
         }
 
-        $article = ArticleModel::query()->with('tags')->whereKey($id)->where('is_published', true)->first();
+        $article = $this->searchable()->with('tags')->whereKey($id)->first();
 
         return $article instanceof ArticleModel ? $this->toDocument($article) : null;
     }
@@ -53,17 +54,19 @@ final class ArticleSearchSource implements ChecksSearchHits, IndexedSearchSource
      */
     public function documents(): iterable
     {
-        foreach (ArticleModel::query()->with('tags')->where('is_published', true)->lazyById(200) as $article) {
+        foreach ($this->searchable()->with('tags')->lazyById(200) as $article) {
             yield $this->toDocument($article);
         }
     }
 
     /**
-     * @return class-string<ArticleModel>
+     * The records that may be found: documents, full rebuilds and the check of results all read it.
+     *
+     * @return Builder<ArticleModel>
      */
-    private function searchedModel(): string
+    private function searchable(): Builder
     {
-        return ArticleModel::class;
+        return ArticleModel::query()->where('is_published', true);
     }
 
     private function toDocument(ArticleModel $article): SearchDocumentDTO
