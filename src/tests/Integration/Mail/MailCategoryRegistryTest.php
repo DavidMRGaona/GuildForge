@@ -93,6 +93,20 @@ final class MailCategoryRegistryTest extends TestCase
         ), 'example');
     }
 
+    public function test_an_icon_name_with_a_trailing_newline_is_rejected(): void
+    {
+        $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);
+
+        $this->expectException(InvalidMailCategoryException::class);
+        $registry->register(MailCategoryDTO::optional(
+            key: 'example.first',
+            section: 'example::mail.section',
+            label: 'Label',
+            description: 'Description',
+            icon: "calendar-check\n",
+        ), 'example');
+    }
+
     public function test_a_kebab_case_icon_name_is_accepted(): void
     {
         $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);

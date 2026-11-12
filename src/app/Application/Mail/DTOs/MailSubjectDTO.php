@@ -45,15 +45,15 @@ final readonly class MailSubjectDTO
         string $label,
         public ?string $typeLabel = null,
     ) {
-        if (strlen($type) > self::TYPE_MAX_LENGTH || preg_match('/^'.self::TYPE_PATTERN.'$/', $type) !== 1) {
+        if (strlen($type) > self::TYPE_MAX_LENGTH || preg_match('/^'.self::TYPE_PATTERN.'\z/', $type) !== 1) {
             throw new InvalidArgumentException(sprintf('Invalid mail subject type "%s".', $type));
         }
 
-        if (preg_match('/^'.self::ID_PATTERN.'$/', $id) !== 1) {
+        if (preg_match('/^'.self::ID_PATTERN.'\z/', $id) !== 1) {
             throw new InvalidArgumentException(sprintf('Invalid mail subject id "%s".', $id));
         }
 
-        if ($typeLabel !== null && preg_match('/^'.self::TYPE_LABEL_PATTERN.'$/', $typeLabel) !== 1) {
+        if ($typeLabel !== null && preg_match('/^'.self::TYPE_LABEL_PATTERN.'\z/', $typeLabel) !== 1) {
             throw new InvalidArgumentException(sprintf('Invalid mail subject type label "%s".', $typeLabel));
         }
 

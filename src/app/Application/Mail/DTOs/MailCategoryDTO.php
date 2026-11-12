@@ -15,8 +15,8 @@ use Closure;
  */
 final readonly class MailCategoryDTO
 {
-    /** Shape of an icon name: a Lucide icon in kebab case («calendar-check»). */
-    public const string ICON_PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*$/';
+    /** Shape of an icon name: a Lucide icon in kebab case («calendar-check»). Ends in \z, not $: PCRE lets $ match before a final newline. */
+    public const string ICON_PATTERN = '/^[a-z0-9]+(-[a-z0-9]+)*\z/';
 
     /**
      * @param  string  $key  "<prefix>.<name>", where the prefix is "core" or the module name.
