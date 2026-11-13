@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Proposals\Listeners;
 
-use App\Application\Proposals\DTOs\StoredProposalRequestDTO;
 use App\Application\Proposals\Services\EventProposalRequestServiceInterface;
 use App\Domain\Proposals\Enums\ProposalType;
 use App\Domain\Proposals\Events\ProposalSubmitted;
@@ -77,7 +76,7 @@ final readonly class NotifyProposalReviewers
         $lines = [];
 
         foreach ($this->requests->forEvent($eventId) as $request) {
-            if ($request instanceof StoredProposalRequestDTO && $request->description !== null) {
+            if ($request->description !== null) {
                 $lines[] = (string) __('proposals.requests.notice_line', ['label' => $request->label, 'description' => $request->description]);
             }
         }
