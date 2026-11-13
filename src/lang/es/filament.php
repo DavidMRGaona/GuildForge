@@ -438,6 +438,49 @@ return [
             'date' => 'Fecha',
         ],
     ],
+    'impersonation' => [
+        'action' => [
+            'label' => 'Impersonar',
+            'heading' => 'Impersonar a :name',
+            'description' => 'Verás el sitio y el panel como esta persona. No se guarda nada mientras tanto, y la impersonación queda registrada.',
+            'simulate' => 'Permitir ejecutar acciones (se deshacen al terminar cada petición)',
+            'simulate_help' => 'Sin marcar, solo puedes mirar: los envíos y las acciones se bloquean. Marcada, se ejecutan y se deshacen, y los avisos de «Guardado» no son reales.',
+            'confirm' => 'Impersonar',
+            'refused' => 'No se puede impersonar a esta cuenta.',
+        ],
+        'banner' => [
+            'viewing_as' => 'Estás viendo como :name',
+            'read_only' => 'Solo mirar: no se guardan cambios',
+            'simulate' => 'Ejecutar y deshacer: las acciones se ejecutan y se deshacen; los avisos de «Guardado» no son reales',
+            'stop' => 'Volver a mi cuenta',
+        ],
+        'no_panel_access' => ':name no tiene acceso al panel.',
+        'history' => [
+            'as_target' => 'Impersonaciones de esta cuenta',
+            'as_impersonator' => 'Impersonaciones hechas por esta cuenta',
+            'empty' => 'Sin impersonaciones',
+            'open' => 'Sin cierre registrado',
+            'deleted_account' => 'Cuenta anonimizada',
+            'columns' => [
+                'impersonator' => 'Hecha por',
+                'target' => 'Cuenta impersonada',
+                'mode' => 'Modo',
+                'started_at' => 'Inicio',
+                'ended_at' => 'Fin',
+                'reason' => 'Motivo del cierre',
+            ],
+            'modes' => [
+                'read_only' => 'Solo mirar',
+                'simulate' => 'Ejecutar y deshacer',
+            ],
+            'reasons' => [
+                'stopped' => 'Volvió a su cuenta',
+                'logout' => 'Cerró sesión',
+                'revoked' => 'Revocada',
+            ],
+        ],
+    ],
+
     'users' => [
         'fields' => [
             'emailVerified' => 'Email verificado',

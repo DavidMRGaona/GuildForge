@@ -226,6 +226,26 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
     }
 
     /**
+     * Impersonations of this account (it was the one viewed).
+     *
+     * @return HasMany<ImpersonationLogEntryModel, $this>
+     */
+    public function impersonationsAsTarget(): HasMany
+    {
+        return $this->hasMany(ImpersonationLogEntryModel::class, 'target_id');
+    }
+
+    /**
+     * Impersonations this account made (it was the administrator).
+     *
+     * @return HasMany<ImpersonationLogEntryModel, $this>
+     */
+    public function impersonationsAsImpersonator(): HasMany
+    {
+        return $this->hasMany(ImpersonationLogEntryModel::class, 'impersonator_id');
+    }
+
+    /**
      * Normalize email to lowercase to ensure case-insensitive lookups on PostgreSQL.
      *
      * @return Attribute<string, string>
