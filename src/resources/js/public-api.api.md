@@ -1146,7 +1146,7 @@ export interface ProfileTab {
     isModuleTab?: boolean;
     parentId?: string;
 }
-export type ProfileTabIcon = 'user' | 'lock' | 'dice' | 'trophy' | 'calendar' | 'cog' | 'pencil-square' | 'book-open' | 'envelope';
+export type ProfileTabIcon = 'user' | 'lock' | 'dice' | 'trophy' | 'calendar' | 'cog' | 'pencil-square' | 'book-open' | 'envelope' | 'id-card';
 export interface ProfileTabMetadata {
     icon: ProfileTabIcon;
     label: string;

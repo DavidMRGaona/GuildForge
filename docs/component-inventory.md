@@ -728,7 +728,7 @@ Re-exports `models.ts` and `inertia.d.ts`. Also defines:
 | Type | Properties |
 |------|------------|
 | `ProfileTab` | `id`, `label`, `icon: ProfileTabIcon`, `badge?`, `isModuleTab?`, `parentId?` |
-| `ProfileTabIcon` | `'user' \| 'lock' \| 'dice' \| 'trophy' \| 'calendar' \| 'cog' \| 'pencil-square'` |
+| `ProfileTabIcon` | `'user' \| 'lock' \| 'dice' \| 'trophy' \| 'calendar' \| 'cog' \| 'pencil-square' \| 'book-open' \| 'envelope' \| 'id-card'` |
 | `ProfileTabMetadata` | `icon`, `label`, `order` |
 
 ### inertia.d.ts

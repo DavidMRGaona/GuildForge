@@ -84,6 +84,7 @@ export const profileTabIconMap: Record<ProfileTabIconType, Component> = {
     'pencil-square': SquarePen,
     'book-open': BookOpen,
     envelope: Mail,
+    'id-card': IdCard,
 };
 
 /** Resolve a module-provided tab icon, falling back to a neutral icon for names this core does not know. */
