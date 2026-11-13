@@ -168,8 +168,9 @@ final class ApplyImpersonationTest extends TestCase
     {
         $this->startImpersonating();
 
-        // The identity is applied before the panel checks access: never the administrator's
-        $this->get('/admin')->assertForbidden();
+        // The identity is applied before the panel checks access: never the administrator's.
+        // Not a 403 without band: the site, which has it, with a notice
+        $this->get('/admin')->assertRedirect(route('home'));
     }
 
     public function test_the_impersonated_account_with_panel_access_sees_the_panel(): void

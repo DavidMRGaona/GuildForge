@@ -12,10 +12,13 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Filament\Actions\ImpersonateAction;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Resources\UserResource\RelationManagers\ImpersonationsAsImpersonatorRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\ImpersonationsAsTargetRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\RoleAuditRelationManager;
 use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
@@ -328,6 +331,7 @@ class UserResource extends BaseResource
                                     ->send();
                             }
                         }),
+                    ImpersonateAction::make(),
                     Action::make('deactivate')
                         ->authorize('delete')
                         ->label(__('filament.users.actions.deactivate'))
@@ -453,6 +457,8 @@ class UserResource extends BaseResource
     {
         return [
             RoleAuditRelationManager::class,
+            ImpersonationsAsTargetRelationManager::class,
+            ImpersonationsAsImpersonatorRelationManager::class,
         ];
     }
 
