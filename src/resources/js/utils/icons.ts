@@ -22,6 +22,7 @@ import {
     Heart,
     IdCard,
     Image,
+    Images,
     Info,
     Lock,
     Mail,
@@ -160,6 +161,7 @@ export function resolveMailSectionIcon(icon: string | null): Component {
 export const siteNotificationIconMap: Record<string, Component> = {
     ...mailSectionIconMap,
     'at-sign': AtSign,
+    images: Images,
     'message-circle': MessageCircle,
     'message-square': MessageSquare,
     quote: Quote,

@@ -36,6 +36,9 @@ final class CoreMailCategories
     /** What happened to the person's own proposals: approved, returned or rejected (core#577). */
     public const string PROPOSALS_STATUS = 'core.proposals-status';
 
+    /** The first publication of an event, an article or a gallery, in the bell only (core#613). */
+    public const string SITE_NEWS = 'core.site-news';
+
     private static function mayHaveProposals(object $user): bool
     {
         if (! $user instanceof UserModel) {
@@ -100,6 +103,16 @@ final class CoreMailCategories
                 audience: static fn (object $user): bool => self::mayHaveProposals($user),
                 icon: 'clipboard-check',
                 site: true,
+            ),
+            MailCategoryDTO::optional(
+                key: self::SITE_NEWS,
+                section: 'mail.preferences.sections.news',
+                label: 'mail.preferences.categories.site_news.label',
+                description: 'mail.preferences.categories.site_news.description',
+                icon: 'newspaper',
+                // Every account, grouped in the bell while unread; never mailed
+                site: true,
+                mail: false,
             ),
         ]);
 

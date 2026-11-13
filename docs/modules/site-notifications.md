@@ -166,6 +166,16 @@ It deletes every notice whose `HasMailSubject` was that thing, for everybody, so
 - **Notices about an anonymized account (core ≥ the release with #537).** The title and body are stored already written, with the name in them, and the core cannot tell where. So anonymizing also *forgets* every row, of anybody, that has the account among its `actorId`s (`SiteNotificationServiceInterface::forgetActor()`, in the same transaction as the anonymization): read or unread, single or grouped. A group goes whole even when it has other actors, because its title («Ana y 2 más») may name the account; the bell count is recalculated from the remaining rows, so it drops with them. Pass `actorId` in every notice that names a person, or it cannot be forgotten. The call is idempotent. Groups keep at most 100 actors: an account trimmed off a very big group is not found.
 - The notices live in `site_notifications` (one row per notice or group, `user_id` with cascade) and the choices in `user_site_notification_preferences` (only what the person changed; no row shows the notices). Never read or write them directly: use `SiteNotificationServiceInterface` (counts, lists, opening, marking read, forgetting) and `SiteNotificationPreferenceServiceInterface` (`receives()`, `update()`). The state of each category for the profile comes from `MailPreferenceServiceInterface::sectionsFor()`: `MailPreferenceDTO::$mail`, `$site` and `$siteEnabled`.
 
+## The core's site news
+
+The core uses the bell itself for its own content (core#613): the first publication of an event, an article or a gallery reaches every active account as a notice of the optional category `core.site-news` («Novedades», site only, on by default).
+
+- `SiteNewsObserver` watches the three models. A save that leaves the content published for the first time (created published, or `is_published` turned on) writes one row in `site_news_announcements` in the same transaction, and queues `AnnounceSiteNewsJob` once it commits. Taking the content down and publishing it again, or editing it, says nothing; an event that has already ended is no news.
+- `AnnounceSiteNewsJob` splits the active accounts in batches of 100, one `DeliverSiteNewsJob` each, leaving out who published it and who proposed it. Each batch goes straight to the site channel (the news is never mailed), so `Notification::fake()` in a module's tests does not see it. `SiteNewsNotification` reads the content again when it is delivered (`SiteNewsReaderInterface`) and shows nothing once it is no longer published.
+- Unread news of a person share the group key `core.news` («3 novedades en el sitio»). Deleting the content forgets its notices (subject types `core.event`, `core.article`, `core.gallery`).
+
+A module that wants the same for its own content (a new announcement, a general survey opened) declares its own site-only category and sends its own notification: never `core.site-news`.
+
 ## Testing
 
 Send the notification to an account and read what the core stored:

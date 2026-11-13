@@ -45,7 +45,7 @@ Si te vas de vacaciones o pasas una temporada sin jugar, no hace falta ir tipo p
 
 ## Avisos en la web
 
-Algunos tipos también te avisan en la campana de la cabecera. Esos tipos tienen dos interruptores, **En la web** y **Por correo**, y puedes elegir cada uno por separado. Algunos, como los «me gusta», solo avisan en la web, y entonces solo verás **En la web**. La pausa de los correos no pausa los avisos de la web; silenciar algo concreto, sí. Más detalles en la guía de los avisos en la web.
+Algunos tipos también te avisan en la campana de la cabecera. Esos tipos tienen dos interruptores, **En la web** y **Por correo**, y puedes elegir cada uno por separado. Algunos, como los «me gusta» o las novedades del sitio (eventos, artículos y galerías nuevos), solo avisan en la web, y entonces solo verás **En la web**. La pausa de los correos no pausa los avisos de la web; silenciar algo concreto, sí. Más detalles en la guía de los avisos en la web.
 
 ## Qué son los correos obligatorios
 
