@@ -6,11 +6,13 @@ namespace App\Filament\Resources;
 
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Content\Enums\EditorImageOrigin;
+use App\Domain\Proposals\Enums\ProposalType;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Concerns\HasExtendableFormSections;
 use App\Filament\Concerns\HasExtendableRelations;
 use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Forms\RichEditor\EditorImages;
+use App\Filament\Proposals\ProposalReviewPanel;
 use App\Filament\Resources\EventResource\Pages\CreateEvent;
 use App\Filament\Resources\EventResource\Pages\EditEvent;
 use App\Filament\Resources\EventResource\Pages\ListEvents;
@@ -24,6 +26,7 @@ use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -56,6 +59,21 @@ class EventResource extends BaseResource
         return PanelNavigationGroup::Content->getLabel();
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        return ProposalReviewPanel::navigationBadge(ProposalType::Event, EventModel::class);
+    }
+
+    public static function getNavigationBadgeColor(): string
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): string
+    {
+        return __('filament.proposals.navigation_badge');
+    }
+
     public static function getModelLabel(): string
     {
         return __('evento');
@@ -70,6 +88,7 @@ class EventResource extends BaseResource
     {
         return $schema
             ->components([
+                ProposalReviewPanel::reviewSection(),
                 TextInput::make('title')
                     ->label(__('Título'))
                     ->required()
@@ -191,10 +210,11 @@ class EventResource extends BaseResource
                     }),
                 Toggle::make('is_published')
                     ->label(__('Publicado'))
-                    ->default(false),
+                    ->default(false)
+                    ->disabled(fn (?Model $record): bool => ! ProposalReviewPanel::mayPublishWithToggle($record))
+                    ->helperText(fn (?Model $record): ?string => ProposalReviewPanel::publishLockedHint($record)),
 
-                // Extended form sections from modules
-                ...static::getExtendedFormSections(),
+                ...self::moduleFormSections(),
             ]);
     }
 
@@ -235,6 +255,10 @@ class EventResource extends BaseResource
                 IconColumn::make('is_published')
                     ->label(__('Publicado'))
                     ->boolean(),
+                ProposalReviewPanel::statusColumn()
+                    ->visibleFrom('2xl'),
+                ProposalReviewPanel::proposerColumn()
+                    ->visibleFrom('2xl'),
                 TextColumn::make('created_at')
                     ->label(__('Creado'))
                     ->dateTime('d/m/Y')
@@ -244,12 +268,36 @@ class EventResource extends BaseResource
             ->filters([
                 TernaryFilter::make('is_published')
                     ->label(__('Publicado')),
+                ProposalReviewPanel::statusFilter(),
             ])
             // The whole row opens the record: «Ver detalles» shows what narrow screens hide (core#399)
             ->recordActions([
                 RowDetailsAction::makeIconButton(),
             ])
             ->defaultSort('start_date', 'desc');
+    }
+
+    /**
+     * What modules add to the form (extendFormSections()). Hidden while the event is a proposal
+     * not approved yet: its module requests are the only way to configure them until then
+     * (core#575), and a hidden section is neither validated nor saved. Same layout as the form.
+     *
+     * @return list<Group>
+     */
+    private static function moduleFormSections(): array
+    {
+        $sections = static::getExtendedFormSections();
+
+        if ($sections === []) {
+            return [];
+        }
+
+        return [
+            Group::make($sections)
+                ->columns(2)
+                ->columnSpanFull()
+                ->hidden(fn (?Model $record): bool => ProposalReviewPanel::isUnapproved($record)),
+        ];
     }
 
     public static function getPages(): array

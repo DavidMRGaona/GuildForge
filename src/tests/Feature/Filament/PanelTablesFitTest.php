@@ -205,6 +205,8 @@ final class PanelTablesFitTest extends TestCase
             'events date' => [ListEvents::class, 'start_date', 'sm'],
             'events image' => [ListEvents::class, 'image_public_id', 'md'],
             'events location' => [ListEvents::class, 'location', 'xl'],
+            'events proposal status' => [ListEvents::class, 'proposal_status', '2xl'],
+            'events proposer' => [ListEvents::class, 'proposer.display_name', '2xl'],
 
             'guides title' => [ListKnowledgeGuides::class, 'title', null],
             'guides status' => [ListKnowledgeGuides::class, 'status', null],
@@ -247,6 +249,8 @@ final class PanelTablesFitTest extends TestCase
             'articles publication date' => [ListArticles::class, 'published_at', 'sm'],
             'articles image' => [ListArticles::class, 'featured_image_public_id', 'md'],
             'articles author' => [ListArticles::class, 'author.display_name', 'xl'],
+            'articles proposal status' => [ListArticles::class, 'proposal_status', '2xl'],
+            'articles proposer' => [ListArticles::class, 'proposer.display_name', '2xl'],
 
             'galleries title' => [ListGalleries::class, 'title', null],
             'galleries published' => [ListGalleries::class, 'is_published', null],

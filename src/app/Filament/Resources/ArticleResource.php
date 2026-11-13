@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources;
 
 use App\Domain\Content\Enums\EditorImageOrigin;
+use App\Domain\Proposals\Enums\ProposalType;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Forms\RichEditor\EditorImages;
+use App\Filament\Proposals\ProposalReviewPanel;
 use App\Filament\Resources\ArticleResource\Pages\CreateArticle;
 use App\Filament\Resources\ArticleResource\Pages\EditArticle;
 use App\Filament\Resources\ArticleResource\Pages\ListArticles;
@@ -51,6 +53,21 @@ class ArticleResource extends BaseResource
         return PanelNavigationGroup::Content->getLabel();
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        return ProposalReviewPanel::navigationBadge(ProposalType::Article, ArticleModel::class);
+    }
+
+    public static function getNavigationBadgeColor(): string
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): string
+    {
+        return __('filament.proposals.navigation_badge');
+    }
+
     public static function getModelLabel(): string
     {
         return __('artículo');
@@ -65,6 +82,7 @@ class ArticleResource extends BaseResource
     {
         return $schema
             ->components([
+                ProposalReviewPanel::reviewSection(),
                 TextInput::make('title')
                     ->label(__('Título'))
                     ->required()
@@ -145,6 +163,8 @@ class ArticleResource extends BaseResource
                 Toggle::make('is_published')
                     ->label(__('Publicado'))
                     ->default(false)
+                    ->disabled(fn (?Model $record): bool => ! ProposalReviewPanel::mayPublishWithToggle($record))
+                    ->helperText(fn (?Model $record): ?string => ProposalReviewPanel::publishLockedHint($record))
                     ->live(),
                 DateTimePicker::make('published_at')
                     ->label(__('Fecha de publicación'))
@@ -173,10 +193,15 @@ class ArticleResource extends BaseResource
                     ->getStateUsing(fn (ArticleModel $record): string => $record->author->display_name ?? $record->author->name)
                     ->label(__('Autor'))
                     ->sortable()
+                    ->wrap()
                     ->visibleFrom('xl'),
                 IconColumn::make('is_published')
                     ->label(__('Publicado'))
                     ->boolean(),
+                ProposalReviewPanel::statusColumn()
+                    ->visibleFrom('2xl'),
+                ProposalReviewPanel::proposerColumn()
+                    ->visibleFrom('2xl'),
                 TextColumn::make('published_at')
                     ->label(__('Fecha de publicación'))
                     ->dateTime('d/m/Y H:i')
@@ -192,6 +217,7 @@ class ArticleResource extends BaseResource
             ->filters([
                 TernaryFilter::make('is_published')
                     ->label(__('Publicado')),
+                ProposalReviewPanel::statusFilter(),
                 SelectFilter::make('author_id')
                     ->label(__('Autor'))
                     ->relationship('author', 'display_name')

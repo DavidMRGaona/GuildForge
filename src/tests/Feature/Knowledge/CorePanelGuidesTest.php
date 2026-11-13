@@ -7,6 +7,7 @@ namespace Tests\Feature\Knowledge;
 use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Domain\Knowledge\Enums\GuideAudience;
 use App\Domain\Knowledge\ValueObjects\GuideId;
+use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Filament\Pages\CoreUpdatesPage;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\KnowledgeBasePage;
@@ -20,6 +21,7 @@ use App\Filament\Pages\Settings\MailSettings;
 use App\Filament\Pages\Settings\MailStatisticsPage;
 use App\Filament\Pages\SiteSettings;
 use App\Filament\Resources\ArticleResource\Pages\ListArticles;
+use App\Filament\Resources\EventResource\Pages\EditEvent;
 use App\Filament\Resources\EventResource\Pages\ListEvents;
 use App\Filament\Resources\GalleryResource\Pages\ListGalleries;
 use App\Filament\Resources\HeroSlideResource\Pages\ListHeroSlides;
@@ -28,6 +30,7 @@ use App\Filament\Resources\RoleResource\Pages\ListRoles;
 use App\Filament\Resources\TagResource\Pages\ListTags;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
@@ -60,6 +63,7 @@ final class CorePanelGuidesTest extends TestCase
         'core.panel.updates',
         'core.panel.media-library',
         'core.panel.impersonation',
+        'core.panel.review-proposals',
     ];
 
     protected function setUp(): void
@@ -146,6 +150,22 @@ final class CorePanelGuidesTest extends TestCase
         Livewire::test(ListEvents::class)
             ->assertActionVisible('contextualHelp')
             ->assertActionVisible('create');
+    }
+
+    public function test_a_proposal_links_to_the_review_guide_for_its_reviewers(): void
+    {
+        $proposal = EventModel::factory()->proposal(ProposalStatus::PendingReview)->create();
+        $panelMade = EventModel::factory()->create();
+
+        $this->actingAs($this->editorWithPermissions(['events.view_any', 'events.update', 'events.review']));
+        Livewire::test(EditEvent::class, ['record' => $proposal->getRouteKey()])
+            ->assertActionHasUrl('contextualHelp', KnowledgeBasePage::getUrl(['guia' => 'core.panel.review-proposals']));
+        Livewire::test(EditEvent::class, ['record' => $panelMade->getRouteKey()])
+            ->assertActionDoesNotExist('contextualHelp');
+
+        $this->actingAs($this->editorWithPermissions(['events.view_any', 'events.update']));
+        Livewire::test(EditEvent::class, ['record' => $proposal->getRouteKey()])
+            ->assertActionDoesNotExist('contextualHelp');
     }
 
     public function test_pages_without_a_visible_guide_have_no_help_action(): void
