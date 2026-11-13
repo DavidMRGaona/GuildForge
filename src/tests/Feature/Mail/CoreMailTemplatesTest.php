@@ -82,14 +82,17 @@ final class CoreMailTemplatesTest extends TestCase
         $this->assertStringNotContainsString('laravel', strtolower($html));
     }
 
-    public function test_mail_loads_the_site_font(): void
+    public function test_mail_names_the_site_font_without_loading_it_from_a_third_party(): void
     {
+        app(SettingsServiceInterface::class)->set('theme_font_heading', 'Montserrat');
         app(SettingsServiceInterface::class)->set('theme_font_body', 'Poppins');
 
         $html = (string) (new MailMessage)->line('Contenido.')->render();
 
-        $this->assertStringContainsString('https://fonts.bunny.net/css?family=', $html);
         $this->assertStringContainsString("font-family: 'Poppins',", $html);
+        $this->assertStringNotContainsString('fonts.bunny.net', $html);
+        $this->assertDoesNotMatchRegularExpression('/<link\b[^>]*rel="stylesheet"/i', $html);
+        $this->assertDoesNotMatchRegularExpression('/@import|@font-face/i', $html);
     }
 
     public function test_password_reset_email_is_in_spanish(): void

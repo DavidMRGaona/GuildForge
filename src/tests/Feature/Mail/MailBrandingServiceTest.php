@@ -105,17 +105,16 @@ final class MailBrandingServiceTest extends TestCase
         $this->assertStringStartsWith("'Montserrat', ", $branding->fontHeading);
         $this->assertStringStartsWith("'Open Sans', ", $branding->fontBody);
         $this->assertStringEndsWith('sans-serif', $branding->fontBody);
-        $this->assertSame('https://fonts.bunny.net/css?family=montserrat:400,600,700|open-sans:400,600,700', $branding->fontStylesheetUrl);
     }
 
-    public function test_system_font_needs_no_stylesheet(): void
+    public function test_system_font_uses_the_system_stack_only(): void
     {
         $this->settings()->set('theme_font_heading', 'system-ui');
         $this->settings()->set('theme_font_body', 'system-ui');
 
         $branding = $this->service()->branding();
 
-        $this->assertNull($branding->fontStylesheetUrl);
+        $this->assertStringNotContainsString("'", $branding->fontHeading);
         $this->assertStringNotContainsString("'", $branding->fontBody);
     }
 
@@ -136,7 +135,6 @@ final class MailBrandingServiceTest extends TestCase
         $branding = $this->service()->branding();
 
         $this->assertStringNotContainsString('Montserrat', $branding->fontBody);
-        $this->assertStringNotContainsString('montserrat', (string) $branding->fontStylesheetUrl);
     }
 
     public function test_border_radius_follows_the_site_setting_in_pixels(): void

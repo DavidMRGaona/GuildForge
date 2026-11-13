@@ -23,9 +23,6 @@ width: 100% !important;
 }
 }
 </style>
-@if($mailBranding->fontStylesheetUrl)
-<link href="{{ $mailBranding->fontStylesheetUrl }}" rel="stylesheet">
-@endif
 {!! $head ?? '' !!}
 </head>
 <body>
