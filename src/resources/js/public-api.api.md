@@ -445,7 +445,7 @@ export default _default;
 
 ```ts
 interface Props {
-    variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+    variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
     size?: 'sm' | 'md' | 'lg';
     disabled?: boolean;
     loading?: boolean;
@@ -462,7 +462,7 @@ declare const __VLS_base: import("vue").DefineComponent<Props, {}, {}, {}, {}, i
 }>, {
     size: "sm" | "md" | "lg";
     type: "button" | "reset" | "submit";
-    variant: "primary" | "secondary" | "danger" | "ghost";
+    variant: "primary" | "secondary" | "danger" | "ghost" | "outline";
     disabled: boolean;
     loading: boolean;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;

@@ -21,7 +21,23 @@ describe('BaseButton', () => {
         expect(classes).not.toContain('text-white');
     });
 
-    it.each(['secondary', 'danger', 'ghost'] as const)(
+    it('draws the outline variant as a border on a transparent background', () => {
+        const classes = mount(BaseButton, { props: { variant: 'outline' } }).classes();
+
+        // An inset ring, like the primary border: same size as the solid buttons beside it
+        expect(classes).toEqual(
+            expect.arrayContaining([
+                'bg-transparent',
+                'text-base-primary',
+                'inset-ring',
+                'inset-ring-(--color-border)',
+                'hover:bg-muted',
+            ])
+        );
+        expect(classes).not.toContain('bg-muted');
+    });
+
+    it.each(['secondary', 'danger', 'ghost', 'outline'] as const)(
         'keeps the %s variant outside the button style setting',
         (variant) => {
             const classes = mount(BaseButton, { props: { variant } }).classes();

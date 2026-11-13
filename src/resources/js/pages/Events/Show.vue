@@ -171,7 +171,7 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
 
                         <!-- Secondary action: after signing up, not before -->
                         <div v-if="props.calendarLinks && isUpcoming(props.event)" class="mb-6">
-                            <AddToCalendarMenu :links="props.calendarLinks" />
+                            <AddToCalendarMenu :links="props.calendarLinks" block />
                         </div>
 
                         <!-- Conversation about the event, filled by a forum module -->

@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import LoadingSpinner from './LoadingSpinner.vue';
 
 interface Props {
-    variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+    variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
     size?: 'sm' | 'md' | 'lg';
     disabled?: boolean;
     loading?: boolean;
@@ -31,6 +31,10 @@ const variantClasses: Record<NonNullable<typeof props.variant>, string> = {
         'bg-muted text-base-primary hover:bg-neutral-200 dark:hover:bg-neutral-700 focus:ring-neutral-400 disabled:opacity-50',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50',
     ghost: 'bg-transparent text-base-secondary hover:bg-muted hover:text-base-primary focus:ring-neutral-400 disabled:opacity-50',
+    // Secondary actions next to bordered links (module buttons): an inset ring, like the primary
+    // border, so it is as tall as the solid buttons beside it
+    outline:
+        'bg-transparent text-base-primary inset-ring inset-ring-(--color-border) hover:bg-muted focus:ring-neutral-400 disabled:opacity-50',
 };
 
 const sizeClasses: Record<NonNullable<typeof props.size>, string> = {
@@ -50,6 +54,7 @@ const spinnerColors: Record<NonNullable<typeof props.variant>, string> = {
     secondary: 'text-base-secondary',
     danger: 'text-white',
     ghost: 'text-base-secondary',
+    outline: 'text-base-secondary',
 };
 
 const buttonClasses = computed(() => [
