@@ -17,6 +17,7 @@ use App\Filament\Support\InitialsAvatarProvider;
 use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
+use App\Http\Middleware\ApplyImpersonation;
 use App\Modules\ModuleAutoloader;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -126,6 +127,10 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                // Before the session check and Filament's Authenticate, so the panel opens
+                // (or not) for the impersonated account, never for the administrator
+                ApplyImpersonation::class,
+                // Resolves to AuthenticatePanelImpersonatorSession (ImpersonationServiceProvider)
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 PreventRequestForgery::class,

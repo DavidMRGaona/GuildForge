@@ -398,6 +398,15 @@ final class CorePermissionDefinitions
                 description: __('authorization.permission_descriptions.users.assign_roles'),
             ),
 
+            // Impersonation: admin only (AdminOnlyPermissionRule::CORE_KEYS)
+            new PermissionDefinitionDTO(
+                key: 'users.impersonate',
+                label: __('authorization.permissions.users.impersonate'),
+                resource: 'users',
+                action: 'impersonate',
+                description: __('authorization.permission_descriptions.users.impersonate'),
+            ),
+
             // Admin panel access
             new PermissionDefinitionDTO(
                 key: 'admin.access',

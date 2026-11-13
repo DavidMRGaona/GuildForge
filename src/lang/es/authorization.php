@@ -80,6 +80,7 @@ return [
             'update' => 'Editar usuario',
             'delete' => 'Eliminar usuario',
             'assign_roles' => 'Asignar roles a usuarios',
+            'impersonate' => 'Impersonar a otras personas',
         ],
         'roles' => [
             'view_any' => 'Ver listado de roles',
@@ -152,6 +153,7 @@ return [
         ],
         'users' => [
             'assign_roles' => 'Solo puede dar o quitar roles cuyos permisos tenga.',
+            'impersonate' => 'Ver el sitio y el panel como otra persona, sin guardar nada. Solo para la administración.',
         ],
         'modules' => [
             'manage' => 'Instalar, habilitar y deshabilitar módulos.',

@@ -73,6 +73,7 @@ return [
             'update' => 'Edit user',
             'delete' => 'Delete user',
             'assign_roles' => 'Assign roles to users',
+            'impersonate' => 'Impersonate other people',
         ],
         'roles' => [
             'view_any' => 'View roles list',
@@ -145,6 +146,7 @@ return [
         ],
         'users' => [
             'assign_roles' => 'Can only give or remove roles whose permissions they hold.',
+            'impersonate' => 'See the site and the panel as another person, without saving anything. Administrators only.',
         ],
         'modules' => [
             'manage' => 'Install, enable and disable modules.',

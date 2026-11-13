@@ -28,6 +28,8 @@ use Symfony\Component\HttpFoundation\Response;
  * Always reachable:
  * - `verification.*`: the notice, resending the link and the verification links themselves;
  * - `logout`: an account must always be able to sign out;
+ * - `impersonation.stop`: an administrator impersonating an unverified account must always be
+ *   able to go back to their own;
  * - `profile.show` and `profile.update`: to correct a mistyped email (the change is confirmed
  *   through `verification.pending-email`, which also verifies the account);
  * - `filament.*`: the admin panel has its own middleware stack (not the `web` group) and access
@@ -58,6 +60,7 @@ final readonly class EnsureEmailIsVerifiedWhenRequired
     private const array EXCLUDED_ROUTE_NAMES = [
         'verification.*',
         'logout',
+        'impersonation.stop',
         'profile.show',
         'profile.update',
         'filament.*',

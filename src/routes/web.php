@@ -16,6 +16,7 @@ use App\Http\Controllers\Auth\MutedMailSubjectsController;
 use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\StopImpersonationController;
 use App\Http\Controllers\CalendarEntryICalendarController;
 use App\Http\Controllers\CalendarPageController;
 use App\Http\Controllers\ContactController;
@@ -159,6 +160,7 @@ Route::middleware('guest')->group(function (): void {
 // Authenticated routes
 Route::middleware('auth')->group(function (): void {
     Route::post('/cerrar-sesion', [LoginController::class, 'destroy'])->name('logout');
+    Route::post('/impersonar/salir', StopImpersonationController::class)->name('impersonation.stop');
 
     // Email verification
     Route::get('/verificar-email', [EmailVerificationController::class, 'notice'])->name('verification.notice');
