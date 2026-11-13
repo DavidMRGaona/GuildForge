@@ -27,6 +27,7 @@ use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Throwable;
 
 /**
@@ -45,13 +46,16 @@ final class MediaLibraryPicker
 
     public const string PERMISSION = 'media.view_any';
 
+    /** Request attribute holding the paths the picker's fields stored from uploads in this request (core#608). */
+    private const string STORED_IN_THIS_REQUEST = 'media_picker.stored_in_this_request';
+
     /**
      * @param  (Closure(): list<string>)|null  $storedPaths  paths always accepted, for pages without a record (settings)
      * @param  (Closure(Builder<MediaFileModel>): Builder<MediaFileModel>)|null  $constrain  the field's own rule on top of the library's
      */
     public static function attachTo(FileUpload $field, ?Closure $storedPaths = null, ?Closure $constrain = null): FileUpload
     {
-        return $field
+        return self::rememberWhatItStores($field)
             ->hintAction(self::action($constrain))
             ->preventFilePathTampering(
                 true,
@@ -66,6 +70,34 @@ final class MediaLibraryPicker
                     ? (string) __('filament.media_picker.errors.missing')
                     : null,
             ]);
+    }
+
+    /**
+     * core#608: a repeater saves its relationship by reading each item's state again, once the field has already
+     * stored the upload under its final path. Filament's own way of storing it is kept; the path it returns is
+     * remembered for this request only, so isStored() accepts it. Nothing else can reach that list: it only holds
+     * paths this field wrote from a file uploaded in this same request.
+     */
+    private static function rememberWhatItStores(FileUpload $field): FileUpload
+    {
+        $store = (fn (): ?Closure => $this->saveUploadedFileUsing)->call($field);
+
+        if (! $store instanceof Closure) {
+            return $field;
+        }
+
+        return $field->saveUploadedFileUsing(static function (FileUpload $component, TemporaryUploadedFile $file) use ($store): mixed {
+            $stored = $component->evaluate($store, ['file' => $file]);
+
+            if (is_string($stored) && $stored !== '') {
+                $request = request();
+                $paths = (array) $request->attributes->get(self::STORED_IN_THIS_REQUEST, []);
+                $paths[] = $stored;
+                $request->attributes->set(self::STORED_IN_THIS_REQUEST, $paths);
+            }
+
+            return $stored;
+        });
     }
 
     /**
@@ -154,7 +186,8 @@ final class MediaLibraryPicker
      */
     private static function isStored(string $file, FileUpload $component, ?Closure $storedPaths): bool
     {
-        if (in_array($file, $component->getOriginalFilePaths(), true)) {
+        if (in_array($file, $component->getOriginalFilePaths(), true)
+            || in_array($file, (array) request()->attributes->get(self::STORED_IN_THIS_REQUEST, []), true)) {
             return true;
         }
 
