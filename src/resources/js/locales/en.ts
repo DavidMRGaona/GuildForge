@@ -297,6 +297,14 @@ export default {
         undo: 'Undo',
         choose: 'Choose which emails you receive',
     },
+    impersonationBanner: {
+        label: 'Impersonation',
+        viewingAs: 'You are viewing the site as {name}',
+        readOnly: 'View only: no changes are saved',
+        simulate: 'Run and undo: what you submit is run and then undone',
+        stop: 'Back to my account',
+        stopping: 'Going back…',
+    },
     maintenance: {
         title: "We're under maintenance",
         defaultMessage: "We're making improvements to the site. Please try again in a few minutes.",

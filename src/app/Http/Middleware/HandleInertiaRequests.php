@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
@@ -88,6 +89,8 @@ final class HandleInertiaRequests extends Middleware
             'siteNotifications' => fn (): ?array => $this->getSiteNotifications($request),
             // Where the browser opens the WebSocket (core#493); null without real time or session
             'realtime' => fn (): ?array => $this->getRealtimeConfig($request),
+            // Whom the administrator is viewing the site as (core#580); null outside an impersonation
+            'impersonation' => $this->getImpersonation(...),
             'authSettings' => $this->getAuthSettings(...),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -253,6 +256,34 @@ final class HandleInertiaRequests extends Middleware
         } catch (\Throwable $e) {
             // Without it the page polls, as it does when real time is off
             $this->logDebugError('getRealtimeConfig', $e);
+
+            return null;
+        }
+    }
+
+    /**
+     * Who the administrator is viewing the site as, or null when no impersonation is active.
+     *
+     * @return array{targetName: string|null, mode: string}|null
+     */
+    private function getImpersonation(): ?array
+    {
+        try {
+            $context = app(ImpersonationContextInterface::class);
+            $target = $context->target();
+            $mode = $context->mode();
+
+            if (! $context->isActive() || $target === null || $mode === null) {
+                return null;
+            }
+
+            // Only what the band shows: never anything about the administrator
+            return [
+                'targetName' => app(ResponseDTOFactoryInterface::class)->createUserDTO($target)->displayName,
+                'mode' => $mode->value,
+            ];
+        } catch (\Throwable $e) {
+            $this->logDebugError('getImpersonation', $e);
 
             return null;
         }

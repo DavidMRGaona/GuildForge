@@ -123,6 +123,27 @@ final class ImpersonationSessionTest extends TestCase
         $this->assertTrue(Auth::user()?->is($this->admin));
     }
 
+    public function test_back_to_my_account_from_an_inertia_visit_is_a_location_visit(): void
+    {
+        $this->startImpersonating();
+
+        $response = $this->post(route('impersonation.stop'), [], ['X-Inertia' => 'true']);
+
+        $response->assertStatus(409);
+        $response->assertHeader('X-Inertia-Location', UserResource::getUrl('edit', ['record' => $this->editor->id]));
+        $this->assertSame(ImpersonationEndReason::Stopped, ImpersonationLogEntryModel::query()->sole()->ended_reason);
+        $this->assertFalse(app(Session::class)->has(ImpersonationSessionState::SESSION_KEY));
+    }
+
+    public function test_back_to_my_account_from_an_inertia_visit_without_an_impersonation_goes_home(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->post(route('impersonation.stop'), [], ['X-Inertia' => 'true'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', route('home'));
+    }
+
     public function test_back_to_my_account_works_while_the_site_is_in_maintenance(): void
     {
         $member = UserModel::factory()->create();

@@ -9,6 +9,7 @@ import TheHeader from '@/components/layout/TheHeader.vue';
 import TheFooter from '@/components/layout/TheFooter.vue';
 import NotificationToast from '@/components/ui/NotificationToast.vue';
 import ModuleSlot from '@/components/layout/ModuleSlot.vue';
+import ImpersonationBanner from '@/components/layout/ImpersonationBanner.vue';
 import VerificationBanner from '@/components/layout/VerificationBanner.vue';
 
 const { t } = useI18n();
@@ -50,6 +51,7 @@ watch(theme, (newTheme) => {
         >
             {{ t('a11y.skipToContent') }}
         </a>
+        <ImpersonationBanner />
         <ModuleSlot name="before-header" />
         <TheHeader />
         <VerificationBanner />
