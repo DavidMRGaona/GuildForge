@@ -39,9 +39,11 @@ interface EventProposalRequestServiceInterface
 
     /**
      * Stores what the author asks for, for the requests offered now: a request asked for is
-     * written with its values (any approved values and the apply flag start over), one not asked
-     * for is removed. Requests not offered any more stay as they were. Call it inside the
-     * transaction that saves the proposal, once the author may edit it.
+     * written with its values, one not asked for is removed. A request whose values changed (or
+     * is new) starts its review over (no approved values, ticked to apply); one asked for with
+     * the same values keeps what the reviewer decided, so a returned draft saved again loses
+     * nothing. Requests not offered any more stay as they were. Call it inside the transaction
+     * that saves the proposal, once the author may edit it.
      *
      * @param  array<array-key, mixed>  $submitted
      *

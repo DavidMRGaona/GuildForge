@@ -166,6 +166,25 @@ final class EventProposalRequestServiceTest extends TestCase
         $this->assertNull($this->row($id));
     }
 
+    public function test_a_returned_draft_keeps_the_review_of_a_request_its_author_did_not_change(): void
+    {
+        [$id, $author] = $this->pending();
+        $reviewer = $this->userWith(['events.review']);
+        $this->requests()->review((string) $reviewer->id, $id, [self::KEY => ['apply' => false, 'values' => ['capacity' => '12', 'mode' => 'members']]]);
+        $this->proposals()->returnToDraft((string) $reviewer->id, ProposalType::Event, $id, 'Falta el lugar');
+
+        // Saved again with the same request: what the reviewer decided stays
+        $this->proposals()->updateEvent((string) $author->id, $id, $this->data($this->asked()));
+        $this->assertFalse($this->row($id)?->apply);
+        $this->assertSame(12, $this->row($id)->approved_values['capacity'] ?? null);
+
+        // Changed: it is a new request, so the review starts over
+        $this->proposals()->updateEvent((string) $author->id, $id, $this->data($this->asked(['capacity' => '30', 'mode' => 'open'])));
+        $this->assertTrue($this->row($id)?->apply);
+        $this->assertNull($this->row($id)->approved_values);
+        $this->assertSame(30, $this->row($id)->requested_values['capacity'] ?? null);
+    }
+
     public function test_invalid_values_are_refused_and_nothing_is_saved(): void
     {
         $author = $this->userWith();

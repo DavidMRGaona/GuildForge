@@ -103,7 +103,14 @@ final readonly class EventProposalRequestService implements EventProposalRequest
                 continue;
             }
 
-            // Asked for again: whatever a reviewer decided before starts over
+            $row = $this->rows($eventId)->where('request_key', $definition->key)->first();
+
+            // Unchanged (a returned draft saved again): what the reviewer decided stays
+            if ($row instanceof EventProposalRequestModel && $row->requested_values === $values) {
+                continue;
+            }
+
+            // New or changed: a new request, so any earlier review starts over
             EventProposalRequestModel::query()->updateOrCreate(
                 ['event_id' => $eventId, 'request_key' => $definition->key],
                 ['requested_values' => $values, 'approved_values' => null, 'apply' => true, 'applied_at' => null],
