@@ -10,6 +10,7 @@ use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
+use App\Domain\ValueObjects\NeutralPalette;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
@@ -51,26 +52,6 @@ use Throwable;
 class AdminPanelProvider extends PanelProvider
 {
     /**
-     * The public site's warm greys (resources/css/app.css): stone in light mode, and the
-     * page (950), surface (900) and elevated (800) backgrounds of its dark mode.
-     *
-     * @var array<int, string>
-     */
-    public const array GRAY_PALETTE = [
-        50 => '#fafaf9',
-        100 => '#f5f5f4',
-        200 => '#e7e5e4',
-        300 => '#d6d3d1',
-        400 => '#a8a29e',
-        500 => '#78716c',
-        600 => '#57534e',
-        700 => '#44403c',
-        800 => '#3d3936',
-        900 => '#302d2a',
-        950 => '#252220',
-    ];
-
-    /**
      * Cache for enabled module names to avoid multiple repository calls.
      *
      * @var array<string>|null
@@ -110,7 +91,7 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(fn (): string => $this->getFavicon())
             ->colors([
                 'primary' => $this->getPrimaryColor(),
-                'gray' => self::GRAY_PALETTE,
+                'gray' => NeutralPalette::SHADES,
             ])
             ->darkMode(true)
             ->defaultAvatarProvider(InitialsAvatarProvider::class)

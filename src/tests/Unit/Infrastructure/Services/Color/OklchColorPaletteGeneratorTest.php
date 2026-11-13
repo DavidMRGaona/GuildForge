@@ -235,20 +235,6 @@ final class OklchColorPaletteGeneratorTest extends TestCase
         $this->assertGreaterThan(7.0, $contrast);
     }
 
-    public function test_generates_neutral_palette_from_accent(): void
-    {
-        $accentColor = new HexColor('#0EA5E9');
-
-        $neutral = $this->generator->generateNeutral('neutral', $accentColor);
-
-        // Neutral should have very low chroma
-        $shade500 = $neutral->shade(500);
-        $this->assertNotNull($shade500);
-
-        $oklch = $shade500->toOklch();
-        $this->assertLessThan(0.03, $oklch['c']);
-    }
-
     public function test_detects_near_white_color(): void
     {
         $nearWhite = new HexColor('#F8F8F8');

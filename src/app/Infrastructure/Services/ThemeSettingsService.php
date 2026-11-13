@@ -10,6 +10,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Domain\ValueObjects\ColorPalette;
 use App\Domain\ValueObjects\HexColor;
+use App\Domain\ValueObjects\NeutralPalette;
 use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 
 final readonly class ThemeSettingsService implements ThemeSettingsServiceInterface
@@ -264,13 +265,11 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
     }
 
     /**
-     * Get the neutral color palette (derived from accent).
+     * The shared neutral palette: the same greys as the panel, whatever the accent colour.
      */
     public function getNeutralPalette(): ColorPalette
     {
-        $accentColor = $this->getAccentBaseColor();
-
-        return $this->paletteGenerator->generateNeutral('neutral', $accentColor);
+        return NeutralPalette::palette();
     }
 
     private function getPrimaryBaseColor(): HexColor

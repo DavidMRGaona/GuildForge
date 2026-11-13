@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\SiteSettings;
 use App\Filament\Support\PanelSidebarMode;
@@ -34,6 +35,17 @@ final class PanelAppearanceTest extends TestCase
         $this->assertSame('#3d3936', $gray[800]);
         // Page background in light mode
         $this->assertSame('#fafaf9', $gray[50]);
+    }
+
+    public function test_panel_greys_are_the_neutral_palette_the_site_theme_writes(): void
+    {
+        $gray = Filament::getPanel('admin')->getColors()['gray'] ?? null;
+        $siteNeutral = app(ThemeSettingsServiceInterface::class)->getNeutralPalette();
+
+        $this->assertIsArray($gray);
+        foreach ($siteNeutral->shades() as $shade => $color) {
+            $this->assertSame($color->value, strtoupper((string) $gray[$shade]), "gray-{$shade}");
+        }
     }
 
     /**

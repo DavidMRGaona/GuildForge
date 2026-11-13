@@ -7,6 +7,7 @@ namespace Tests\Unit\Infrastructure\Services\Color;
 use App\Application\Services\ColorPaletteGeneratorInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\ValueObjects\HexColor;
+use App\Domain\ValueObjects\NeutralPalette;
 use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 use App\Infrastructure\Services\ThemeSettingsService;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -194,6 +195,26 @@ final class ThemeSettingsServicePaletteTest extends TestCase
         $palette = $this->service->getNeutralPalette();
 
         $this->assertEquals('neutral', $palette->name());
+    }
+
+    #[DataProvider('themeColours')]
+    public function test_neutral_palette_is_the_shared_one_whatever_the_accent(string $primary, string $accent): void
+    {
+        $this->useColours($primary, $accent);
+
+        $this->assertTrue($this->service->getNeutralPalette()->equals(NeutralPalette::palette()));
+    }
+
+    public function test_css_variables_carry_the_shared_neutral_shades(): void
+    {
+        // A cool accent used to tint (and darken) the site's greys away from the panel's
+        $this->useColours('#D97706', '#0EA5E9');
+
+        $css = $this->service->getCssVariables();
+
+        foreach (NeutralPalette::palette()->shades() as $shade => $color) {
+            $this->assertStringContainsString("--color-neutral-{$shade}: {$color->value};", $css);
+        }
     }
 
     #[DataProvider('themeColours')]
