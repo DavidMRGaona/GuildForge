@@ -225,19 +225,36 @@ final class ModuleManagerServiceTest extends TestCase
             'requires' => null,
         ]);
 
-        // Closing the module change window reads the enabled modules afresh and may cache them
-        // again (core#624): what must never survive is the stale list
+        // Closing the module change window reads the enabled modules afresh, which caches them
+        // again (core#624): the stale list is gone and what is cached is the list after the change
         Cache::put('modules.discovered', ['stale'], 3600);
         $this->service->enable(ModuleName::fromString('test-module'));
-        $this->assertNotSame(['stale'], Cache::get('modules.discovered'));
+        $this->assertSame(['test-module'], $this->cachedModuleNames());
 
         Cache::put('modules.discovered', ['stale'], 3600);
         $this->service->disable(ModuleName::fromString('test-module'));
-        $this->assertNotSame(['stale'], Cache::get('modules.discovered'));
+        $this->assertSame([], $this->cachedModuleNames());
 
         Cache::put('modules.discovered', ['stale'], 3600);
         $this->service->uninstall(ModuleName::fromString('test-module'));
-        $this->assertNotSame(['stale'], Cache::get('modules.discovered'));
+        $this->assertSame([], $this->cachedModuleNames());
+    }
+
+    /**
+     * Names of the modules in the cached enabled-modules list; fails when the cache holds anything else
+     *
+     * @return list<string>
+     */
+    private function cachedModuleNames(): array
+    {
+        $cached = Cache::get('modules.discovered');
+        $this->assertIsArray($cached);
+
+        return array_values(array_map(function (mixed $module): string {
+            $this->assertInstanceOf(Module::class, $module);
+
+            return $module->name()->value;
+        }, $cached));
     }
 
     public function test_it_throws_when_disabling_already_disabled_module(): void
