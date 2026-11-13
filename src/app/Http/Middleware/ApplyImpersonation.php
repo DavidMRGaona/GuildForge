@@ -47,6 +47,12 @@ final readonly class ApplyImpersonation
     /** @var list<string> */
     public const array LOGOUT_ROUTES = ['logout', 'filament.*.auth.logout'];
 
+    /**
+     * Flash key for notices meant for the administrator (core#614). The site's band shows it on
+     * any page, which plain `error` flashes do not reach.
+     */
+    public const string NOTICE_FLASH = 'impersonation_notice';
+
     /** «Volver a mi cuenta»: it closes the log entry, so it runs outside the rolled back transaction */
     public const string STOP_ROUTE = 'impersonation.stop';
 

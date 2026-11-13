@@ -104,7 +104,7 @@ final class ImpersonationPanelBannerTest extends TestCase
 
         $this->get('/admin')
             ->assertRedirect(route('home'))
-            ->assertSessionHas('error', __('filament.impersonation.no_panel_access', ['name' => 'Luis Ejemplo']));
+            ->assertSessionHas('impersonation_notice', __('filament.impersonation.no_panel_access', ['name' => 'Luis Ejemplo']));
     }
 
     public function test_the_notice_prefers_the_display_name(): void
@@ -112,7 +112,7 @@ final class ImpersonationPanelBannerTest extends TestCase
         $member = UserModel::factory()->create(['name' => 'Luis Ejemplo', 'display_name' => 'Lu']);
         $this->startImpersonating($member);
 
-        $this->get('/admin')->assertSessionHas('error', __('filament.impersonation.no_panel_access', ['name' => 'Lu']));
+        $this->get('/admin')->assertSessionHas('impersonation_notice', __('filament.impersonation.no_panel_access', ['name' => 'Lu']));
     }
 
     public function test_the_redirect_keeps_the_impersonation_going(): void
