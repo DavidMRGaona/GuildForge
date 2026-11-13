@@ -15,6 +15,7 @@ return [
         'sections' => [
             'account' => 'Cuenta',
             'site_management' => 'Gestión del sitio',
+            'proposals' => 'Propuestas',
         ],
         'categories' => [
             'account' => [
@@ -25,6 +26,14 @@ return [
             'role_management' => [
                 'label' => 'Roles inactivos',
                 'description' => 'Aviso cuando una persona a la que puedes conceder roles se queda con alguno inactivo.',
+            ],
+            'proposals_review' => [
+                'label' => 'Propuestas para revisar',
+                'description' => 'Aviso cuando alguien envía a revisión un evento o un artículo que puedes revisar.',
+            ],
+            'proposals_status' => [
+                'label' => 'Estado de mis propuestas',
+                'description' => 'Aviso cuando se aprueba, se devuelve o se rechaza un evento o un artículo que has propuesto.',
             ],
         ],
     ],
