@@ -16,7 +16,8 @@ export type ProfileTabIcon =
     | 'cog'
     | 'pencil-square'
     | 'book-open'
-    | 'envelope';
+    | 'envelope'
+    | 'id-card';
 
 export interface ProfileTabMetadata {
     icon: ProfileTabIcon;
