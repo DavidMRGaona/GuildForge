@@ -40,7 +40,7 @@ const { categoryTag, additionalTags, hasTags } = useTags(computed(() => props.ar
             </Link>
         </div>
 
-        <article class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-neutral-900/50">
+        <article class="overflow-hidden rounded-lg bg-surface shadow dark:shadow-depth">
             <img
                 v-if="heroImageUrl"
                 :src="heroImageUrl"

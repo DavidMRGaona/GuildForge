@@ -60,11 +60,11 @@ final class RootViewThemeTest extends TestCase
 
     public function test_the_head_loads_the_site_fonts(): void
     {
-        app(SettingsServiceInterface::class)->set('theme_font_heading', 'Lora');
+        app(SettingsServiceInterface::class)->set('theme_font_heading', 'Playfair Display');
         app(SettingsServiceInterface::class)->set('theme_font_body', 'Open Sans');
 
         $this->assertStringContainsString(
-            '<link rel="stylesheet" href="https://fonts.bunny.net/css2?family=Lora:wght@400;500;600;700&amp;family=Open%20Sans:wght@400;500;600;700&amp;display=swap" data-site-fonts>',
+            '<link rel="stylesheet" href="https://fonts.bunny.net/css2?family=Playfair%20Display:wght@400;500;600;700&amp;family=Open%20Sans:wght@400;500;600;700&amp;display=swap" data-site-fonts>',
             $this->rootHead(),
         );
     }
@@ -74,7 +74,11 @@ final class RootViewThemeTest extends TestCase
         app(SettingsServiceInterface::class)->set('theme_font_heading', 'system-ui');
         app(SettingsServiceInterface::class)->set('theme_font_body', 'system-ui');
 
-        $this->assertStringNotContainsString('data-site-fonts', $this->rootHead());
+        $head = $this->rootHead();
+
+        $this->assertStringNotContainsString('data-site-fonts', $head);
+        // No fixed family either: the page downloads only what the settings choose
+        $this->assertStringNotContainsString('fonts.bunny.net/css', $head);
     }
 
     public function test_a_stored_value_cannot_close_the_style_element(): void

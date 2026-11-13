@@ -44,7 +44,7 @@ const excerptLength = computed(() => (isCompact.value ? 100 : 120));
     <Link
         :href="routes.events.show(props.event.slug)"
         :aria-label="t('a11y.viewEvent', { title: props.event.title })"
-        class="group block overflow-hidden rounded-lg bg-surface shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:shadow-neutral-900/50 dark:focus:ring-offset-page"
+        class="group block overflow-hidden rounded-lg bg-surface shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:shadow-depth dark:focus:ring-offset-page"
     >
         <!-- Image with badges -->
         <div class="relative">

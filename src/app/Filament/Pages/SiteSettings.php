@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleGrantPolicy;
+use App\Application\DTOs\ThemeSettingsDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Domain\Enums\UserRole;
@@ -155,6 +156,25 @@ final class SiteSettings extends Page implements HasForms
     public static function getMaintenanceTabUrl(): string
     {
         return self::getUrl(['tab' => self::MAINTENANCE_TAB]);
+    }
+
+    /**
+     * Font select options: each family under its own name, the system font translated. The same
+     * lists decide what ThemeSettingsDTO accepts, so the form never offers a value the site drops.
+     *
+     * @param  list<string>  $fonts
+     * @return array<string, string>
+     */
+    public static function fontOptions(array $fonts): array
+    {
+        $options = [];
+        foreach ($fonts as $font) {
+            $options[$font] = $font === ThemeSettingsDTO::SYSTEM_FONT
+                ? __('filament.settings.typography.font_system')
+                : $font;
+        }
+
+        return $options;
     }
 
     /**
@@ -431,26 +451,12 @@ final class SiteSettings extends Page implements HasForms
                             ->schema([
                                 Select::make('theme_font_heading')
                                     ->label(__('filament.settings.typography.font_heading'))
-                                    ->options([
-                                        'Inter' => 'Inter',
-                                        'Poppins' => 'Poppins',
-                                        'Montserrat' => 'Montserrat',
-                                        'Roboto' => 'Roboto',
-                                        'Open Sans' => 'Open Sans',
-                                        'system-ui' => 'System Default',
-                                    ])
+                                    ->options(self::fontOptions(ThemeSettingsDTO::HEADING_FONTS))
                                     ->default('Inter'),
 
                                 Select::make('theme_font_body')
                                     ->label(__('filament.settings.typography.font_body'))
-                                    ->options([
-                                        'Inter' => 'Inter',
-                                        'Poppins' => 'Poppins',
-                                        'Montserrat' => 'Montserrat',
-                                        'Roboto' => 'Roboto',
-                                        'Open Sans' => 'Open Sans',
-                                        'system-ui' => 'System Default',
-                                    ])
+                                    ->options(self::fontOptions(ThemeSettingsDTO::BODY_FONTS))
                                     ->default('Inter'),
 
                                 Select::make('theme_font_size_base')

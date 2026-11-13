@@ -29,9 +29,9 @@
         <x-site-favicons />
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|playfair-display:400,700" rel="stylesheet" />
 
-        {{-- The site palette and fonts for every page, with or without a layout (core#394) --}}
+        {{-- The site palette and fonts for every page, with or without a layout (core#394): only the
+             families the site settings choose, Inter when they cannot be read --}}
         <x-site-theme :theme="$page['props']['theme'] ?? null" />
 
         {{-- Import map for dynamic module loading (resolves vue, pinia, etc.) --}}

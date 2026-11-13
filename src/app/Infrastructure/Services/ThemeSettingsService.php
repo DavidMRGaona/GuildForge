@@ -58,6 +58,10 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         $primaryLight = $this->shade($primaryPalette, 600)->readableOn($white, lighten: false)->value;
         $primaryDark = $this->shade($primaryPalette, 500)->readableOn($white, lighten: false)->value;
 
+        $fontHeading = $this->fontStack($theme->fontHeading);
+        $fontBody = $this->fontStack($theme->fontBody);
+        $button = $this->primaryButtonCss($theme->buttonStyle);
+
         // One step more specific than the defaults in app.css (:root and .dark), so the site palette
         // wins whatever order the stylesheets load in: the dev server appends app.css after the head
         return <<<CSS
@@ -127,13 +131,16 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           --color-calendar-neutral: var(--color-neutral-400);
 
           /* Typography */
-          --font-heading: '{$theme->fontHeading}', system-ui, sans-serif;
-          --font-body: '{$theme->fontBody}', system-ui, sans-serif;
+          --font-heading: {$fontHeading};
+          --font-body: {$fontBody};
           --font-size-base: {$theme->fontSizeBase};
 
           /* UI */
           --border-radius: {$theme->borderRadius};
           --shadow-intensity: {$theme->shadowIntensity};
+
+          /* Primary button ({$theme->buttonStyle}): BaseButton reads these, in both themes */
+          {$button}
         }
 
         :root.dark {
@@ -193,6 +200,47 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           --color-calendar-neutral: var(--color-neutral-400);
         }
         CSS;
+    }
+
+    /**
+     * The family and its fallbacks. Only names from ThemeSettingsDTO's lists reach this point.
+     */
+    private function fontStack(string $font): string
+    {
+        if ($font === ThemeSettingsDTO::SYSTEM_FONT) {
+            return 'system-ui, sans-serif';
+        }
+
+        if (in_array($font, ThemeSettingsDTO::SERIF_FONTS, true)) {
+            return "'{$font}', Georgia, serif";
+        }
+
+        return "'{$font}', system-ui, sans-serif";
+    }
+
+    /**
+     * Colours of the primary button for the chosen style. They point at the palette variables, so
+     * the dark theme (which redefines those on the same element) needs no copy of its own. The
+     * outline and ghost text uses the link colour, already checked for 4.5:1 on the page, surface,
+     * muted and primary-light backgrounds.
+     */
+    private function primaryButtonCss(string $style): string
+    {
+        $values = match ($style) {
+            'outline' => ['transparent', 'var(--color-primary-link)', 'var(--color-primary-link)', 'var(--color-primary-light)', 'var(--color-primary-link)'],
+            'ghost' => ['transparent', 'var(--color-primary-link)', 'transparent', 'var(--color-primary-light)', 'var(--color-primary-link)'],
+            default => ['var(--color-primary)', '#FFFFFF', 'transparent', 'var(--color-primary-700)', '#FFFFFF'],
+        };
+
+        [$background, $text, $border, $hoverBackground, $hoverText] = $values;
+
+        return implode("\n  ", [
+            "--button-primary-bg: {$background};",
+            "--button-primary-text: {$text};",
+            "--button-primary-border: {$border};",
+            "--button-primary-hover-bg: {$hoverBackground};",
+            "--button-primary-hover-text: {$hoverText};",
+        ]);
     }
 
     /**

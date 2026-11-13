@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Pages;
 
+use App\Application\DTOs\ThemeSettingsDTO;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Pages\SiteSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Filament\Forms\Components\Select;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -143,5 +145,33 @@ final class SiteSettingsTest extends TestCase
         $this->assertSame('Nuevo nombre', $settings->get('guild_name'));
         $this->assertTrue($settings->isMaintenanceModeEnabled());
         $this->assertSame('Mensaje existente', $settings->get('maintenance_message'));
+    }
+
+    public function test_font_selects_offer_exactly_what_the_site_accepts(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(SiteSettings::class)
+            ->assertFormFieldExists('theme_font_heading', 'form', static fn (Select $field): bool => array_keys($field->getOptions()) === ThemeSettingsDTO::HEADING_FONTS)
+            ->assertFormFieldExists('theme_font_body', 'form', static fn (Select $field): bool => array_keys($field->getOptions()) === ThemeSettingsDTO::BODY_FONTS);
+    }
+
+    public function test_playfair_display_is_offered_for_headings_only(): void
+    {
+        $this->assertArrayHasKey('Playfair Display', SiteSettings::fontOptions(ThemeSettingsDTO::HEADING_FONTS));
+        $this->assertArrayNotHasKey('Playfair Display', SiteSettings::fontOptions(ThemeSettingsDTO::BODY_FONTS));
+    }
+
+    public function test_the_system_font_option_is_translated(): void
+    {
+        $this->assertSame('Fuente del sistema', SiteSettings::fontOptions(ThemeSettingsDTO::BODY_FONTS)[ThemeSettingsDTO::SYSTEM_FONT]);
+    }
+
+    public function test_button_style_select_offers_exactly_what_the_site_accepts(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(SiteSettings::class)
+            ->assertFormFieldExists('theme_button_style', 'form', static fn (Select $field): bool => array_keys($field->getOptions()) === ThemeSettingsDTO::BUTTON_STYLES);
     }
 }

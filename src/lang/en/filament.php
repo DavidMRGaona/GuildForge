@@ -155,6 +155,7 @@ return [
             'font_size_small' => 'Small (14px)',
             'font_size_normal' => 'Normal (16px)',
             'font_size_large' => 'Large (18px)',
+            'font_system' => 'System font',
         ],
         'appearance' => [
             'border_radius' => 'Border radius',
