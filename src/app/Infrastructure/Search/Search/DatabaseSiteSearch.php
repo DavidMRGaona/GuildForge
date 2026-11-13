@@ -92,7 +92,10 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
         // Positions stay the engine's: rows a source takes away leave the page shorter, the help does not move up
         $remaining = $limit - count($rows);
         $checked = $this->hitVisibility->check($rows, $query->user);
-        $hits = array_map(fn (SearchDocumentModel $row): SiteSearchHitDTO => $this->documentHit($row, $terms), array_values($checked->rows));
+        $hits = array_map(
+            fn (SearchDocumentModel $row): SiteSearchHitDTO => $this->documentHit($row, $terms, $checked->withholdsSnippet($row)),
+            array_values($checked->rows),
+        );
 
         $shownHelp = $remaining > 0 ? array_slice($tabHelp, max(0, $offset - $documentTotal), $remaining) : [];
         if ($user !== null && $shownHelp !== []) {
@@ -133,8 +136,9 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
 
     /**
      * @param  list<string>  $terms
+     * @param  bool  $withoutSnippet  the source says the stored text no longer holds: title only
      */
-    private function documentHit(SearchDocumentModel $row, array $terms): SiteSearchHitDTO
+    private function documentHit(SearchDocumentModel $row, array $terms, bool $withoutSnippet): SiteSearchHitDTO
     {
         return new SiteSearchHitDTO(
             type: $row->type,
@@ -145,7 +149,7 @@ final readonly class DatabaseSiteSearch implements SiteSearchInterface
             startsAt: $row->starts_at,
             endsAt: $row->ends_at,
             past: (int) $row->getAttribute('is_past') === 1,
-            snippet: $this->snippet($row, $terms),
+            snippet: $withoutSnippet ? [] : $this->snippet($row, $terms),
             publishedAt: $row->published_at,
         );
     }
