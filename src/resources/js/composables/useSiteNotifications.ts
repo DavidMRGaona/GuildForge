@@ -1,6 +1,7 @@
-import { readonly, ref, watch } from 'vue';
-import type { DeepReadonly, Ref } from 'vue';
+import { effectScope, readonly, ref, watch } from 'vue';
+import type { DeepReadonly, EffectScope, Ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { useRealtimeChannel } from '@/composables/useRealtimeChannel';
 import { useRoutes } from '@/composables/useRoutes';
 import { csrfHeaders } from '@/utils/csrf';
 import type { SiteNotificationItem, SiteNotificationsSharedProps } from '@/types/siteNotifications';
@@ -9,8 +10,11 @@ interface SharedProps {
     siteNotifications?: SiteNotificationsSharedProps | null;
 }
 
-/** How often the bell asks for the counter while the tab is visible. */
+/** How often the bell asks for the counter while the tab is visible and real time is not live. */
 export const POLL_INTERVAL_MS = 60_000;
+
+/** What the account's channel says when a notice is delivered (core#493): nothing but that. */
+export const DELIVERED_EVENT = 'site-notification.delivered';
 
 export interface UseSiteNotificationsReturn {
     /** Unread rows (a group counts once). */
@@ -26,7 +30,10 @@ export interface UseSiteNotificationsReturn {
     loadRecent: () => Promise<void>;
     /** Mark every notice read; true when the server did. */
     markAllRead: () => Promise<boolean>;
-    /** Start asking every minute and on return to the tab; stops when the last user stops. */
+    /**
+     * Start asking every minute and on return to the tab; stops when the last user stops. With
+     * real time live, a delivered notice is heard at once and the minute's question is skipped.
+     */
     startPolling: () => () => void;
 }
 
@@ -38,6 +45,9 @@ const loading = ref(false);
 const failed = ref(false);
 let pollers = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
+// One subscription for the whole page, however many bells it has
+let realtimeScope: EffectScope | null = null;
+let live = false;
 
 function readNumber(value: unknown): number | null {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -84,7 +94,8 @@ async function refresh(routes: ReturnType<typeof useRoutes>): Promise<void> {
 /**
  * The notification centre of the header (core#491): the unread counter, which every page brings
  * in its shared props and the bell refreshes every minute and on return to the tab (a light JSON
- * request, never a page visit), and the latest notices, loaded when the list opens.
+ * request, never a page visit), and the latest notices, loaded when the list opens. With real
+ * time (core#493) the account's channel says when a notice arrives and the counter is asked then.
  */
 export function useSiteNotifications(): UseSiteNotificationsReturn {
     const routes = useRoutes();
@@ -142,20 +153,47 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
         }
     }
 
+    function listenInRealTime(): void {
+        realtimeScope = effectScope(true);
+        realtimeScope.run(() => {
+            const { status } = useRealtimeChannel(
+                () => (page.props as SharedProps).siteNotifications?.channel ?? null,
+                { [DELIVERED_EVENT]: () => void refresh(routes) }
+            );
+            watch(status, (now, before) => {
+                live = now === 'live';
+                // Back after a drop: a notice may have arrived meanwhile
+                if (live && before === 'offline') {
+                    void refresh(routes);
+                }
+            });
+        });
+    }
+
     function startPolling(): () => void {
         const listener = onVisibilityChange(routes);
         pollers++;
         if (pollers === 1) {
-            timer = setInterval(() => void refresh(routes), POLL_INTERVAL_MS);
+            timer = setInterval(() => {
+                if (!live) {
+                    void refresh(routes);
+                }
+            }, POLL_INTERVAL_MS);
+            listenInRealTime();
         }
         document.addEventListener('visibilitychange', listener);
 
         return () => {
             document.removeEventListener('visibilitychange', listener);
             pollers = Math.max(0, pollers - 1);
-            if (pollers === 0 && timer !== null) {
-                clearInterval(timer);
-                timer = null;
+            if (pollers === 0) {
+                if (timer !== null) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+                realtimeScope?.stop();
+                realtimeScope = null;
+                live = false;
             }
         };
     }
@@ -183,4 +221,7 @@ export function resetSiteNotificationsState(): void {
         clearInterval(timer);
         timer = null;
     }
+    realtimeScope?.stop();
+    realtimeScope = null;
+    live = false;
 }

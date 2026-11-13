@@ -33,6 +33,7 @@ use App\Http\Controllers\MailUnsubscribeController;
 use App\Http\Controllers\OneClickMailUnsubscribeController;
 use App\Http\Controllers\PersonalCalendarFeedController;
 use App\Http\Controllers\PublicCalendarFeedController;
+use App\Http\Controllers\RealtimeAuthController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SearchSuggestionsController;
 use App\Http\Controllers\SitemapController;
@@ -202,6 +203,12 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/perfil/calendario', [CalendarFeedTokenController::class, 'destroy'])
         ->middleware('throttle:6,1,calendar-feed-token')
         ->name('profile.calendar-feed.destroy');
+
+    // A browser asks to listen to a private real-time channel (core#493); 404 without real time.
+    // Every page with the bell subscribes once, and again after each reconnection: its own limit
+    Route::post('/broadcasting/auth', RealtimeAuthController::class)
+        ->middleware('throttle:60,1,realtime-auth')
+        ->name('realtime.auth');
 
     // Notification centre (core#491). The bell asks for the counter every minute: its own limit
     Route::get('/avisos', [SiteNotificationsController::class, 'index'])->name('site-notifications.index');

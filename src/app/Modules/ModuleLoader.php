@@ -19,6 +19,7 @@ use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Publications\Services\PublicationSourceRegistryInterface;
+use App\Application\Realtime\Services\RealtimeChannelRegistryInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
 use App\Domain\Modules\Entities\Module;
@@ -118,6 +119,9 @@ final class ModuleLoader
 
         // Register editor text sources from the provider
         $this->registerProviderEditorTextSources($provider, $module->name()->value);
+
+        // Register private real-time channels from the provider
+        $this->registerProviderRealtimeChannels($provider, $module->name()->value);
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
@@ -306,6 +310,22 @@ final class ModuleLoader
 
         if ($this->app->bound(EditorTextSourceRegistryInterface::class)) {
             $this->app->make(EditorTextSourceRegistryInterface::class)->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register private real-time channels from a module provider.
+     */
+    private function registerProviderRealtimeChannels(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $channels = $provider->registerRealtimeChannels();
+
+        if ($channels === []) {
+            return;
+        }
+
+        if ($this->app->bound(RealtimeChannelRegistryInterface::class)) {
+            $this->app->make(RealtimeChannelRegistryInterface::class)->registerMany($channels, $moduleName);
         }
     }
 

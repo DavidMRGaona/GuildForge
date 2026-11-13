@@ -108,6 +108,30 @@ services:
       - PHP_MEMORY_LIMIT=256M
     command: php artisan schedule:work
 
+  # Real-time WebSocket server (core#493). Optional: starts only with
+  # `docker compose --profile realtime up -d` and the REVERB_* settings of docs/realtime.md
+  # in src/.env (REVERB_HOST=reverb). nginx sends /app/ to it.
+  reverb:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: guildforge_reverb
+    profiles:
+      - realtime
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    networks:
+      - guildforge
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PHP_MEMORY_LIMIT=256M
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+
   mailpit:
     image: axllent/mailpit:v1.31
     container_name: guildforge_mailpit

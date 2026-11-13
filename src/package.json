@@ -36,8 +36,10 @@
         "@unhead/vue": "^3.4.3",
         "@vue-leaflet/vue-leaflet": "^0.10.1",
         "@vue/devtools-api": "^8.2.1",
+        "laravel-echo": "^2.6.3",
         "leaflet": "^1.9.4",
         "pinia": "^4.0.3",
+        "pusher-js": "^8.6.0",
         "temporal-polyfill": "^1.0.6",
         "vue": "^3.5.26",
         "vue-i18n": "^11.2.8"

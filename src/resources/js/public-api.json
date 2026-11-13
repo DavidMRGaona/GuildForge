@@ -31,6 +31,7 @@
         "@/composables/useMenuBadges": "resources/js/composables/useMenuBadges.ts",
         "@/composables/useNotifications": "resources/js/composables/useNotifications.ts",
         "@/composables/usePagination": "resources/js/composables/usePagination.ts",
+        "@/composables/useRealtimeChannel": "resources/js/composables/useRealtimeChannel.ts",
         "@/composables/useRoutes": "resources/js/composables/useRoutes.ts",
         "@/composables/useVerificationGate": "resources/js/composables/useVerificationGate.ts",
         "@/contracts/cookieConsent": "resources/js/contracts/cookieConsent.ts",

@@ -9,6 +9,7 @@ use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
+use App\Application\Realtime\Services\RealtimeConfigurationInterface;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Application\Services\SettingsServiceInterface;
@@ -19,6 +20,7 @@ use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Application\Social\SocialNetwork;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\SiteNotifications\SiteNotificationsRealtimeChannel;
 use App\Infrastructure\Social\SocialLinkResolver;
 use App\Modules\ModuleLoader;
 use Closure;
@@ -84,6 +86,8 @@ final class HandleInertiaRequests extends Middleware
             ],
             // Unread notices of the bell (core#491); the bell refreshes it on its own afterwards
             'siteNotifications' => fn (): ?array => $this->getSiteNotifications($request),
+            // Where the browser opens the WebSocket (core#493); null without real time or session
+            'realtime' => fn (): ?array => $this->getRealtimeConfig($request),
             'authSettings' => $this->getAuthSettings(...),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -216,10 +220,39 @@ final class HandleInertiaRequests extends Middleware
         }
 
         try {
-            return ['unread' => app(SiteNotificationServiceInterface::class)->unreadCount($user)];
+            return [
+                'unread' => app(SiteNotificationServiceInterface::class)->unreadCount($user),
+                // The bell listens here when real time is on; it polls otherwise
+                'channel' => app(RealtimeConfigurationInterface::class)->enabled()
+                    ? SiteNotificationsRealtimeChannel::for((string) $user->id)
+                    : null,
+            ];
         } catch (\Throwable $e) {
             // The bell is not worth a broken page
             $this->logDebugError('getSiteNotifications', $e);
+
+            return null;
+        }
+    }
+
+    /**
+     * What the browser needs to connect to the real-time server: the public key, host, port and
+     * the endpoint that signs private subscriptions. Only for signed-in accounts (guests have no
+     * private channel to listen to) and read at runtime, like Cloudinary's settings.
+     *
+     * @return array{key: string, host: string, port: int, tls: bool, authEndpoint: string}|null
+     */
+    private function getRealtimeConfig(Request $request): ?array
+    {
+        if (! $request->user() instanceof UserModel) {
+            return null;
+        }
+
+        try {
+            return app(RealtimeConfigurationInterface::class)->client()?->toArray(route('realtime.auth', absolute: false));
+        } catch (\Throwable $e) {
+            // Without it the page polls, as it does when real time is off
+            $this->logDebugError('getRealtimeConfig', $e);
 
             return null;
         }

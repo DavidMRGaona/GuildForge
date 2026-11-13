@@ -1,5 +1,6 @@
 import type { AuthSettings, User } from './models';
 import type { SeoProps } from './seo';
+import type { RealtimeSharedProps } from './realtime';
 import type { SiteNotificationsSharedProps } from './siteNotifications';
 import type { ModuleSlots } from './slots';
 
@@ -29,6 +30,7 @@ declare module '@inertiajs/vue3' {
         };
         /** Unread notices of the bell (core#491); null for guests. */
         siteNotifications: SiteNotificationsSharedProps | null;
+        realtime: RealtimeSharedProps | null;
         authSettings: AuthSettings;
         flash: {
             success?: string;

@@ -342,6 +342,8 @@ To add a target, add its secret and a line to `WEBHOOKS` in `deploy.yml`; it is 
 | `SOURCE_COMMIT` | Deployed commit, injected by the deployment platform; do not set by hand (see `config/updates.php`) | - |
 | `CORE_GITHUB_BRANCH` | Branch the application deploys from, compared on the core updates page | `main` |
 
+> **Real time (optional):** `BROADCAST_CONNECTION=reverb` and the `REVERB_*` variables turn on WebSockets, with one more process (`php artisan reverb:start`) and a proxy rule for `/app/`. Without them the site polls. See [Real time](./realtime.md).
+
 > **Note on Redis vs database:** the default configuration uses `database` for cache, queues, and sessions, which simplifies deployment and does not require Redis to be available. For better performance in production, you can switch to `redis` for all three variables (`CACHE_STORE`, `QUEUE_CONNECTION`, `SESSION_DRIVER`), since Redis is part of the production stack.
 
 ### Secret management

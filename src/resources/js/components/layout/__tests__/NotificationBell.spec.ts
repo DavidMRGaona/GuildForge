@@ -6,7 +6,18 @@ import { reactive } from 'vue';
 import NotificationBell from '../NotificationBell.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
-import { POLL_INTERVAL_MS, resetSiteNotificationsState } from '@/composables/useSiteNotifications';
+import {
+    DELIVERED_EVENT,
+    POLL_INTERVAL_MS,
+    resetSiteNotificationsState,
+} from '@/composables/useSiteNotifications';
+import { resetRealtimeConnection, setRealtimeClientFactory } from '@/utils/realtime/connection';
+import type {
+    RawListener,
+    RealtimeChannelHandle,
+    RealtimeClient,
+    RealtimeConnectionState,
+} from '@/utils/realtime/client';
 import type { SiteNotificationItem } from '@/types/siteNotifications';
 
 const page = reactive<{ url: string; props: Record<string, unknown> }>({
@@ -57,6 +68,9 @@ describe('NotificationBell', () => {
     });
 
     afterEach(() => {
+        resetSiteNotificationsState();
+        resetRealtimeConnection();
+        setRealtimeClientFactory(null);
         vi.unstubAllGlobals();
         vi.useRealTimers();
         document.body.innerHTML = '';
@@ -214,5 +228,108 @@ describe('NotificationBell', () => {
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 2);
 
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    describe('with real time', () => {
+        const CHANNEL = 'core.site-notifications.user-1';
+        let granted: Array<() => void>;
+        let events: Map<string, RawListener>;
+        let stateListeners: Array<(state: RealtimeConnectionState) => void>;
+        let subscriptions: string[];
+
+        function fakeClient(): RealtimeClient {
+            let current: RealtimeConnectionState = 'connecting';
+
+            return {
+                state: () => current,
+                onStateChange: (callback): void => {
+                    stateListeners.push((state) => {
+                        current = state;
+                        callback(state);
+                    });
+                },
+                subscribe: (name): RealtimeChannelHandle => {
+                    subscriptions.push(name);
+
+                    return {
+                        onSubscribed: (callback) => granted.push(callback),
+                        onError: () => undefined,
+                        listen: (event, callback) => events.set(event, callback),
+                        stopListening: (event) => events.delete(event),
+                        whisper: () => undefined,
+                        listenForWhisper: () => undefined,
+                        stopListeningForWhisper: () => undefined,
+                    };
+                },
+                leave: () => undefined,
+                reconnect: () => undefined,
+                disconnect: () => undefined,
+            };
+        }
+
+        async function goLive(): Promise<void> {
+            await flushPromises();
+            stateListeners.forEach((listener) => listener('connected'));
+            granted.forEach((grant) => grant());
+            await flushPromises();
+        }
+
+        beforeEach(() => {
+            granted = [];
+            events = new Map();
+            stateListeners = [];
+            subscriptions = [];
+            setRealtimeClientFactory(async () => fakeClient());
+            page.props = {
+                siteNotifications: { unread: 3, channel: CHANNEL },
+                realtime: {
+                    key: 'example-key',
+                    host: 'example.test',
+                    port: 443,
+                    tls: true,
+                    authEndpoint: '/broadcasting/auth',
+                },
+                auth: { user: { id: 'user-1' } },
+            };
+        });
+
+        it('asks for the counter as soon as a notice is delivered', async () => {
+            fetchMock.mockResolvedValue(jsonResponse({ unread: 4 }));
+            const wrapper = mountBell();
+            await goLive();
+
+            expect(subscriptions).toEqual([CHANNEL]);
+            events.get(DELIVERED_EVENT)?.({});
+            await flushPromises();
+
+            expect(fetchMock).toHaveBeenCalledWith('/avisos/contador', expect.anything());
+            expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('4');
+            wrapper.unmount();
+        });
+
+        it('skips the minute question while live and asks again once it is not', async () => {
+            vi.useFakeTimers();
+            fetchMock.mockResolvedValue(jsonResponse({ unread: 3 }));
+            const wrapper = mountBell();
+            await goLive();
+
+            await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+            expect(fetchMock).not.toHaveBeenCalled();
+
+            stateListeners.forEach((listener) => listener('unavailable'));
+            await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+            expect(fetchMock).toHaveBeenCalledWith('/avisos/contador', expect.anything());
+            wrapper.unmount();
+        });
+
+        it('subscribes once for the two bells of the page', async () => {
+            const desktop = mountBell();
+            const narrow = mountBell();
+            await goLive();
+
+            expect(subscriptions).toEqual([CHANNEL]);
+            desktop.unmount();
+            narrow.unmount();
+        });
     });
 });

@@ -8,6 +8,7 @@ use App\Application\Mail\Contracts\HasMailCategory;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\Realtime\Services\RealtimePublisherInterface;
 use App\Application\SiteNotifications\Contracts\HasSiteNotification;
 use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Application\SiteNotifications\DTOs\SiteNotificationGroupDTO;
@@ -40,6 +41,7 @@ final class SiteNotificationChannel
         private readonly MailCategoryRegistryInterface $categories,
         private readonly SiteNotificationPreferenceServiceInterface $preferences,
         private readonly SiteNotificationRepositoryInterface $notices,
+        private readonly RealtimePublisherInterface $realtime,
     ) {}
 
     public function send(object $notifiable, Notification $notification): void
@@ -86,6 +88,9 @@ final class SiteNotificationChannel
         }
 
         $this->notices->deliver(UserId::fromString($notifiable->id), $this->toNotice($category, $notice, $subject));
+
+        // With real time on, the bell hears of it at once and asks for its counter (core#493)
+        $this->realtime->publish(SiteNotificationsRealtimeChannel::for((string) $notifiable->id), SiteNotificationsRealtimeChannel::DELIVERED);
     }
 
     private function toNotice(MailCategoryDTO $category, SiteNotificationDTO $notice, ?MailSubjectDTO $subject): SiteNotice
