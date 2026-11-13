@@ -14,7 +14,7 @@ const i18n = createI18n({
     locale: 'es',
     missingWarn: false,
     fallbackWarn: false,
-    messages: { es: {} },
+    messages: { es: { proposals: { requests: { warning: 'Aviso: {text}' } } } },
 });
 
 function proposal(overrides: Partial<Proposal>): Proposal {
@@ -103,6 +103,7 @@ describe('ProfileProposalsTab', () => {
                         active: true,
                         values: { capacity: 20 },
                         description: 'Inscripciones con aforo de 20',
+                        warnings: [],
                         applied: false,
                     },
                     {
@@ -111,6 +112,7 @@ describe('ProfileProposalsTab', () => {
                         active: false,
                         values: {},
                         description: null,
+                        warnings: [],
                         applied: false,
                     },
                 ],
@@ -122,6 +124,29 @@ describe('ProfileProposalsTab', () => {
         expect(requests[0]?.text()).toBe('Inscripciones con aforo de 20');
         expect(requests[1]?.text()).toContain('gone.module');
         expect(requests[1]?.text()).toContain('proposals.requests.unavailable');
+    });
+
+    it('shows the early warnings of a request as plain text, never as HTML', () => {
+        const wrapper = mountTab([
+            proposal({
+                requests: [
+                    {
+                        key: 'venue-bookings.space',
+                        label: 'Espacio',
+                        active: true,
+                        values: {},
+                        description: 'Espacio: sala 1',
+                        warnings: ['<b>El espacio no está libre.</b>'],
+                        applied: false,
+                    },
+                ],
+            }),
+        ]);
+
+        const warnings = wrapper.find('[data-testid="proposal-request-warnings"]');
+        expect(warnings.exists()).toBe(true);
+        expect(warnings.text()).toContain('<b>El espacio no está libre.</b>');
+        expect(warnings.find('b').exists()).toBe(false);
     });
 
     it('shows the reason of a rejection', () => {

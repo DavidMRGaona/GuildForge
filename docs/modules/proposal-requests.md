@@ -128,6 +128,35 @@ final readonly class RegistrationsProposalRequest implements EventProposalReques
 }
 ```
 
+## Early warnings (optional, core ≥ the release with #612)
+
+What depends on the module's state (a space already booked, a clash with another event) cannot be known from the values alone, so it only fails when someone approves. A request can warn the author earlier by also implementing `App\Application\Proposals\Contracts\ChecksProposalRequestEarly`:
+
+```php
+public function warnings(ProposedEventDTO $event, array $values): array; // list<string>
+```
+
+- `ProposedEventDTO` (`App\Application\Proposals\DTOs`) carries `startDate` and `endDate` (instants, `DateTimeImmutable`) and `location` (`?string`) as the author wrote them: the event may be a draft that is not published, so never look it up by id.
+- `$values` is what `apply()` would receive: every field of `fields()`, already checked by `ProposalRequestValueRule`, for the values in force (approved ones, else requested).
+- Return plain translated sentences (`__('…')`); the core escapes them. Return `[]` when there is nothing to say. **Only read**: no writes and no reservations.
+- A warning never blocks saving or submitting. The core asks again every time the proposal is shown (the edit form and «Mis propuestas» in the web, and the «Peticiones de módulos» section of the panel), so nothing is stored and the answer follows what changed since; keep the check cheap.
+- It fails closed to «no warning»: a call that throws is logged (request class and call, never the values) and an answer that is not a list of non-empty texts is trimmed to those. A request that is not offered any more gives none.
+- `apply()` stays the real check, inside the approval transaction.
+
+```php
+final class SpaceProposalRequest implements EventProposalRequestInterface, ChecksProposalRequestEarly
+{
+    public function warnings(ProposedEventDTO $event, array $values): array
+    {
+        if ($values['space'] === null || $this->spaces->isFree((string) $values['space'], $event->startDate, $event->endDate)) {
+            return [];
+        }
+
+        return [__('venue-bookings::proposals.space_busy')];
+    }
+}
+```
+
 ## Testing
 
 Register the request in the registry of a test and go through the core's flow:
@@ -136,4 +165,4 @@ Register the request in the registry of a test and go through the core's flow:
 app(EventProposalRequestRegistryInterface::class)->register(RegistrationsProposalRequest::class, 'event-registrations');
 ```
 
-Cover at least: the fields and their dependencies (`ProposalRequestValueRule::check()`), `apply()` creating the configuration with the values, `apply()` refusing when the configuration exists, `describe()`, and that no query, reminder or notice of the module treats an unapproved proposal as a real event. The core's own fixture, `tests/Support/Proposals/FixtureEventProposalRequest.php`, and `tests/Feature/Proposals/ProposalModuleRequestsTest.php` show the whole path.
+Cover at least: the fields and their dependencies (`ProposalRequestValueRule::check()`), `apply()` creating the configuration with the values, `apply()` refusing when the configuration exists, `describe()`, `warnings()` (with a clash and without, and that it throws nothing), and that no query, reminder or notice of the module treats an unapproved proposal as a real event. The core's own fixture, `tests/Support/Proposals/FixtureEventProposalRequest.php`, and `tests/Feature/Proposals/ProposalModuleRequestsTest.php` show the whole path.

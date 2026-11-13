@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Infrastructure\Proposals\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Proposals\Contracts\ChecksProposalRequestEarly;
 use App\Application\Proposals\Contracts\EventProposalRequestInterface;
 use App\Application\Proposals\DTOs\ProposalRequestDefinitionDTO;
 use App\Application\Proposals\DTOs\ProposalRequestFieldDTO;
 use App\Application\Proposals\DTOs\ProposalRequestSubmissionDTO;
+use App\Application\Proposals\DTOs\ProposedEventDTO;
 use App\Application\Proposals\DTOs\StoredProposalRequestDTO;
 use App\Application\Proposals\Services\EventProposalRequestRegistryInterface;
 use App\Application\Proposals\Services\EventProposalRequestServiceInterface;
@@ -127,9 +129,17 @@ final readonly class EventProposalRequestService implements EventProposalRequest
         $requests = $this->registry->requests();
         $positions = array_flip(array_keys($requests));
 
-        return array_values($this->rows($eventId)->get()
+        $rows = $this->rows($eventId)->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $proposed = $this->proposedEvent($eventId);
+
+        return array_values($rows
             ->sortBy(static fn (EventProposalRequestModel $row): array => [$positions[$row->request_key] ?? PHP_INT_MAX, $row->request_key])
-            ->map(fn (EventProposalRequestModel $row): StoredProposalRequestDTO => $this->toDto($row, $requests[$row->request_key] ?? null))
+            ->map(fn (EventProposalRequestModel $row): StoredProposalRequestDTO => $this->toDto($row, $requests[$row->request_key] ?? null, $proposed))
             ->all());
     }
 
@@ -239,7 +249,7 @@ final readonly class EventProposalRequestService implements EventProposalRequest
         }
     }
 
-    private function toDto(EventProposalRequestModel $row, ?EventProposalRequestInterface $request): StoredProposalRequestDTO
+    private function toDto(EventProposalRequestModel $row, ?EventProposalRequestInterface $request, ?ProposedEventDTO $proposed): StoredProposalRequestDTO
     {
         $fields = $this->activeFields($request);
         $active = $request instanceof EventProposalRequestInterface && $fields !== null;
@@ -264,7 +274,68 @@ final readonly class EventProposalRequestService implements EventProposalRequest
             appliedAt: $row->applied_at !== null ? DateTimeImmutable::createFromInterface($row->applied_at) : null,
             fields: $fields ?? [],
             description: is_string($description) ? $description : null,
+            warnings: $active && $proposed instanceof ProposedEventDTO ? $this->warningsOf($request, $proposed, $inForce, $fields) : [],
         );
+    }
+
+    /**
+     * The event as written now, for the early warnings (core#612); null when it cannot be read.
+     */
+    private function proposedEvent(string $eventId): ?ProposedEventDTO
+    {
+        $event = EventModel::query()->includingUnsubmittedProposals()->whereKey($eventId)->first();
+
+        if (! $event instanceof EventModel) {
+            return null;
+        }
+
+        return new ProposedEventDTO(
+            DateTimeImmutable::createFromInterface($event->start_date),
+            DateTimeImmutable::createFromInterface($event->end_date),
+            $event->location,
+        );
+    }
+
+    /**
+     * What a request that checks early (ChecksProposalRequestEarly) says about the values in
+     * force. They are checked again first, so the module never sees something the form would
+     * refuse. A call that throws, or anything but non-empty text in the answer, leaves no warning.
+     *
+     * @param  array<string, bool|int|string|null>  $values
+     * @param  list<ProposalRequestFieldDTO>  $fields
+     * @return list<string>
+     */
+    private function warningsOf(EventProposalRequestInterface $request, ProposedEventDTO $proposed, array $values, array $fields): array
+    {
+        if (! $request instanceof ChecksProposalRequestEarly) {
+            return [];
+        }
+
+        $result = $this->rule->check($fields, $values);
+
+        if (! $result->isValid()) {
+            return [];
+        }
+
+        return $this->textLines($this->guard($request, 'warnings', static fn (): mixed => $request->warnings($proposed, $result->values)));
+    }
+
+    /**
+     * Only the non-empty texts of a module's answer, trimmed; anything else is dropped.
+     *
+     * @return list<string>
+     */
+    private function textLines(mixed $answer): array
+    {
+        $lines = [];
+
+        foreach (is_array($answer) ? $answer : [] as $line) {
+            if (is_string($line) && trim($line) !== '') {
+                $lines[] = trim($line);
+            }
+        }
+
+        return $lines;
     }
 
     /**

@@ -18,6 +18,8 @@ import type {
 const props = defineProps<{
     definitions: ProposalRequestDefinition[];
     errors: Record<string, string | undefined>;
+    /** Early warnings by request key, from what is already saved; they never block sending. */
+    warnings?: Record<string, string[]>;
 }>();
 
 const requests = defineModel<Record<string, ProposalRequestState>>({ required: true });
@@ -103,6 +105,18 @@ function inputChecked(event: Event): boolean {
                 />
                 <span class="font-medium">{{ definition.question }}</span>
             </label>
+
+            <ul
+                v-if="
+                    stateOf(definition.key).wanted && (warnings?.[definition.key] ?? []).length > 0
+                "
+                class="space-y-1 rounded-md bg-muted p-3 text-sm text-warning"
+                data-testid="proposal-request-warnings"
+            >
+                <li v-for="warning in warnings?.[definition.key]" :key="warning">
+                    {{ t('proposals.requests.warning', { text: warning }) }}
+                </li>
+            </ul>
 
             <div v-if="stateOf(definition.key).wanted" class="grid gap-4 sm:grid-cols-2">
                 <template v-for="field in shown(definition)" :key="field.name">

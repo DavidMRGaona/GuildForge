@@ -183,9 +183,14 @@ final class ProposalRequestsSection
             ]))->columnSpanFull()];
         }
 
-        return $request->description !== null
-            ? [Text::make($request->description)->color('gray')->columnSpanFull()]
-            : [];
+        $lines = $request->description !== null ? [Text::make($request->description)->color('gray')->columnSpanFull()] : [];
+
+        // The module's early warnings for the values in force, as the author saw them (core#612)
+        foreach ($request->warnings as $warning) {
+            $lines[] = Text::make(__('filament.proposals.requests.warning', ['text' => $warning]))->color('warning')->columnSpanFull();
+        }
+
+        return $lines;
     }
 
     /**

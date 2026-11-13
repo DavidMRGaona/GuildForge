@@ -898,6 +898,7 @@ return [
             'apply' => 'Aplicar al aprobar',
             'inactive' => 'Su módulo ya no está activo: desmárcala para aprobar sin ella.',
             'applied_at' => 'Aplicada el :date',
+            'warning' => 'Aviso para quien propone: :text',
         ],
         'widget' => [
             'heading' => 'Propuestas pendientes',

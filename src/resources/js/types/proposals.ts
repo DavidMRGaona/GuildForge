@@ -85,6 +85,8 @@ export interface OwnProposalRequest {
     values: Record<string, ProposalRequestValue>;
     /** The module's line for the values in force. */
     description: string | null;
+    /** Early warnings of the module for the values in force; they never block anything. */
+    warnings: string[];
     applied: boolean;
 }
 

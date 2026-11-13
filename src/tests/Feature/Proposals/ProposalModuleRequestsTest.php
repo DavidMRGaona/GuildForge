@@ -277,4 +277,49 @@ final class ProposalModuleRequestsTest extends TestCase
             ->call('save')
             ->assertHasNoFormErrors();
     }
+
+    public function test_early_warnings_show_in_mis_propuestas_and_in_the_edit_form_without_blocking_anything(): void
+    {
+        FixtureEventProposalRequest::$warnings = ['El espacio no está libre esos días.', '<script>alert(1)</script>'];
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)->post('/propuestas/eventos', [...$this->eventForm($this->asked()), 'submit' => '1'])->assertRedirect('/perfil?tab=proposals');
+
+        $event = $this->proposal();
+        $this->assertSame(ProposalStatus::PendingReview, $event->proposalStatus());
+
+        $this->get('/perfil?tab=proposals')->assertInertia(fn (Assert $page) => $page
+            ->where('proposals.items.0.requests.0.warnings', ['El espacio no está libre esos días.', '<script>alert(1)</script>']));
+
+        $draft = $this->actingAs($user)->post('/propuestas/eventos', $this->eventForm($this->asked()));
+        $draft->assertRedirect('/perfil?tab=proposals');
+        $draftEvent = EventModel::query()->includingUnsubmittedProposals()->whereKeyNot($event->id)->firstOrFail();
+
+        $this->get('/propuestas/eventos/'.$draftEvent->id.'/editar')->assertInertia(fn (Assert $page) => $page
+            ->component('Proposals/EventForm')
+            ->where('proposal.requests.0.warnings', ['El espacio no está libre esos días.', '<script>alert(1)</script>']));
+    }
+
+    public function test_a_failing_early_check_never_breaks_the_pages(): void
+    {
+        FixtureEventProposalRequest::$warnFailWith = new \RuntimeException('boom');
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)->post('/propuestas/eventos', [...$this->eventForm($this->asked()), 'submit' => '1'])->assertRedirect('/perfil?tab=proposals');
+
+        $this->get('/perfil?tab=proposals')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('proposals.items.0.requests.0.warnings', [])
+            ->where('proposals.items.0.requests.0.description', 'Inscripciones, aforo de 20, con lista de espera'));
+    }
+
+    public function test_the_panel_shows_the_warnings_for_the_values_in_force_escaped(): void
+    {
+        FixtureEventProposalRequest::$warnings = ['Ocupado <b>aquí</b>.'];
+        $event = $this->pendingProposal();
+        $this->actingAs($this->reviewer());
+
+        Livewire::test(EditEvent::class, ['record' => $event->getRouteKey()])
+            ->assertSee('Aviso para quien propone: Ocupado &lt;b&gt;aquí&lt;/b&gt;.', false)
+            ->assertDontSee('<b>aquí</b>', false);
+    }
 }

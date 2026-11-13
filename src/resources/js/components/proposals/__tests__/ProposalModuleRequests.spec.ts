@@ -9,7 +9,7 @@ const i18n = createI18n({
     locale: 'es',
     missingWarn: false,
     fallbackWarn: false,
-    messages: { es: {} },
+    messages: { es: { proposals: { requests: { warning: 'Aviso: {text}' } } } },
 });
 
 const definition: ProposalRequestDefinition = {
@@ -48,12 +48,14 @@ const definition: ProposalRequestDefinition = {
 
 function mountRequests(
     state: ProposalRequestState,
-    errors: Record<string, string | undefined> = {}
+    errors: Record<string, string | undefined> = {},
+    warnings: Record<string, string[]> = {}
 ): VueWrapper {
     return mount(ProposalModuleRequests, {
         props: {
             definitions: [definition],
             errors,
+            warnings,
             modelValue: { [definition.key]: state },
         },
         global: { plugins: [i18n] },
@@ -107,5 +109,31 @@ describe('ProposalModuleRequests', () => {
         expect(wrapper.find('#proposal-request-fixture-registrations-waitlist').exists()).toBe(
             false
         );
+    });
+
+    it('shows the module warnings of a ticked request, as text, without blocking anything', () => {
+        const wrapper = mountRequests(
+            { wanted: true, values: {} },
+            {},
+            {
+                [definition.key]: ['<i>El espacio no está libre.</i>'],
+            }
+        );
+
+        const warnings = wrapper.find('[data-testid="proposal-request-warnings"]');
+        expect(warnings.text()).toContain('<i>El espacio no está libre.</i>');
+        expect(warnings.find('i').exists()).toBe(false);
+    });
+
+    it('shows no warnings for a request that is not ticked', () => {
+        const wrapper = mountRequests(
+            { wanted: false, values: {} },
+            {},
+            {
+                [definition.key]: ['Ocupado.'],
+            }
+        );
+
+        expect(wrapper.find('[data-testid="proposal-request-warnings"]').exists()).toBe(false);
     });
 });
