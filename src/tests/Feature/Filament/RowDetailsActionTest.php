@@ -146,7 +146,7 @@ final class RowDetailsActionTest extends TestCase
     public function test_it_hides_from_the_width_where_every_column_already_shows(): void
     {
         $this->assertSame('2xl:hidden', RowDetailsAction::hiddenFromClass($this->table(ListKnowledgeGuides::class)));
-        $this->assertSame('xl:hidden', RowDetailsAction::hiddenFromClass($this->table(ListEvents::class)));
+        $this->assertSame('2xl:hidden', RowDetailsAction::hiddenFromClass($this->table(ListEvents::class)));
         $this->assertSame('sm:hidden', RowDetailsAction::hiddenFromClass($this->table(ListGalleries::class)));
     }
 
