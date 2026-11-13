@@ -88,6 +88,7 @@ final class CoreMailCategoriesTest extends TestCase
         $this->assertSame([
             __('mail.preferences.sections.account'),
             __('mail.preferences.sections.site_management'),
+            __('mail.preferences.sections.proposals'),
         ], $this->labels($sections));
         $this->assertSame(
             [CoreMailCategories::ROLE_MANAGEMENT],

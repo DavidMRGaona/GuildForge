@@ -15,6 +15,7 @@ return [
         'sections' => [
             'account' => 'Account',
             'site_management' => 'Site management',
+            'proposals' => 'Proposals',
         ],
         'categories' => [
             'account' => [
@@ -25,6 +26,14 @@ return [
             'role_management' => [
                 'label' => 'Inactive roles',
                 'description' => 'Notice when someone you can grant roles to is left with an inactive one.',
+            ],
+            'proposals_review' => [
+                'label' => 'Proposals to review',
+                'description' => 'Notice when someone sends in an event or an article you can review.',
+            ],
+            'proposals_status' => [
+                'label' => 'Status of my proposals',
+                'description' => 'Notice when an event or an article you proposed is approved, returned or rejected.',
             ],
         ],
     ],
