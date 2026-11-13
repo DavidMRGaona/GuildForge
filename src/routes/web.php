@@ -34,6 +34,9 @@ use App\Http\Controllers\MailSubjectMuteController;
 use App\Http\Controllers\MailUnsubscribeController;
 use App\Http\Controllers\OneClickMailUnsubscribeController;
 use App\Http\Controllers\PersonalCalendarFeedController;
+use App\Http\Controllers\Proposals\ArticleProposalController;
+use App\Http\Controllers\Proposals\EventProposalController;
+use App\Http\Controllers\Proposals\ProposalActionController;
 use App\Http\Controllers\PublicCalendarFeedController;
 use App\Http\Controllers\RealtimeAuthController;
 use App\Http\Controllers\SearchController;
@@ -217,6 +220,26 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/editor/imagenes/articulos', EditorImageUploadController::class)
         ->middleware('throttle:editor-image-upload')
         ->name('editor-images.articles.store');
+
+    // Proposals of events and articles from the web (core#579). Who may propose is checked by the
+    // form requests and the service (403); someone else's proposal answers 404. Writes share a limit
+    Route::prefix('/propuestas')->where(['id' => '[0-9a-fA-F-]{36}', 'type' => 'eventos|articulos'])->group(function (): void {
+        Route::get('/eventos/nuevo', [EventProposalController::class, 'create'])->name('proposals.events.create');
+        Route::get('/eventos/{id}/editar', [EventProposalController::class, 'edit'])->name('proposals.events.edit');
+        Route::get('/articulos/nuevo', [ArticleProposalController::class, 'create'])->name('proposals.articles.create');
+        Route::get('/articulos/{id}/editar', [ArticleProposalController::class, 'edit'])->name('proposals.articles.edit');
+
+        Route::middleware('throttle:proposals')->group(function (): void {
+            Route::post('/eventos', [EventProposalController::class, 'store'])->name('proposals.events.store');
+            Route::put('/eventos/{id}', [EventProposalController::class, 'update'])->name('proposals.events.update');
+            Route::post('/articulos', [ArticleProposalController::class, 'store'])->name('proposals.articles.store');
+            Route::put('/articulos/{id}', [ArticleProposalController::class, 'update'])->name('proposals.articles.update');
+
+            Route::post('/{type}/{id}/enviar', [ProposalActionController::class, 'submit'])->name('proposals.submit');
+            Route::post('/{type}/{id}/retirar', [ProposalActionController::class, 'withdraw'])->name('proposals.withdraw');
+            Route::delete('/{type}/{id}', [ProposalActionController::class, 'destroy'])->name('proposals.destroy');
+        });
+    });
 
     // Notification centre (core#491). The bell asks for the counter every minute: its own limit
     Route::get('/avisos', [SiteNotificationsController::class, 'index'])->name('site-notifications.index');

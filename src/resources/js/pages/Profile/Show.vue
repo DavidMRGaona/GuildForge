@@ -8,23 +8,33 @@ import ProfileTabBar from '@/components/profile/ProfileTabBar.vue';
 import ProfileAccountTab from '@/components/profile/ProfileAccountTab.vue';
 import ProfileCalendarTab from '@/components/profile/ProfileCalendarTab.vue';
 import ProfileMailTab from '@/components/profile/ProfileMailTab.vue';
-import { CALENDAR_TAB, MAIL_TAB, useProfileTabs } from '@/composables/useProfileTabs';
+import ProfileProposalsTab from '@/components/profile/ProfileProposalsTab.vue';
+import {
+    CALENDAR_TAB,
+    MAIL_TAB,
+    PROPOSALS_TAB,
+    useProfileTabs,
+} from '@/composables/useProfileTabs';
 import { useModuleSlots } from '@/composables/useModuleSlots';
 import { useFlashMessages } from '@/composables/useFlashMessages';
 import type { User } from '@/types/models';
 import type { CalendarFeedStatus } from '@/types/calendarFeed';
 import type { MailPreferencesProps } from '@/types/mailPreferences';
+import type { ProfileProposals } from '@/types/proposals';
 
 interface Props {
     user: User;
     calendarFeed?: CalendarFeedStatus;
     /** Only sent while the «Avisos» tab is open (`?tab=mail`). */
     mailPreferences?: MailPreferencesProps | null;
+    /** «Mis propuestas» (core#579); the tab shows when `available`. */
+    proposals?: ProfileProposals | null;
 }
 
 withDefaults(defineProps<Props>(), {
     calendarFeed: () => ({ available: false, issuedAt: null }),
     mailPreferences: null,
+    proposals: null,
 });
 
 const { t } = useI18n();
@@ -104,6 +114,12 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                         />
                     </div>
                 </template>
+
+                <!-- Events and articles the person proposed -->
+                <ProfileProposalsTab
+                    v-if="activeTabId === PROPOSALS_TAB && proposals?.available"
+                    :proposals="proposals"
+                />
 
                 <!-- Module tabs -->
                 <template v-if="hasModuleTabs">

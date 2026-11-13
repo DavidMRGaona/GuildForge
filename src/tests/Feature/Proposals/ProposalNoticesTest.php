@@ -193,7 +193,7 @@ final class ProposalNoticesTest extends TestCase
         $this->service()->approve($reviewer->id, ProposalType::Event, $id);
         $forAuthor = $notices->latest($author, 10);
         $this->assertCount(1, $forAuthor);
-        $this->assertSame(route('profile.show', absolute: false), $forAuthor[0]->url);
+        $this->assertSame(route('profile.show', ['tab' => 'proposals'], absolute: false), $forAuthor[0]->url);
     }
 
     public function test_a_review_notice_is_dropped_when_the_proposal_was_already_reviewed(): void

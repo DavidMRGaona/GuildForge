@@ -772,6 +772,25 @@ export interface RouteDefinitions {
         recent: string;
         readAll: string;
     };
+    proposals: {
+        mine: string;
+        events: {
+            create: string;
+            store: string;
+            edit: (id: string) => string;
+            update: (id: string) => string;
+        };
+        articles: {
+            create: string;
+            store: string;
+            edit: (id: string) => string;
+            update: (id: string) => string;
+        };
+        submit: (type: 'event' | 'article', id: string) => string;
+        withdraw: (type: 'event' | 'article', id: string) => string;
+        destroy: (type: 'event' | 'article', id: string) => string;
+        articleImages: string;
+    };
     admin: string;
     contact: string;
 }

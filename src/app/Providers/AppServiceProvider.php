@@ -558,6 +558,16 @@ class AppServiceProvider extends ServiceProvider
             ]
         );
 
+        // Writes of the proposal forms (core#579): per account, with a cap per hour. Each form also
+        // stores an image in the image store, so it is kept apart from the plain editor uploads
+        RateLimiter::for(
+            'proposals',
+            static fn (Request $request): array => [
+                Limit::perMinute(20)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+                Limit::perHour(120)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+            ]
+        );
+
         Gate::policy(UserModel::class, UserPolicy::class);
         Gate::policy(RoleModel::class, RolePolicy::class);
         Gate::policy(EventModel::class, EventPolicy::class);

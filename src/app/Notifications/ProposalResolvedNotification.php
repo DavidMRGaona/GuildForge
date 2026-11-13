@@ -82,11 +82,11 @@ final class ProposalResolvedNotification extends Notification implements HasMail
     }
 
     /**
-     * «Mis propuestas» (core#579) is not in main yet: until it is, the profile page.
+     * The «Mis propuestas» tab of the profile (core#579).
      */
     private function path(): string
     {
-        return route('profile.show', absolute: false);
+        return route('profile.show', ['tab' => 'proposals'], absolute: false);
     }
 
     /**

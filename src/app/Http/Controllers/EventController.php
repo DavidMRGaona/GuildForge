@@ -8,10 +8,13 @@ use App\Application\Calendar\DTOs\CalendarEntryDTO;
 use App\Application\Calendar\Services\AddToCalendarLinksFactoryInterface;
 use App\Application\Calendar\Services\CalendarAggregatorServiceInterface;
 use App\Application\DTOs\Response\EventResponseDTO;
+use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
+use App\Application\Proposals\Services\ProposalQueryServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
+use App\Domain\Proposals\Enums\ProposalType;
 use App\Http\Concerns\BuildsPaginatedResponse;
 use App\Http\Requests\TagFilterRequest;
 use App\Http\Resources\EventResource;
@@ -31,6 +34,8 @@ final class EventController extends Controller
         private readonly SeoMetadataFactoryInterface $seo,
         private readonly CalendarAggregatorServiceInterface $calendar,
         private readonly AddToCalendarLinksFactoryInterface $calendarLinks,
+        private readonly ProposalEligibilityServiceInterface $proposalAccess,
+        private readonly ProposalQueryServiceInterface $proposals,
     ) {}
 
     public function index(TagFilterRequest $request): Response
@@ -53,6 +58,8 @@ final class EventController extends Controller
             ),
             'tags' => TagResource::collection($availableTags)->resolve(),
             'currentTags' => $tagSlugs ?? [],
+            // Only for whoever may propose one (core#579): the button never shows otherwise
+            'canPropose' => $this->proposalAccess->check(ProposalType::Event, $request->user()?->getAuthIdentifier() === null ? null : (string) $request->user()->getAuthIdentifier())->allowed,
             'seo' => $this->seo->forPage(new SeoPageDTO(title: (string) __('seo.titles.events')))->toArray(),
         ]);
     }
@@ -69,6 +76,8 @@ final class EventController extends Controller
 
         return Inertia::render('Events/Show', [
             'event' => EventResource::make($event)->resolve(),
+            // «Propuesto por…», when the setting is on and the event was proposed (core#579)
+            'proposedBy' => $this->proposals->proposerNameOfEvent($event->id),
             'seo' => $this->seo->forEvent($event)->toArray(),
             'calendarLinks' => $calendarEntry instanceof CalendarEntryDTO
                 ? $this->calendarLinks->for($calendarEntry)->toArray()

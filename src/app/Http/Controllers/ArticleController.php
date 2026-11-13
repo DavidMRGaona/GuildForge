@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Application\DTOs\Response\ArticleResponseDTO;
+use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\ArticleQueryServiceInterface;
 use App\Application\Services\TagQueryServiceInterface;
+use App\Domain\Proposals\Enums\ProposalType;
 use App\Http\Concerns\BuildsPaginatedResponse;
 use App\Http\Requests\TagFilterRequest;
 use App\Http\Resources\ArticleResource;
@@ -26,6 +28,7 @@ final class ArticleController extends Controller
         private readonly ArticleQueryServiceInterface $articleQuery,
         private readonly TagQueryServiceInterface $tagQuery,
         private readonly SeoMetadataFactoryInterface $seo,
+        private readonly ProposalEligibilityServiceInterface $proposals,
     ) {}
 
     public function index(TagFilterRequest $request): Response
@@ -48,6 +51,8 @@ final class ArticleController extends Controller
             ),
             'tags' => TagResource::collection($availableTags)->resolve(),
             'currentTags' => $tagSlugs ?? [],
+            // Only for whoever may propose one (core#579): the button never shows otherwise
+            'canPropose' => $this->proposals->check(ProposalType::Article, $request->user()?->getAuthIdentifier() === null ? null : (string) $request->user()->getAuthIdentifier())->allowed,
             'seo' => $this->seo->forPage(new SeoPageDTO(
                 title: (string) __('seo.titles.articles'),
                 description: (string) __('seo.descriptions.articles'),

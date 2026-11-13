@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Content\Services\EditorImageUploadAuthorizerInterface;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
+use App\Application\Proposals\Services\ProposalQueryServiceInterface;
 use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
 use App\Domain\Proposals\Events\ProposalApproved;
@@ -17,7 +19,9 @@ use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Proposals\Listeners\NotifyProposalAuthor;
 use App\Infrastructure\Proposals\Listeners\NotifyProposalReviewers;
+use App\Infrastructure\Proposals\Services\ProposalEditorImageUploadAuthorizer;
 use App\Infrastructure\Proposals\Services\ProposalEligibilityService;
+use App\Infrastructure\Proposals\Services\ProposalQueryService;
 use App\Infrastructure\Proposals\Services\ProposalService;
 use App\Infrastructure\Proposals\Services\ProposalSettingsService;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +39,9 @@ final class ProposalsServiceProvider extends ServiceProvider
         $this->app->bind(ProposalSettingsServiceInterface::class, ProposalSettingsService::class);
         $this->app->bind(ProposalEligibilityServiceInterface::class, ProposalEligibilityService::class);
         $this->app->bind(ProposalServiceInterface::class, ProposalService::class);
+        $this->app->bind(ProposalQueryServiceInterface::class, ProposalQueryService::class);
+        // Replaces the core's default (only whoever creates articles in the panel): adds whoever may propose them
+        $this->app->singleton(EditorImageUploadAuthorizerInterface::class, ProposalEditorImageUploadAuthorizer::class);
     }
 
     public function boot(): void

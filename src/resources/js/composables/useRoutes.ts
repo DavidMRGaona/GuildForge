@@ -65,6 +65,29 @@ export interface RouteDefinitions {
         readAll: string;
     };
 
+    // Proposals of events and articles from the web (core#579)
+    proposals: {
+        /** «Mis propuestas» tab of the profile */
+        mine: string;
+        events: {
+            create: string;
+            store: string;
+            edit: (id: string) => string;
+            update: (id: string) => string;
+        };
+        articles: {
+            create: string;
+            store: string;
+            edit: (id: string) => string;
+            update: (id: string) => string;
+        };
+        submit: (type: 'event' | 'article', id: string) => string;
+        withdraw: (type: 'event' | 'article', id: string) => string;
+        destroy: (type: 'event' | 'article', id: string) => string;
+        /** Where the web rich editor uploads the images of an article */
+        articleImages: string;
+    };
+
     // Admin
     admin: string;
 
@@ -131,6 +154,29 @@ const routes: RouteDefinitions = {
         count: '/avisos/contador',
         recent: '/avisos/recientes',
         readAll: '/avisos/leidos',
+    },
+
+    // Proposals
+    proposals: {
+        mine: '/perfil?tab=proposals',
+        events: {
+            create: '/propuestas/eventos/nuevo',
+            store: '/propuestas/eventos',
+            edit: (id: string) => `/propuestas/eventos/${id}/editar`,
+            update: (id: string) => `/propuestas/eventos/${id}`,
+        },
+        articles: {
+            create: '/propuestas/articulos/nuevo',
+            store: '/propuestas/articulos',
+            edit: (id: string) => `/propuestas/articulos/${id}/editar`,
+            update: (id: string) => `/propuestas/articulos/${id}`,
+        },
+        submit: (type, id) =>
+            `/propuestas/${type === 'event' ? 'eventos' : 'articulos'}/${id}/enviar`,
+        withdraw: (type, id) =>
+            `/propuestas/${type === 'event' ? 'eventos' : 'articulos'}/${id}/retirar`,
+        destroy: (type, id) => `/propuestas/${type === 'event' ? 'eventos' : 'articulos'}/${id}`,
+        articleImages: '/editor/imagenes/articulos',
     },
 
     // Admin

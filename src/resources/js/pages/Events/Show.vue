@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Calendar, ChevronLeft, Clock, Download, MapPin, Ticket } from '@lucide/vue';
+import { Calendar, ChevronLeft, Clock, Download, MapPin, Ticket, UserRound } from '@lucide/vue';
 import { computed, useTemplateRef } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
@@ -18,9 +18,11 @@ import { useFitsViewportHeight } from '@/composables/useFitsViewportHeight';
 interface Props {
     event: Event;
     calendarLinks?: AddToCalendarLinks | null;
+    /** Who proposed the event, when the setting shows it (core#579). */
+    proposedBy?: string | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { calendarLinks: null, proposedBy: null });
 
 const { t } = useI18n();
 const { formatDateRange, formatSchedule, formatPrice, isUpcoming } = useEvents();
@@ -122,6 +124,15 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
                         <span class="sr-only">{{ t('events.location') }}:</span>
                         <MapPin class="mr-2 h-5 w-5 text-primary" aria-hidden="true" />
                         <span>{{ props.event.location }}</span>
+                    </div>
+
+                    <div
+                        v-if="proposedBy"
+                        data-testid="event-proposed-by"
+                        class="flex items-center"
+                    >
+                        <UserRound class="mr-2 h-5 w-5 text-primary" aria-hidden="true" />
+                        <span>{{ t('proposals.proposedBy', { name: proposedBy }) }}</span>
                     </div>
 
                     <div class="flex items-center">
