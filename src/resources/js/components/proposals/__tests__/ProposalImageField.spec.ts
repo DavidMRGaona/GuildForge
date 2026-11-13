@@ -13,9 +13,10 @@ const i18n = createI18n({
             proposals: {
                 form: {
                     imageHint: 'JPG, PNG, WebP o GIF de hasta 2 MB.',
-                    chooseImage: 'Elegir imagen',
-                    changeImage: 'Cambiar imagen',
-                    noImageChosen: 'Ningún archivo elegido',
+                    dropImage: 'Arrastra y suelta tu imagen o {browse}',
+                    dropOtherImage: 'Arrastra otra imagen o {browse} para cambiarla',
+                    browse: 'examina',
+                    imageInvalid: 'Elige una imagen JPG, PNG, WebP o GIF de hasta 2 MB.',
                     removeImage: 'Quitar imagen',
                 },
             },
@@ -23,25 +24,37 @@ const i18n = createI18n({
     },
 });
 
+let wrapper: VueWrapper;
+
 function mountField(currentPublicId: string | null = null): VueWrapper {
-    return mount(ProposalImageField, {
+    wrapper = mount(ProposalImageField, {
         props: {
             currentPublicId,
             label: 'Imagen',
             file: null,
             removed: false,
-            'onUpdate:file': (value: File | null) => wrapperRef?.setProps({ file: value }),
+            'onUpdate:file': (value: File | null) => wrapper.setProps({ file: value }),
         },
         global: { plugins: [i18n] },
     });
+
+    return wrapper;
 }
 
-let wrapperRef: VueWrapper | null = null;
+function image(name = 'cartel.png', bytes = 10, type = 'image/png'): File {
+    return new File([new Uint8Array(bytes)], name, { type });
+}
 
-async function pick(wrapper: VueWrapper, file: File): Promise<void> {
+async function pick(file: File): Promise<void> {
     const input = wrapper.find('input[type="file"]');
     Object.defineProperty(input.element, 'files', { value: [file], configurable: true });
     await input.trigger('change');
+}
+
+async function drop(file: File): Promise<void> {
+    await wrapper.find('[data-testid="image-dropzone"]').trigger('drop', {
+        dataTransfer: { files: [file] },
+    });
 }
 
 describe('ProposalImageField', () => {
@@ -51,38 +64,62 @@ describe('ProposalImageField', () => {
 
     afterEach(() => {
         vi.unstubAllGlobals();
-        wrapperRef = null;
     });
 
-    it('hides the browser file control and draws its own picker', () => {
-        const wrapper = mountField();
+    it('hides the browser file control behind a drop zone that opens it', () => {
+        mountField();
         const input = wrapper.find('input[type="file"]');
+        const zone = wrapper.find('[data-testid="image-dropzone"]');
 
         expect(input.classes()).toContain('sr-only');
-        const picker = wrapper.find(
-            `label[for="${input.attributes('id')}"][data-testid="image-picker"]`
-        );
-        expect(picker.text()).toBe('Elegir imagen');
-        expect(wrapper.find('[data-testid="image-file-name"]').text()).toBe(
-            'Ningún archivo elegido'
-        );
+        expect(zone.element.tagName).toBe('LABEL');
+        expect(zone.attributes('for')).toBe(input.attributes('id'));
+        expect(zone.text()).toContain('Arrastra y suelta tu imagen o examina');
     });
 
-    it('offers to change the image when the proposal already has one', () => {
-        const wrapper = mountField('events/2026/11/poster');
+    it('offers to replace the image when the proposal already has one', () => {
+        mountField('events/2026/11/poster');
 
-        expect(wrapper.find('[data-testid="image-picker"]').text()).toBe('Cambiar imagen');
-        expect(wrapper.find('[data-testid="image-file-name"]').exists()).toBe(false);
+        const zone = wrapper.find('[data-testid="image-dropzone"]');
+        expect(zone.text()).toContain('Arrastra otra imagen o examina para cambiarla');
+        expect(zone.find('img').exists()).toBe(true);
     });
 
-    it('shows the name of the picked file and hands it to the form', async () => {
-        const wrapper = mountField();
-        wrapperRef = wrapper;
+    it('takes a picked file and shows its name', async () => {
+        mountField();
 
-        await pick(wrapper, new File(['x'], 'cartel.png', { type: 'image/png' }));
+        await pick(image());
 
         expect(wrapper.emitted('update:file')?.[0]?.[0]).toBeInstanceOf(File);
         expect(wrapper.find('[data-testid="image-file-name"]').text()).toBe('cartel.png');
-        expect(wrapper.find('[data-testid="image-picker"]').text()).toBe('Cambiar imagen');
+    });
+
+    it('takes a dropped file and marks the zone while dragging', async () => {
+        mountField();
+        const zone = wrapper.find('[data-testid="image-dropzone"]');
+
+        await zone.trigger('dragenter');
+        expect(zone.attributes('data-dragging')).toBe('true');
+
+        await drop(image('mesa.webp', 10, 'image/webp'));
+
+        expect(zone.attributes('data-dragging')).toBeUndefined();
+        expect((wrapper.emitted('update:file')?.[0]?.[0] as File).name).toBe('mesa.webp');
+    });
+
+    it('refuses a file of another type or over 2 MB, and says why', async () => {
+        mountField();
+
+        await drop(image('bases.pdf', 10, 'application/pdf'));
+        await pick(image('enorme.png', 2048 * 1024 + 1));
+
+        expect(wrapper.emitted('update:file')).toBeUndefined();
+        expect(wrapper.find('[role="alert"]').text()).toBe(
+            'Elige una imagen JPG, PNG, WebP o GIF de hasta 2 MB.'
+        );
+
+        await drop(image());
+        expect(wrapper.emitted('update:file')).toHaveLength(1);
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 });
