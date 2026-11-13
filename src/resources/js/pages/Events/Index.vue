@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import type { Event, PaginatedResponse, Tag } from '@/types';
 import EventList from '@/components/events/EventList.vue';
@@ -13,11 +14,14 @@ interface Props {
     events: PaginatedResponse<Event>;
     tags?: Tag[];
     currentTags?: string[];
+    /** Whether the person may propose an event (core#579). */
+    canPropose?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     tags: () => [],
     currentTags: () => [],
+    canPropose: false,
 });
 
 const { t } = useI18n();
@@ -51,7 +55,17 @@ const {
                         {{ t('events.subtitle') }}
                     </p>
                 </div>
-                <EventsViewToggle current="list" />
+                <div class="flex shrink-0 flex-col items-end gap-3 sm:flex-row sm:items-center">
+                    <Link
+                        v-if="canPropose"
+                        :href="routes.proposals.events.create"
+                        data-testid="propose-event"
+                        class="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-md bg-(--button-primary-bg) px-4 py-2 font-medium text-(--button-primary-text) inset-ring inset-ring-(--button-primary-border) hover:bg-(--button-primary-hover-bg) hover:text-(--button-primary-hover-text) focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                    >
+                        {{ t('proposals.proposeEvent') }}
+                    </Link>
+                    <EventsViewToggle current="list" />
+                </div>
             </div>
         </div>
     </div>

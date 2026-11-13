@@ -12,15 +12,20 @@ use App\Application\Mail\Services\MailDigestServiceInterface;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
+use App\Application\Proposals\DTOs\OwnProposalDTO;
+use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
+use App\Application\Proposals\Services\ProposalQueryServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Mail\ValueObjects\MailPause;
 use App\Domain\Mail\ValueObjects\MutedMailSubject;
+use App\Domain\Proposals\Enums\ProposalType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Http\Resources\OwnProposalResource;
 use App\Infrastructure\Mail\Preferences\MailSubjectTypeLabel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Http\RedirectResponse;
@@ -44,6 +49,8 @@ final class ProfileController extends Controller
         private readonly MailPauseServiceInterface $mailPause,
         private readonly MailSubjectMuteServiceInterface $mailSubjectMutes,
         private readonly MailDigestServiceInterface $mailDigests,
+        private readonly ProposalQueryServiceInterface $proposalQueries,
+        private readonly ProposalEligibilityServiceInterface $proposalAccess,
     ) {}
 
     public function show(Request $request): Response
@@ -62,6 +69,7 @@ final class ProfileController extends Controller
                 'available' => $this->personalCalendar->isAvailable(),
                 'issuedAt' => $this->timezone->iso($this->calendarFeedTokens->issuedAt((string) $user->id)),
             ],
+            'proposals' => $this->proposalsFor($user),
         ];
 
         // Only for the «Avisos» tab (`?tab=mail`): listing the categories evaluates each one's
@@ -91,6 +99,40 @@ final class ProfileController extends Controller
         }
 
         return Inertia::render('Profile/Show', $props);
+    }
+
+    /**
+     * «Mis propuestas» (core#579): the person's proposals, what they may propose and how much of
+     * the limits they have used. The tab shows when they may propose or already have proposals.
+     *
+     * @return array<string, mixed>
+     */
+    private function proposalsFor(UserModel $user): array
+    {
+        $userId = (string) $user->id;
+        $items = array_map(
+            static fn (OwnProposalDTO $proposal): array => OwnProposalResource::make($proposal)->resolve(),
+            $this->proposalQueries->ownedBy($userId),
+        );
+        $canPropose = [
+            'event' => $this->proposalAccess->check(ProposalType::Event, $userId)->allowed,
+            'article' => $this->proposalAccess->check(ProposalType::Article, $userId)->allowed,
+        ];
+        $limits = $this->proposalQueries->limitsOf($userId);
+
+        return [
+            'available' => $items !== [] || $canPropose['event'] || $canPropose['article'],
+            'canPropose' => $canPropose,
+            'items' => $items,
+            'limits' => [
+                'pendingUsed' => $limits->pendingUsed,
+                'pendingMax' => $limits->pendingMax,
+                'draftsUsed' => $limits->draftsUsed,
+                'draftsMax' => $limits->draftsMax,
+                'submissionsLeft' => $limits->submissionsLeftThisHour,
+                'submissionsPerHour' => $limits->submissionsPerHour,
+            ],
+        ];
     }
 
     public function update(UpdateProfileRequest $request): RedirectResponse

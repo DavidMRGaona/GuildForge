@@ -28,6 +28,9 @@ export const CALENDAR_TAB = 'calendar';
  */
 export const MAIL_TAB = 'mail';
 
+/** Core tab with the person's proposals of events and articles; shown when they may propose or have any. */
+export const PROPOSALS_TAB = 'proposals';
+
 function tabFromUrl(url: string): string | null {
     return new URL(url, 'http://localhost').searchParams.get('tab');
 }
@@ -85,9 +88,15 @@ export function useProfileTabs(): UseProfileTabsReturn {
 
         return feed?.available === true;
     });
+    const hasProposalsTab = computed(() => {
+        const proposals = page.props.proposals as { available?: unknown } | undefined;
+
+        return proposals?.available === true;
+    });
     const visibleTabIds = [
         ...(hasCalendarTab.value ? [CALENDAR_TAB] : []),
         MAIL_TAB,
+        ...(hasProposalsTab.value ? [PROPOSALS_TAB] : []),
         ...profileRegistrations.value.filter(isRegistrationVisible).map(registeredTabId),
     ];
     const requestedTab = tabFromUrl(page.url);
@@ -117,6 +126,14 @@ export function useProfileTabs(): UseProfileTabsReturn {
             label: t('auth.profile.tabs.mail'),
             icon: 'envelope' as ProfileTabIcon,
         });
+
+        if (hasProposalsTab.value) {
+            baseTabs.push({
+                id: PROPOSALS_TAB,
+                label: t('auth.profile.tabs.proposals'),
+                icon: 'pencil-square' as ProfileTabIcon,
+            });
+        }
 
         // Add module tabs from profile-sections slot
         const moduleSlots = getSlotComponents('profile-sections');

@@ -35,4 +35,49 @@ return [
         'reason' => 'Motivo: :reason',
         'status_action' => 'Ver mis propuestas',
     ],
+
+    'seo' => [
+        'events' => 'Proponer un evento',
+        'articles' => 'Proponer un artículo',
+    ],
+
+    'fields' => [
+        'title' => 'título',
+        'description' => 'descripción',
+        'location' => 'lugar',
+        'start_date' => 'fecha de inicio',
+        'start_time' => 'hora de inicio',
+        'end_date' => 'fecha de fin',
+        'end_time' => 'hora de fin',
+        'image' => 'imagen',
+        'tags' => 'etiquetas',
+        'note' => 'nota para la administración',
+        'excerpt' => 'extracto',
+        'content' => 'contenido',
+    ],
+
+    'flash' => [
+        'saved' => 'Borrador guardado.',
+        'submitted' => 'Propuesta enviada a revisión. Te avisaremos cuando se revise.',
+        'published' => 'Propuesta publicada.',
+        'withdrawn' => 'Propuesta retirada: vuelve a ser un borrador.',
+        'deleted' => 'Propuesta eliminada.',
+        'saved_not_sent' => 'Se ha guardado el borrador, pero no se ha podido enviar: :reason',
+    ],
+
+    'errors' => [
+        'generic' => 'No se ha podido completar la acción.',
+        'end_before_start' => 'El fin no puede ser anterior al inicio.',
+        'invalid_status' => 'La propuesta ya no está en un estado que permita esta acción.',
+        'pending_limit' => 'Ya tienes el máximo de propuestas en revisión. Espera a que se revisen o retira alguna.',
+        'drafts_limit' => 'Ya tienes el máximo de borradores abiertos. Envía o elimina alguno.',
+        'hourly_limit' => 'Has enviado demasiadas propuestas en la última hora. Inténtalo más tarde.',
+        'invalid_title' => 'El título no es válido.',
+        'invalid_dates' => 'El fin no puede ser anterior al inicio.',
+        'invalid_content' => 'El contenido no puede estar vacío.',
+        'invalid_image' => 'La imagen no es válida.',
+        'invalid_location' => 'El lugar no es válido.',
+        'invalid_excerpt' => 'El extracto no es válido.',
+        'invalid_note' => 'La nota no es válida.',
+    ],
 ];

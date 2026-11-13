@@ -35,4 +35,49 @@ return [
         'reason' => 'Reason: :reason',
         'status_action' => 'See my proposals',
     ],
+
+    'seo' => [
+        'events' => 'Propose an event',
+        'articles' => 'Propose an article',
+    ],
+
+    'fields' => [
+        'title' => 'title',
+        'description' => 'description',
+        'location' => 'location',
+        'start_date' => 'start date',
+        'start_time' => 'start time',
+        'end_date' => 'end date',
+        'end_time' => 'end time',
+        'image' => 'image',
+        'tags' => 'tags',
+        'note' => 'note for the administration',
+        'excerpt' => 'excerpt',
+        'content' => 'content',
+    ],
+
+    'flash' => [
+        'saved' => 'Draft saved.',
+        'submitted' => 'Proposal sent for review. We will let you know once it is reviewed.',
+        'published' => 'Proposal published.',
+        'withdrawn' => 'Proposal withdrawn: it is a draft again.',
+        'deleted' => 'Proposal deleted.',
+        'saved_not_sent' => 'The draft was saved, but it could not be sent: :reason',
+    ],
+
+    'errors' => [
+        'generic' => 'The action could not be completed.',
+        'end_before_start' => 'The end cannot be before the start.',
+        'invalid_status' => 'The proposal is no longer in a status that allows this action.',
+        'pending_limit' => 'You already have the maximum number of proposals in review. Wait for them to be reviewed or withdraw one.',
+        'drafts_limit' => 'You already have the maximum number of open drafts. Send or delete one.',
+        'hourly_limit' => 'You have sent too many proposals in the last hour. Try again later.',
+        'invalid_title' => 'The title is not valid.',
+        'invalid_dates' => 'The end cannot be before the start.',
+        'invalid_content' => 'The content cannot be empty.',
+        'invalid_image' => 'The image is not valid.',
+        'invalid_location' => 'The location is not valid.',
+        'invalid_excerpt' => 'The excerpt is not valid.',
+        'invalid_note' => 'The note is not valid.',
+    ],
 ];
