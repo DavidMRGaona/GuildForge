@@ -100,7 +100,13 @@ watch(live, (isLive, wasLive) => {
 
 ### Client events («typing…»)
 
-`whisper(event, data)` sends a client event to the others on the channel; `onWhisper(event, listener)` listens to theirs and returns what stops it. They go from browser to browser without the server checking them: send only the sender's own id, never trust what arrives (show a «someone is typing» hint, nothing more), and limit how often you send. `whisper()` returns `false` when the channel is not live.
+`whisper(event, data)` sends a client event to the others on the channel; `onWhisper(event, listener)` listens to theirs and returns what stops it. `whisper()` returns `false` when the channel is not live.
+
+Whispers never go through the application: the WebSocket server passes them from browser to browser, so no permission check, no payload rule and no rate limit of the application applies to them. Anyone subscribed to the channel can send any whisper with any content. Use them only for ephemeral hints such as «typing…»:
+
+- never for anything that is stored, counted, shown as content or decides something (a vote, a move, a read mark): those go through a normal request, which checks permissions;
+- send only the sender's own id, and treat what arrives as untrusted (show a hint, nothing more; never render it as HTML);
+- limit how often you send (for instance once every few seconds while typing).
 
 ## Tests
 

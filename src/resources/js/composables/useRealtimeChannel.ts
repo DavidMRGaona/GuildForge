@@ -29,8 +29,10 @@ export interface UseRealtimeChannelReturn {
     live: ComputedRef<boolean>;
     /**
      * Sends a client event (`client-<event>`) to the others on the channel, e.g. «typing…».
-     * Nothing checks it on the server: send only the sender's own ids, and never trust what
-     * arrives. False when the channel is not live.
+     * It never goes through the application (no permission check, no payload rule, no rate
+     * limit there): only for ephemeral hints, never for anything stored or that decides
+     * something. Send only the sender's own ids and never trust what arrives. False when the
+     * channel is not live.
      */
     whisper: (event: string, data: Record<string, unknown>) => boolean;
     /** Listens to the client events of the others; returns what stops it. */

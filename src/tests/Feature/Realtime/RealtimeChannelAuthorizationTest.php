@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Realtime;
 
 use App\Application\Realtime\Services\RealtimeChannelRegistryInterface;
+use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Realtime\EnablesRealtime;
@@ -151,6 +153,42 @@ final class RealtimeChannelAuthorizationTest extends TestCase
         $user = UserModel::factory()->create(['anonymized_at' => now()]);
 
         $this->subscribe($user, 'private-core.site-notifications.'.$user->id)->assertForbidden();
+    }
+
+    public function test_an_account_pending_verification_may_not_listen_when_verification_is_required(): void
+    {
+        $settings = $this->app->make(SettingsServiceInterface::class);
+        $settings->set('email_verification_enforced_since', '2026-01-01T00:00:00+00:00');
+        $user = UserModel::factory()->unverified()->create();
+        $channel = 'private-core.site-notifications.'.$user->id;
+
+        // The setting off: the same account may listen
+        $this->subscribe($user, $channel)->assertOk();
+
+        $settings->set('auth_email_verification_required', '1');
+
+        $this->subscribe($user, $channel)
+            ->assertForbidden()
+            ->assertJsonPath('error', 'email_verification_required');
+    }
+
+    public function test_a_deactivated_account_may_not_listen(): void
+    {
+        $user = UserModel::factory()->create();
+        $user->delete();
+
+        $this->subscribe($user, 'private-core.site-notifications.'.$user->id)->assertForbidden();
+    }
+
+    public function test_the_endpoint_is_a_signed_in_web_route_with_its_own_limit(): void
+    {
+        $route = Route::getRoutes()->getByName('realtime.auth');
+
+        $this->assertNotNull($route);
+        $middleware = $route->gatherMiddleware();
+        $this->assertContains('web', $middleware);
+        $this->assertContains('auth', $middleware);
+        $this->assertContains('throttle:60,1,realtime-auth', $middleware);
     }
 
     public function test_the_endpoint_does_not_exist_without_realtime(): void

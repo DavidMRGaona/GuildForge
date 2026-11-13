@@ -105,8 +105,14 @@ BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=guildforge
 REVERB_APP_KEY=local-key
 REVERB_APP_SECRET=local-secret
-REVERB_HOST=127.0.0.1
+REVERB_HOST=reverb
 REVERB_PORT=8080
 ```
 
-run `php artisan reverb:start` inside the application container, and make the local proxy send `/app/` to it as above.
+and start the optional `reverb` service, which runs `php artisan reverb:start`:
+
+```bash
+docker compose --profile realtime up -d reverb
+```
+
+The local nginx already sends `/app/` to it (it answers 502 while the service is stopped, and the pages poll). Restart the `queue` service so the worker reads the new settings. To stop: `docker compose stop reverb` and set `BROADCAST_CONNECTION=log` again.
