@@ -104,7 +104,9 @@ export const createEchoClient: RealtimeClientFactory = async (config) => {
         wsPort: config.port,
         wssPort: config.port,
         forceTLS: config.tls,
-        enabledTransports: ['ws', 'wss'],
+        // One scheme, the same one `RealtimeClientConfigDTO::origin()` gives the CSP's connect-src
+        // (both read `tls`): trying the other one is blocked by the CSP and delays reconnecting.
+        enabledTransports: config.tls ? ['wss'] : ['ws'],
         Pusher,
         withoutInterceptors: true,
         channelAuthorization: {
