@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Proposals\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Content\Services\RichTextSanitizerInterface;
 use App\Application\Proposals\Contracts\ProposalApprovalStepInterface;
 use App\Application\Proposals\DTOs\ArticleProposalDataDTO;
 use App\Application\Proposals\DTOs\EventProposalDataDTO;
@@ -12,6 +13,7 @@ use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
 use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
+use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Domain\Proposals\Enums\ProposalAuthorAction;
 use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Domain\Proposals\Enums\ProposalType;
@@ -29,7 +31,6 @@ use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use App\Infrastructure\Support\SanitizesHtml;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -42,8 +43,6 @@ use Throwable;
 
 final readonly class ProposalService implements ProposalServiceInterface
 {
-    use SanitizesHtml;
-
     private const int MAX_TITLE = 255;
 
     private const int MAX_TEXT = 5000;
@@ -55,6 +54,7 @@ final readonly class ProposalService implements ProposalServiceInterface
         private ProposalSettingsServiceInterface $settings,
         private AuthorizationServiceInterface $authorization,
         private TimezoneServiceInterface $timezone,
+        private RichTextSanitizerInterface $sanitizer,
         private Container $container,
     ) {}
 
@@ -496,7 +496,7 @@ final readonly class ProposalService implements ProposalServiceInterface
 
         return [
             'title' => $this->title($data->title),
-            'description' => $this->sanitizeHtml($data->description),
+            'description' => $this->sanitizer->sanitize($data->description, EditorImageOrigin::Events),
             'start_date' => $data->startDate,
             'end_date' => $data->endDate,
             'location' => $this->optionalText($data->location, self::MAX_TITLE, 'location'),
@@ -510,7 +510,7 @@ final readonly class ProposalService implements ProposalServiceInterface
      */
     private function articleAttributes(ArticleProposalDataDTO $data): array
     {
-        $content = $this->sanitizeHtml($data->content);
+        $content = $this->sanitizer->sanitize($data->content, EditorImageOrigin::Articles);
 
         if (trim(strip_tags($content)) === '' && ! str_contains($content, '<img')) {
             throw InvalidProposalDataException::field('content');

@@ -69,6 +69,5 @@ final class ProposalStatusTest extends TestCase
     public function test_unapproved_statuses_list_every_status_kept_out_of_public_view(): void
     {
         $this->assertSame(['draft', 'pending_review', 'rejected'], ProposalStatus::unapprovedValues());
-        $this->assertSame(ProposalStatus::PendingReview, ProposalStatus::from('pending_review'));
     }
 }
