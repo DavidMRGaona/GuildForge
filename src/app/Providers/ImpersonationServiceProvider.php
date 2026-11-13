@@ -14,6 +14,8 @@ use App\Infrastructure\Impersonation\EloquentImpersonationAccounts;
 use App\Infrastructure\Impersonation\ImpersonationContext;
 use App\Infrastructure\Impersonation\ImpersonationLogger;
 use App\Infrastructure\Impersonation\ImpersonationService;
+use App\Infrastructure\Impersonation\SafetyNet\ImpersonationSafetyNet;
+use App\Infrastructure\Impersonation\SafetyNet\RolledBackTransaction;
 use Filament\Http\Middleware\AuthenticateSession as FilamentAuthenticateSession;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\ServiceProvider;
@@ -31,6 +33,11 @@ final class ImpersonationServiceProvider extends ServiceProvider
         $this->app->bind(ImpersonationServiceInterface::class, ImpersonationService::class);
         $this->app->bind(ImpersonationLoggerInterface::class, ImpersonationLogger::class);
         $this->app->bind(ImpersonationAccountsInterface::class, EloquentImpersonationAccounts::class);
+
+        // Singletons, not scoped: once engaged the outputs stay neutralised until the process
+        // ends, terminating middleware and defer() callbacks included
+        $this->app->singleton(RolledBackTransaction::class);
+        $this->app->singleton(ImpersonationSafetyNet::class);
 
         // Both session checks store the administrator's password hash, not the target's.
         // Bound under the framework names: the panel and Livewire's persistent middleware
