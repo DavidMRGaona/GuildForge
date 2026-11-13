@@ -21,6 +21,7 @@ use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Impersonation\ReadsOnly;
 use App\Filament\Support\PanelNavigationGroup;
 use App\Modules\ModuleLoader;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -340,6 +341,7 @@ final class ModulesPage extends Page implements HasForms
         }
     }
 
+    #[ReadsOnly]
     public function confirmUninstall(string $name): void
     {
         abort_unless($this->canManageModules(), 403);
@@ -349,6 +351,7 @@ final class ModulesPage extends Page implements HasForms
         $this->dispatch('open-modal', id: 'confirm-uninstall');
     }
 
+    #[ReadsOnly]
     public function cancelUninstall(): void
     {
         $this->confirmingUninstall = null;
@@ -396,6 +399,7 @@ final class ModulesPage extends Page implements HasForms
         }
     }
 
+    #[ReadsOnly]
     public function setFilter(string $filter): void
     {
         $this->filter = $filter;

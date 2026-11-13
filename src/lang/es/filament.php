@@ -8,6 +8,9 @@ return [
         'heading' => 'Detalles',
         'close' => 'Cerrar',
     ],
+    'impersonation_read_only' => [
+        'refused' => 'Estás viendo como :name: no se guardan cambios',
+    ],
     'hero_slides' => [
         'navigation' => 'Hero slides',
         'label' => 'slide',

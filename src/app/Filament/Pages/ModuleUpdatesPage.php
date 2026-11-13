@@ -16,6 +16,7 @@ use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Impersonation\ReadsOnly;
 use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Updates\Jobs\UpdateModuleJob;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleUpdateHistoryModel;
@@ -325,6 +326,7 @@ final class ModuleUpdatesPage extends Page implements HasTable
     /**
      * Called by wire:poll while updates are queued: reports the ones that finished.
      */
+    #[ReadsOnly]
     public function pollUpdates(): void
     {
         if ($this->queuedModules === [] || $this->queuedSince === null) {

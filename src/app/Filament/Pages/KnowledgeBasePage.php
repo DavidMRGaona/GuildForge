@@ -12,6 +12,7 @@ use App\Application\Knowledge\Services\KnowledgeQueryServiceInterface;
 use App\Domain\Knowledge\Enums\GuideAudience;
 use App\Domain\Knowledge\Exceptions\InvalidGuideIdException;
 use App\Domain\Knowledge\ValueObjects\GuideId;
+use App\Filament\Impersonation\ReadsOnly;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Livewire\Attributes\Url;
@@ -57,6 +58,7 @@ final class KnowledgeBasePage extends Page
         return auth()->check();
     }
 
+    #[ReadsOnly]
     public function openGuide(string $guideId): void
     {
         $this->guide = $guideId;
@@ -64,6 +66,7 @@ final class KnowledgeBasePage extends Page
         $this->scrollToContent();
     }
 
+    #[ReadsOnly]
     public function showHome(): void
     {
         $this->guide = null;
@@ -98,6 +101,7 @@ final class KnowledgeBasePage extends Page
     /**
      * Counts the search as a miss only when it was submitted and found nothing.
      */
+    #[ReadsOnly]
     public function submitSearch(): void
     {
         $query = trim($this->search);
