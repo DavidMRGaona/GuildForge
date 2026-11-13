@@ -23,9 +23,9 @@ final class OklchColorPaletteGenerator implements ColorPaletteGeneratorInterface
         500 => 0.60,
         600 => 0.50,  // Base color anchored here
         700 => 0.40,
-        800 => 0.32,  // Elevated surfaces in dark mode
-        900 => 0.25,  // Surface/muted in dark mode
-        950 => 0.18,  // Page background in dark mode
+        800 => 0.32,
+        900 => 0.25,
+        950 => 0.18,
     ];
 
     /**
@@ -86,22 +86,6 @@ final class OklchColorPaletteGenerator implements ColorPaletteGeneratorInterface
             $chroma = max(0, min(0.4, $chroma));
 
             $shades[$shade] = HexColor::fromOklch($targetLightness, $chroma, $hue);
-        }
-
-        return new ColorPalette($name, $shades);
-    }
-
-    public function generateNeutral(string $name, HexColor $accentColor): ColorPalette
-    {
-        $accentOklch = $accentColor->toOklch();
-
-        $shades = [];
-
-        foreach (self::LIGHTNESS_SCALE as $shade => $targetLightness) {
-            // Very low chroma for neutral, but keep a hint of the accent hue
-            $chroma = 0.01 * self::CHROMA_SCALE[$shade];
-
-            $shades[$shade] = HexColor::fromOklch($targetLightness, $chroma, $accentOklch['h']);
         }
 
         return new ColorPalette($name, $shades);

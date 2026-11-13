@@ -1,5 +1,6 @@
 @php
     use App\Domain\ValueObjects\HexColor;
+    use App\Domain\ValueObjects\NeutralPalette;
     use App\Infrastructure\Services\Color\OklchColorPaletteGenerator;
 
     $generator = new OklchColorPaletteGenerator();
@@ -15,7 +16,7 @@
 
         $primaryPalette = $generator->generate('primary', $primaryHex);
         $accentPalette = $generator->generate('accent', $accentHex);
-        $neutralPalette = $generator->generateNeutral('neutral', $accentHex);
+        $neutralPalette = NeutralPalette::palette();
 
         // Detect warnings
         $primaryWarnings = $generator->detectWarnings($primaryHex);
@@ -130,7 +131,7 @@
             <h4 class="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                 {{ __('Paleta de neutros') }}
                 <span class="text-xs font-normal text-neutral-500 dark:text-neutral-400">
-                    ({{ __('derivada del acento') }})
+                    ({{ __('común al sitio, al panel y a los correos') }})
                 </span>
             </h4>
             <div class="flex rounded-lg overflow-hidden shadow-sm">

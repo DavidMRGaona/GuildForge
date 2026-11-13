@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
-use App\Providers\Filament\AdminPanelProvider;
+use App\Domain\ValueObjects\NeutralPalette;
 use Filament\AvatarProviders\Contracts\AvatarProvider;
 use Filament\Facades\Filament;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -26,7 +26,7 @@ final class InitialsAvatarProvider implements AvatarProvider
     public static function svgDataUri(string $name): string
     {
         $initials = htmlspecialchars(self::initials($name), ENT_XML1 | ENT_QUOTES, 'UTF-8');
-        $background = AdminPanelProvider::GRAY_PALETTE[700];
+        $background = NeutralPalette::SHADES[700];
 
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">'
             .'<rect width="64" height="64" fill="'.$background.'"/>'
