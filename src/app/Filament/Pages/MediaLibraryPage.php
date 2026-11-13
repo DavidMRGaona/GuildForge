@@ -20,6 +20,7 @@ use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Impersonation\ReadOnlyActions;
 use App\Filament\Support\FileSize;
 use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Media\Jobs\SyncMediaLibraryJob;
@@ -262,7 +263,7 @@ final class MediaLibraryPage extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         return array_filter([
-            Action::make('toggleLayout')
+            ReadOnlyActions::allow(Action::make('toggleLayout')
                 ->label(fn (): string => $this->isList()
                     ? __('filament.media_library.layout.grid')
                     : __('filament.media_library.layout.list'))
@@ -271,7 +272,7 @@ final class MediaLibraryPage extends Page implements HasTable
                 ->action(function (): void {
                     $this->display = $this->isList() ? self::LAYOUT_GRID : self::LAYOUT_LIST;
                     $this->resetTable();
-                }),
+                })),
             Action::make('refresh')
                 ->label(__('filament.media_library.actions.refresh'))
                 ->icon('heroicon-o-arrow-path')
@@ -464,12 +465,12 @@ final class MediaLibraryPage extends Page implements HasTable
      */
     private function viewDetailsAction(): Action
     {
-        return Action::make('viewDetails')
+        return ReadOnlyActions::allow(Action::make('viewDetails')
             ->label(__('filament.media_library.actions.view_details'))
             ->icon('heroicon-o-photo')
             ->action(function (MediaFileModel $record): void {
                 $this->replaceMountedAction('details', ['file' => (string) $record->getKey()]);
-            });
+            }));
     }
 
     /**
@@ -481,7 +482,7 @@ final class MediaLibraryPage extends Page implements HasTable
         $original = $this->urls()->mediaOriginal($file->file_id, $file->resource_type);
 
         return array_values(array_filter([
-            Action::make('previous')
+            ReadOnlyActions::allow(Action::make('previous')
                 ->label(__('filament.media_library.actions.previous'))
                 ->icon('heroicon-o-chevron-left')
                 ->iconButton()
@@ -492,8 +493,8 @@ final class MediaLibraryPage extends Page implements HasTable
                     if ($previous !== null) {
                         $this->replaceMountedAction('details', ['file' => $previous]);
                     }
-                }),
-            Action::make('next')
+                })),
+            ReadOnlyActions::allow(Action::make('next')
                 ->label(__('filament.media_library.actions.next'))
                 ->icon('heroicon-o-chevron-right')
                 ->iconButton()
@@ -504,7 +505,7 @@ final class MediaLibraryPage extends Page implements HasTable
                     if ($next !== null) {
                         $this->replaceMountedAction('details', ['file' => $next]);
                     }
-                }),
+                })),
             $original !== null ? Action::make('openOriginal')
                 ->label(__('filament.media_library.actions.open_original'))
                 ->icon('heroicon-o-arrow-top-right-on-square')

@@ -8,6 +8,7 @@ use App\Application\Impersonation\Services\ImpersonationAccountsInterface;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Impersonation\Services\ImpersonationLoggerInterface;
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
+use App\Filament\Impersonation\RefuseChangesWhileOnlyLooking;
 use App\Http\Middleware\AuthenticateImpersonatorSession;
 use App\Http\Middleware\AuthenticatePanelImpersonatorSession;
 use App\Infrastructure\Impersonation\EloquentImpersonationAccounts;
@@ -19,6 +20,7 @@ use App\Infrastructure\Impersonation\SafetyNet\RolledBackTransaction;
 use Filament\Http\Middleware\AuthenticateSession as FilamentAuthenticateSession;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 /**
  * An administrator viewing the site and the panel as another account (core#569): the
@@ -44,5 +46,12 @@ final class ImpersonationServiceProvider extends ServiceProvider
         // name those classes, and the container builds them.
         $this->app->bind(AuthenticateSession::class, AuthenticateImpersonatorSession::class);
         $this->app->bind(FilamentAuthenticateSession::class, AuthenticatePanelImpersonatorSession::class);
+
+        // «Solo mirar» in the panel: Livewire calls that run actions or save are refused (core#576).
+        // Before any provider boots: Livewire wires its component hooks when it boots, and a hook
+        // added later would only reach the next application (none, under PHP-FPM).
+        $this->app->booting(static function (): void {
+            Livewire::componentHook(RefuseChangesWhileOnlyLooking::class);
+        });
     }
 }
