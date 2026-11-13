@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
+use App\Infrastructure\Impersonation\ImpersonatedName;
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
@@ -41,11 +42,9 @@ final readonly class RedirectImpersonatedAccountWithoutPanelAccess
             return $next($request);
         }
 
-        $display = $target->display_name ?? '';
-        $name = is_string($display) && $display !== '' ? $display : (string) ($target->name ?? '');
-
+        // `error`: the site only draws success and error flashes (useFlashMessages), core#600
         return redirect()
             ->route('home')
-            ->with('warning', __('filament.impersonation.no_panel_access', ['name' => $name]));
+            ->with('error', __('filament.impersonation.no_panel_access', ['name' => ImpersonatedName::of($target)]));
     }
 }

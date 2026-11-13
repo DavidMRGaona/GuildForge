@@ -457,6 +457,7 @@ return [
             'simulate' => 'Ejecutar y deshacer: las acciones se ejecutan y se deshacen; los avisos de «Guardado» no son reales',
             'stop' => 'Volver a mi cuenta',
         ],
+        'reminder' => 'Como :name',
         'no_panel_access' => ':name no tiene acceso al panel.',
         'history' => [
             'as_target' => 'Impersonaciones de esta cuenta',

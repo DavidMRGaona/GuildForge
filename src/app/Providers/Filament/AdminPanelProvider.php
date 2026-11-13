@@ -21,6 +21,7 @@ use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
 use App\Http\Middleware\ApplyImpersonation;
 use App\Http\Middleware\RedirectImpersonatedAccountWithoutPanelAccess;
+use App\Infrastructure\Impersonation\ImpersonatedName;
 use App\Modules\ModuleAutoloader;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -269,6 +270,11 @@ class AdminPanelProvider extends PanelProvider
                 fn (): string => $this->impersonationBanner(),
             )
             ->renderHook(
+                // The band scrolls away on long pages; the top bar stays (core#600)
+                PanelsRenderHook::USER_MENU_BEFORE,
+                fn (): string => $this->impersonationBanner('filament.components.impersonation-reminder'),
+            )
+            ->renderHook(
                 PanelsRenderHook::BODY_START,
                 // Read on render, never while the panel is being registered
                 fn (): string => $this->incompatibleModulesBanner(),
@@ -378,9 +384,12 @@ class AdminPanelProvider extends PanelProvider
      */
     /**
      * «Estás viendo como X» (core#578): always shown while an administrator impersonates, so the
-     * panel never looks like the administrator's own. Simulate has its own colour.
+     * panel never looks like the administrator's own. Simulate has its own colour. The same data
+     * draws the compact reminder in the sticky top bar.
+     *
+     * @param  view-string  $view
      */
-    private function impersonationBanner(): string
+    private function impersonationBanner(string $view = 'filament.components.impersonation-banner'): string
     {
         try {
             $context = app(ImpersonationContextInterface::class);
@@ -391,10 +400,9 @@ class AdminPanelProvider extends PanelProvider
             }
 
             $simulate = $context->mode() === ImpersonationMode::Simulate;
-            $display = $target->display_name ?? '';
 
-            return view('filament.components.impersonation-banner', [
-                'name' => is_string($display) && $display !== '' ? $display : (string) ($target->name ?? ''),
+            return view($view, [
+                'name' => ImpersonatedName::of($target),
                 'color' => $simulate ? 'warning' : 'info',
                 'modeText' => __($simulate ? 'filament.impersonation.banner.simulate' : 'filament.impersonation.banner.read_only'),
             ])->render();

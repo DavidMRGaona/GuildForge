@@ -56,6 +56,7 @@ final class PanelReadOnlyTest extends TestCase
             'tags.view_any', 'tags.create', 'tags.update', 'tags.delete',
             'menu_items.view_any', 'menu_items.delete',
         ]);
+        $this->target->forceFill(['name' => 'Marta Ejemplo', 'display_name' => 'Marta'])->save();
     }
 
     public function test_a_row_action_is_refused(): void
@@ -317,7 +318,7 @@ final class PanelReadOnlyTest extends TestCase
 
     private function refusal(): string
     {
-        return __('filament.impersonation_read_only.refused', ['name' => Filament::getUserName($this->target)]);
+        return __('filament.impersonation_read_only.refused', ['name' => 'Marta']);
     }
 
     private function menuItem(): MenuItemModel
