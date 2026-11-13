@@ -8,6 +8,7 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Events\UserProfileUpdated;
 use App\Filament\Actions\ImpersonateAction;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Concerns\SavesRolesThroughTheGrantRule;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\Event;
 
 class EditUser extends EditRecord
 {
+    use HasKnowledgeGuideAction;
     use SavesRolesThroughTheGrantRule;
 
     protected static string $resource = UserResource::class;
@@ -184,6 +186,7 @@ class EditUser extends EditRecord
                         ->send();
                     $this->redirect(UserResource::getUrl('index'));
                 }),
+            ...array_filter([$this->knowledgeGuideAction('core.panel.impersonation')]),
         ];
     }
 }

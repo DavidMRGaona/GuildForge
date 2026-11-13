@@ -26,6 +26,7 @@ use App\Filament\Resources\HeroSlideResource\Pages\ListHeroSlides;
 use App\Filament\Resources\MenuItemResource\Pages\ListMenuItems;
 use App\Filament\Resources\RoleResource\Pages\ListRoles;
 use App\Filament\Resources\TagResource\Pages\ListTags;
+use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -58,6 +59,7 @@ final class CorePanelGuidesTest extends TestCase
         'core.panel.modules',
         'core.panel.updates',
         'core.panel.media-library',
+        'core.panel.impersonation',
     ];
 
     protected function setUp(): void
@@ -96,6 +98,25 @@ final class CorePanelGuidesTest extends TestCase
         foreach (self::PANEL_GUIDES as $id) {
             $this->assertContains($id, $visible);
         }
+    }
+
+    public function test_impersonation_guide_needs_the_impersonation_permission(): void
+    {
+        $editor = $this->editorWithPermissions(['users.view_any', 'users.update']);
+
+        $this->assertNotContains('core.panel.impersonation', $this->queries()->visibleIds($editor, GuideAudience::Panel));
+    }
+
+    public function test_edit_user_shows_the_impersonation_help_to_an_admin_only(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $target = UserModel::factory()->create();
+
+        $this->actingAs($admin);
+        Livewire::test(EditUser::class, ['record' => $target->getKey()])->assertActionVisible('contextualHelp');
+
+        $this->actingAs($this->editorWithPermissions(['users.view_any', 'users.update']));
+        Livewire::test(EditUser::class, ['record' => $target->getKey()])->assertActionDoesNotExist('contextualHelp');
     }
 
     public function test_each_panel_guide_renders_without_raw_markers(): void

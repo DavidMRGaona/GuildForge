@@ -1,0 +1,60 @@
+---
+id: core.panel.impersonation
+title: Impersonar a otra persona
+summary: Mira el sitio y el panel como los ve otra cuenta para reproducir un fallo, sin que se guarde nada.
+category: users-and-roles
+audience: panel
+order: 15
+keywords: [impersonar, impersonación, ver como, ver como otra persona, depurar, fallo, no veo, permisos, solo mirar, ejecutar y deshacer, volver a mi cuenta, historial, privacidad]
+related: [core.panel.manage-users, core.panel.roles-and-permissions]
+conditions:
+  permissions:
+    all: [users.impersonate]
+---
+Impersonar sirve para ver {{site_name}} exactamente como lo ve otra cuenta: con sus roles, sus permisos y sus datos. Es útil cuando alguien dice «no veo la pestaña de inscripciones» o «me sale un evento que no debería» y el fallo se reproduce mirando lo que ve esa persona.
+
+> [!IMPORTANT]
+> Mientras impersonas, **no se guarda nada**, en ningún modo. Tampoco sale ningún correo, ni se envía ningún aviso ni se borra ningún archivo.
+
+## Quién puede y a quién
+
+- Solo la **administración** puede impersonar. El permiso «Impersonar» no se puede dar a ningún otro rol.
+- Puedes impersonar a cualquier cuenta, incluidas las que tienen acceso al panel, salvo:
+  - cuentas con el rol de administración;
+  - tu propia cuenta;
+  - cuentas desactivadas o anonimizadas.
+- No se encadenan: si ya estás impersonando, primero vuelve a tu cuenta.
+- La persona impersonada no recibe ningún aviso. Sí queda un registro (ver más abajo).
+
+## Empezar
+
+1. Ve a **Personas → Usuarios**.
+2. Abre el menú **⋯** de la cuenta, o su ficha, y pulsa **Impersonar**.
+3. Elige el modo y confirma.
+
+Verás la portada del sitio con una banda fija: «Estás viendo como…». Navega por el sitio y por el panel como si fueras esa persona. Si esa cuenta no tiene acceso al panel, al entrar en el panel te devolvemos a la portada con un aviso.
+
+## Los dos modos
+
+| Modo | Qué pasa |
+|------|----------|
+| **Solo mirar** (por defecto) | Los envíos del sitio y las acciones del panel se rechazan con un aviso: «no se guardan cambios». Puedes navegar, filtrar, ordenar, paginar y abrir formularios y ventanas. |
+| **Ejecutar y deshacer** | Marca «Permitir ejecutar acciones». Los envíos y las acciones se ejecutan y dan su respuesta normal, para reproducir un «al guardar me da error», pero todo se deshace al terminar cada petición. |
+
+> [!IMPORTANT]
+> En **Ejecutar y deshacer**, los avisos de «Guardado» no son reales: no queda nada guardado. La banda cambia de color para que no lo olvides.
+
+El modo no se cambia a mitad: vuelve a tu cuenta y empieza otra impersonación.
+
+## Volver a tu cuenta
+
+Pulsa **Volver a mi cuenta** en la banda, en el sitio o en el panel: vuelves a la ficha de la persona que impersonabas. Si cierras sesión, la impersonación termina y tu sesión se cierra. No hay caducidad: dura hasta que vuelves o cierras sesión.
+
+## Historial
+
+Cada impersonación queda registrada: quién, a quién, en qué modo, cuándo empezó y cuándo terminó. Lo ves en la ficha de la cuenta, en **Impersonaciones de esta cuenta** (las que ha recibido) y en **Impersonaciones hechas por esta cuenta**. Solo lo ve quien puede impersonar. Una fila «Sin cierre registrado» es una sesión que caducó sin volver.
+
+## Aviso para la administración
+
+> [!IMPORTANT]
+> Conviene mencionar en la **política de privacidad** que la administración puede ver la web como otra cuenta para atender incidencias, sin modificar nada, y que cada uso queda registrado. Los textos legales de {{site_name}} se editan en **Sitio web → Páginas legales**.
