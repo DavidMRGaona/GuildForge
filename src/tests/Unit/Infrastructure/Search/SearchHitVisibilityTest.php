@@ -11,8 +11,10 @@ use App\Infrastructure\Search\Search\SearchHitVisibility;
 use RuntimeException;
 use stdClass;
 use Tests\Support\Logging\RecordingLogger;
+use Tests\Support\Search\CheckingAndWithholdingSearchSource;
 use Tests\Support\Search\CheckingSearchSource;
 use Tests\Support\Search\InMemoryIndexedSearchSource;
+use Tests\Support\Search\SnippetWithholdingSearchSource;
 use Tests\TestCase;
 
 final class SearchHitVisibilityTest extends TestCase
@@ -128,6 +130,120 @@ final class SearchHitVisibilityTest extends TestCase
 
         $this->assertSame(['notes' => 3, 'help' => 2], $checked->adjust(['notes' => 5, 'events' => 1, 'help' => 2]));
         $this->assertSame(6, $checked->droppedTotal());
+    }
+
+    public function test_without_a_withholding_source_every_kept_row_shows_its_snippet(): void
+    {
+        $this->checking(CheckingSearchSource::allowing('notes', ['n1']));
+        $rows = ['a' => $this->row('notes', 'n1'), 'b' => $this->row('events', 'e1')];
+
+        $checked = $this->check($rows);
+
+        $this->assertFalse($checked->withholdsSnippet($rows['a']));
+        $this->assertFalse($checked->withholdsSnippet($rows['b']));
+    }
+
+    public function test_a_source_withholds_the_stored_snippet_of_rows_that_stay_visible(): void
+    {
+        $source = $this->withholding(SnippetWithholdingSearchSource::withholding('notes', ['n2']));
+        $rows = [
+            'a' => $this->row('notes', 'n1'),
+            'b' => $this->row('notes', 'n2'),
+            'c' => $this->row('events', 'n2'),
+        ];
+        $user = new stdClass;
+
+        $checked = $this->check($rows, $user);
+
+        // The row stays, only its snippet goes; the same id of another type is not touched
+        $this->assertSame(['a', 'b', 'c'], array_keys($checked->rows));
+        $this->assertSame([], $checked->dropped);
+        $this->assertFalse($checked->withholdsSnippet($rows['a']));
+        $this->assertTrue($checked->withholdsSnippet($rows['b']));
+        $this->assertFalse($checked->withholdsSnippet($rows['c']));
+        $this->assertCount(1, $source->calls);
+        $this->assertSame(['n1', 'n2'], $source->calls[0]['ids']);
+        $this->assertSame($user, $source->calls[0]['user']);
+    }
+
+    public function test_only_rows_still_visible_are_asked_about_their_snippet(): void
+    {
+        $source = $this->both(new CheckingAndWithholdingSearchSource('notes', visible: ['n1', 'n3'], stale: ['n3']));
+        $rows = ['a' => $this->row('notes', 'n1'), 'b' => $this->row('notes', 'n2'), 'c' => $this->row('notes', 'n3')];
+
+        $checked = $this->check($rows);
+
+        $this->assertSame(['a', 'c'], array_keys($checked->rows));
+        $this->assertSame([['n1', 'n2', 'n3']], $source->visibilityCalls);
+        $this->assertSame([['n1', 'n3']], $source->snippetCalls);
+        $this->assertFalse($checked->withholdsSnippet($rows['a']));
+        $this->assertTrue($checked->withholdsSnippet($rows['c']));
+    }
+
+    public function test_a_page_where_no_row_is_left_asks_nothing_about_snippets(): void
+    {
+        $source = $this->both(new CheckingAndWithholdingSearchSource('notes', visible: []));
+
+        $checked = $this->check(['a' => $this->row('notes', 'n1')]);
+
+        $this->assertSame([], $checked->rows);
+        $this->assertSame([], $source->snippetCalls);
+    }
+
+    public function test_ids_not_asked_for_withhold_nothing(): void
+    {
+        $this->withholding(new SnippetWithholdingSearchSource('notes', static fn (): array => ['n9', 42, null]));
+        $rows = ['a' => $this->row('notes', 'n1')];
+
+        $checked = $this->check($rows);
+
+        $this->assertFalse($checked->withholdsSnippet($rows['a']));
+        $this->assertSame([], $this->logger->records);
+    }
+
+    public function test_a_withholding_check_that_throws_withholds_every_snippet_of_its_type_and_logs_an_error(): void
+    {
+        $this->withholding(new SnippetWithholdingSearchSource('notes', static fn (): never => throw new RuntimeException('Database is gone')));
+        $rows = ['a' => $this->row('notes', 'n1'), 'b' => $this->row('events', 'e1'), 'c' => $this->row('notes', 'n2')];
+
+        $checked = $this->check($rows);
+
+        // Fails closed without hiding the results: they show the title, never the stored text
+        $this->assertSame(['a', 'b', 'c'], array_keys($checked->rows));
+        $this->assertTrue($checked->withholdsSnippet($rows['a']));
+        $this->assertFalse($checked->withholdsSnippet($rows['b']));
+        $this->assertTrue($checked->withholdsSnippet($rows['c']));
+        $this->assertCount(1, $this->logger->records);
+        $this->assertSame('error', $this->logger->records[0]['level']);
+        $this->assertStringContainsString('Database is gone', $this->logger->records[0]['message']);
+        $this->assertSame('notes', $this->logger->records[0]['context']['type'] ?? null);
+    }
+
+    public function test_a_withholding_answer_that_is_no_list_fails_like_an_error(): void
+    {
+        $this->withholding(new SnippetWithholdingSearchSource('notes', static fn (): string => 'n1'));
+        $rows = ['a' => $this->row('notes', 'n1')];
+
+        $checked = $this->check($rows);
+
+        $this->assertTrue($checked->withholdsSnippet($rows['a']));
+        $this->assertSame('error', $this->logger->records[0]['level'] ?? null);
+    }
+
+    private function withholding(SnippetWithholdingSearchSource $source): SnippetWithholdingSearchSource
+    {
+        $this->app->instance(SnippetWithholdingSearchSource::class, $source);
+        $this->app->make(SearchSourceRegistryInterface::class)->register(SnippetWithholdingSearchSource::class);
+
+        return $source;
+    }
+
+    private function both(CheckingAndWithholdingSearchSource $source): CheckingAndWithholdingSearchSource
+    {
+        $this->app->instance(CheckingAndWithholdingSearchSource::class, $source);
+        $this->app->make(SearchSourceRegistryInterface::class)->register(CheckingAndWithholdingSearchSource::class);
+
+        return $source;
     }
 
     private function checking(CheckingSearchSource $source): CheckingSearchSource

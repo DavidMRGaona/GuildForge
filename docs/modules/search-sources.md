@@ -102,6 +102,45 @@ final class TableSearchSource implements ChecksSearchHits, IndexedSearchSourceIn
 }
 ```
 
+## Withholding a stale snippet
+
+Sometimes a result must stay visible while part of its stored text must not: a forum topic whose opening post moderation has just hidden is still listed, but until the queued refresh rewrites its document, the stored body (and the snippet built from it) still holds the hidden text. A source covers that by implementing `App\Application\Search\Contracts\WithholdsSearchSnippets` (optional, core ≥ the release with #550, independent from `ChecksSearchHits`):
+
+```php
+/**
+ * @param  non-empty-list<string>  $ids  ids given by document() and documents(), of this source's type
+ * @return list<string>  the ids whose stored text must not be shown
+ */
+public function staleSearchSnippets(array $ids, ?object $user): array;
+```
+
+- **What it changes.** Those results keep their title, link, meta, image and dates, and come with an empty snippet (`/buscar` and the header panel then show the title alone). Counts, totals and paging do not change. The meta line is still shown: keep anything that can be hidden out of `meta`.
+- **When it is called.** By both engines, once per page and type, with the ids of that type still on the page (after `visibleSearchHits()`, when the source has it too: a result already taken away is not asked about). One query over all the ids, as for the visibility check.
+- **It only takes away.** Ids you did not receive are ignored.
+- **It fails closed.** If it throws, or answers with something that is not a list, every result of the type on that page comes without a snippet and the core logs an error. The results themselves stay.
+- **A match on the hidden text.** A result that only matched through the stale text still shows, with its title only, until the refresh runs. If that would already reveal too much, take the result away with `visibleSearchHits()` instead.
+
+```php
+use App\Application\Search\Contracts\WithholdsSearchSnippets;
+
+final class TopicSearchSource implements ChecksSearchHits, IndexedSearchSourceInterface, WithholdsSearchSnippets
+{
+    // ...
+
+    public function staleSearchSnippets(array $ids, ?object $user): array
+    {
+        $uuids = array_values(array_filter($ids, Str::isUuid(...)));
+        if ($uuids === []) {
+            return [];
+        }
+
+        // Topics whose opening post is hidden: the stored body no longer matches document()
+        return $this->listed()->whereKey($uuids)->whereHas('openingPost', fn ($post) => $post->hidden())
+            ->pluck('id')->map(fn (mixed $id): string => (string) $id)->all();
+    }
+}
+```
+
 ## Example
 
 ```php

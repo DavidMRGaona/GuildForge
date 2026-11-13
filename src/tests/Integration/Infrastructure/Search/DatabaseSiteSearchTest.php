@@ -18,6 +18,7 @@ use RuntimeException;
 use stdClass;
 use Tests\Support\Logging\RecordingLogger;
 use Tests\Support\Search\CheckingSearchSource;
+use Tests\Support\Search\SnippetWithholdingSearchSource;
 use Tests\TestCase;
 
 final class DatabaseSiteSearchTest extends TestCase
@@ -276,6 +277,49 @@ final class DatabaseSiteSearchTest extends TestCase
         $this->assertSame(['error'], array_column($logger->records, 'level'));
     }
 
+    public function test_a_row_whose_stored_text_is_stale_shows_its_title_without_the_snippet(): void
+    {
+        $this->document(['type' => 'articles', 'source_id' => 'a-stale', 'title' => 'Tema de dragones', 'body' => 'Texto oculto por la moderación sobre dragones.']);
+        $this->document(['type' => 'articles', 'source_id' => 'a-fresh', 'title' => 'Otro tema', 'body' => 'Un texto que sigue valiendo sobre dragones.']);
+        $source = $this->withholding(SnippetWithholdingSearchSource::withholding('articles', ['a-stale']));
+        $user = new stdClass;
+
+        $result = $this->search('dragones', user: $user);
+
+        $hits = [];
+        foreach ($result->hits as $hit) {
+            $hits[$hit->title] = $hit;
+        }
+        $this->assertSame([], $hits['Tema de dragones']->snippet);
+        $this->assertContains(['text' => 'dragones', 'match' => true], $hits['Otro tema']->snippet);
+        // The result stays: counts and total are untouched
+        $this->assertSame(['articles' => 2], $result->counts);
+        $this->assertSame(2, $result->total);
+        $this->assertCount(1, $source->calls);
+        $this->assertEqualsCanonicalizing(['a-stale', 'a-fresh'], $source->calls[0]['ids']);
+        $this->assertSame($user, $source->calls[0]['user']);
+    }
+
+    public function test_a_failing_snippet_check_shows_its_type_without_snippets_and_logs_an_error(): void
+    {
+        $logger = new RecordingLogger;
+        $this->app->instance(LoggerInterface::class, $logger);
+        $this->document(['title' => 'Dragones del evento', 'body' => 'Una tarde con dragones.']);
+        $this->document(['type' => 'articles', 'source_id' => 'a1', 'title' => 'Dragones uno', 'body' => 'Más dragones.']);
+        $this->withholding(new SnippetWithholdingSearchSource('articles', static fn (): never => throw new RuntimeException('Gone')));
+
+        $result = $this->search('dragones');
+
+        $snippets = [];
+        foreach ($result->hits as $hit) {
+            $snippets[$hit->title] = $hit->snippet;
+        }
+        $this->assertSame([], $snippets['Dragones uno']);
+        $this->assertNotSame([], $snippets['Dragones del evento']);
+        $this->assertSame(2, $result->total);
+        $this->assertSame(['error'], array_column($logger->records, 'level'));
+    }
+
     public function test_only_the_rows_of_the_page_are_checked_and_paging_stays_coherent(): void
     {
         foreach (['a1', 'a2', 'a3', 'a4'] as $position => $id) {
@@ -327,6 +371,14 @@ final class DatabaseSiteSearchTest extends TestCase
             user: $user,
             includeHelp: false,
         ));
+    }
+
+    private function withholding(SnippetWithholdingSearchSource $source): SnippetWithholdingSearchSource
+    {
+        $this->app->instance(SnippetWithholdingSearchSource::class, $source);
+        $this->app->make(SearchSourceRegistryInterface::class)->register(SnippetWithholdingSearchSource::class);
+
+        return $source;
     }
 
     private function checking(CheckingSearchSource $source): CheckingSearchSource

@@ -32,6 +32,7 @@ use stdClass;
 use Tests\Support\Knowledge\KnowledgeGuides;
 use Tests\Support\Logging\RecordingLogger;
 use Tests\Support\Search\CheckingSearchSource;
+use Tests\Support\Search\SnippetWithholdingSearchSource;
 use Tests\TestCase;
 use UnexpectedValueException;
 
@@ -291,6 +292,56 @@ final class MeilisearchSiteSearchTest extends TestCase
         $this->assertSame(['error'], array_column($logger->records, 'level'));
     }
 
+    public function test_a_row_whose_stored_text_is_stale_shows_its_title_without_the_snippet(): void
+    {
+        $stale = $this->document(['type' => 'articles', 'source_id' => 'a-stale', 'title' => 'Tema de dragones']);
+        $fresh = $this->document(['type' => 'articles', 'source_id' => 'a-fresh', 'title' => 'Otro tema']);
+        $source = $this->withholding(SnippetWithholdingSearchSource::withholding('articles', ['a-stale']));
+        $user = new stdClass;
+        $this->engineAnswers([
+            'hits' => [
+                $this->documentHit($stale, ['body' => 'Texto oculto sobre '.self::PRE.'dragones'.self::POST, 'meta' => null]),
+                $this->documentHit($fresh, ['body' => 'Texto que vale sobre '.self::PRE.'dragones'.self::POST, 'meta' => null]),
+            ],
+            'facetsByIndex' => [self::DOCUMENTS => ['distribution' => ['type' => ['articles' => 2]]]],
+        ]);
+
+        $result = $this->search('dragones', user: $user, includeHelp: false);
+
+        $this->assertSame(['Tema de dragones', 'Otro tema'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->title, $result->hits));
+        $this->assertSame([], $result->hits[0]->snippet);
+        $this->assertContains(['text' => 'dragones', 'match' => true], $result->hits[1]->snippet);
+        $this->assertSame(['articles' => 2], $result->counts);
+        $this->assertSame(2, $result->total);
+        $this->assertCount(1, $source->calls);
+        $this->assertEqualsCanonicalizing(['a-stale', 'a-fresh'], $source->calls[0]['ids']);
+        $this->assertSame($user, $source->calls[0]['user']);
+    }
+
+    public function test_a_failing_snippet_check_shows_its_type_without_snippets_and_logs_an_error(): void
+    {
+        $logger = new RecordingLogger;
+        $this->app->instance(LoggerInterface::class, $logger);
+        $event = $this->document(['title' => 'Dragones del evento']);
+        $article = $this->document(['type' => 'articles', 'source_id' => 'a1', 'title' => 'Dragones uno']);
+        $this->withholding(new SnippetWithholdingSearchSource('articles', static fn (): never => throw new RuntimeException('Gone')));
+        $this->engineAnswers([
+            'hits' => [
+                $this->documentHit($article, ['body' => 'Más '.self::PRE.'dragones'.self::POST]),
+                $this->documentHit($event, ['body' => 'Una tarde con '.self::PRE.'dragones'.self::POST]),
+            ],
+            'facetsByIndex' => [self::DOCUMENTS => ['distribution' => ['type' => ['events' => 1, 'articles' => 1]]]],
+        ]);
+
+        $result = $this->search('dragones', includeHelp: false);
+
+        $this->assertSame(['Dragones uno', 'Dragones del evento'], array_map(static fn (SiteSearchHitDTO $hit): string => $hit->title, $result->hits));
+        $this->assertSame([], $result->hits[0]->snippet);
+        $this->assertNotSame([], $result->hits[1]->snippet);
+        $this->assertSame(2, $result->total);
+        $this->assertSame(['error'], array_column($logger->records, 'level'));
+    }
+
     public function test_counts_come_from_type_facet_plus_help_hits(): void
     {
         $this->engineAnswers(
@@ -417,6 +468,14 @@ final class MeilisearchSiteSearchTest extends TestCase
         );
 
         $this->app->instance(Client::class, $client);
+    }
+
+    private function withholding(SnippetWithholdingSearchSource $source): SnippetWithholdingSearchSource
+    {
+        $this->app->instance(SnippetWithholdingSearchSource::class, $source);
+        $this->app->make(SearchSourceRegistryInterface::class)->register(SnippetWithholdingSearchSource::class);
+
+        return $source;
     }
 
     private function checking(CheckingSearchSource $source): CheckingSearchSource

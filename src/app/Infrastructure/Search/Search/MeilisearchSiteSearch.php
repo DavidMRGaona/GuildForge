@@ -315,7 +315,7 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
             }
 
             if ($source === 'document' && isset($documents[$id])) {
-                $hits[$key] = $this->documentHit($documents[$id], $formatted, $now);
+                $hits[$key] = $this->documentHit($documents[$id], $checked->withholdsSnippet($documents[$id]) ? null : $formatted, $now);
             } elseif ($source === 'guide' && isset($help[$id])) {
                 $hits[$key] = $help[$id];
             }
@@ -353,9 +353,9 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
     }
 
     /**
-     * @param  array<array-key, mixed>  $formatted
+     * @param  array<array-key, mixed>|null  $formatted  null when the source says the stored text no longer holds: title only
      */
-    private function documentHit(SearchDocumentModel $row, array $formatted, int $now): SiteSearchHitDTO
+    private function documentHit(SearchDocumentModel $row, ?array $formatted, int $now): SiteSearchHitDTO
     {
         // Past as in the database search: finished, or its end (its start when it has no end) before now
         $end = $row->ends_at ?? $row->starts_at;
@@ -369,7 +369,7 @@ final readonly class MeilisearchSiteSearch implements SiteSearchInterface
             startsAt: $row->starts_at,
             endsAt: $row->ends_at,
             past: $row->finished || ($end !== null && $end->getTimestamp() < $now),
-            snippet: $this->documentSnippet($formatted),
+            snippet: $formatted === null ? [] : $this->documentSnippet($formatted),
             publishedAt: $row->published_at,
         );
     }
