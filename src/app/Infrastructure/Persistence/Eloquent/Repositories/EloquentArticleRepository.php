@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Domain\Entities\Article;
+use App\Domain\Proposals\ValueObjects\ProposalReview;
 use App\Domain\Repositories\ArticleRepositoryInterface;
 use App\Domain\ValueObjects\ArticleId;
 use App\Domain\ValueObjects\Slug;
@@ -14,9 +15,12 @@ use Illuminate\Support\Collection;
 
 final readonly class EloquentArticleRepository implements ArticleRepositoryInterface
 {
+    /**
+     * Any article, proposal drafts never submitted included (the proposals flow reads them here).
+     */
     public function findById(ArticleId $id): ?Article
     {
-        $model = ArticleModel::query()->find($id->value);
+        $model = ArticleModel::query()->includingUnsubmittedProposals()->find($id->value);
 
         if ($model === null) {
             return null;
@@ -56,15 +60,17 @@ final readonly class EloquentArticleRepository implements ArticleRepositoryInter
 
     public function save(Article $article): void
     {
-        ArticleModel::query()->updateOrCreate(
-            ['id' => $article->id()->value],
-            $this->toArray($article),
-        );
+        // Unsubmitted drafts included, or saving one would insert it again; the review columns are
+        // not fillable, so they are written with forceFill()
+        $model = ArticleModel::query()->includingUnsubmittedProposals()->find($article->id()->value) ?? new ArticleModel;
+
+        $model->forceFill([...$this->toArray($article), ...$this->proposalColumns($article->proposal())]);
+        $model->save();
     }
 
     public function delete(Article $article): void
     {
-        ArticleModel::query()->where('id', $article->id()->value)->delete();
+        ArticleModel::query()->includingUnsubmittedProposals()->where('id', $article->id()->value)->delete();
     }
 
     private function toDomain(ArticleModel $model): Article
@@ -87,7 +93,24 @@ final readonly class EloquentArticleRepository implements ArticleRepositoryInter
             updatedAt: $model->updated_at !== null
                 ? new DateTimeImmutable($model->updated_at->toDateTimeString())
                 : null,
+            proposal: $model->proposalReview(),
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function proposalColumns(?ProposalReview $proposal): array
+    {
+        return [
+            'proposal_status' => $proposal?->status,
+            'proposed_by' => $proposal?->proposedBy,
+            'proposal_note' => $proposal?->note,
+            'proposal_reason' => $proposal?->reason,
+            'submitted_at' => $proposal?->submittedAt,
+            'reviewed_at' => $proposal?->reviewedAt,
+            'reviewed_by' => $proposal?->reviewedBy,
+        ];
     }
 
     /**

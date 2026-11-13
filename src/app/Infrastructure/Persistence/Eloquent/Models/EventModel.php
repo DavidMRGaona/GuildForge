@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
+use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
+use App\Infrastructure\Persistence\Eloquent\Concerns\HasProposalReview;
 use App\Infrastructure\Persistence\Eloquent\Concerns\HasSlug;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\EventModelFactory;
@@ -30,10 +32,21 @@ use Illuminate\Support\Carbon;
  * @property string|null $non_member_price
  * @property array<array{label: string, url: string, description: string}>|null $download_links
  * @property bool $is_published
+ * @property ProposalStatus|null $proposal_status
+ * @property string|null $proposed_by
+ * @property string|null $proposal_note
+ * @property string|null $proposal_reason
+ * @property Carbon|null $submitted_at
+ * @property Carbon|null $reviewed_at
+ * @property string|null $reviewed_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, TagModel> $tags
+ * @property-read UserModel|null $proposer
+ * @property-read UserModel|null $reviewer
  *
+ * @method static Builder<EventModel> includingUnsubmittedProposals()
+ * @method static Builder<EventModel> unapprovedProposals()
  * @method static Builder<EventModel> orderedByStart(string $direction = 'asc')
  * @method static Builder<EventModel> orderedUpcomingFirst(DateTimeInterface $now)
  */
@@ -44,6 +57,7 @@ final class EventModel extends Model
     /** @use HasFactory<EventModelFactory> */
     use HasFactory;
 
+    use HasProposalReview;
     use HasSlug;
     use HasUuids;
     use StoresInstantsInStorageTimezone;
@@ -80,6 +94,9 @@ final class EventModel extends Model
             'non_member_price' => 'decimal:2',
             'download_links' => 'array',
             'is_published' => 'boolean',
+            'proposal_status' => ProposalStatus::class,
+            'submitted_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 

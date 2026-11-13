@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
+use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
+use App\Infrastructure\Persistence\Eloquent\Concerns\HasProposalReview;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
 use Database\Factories\ArticleModelFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,11 +28,22 @@ use Illuminate\Support\Carbon;
  * @property bool $is_published
  * @property Carbon|null $published_at
  * @property string $author_id
+ * @property ProposalStatus|null $proposal_status
+ * @property string|null $proposed_by
+ * @property string|null $proposal_note
+ * @property string|null $proposal_reason
+ * @property Carbon|null $submitted_at
+ * @property Carbon|null $reviewed_at
+ * @property string|null $reviewed_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read UserModel $author
  * @property-read Collection<int, TagModel> $tags
+ * @property-read UserModel|null $proposer
+ * @property-read UserModel|null $reviewer
  *
+ * @method static Builder<ArticleModel> includingUnsubmittedProposals()
+ * @method static Builder<ArticleModel> unapprovedProposals()
  * @method static Builder<ArticleModel> orderedByPublication()
  */
 final class ArticleModel extends Model
@@ -40,6 +53,7 @@ final class ArticleModel extends Model
     /** @use HasFactory<ArticleModelFactory> */
     use HasFactory;
 
+    use HasProposalReview;
     use HasUuids;
     use StoresInstantsInStorageTimezone;
 
@@ -68,6 +82,9 @@ final class ArticleModel extends Model
         return [
             'is_published' => 'boolean',
             'published_at' => 'datetime',
+            'proposal_status' => ProposalStatus::class,
+            'submitted_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 
@@ -77,6 +94,14 @@ final class ArticleModel extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(UserModel::class, 'author_id');
+    }
+
+    /**
+     * An unapproved proposal has no publication date either.
+     */
+    protected function keepProposalUnpublished(): void
+    {
+        $this->setAttribute('published_at', null);
     }
 
     protected static function newFactory(): ArticleModelFactory
