@@ -89,7 +89,6 @@ final class MailBrandingService implements MailBrandingServiceInterface
             fontHeading: $this->fontStack($headingFont),
             fontBody: $this->fontStack($bodyFont),
             borderRadius: $this->radiusInPixels($theme->borderRadius),
-            fontStylesheetUrl: $this->fontStylesheetUrl([$headingFont, $bodyFont]),
         );
     }
 
@@ -113,7 +112,6 @@ final class MailBrandingService implements MailBrandingServiceInterface
             fontHeading: self::SYSTEM_FONTS,
             fontBody: self::SYSTEM_FONTS,
             borderRadius: '8px',
-            fontStylesheetUrl: null,
         );
     }
 
@@ -164,19 +162,6 @@ final class MailBrandingService implements MailBrandingServiceInterface
     private function fontStack(?string $font): string
     {
         return $font === null ? self::SYSTEM_FONTS : "'{$font}', ".self::SYSTEM_FONTS;
-    }
-
-    /**
-     * @param  list<string|null>  $fonts
-     */
-    private function fontStylesheetUrl(array $fonts): ?string
-    {
-        $families = array_values(array_unique(array_map(
-            static fn (string $font): string => str_replace(' ', '-', strtolower($font)).':400,600,700',
-            array_filter($fonts, static fn (?string $font): bool => $font !== null),
-        )));
-
-        return $families === [] ? null : 'https://fonts.bunny.net/css?family='.implode('|', $families);
     }
 
     private function radiusInPixels(string $radius): string
