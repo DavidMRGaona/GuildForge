@@ -1180,9 +1180,9 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains  -> sent on HTTPS
 Content-Security-Policy:
     default-src 'self'
     script-src 'self' 'unsafe-inline' 'unsafe-eval'
-    style-src 'self' 'unsafe-inline' https://fonts.bunny.net
+    style-src 'self' 'unsafe-inline'
     img-src 'self' https://res.cloudinary.com https://*.tile.openstreetmap.org data:
-    font-src 'self' https://fonts.bunny.net data:
+    font-src 'self' data:                -> the site serves its own fonts (resources/css/fonts.css, core#557)
     connect-src 'self'
     frame-ancestors 'none'
     base-uri 'self'

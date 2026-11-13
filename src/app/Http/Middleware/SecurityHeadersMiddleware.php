@@ -40,7 +40,8 @@ final readonly class SecurityHeadersMiddleware
             $this->scriptSrc(),
             $this->styleSrc(),
             $this->imgSrc(),
-            "font-src 'self' https://fonts.bunny.net data:",
+            // The site serves its own fonts (resources/css/fonts.css, core#557)
+            "font-src 'self' data:",
             $this->connectSrc(),
             $this->frameSrc(),
             "frame-ancestors 'none'",
@@ -70,7 +71,7 @@ final readonly class SecurityHeadersMiddleware
      */
     private function styleSrc(): string
     {
-        $sources = "'self' 'unsafe-inline' https://fonts.bunny.net";
+        $sources = "'self' 'unsafe-inline'";
 
         if (app()->environment('local')) {
             $sources .= ' http://localhost:5173';

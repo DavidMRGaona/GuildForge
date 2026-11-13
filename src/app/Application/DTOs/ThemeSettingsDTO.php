@@ -11,7 +11,7 @@ final readonly class ThemeSettingsDTO
     /** The generic system font: written to the CSS without quotes */
     public const string SYSTEM_FONT = 'system-ui';
 
-    /** Families offered for body text, served by Bunny Fonts (all but the system font) */
+    /** Families offered for body text, served by the site from resources/css/fonts.css (all but the system font, core#557) */
     public const array BODY_FONTS = ['Inter', 'Poppins', 'Montserrat', 'Roboto', 'Open Sans', self::SYSTEM_FONT];
 
     /** Families offered for headings: the body ones plus a serif display face */

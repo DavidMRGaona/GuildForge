@@ -26,6 +26,10 @@
 @import '@fullcalendar/vue3/skeleton.css';
 @import '@fullcalendar/vue3/themes/classic/theme.css';
 
+/* The families the theme settings offer, served from the site (core#557): every page loads app.css, with or
+   without a layout, and a family's files are only downloaded when a page uses it */
+@import './fonts.css';
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

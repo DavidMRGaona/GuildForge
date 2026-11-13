@@ -88,7 +88,7 @@ Located in `src/resources/js/layouts/`.
 - **Applied by**: the app, not the pages. `createInertiaApp({ layout })` (`utils/pageLayout.ts`) renders it around every core page that declares no layout and around module pages whose prefix sets `usesCoreLayout`; it persists across visits, so components in it use `useOnNavigate()` to reset state tied to the previous page (open menus, the verification banner's feedback)
 - **Shared functionality**:
   - Injects dynamic theme CSS variables
-  - Loads web fonts from Bunny Fonts
+  - Font files come with app.css (`resources/css/fonts.css`, core#557); the layout only injects the variables that pick the family
   - "Skip to content" link for accessibility
   - Initializes and observes theme changes (`useAppStore`)
   - Manages dynamic favicons (`useFavicons`)

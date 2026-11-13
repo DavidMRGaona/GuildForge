@@ -23,23 +23,8 @@ const { logo, markFailed } = useSiteLogo();
 const appName = computed(() => page.props.appName as string);
 
 const theme = computed(() => page.props.theme as ThemeSettings | undefined);
+// The font files come with app.css (resources/css/fonts.css, core#557): the variables pick the family
 const cssVariables = computed(() => theme.value?.cssVariables ?? '');
-const fontHeading = computed(() => theme.value?.fontHeading ?? 'Inter');
-const fontBody = computed(() => theme.value?.fontBody ?? 'Inter');
-
-const fontsUrl = computed(() => {
-    const fonts = new Set<string>();
-    if (fontHeading.value !== 'system-ui') fonts.add(fontHeading.value);
-    if (fontBody.value !== 'system-ui') fonts.add(fontBody.value);
-
-    if (fonts.size === 0) return null;
-
-    const fontString = Array.from(fonts)
-        .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
-        .join('&');
-
-    return `https://fonts.bunny.net/css2?${fontString}&display=swap`;
-});
 
 appStore.setThemeSettings(theme.value);
 
@@ -61,11 +46,6 @@ watch(theme, (newTheme) => {
     >
         <!-- Inject CSS Variables -->
         <component :is="'style'" v-if="cssVariables">{{ cssVariables }}</component>
-
-        <!-- Load Google Fonts -->
-        <Teleport to="head">
-            <link v-if="fontsUrl" rel="stylesheet" :href="fontsUrl" />
-        </Teleport>
 
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
             <Link :href="routes.home" class="flex justify-center">
