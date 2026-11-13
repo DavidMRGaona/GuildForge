@@ -20,6 +20,8 @@ export interface SiteNotificationItem {
 /** Shared prop of every page: null for guests. */
 export interface SiteNotificationsSharedProps {
     unread: number;
+    /** The account's real-time channel (core#493), or null without real time: the bell polls. */
+    channel?: string | null;
 }
 
 /** Props of the «Avisos» page. */

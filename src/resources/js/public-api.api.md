@@ -705,6 +705,21 @@ export declare function usePagination<T>(paginated: MaybeRefOrGetter<PaginatedRe
 export {};
 ```
 
+## resources/js/composables/useRealtimeChannel.ts
+
+```ts
+import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue';
+import type { RealtimeListener, RealtimeStatus } from '@/types/realtime';
+export type { RealtimeListener, RealtimePayload, RealtimeStatus } from '@/types/realtime';
+export interface UseRealtimeChannelReturn {
+    status: Readonly<Ref<RealtimeStatus>>;
+    live: ComputedRef<boolean>;
+    whisper: (event: string, data: Record<string, unknown>) => boolean;
+    onWhisper: (event: string, listener: RealtimeListener) => () => void;
+}
+export declare function useRealtimeChannel(channel: MaybeRefOrGetter<string | null | undefined>, listeners?: Readonly<Record<string, RealtimeListener>>): UseRealtimeChannelReturn;
+```
+
 ## resources/js/composables/useRoutes.ts
 
 ```ts
@@ -844,6 +859,7 @@ export interface FlashMessages {
 ```ts
 import type { AuthSettings, User } from './models';
 import type { SeoProps } from './seo';
+import type { RealtimeSharedProps } from './realtime';
 import type { SiteNotificationsSharedProps } from './siteNotifications';
 import type { ModuleSlots } from './slots';
 
@@ -873,6 +889,7 @@ declare module '@inertiajs/vue3' {
         };
         /** Unread notices of the bell (core#491); null for guests. */
         siteNotifications: SiteNotificationsSharedProps | null;
+        realtime: RealtimeSharedProps | null;
         authSettings: AuthSettings;
         flash: {
             success?: string;
@@ -1112,6 +1129,21 @@ export interface ProfileTabMetadata {
     label: string;
     order: number;
 }
+```
+
+## resources/js/types/realtime.ts
+
+```ts
+export interface RealtimeSharedProps {
+    key: string;
+    host: string;
+    port: number;
+    tls: boolean;
+    authEndpoint: string;
+}
+export type RealtimeStatus = 'off' | 'connecting' | 'live' | 'offline';
+export type RealtimePayload = Readonly<Record<string, unknown>>;
+export type RealtimeListener = (payload: RealtimePayload) => void;
 ```
 
 ## resources/js/types/slots.ts

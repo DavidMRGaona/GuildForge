@@ -24,6 +24,7 @@ const ENTRIES = [
     '@/composables/useMenuBadges',
     '@/composables/useNotifications',
     '@/composables/usePagination',
+    '@/composables/useRealtimeChannel',
     '@/composables/useRoutes',
     '@/composables/useVerificationGate',
     '@/contracts/cookieConsent',

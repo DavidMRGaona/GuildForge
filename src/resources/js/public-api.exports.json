@@ -67,6 +67,9 @@
     "@/composables/usePagination": [
         "usePagination"
     ],
+    "@/composables/useRealtimeChannel": [
+        "useRealtimeChannel"
+    ],
     "@/composables/useRoutes": [
         "routes",
         "useRoutes"
