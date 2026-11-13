@@ -299,6 +299,9 @@ export default {
         undo: 'Deshacer',
         choose: 'Elegir qué correos recibes',
     },
+    impersonation: {
+        readOnlyNotice: 'Estás viendo el sitio como otra persona: no se guardan cambios.',
+    },
     maintenance: {
         title: 'Estamos en mantenimiento',
         defaultMessage: 'Estamos haciendo mejoras en la web. Vuelve a intentarlo en unos minutos.',

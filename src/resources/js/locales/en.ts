@@ -297,6 +297,9 @@ export default {
         undo: 'Undo',
         choose: 'Choose which emails you receive',
     },
+    impersonation: {
+        readOnlyNotice: 'You are viewing the site as another person: changes are not saved.',
+    },
     maintenance: {
         title: "We're under maintenance",
         defaultMessage: "We're making improvements to the site. Please try again in a few minutes.",
