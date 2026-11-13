@@ -14,8 +14,11 @@ const props = withDefaults(
         name?: string;
         required?: boolean;
         placeholder?: string;
+        /** Ids of the hint and error that describe the field. */
+        describedBy?: string | undefined;
     }>(),
     {
+        describedBy: undefined,
         min: undefined,
         max: undefined,
         step: 1,
@@ -100,6 +103,7 @@ function handleInput(event: Event): void {
             :disabled="disabled"
             :placeholder="placeholder"
             :aria-invalid="!!error"
+            :aria-describedby="describedBy"
             class="block w-full rounded-lg border bg-surface px-12 py-2.5 text-center text-base-primary placeholder-base-muted transition-colors duration-150 focus:outline-none focus:ring-2 disabled:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             :class="[
                 error

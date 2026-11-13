@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ImageUp } from '@lucide/vue';
 import { computed, onBeforeUnmount, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BaseButton from '@/components/ui/BaseButton.vue';
@@ -28,9 +29,8 @@ const currentUrl = computed(() =>
     removed.value ? null : buildCardImageUrl(props.currentPublicId)
 );
 const shownUrl = computed(() => previewUrl.value ?? currentUrl.value);
-const hasImage = computed(
-    () => file.value !== null || (props.currentPublicId !== null && !removed.value)
-);
+const hasStoredImage = computed(() => props.currentPublicId !== null && !removed.value);
+const hasImage = computed(() => file.value !== null || hasStoredImage.value);
 
 function revoke(): void {
     if (previewUrl.value !== null) {
@@ -72,16 +72,43 @@ onBeforeUnmount(revoke);
                     class="h-32 w-full max-w-xs rounded-md border border-default object-cover sm:w-48"
                 />
                 <div class="min-w-0">
-                    <input
-                        :id="id"
-                        ref="input"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        :aria-describedby="[hintId, errorId].filter(Boolean).join(' ') || undefined"
-                        :aria-invalid="error ? 'true' : undefined"
-                        class="block w-full text-sm text-base-secondary file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium file:text-base-primary"
-                        @change="onPick"
-                    />
+                    <!--
+                        The browser control writes its own texts in the browser language: it stays
+                        as the focusable control (sr-only) and the label next to it is what shows
+                    -->
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                        <input
+                            :id="id"
+                            ref="input"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            :aria-describedby="
+                                [hintId, errorId].filter(Boolean).join(' ') || undefined
+                            "
+                            :aria-invalid="error ? 'true' : undefined"
+                            class="peer sr-only"
+                            @change="onPick"
+                        />
+                        <label
+                            :for="id"
+                            data-testid="image-picker"
+                            class="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md bg-muted px-4 py-2 text-sm font-medium text-base-primary transition-colors hover:bg-neutral-200 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 peer-focus-visible:ring-offset-2 dark:hover:bg-neutral-700 dark:peer-focus-visible:ring-offset-neutral-900"
+                        >
+                            <ImageUp class="h-4 w-4" aria-hidden="true" />
+                            <span>{{
+                                hasImage
+                                    ? t('proposals.form.changeImage')
+                                    : t('proposals.form.chooseImage')
+                            }}</span>
+                        </label>
+                        <span
+                            v-if="!hasStoredImage || file !== null"
+                            data-testid="image-file-name"
+                            class="min-w-0 truncate text-sm text-base-muted"
+                        >
+                            {{ file?.name ?? t('proposals.form.noImageChosen') }}
+                        </span>
+                    </div>
                     <BaseButton
                         v-if="hasImage"
                         type="button"

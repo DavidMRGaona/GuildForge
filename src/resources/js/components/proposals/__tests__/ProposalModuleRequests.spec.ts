@@ -9,7 +9,9 @@ const i18n = createI18n({
     locale: 'es',
     missingWarn: false,
     fallbackWarn: false,
-    messages: { es: { proposals: { requests: { warning: 'Aviso: {text}' } } } },
+    messages: {
+        es: { proposals: { requests: { warning: 'Aviso: {text}', choose: 'Elige una opción' } } },
+    },
 });
 
 const definition: ProposalRequestDefinition = {
@@ -42,6 +44,22 @@ const definition: ProposalRequestDefinition = {
             options: [],
             default: false,
             visibleWhen: { field: 'capacity', values: null },
+        },
+        {
+            name: 'mode',
+            type: 'select',
+            label: 'Modo',
+            required: true,
+            helperText: null,
+            min: null,
+            max: null,
+            maxLength: null,
+            options: [
+                { value: 'open', label: 'Abierta' },
+                { value: 'closed', label: 'Cerrada' },
+            ],
+            default: null,
+            visibleWhen: null,
         },
     ],
 };
@@ -80,7 +98,7 @@ describe('ProposalModuleRequests', () => {
             false
         );
 
-        await wrapper.find('[data-testid="proposal-request-wanted"]').setValue(true);
+        await wrapper.find('[data-testid="proposal-request-wanted"] input').setValue(true);
 
         const updates = wrapper.emitted('update:modelValue');
         expect(updates?.[0]?.[0]).toEqual({
@@ -135,5 +153,60 @@ describe('ProposalModuleRequests', () => {
         );
 
         expect(wrapper.find('[data-testid="proposal-request-warnings"]').exists()).toBe(false);
+    });
+
+    it('draws the site controls instead of the browser ones', () => {
+        const wrapper = mountRequests({
+            wanted: true,
+            values: { capacity: '12', waitlist: false, mode: '' },
+        });
+
+        wrapper
+            .findAll('input[type="checkbox"]')
+            .forEach((input) => expect(input.classes()).toContain('sr-only'));
+        expect(wrapper.find('select').exists()).toBe(false);
+        expect(wrapper.find('#proposal-request-fixture-registrations-mode').text()).toContain(
+            'Elige una opción'
+        );
+    });
+
+    it('keeps a number as the text the server reads', async () => {
+        const wrapper = mountRequests({
+            wanted: true,
+            values: { capacity: '12', waitlist: false, mode: '' },
+        });
+
+        const capacity = wrapper.find('#proposal-request-fixture-registrations-capacity');
+        expect((capacity.element as HTMLInputElement).value).toBe('12');
+
+        await capacity.setValue('30');
+        expect(wrapper.emitted('update:modelValue')?.[0]?.[0]).toEqual({
+            [definition.key]: {
+                wanted: true,
+                values: { capacity: '30', waitlist: false, mode: '' },
+            },
+        });
+
+        await capacity.setValue('');
+        expect(wrapper.emitted('update:modelValue')?.[1]?.[0]).toEqual({
+            [definition.key]: { wanted: true, values: { capacity: '', waitlist: false, mode: '' } },
+        });
+    });
+
+    it('links the hint and the error of a field to its control', () => {
+        const wrapper = mountRequests(
+            { wanted: true, values: { capacity: '900', waitlist: false, mode: '' } },
+            {
+                'requests.fixture.registrations.capacity': 'Demasiado.',
+                'requests.fixture.registrations.mode': 'Elige uno.',
+            }
+        );
+
+        for (const name of ['capacity', 'mode']) {
+            const control = wrapper.find(`#proposal-request-fixture-registrations-${name}`);
+            const describedBy = control.attributes('aria-describedby') ?? '';
+            expect(describedBy).not.toBe('');
+            expect(control.attributes('aria-invalid')).toBe('true');
+        }
     });
 });
