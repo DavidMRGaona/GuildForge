@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useImpersonationReadOnly } from '@/composables/useImpersonationReadOnly';
 import { useRoutes } from '@/composables/useRoutes';
 import { csrfHeaders } from '@/utils/csrf';
 
@@ -11,6 +12,7 @@ const props = defineProps<{
 const { t } = useI18n();
 const routes = useRoutes();
 
+const readOnly = useImpersonationReadOnly();
 const sending = ref(false);
 const voted = ref(false);
 
@@ -31,6 +33,9 @@ async function vote(helpful: boolean): Promise<void> {
             },
             body: JSON.stringify({ helpful }),
         });
+        if (await readOnly.notifyRefusal(response)) {
+            return;
+        }
         if (response.ok) {
             voted.value = true;
         }

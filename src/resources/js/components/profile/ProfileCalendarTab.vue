@@ -6,6 +6,7 @@ import BaseCard from '@/components/ui/BaseCard.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
+import { useImpersonationReadOnly } from '@/composables/useImpersonationReadOnly';
 import { useNotifications } from '@/composables/useNotifications';
 import { useVerificationGate } from '@/composables/useVerificationGate';
 import { csrfHeaders } from '@/utils/csrf';
@@ -24,6 +25,8 @@ const { t, locale } = useI18n();
 const notifications = useNotifications();
 // POST /perfil/calendario is closed to accounts that must verify their email
 const gate = useVerificationGate();
+// «Solo mirar» refuses every submission: say so instead of the generic failure
+const readOnly = useImpersonationReadOnly();
 
 const issuedAt = ref<string | null>(props.calendarFeed.issuedAt);
 // Only known right after creating it: the server keeps a hash, never the address
@@ -98,6 +101,10 @@ async function send(method: 'POST' | 'DELETE'): Promise<Response | null> {
         if (gate.isVerificationRequired(response)) {
             gate.goToNotice();
 
+            return null;
+        }
+
+        if (await readOnly.notifyRefusal(response)) {
             return null;
         }
 
