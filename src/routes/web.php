@@ -16,9 +16,11 @@ use App\Http\Controllers\Auth\MutedMailSubjectsController;
 use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\StopImpersonationController;
 use App\Http\Controllers\CalendarEntryICalendarController;
 use App\Http\Controllers\CalendarPageController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\EditorImageUploadController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\HomeController;
@@ -159,6 +161,7 @@ Route::middleware('guest')->group(function (): void {
 // Authenticated routes
 Route::middleware('auth')->group(function (): void {
     Route::post('/cerrar-sesion', [LoginController::class, 'destroy'])->name('logout');
+    Route::post('/impersonar/salir', StopImpersonationController::class)->name('impersonation.stop');
 
     // Email verification
     Route::get('/verificar-email', [EmailVerificationController::class, 'notice'])->name('verification.notice');
@@ -209,6 +212,11 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/broadcasting/auth', RealtimeAuthController::class)
         ->middleware('throttle:60,1,realtime-auth')
         ->name('realtime.auth');
+
+    // Images of the web rich editor (core#573); who may upload is decided by EditorImageUploadAuthorizerInterface
+    Route::post('/editor/imagenes/articulos', EditorImageUploadController::class)
+        ->middleware('throttle:editor-image-upload')
+        ->name('editor-images.articles.store');
 
     // Notification centre (core#491). The bell asks for the counter every minute: its own limit
     Route::get('/avisos', [SiteNotificationsController::class, 'index'])->name('site-notifications.index');

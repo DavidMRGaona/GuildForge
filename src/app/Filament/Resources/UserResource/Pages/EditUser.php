@@ -7,6 +7,7 @@ namespace App\Filament\Resources\UserResource\Pages;
 use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Events\UserProfileUpdated;
+use App\Filament\Actions\ImpersonateAction;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Concerns\SavesRolesThroughTheGrantRule;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -80,6 +81,7 @@ class EditUser extends EditRecord
         $record = $this->record;
 
         return [
+            ImpersonateAction::make(static fn (): UserModel => $record),
             Action::make('deactivate')
                 ->authorize('delete')
                 ->label(__('filament.users.actions.deactivate'))

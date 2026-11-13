@@ -8,6 +8,7 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
+use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
@@ -49,6 +50,8 @@ final class UserServiceTest extends TestCase
 
     private MailDigestItemRepositoryInterface&MockInterface $mailDigestItems;
 
+    private ProposalServiceInterface&MockInterface $proposals;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -63,6 +66,8 @@ final class UserServiceTest extends TestCase
         $this->siteNotificationPreferences = Mockery::mock(SiteNotificationPreferenceRepositoryInterface::class);
         $this->siteNotificationService = Mockery::mock(SiteNotificationServiceInterface::class);
         $this->mailDigestItems = Mockery::mock(MailDigestItemRepositoryInterface::class);
+        $this->proposals = Mockery::mock(ProposalServiceInterface::class);
+        $this->proposals->shouldReceive('deleteUnpublishedOf')->byDefault()->andReturn(0);
 
         $this->service = new UserService(
             $this->userModelQuery,
@@ -75,6 +80,7 @@ final class UserServiceTest extends TestCase
             $this->siteNotificationPreferences,
             $this->siteNotificationService,
             $this->mailDigestItems,
+            $this->proposals,
         );
     }
 

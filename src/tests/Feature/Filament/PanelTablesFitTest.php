@@ -54,7 +54,7 @@ final class PanelTablesFitTest extends TestCase
         return [
             'help guides' => [ListKnowledgeGuides::class, ['rowDetails', 'edit', 'hide', 'show', 'feature', 'delete']],
             'tags' => [ListTags::class, ['rowDetails', 'edit', 'delete']],
-            'users' => [ListUsers::class, ['rowDetails', 'edit', 'sendVerificationEmail', 'sendPasswordResetEmail', 'deactivate', 'restore', 'anonymize']],
+            'users' => [ListUsers::class, ['rowDetails', 'edit', 'sendVerificationEmail', 'sendPasswordResetEmail', 'impersonate', 'deactivate', 'restore', 'anonymize']],
             'menu items' => [ListMenuItems::class, ['rowDetails', 'edit', 'delete']],
             'roles' => [ListRoles::class, ['rowDetails', 'edit', 'delete']],
         ];

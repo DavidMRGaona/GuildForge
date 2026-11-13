@@ -39,6 +39,9 @@ final readonly class EnsureSiteIsNotInMaintenance
         'admin/*',
         'up',
         'iniciar-sesion',
+        // An administrator impersonating an account without panel access gets the maintenance
+        // page like that account would, but can always go back to their own
+        'impersonar/salir',
         // Unsubscribing from a mail must work whatever the site is doing
         'correos/baja/*',
         'correos/silenciar/*',

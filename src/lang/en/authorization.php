@@ -51,6 +51,9 @@ return [
             'create' => 'Create event',
             'update' => 'Edit event',
             'delete' => 'Delete event',
+            'propose' => 'Propose events from the website',
+            'review' => 'Review event proposals',
+            'publish_proposals_directly' => 'Publish own event proposals without review',
         ],
         'articles' => [
             'view_any' => 'View articles list',
@@ -58,6 +61,9 @@ return [
             'create' => 'Create article',
             'update' => 'Edit article',
             'delete' => 'Delete article',
+            'propose' => 'Propose articles from the website',
+            'review' => 'Review article proposals',
+            'publish_proposals_directly' => 'Publish own article proposals without review',
         ],
         'galleries' => [
             'view_any' => 'View galleries list',
@@ -73,6 +79,7 @@ return [
             'update' => 'Edit user',
             'delete' => 'Delete user',
             'assign_roles' => 'Assign roles to users',
+            'impersonate' => 'Impersonate other people',
         ],
         'roles' => [
             'view_any' => 'View roles list',
@@ -137,6 +144,14 @@ return [
     ],
 
     'permission_descriptions' => [
+        'events' => [
+            'propose' => 'Only counts when access to event proposals is «With the permission».',
+            'publish_proposals_directly' => 'Submitting an event proposal publishes it without review.',
+        ],
+        'articles' => [
+            'propose' => 'Only counts when access to article proposals is «With the permission».',
+            'publish_proposals_directly' => 'Submitting an article proposal publishes it without review.',
+        ],
         'knowledge' => [
             'manage' => "Write the site's own guides, and hide or star the official ones.",
         ],
@@ -145,6 +160,7 @@ return [
         ],
         'users' => [
             'assign_roles' => 'Can only give or remove roles whose permissions they hold.',
+            'impersonate' => 'See the site and the panel as another person, without saving anything. Administrators only.',
         ],
         'modules' => [
             'manage' => 'Install, enable and disable modules.',

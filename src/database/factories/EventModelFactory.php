@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
@@ -127,6 +129,27 @@ final class EventModelFactory extends Factory
     {
         return $this->afterMaking(function (EventModel $event): void {
             $event->end_date = (clone $event->start_date)->modify('+2 days');
+        });
+    }
+
+    /**
+     * A proposal from the web in the given status. Drafts are unsubmitted unless $submitted (a
+     * returned draft); any other status was submitted. Approved ones are published.
+     */
+    public function proposal(ProposalStatus $status = ProposalStatus::Draft, ?UserModel $by = null, bool $submitted = false): static
+    {
+        return $this->state(function (array $attributes) use ($status, $by, $submitted): array {
+            $proposer = $by instanceof UserModel ? $by->id : UserModel::factory();
+            $wasSubmitted = $status !== ProposalStatus::Draft || $submitted;
+            $wasReviewed = in_array($status, [ProposalStatus::Approved, ProposalStatus::Rejected], true) || ($status === ProposalStatus::Draft && $submitted);
+
+            return [
+                'proposal_status' => $status,
+                'proposed_by' => $proposer,
+                'submitted_at' => $wasSubmitted ? now()->subDay() : null,
+                'reviewed_at' => $wasReviewed ? now() : null,
+                'is_published' => $status === ProposalStatus::Approved,
+            ];
         });
     }
 }

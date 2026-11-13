@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Media;
 
+use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Domain\Media\Enums\MediaDestroyOutcome;
 use App\Domain\Media\Exceptions\MediaCatalogUnavailableException;
 use App\Domain\Media\ValueObjects\MediaFileId;
@@ -130,6 +131,17 @@ final class CloudinaryMediaCatalogTest extends TestCase
         }
     }
 
+    public function test_destroy_refuses_while_an_impersonation_lasts(): void
+    {
+        /** @var UploadApi&MockObject $upload */
+        $upload = $this->createMock(UploadApi::class);
+        $upload->expects($this->never())->method('destroy');
+
+        $this->expectException(MediaCatalogUnavailableException::class);
+
+        $this->catalog(upload: $upload, impersonating: true)->destroy(new MediaFileId('events/a'), 'image');
+    }
+
     public function test_destroy_sends_resource_type_from_index(): void
     {
         /** @var UploadApi&MockObject $upload */
@@ -221,12 +233,15 @@ final class CloudinaryMediaCatalogTest extends TestCase
         return new ApiResponse($next === null ? ['resources' => $resources] : ['resources' => $resources, 'next_cursor' => $next], []);
     }
 
-    private function catalog(?AdminApi $admin = null, ?UploadApi $upload = null, string $prefix = 'guildforge'): CloudinaryMediaCatalog
+    private function catalog(?AdminApi $admin = null, ?UploadApi $upload = null, string $prefix = 'guildforge', bool $impersonating = false): CloudinaryMediaCatalog
     {
+        $impersonation = $this->createStub(ImpersonationContextInterface::class);
+        $impersonation->method('isActive')->willReturn($impersonating);
+
         $cloudinary = $this->createStub(Cloudinary::class);
         $cloudinary->method('adminApi')->willReturn($admin ?? $this->createStub(AdminApi::class));
         $cloudinary->method('uploadApi')->willReturn($upload ?? $this->createStub(UploadApi::class));
 
-        return new CloudinaryMediaCatalog($cloudinary, new CloudinaryMediaFileIdResolver($prefix));
+        return new CloudinaryMediaCatalog($cloudinary, new CloudinaryMediaFileIdResolver($prefix), $impersonation);
     }
 }

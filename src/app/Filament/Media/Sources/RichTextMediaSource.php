@@ -189,7 +189,8 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
      */
     private function query(string $kind): Builder
     {
-        $query = $this->models()[$kind]['model']::query();
+        // Rows hidden by a global scope (drafts kept out of the panel, core#570) still use their files
+        $query = $this->models()[$kind]['model']::query()->withoutGlobalScopes();
 
         // Official guides come from files shipped with the code, never with this site's files
         if ($kind === 'guides') {

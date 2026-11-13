@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaDeletionServiceInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
@@ -72,6 +73,7 @@ final class MediaServiceProvider extends ServiceProvider
                 static fn (): MediaCatalogInterface => new CloudinaryMediaCatalog(
                     new Cloudinary(config('filesystems.disks.images.url') ?? config('cloudinary.cloud_url')),
                     $app->make(MediaFileIdResolverInterface::class),
+                    $app->make(ImpersonationContextInterface::class),
                 ),
             ),
         );

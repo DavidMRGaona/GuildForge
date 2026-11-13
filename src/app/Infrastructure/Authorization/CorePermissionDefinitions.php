@@ -52,6 +52,28 @@ final class CorePermissionDefinitions
                 action: 'delete',
                 defaultRoles: ['editor'],
             ),
+            // Proposals from the web (core#570)
+            new PermissionDefinitionDTO(
+                key: 'events.propose',
+                label: __('authorization.permissions.events.propose'),
+                resource: 'events',
+                action: 'propose',
+                description: __('authorization.permission_descriptions.events.propose'),
+            ),
+            new PermissionDefinitionDTO(
+                key: 'events.review',
+                label: __('authorization.permissions.events.review'),
+                resource: 'events',
+                action: 'review',
+                defaultRoles: ['editor'],
+            ),
+            new PermissionDefinitionDTO(
+                key: 'events.publish_proposals_directly',
+                label: __('authorization.permissions.events.publish_proposals_directly'),
+                resource: 'events',
+                action: 'publish_proposals_directly',
+                description: __('authorization.permission_descriptions.events.publish_proposals_directly'),
+            ),
 
             // Articles
             new PermissionDefinitionDTO(
@@ -88,6 +110,28 @@ final class CorePermissionDefinitions
                 resource: 'articles',
                 action: 'delete',
                 defaultRoles: ['editor'],
+            ),
+            // Proposals from the web (core#570)
+            new PermissionDefinitionDTO(
+                key: 'articles.propose',
+                label: __('authorization.permissions.articles.propose'),
+                resource: 'articles',
+                action: 'propose',
+                description: __('authorization.permission_descriptions.articles.propose'),
+            ),
+            new PermissionDefinitionDTO(
+                key: 'articles.review',
+                label: __('authorization.permissions.articles.review'),
+                resource: 'articles',
+                action: 'review',
+                defaultRoles: ['editor'],
+            ),
+            new PermissionDefinitionDTO(
+                key: 'articles.publish_proposals_directly',
+                label: __('authorization.permissions.articles.publish_proposals_directly'),
+                resource: 'articles',
+                action: 'publish_proposals_directly',
+                description: __('authorization.permission_descriptions.articles.publish_proposals_directly'),
             ),
 
             // Galleries
@@ -396,6 +440,15 @@ final class CorePermissionDefinitions
                 resource: 'users',
                 action: 'assign_roles',
                 description: __('authorization.permission_descriptions.users.assign_roles'),
+            ),
+
+            // Impersonation: admin only (AdminOnlyPermissionRule::CORE_KEYS)
+            new PermissionDefinitionDTO(
+                key: 'users.impersonate',
+                label: __('authorization.permissions.users.impersonate'),
+                resource: 'users',
+                action: 'impersonate',
+                description: __('authorization.permission_descriptions.users.impersonate'),
             ),
 
             // Admin panel access

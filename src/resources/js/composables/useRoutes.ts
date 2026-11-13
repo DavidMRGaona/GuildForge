@@ -52,6 +52,7 @@ export interface RouteDefinitions {
         resetPassword: string;
         verifyEmail: string;
         resendVerification: string;
+        stopImpersonation: string;
     };
 
     // User
@@ -120,6 +121,7 @@ const routes: RouteDefinitions = {
         resetPassword: '/restablecer-contrasena',
         verifyEmail: '/verificar-email',
         resendVerification: '/verificar-email/reenviar',
+        stopImpersonation: '/impersonar/salir',
     },
 
     // User

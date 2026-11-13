@@ -61,6 +61,9 @@ return [
             'create' => 'Crear evento',
             'update' => 'Editar evento',
             'delete' => 'Eliminar evento',
+            'propose' => 'Proponer eventos desde la web',
+            'review' => 'Revisar propuestas de eventos',
+            'publish_proposals_directly' => 'Publicar sus propuestas de eventos sin revisión',
         ],
         'articles' => [
             'view_any' => 'Ver listado de artículos',
@@ -68,6 +71,9 @@ return [
             'create' => 'Crear artículo',
             'update' => 'Editar artículo',
             'delete' => 'Eliminar artículo',
+            'propose' => 'Proponer artículos desde la web',
+            'review' => 'Revisar propuestas de artículos',
+            'publish_proposals_directly' => 'Publicar sus propuestas de artículos sin revisión',
         ],
         'galleries' => [
             'view_any' => 'Ver listado de galerías',
@@ -83,6 +89,7 @@ return [
             'update' => 'Editar usuario',
             'delete' => 'Eliminar usuario',
             'assign_roles' => 'Asignar roles a usuarios',
+            'impersonate' => 'Impersonar a otras personas',
         ],
         'roles' => [
             'view_any' => 'Ver listado de roles',
@@ -147,6 +154,14 @@ return [
     ],
 
     'permission_descriptions' => [
+        'events' => [
+            'propose' => 'Solo cuenta si el acceso a las propuestas de eventos es «Con el permiso».',
+            'publish_proposals_directly' => 'Al enviar una propuesta de evento, se publica sin pasar por revisión.',
+        ],
+        'articles' => [
+            'propose' => 'Solo cuenta si el acceso a las propuestas de artículos es «Con el permiso».',
+            'publish_proposals_directly' => 'Al enviar una propuesta de artículo, se publica sin pasar por revisión.',
+        ],
         'knowledge' => [
             'manage' => 'Escribir las guías propias del sitio, y ocultar o destacar las oficiales.',
         ],
@@ -155,6 +170,7 @@ return [
         ],
         'users' => [
             'assign_roles' => 'Solo puede dar o quitar roles cuyos permisos tenga.',
+            'impersonate' => 'Ver el sitio y el panel como otra persona, sin guardar nada. Solo para la administración.',
         ],
         'modules' => [
             'manage' => 'Instalar, habilitar y deshabilitar módulos.',

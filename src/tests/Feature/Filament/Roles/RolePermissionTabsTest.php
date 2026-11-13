@@ -307,11 +307,13 @@ final class RolePermissionTabsTest extends TestCase
         Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
             ->assertFormFieldExists('permissions_by_section.content.events', 'form', fn (CheckboxList $field): bool => $field->isBulkToggleable());
 
-        // Admin keeps it everywhere
+        // Admin keeps it everywhere except where an admin-only permission is locked for this
+        // role: users holds users.impersonate
         $this->actingAs(UserModel::factory()->admin()->create());
         Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
-            ->assertFormFieldExists('permissions_by_section.users.users', 'form', fn (CheckboxList $field): bool => $field->isBulkToggleable())
-            ->assertFormFieldExists('permissions_by_section.content.events', 'form', fn (CheckboxList $field): bool => $field->isBulkToggleable());
+            ->assertFormFieldExists('permissions_by_section.users.roles', 'form', fn (CheckboxList $field): bool => $field->isBulkToggleable())
+            ->assertFormFieldExists('permissions_by_section.content.events', 'form', fn (CheckboxList $field): bool => $field->isBulkToggleable())
+            ->assertFormFieldExists('permissions_by_section.users.users', 'form', fn (CheckboxList $field): bool => ! $field->isBulkToggleable());
     }
 
     public function test_create_role_with_tabs(): void

@@ -15,8 +15,10 @@ use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
 use App\Application\Calendar\Services\PublicCalendarFeedDocumentInterface;
 use App\Application\Calendar\Services\PublicCalendarFeedInterface;
 use App\Application\Content\Services\EditorImageMoverInterface;
+use App\Application\Content\Services\EditorImageUploadAuthorizerInterface;
 use App\Application\Content\Services\EditorImageUrlsInterface;
 use App\Application\Content\Services\EditorTextSourceRegistryInterface;
+use App\Application\Content\Services\RichTextSanitizerInterface;
 use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Cookies\Services\CookieDeclarationRegistryInterface;
@@ -115,6 +117,8 @@ use App\Infrastructure\Calendar\Services\PersonalCalendarService;
 use App\Infrastructure\Content\Services\EditorImageMover;
 use App\Infrastructure\Content\Services\EditorImageUrls;
 use App\Infrastructure\Content\Services\EditorTextSourceRegistry;
+use App\Infrastructure\Content\Services\PanelEditorImageUploadAuthorizer;
+use App\Infrastructure\Content\Services\RichTextSanitizer;
 use App\Infrastructure\Content\Services\TrixContentMigrator;
 use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Content\Sources\AboutHistoryTextSource;
@@ -438,6 +442,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Images inserted with the rich editors: Cloudinary URLs built locally (core#481)
         $this->app->singleton(EditorImageUrlsInterface::class, EditorImageUrls::class);
+        $this->app->singleton(RichTextSanitizerInterface::class, RichTextSanitizer::class);
+        $this->app->singleton(EditorImageUploadAuthorizerInterface::class, PanelEditorImageUploadAuthorizer::class);
         $this->app->bind(EditorImageMoverInterface::class, EditorImageMover::class);
         // Texts written with a rich editor: the core's come first, the modules add theirs as they load
         $this->app->singleton(EditorTextSourceRegistryInterface::class, static function ($app): EditorTextSourceRegistryInterface {
@@ -539,6 +545,16 @@ class AppServiceProvider extends ServiceProvider
             static fn (Request $request): array => [
                 Limit::perMinute(20)->by('user:'.$request->route('user')),
                 Limit::perMinute(120)->by('ip:'.($request->ip() ?? 'unknown')),
+            ]
+        );
+
+        // Images from the web rich editor: per account, and a cap per hour so a long session cannot
+        // fill the image store
+        RateLimiter::for(
+            'editor-image-upload',
+            static fn (Request $request): array => [
+                Limit::perMinute(20)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+                Limit::perHour(200)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
             ]
         );
 

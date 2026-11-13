@@ -11,6 +11,9 @@ use Illuminate\Support\Collection;
 
 interface EventRepositoryInterface
 {
+    /**
+     * Any event, proposal drafts never submitted included (every other query hides them).
+     */
     public function findById(EventId $id): ?Event;
 
     public function findBySlug(string $slug): ?Event;

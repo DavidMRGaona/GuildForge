@@ -6,6 +6,8 @@ namespace App\Domain\Entities;
 
 use App\Domain\Exceptions\CannotPublishPastEventException;
 use App\Domain\Exceptions\InvalidEventDatesException;
+use App\Domain\Proposals\Exceptions\ProposalNotApprovedException;
+use App\Domain\Proposals\ValueObjects\ProposalReview;
 use App\Domain\ValueObjects\DownloadLink;
 use App\Domain\ValueObjects\EventId;
 use App\Domain\ValueObjects\Price;
@@ -32,6 +34,7 @@ final class Event
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
         private readonly array $downloadLinks = [],
+        private readonly ?ProposalReview $proposal = null,
     ) {
         $this->validateDates();
     }
@@ -108,8 +111,20 @@ final class Event
         return $this->updatedAt;
     }
 
+    /**
+     * The review data when the event was proposed from the web; null when created in the panel.
+     */
+    public function proposal(): ?ProposalReview
+    {
+        return $this->proposal;
+    }
+
     public function publish(): void
     {
+        if ($this->proposal instanceof ProposalReview && $this->proposal->isUnapproved()) {
+            throw ProposalNotApprovedException::cannotPublish();
+        }
+
         if ($this->isPast()) {
             throw CannotPublishPastEventException::create();
         }

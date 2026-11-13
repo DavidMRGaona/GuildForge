@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Content\Services;
 
+use Closure;
 use RuntimeException;
 
 /**
@@ -51,6 +52,21 @@ final readonly class EditorImageTags
 
             return $this->set($tag, 'data-id', $image['id']);
         }, $html) ?? throw new RuntimeException('Could not rewrite the images: '.preg_last_error_msg());
+    }
+
+    /**
+     * Replaces every <img> tag with what $replace gives for its decoded attributes (an empty string
+     * removes the tag); every other byte stays as it was.
+     *
+     * @param  Closure(string $tag, ?string $src, ?string $id): string  $replace
+     */
+    public function replace(string $html, Closure $replace): string
+    {
+        return preg_replace_callback(self::TAG, fn (array $match): string => $replace(
+            $match[0],
+            $this->attribute($match[0], 'src'),
+            $this->attribute($match[0], 'data-id'),
+        ), $html) ?? throw new RuntimeException('Could not read the images: '.preg_last_error_msg());
     }
 
     private function attribute(string $tag, string $name): ?string

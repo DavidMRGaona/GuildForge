@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Application\Proposals\DTOs;
+
+use DateTimeImmutable;
+
+/**
+ * What a person may write in an event proposal: no prices, download links nor publication. The
+ * dates are instants (the web form reads them as display-zone wall times).
+ */
+final readonly class EventProposalDataDTO
+{
+    /**
+     * @param  list<string>  $tagIds  tags that do not exist or do not apply to events are ignored
+     * @param  ?string  $note  private note for the administration
+     */
+    public function __construct(
+        public string $title,
+        public string $description,
+        public DateTimeImmutable $startDate,
+        public DateTimeImmutable $endDate,
+        public ?string $location = null,
+        public ?string $imagePublicId = null,
+        public array $tagIds = [],
+        public ?string $note = null,
+    ) {}
+}

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Modules\DTOs\RejectedModuleDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
+use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
@@ -17,6 +19,8 @@ use App\Filament\Support\InitialsAvatarProvider;
 use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
+use App\Http\Middleware\ApplyImpersonation;
+use App\Http\Middleware\RedirectImpersonatedAccountWithoutPanelAccess;
 use App\Modules\ModuleAutoloader;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -126,6 +130,12 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                // Before the session check and Filament's Authenticate, so the panel opens
+                // (or not) for the impersonated account, never for the administrator
+                ApplyImpersonation::class,
+                // The impersonated account without panel access goes to the site, where the band is
+                RedirectImpersonatedAccountWithoutPanelAccess::class,
+                // Resolves to AuthenticatePanelImpersonatorSession (ImpersonationServiceProvider)
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 PreventRequestForgery::class,
@@ -256,6 +266,10 @@ class AdminPanelProvider extends PanelProvider
             )
             ->renderHook(
                 PanelsRenderHook::BODY_START,
+                fn (): string => $this->impersonationBanner(),
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
                 // Read on render, never while the panel is being registered
                 fn (): string => $this->incompatibleModulesBanner(),
             )
@@ -362,6 +376,33 @@ class AdminPanelProvider extends PanelProvider
     /**
      * Every signed-in panel user sees it while an enabled module is not loaded because this host cannot run it.
      */
+    /**
+     * «Estás viendo como X» (core#578): always shown while an administrator impersonates, so the
+     * panel never looks like the administrator's own. Simulate has its own colour.
+     */
+    private function impersonationBanner(): string
+    {
+        try {
+            $context = app(ImpersonationContextInterface::class);
+            $target = $context->target();
+
+            if (! $context->isActive() || $target === null) {
+                return '';
+            }
+
+            $simulate = $context->mode() === ImpersonationMode::Simulate;
+            $display = $target->display_name ?? '';
+
+            return view('filament.components.impersonation-banner', [
+                'name' => is_string($display) && $display !== '' ? $display : (string) ($target->name ?? ''),
+                'color' => $simulate ? 'warning' : 'info',
+                'modeText' => __($simulate ? 'filament.impersonation.banner.simulate' : 'filament.impersonation.banner.read_only'),
+            ])->render();
+        } catch (Throwable) {
+            return '';
+        }
+    }
+
     private function incompatibleModulesBanner(): string
     {
         try {

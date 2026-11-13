@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Realtime;
 
+use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Realtime\Services\RealtimeConfigurationInterface;
 use App\Application\Realtime\Services\RealtimePublisherInterface;
 use App\Domain\Realtime\RealtimeMessageRule;
@@ -24,11 +25,13 @@ final readonly class BroadcastRealtimePublisher implements RealtimePublisherInte
         private Dispatcher $events,
         private DatabaseManager $database,
         private LoggerInterface $logger,
+        private ImpersonationContextInterface $impersonation,
     ) {}
 
     public function publish(string $channel, string $event, array $payload = []): void
     {
-        if (! $this->configuration->enabled()) {
+        // Nothing leaves while an impersonation lasts (core#572), even outside a transaction
+        if (! $this->configuration->enabled() || $this->impersonation->isActive()) {
             return;
         }
 
