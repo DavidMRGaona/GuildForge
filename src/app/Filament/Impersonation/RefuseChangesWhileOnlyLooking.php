@@ -6,7 +6,7 @@ namespace App\Filament\Impersonation;
 
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
-use Filament\Facades\Filament;
+use App\Infrastructure\Impersonation\ImpersonatedName;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Log;
@@ -56,7 +56,7 @@ final class RefuseChangesWhileOnlyLooking extends ComponentHook
     {
         Notification::make()
             ->title(__('filament.impersonation_read_only.refused', [
-                'name' => $target instanceof Authenticatable ? Filament::getUserName($target) : '',
+                'name' => ImpersonatedName::of($target),
             ]))
             ->warning()
             ->send();
