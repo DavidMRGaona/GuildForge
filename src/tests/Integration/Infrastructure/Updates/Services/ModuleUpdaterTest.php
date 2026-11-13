@@ -35,6 +35,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Mockery;
 use Mockery\MockInterface;
+use Tests\Support\Modules\RecordingModuleChangeWindow;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -55,6 +56,10 @@ final class ModuleUpdaterTest extends TestCase
     private MockInterface&Dispatcher $events;
 
     private ModuleUpdater $service;
+
+    private RecordingModuleChangeWindow $changeWindow;
+
+    private ?bool $windowOpenDuringDownload = null;
 
     private string $tempDir;
 
@@ -78,6 +83,7 @@ final class ModuleUpdaterTest extends TestCase
         $this->backupService = Mockery::mock(ModuleBackupServiceInterface::class);
         $this->postUpdateRunner = Mockery::mock(ModulePostUpdateRunnerInterface::class);
         $this->events = Mockery::mock(Dispatcher::class);
+        $this->changeWindow = new RecordingModuleChangeWindow;
 
         $this->service = new ModuleUpdater(
             $this->moduleRepository,
@@ -88,6 +94,7 @@ final class ModuleUpdaterTest extends TestCase
             app(ModulePackageInstaller::class),
             new ReleaseChannelPolicy(allowPrereleases: false),
             $this->postUpdateRunner,
+            $this->changeWindow,
         );
 
         // One folder per test: a fixed storage/app/test-updates was shared with any other suite
@@ -315,6 +322,52 @@ final class ModuleUpdaterTest extends TestCase
         $this->assertSame('1.0.1-beta', $versionSeenByRunner);
     }
 
+    public function test_update_holds_the_queue_workers_from_the_swap_until_it_ends_but_not_while_downloading(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $windowOpenDuringPostUpdate = null;
+        $this->postUpdateRunner->shouldReceive('run')->once()->andReturnUsing(function () use (&$windowOpenDuringPostUpdate): PostUpdateReportDTO {
+            $windowOpenDuringPostUpdate = $this->changeWindow->inProgress();
+
+            return new PostUpdateReportDTO([], []);
+        });
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertTrue($result->isSuccess(), (string) $result->errorMessage);
+        $this->assertFalse($this->windowOpenDuringDownload);
+        $this->assertTrue($windowOpenDuringPostUpdate);
+        $this->assertFalse($this->changeWindow->inProgress());
+        $this->assertSame(1, $this->changeWindow->opened);
+        $this->assertSame(1, $this->changeWindow->closed);
+    }
+
+    public function test_a_rolled_back_update_still_releases_the_queue_workers(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-game', '1.0.1-beta', 'new'));
+        $this->postUpdateRunner->shouldReceive('run')->andThrow(UpdateException::postUpdateFailed('updtest-game', 'broken'));
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertTrue($result->wasRolledBack());
+        $this->assertFalse($this->changeWindow->inProgress());
+        $this->assertSame(1, $this->changeWindow->opened);
+        $this->assertSame(1, $this->changeWindow->closed);
+    }
+
+    public function test_an_update_refused_before_touching_the_files_never_holds_the_queue_workers(): void
+    {
+        $this->prepareInstalledModules();
+        $this->expectRelease('1.0.1-beta', $this->releaseZip('updtest-aaa', '1.0.1-beta', 'new'));
+
+        $result = $this->service->update(ModuleName::fromString('updtest-game'));
+
+        $this->assertFalse($result->isSuccess());
+        $this->assertSame(0, $this->changeWindow->opened);
+    }
+
     public function test_update_result_lists_the_migrations_and_seeders_the_post_update_steps_applied(): void
     {
         $this->prepareInstalledModules();
@@ -531,6 +584,7 @@ final class ModuleUpdaterTest extends TestCase
         $this->githubFetcher->shouldReceive('selectRelease')->andReturn(new ReleaseSelection($this->createReleaseInfo($version), '^2.0', null, null, []));
         $this->githubFetcher->shouldReceive('downloadRelease')->andReturnUsing(
             function (GitHubReleaseInfo $release, string $destination) use ($zipPath): string {
+                $this->windowOpenDuringDownload = $this->changeWindow->inProgress();
                 File::ensureDirectoryExists(dirname($destination));
                 File::copy($zipPath, $destination);
 
@@ -578,6 +632,7 @@ final class ModuleUpdaterTest extends TestCase
             app(ModulePackageInstaller::class),
             new ReleaseChannelPolicy(allowPrereleases: false),
             $this->postUpdateRunner,
+            $this->changeWindow,
         );
     }
 

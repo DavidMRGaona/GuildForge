@@ -2018,6 +2018,8 @@ final class ProcessHeavyTask implements ShouldQueue
 
 The queue workers of the development and production images only consume the default queue: leave `$queue` unset. A listener sent to another queue (`public string $queue = 'listeners';`) is never run.
 
+Jobs your module queues while it is being enabled or updated (from its seeders, observers or listeners of `ModuleEnabled` / `ModuleUpdated`) are safe: the queue workers wait until the change ends and the ones started before it stop and start again with your module loaded, so the job is never unserialized without its class. Nothing to do in the module (core#624).
+
 **Scaffolding commands:**
 ```bash
 # Synchronous (default)

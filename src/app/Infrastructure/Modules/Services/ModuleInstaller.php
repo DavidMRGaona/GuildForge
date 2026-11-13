@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Modules\Services;
 
 use App\Application\Modules\DTOs\ModuleManifestDTO;
+use App\Application\Modules\Services\ModuleChangeWindowInterface;
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
 use App\Application\Updates\Services\ModuleBackupServiceInterface;
@@ -37,6 +38,7 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
         private ModuleMigrationRunner $migrationRunner,
         private ModuleSeederRunner $seederRunner,
         private ModuleCompatibilityServiceInterface $compatibility,
+        private ModuleChangeWindowInterface $changeWindow,
     ) {}
 
     public function installFromZip(UploadedFile $file): ModuleManifestDTO
@@ -50,16 +52,19 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
             $this->validateModuleNameForInstall($manifest);
             $this->assertCompatible($manifest);
 
-            $targetPath = $this->moveToModulesDirectory($tempPath, $manifest->name);
-            $this->publishPreBuiltAssets($targetPath, $manifest->name);
+            // Queue workers wait from the moment module files change (core#624)
+            return $this->changeWindow->run(function () use ($tempPath, $manifest): ModuleManifestDTO {
+                $targetPath = $this->moveToModulesDirectory($tempPath, $manifest->name);
+                $this->publishPreBuiltAssets($targetPath, $manifest->name);
 
-            $this->events->dispatch(new ModuleInstalled(
-                $manifest->name,
-                $manifest->version,
-                $targetPath,
-            ));
+                $this->events->dispatch(new ModuleInstalled(
+                    $manifest->name,
+                    $manifest->version,
+                    $targetPath,
+                ));
 
-            return $manifest;
+                return $manifest;
+            });
         } finally {
             $this->cleanupTempDirectory($tempPath);
         }
@@ -89,6 +94,9 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
             Log::info("Created backup for module {$manifest->name} before update", [
                 'backup_path' => $backupPath,
             ]);
+
+            // Queue workers wait from the moment module files change until the restore, if any (core#624)
+            $this->changeWindow->open();
 
             try {
                 // Remove current module directory
@@ -137,6 +145,8 @@ final readonly class ModuleInstaller implements ModuleInstallerInterface
                 }
 
                 throw ModuleInstallationException::updateFailed($e->getMessage());
+            } finally {
+                $this->changeWindow->close();
             }
         } finally {
             $this->cleanupTempDirectory($tempPath);

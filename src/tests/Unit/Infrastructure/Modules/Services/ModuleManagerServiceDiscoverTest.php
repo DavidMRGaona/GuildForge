@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Log;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Support\Authorization\FakePermissionSyncRunner;
+use Tests\Support\Modules\RecordingModuleChangeWindow;
 use Tests\TestCase;
 
 final class ModuleManagerServiceDiscoverTest extends TestCase
@@ -81,6 +82,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
             Mockery::mock(ModuleSettingsStoreInterface::class),
             $this->permissionSync,
+            new RecordingModuleChangeWindow,
         );
 
         $module = $this->createModule('test-module', '1.0.0', ModuleStatus::Enabled, new \DateTimeImmutable);
@@ -151,6 +153,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
             Mockery::mock(ModuleSettingsStoreInterface::class),
             $this->permissionSync,
+            new RecordingModuleChangeWindow,
         );
 
         $module = $this->createModule('test-module', '1.0.0', ModuleStatus::Disabled, null);
@@ -217,6 +220,7 @@ final class ModuleManagerServiceDiscoverTest extends TestCase
             Mockery::mock(EnabledModulesResolverInterface::class)->shouldIgnoreMissing(),
             Mockery::mock(ModuleSettingsStoreInterface::class),
             $this->permissionSync,
+            new RecordingModuleChangeWindow,
         );
 
         // Module entity with a path that does NOT exist on disk

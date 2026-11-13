@@ -7,6 +7,7 @@ namespace App\Infrastructure\Modules\Services;
 use App\Application\Authorization\Services\PermissionSyncRunnerInterface;
 use App\Application\Modules\DTOs\DependencyCheckResultDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Application\Modules\Services\ModuleChangeWindowInterface;
 use App\Application\Modules\Services\ModuleCompatibilityServiceInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
@@ -46,10 +47,19 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         private EnabledModulesResolverInterface $resolver,
         private ModuleSettingsStoreInterface $settingsStore,
         private PermissionSyncRunnerInterface $permissionSync,
+        private ModuleChangeWindowInterface $changeWindow,
         private ModulePathResolver $paths = new ModulePathResolver,
     ) {}
 
+    /**
+     * Queue workers wait while it runs: it may record a new version of an enabled module (core#624)
+     */
     public function discover(): ModuleCollection
+    {
+        return $this->changeWindow->run(fn (): ModuleCollection => $this->discoverModules());
+    }
+
+    private function discoverModules(): ModuleCollection
     {
         $manifests = $this->discoveryService->discover();
         $discovered = new ModuleCollection;
@@ -194,7 +204,16 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
         return $discovered;
     }
 
+    /**
+     * Queue workers wait while it runs: the module is booted here to run its seeders, so its
+     * listeners may queue jobs before it is saved as enabled (core#624)
+     */
     public function enable(ModuleName $name): Module
+    {
+        return $this->changeWindow->run(fn (): Module => $this->enableModule($name));
+    }
+
+    private function enableModule(ModuleName $name): Module
     {
         $module = $this->repository->findByName($name);
 
@@ -259,6 +278,11 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     }
 
     public function disable(ModuleName $name): Module
+    {
+        return $this->changeWindow->run(fn (): Module => $this->disableModule($name));
+    }
+
+    private function disableModule(ModuleName $name): Module
     {
         $module = $this->repository->findByName($name);
 
@@ -415,6 +439,13 @@ final readonly class ModuleManagerService implements ModuleManagerServiceInterfa
     }
 
     public function uninstall(ModuleName $name, bool $deleteData = false): void
+    {
+        $this->changeWindow->run(function () use ($name, $deleteData): void {
+            $this->uninstallModule($name, $deleteData);
+        });
+    }
+
+    private function uninstallModule(ModuleName $name, bool $deleteData): void
     {
         $module = $this->repository->findByName($name);
 
