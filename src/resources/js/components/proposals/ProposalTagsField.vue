@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import FormCheckbox from '@/components/form/FormCheckbox.vue';
 import type { Tag } from '@/types/models';
 
 defineProps<{ tags: Tag[] }>();
@@ -21,19 +22,16 @@ function toggle(id: string): void {
             {{ t('proposals.form.tags') }}
         </legend>
         <div class="mt-2 flex flex-wrap gap-2">
-            <label
+            <!-- The site checkbox inside a pill; py-3 keeps the 44 px touch target -->
+            <FormCheckbox
                 v-for="tag in tags"
                 :key="tag.id"
-                class="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-default px-3 py-1 text-sm text-base-primary has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500 dark:has-[:checked]:bg-primary-900/30"
+                :model-value="selected.includes(tag.id)"
+                class="rounded-full border border-default px-3 py-3 transition-colors has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 dark:has-[:checked]:bg-primary-900/30"
+                @update:model-value="toggle(tag.id)"
             >
-                <input
-                    type="checkbox"
-                    class="h-4 w-4 rounded border-default text-primary-600 focus:ring-primary-500"
-                    :checked="selected.includes(tag.id)"
-                    @change="toggle(tag.id)"
-                />
-                {{ tag.name }}
-            </label>
+                <span class="text-base-primary">{{ tag.name }}</span>
+            </FormCheckbox>
         </div>
     </fieldset>
 </template>

@@ -121,6 +121,23 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $this->assertStringContainsString('https://*.tile.openstreetmap.org', $csp);
     }
 
+    public function test_csp_allows_blob_images_only_for_local_previews(): void
+    {
+        $response = $this->get('/test-security-headers');
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+
+        $directives = array_map(trim(...), explode(';', $csp));
+        $withBlob = array_values(array_filter(
+            $directives,
+            static fn (string $directive): bool => str_contains($directive, 'blob:'),
+        ));
+
+        $this->assertCount(1, $withBlob, 'Only img-src may load blob: URLs.');
+        $this->assertStringStartsWith('img-src ', $withBlob[0]);
+    }
+
     public function test_csp_script_src_allows_unsafe_inline_for_livewire(): void
     {
         $response = $this->get('/test-security-headers');
