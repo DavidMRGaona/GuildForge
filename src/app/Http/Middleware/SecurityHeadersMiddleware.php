@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Application\Realtime\Services\RealtimeConfigurationInterface;
 use App\Application\Security\Services\ContentSecurityPolicySourcesInterface;
 use Closure;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ final readonly class SecurityHeadersMiddleware
 {
     public function __construct(
         private ContentSecurityPolicySourcesInterface $sources,
+        private RealtimeConfigurationInterface $realtime,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -100,12 +102,21 @@ final readonly class SecurityHeadersMiddleware
         return trim("frame-src 'self' ".implode(' ', $this->sources->frameOrigins()));
     }
 
+    /**
+     * Requests to the site itself and, only while real time is on (core#493), the configured
+     * WebSocket origin (`wss://host[:port]`, validated by the configuration).
+     */
     private function connectSrc(): string
     {
         $sources = "'self'";
 
         if (app()->environment('local')) {
             $sources .= ' http://localhost:5173 ws://localhost:5173';
+        }
+
+        $websocket = $this->realtime->connectSource();
+        if ($websocket !== null) {
+            $sources .= ' '.$websocket;
         }
 
         return "connect-src {$sources}";

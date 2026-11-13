@@ -7,10 +7,12 @@ namespace Tests\Feature\Http\Middleware;
 use App\Application\Security\Services\ContentSecurityPolicySourcesInterface;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Route;
+use Tests\Support\Realtime\EnablesRealtime;
 use Tests\TestCase;
 
 final class SecurityHeadersMiddlewareTest extends TestCase
 {
+    use EnablesRealtime;
     use LazilyRefreshDatabase;
 
     protected function setUp(): void
@@ -201,6 +203,25 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
         $this->assertStringContainsString("frame-src 'self';", $csp);
+    }
+
+    public function test_csp_connect_src_has_no_websocket_origin_without_realtime(): void
+    {
+        config(['broadcasting.default' => 'log']);
+
+        $csp = (string) $this->get('/test-security-headers')->headers->get('Content-Security-Policy');
+
+        $this->assertStringNotContainsString('wss:', $csp);
+        $this->assertMatchesRegularExpression("/connect-src 'self'(;| http:\\/\\/localhost)/", $csp);
+    }
+
+    public function test_csp_connect_src_allows_the_realtime_origin_when_it_is_on(): void
+    {
+        $this->enableRealtime(['broadcasting.connections.reverb.public.host' => 'ws.example.test']);
+
+        $csp = (string) $this->get('/test-security-headers')->headers->get('Content-Security-Policy');
+
+        $this->assertMatchesRegularExpression("/connect-src 'self'[^;]* wss:\\/\\/ws\\.example\\.test(;|$)/", $csp);
     }
 
     public function test_it_does_not_add_hsts_header_for_non_secure_requests(): void

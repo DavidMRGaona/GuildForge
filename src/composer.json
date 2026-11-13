@@ -18,6 +18,7 @@
         "inertiajs/inertia-laravel": "^3.5",
         "intervention/image": "^4.3",
         "laravel/framework": "^13.35",
+        "laravel/reverb": "^1.13",
         "laravel/scout": "^11.9",
         "laravel/tinker": "^3.0",
         "league/commonmark": "^2.10",

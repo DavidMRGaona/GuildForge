@@ -10,6 +10,7 @@ use App\Providers\KnowledgeServiceProvider;
 use App\Providers\MailPreferencesServiceProvider;
 use App\Providers\MediaServiceProvider;
 use App\Providers\PublicationServiceProvider;
+use App\Providers\RealtimeServiceProvider;
 use App\Providers\SearchServiceProvider;
 use App\Providers\SiteNotificationsServiceProvider;
 
@@ -22,6 +23,7 @@ return [
     MailPreferencesServiceProvider::class,
     MediaServiceProvider::class,
     PublicationServiceProvider::class,
+    RealtimeServiceProvider::class,
     SearchServiceProvider::class,
     SiteNotificationsServiceProvider::class,
 ];

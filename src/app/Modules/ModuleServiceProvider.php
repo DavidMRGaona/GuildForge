@@ -17,6 +17,7 @@ use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Publications\Contracts\PublicationSourceInterface;
+use App\Application\Realtime\Contracts\RealtimeChannelInterface;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use Filament\Pages\Page;
@@ -301,6 +302,18 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<EditorTextSourceInterface>>
      */
     public function registerEditorTextSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the private real-time channels this module offers (core#493).
+     * Each name starts with the module name and a dot (`<module>.discussion.{discussion}`); the core checks every
+     * subscription with the channel's authorize() and fails closed. Messages carry only ids and numbers.
+     *
+     * @return array<class-string<RealtimeChannelInterface>>
+     */
+    public function registerRealtimeChannels(): array
     {
         return [];
     }
