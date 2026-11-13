@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import AddToCalendarMenu from '../AddToCalendarMenu.vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
 import type { AddToCalendarLinks } from '@/types/models';
@@ -40,6 +41,14 @@ describe('AddToCalendarMenu', () => {
 
         expect(menu.get('button').attributes('aria-expanded')).toBe('false');
         expect(menu.find('[role="menu"]').exists()).toBe(false);
+    });
+
+    it('draws the trigger as a small outline button, like the other secondary actions', () => {
+        const menu = mountMenu();
+
+        const trigger = menu.getComponent(BaseButton);
+        expect(trigger.props('variant')).toBe('outline');
+        expect(trigger.props('size')).toBe('sm');
     });
 
     it('offers Google, Outlook and the .ics download', async () => {

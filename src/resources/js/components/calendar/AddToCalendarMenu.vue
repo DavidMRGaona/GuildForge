@@ -13,13 +13,14 @@ interface Props {
     placement?: 'bottom' | 'top';
     /** Stretch the button (and its menu) to the container's width. */
     block?: boolean;
+    /** Small by default: a secondary action beside the page's other outline buttons. */
     size?: 'sm' | 'md';
 }
 
 const props = withDefaults(defineProps<Props>(), {
     placement: 'bottom',
     block: false,
-    size: 'md',
+    size: 'sm',
 });
 
 const { t } = useI18n();
@@ -67,7 +68,7 @@ onUnmounted(() => {
         @keydown.escape="closeAndFocusTrigger"
     >
         <BaseButton
-            variant="secondary"
+            variant="outline"
             :size="props.size"
             :class="{ 'w-full': props.block }"
             aria-haspopup="menu"

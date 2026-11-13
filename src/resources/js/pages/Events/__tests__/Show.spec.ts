@@ -103,6 +103,14 @@ describe('Events/Show', () => {
         expect(calendarAt).toBeGreaterThan(slotAt);
     });
 
+    it('stretches the calendar button to the side column, like the actions above it', () => {
+        const page = mountPage({ event: event(), calendarLinks });
+
+        // The stub declares no props: what the page passes shows up as attributes
+        const calendar = page.get('[data-add-to-calendar]');
+        expect(calendar.attributes('block')).toBeDefined();
+    });
+
     it('does not offer adding a past event to the calendar', () => {
         const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const page = mountPage({
