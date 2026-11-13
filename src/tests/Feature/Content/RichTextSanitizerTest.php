@@ -64,6 +64,37 @@ final class RichTextSanitizerTest extends TestCase
         }
     }
 
+    public function test_the_panel_editor_reads_the_new_formatting_tools(): void
+    {
+        $html = $this->clean(
+            '<h2 style="text-align: center">T</h2><p style="text-align: end"><u>u</u> <s>s</s> <sub>1</sub> <sup>2</sup></p>'
+            .'<pre><code>x &lt; y</code></pre>'
+            .'<table><tbody><tr><th colspan="1" rowspan="1"><p>H</p></th><th colspan="1" rowspan="1"><p>I</p></th></tr>'
+            .'<tr><td colspan="2" rowspan="1"><p>c</p></td></tr></tbody></table>',
+        );
+
+        $document = RichContentRenderer::make($html)->toArray();
+        [$heading, $paragraph, $code, $table] = $document['content'];
+
+        $this->assertSame('center', $heading['attrs']['textAlign']);
+        $this->assertSame('end', $paragraph['attrs']['textAlign']);
+        $marks = array_map(
+            static fn (array $node): string => $node['marks'][0]['type'],
+            array_values(array_filter($paragraph['content'], static fn (array $node): bool => isset($node['marks']))),
+        );
+        $this->assertSame(['underline', 'strike', 'subscript', 'superscript'], $marks);
+        $this->assertSame('codeBlock', $code['type']);
+        $this->assertSame('x < y', $code['content'][0]['text']);
+        $this->assertSame('table', $table['type']);
+        $this->assertSame(['tableHeader', 'tableHeader'], array_column($table['content'][0]['content'], 'type'));
+        $this->assertSame('tableCell', $table['content'][1]['content'][0]['type']);
+        $this->assertSame(2, $table['content'][1]['content'][0]['attrs']['colspan']);
+
+        // The panel gives back what it read: nothing is lost on approval
+        $again = RichContentRenderer::make(RichContentRenderer::make($html)->toHtml())->toArray();
+        $this->assertSame($document, $again);
+    }
+
     public function test_images_of_the_origin_keep_their_data_id_so_the_panel_knows_them(): void
     {
         $url = Storage::disk('images')->url(self::PATH);

@@ -3,6 +3,9 @@ import type { Editor } from '@tiptap/core';
 import type { EditorProps } from '@tiptap/pm/view';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
 import {
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
     Bold,
     Heading2,
     Heading3,
@@ -13,12 +16,18 @@ import {
     ListOrdered,
     Quote,
     Redo2,
+    SquareCode,
+    Strikethrough,
+    Subscript,
+    Superscript,
+    Table as TableIcon,
+    Underline,
     Undo2,
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { createRichTextExtensions } from './richText/extensions';
+import { createRichTextExtensions, TEXT_ALIGNMENTS } from './richText/extensions';
 import {
     checkImageFile,
     EDITOR_IMAGE_TYPES,
@@ -28,8 +37,8 @@ import {
 } from '@/utils/richText';
 
 /**
- * Rich text editor for the public site (core#573). It writes the same HTML as the panel's
- * RichEditor for headings (2 and 3), bold, italic, lists, links, quotes and images, so a text
+ * Rich text editor for the public site (core#573). It offers the toolset of the panel's article
+ * editor (core#627), in its groups, and writes the same HTML as the panel's RichEditor, so a text
  * written here opens there without loss. The server sanitises it again: never trust this HTML.
  *
  * Images go to `uploadUrl` (null offers none) and come back with the stored path, kept in the
@@ -142,14 +151,20 @@ interface Button {
     label: string;
     icon: Component;
     run: () => void;
-    active: () => boolean;
+    /** Whether it is on; absent for actions that are not toggles (they get no aria-pressed) */
+    active?: () => boolean;
     disabled?: () => boolean;
     shortcut?: string;
 }
 
 const chain = (current: Editor) => current.chain().focus();
 
-const buttons = computed<Button[]>(() => {
+/** The start is no alignment at all: what a text has until it is centred or aligned to the end */
+const alignedToStart = (current: Editor): boolean =>
+    !TEXT_ALIGNMENTS.some((alignment) => current.isActive({ textAlign: alignment }));
+
+/** The panel's groups, in its order; a group left empty is not drawn */
+const groups = computed<Button[][]>(() => {
     void tick.value;
     const current = editor.value;
 
@@ -157,21 +172,7 @@ const buttons = computed<Button[]>(() => {
         return [];
     }
 
-    const list: Button[] = [
-        {
-            id: 'heading2',
-            label: t('richEditor.heading2'),
-            icon: Heading2,
-            run: () => chain(current).toggleHeading({ level: 2 }).run(),
-            active: () => current.isActive('heading', { level: 2 }),
-        },
-        {
-            id: 'heading3',
-            label: t('richEditor.heading3'),
-            icon: Heading3,
-            run: () => chain(current).toggleHeading({ level: 3 }).run(),
-            active: () => current.isActive('heading', { level: 3 }),
-        },
+    const marks: Button[] = [
         {
             id: 'bold',
             label: t('richEditor.bold'),
@@ -189,6 +190,101 @@ const buttons = computed<Button[]>(() => {
             active: () => current.isActive('italic'),
         },
         {
+            id: 'underline',
+            label: t('richEditor.underline'),
+            icon: Underline,
+            shortcut: 'Ctrl+U',
+            run: () => chain(current).toggleUnderline().run(),
+            active: () => current.isActive('underline'),
+        },
+        {
+            id: 'strike',
+            label: t('richEditor.strike'),
+            icon: Strikethrough,
+            run: () => chain(current).toggleStrike().run(),
+            active: () => current.isActive('strike'),
+        },
+        {
+            id: 'subscript',
+            label: t('richEditor.subscript'),
+            icon: Subscript,
+            run: () => chain(current).toggleSubscript().run(),
+            active: () => current.isActive('subscript'),
+        },
+        {
+            id: 'superscript',
+            label: t('richEditor.superscript'),
+            icon: Superscript,
+            run: () => chain(current).toggleSuperscript().run(),
+            active: () => current.isActive('superscript'),
+        },
+        {
+            id: 'link',
+            label: t('richEditor.link'),
+            icon: LinkIcon,
+            shortcut: 'Ctrl+K',
+            run: openLink,
+            active: () => current.isActive('link'),
+        },
+    ];
+
+    const headings: Button[] = [
+        {
+            id: 'heading2',
+            label: t('richEditor.heading2'),
+            icon: Heading2,
+            run: () => chain(current).toggleHeading({ level: 2 }).run(),
+            active: () => current.isActive('heading', { level: 2 }),
+        },
+        {
+            id: 'heading3',
+            label: t('richEditor.heading3'),
+            icon: Heading3,
+            run: () => chain(current).toggleHeading({ level: 3 }).run(),
+            active: () => current.isActive('heading', { level: 3 }),
+        },
+    ];
+
+    const alignment: Button[] = [
+        {
+            id: 'alignStart',
+            label: t('richEditor.alignStart'),
+            icon: AlignLeft,
+            run: () => chain(current).unsetTextAlign().run(),
+            active: () => alignedToStart(current),
+        },
+        {
+            id: 'alignCenter',
+            label: t('richEditor.alignCenter'),
+            icon: AlignCenter,
+            run: () => chain(current).setTextAlign('center').run(),
+            active: () => current.isActive({ textAlign: 'center' }),
+        },
+        {
+            id: 'alignEnd',
+            label: t('richEditor.alignEnd'),
+            icon: AlignRight,
+            run: () => chain(current).setTextAlign('end').run(),
+            active: () => current.isActive({ textAlign: 'end' }),
+        },
+    ];
+
+    const blocks: Button[] = [
+        {
+            id: 'blockquote',
+            label: t('richEditor.blockquote'),
+            icon: Quote,
+            run: () => chain(current).toggleBlockquote().run(),
+            active: () => current.isActive('blockquote'),
+        },
+        {
+            id: 'codeBlock',
+            label: t('richEditor.codeBlock'),
+            icon: SquareCode,
+            run: () => chain(current).toggleCodeBlock().run(),
+            active: () => current.isActive('codeBlock'),
+        },
+        {
             id: 'bulletList',
             label: t('richEditor.bulletList'),
             icon: List,
@@ -202,41 +298,34 @@ const buttons = computed<Button[]>(() => {
             run: () => chain(current).toggleOrderedList().run(),
             active: () => current.isActive('orderedList'),
         },
+    ];
+
+    const inserts: Button[] = [
         {
-            id: 'blockquote',
-            label: t('richEditor.blockquote'),
-            icon: Quote,
-            run: () => chain(current).toggleBlockquote().run(),
-            active: () => current.isActive('blockquote'),
-        },
-        {
-            id: 'link',
-            label: t('richEditor.link'),
-            icon: LinkIcon,
-            shortcut: 'Ctrl+K',
-            run: openLink,
-            active: () => current.isActive('link'),
+            id: 'table',
+            label: t('richEditor.table'),
+            icon: TableIcon,
+            run: () => chain(current).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+            disabled: () => !current.can().insertTable({ rows: 3, cols: 3, withHeaderRow: true }),
         },
     ];
 
     if (props.uploadUrl !== null) {
-        list.push({
+        inserts.push({
             id: 'image',
             label: t('richEditor.image'),
             icon: ImagePlus,
             run: () => fileInput.value?.click(),
-            active: () => false,
         });
     }
 
-    list.push(
+    const history: Button[] = [
         {
             id: 'undo',
             label: t('richEditor.undo'),
             icon: Undo2,
             shortcut: 'Ctrl+Z',
             run: () => chain(current).undo().run(),
-            active: () => false,
             disabled: () => !current.can().undo(),
         },
         {
@@ -245,13 +334,61 @@ const buttons = computed<Button[]>(() => {
             icon: Redo2,
             shortcut: 'Ctrl+Y',
             run: () => chain(current).redo().run(),
-            active: () => false,
             disabled: () => !current.can().redo(),
-        }
-    );
+        },
+    ];
 
-    return list;
+    return [marks, headings, alignment, blocks, inserts, history];
 });
+
+type TableAction =
+    | 'addRowBefore'
+    | 'addRowAfter'
+    | 'addColumnBefore'
+    | 'addColumnAfter'
+    | 'deleteRow'
+    | 'deleteColumn'
+    | 'toggleHeaderRow'
+    | 'mergeCells'
+    | 'splitCell'
+    | 'deleteTable';
+
+const TABLE_ACTIONS: readonly TableAction[] = [
+    'addRowBefore',
+    'addRowAfter',
+    'addColumnBefore',
+    'addColumnAfter',
+    'deleteRow',
+    'deleteColumn',
+    'toggleHeaderRow',
+    'mergeCells',
+    'splitCell',
+    'deleteTable',
+];
+
+/** What can be done to the table holding the cursor; nothing outside a table */
+const tableActions = computed<{ id: TableAction; label: string; disabled: boolean }[]>(() => {
+    void tick.value;
+    const current = editor.value;
+
+    if (current === undefined || !current.isActive('table')) {
+        return [];
+    }
+
+    return TABLE_ACTIONS.map((id) => ({
+        id,
+        label: t(`richEditor.tableTools.${id}`),
+        disabled: !current.can()[id](),
+    }));
+});
+
+function runTableAction(id: TableAction): void {
+    const current = editor.value;
+
+    if (current !== undefined) {
+        chain(current)[id]().run();
+    }
+}
 
 /** Roving focus: the toolbar is one tab stop, arrows move inside it */
 function onToolbarKeydown(event: KeyboardEvent): void {
@@ -286,7 +423,7 @@ function onToolbarKeydown(event: KeyboardEvent): void {
     }
 }
 
-const activeStop = ref('heading2');
+const activeStop = ref('bold');
 
 function openLink(): void {
     const current = editor.value;
@@ -422,29 +559,32 @@ const altHintId = `${uid}-alt-hint`;
             role="toolbar"
             :aria-label="t('richEditor.toolbar')"
             aria-orientation="horizontal"
-            class="flex flex-wrap items-center gap-1 border-b p-1.5"
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b p-1.5 sm:gap-x-1"
             @keydown="onToolbarKeydown"
         >
-            <button
-                v-for="button in buttons"
-                :key="button.id"
-                type="button"
-                :aria-label="button.label"
-                :title="button.shortcut ? `${button.label} (${button.shortcut})` : button.label"
-                :aria-pressed="
-                    button.id === 'undo' || button.id === 'redo' || button.id === 'image'
-                        ? undefined
-                        : button.active()
-                "
-                :aria-expanded="button.id === 'link' ? panel === 'link' : undefined"
-                :disabled="disabled || (button.disabled?.() ?? false)"
-                :tabindex="button.id === activeStop ? 0 : -1"
-                class="inline-flex size-9 items-center justify-center rounded-md text-base-secondary transition-colors hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-40 aria-pressed:bg-primary-100 aria-pressed:text-primary-700 dark:aria-pressed:bg-primary-950 dark:aria-pressed:text-primary-300"
-                @focus="activeStop = button.id"
-                @click="button.run()"
+            <div
+                v-for="(group, index) in groups"
+                :key="index"
+                role="group"
+                class="flex items-center gap-1 sm:border-e sm:pe-1 sm:last:border-e-0 sm:last:pe-0"
             >
-                <component :is="button.icon" class="size-4" aria-hidden="true" />
-            </button>
+                <button
+                    v-for="button in group"
+                    :key="button.id"
+                    type="button"
+                    :aria-label="button.label"
+                    :title="button.shortcut ? `${button.label} (${button.shortcut})` : button.label"
+                    :aria-pressed="button.active ? button.active() : undefined"
+                    :aria-expanded="button.id === 'link' ? panel === 'link' : undefined"
+                    :disabled="disabled || (button.disabled?.() ?? false)"
+                    :tabindex="button.id === activeStop ? 0 : -1"
+                    class="inline-flex size-9 items-center justify-center rounded-md text-base-secondary transition-colors hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-40 aria-pressed:bg-primary-100 aria-pressed:text-primary-700 dark:aria-pressed:bg-primary-950 dark:aria-pressed:text-primary-300"
+                    @focus="activeStop = button.id"
+                    @click="button.run()"
+                >
+                    <component :is="button.icon" class="size-4" aria-hidden="true" />
+                </button>
+            </div>
         </div>
 
         <form
@@ -501,6 +641,25 @@ const altHintId = `${uid}-alt-hint`;
                 {{ t('richEditor.linkCancel') }}
             </button>
         </form>
+
+        <div
+            v-if="tableActions.length > 0"
+            role="group"
+            :aria-label="t('richEditor.tableTools.label')"
+            class="flex flex-wrap items-center gap-1 border-b p-1.5"
+        >
+            <button
+                v-for="action in tableActions"
+                :key="action.id"
+                type="button"
+                :aria-label="action.label"
+                :disabled="disabled || action.disabled"
+                class="rounded-md px-2.5 py-1.5 text-sm text-base-secondary transition-colors hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-40"
+                @click="runTableAction(action.id)"
+            >
+                {{ action.label }}
+            </button>
+        </div>
 
         <div v-if="imageSelected && uploadUrl !== null" class="border-b p-2">
             <label :for="`${uid}-alt`" class="block text-sm font-medium text-base-primary">{{
@@ -569,5 +728,33 @@ const altHintId = `${uid}-alt-hint`;
 
 .rich-text-editor :deep(.ProseMirror) {
     min-height: 10rem;
+}
+
+/* Tables: every cell visible while writing, wide ones scroll inside the editor */
+.rich-text-editor :deep(.ProseMirror table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+}
+
+.rich-text-editor :deep(.ProseMirror :is(th, td)) {
+    position: relative;
+    min-width: 4rem;
+    border: 1px solid var(--color-border, #d6d3d1);
+    padding: 0.375rem 0.5rem;
+    vertical-align: top;
+}
+
+.rich-text-editor :deep(.ProseMirror :is(th, td) > p) {
+    margin: 0;
+}
+
+.rich-text-editor :deep(.ProseMirror .selectedCell::after) {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-primary-500, #f59e0b) 20%, transparent);
+    pointer-events: none;
 }
 </style>

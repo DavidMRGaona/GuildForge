@@ -41,22 +41,24 @@ describe('RichTextEditor', () => {
         );
     });
 
-    it('offers headings, bold, italic, lists, quote and link, and no image without an endpoint', async () => {
+    it('offers the toolset of the panel editor in its groups, and no image without an endpoint', async () => {
         const wrapper = mountEditor();
         await flushPromises();
 
-        for (const name of [
-            'Título',
-            'Subtítulo',
-            'Negrita',
-            'Cursiva',
-            'Lista con viñetas',
-            'Lista numerada',
-            'Cita',
-            'Enlace',
-        ]) {
-            expect(wrapper.find(`button[aria-label="${name}"]`).exists()).toBe(true);
-        }
+        const groups = wrapper
+            .findAll('[role="toolbar"] > [role="group"]')
+            .map((group) =>
+                group.findAll('button').map((item) => item.attributes('aria-label') ?? '')
+            );
+
+        expect(groups).toEqual([
+            ['Negrita', 'Cursiva', 'Subrayado', 'Tachado', 'Subíndice', 'Superíndice', 'Enlace'],
+            ['Título', 'Subtítulo'],
+            ['Alinear al inicio', 'Centrar', 'Alinear al final'],
+            ['Cita', 'Bloque de código', 'Lista con viñetas', 'Lista numerada'],
+            ['Insertar tabla'],
+            ['Deshacer', 'Rehacer'],
+        ]);
 
         expect(wrapper.find('button[aria-label="Insertar imagen"]').exists()).toBe(false);
         expect(wrapper.find('input[type="file"]').exists()).toBe(false);
@@ -79,6 +81,101 @@ describe('RichTextEditor', () => {
 
         const emitted = wrapper.emitted('update:modelValue') ?? [];
         expect(emitted.at(-1)?.[0]).toBe('<h3>Hola</h3>');
+    });
+
+    it('aligns the paragraph, and aligning to the start removes the alignment', async () => {
+        const wrapper = mountEditor({ modelValue: '<p>Hola</p>' });
+        await flushPromises();
+
+        expect(button(wrapper, 'Alinear al inicio').attributes('aria-pressed')).toBe('true');
+
+        await button(wrapper, 'Centrar').trigger('click');
+
+        const emitted = wrapper.emitted('update:modelValue') ?? [];
+        expect(emitted.at(-1)?.[0]).toBe('<p style="text-align: center;">Hola</p>');
+        expect(button(wrapper, 'Centrar').attributes('aria-pressed')).toBe('true');
+        expect(button(wrapper, 'Alinear al inicio').attributes('aria-pressed')).toBe('false');
+
+        await button(wrapper, 'Alinear al final').trigger('click');
+        expect((wrapper.emitted('update:modelValue') ?? []).at(-1)?.[0]).toBe(
+            '<p style="text-align: end;">Hola</p>'
+        );
+
+        await button(wrapper, 'Alinear al inicio').trigger('click');
+        expect((wrapper.emitted('update:modelValue') ?? []).at(-1)?.[0]).toBe('<p>Hola</p>');
+    });
+
+    it('turns the paragraph into a code block', async () => {
+        const wrapper = mountEditor({ modelValue: '<p>a &lt; b</p>' });
+        await flushPromises();
+
+        await button(wrapper, 'Bloque de código').trigger('click');
+
+        expect((wrapper.emitted('update:modelValue') ?? []).at(-1)?.[0]).toBe(
+            '<pre><code>a &lt; b</code></pre>'
+        );
+        expect(button(wrapper, 'Bloque de código').attributes('aria-pressed')).toBe('true');
+    });
+
+    describe('tables', () => {
+        function lastHtml(wrapper: VueWrapper): string {
+            return String((wrapper.emitted('update:modelValue') ?? []).at(-1)?.[0] ?? '');
+        }
+
+        function tableTools(wrapper: VueWrapper): ReturnType<VueWrapper['find']> {
+            return wrapper.find('[role="group"][aria-label="Herramientas de tabla"]');
+        }
+
+        it('inserts a table with a header row and offers its tools only inside it', async () => {
+            const wrapper = mountEditor({ modelValue: '<p>Hola</p>' });
+            await flushPromises();
+
+            expect(tableTools(wrapper).exists()).toBe(false);
+            expect(button(wrapper, 'Insertar tabla').attributes('aria-pressed')).toBeUndefined();
+
+            await button(wrapper, 'Insertar tabla').trigger('click');
+            await flushPromises();
+
+            const html = lastHtml(wrapper);
+            expect(html.match(/<tr>/g)).toHaveLength(3);
+            expect(html.match(/<th>/g)).toHaveLength(3);
+            expect(html.match(/<td>/g)).toHaveLength(6);
+            expect(tableTools(wrapper).exists()).toBe(true);
+        });
+
+        it('adds and removes rows and columns, and deletes the table', async () => {
+            const wrapper = mountEditor();
+            await flushPromises();
+            await button(wrapper, 'Insertar tabla').trigger('click');
+            await flushPromises();
+
+            await button(wrapper, 'Fila debajo').trigger('click');
+            expect(lastHtml(wrapper).match(/<tr>/g)).toHaveLength(4);
+
+            await button(wrapper, 'Columna después').trigger('click');
+            expect(lastHtml(wrapper).match(/<th>/g)).toHaveLength(4);
+
+            await button(wrapper, 'Borrar columna').trigger('click');
+            expect(lastHtml(wrapper).match(/<th>/g)).toHaveLength(3);
+
+            await button(wrapper, 'Borrar fila').trigger('click');
+            expect(lastHtml(wrapper).match(/<tr>/g)).toHaveLength(3);
+
+            await button(wrapper, 'Borrar tabla').trigger('click');
+            await flushPromises();
+
+            expect(lastHtml(wrapper)).not.toContain('<table');
+            expect(tableTools(wrapper).exists()).toBe(false);
+        });
+
+        it('cannot merge cells without a selection of several', async () => {
+            const wrapper = mountEditor();
+            await flushPromises();
+            await button(wrapper, 'Insertar tabla').trigger('click');
+            await flushPromises();
+
+            expect(button(wrapper, 'Unir celdas').attributes('disabled')).toBeDefined();
+        });
     });
 
     it('marks the active format with aria-pressed', async () => {
@@ -200,6 +297,18 @@ describe('RichTextEditor', () => {
             await input.trigger('change');
             await flushPromises();
         }
+
+        it('puts the image next to the table, as the panel does', async () => {
+            const wrapper = mountEditor({ uploadUrl: '/x' });
+            await flushPromises();
+
+            const group = button(wrapper, 'Insertar tabla').element.parentElement;
+            expect(
+                Array.from(group?.querySelectorAll('button') ?? []).map((item) =>
+                    item.getAttribute('aria-label')
+                )
+            ).toEqual(['Insertar tabla', 'Insertar imagen']);
+        });
 
         it('uploads the picked image and inserts it with its stored path', async () => {
             stubUpload();
