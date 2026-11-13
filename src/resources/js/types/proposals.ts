@@ -37,7 +37,55 @@ export interface Proposal {
     updatedAt: string | null;
     /** Address of the published page, once approved. */
     publicPath: string | null;
+    /** What an event's author asked the modules for (always empty for articles). */
+    requests: OwnProposalRequest[];
     can: ProposalPermissions;
+}
+
+export type ProposalRequestFieldType = 'boolean' | 'number' | 'select' | 'text';
+export type ProposalRequestValue = boolean | number | string | null;
+
+/** One field of a module request, drawn by the core; the server checks every value again. */
+export interface ProposalRequestField {
+    name: string;
+    type: ProposalRequestFieldType;
+    label: string;
+    required: boolean;
+    helperText: string | null;
+    min: number | null;
+    max: number | null;
+    maxLength: number | null;
+    options: { value: string; label: string }[];
+    default: ProposalRequestValue;
+    /** Shown only while an earlier field holds one of the values (any value but empty when null). */
+    visibleWhen: { field: string; values: (boolean | number | string)[] | null } | null;
+}
+
+/** A request an enabled module adds below the event proposal form. */
+export interface ProposalRequestDefinition {
+    key: string;
+    label: string;
+    /** The yes/no question that opens it. */
+    question: string;
+    fields: ProposalRequestField[];
+}
+
+/** What the form sends for one request. */
+export interface ProposalRequestState {
+    wanted: boolean;
+    values: Record<string, ProposalRequestValue>;
+}
+
+/** A request stored with an event proposal, as its author sees it. */
+export interface OwnProposalRequest {
+    key: string;
+    label: string;
+    /** False when its module is no longer active. */
+    active: boolean;
+    values: Record<string, ProposalRequestValue>;
+    /** The module's line for the values in force. */
+    description: string | null;
+    applied: boolean;
 }
 
 export interface ProposalLimits {
@@ -62,4 +110,9 @@ export interface ProposalFormProps {
     /** Null when creating. */
     proposal: Proposal | null;
     tags: Tag[];
+}
+
+export interface EventProposalFormProps extends ProposalFormProps {
+    /** The requests the enabled modules offer right now. */
+    moduleRequests: ProposalRequestDefinition[];
 }

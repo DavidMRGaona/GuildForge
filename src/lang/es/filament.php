@@ -887,6 +887,17 @@ return [
             'review_denied' => 'No tienes permiso para revisar propuestas de este tipo.',
             'not_approved' => 'Una propuesta solo se publica al aprobarla.',
             'unexpected' => 'No se ha podido completar. La propuesta sigue en revisión.',
+            'request_unavailable' => '«:request» ya no está disponible porque su módulo no está activo. Desmarca «Aplicar al aprobar» para aprobar sin ella.',
+            'request_invalid' => 'Los valores de «:request» ya no son válidos. Revísalos y vuelve a aprobar.',
+            'request_failed' => 'No se ha podido aplicar «:request». La propuesta sigue en revisión.',
+            'invalid_requests' => 'Revisa las peticiones de los módulos.',
+        ],
+        'requests' => [
+            'heading' => 'Peticiones de módulos',
+            'description' => 'Lo que la persona que propone ha pedido a los módulos. Al aprobar, cada petición marcada crea su configuración con estos valores.',
+            'apply' => 'Aplicar al aprobar',
+            'inactive' => 'Su módulo ya no está activo: desmárcala para aprobar sin ella.',
+            'applied_at' => 'Aplicada el :date',
         ],
         'widget' => [
             'heading' => 'Propuestas pendientes',

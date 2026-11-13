@@ -6,6 +6,7 @@ namespace App\Infrastructure\Proposals\Services;
 
 use App\Application\Proposals\DTOs\OwnProposalDTO;
 use App\Application\Proposals\DTOs\ProposalLimitsDTO;
+use App\Application\Proposals\Services\EventProposalRequestServiceInterface;
 use App\Application\Proposals\Services\ProposalQueryServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
 use App\Domain\Proposals\Enums\ProposalStatus;
@@ -26,6 +27,7 @@ final readonly class ProposalQueryService implements ProposalQueryServiceInterfa
 
     public function __construct(
         private ProposalSettingsServiceInterface $settings,
+        private EventProposalRequestServiceInterface $requests,
     ) {}
 
     public function ownedBy(string $userId): array
@@ -162,6 +164,7 @@ final readonly class ProposalQueryService implements ProposalQueryServiceInterfa
             reviewedAt: $review?->reviewedAt,
             updatedAt: $this->instant($model->getAttribute('updated_at')),
             slug: $status === ProposalStatus::Approved ? $this->text($model->getAttribute('slug')) : null,
+            requests: $isEvent ? $this->requests->forEvent((string) $model->getKey()) : [],
         );
     }
 

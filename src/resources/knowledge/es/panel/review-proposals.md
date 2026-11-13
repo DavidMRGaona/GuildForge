@@ -5,7 +5,7 @@ summary: Revisa los eventos y artículos que la gente propone desde la web, ret�
 category: content
 audience: panel
 order: 25
-keywords: [propuesta, propuestas, revisar, revisión, aprobar, publicar, devolver, rechazar, motivo, en revisión, propuesto por, nota, pendientes]
+keywords: [propuesta, propuestas, revisar, revisión, aprobar, publicar, devolver, rechazar, motivo, en revisión, propuesto por, nota, pendientes, peticiones, módulos, aplicar]
 related: [core.panel.manage-events, core.panel.manage-articles]
 conditions:
   permissions:
@@ -33,6 +33,15 @@ Los borradores que la persona aún no ha enviado no salen en el panel.
    - **Rechazar**: la cierra sin publicarla. Escribe el **Motivo** y marca la casilla de confirmación.
 
 Quien la propuso recibe un aviso en cada caso.
+
+## Peticiones de módulos
+
+En los eventos, la persona que propone puede pedir cosas a los módulos instalados, como inscripciones o una reserva de espacio. Las ves en la sección **Peticiones de módulos** de la ficha:
+
+- Cada petición muestra los valores pedidos. Puedes cambiarlos antes de aprobar.
+- El interruptor **Aplicar al aprobar** decide si se aplica. Desmárcalo para aprobar el evento sin esa petición.
+- Al pulsar **Aprobar y publicar**, cada petición marcada crea su configuración en el módulo con esos valores. Luego la ajustas en la pestaña del módulo.
+- Si una petición no se puede aplicar, no se aprueba nada: la propuesta sigue en revisión y el aviso te dice cuál ha fallado. Si su módulo ya no está activo, desmárcala para aprobar sin ella.
 
 > [!IMPORTANT]
 > Mientras la propuesta no esté aprobada, el interruptor **Publicado** está desactivado: solo se publica con **Aprobar y publicar**. Después ya es un evento o un artículo como cualquier otro, y puedes ocultarlo o volver a publicarlo.

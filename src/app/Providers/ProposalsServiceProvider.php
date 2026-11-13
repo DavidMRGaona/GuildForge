@@ -6,6 +6,9 @@ namespace App\Providers;
 
 use App\Application\Content\Services\EditorImageUploadAuthorizerInterface;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
+use App\Application\Proposals\Contracts\ProposalApprovalStepInterface;
+use App\Application\Proposals\Services\EventProposalRequestRegistryInterface;
+use App\Application\Proposals\Services\EventProposalRequestServiceInterface;
 use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
 use App\Application\Proposals\Services\ProposalQueryServiceInterface;
 use App\Application\Proposals\Services\ProposalServiceInterface;
@@ -19,18 +22,22 @@ use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Proposals\Listeners\NotifyProposalAuthor;
 use App\Infrastructure\Proposals\Listeners\NotifyProposalReviewers;
+use App\Infrastructure\Proposals\Services\EventProposalRequestRegistry;
+use App\Infrastructure\Proposals\Services\EventProposalRequestService;
 use App\Infrastructure\Proposals\Services\ProposalEditorImageUploadAuthorizer;
 use App\Infrastructure\Proposals\Services\ProposalEligibilityService;
 use App\Infrastructure\Proposals\Services\ProposalQueryService;
 use App\Infrastructure\Proposals\Services\ProposalService;
 use App\Infrastructure\Proposals\Services\ProposalSettingsService;
+use App\Infrastructure\Proposals\Steps\ApplyEventProposalRequests;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
  * Events and articles proposed from the web (core#570): settings, eligibility, the review flow and
- * what happens to proposals when their author's account goes.
+ * what happens to proposals when their author's account goes, and the requests modules add to
+ * event proposals (core#581).
  */
 final class ProposalsServiceProvider extends ServiceProvider
 {
@@ -40,6 +47,10 @@ final class ProposalsServiceProvider extends ServiceProvider
         $this->app->bind(ProposalEligibilityServiceInterface::class, ProposalEligibilityService::class);
         $this->app->bind(ProposalServiceInterface::class, ProposalService::class);
         $this->app->bind(ProposalQueryServiceInterface::class, ProposalQueryService::class);
+        // Module requests of event proposals (core#581): modules register into the registry while they boot
+        $this->app->singleton(EventProposalRequestRegistryInterface::class, EventProposalRequestRegistry::class);
+        $this->app->bind(EventProposalRequestServiceInterface::class, EventProposalRequestService::class);
+        $this->app->tag([ApplyEventProposalRequests::class], ProposalApprovalStepInterface::TAG);
         // Replaces the core's default (only whoever creates articles in the panel): adds whoever may propose them
         $this->app->singleton(EditorImageUploadAuthorizerInterface::class, ProposalEditorImageUploadAuthorizer::class);
     }

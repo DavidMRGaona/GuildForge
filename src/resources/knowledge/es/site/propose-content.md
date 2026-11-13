@@ -5,13 +5,14 @@ summary: Envía tu propuesta a la administración y sigue su estado en «Mis pro
 category: community
 audience: site
 order: 30
-keywords: [proponer, propuesta, evento, artículo, borrador, revisión, enviar, mis propuestas]
+keywords: [proponer, propuesta, evento, artículo, borrador, revisión, enviar, mis propuestas, peticiones, inscripciones]
 related: [core.events.find-events, core.content.read-articles]
 ---
 Si la asociación lo permite, puedes proponer eventos y artículos desde la web. La administración los revisa antes de publicarlos.
 
 1. Abre **Eventos** o **Artículos** y pulsa **Proponer evento** o **Proponer artículo**. Si no ves el botón, todavía no tienes permiso para proponer.
 2. Rellena el formulario. En los eventos, las horas son las de la zona de la asociación.
+   Debajo pueden salir otras preguntas, como «¿Quieres inscripciones?». Marca las que quieras pedir y rellena sus datos. La administración las confirma o las ajusta al aprobar.
 3. Pulsa **Guardar borrador** para seguir más tarde, o **Enviar a revisión**.
 
 ## Seguir tus propuestas

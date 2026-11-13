@@ -17,6 +17,7 @@ final readonly class OwnProposalDTO
      * @param  ?string  $body  the event's description or the article's content (HTML)
      * @param  list<string>  $tagIds
      * @param  ?string  $reason  why the last review returned or rejected it
+     * @param  list<StoredProposalRequestDTO>  $requests  what an event's author asked the modules for
      */
     public function __construct(
         public ProposalType $type,
@@ -36,5 +37,6 @@ final readonly class OwnProposalDTO
         public ?DateTimeImmutable $reviewedAt,
         public ?DateTimeImmutable $updatedAt,
         public ?string $slug = null,
+        public array $requests = [],
     ) {}
 }

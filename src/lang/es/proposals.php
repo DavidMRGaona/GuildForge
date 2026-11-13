@@ -14,6 +14,7 @@ return [
         'review_site_title' => 'Propuesta de :type para revisar',
         'review_site_body' => ':title, de :author',
         'review_digest_line' => ':author propone el :type «:title»',
+        'review_requests' => 'Ha pedido a los módulos:',
         'review_action' => 'Revisar propuesta',
         'status' => [
             'approved' => [
@@ -56,6 +57,20 @@ return [
         'content' => 'contenido',
     ],
 
+    'requests' => [
+        'errors' => [
+            'required' => 'Rellena «:field».',
+            'boolean' => '«:field» debe ser sí o no.',
+            'integer' => '«:field» debe ser un número entero.',
+            'min' => '«:field» debe ser como mínimo :min.',
+            'max' => '«:field» debe ser como máximo :max.',
+            'option' => 'Elige una de las opciones de «:field».',
+            'text' => '«:field» debe ser un texto.',
+            'max_length' => '«:field» admite como máximo :max_length caracteres.',
+        ],
+        'notice_line' => ':label: :description',
+    ],
+
     'flash' => [
         'saved' => 'Borrador guardado.',
         'submitted' => 'Propuesta enviada a revisión. Te avisaremos cuando se revise.',
@@ -79,5 +94,6 @@ return [
         'invalid_location' => 'El lugar no es válido.',
         'invalid_excerpt' => 'El extracto no es válido.',
         'invalid_note' => 'La nota no es válida.',
+        'invalid_requests' => 'Revisa las peticiones de los módulos.',
     ],
 ];

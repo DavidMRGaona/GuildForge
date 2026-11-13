@@ -18,6 +18,7 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
+use App\Application\Proposals\Services\EventProposalRequestRegistryInterface;
 use App\Application\Publications\Services\PublicationSourceRegistryInterface;
 use App\Application\Realtime\Services\RealtimeChannelRegistryInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
@@ -128,6 +129,9 @@ final class ModuleLoader
 
         // Register publication sources from the provider
         $this->registerProviderPublicationSources($provider, $module->name()->value);
+
+        // Register event proposal requests from the provider
+        $this->registerProviderEventProposalRequests($provider, $module->name()->value);
 
         // Register knowledge capabilities from the provider
         $this->registerProviderKnowledgeCapabilities($provider, $module->name()->value);
@@ -359,6 +363,22 @@ final class ModuleLoader
 
         if ($this->app->bound(PublicationSourceRegistryInterface::class)) {
             $this->app->make(PublicationSourceRegistryInterface::class)->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register event proposal requests from a module provider.
+     */
+    private function registerProviderEventProposalRequests(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $requests = $provider->registerEventProposalRequests();
+
+        if ($requests === []) {
+            return;
+        }
+
+        if ($this->app->bound(EventProposalRequestRegistryInterface::class)) {
+            $this->app->make(EventProposalRequestRegistryInterface::class)->registerMany($requests, $moduleName);
         }
     }
 

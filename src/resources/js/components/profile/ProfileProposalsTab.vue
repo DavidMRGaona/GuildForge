@@ -204,6 +204,24 @@ function confirm(): void {
                     <li v-for="line in datesOf(proposal)" :key="line">{{ line }}</li>
                 </ul>
 
+                <div
+                    v-if="proposal.requests.length > 0"
+                    data-testid="proposal-requests"
+                    class="mt-3 text-sm"
+                >
+                    <p class="font-medium text-base-secondary">
+                        {{ t('proposals.requests.listHeading') }}
+                    </p>
+                    <ul class="mt-1 list-disc space-y-0.5 pl-5 text-base-primary">
+                        <li v-for="request in proposal.requests" :key="request.key">
+                            {{ request.description ?? request.label }}
+                            <span v-if="!request.active" class="text-base-muted">
+                                ({{ t('proposals.requests.unavailable') }})
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+
                 <p
                     v-if="proposal.reason"
                     data-testid="proposal-reason"

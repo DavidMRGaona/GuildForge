@@ -12,6 +12,7 @@ use App\Filament\Concerns\HasExtendableFormSections;
 use App\Filament\Concerns\HasExtendableRelations;
 use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Forms\RichEditor\EditorImages;
+use App\Filament\Proposals\ProposalRequestsSection;
 use App\Filament\Proposals\ProposalReviewPanel;
 use App\Filament\Resources\EventResource\Pages\CreateEvent;
 use App\Filament\Resources\EventResource\Pages\EditEvent;
@@ -89,6 +90,7 @@ class EventResource extends BaseResource
         return $schema
             ->components([
                 ProposalReviewPanel::reviewSection(),
+                ProposalRequestsSection::make(),
                 TextInput::make('title')
                     ->label(__('Título'))
                     ->required()
