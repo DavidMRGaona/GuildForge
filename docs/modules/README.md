@@ -51,6 +51,8 @@ Letting people choose which of the module's mail they receive is covered in [Mai
 
 Showing notices in the notification centre (the bell in the header) is covered in [Site notifications](./site-notifications.md): mark a mail category with `site: true`, implement `HasSiteNotification` and add the `site` channel to `via()`.
 
+Telling open pages at once that something changed (a new post, a like) is covered in [Real time](./realtime.md): offer private channels with `registerRealtimeChannels()`, publish ids and numbers with `RealtimePublisherInterface`, and listen with `useRealtimeChannel`, keeping the page's polling for when it is not live.
+
 ---
 
 ## Getting started
@@ -2331,6 +2333,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerSearchSources()` | `class-string<IndexedSearchSourceInterface>[]` | Indexed sources of the site search; types prefixed with the module (see [Search sources](./search-sources.md)) |
 | `registerMediaSources()` | `class-string<MediaUsageSourceInterface>[]` | Sources of the panel media library: which records use stored files and which folders the module claims; types prefixed with the module (see [Media sources](./media-sources.md)) |
 | `registerEditorTextSources()` | `class-string<EditorTextSourceInterface>[]` | Texts written with a rich editor, whose old local images the core moves to the media storage; types prefixed with the module (see [Editor images](./editor-images.md)) |
+| `registerRealtimeChannels()` | `class-string<RealtimeChannelInterface>[]` | Private real-time channels; names start with the module, every subscription is checked on the server and fails closed (see [Real time](./realtime.md)) |
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerPublicationSources()` | `class-string<PublicationSourceInterface>[]` | Published records other modules may announce elsewhere (see [Publication sources](./publications.md)) |
 | `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |
