@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Resources\ArticleResource\Pages;
 
 use App\Application\Search\Services\SearchIndexerInterface;
+use App\Domain\Proposals\Enums\ProposalType;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Proposals\ProposalReviewActions;
 use App\Filament\Resources\ArticleResource;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
@@ -18,15 +22,19 @@ class EditArticle extends EditRecord
      */
     protected ?bool $hasDatabaseTransactions = true;
 
+    use HasKnowledgeGuideAction;
+
     protected static string $resource = ArticleResource::class;
 
     /**
-     * @return array<DeleteAction>
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
         return [
+            ...ProposalReviewActions::for(ProposalType::Article),
             DeleteAction::make(),
+            ...array_filter([ProposalReviewActions::isProposal($this->getRecord()) ? $this->knowledgeGuideAction(ProposalReviewActions::GUIDE) : null]),
         ];
     }
 

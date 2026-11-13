@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\Resources\EventResource\Pages;
 
 use App\Application\Search\Services\SearchIndexerInterface;
+use App\Domain\Proposals\Enums\ProposalType;
+use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Proposals\ProposalReviewActions;
+use App\Filament\Proposals\ProposalReviewPanel;
 use App\Filament\Resources\EventResource;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
@@ -17,6 +22,8 @@ class EditEvent extends EditRecord
      * every record of the save is written (a later one may have chosen the same file from the library).
      */
     protected ?bool $hasDatabaseTransactions = true;
+
+    use HasKnowledgeGuideAction;
 
     protected static string $resource = EventResource::class;
 
@@ -38,12 +45,34 @@ class EditEvent extends EditRecord
     }
 
     /**
-     * @return array<DeleteAction>
+     * The tabs modules add (extendRelations()) wait until the event is approved, like their form
+     * sections: while it is a proposal, its module requests are the only way to configure them
+     * (core#575).
+     *
+     * @return array<mixed>
+     */
+    public function getRelationManagers(): array
+    {
+        $managers = parent::getRelationManagers();
+
+        if (! ProposalReviewPanel::isUnapproved($this->getRecord())) {
+            return $managers;
+        }
+
+        $fromModules = EventResource::getExtendedRelations();
+
+        return array_filter($managers, static fn (mixed $manager): bool => ! in_array($manager, $fromModules, true));
+    }
+
+    /**
+     * @return array<Action>
      */
     protected function getHeaderActions(): array
     {
         return [
+            ...ProposalReviewActions::for(ProposalType::Event),
             DeleteAction::make(),
+            ...array_filter([ProposalReviewActions::isProposal($this->getRecord()) ? $this->knowledgeGuideAction(ProposalReviewActions::GUIDE) : null]),
         ];
     }
 

@@ -65,9 +65,19 @@ trait HasExtendableRelations
     public static function getRelations(): array
     {
         $baseRelations = static::getBaseRelations();
-        $extendedRelations = static::filterValidRelations(static::$extendedRelations);
+        $extendedRelations = static::getExtendedRelations();
 
         return array_merge($baseRelations, $extendedRelations);
+    }
+
+    /**
+     * The RelationManagers added by modules, as getRelations() includes them.
+     *
+     * @return array<class-string>
+     */
+    public static function getExtendedRelations(): array
+    {
+        return static::filterValidRelations(static::$extendedRelations);
     }
 
     /**
