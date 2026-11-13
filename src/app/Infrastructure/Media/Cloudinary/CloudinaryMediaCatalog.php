@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Media\Cloudinary;
 
+use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Media\DTOs\MediaAssetDTO;
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
@@ -30,6 +31,7 @@ final readonly class CloudinaryMediaCatalog implements MediaCatalogInterface
     public function __construct(
         private Cloudinary $cloudinary,
         private MediaFileIdResolverInterface $resolver,
+        private ImpersonationContextInterface $impersonation,
     ) {}
 
     public function all(): array
@@ -110,6 +112,11 @@ final readonly class CloudinaryMediaCatalog implements MediaCatalogInterface
     public function destroy(MediaFileId $id, string $resourceType): MediaDestroyOutcome
     {
         $this->assertScoped();
+
+        // Cloudinary is outside the rolled back transaction of an impersonation (core#572)
+        if ($this->impersonation->isActive()) {
+            throw MediaCatalogUnavailableException::because('an impersonation is in progress');
+        }
 
         try {
             $response = $this->cloudinary->uploadApi()->destroy($this->publicId($id), [

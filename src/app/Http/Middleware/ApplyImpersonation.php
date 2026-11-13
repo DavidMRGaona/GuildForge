@@ -11,6 +11,7 @@ use App\Domain\Impersonation\Enums\ImpersonationEndReason;
 use App\Domain\Impersonation\Enums\ImpersonationRefusal;
 use App\Infrastructure\Impersonation\ImpersonationContext;
 use App\Infrastructure\Impersonation\ImpersonationSessionState;
+use App\Infrastructure\Impersonation\SafetyNet\ImpersonationSafetyNet;
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
@@ -32,6 +33,11 @@ use Throwable;
  *
  * The guard holds the target only during the request: it goes back to the administrator
  * once the response is built, unless the request changed it (signed out, stopped).
+ *
+ * While it runs as the target, nothing persists (ImpersonationSafetyNet): the rest of the
+ * request runs in a transaction that is always rolled back, inside this middleware so the
+ * log entries written here and the session (saved by StartSession, outside) are kept. Ending
+ * it («Volver a mi cuenta», signing out) runs outside: it has to close the entry.
  */
 final readonly class ApplyImpersonation
 {
@@ -41,12 +47,16 @@ final readonly class ApplyImpersonation
     /** @var list<string> */
     public const array LOGOUT_ROUTES = ['logout', 'filament.*.auth.logout'];
 
+    /** «Volver a mi cuenta»: it closes the log entry, so it runs outside the rolled back transaction */
+    public const string STOP_ROUTE = 'impersonation.stop';
+
     public function __construct(
         private ImpersonationContext $context,
         private ImpersonationServiceInterface $impersonation,
         private ImpersonationEligibilityRule $rule,
         private ImpersonationAccountsInterface $accounts,
         private AuthFactory $auth,
+        private ImpersonationSafetyNet $safetyNet,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -80,7 +90,11 @@ final readonly class ApplyImpersonation
         $guard->setUser($target);
 
         try {
-            return $next($request);
+            if ($request->routeIs(self::STOP_ROUTE)) {
+                return $next($request);
+            }
+
+            return $this->safetyNet->run(static fn (): Response => $next($request));
         } finally {
             if ($guard->user() === $target) {
                 $guard->setUser($actor);

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Realtime;
 
 use App\Application\Realtime\Services\RealtimePublisherInterface;
+use App\Domain\Impersonation\Enums\ImpersonationMode;
+use App\Infrastructure\Impersonation\ImpersonationContext;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Realtime\RealtimeBroadcast;
 use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -44,6 +47,25 @@ final class RealtimePublisherTest extends TestCase
 
         Queue::assertPushed(BroadcastEvent::class, static fn (BroadcastEvent $job): bool => $job->tries === 1
             && $job->event instanceof RealtimeBroadcast);
+    }
+
+    public function test_nothing_is_sent_while_an_impersonation_lasts(): void
+    {
+        $this->enableRealtime();
+        Event::fake([RealtimeBroadcast::class]);
+        Queue::fake();
+        $this->app->make(ImpersonationContext::class)->activate(
+            UserModel::factory()->admin()->make(),
+            UserModel::factory()->make(),
+            ImpersonationMode::Simulate,
+            'log-entry',
+        );
+
+        // Outside any transaction, so only the impersonation keeps it from going out
+        $this->publisher()->publish('forum.discussion.'.self::DISCUSSION, 'post.created', ['number' => 42]);
+
+        Event::assertNotDispatched(RealtimeBroadcast::class);
+        Queue::assertNothingPushed();
     }
 
     public function test_nothing_is_sent_without_realtime(): void
