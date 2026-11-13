@@ -42,7 +42,7 @@ final class CoreMailCategoriesTest extends TestCase
         $this->assertFalse($registry->find(CoreMailCategories::ACCOUNT)?->digestible);
         $this->assertSame(
             'Ana tiene roles en pausa: Tesorería',
-            (new InactiveRolesManagerNotification('Ana', 'Tesorería'))->mailDigestLine(new \stdClass)->text,
+            (new InactiveRolesManagerNotification('Ana', 'Tesorería', 'id', ['treasury']))->mailDigestLine(new \stdClass)->text,
         );
     }
 
@@ -56,7 +56,7 @@ final class CoreMailCategoriesTest extends TestCase
         yield 'email change' => [new VerifyPendingEmailNotification('new@example.com'), CoreMailCategories::ACCOUNT];
         yield 'welcome' => [new WelcomeNotification('Example site'), CoreMailCategories::ACCOUNT];
         yield 'inactive roles' => [new InactiveRolesNotification('Example site', 'Role'), CoreMailCategories::ACCOUNT];
-        yield 'inactive roles to managers' => [new InactiveRolesManagerNotification('Person', 'Role'), CoreMailCategories::ROLE_MANAGEMENT];
+        yield 'inactive roles to managers' => [new InactiveRolesManagerNotification('Person', 'Role', 'id', ['role']), CoreMailCategories::ROLE_MANAGEMENT];
     }
 
     #[DataProvider('coreNotifications')]

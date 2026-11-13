@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Emails the person whose roles went inactive and every active account that could grant
+ * Tells (by mail and in the bell) the person whose roles went inactive and every active account that could grant
  * all of those roles (never the person twice, never anonymized accounts). A mail that cannot
  * be queued is logged and skipped.
  */
@@ -54,8 +54,8 @@ final readonly class NotifyInactiveRoles
                 fn (string $roleName): bool => $this->grantPolicy->canGrant($manager, $roleName),
             ))
             ->unique('id')
-            ->each(function (UserModel $manager) use ($personName, $roles): void {
-                $this->notifySafely($manager, new InactiveRolesManagerNotification($personName, $roles));
+            ->each(function (UserModel $manager) use ($person, $personName, $roles, $event): void {
+                $this->notifySafely($manager, new InactiveRolesManagerNotification($personName, $roles, (string) $person->getKey(), $event->inactiveRoleNames));
             });
     }
 

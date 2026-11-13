@@ -16,7 +16,10 @@ use Illuminate\Auth\Notifications\VerifyEmail;
  */
 final class CoreMailCategories
 {
-    /** Verification, password reset, email change, welcome and inactive roles: always sent. */
+    /**
+     * Verification, password reset, email change, welcome and inactive roles: always sent.
+     * Only the inactive roles notice also goes to the bell (core#583).
+     */
     public const string ACCOUNT = 'core.account';
 
     /** Inactive roles of someone the person can grant roles to. */
@@ -32,6 +35,7 @@ final class CoreMailCategories
                 description: 'mail.preferences.categories.account.description',
                 reason: 'mail.preferences.categories.account.reason',
                 icon: 'circle-user-round',
+                site: true,
             ),
             MailCategoryDTO::optional(
                 key: self::ROLE_MANAGEMENT,
@@ -44,6 +48,7 @@ final class CoreMailCategories
                 icon: 'shield-check',
                 // Notices about other people, which come in bursts when the association role changes
                 digestible: true,
+                site: true,
             ),
         ]);
 

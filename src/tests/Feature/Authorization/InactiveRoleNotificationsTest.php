@@ -117,7 +117,7 @@ final class InactiveRoleNotificationsTest extends TestCase
     {
         $admin = UserModel::factory()->admin()->create();
 
-        $managerHtml = (string) (new InactiveRolesManagerNotification("Jane O'Brien \"JR\"", 'Gestión de D&D, Rol <b>'))->toMail($admin)->render();
+        $managerHtml = (string) (new InactiveRolesManagerNotification("Jane O'Brien \"JR\"", 'Gestión de D&D, Rol <b>', 'id', ['x']))->toMail($admin)->render();
         $personHtml = (string) (new InactiveRolesNotification('Gremio', 'Gestión de D&D'))->toMail($admin)->render();
 
         $managerText = html_entity_decode(strip_tags($managerHtml), ENT_QUOTES | ENT_HTML5);
@@ -137,7 +137,7 @@ final class InactiveRoleNotificationsTest extends TestCase
         $admin = UserModel::factory()->admin()->create();
 
         foreach (['[x](https://example.test)', '<https://example.test>', '[x]: https://example.test'] as $name) {
-            $html = (string) (new InactiveRolesManagerNotification($name, 'Tesorería'))->toMail($admin)->render();
+            $html = (string) (new InactiveRolesManagerNotification($name, 'Tesorería', 'id', ['x']))->toMail($admin)->render();
 
             $this->assertStringNotContainsString('href="https://example.test', $html, $name);
             $this->assertStringContainsString('example.test', $html, $name);
