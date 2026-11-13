@@ -17,6 +17,23 @@ final class CorePermissionDefinitionsTest extends TestCase
         }
     }
 
+    public function test_proposal_permissions_exist_and_only_review_is_suggested_for_editor(): void
+    {
+        foreach (['events', 'articles'] as $resource) {
+            foreach (['propose', 'publish_proposals_directly'] as $action) {
+                $definition = $this->findDefinition("{$resource}.{$action}");
+                $this->assertSame([], $definition->defaultRoles, $definition->key);
+                $this->assertSame($resource, $definition->resource);
+                $this->assertSame(__("authorization.permissions.{$resource}.{$action}"), $definition->label);
+                $this->assertNotEmpty($definition->description, $definition->key);
+            }
+
+            $review = $this->findDefinition("{$resource}.review");
+            $this->assertSame(['editor'], $review->defaultRoles);
+            $this->assertNotSame("authorization.permissions.{$resource}.review", $review->label);
+        }
+    }
+
     public function test_media_deletion_is_never_suggested_nor_seeded(): void
     {
         $this->assertSame(['editor'], $this->findDefinition('media.view_any')->defaultRoles);
