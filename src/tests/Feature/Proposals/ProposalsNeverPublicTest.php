@@ -14,6 +14,7 @@ use App\Infrastructure\Search\Persistence\Eloquent\Models\SearchDocumentModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Testing\PendingCommand;
 use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Time\UsesUtcStorage;
@@ -95,7 +96,9 @@ final class ProposalsNeverPublicTest extends TestCase
     {
         $event = $this->eventProposal($status, $submitted);
         $article = $this->articleProposal($status, $submitted);
-        $this->artisan('search:sync')->assertSuccessful();
+        $sync = $this->artisan('search:sync');
+        assert($sync instanceof PendingCommand);
+        $sync->assertSuccessful()->run();
 
         $this->assertFalse(SearchDocumentModel::query()->whereIn('source_id', [$event->id, $article->id])->exists());
         $this->get('/buscar?q=Dragones')->assertOk()->assertDontSee('Dragones secretos')->assertDontSee('Dragones escondidos');

@@ -167,7 +167,7 @@ final class ProposalSettings extends Page implements HasForms
                 ->visible(fn (Get $get): bool => $get($levelField) === ProposalAccessLevel::Roles->value)
                 ->required(fn (Get $get): bool => $get($levelField) === ProposalAccessLevel::Roles->value)
                 // Filament checks the options of single selects only
-                ->rules([fn (): Closure => $this->onlyRoleOptions()]),
+                ->rules([$this->onlyRoleOptions(...)]),
         ];
 
         if ($type === ProposalType::Event) {

@@ -58,3 +58,8 @@ Schedule::command('mail:send-digests')
 Schedule::command('site-notifications:prune')
     ->daily()
     ->withoutOverlapping();
+
+// Proposals from the web (core#570): rejected ones go after the days the proposals settings keep them
+Schedule::command('proposals:purge-rejected')
+    ->daily()
+    ->withoutOverlapping();

@@ -71,7 +71,7 @@ enum ProposalStatus: string
     {
         return array_values(array_map(
             static fn (self $status): string => $status->value,
-            array_filter(self::cases(), static fn (self $status): bool => self::isUnapproved($status)),
+            array_filter(self::cases(), self::isUnapproved(...)),
         ));
     }
 }

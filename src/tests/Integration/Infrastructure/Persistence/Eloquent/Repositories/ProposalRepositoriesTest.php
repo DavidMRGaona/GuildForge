@@ -103,8 +103,9 @@ final class ProposalRepositoriesTest extends TestCase
 
         $article = $repository->findById(new ArticleId($model->id));
         $this->assertInstanceOf(Article::class, $article);
-        $this->assertSame(ProposalStatus::PendingReview, $article->proposal()?->status);
-        $this->assertSame($user->id, $article->proposal()?->proposedBy);
+        $this->assertInstanceOf(ProposalReview::class, $article->proposal());
+        $this->assertSame(ProposalStatus::PendingReview, $article->proposal()->status);
+        $this->assertSame($user->id, $article->proposal()->proposedBy);
 
         $draft = new Article(
             id: ArticleId::generate(),

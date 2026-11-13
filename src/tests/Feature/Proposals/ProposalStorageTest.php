@@ -169,8 +169,10 @@ final class ProposalStorageTest extends TestCase
 
         $panel = ArticleModel::factory()->draft()->create();
         $panel->update(['is_published' => true, 'published_at' => now()]);
-        $this->assertTrue($panel->fresh()?->is_published);
-        $this->assertNotNull($panel->fresh()?->published_at);
+        $stored = $panel->fresh();
+        $this->assertInstanceOf(ArticleModel::class, $stored);
+        $this->assertTrue($stored->is_published);
+        $this->assertNotNull($stored->published_at);
     }
 
     public function test_the_review_columns_are_not_mass_assignable(): void

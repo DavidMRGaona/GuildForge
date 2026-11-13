@@ -41,4 +41,14 @@ final class ScheduleTest extends TestCase
                 && $event->expression === '5 * * * *'
         ));
     }
+
+    public function test_old_rejected_proposals_are_purged_daily(): void
+    {
+        $events = collect(app(Schedule::class)->events());
+
+        $this->assertTrue($events->contains(
+            fn (Event $event): bool => str_contains($event->command ?? '', 'proposals:purge-rejected')
+                && $event->expression === '0 0 * * *'
+        ));
+    }
 }

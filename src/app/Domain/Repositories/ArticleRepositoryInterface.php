@@ -10,6 +10,9 @@ use Illuminate\Support\Collection;
 
 interface ArticleRepositoryInterface
 {
+    /**
+     * Any article, proposal drafts never submitted included (every other query hides them).
+     */
     public function findById(ArticleId $id): ?Article;
 
     public function findBySlug(string $slug): ?Article;

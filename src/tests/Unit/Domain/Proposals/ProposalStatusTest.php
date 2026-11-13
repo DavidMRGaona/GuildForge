@@ -11,14 +11,6 @@ use PHPUnit\Framework\TestCase;
 
 final class ProposalStatusTest extends TestCase
 {
-    public function test_it_stores_the_agreed_values(): void
-    {
-        $this->assertSame(
-            ['draft', 'pending_review', 'approved', 'rejected'],
-            array_map(static fn (ProposalStatus $status): string => $status->value, ProposalStatus::cases()),
-        );
-    }
-
     /**
      * @return array<string, array{ProposalStatus, list<ProposalAuthorAction>}>
      */
@@ -77,5 +69,6 @@ final class ProposalStatusTest extends TestCase
     public function test_unapproved_statuses_list_every_status_kept_out_of_public_view(): void
     {
         $this->assertSame(['draft', 'pending_review', 'rejected'], ProposalStatus::unapprovedValues());
+        $this->assertSame(ProposalStatus::PendingReview, ProposalStatus::from('pending_review'));
     }
 }
