@@ -82,9 +82,13 @@ final readonly class SecurityHeadersMiddleware
         return "style-src {$sources}";
     }
 
+    /**
+     * blob: is the preview of an image picked in the browser before it is sent (proposal forms);
+     * a blob URL is only ever created by the page's own scripts. Never in any other directive.
+     */
     private function imgSrc(): string
     {
-        $sources = "'self' https://res.cloudinary.com https://*.tile.openstreetmap.org data:";
+        $sources = "'self' https://res.cloudinary.com https://*.tile.openstreetmap.org data: blob:";
 
         if (app()->environment('local')) {
             $sources .= ' http://localhost:5173';

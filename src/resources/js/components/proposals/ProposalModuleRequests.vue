@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import FormCheckbox from '@/components/form/FormCheckbox.vue';
+import FormNumberInput from '@/components/form/FormNumberInput.vue';
+import FormSelect from '@/components/form/FormSelect.vue';
 import ProposalField from '@/components/proposals/ProposalField.vue';
 import { visibleFields } from '@/utils/proposalRequests';
 import type {
@@ -26,7 +29,7 @@ const requests = defineModel<Record<string, ProposalRequestState>>({ required: t
 
 const { t } = useI18n();
 
-const inputClass =
+const textClass =
     'block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500';
 
 function stateOf(key: string): ProposalRequestState {
@@ -64,13 +67,28 @@ function idOf(key: string, name: string): string {
 }
 
 function inputText(event: Event): string {
-    return event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement
-        ? event.target.value
-        : '';
+    return event.target instanceof HTMLInputElement ? event.target.value : '';
 }
 
-function inputChecked(event: Event): boolean {
-    return event.target instanceof HTMLInputElement && event.target.checked;
+/** A number field keeps the text the server reads: '' when empty, never NaN. */
+function numberOf(value: ProposalRequestValue): number | null {
+    if (typeof value === 'number') {
+        return value;
+    }
+    if (typeof value !== 'string' || value.trim() === '') {
+        return null;
+    }
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function choiceOf(value: ProposalRequestValue): string | number | null {
+    return typeof value === 'boolean' ? null : value;
+}
+
+function describedBy(hintId: string | undefined, errorId: string | undefined): string | undefined {
+    return [hintId, errorId].filter(Boolean).join(' ') || undefined;
 }
 </script>
 
@@ -95,16 +113,17 @@ function inputChecked(event: Event): boolean {
             :data-testid="`proposal-request-${definition.key}`"
         >
             <legend class="sr-only">{{ definition.label }}</legend>
-            <label class="flex min-h-[44px] cursor-pointer items-center gap-3 text-base-primary">
-                <input
-                    type="checkbox"
-                    class="h-5 w-5 rounded border-default text-primary-600 focus:ring-primary-500"
-                    :checked="stateOf(definition.key).wanted"
+            <div class="flex min-h-[44px] items-center">
+                <FormCheckbox
+                    :model-value="stateOf(definition.key).wanted"
                     data-testid="proposal-request-wanted"
-                    @change="setWanted(definition.key, inputChecked($event))"
-                />
-                <span class="font-medium">{{ definition.question }}</span>
-            </label>
+                    @update:model-value="setWanted(definition.key, $event)"
+                >
+                    <span class="text-base font-medium text-base-primary">
+                        {{ definition.question }}
+                    </span>
+                </FormCheckbox>
+            </div>
 
             <ul
                 v-if="
@@ -121,18 +140,14 @@ function inputChecked(event: Event): boolean {
             <div v-if="stateOf(definition.key).wanted" class="grid gap-4 sm:grid-cols-2">
                 <template v-for="field in shown(definition)" :key="field.name">
                     <div v-if="field.type === 'boolean'" class="sm:col-span-2">
-                        <label
-                            class="flex min-h-[44px] cursor-pointer items-center gap-3 text-sm text-base-secondary"
-                        >
-                            <input
+                        <div class="flex min-h-[44px] items-center">
+                            <FormCheckbox
                                 :id="idOf(definition.key, field.name)"
-                                type="checkbox"
-                                class="h-4 w-4 rounded border-default text-primary-600 focus:ring-primary-500"
-                                :checked="valueOf(definition.key, field.name) === true"
-                                @change="setValue(definition.key, field.name, inputChecked($event))"
+                                :model-value="valueOf(definition.key, field.name) === true"
+                                :label="field.label"
+                                @update:model-value="setValue(definition.key, field.name, $event)"
                             />
-                            {{ field.label }}
-                        </label>
+                        </div>
                         <p v-if="field.helperText" class="text-sm text-base-muted">
                             {{ field.helperText }}
                         </p>
@@ -155,53 +170,45 @@ function inputChecked(event: Event): boolean {
                         :class="field.type === 'text' ? 'sm:col-span-2' : undefined"
                     >
                         <template #default="{ hintId, errorId }">
-                            <select
+                            <FormSelect
                                 v-if="field.type === 'select'"
                                 :id="idOf(definition.key, field.name)"
-                                :value="valueOf(definition.key, field.name) ?? ''"
-                                :required="field.required"
-                                :aria-describedby="
-                                    [hintId, errorId].filter(Boolean).join(' ') || undefined
+                                :model-value="choiceOf(valueOf(definition.key, field.name))"
+                                :options="field.options"
+                                :placeholder="t('proposals.requests.choose')"
+                                :error="errorOf(definition.key, field.name) ?? ''"
+                                :described-by="describedBy(hintId, errorId)"
+                                @update:model-value="
+                                    setValue(definition.key, field.name, $event ?? '')
                                 "
-                                :aria-invalid="errorId ? 'true' : undefined"
-                                :class="inputClass"
-                                @change="setValue(definition.key, field.name, inputText($event))"
-                            >
-                                <option value="" :disabled="field.required">
-                                    {{ t('proposals.requests.choose') }}
-                                </option>
-                                <option
-                                    v-for="option in field.options"
-                                    :key="option.value"
-                                    :value="option.value"
-                                >
-                                    {{ option.label }}
-                                </option>
-                            </select>
+                            />
+                            <FormNumberInput
+                                v-else-if="field.type === 'number'"
+                                :id="idOf(definition.key, field.name)"
+                                :model-value="numberOf(valueOf(definition.key, field.name))"
+                                :min="field.min ?? undefined"
+                                :max="field.max ?? undefined"
+                                :required="field.required"
+                                :error="errorOf(definition.key, field.name)"
+                                :described-by="describedBy(hintId, errorId)"
+                                @update:model-value="
+                                    setValue(
+                                        definition.key,
+                                        field.name,
+                                        $event === null ? '' : String($event)
+                                    )
+                                "
+                            />
                             <input
                                 v-else
                                 :id="idOf(definition.key, field.name)"
-                                :type="field.type === 'number' ? 'number' : 'text'"
-                                :inputmode="field.type === 'number' ? 'numeric' : undefined"
-                                :step="field.type === 'number' ? 1 : undefined"
-                                :min="
-                                    field.type === 'number' ? (field.min ?? undefined) : undefined
-                                "
-                                :max="
-                                    field.type === 'number' ? (field.max ?? undefined) : undefined
-                                "
-                                :maxlength="
-                                    field.type === 'text'
-                                        ? (field.maxLength ?? undefined)
-                                        : undefined
-                                "
+                                type="text"
+                                :maxlength="field.maxLength ?? undefined"
                                 :value="valueOf(definition.key, field.name) ?? ''"
                                 :required="field.required"
-                                :aria-describedby="
-                                    [hintId, errorId].filter(Boolean).join(' ') || undefined
-                                "
+                                :aria-describedby="describedBy(hintId, errorId)"
                                 :aria-invalid="errorId ? 'true' : undefined"
-                                :class="inputClass"
+                                :class="textClass"
                                 @input="setValue(definition.key, field.name, inputText($event))"
                             />
                         </template>

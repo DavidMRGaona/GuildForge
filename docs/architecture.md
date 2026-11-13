@@ -952,6 +952,8 @@ Modules can:
 
 **First load (Inertia 3).** `app.blade.php` renders `@inertia`, which embeds the page object in `<script data-page="app" type="application/json">` next to `<div id="app">`. Before Inertia boots, `app.ts` reads that script (`readInitialPageJson()`) and takes three shared props from it: `cloudinary` (passed to `setCloudinaryConfig()`), `modulePages` (page prefix to module mapping) and `moduleTranslations`.
 
+**Asset version.** Those props and the module import map are read only on the first load, so `HandleInertiaRequests::version()` combines the core build's version with the name and version of every enabled module (sorted, hashed with `xxh128`). Installing, enabling, disabling, updating or uninstalling a module changes it, and Inertia answers the next visit of a tab opened before with a full reload (core#623). Without modules, or when they cannot be read (logged as a warning), the version is the core build's alone.
+
 **SEO.** Every page sends a `seo` prop built by `SeoMetadataFactoryInterface`; the shared `seo` prop carries the site defaults (`forSite()`). On the first request `<x-seo-head>` server-renders the tags for crawlers (`data-seo-server`). `app.ts` removes them on boot and calls `useServerSeo()` once in the app root, so unhead owns the head and follows every navigation.
 
 **Cloudinary.** The cloud name and folder prefix come at runtime from the shared `cloudinary` prop (`{ cloudName, prefix }`, from `config/cloudinary.php`). `setCloudinaryConfig()` stores them on `globalThis`, so module bundles built in CI carry no installation config. `VITE_CLOUDINARY_*` is only a fallback.

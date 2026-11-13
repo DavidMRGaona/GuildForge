@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
+use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
@@ -19,6 +20,7 @@ use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Application\Social\SocialNetwork;
+use App\Domain\Modules\Entities\Module;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\SiteNotifications\SiteNotificationsRealtimeChannel;
@@ -56,13 +58,53 @@ final class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Determines the current asset version.
+     * Determines the current asset version: the core build plus the enabled modules.
+     *
+     * The browser reads module translations, the page map and the module bundles only on the
+     * first page it loads, so a module installed, enabled, disabled or updated afterwards
+     * must change the version: Inertia then answers the next visit with a full reload.
      *
      * @see https://inertiajs.com/asset-versioning
      */
     public function version(Request $request): ?string
     {
-        return parent::version($request);
+        $core = parent::version($request);
+        $modules = $this->enabledModulesFingerprint();
+
+        if ($modules === null) {
+            return $core;
+        }
+
+        return hash('xxh128', ($core ?? '').'|'.$modules);
+    }
+
+    /**
+     * Name and version of every enabled module, in a stable order; null without modules or
+     * when they cannot be read (the version then follows the core build alone).
+     */
+    private function enabledModulesFingerprint(): ?string
+    {
+        try {
+            $modules = array_map(
+                static fn (Module $module): string => $module->name()->value.'@'.$module->version()->value(),
+                app(EnabledModulesResolverInterface::class)->modules(),
+            );
+        } catch (\Throwable $e) {
+            logger()->warning('[HandleInertiaRequests] Enabled modules unreadable for the asset version', [
+                'exception' => $e::class,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        if ($modules === []) {
+            return null;
+        }
+
+        sort($modules);
+
+        return implode(',', $modules);
     }
 
     /**

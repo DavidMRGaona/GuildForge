@@ -16,8 +16,11 @@ const props = withDefaults(
         error?: string;
         id?: string;
         name?: string;
+        /** Ids of the hint and error that describe the field. */
+        describedBy?: string | undefined;
     }>(),
     {
+        describedBy: undefined,
         placeholder: '',
         disabled: false,
         error: '',
@@ -54,6 +57,8 @@ function handleChange(value: string | number | null): void {
         <ListboxButton
             :id="id"
             :name="name"
+            :aria-describedby="describedBy"
+            :aria-invalid="error ? 'true' : undefined"
             class="relative w-full rounded-lg border bg-surface px-4 py-2.5 pr-10 text-left transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-muted disabled:cursor-not-allowed"
             :class="[
                 error

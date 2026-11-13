@@ -209,6 +209,7 @@ type __VLS_Props = {
     name?: string;
     required?: boolean;
     placeholder?: string;
+    describedBy?: string | undefined;
 };
 declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {
     "update:modelValue": (value: number | null) => any;
@@ -223,6 +224,7 @@ declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {
     disabled: boolean;
     required: boolean;
     placeholder: string;
+    describedBy: string | undefined;
     step: number;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
@@ -273,6 +275,7 @@ type __VLS_Props = {
     error?: string;
     id?: string;
     name?: string;
+    describedBy?: string | undefined;
 };
 declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {
     "update:modelValue": (value: string | number | null) => any;
@@ -284,6 +287,7 @@ declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {
     error: string;
     disabled: boolean;
     placeholder: string;
+    describedBy: string | undefined;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
 export default _default;

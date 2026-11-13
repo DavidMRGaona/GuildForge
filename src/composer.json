@@ -17,7 +17,7 @@
         "http-interop/http-factory-guzzle": "^1.2",
         "inertiajs/inertia-laravel": "^3.5",
         "intervention/image": "^4.3",
-        "laravel/framework": "^13.35",
+        "laravel/framework": "^13.40",
         "laravel/reverb": "^1.13",
         "laravel/scout": "^11.9",
         "laravel/tinker": "^3.0",

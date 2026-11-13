@@ -30,7 +30,8 @@ interface ThemeSettingsServiceInterface
     public function getAccentPalette(): ColorPalette;
 
     /**
-     * Get the neutral color palette (derived from accent).
+     * The neutral palette shared by the site, the panel and emails (fixed, not derived from
+     * the accent colour).
      */
     public function getNeutralPalette(): ColorPalette;
 }

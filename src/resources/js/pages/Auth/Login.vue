@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import type { AuthLayoutProps } from '@/types/layouts';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import FormCheckbox from '@/components/form/FormCheckbox.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useNotifications } from '@/composables/useNotifications';
 import { useRoutes } from '@/composables/useRoutes';
@@ -72,17 +73,12 @@ const submit = () => {
         </div>
 
         <div class="flex items-center justify-between">
-            <div class="flex items-center">
-                <input
-                    id="remember"
-                    v-model="form.remember"
-                    type="checkbox"
-                    class="h-4 w-4 rounded border-default text-primary focus:ring-primary-500"
-                />
-                <label for="remember" class="ml-2 block text-sm text-base-secondary">
-                    {{ t('auth.login.remember') }}
-                </label>
-            </div>
+            <FormCheckbox
+                id="remember"
+                v-model="form.remember"
+                name="remember"
+                :label="t('auth.login.remember')"
+            />
 
             <Link
                 :href="routes.auth.forgotPassword"
