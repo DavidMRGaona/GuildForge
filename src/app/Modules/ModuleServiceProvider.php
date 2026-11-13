@@ -16,6 +16,7 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
+use App\Application\Proposals\Contracts\EventProposalRequestInterface;
 use App\Application\Publications\Contracts\PublicationSourceInterface;
 use App\Application\Realtime\Contracts\RealtimeChannelInterface;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
@@ -336,6 +337,18 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<PublicationSourceInterface>>
      */
     public function registerPublicationSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the requests this module adds to event proposals made from the web (core#581).
+     * Each key starts with the module name and a dot (`<module>.registrations`); the core draws
+     * their fields, checks the values and calls apply() inside the approval transaction.
+     *
+     * @return array<class-string<EventProposalRequestInterface>>
+     */
+    public function registerEventProposalRequests(): array
     {
         return [];
     }

@@ -39,6 +39,8 @@ Uploading the images of a module's rich editors to the media storage, moving the
 
 Letting other modules announce a module's records elsewhere (a forum, a channel) and follow their changes is covered in [Publication sources](./publications.md).
 
+Adding requests to the events people propose from the web («¿Quieres inscripciones?»), which become the module's configuration when the proposal is approved, is covered in [Event proposal requests](./proposal-requests.md).
+
 What the safety net of an administrator viewing the site as another account already covers, when a module must refuse an external call, and how its panel pages and frontend behave meanwhile is covered in [Impersonation](./impersonation.md).
 
 Putting a module's entries in the public calendar and in each person's personal calendar is covered in [Calendar sources, the public feed and the personal calendar](./calendar.md), which also shows how to offer the public calendar subscription (`PublicCalendarFeedInterface`).
@@ -2338,6 +2340,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerRealtimeChannels()` | `class-string<RealtimeChannelInterface>[]` | Private real-time channels; names start with the module, every subscription is checked on the server and fails closed (see [Real time](./realtime.md)) |
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerPublicationSources()` | `class-string<PublicationSourceInterface>[]` | Published records other modules may announce elsewhere (see [Publication sources](./publications.md)) |
+| `registerEventProposalRequests()` | `class-string<EventProposalRequestInterface>[]` | Requests added to event proposals made from the web; keys prefixed with the module, values checked by the core and applied on approval (see [Event proposal requests](./proposal-requests.md)) |
 | `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |
 | `registerMailCategories()` | `MailCategoryDTO[]` | Categories of the module's mail, which people turn off in their profile when optional; keys prefixed with the module (see [Mail categories](./mail-categories.md)) |
 | `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |

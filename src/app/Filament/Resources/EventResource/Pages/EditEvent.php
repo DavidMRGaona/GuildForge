@@ -7,6 +7,7 @@ namespace App\Filament\Resources\EventResource\Pages;
 use App\Application\Search\Services\SearchIndexerInterface;
 use App\Domain\Proposals\Enums\ProposalType;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Proposals\ProposalRequestsSection;
 use App\Filament\Proposals\ProposalReviewActions;
 use App\Filament\Proposals\ProposalReviewPanel;
 use App\Filament\Resources\EventResource;
@@ -76,9 +77,35 @@ class EditEvent extends EditRecord
         ];
     }
 
+    /**
+     * The module requests of a proposal (core#581) live outside the record's attributes.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data[ProposalRequestsSection::STATE] = ProposalRequestsSection::state($this->getRecord());
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        unset($data[ProposalRequestsSection::STATE]);
+
+        return $data;
+    }
+
     protected function afterSave(): void
     {
         $this->syncTags();
+        // In the save's transaction: a value the request refuses rolls the whole save back
+        ProposalRequestsSection::save($this->getRecord(), $this->data ?? []);
     }
 
     private function syncTags(): void

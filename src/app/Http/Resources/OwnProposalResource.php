@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Application\Proposals\DTOs\OwnProposalDTO;
+use App\Application\Proposals\DTOs\StoredProposalRequestDTO;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Proposals\Enums\ProposalAuthorAction;
 use App\Domain\Proposals\Enums\ProposalStatus;
@@ -52,6 +53,15 @@ final class OwnProposalResource extends JsonResource
             'publicPath' => $proposal->status === ProposalStatus::Approved && $proposal->slug !== null
                 ? ($isEvent ? '/eventos/' : '/articulos/').$proposal->slug
                 : null,
+            // What the author asked the modules for: the values to edit and the module's line for them
+            'requests' => array_map(static fn (StoredProposalRequestDTO $request): array => [
+                'key' => $request->key,
+                'label' => $request->label,
+                'active' => $request->active,
+                'values' => $request->requestedValues,
+                'description' => $request->description,
+                'applied' => $request->appliedAt instanceof \DateTimeImmutable,
+            ], $proposal->requests),
             'can' => [
                 'edit' => ProposalStatus::allowsAuthor($proposal->status, ProposalAuthorAction::Edit),
                 'submit' => ProposalStatus::allowsAuthor($proposal->status, ProposalAuthorAction::Submit),

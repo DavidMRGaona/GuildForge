@@ -11,6 +11,7 @@ use App\Application\Modules\DTOs\NavigationItemDTO;
 use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
+use App\Application\Proposals\Contracts\EventProposalRequestInterface;
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use App\Modules\ModuleServiceProvider;
 use Filament\Pages\Page;
@@ -277,6 +278,18 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      * @return array<class-string<SurveySubjectSourceInterface>>
      */
     public function registerSurveySubjectSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the requests this module adds to event proposals made from the web.
+     * The core draws their declarative fields, checks the values and calls apply() when the
+     * proposal is approved. Keys start with "{{ moduleName }}.". See docs/modules/proposal-requests.md.
+     *
+     * @return array<class-string<EventProposalRequestInterface>>
+     */
+    public function registerEventProposalRequests(): array
     {
         return [];
     }

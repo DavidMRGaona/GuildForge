@@ -14,6 +14,7 @@ return [
         'review_site_title' => 'Proposed :type to review',
         'review_site_body' => ':title, by :author',
         'review_digest_line' => ':author proposes the :type «:title»',
+        'review_requests' => 'Asked the modules for:',
         'review_action' => 'Review proposal',
         'status' => [
             'approved' => [
@@ -56,6 +57,20 @@ return [
         'content' => 'content',
     ],
 
+    'requests' => [
+        'errors' => [
+            'required' => 'Fill in «:field».',
+            'boolean' => '«:field» must be yes or no.',
+            'integer' => '«:field» must be a whole number.',
+            'min' => '«:field» must be at least :min.',
+            'max' => '«:field» must be at most :max.',
+            'option' => 'Choose one of the options of «:field».',
+            'text' => '«:field» must be text.',
+            'max_length' => '«:field» takes at most :max_length characters.',
+        ],
+        'notice_line' => ':label: :description',
+    ],
+
     'flash' => [
         'saved' => 'Draft saved.',
         'submitted' => 'Proposal sent for review. We will let you know once it is reviewed.',
@@ -79,5 +94,6 @@ return [
         'invalid_location' => 'The location is not valid.',
         'invalid_excerpt' => 'The excerpt is not valid.',
         'invalid_note' => 'The note is not valid.',
+        'invalid_requests' => 'Check the module requests.',
     ],
 ];

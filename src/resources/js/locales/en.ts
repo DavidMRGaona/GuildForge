@@ -328,6 +328,13 @@ export default {
             withdraw: 'Withdraw',
             delete: 'Delete',
         },
+        requests: {
+            heading: 'What else the event needs',
+            intro: 'Tick what you would like to ask for. The administration confirms or adjusts it when approving the proposal.',
+            choose: 'Choose an option',
+            listHeading: 'Requests',
+            unavailable: 'no longer available',
+        },
         limits: {
             pending: 'In review',
             drafts: 'Open drafts',

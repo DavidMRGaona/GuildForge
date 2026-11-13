@@ -329,6 +329,13 @@ export default {
             withdraw: 'Retirar',
             delete: 'Eliminar',
         },
+        requests: {
+            heading: 'Qué más necesita el evento',
+            intro: 'Marca lo que quieras pedir. La administración lo confirma o lo ajusta al aprobar la propuesta.',
+            choose: 'Elige una opción',
+            listHeading: 'Peticiones',
+            unavailable: 'ya no está disponible',
+        },
         limits: {
             pending: 'En revisión',
             drafts: 'Borradores abiertos',

@@ -8,6 +8,7 @@ use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Domain\Proposals\Enums\ProposalType;
 use App\Domain\Proposals\Exceptions\ProposalException;
+use App\Domain\Proposals\Exceptions\ProposalRequestNotAppliedException;
 use App\Filament\Resources\ArticleResource;
 use App\Filament\Resources\EventResource;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
@@ -150,7 +151,7 @@ final class ProposalReviewActions
         try {
             $review(app(ProposalServiceInterface::class), (string) auth()->id(), (string) $record->getKey());
         } catch (ProposalException $e) {
-            self::refused($e->reason);
+            self::refused($e);
 
             return;
         } catch (Throwable $e) {
@@ -159,7 +160,7 @@ final class ProposalReviewActions
             }
 
             report($e);
-            self::refused('unexpected');
+            self::refused(null);
 
             return;
         }
@@ -173,13 +174,19 @@ final class ProposalReviewActions
         $livewire->redirect($resource::getUrl('edit', ['record' => $record]));
     }
 
-    private static function refused(string $reason): void
+    /**
+     * Tells why the review did not happen. A module request that could not be applied (core#581)
+     * names the request and, when the module refused it with a reason, shows that reason.
+     */
+    private static function refused(?ProposalException $exception): void
     {
-        $key = 'filament.proposals.errors.'.$reason;
+        $key = 'filament.proposals.errors.'.($exception instanceof ProposalException ? $exception->reason : 'unexpected');
+        $replace = $exception instanceof ProposalRequestNotAppliedException ? ['request' => $exception->requestLabel] : [];
 
         Notification::make()
             ->danger()
-            ->title(trans()->has($key) ? __($key) : __('filament.proposals.errors.unexpected'))
+            ->title(trans()->has($key) ? __($key, $replace) : __('filament.proposals.errors.unexpected'))
+            ->body($exception instanceof ProposalRequestNotAppliedException ? $exception->detail : null)
             ->persistent()
             ->send();
     }

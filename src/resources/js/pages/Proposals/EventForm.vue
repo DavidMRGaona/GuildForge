@@ -7,17 +7,19 @@ import FormTimePicker from '@/components/form/FormTimePicker.vue';
 import ProposalField from '@/components/proposals/ProposalField.vue';
 import ProposalFormActions from '@/components/proposals/ProposalFormActions.vue';
 import ProposalImageField from '@/components/proposals/ProposalImageField.vue';
+import ProposalModuleRequests from '@/components/proposals/ProposalModuleRequests.vue';
 import ProposalTagsField from '@/components/proposals/ProposalTagsField.vue';
 import { useImpersonationReadOnly } from '@/composables/useImpersonationReadOnly';
 import { useRoutes } from '@/composables/useRoutes';
-import type { ProposalFormProps } from '@/types/proposals';
+import { initialRequests } from '@/utils/proposalRequests';
+import type { EventProposalFormProps } from '@/types/proposals';
 
 /**
  * Proposes an event from the web (core#579): saved as a draft or sent to review. The dates are the
  * wall times people read in the display zone; the server converts them. No prices nor download
- * links: whoever reviews sets them.
+ * links: whoever reviews sets them. Below it, what the enabled modules let people ask for (core#581).
  */
-const props = defineProps<ProposalFormProps>();
+const props = defineProps<EventProposalFormProps>();
 
 const { t } = useI18n();
 const routes = useRoutes();
@@ -36,6 +38,7 @@ const form = useForm({
     remove_image: false,
     tags: [...(props.proposal?.tagIds ?? [])],
     note: props.proposal?.note ?? '',
+    requests: initialRequests(props.moduleRequests, props.proposal?.requests ?? []),
 });
 
 function send(submit: boolean): void {
@@ -220,6 +223,12 @@ function onStartDate(value: string): void {
                 />
             </template>
         </ProposalField>
+
+        <ProposalModuleRequests
+            v-model="form.requests"
+            :definitions="moduleRequests"
+            :errors="form.errors as Record<string, string | undefined>"
+        />
 
         <p class="text-sm text-base-muted">{{ t('proposals.event.pricesNote') }}</p>
 

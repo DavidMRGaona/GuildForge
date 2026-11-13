@@ -9,6 +9,7 @@ use App\Application\Content\Services\RichTextSanitizerInterface;
 use App\Application\Proposals\Contracts\ProposalApprovalStepInterface;
 use App\Application\Proposals\DTOs\ArticleProposalDataDTO;
 use App\Application\Proposals\DTOs\EventProposalDataDTO;
+use App\Application\Proposals\Services\EventProposalRequestServiceInterface;
 use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
 use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
@@ -56,6 +57,7 @@ final readonly class ProposalService implements ProposalServiceInterface
         private TimezoneServiceInterface $timezone,
         private RichTextSanitizerInterface $sanitizer,
         private Container $container,
+        private EventProposalRequestServiceInterface $requests,
     ) {}
 
     public function createEvent(string $userId, EventProposalDataDTO $data): string
@@ -64,7 +66,7 @@ final readonly class ProposalService implements ProposalServiceInterface
         $attributes = $this->eventAttributes($data);
         $tagIds = $this->tagIds(ProposalType::Event, $data->tagIds);
 
-        return DB::transaction(function () use ($userId, $attributes, $tagIds): string {
+        return DB::transaction(function () use ($userId, $attributes, $tagIds, $data): string {
             $this->lockAccount($userId);
             $this->assertDraftsBelowCap($userId);
 
@@ -77,6 +79,7 @@ final readonly class ProposalService implements ProposalServiceInterface
             ]);
             $event->save();
             $event->tags()->sync($tagIds);
+            $this->saveModuleRequests((string) $event->getKey(), $data);
 
             return (string) $event->getKey();
         });
@@ -87,12 +90,13 @@ final readonly class ProposalService implements ProposalServiceInterface
         $attributes = $this->eventAttributes($data);
         $tagIds = $this->tagIds(ProposalType::Event, $data->tagIds);
 
-        DB::transaction(function () use ($userId, $eventId, $attributes, $tagIds): void {
+        DB::transaction(function () use ($userId, $eventId, $attributes, $tagIds, $data): void {
             $event = $this->authorsProposal(ProposalType::Event, $eventId, $userId, ProposalAuthorAction::Edit, 'edited');
 
             $event->forceFill($attributes);
             $event->save();
             $event->tags()->sync($tagIds);
+            $this->saveModuleRequests($eventId, $data);
         });
     }
 
@@ -338,6 +342,17 @@ final readonly class ProposalService implements ProposalServiceInterface
         $this->dispatchAfterCommit($to === ProposalStatus::Rejected
             ? new ProposalRejected($type, $id, $proposerId, $reviewerId, $reason)
             : new ProposalReturned($type, $id, $proposerId, $reviewerId, $reason));
+    }
+
+    /**
+     * What the author asks the modules for, with the draft (core#581). A form that sends nothing
+     * about them leaves the stored ones as they are.
+     */
+    private function saveModuleRequests(string $eventId, EventProposalDataDTO $data): void
+    {
+        if ($data->moduleRequests !== null) {
+            $this->requests->saveRequested($eventId, $data->moduleRequests);
+        }
     }
 
     private function assertEligible(ProposalType $type, string $userId): void

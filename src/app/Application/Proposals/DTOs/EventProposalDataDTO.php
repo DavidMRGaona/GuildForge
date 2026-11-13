@@ -15,6 +15,8 @@ final readonly class EventProposalDataDTO
     /**
      * @param  list<string>  $tagIds  tags that do not exist or do not apply to events are ignored
      * @param  ?string  $note  private note for the administration
+     * @param  ?array<array-key, mixed>  $moduleRequests  what the form sent for the module requests
+     *                                                    (EventProposalRequestServiceInterface); null leaves the stored ones alone
      */
     public function __construct(
         public string $title,
@@ -25,5 +27,6 @@ final readonly class EventProposalDataDTO
         public ?string $imagePublicId = null,
         public array $tagIds = [],
         public ?string $note = null,
+        public ?array $moduleRequests = null,
     ) {}
 }

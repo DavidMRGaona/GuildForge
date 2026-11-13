@@ -40,6 +40,8 @@ final class ProposalToReviewNotification extends Notification implements HasMail
         private readonly string $title,
         private readonly string $authorName,
         private readonly string $authorId,
+        /** @var list<string> one line per module request of an event («Inscripciones: aforo de 20»), core#581 */
+        private readonly array $requestLines = [],
     ) {}
 
     /**
@@ -69,14 +71,24 @@ final class ProposalToReviewNotification extends Notification implements HasMail
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject(__('proposals.notices.review_subject', ['type' => $this->typeName(), 'title' => $this->title]))
             ->line(__('proposals.notices.review_body', [
                 'author' => EscapesMarkdown::escape($this->authorName),
                 'type' => $this->typeName(),
                 'title' => EscapesMarkdown::escape($this->title),
-            ]))
-            ->action(__('proposals.notices.review_action'), url($this->panelPath()));
+            ]));
+
+        if ($this->requestLines !== []) {
+            // The lines hold what the author typed: escaped, as every user value in a mail
+            $mail->line(__('proposals.notices.review_requests'));
+
+            foreach ($this->requestLines as $line) {
+                $mail->line('- '.EscapesMarkdown::escape($line));
+            }
+        }
+
+        return $mail->action(__('proposals.notices.review_action'), url($this->panelPath()));
     }
 
     public function toSiteNotification(object $notifiable): SiteNotificationDTO

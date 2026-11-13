@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Proposals;
 
 use App\Application\Proposals\DTOs\OwnProposalDTO;
+use App\Application\Proposals\Services\EventProposalRequestServiceInterface;
 use App\Domain\Proposals\Enums\ProposalType;
 use App\Domain\Proposals\Exceptions\ProposalException;
 use App\Http\Requests\Proposals\EventProposalRequest;
+use App\Http\Resources\ProposalRequestDefinitionResource;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
@@ -68,6 +70,20 @@ final class EventProposalController extends ProposalFormController
         }
 
         return $this->afterSaving($request, $id, $request->wantsToSubmit());
+    }
+
+    /**
+     * The requests the enabled modules offer below the form (core#581).
+     *
+     * @return array<string, mixed>
+     */
+    protected function extraProps(): array
+    {
+        return [
+            'moduleRequests' => ProposalRequestDefinitionResource::collection(
+                app(EventProposalRequestServiceInterface::class)->definitions(),
+            )->resolve(),
+        ];
     }
 
     protected function type(): ProposalType

@@ -61,11 +61,22 @@ abstract class ProposalFormController extends Controller
         return Inertia::render($this->page(), [
             'proposal' => $proposal instanceof OwnProposalDTO ? OwnProposalResource::make($proposal)->resolve() : null,
             'tags' => TagResource::collection($this->tags->getByType($type->value))->resolve(),
+            ...$this->extraProps(),
             'seo' => $this->seo->forPage(new SeoPageDTO(
                 title: (string) __('proposals.seo.'.$type->value),
                 noindex: true,
             ))->toArray(),
         ]);
+    }
+
+    /**
+     * What a type's form needs besides the common props.
+     *
+     * @return array<string, mixed>
+     */
+    protected function extraProps(): array
+    {
+        return [];
     }
 
     /** 403 for whoever may not propose this type */

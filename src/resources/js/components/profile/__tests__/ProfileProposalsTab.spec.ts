@@ -39,6 +39,7 @@ function proposal(overrides: Partial<Proposal>): Proposal {
         reviewedAt: null,
         updatedAt: '2026-11-13T10:00:00+01:00',
         publicPath: null,
+        requests: [],
         can: { edit: true, submit: true, withdraw: false, delete: true },
         ...overrides,
     };
@@ -90,6 +91,37 @@ describe('ProfileProposalsTab', () => {
         expect(wrapper.find('[data-testid="withdraw-proposal"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="edit-proposal"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="delete-proposal"]').exists()).toBe(false);
+    });
+
+    it('lists what the author asked the modules for', () => {
+        const wrapper = mountTab([
+            proposal({
+                requests: [
+                    {
+                        key: 'event-registrations.registrations',
+                        label: 'Inscripciones',
+                        active: true,
+                        values: { capacity: 20 },
+                        description: 'Inscripciones con aforo de 20',
+                        applied: false,
+                    },
+                    {
+                        key: 'gone.module',
+                        label: 'gone.module',
+                        active: false,
+                        values: {},
+                        description: null,
+                        applied: false,
+                    },
+                ],
+            }),
+        ]);
+
+        const requests = wrapper.find('[data-testid="proposal-requests"]').findAll('li');
+        expect(requests).toHaveLength(2);
+        expect(requests[0]?.text()).toBe('Inscripciones con aforo de 20');
+        expect(requests[1]?.text()).toContain('gone.module');
+        expect(requests[1]?.text()).toContain('proposals.requests.unavailable');
     });
 
     it('shows the reason of a rejection', () => {
