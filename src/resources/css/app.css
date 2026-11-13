@@ -411,6 +411,25 @@
         font-size: var(--font-size-base);
     }
 
+    /* A safety net for any native control left on a page (core#629): the site's form components
+       hide theirs, but one from a module or a new page still follows the theme. color-scheme
+       darkens native dropdown lists, calendars and scrollbars in dark mode; accent-color paints
+       ticked boxes in the site colour instead of the browser's blue */
+    :root {
+        color-scheme: light;
+    }
+
+    .dark {
+        color-scheme: dark;
+    }
+
+    input[type='checkbox'],
+    input[type='radio'],
+    input[type='range'],
+    progress {
+        accent-color: var(--color-primary);
+    }
+
     h1,
     h2,
     h3,
