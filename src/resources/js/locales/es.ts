@@ -299,6 +299,14 @@ export default {
         undo: 'Deshacer',
         choose: 'Elegir qué correos recibes',
     },
+    impersonationBanner: {
+        label: 'Impersonación',
+        viewingAs: 'Estás viendo el sitio como {name}',
+        readOnly: 'Solo mirar: no se guardan cambios',
+        simulate: 'Ejecutar y deshacer: lo que envíes se ejecuta y se deshace',
+        stop: 'Volver a mi cuenta',
+        stopping: 'Volviendo…',
+    },
     maintenance: {
         title: 'Estamos en mantenimiento',
         defaultMessage: 'Estamos haciendo mejoras en la web. Vuelve a intentarlo en unos minutos.',

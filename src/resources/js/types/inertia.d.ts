@@ -1,6 +1,7 @@
 import type { AuthSettings, User } from './models';
 import type { SeoProps } from './seo';
 import type { RealtimeSharedProps } from './realtime';
+import type { ImpersonationSharedProps } from './impersonation';
 import type { SiteNotificationsSharedProps } from './siteNotifications';
 import type { ModuleSlots } from './slots';
 
@@ -31,6 +32,8 @@ declare module '@inertiajs/vue3' {
         /** Unread notices of the bell (core#491); null for guests. */
         siteNotifications: SiteNotificationsSharedProps | null;
         realtime: RealtimeSharedProps | null;
+        /** Whom an administrator is viewing the site as (core#580); null outside an impersonation. */
+        impersonation: ImpersonationSharedProps | null;
         authSettings: AuthSettings;
         flash: {
             success?: string;
