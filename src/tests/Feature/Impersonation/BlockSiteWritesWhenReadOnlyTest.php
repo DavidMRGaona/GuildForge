@@ -109,9 +109,21 @@ final class BlockSiteWritesWhenReadOnlyTest extends TestCase
     {
         $this->startImpersonating(ImpersonationMode::ReadOnly);
 
-        $response = $this->postJson('/livewire/update', [], ['X-Livewire' => 'true']);
+        $uri = app('livewire')->getUpdateUri();
+        $response = $this->postJson($uri, [], ['X-Livewire' => 'true']);
 
         $this->assertNotSame('impersonation_read_only', $response->json('error'));
+    }
+
+    public function test_a_livewire_header_does_not_exempt_a_site_route(): void
+    {
+        $this->startImpersonating(ImpersonationMode::ReadOnly);
+
+        $this->postJson('/_test/readonly/submit', [], ['X-Livewire' => 'true'])
+            ->assertForbidden()
+            ->assertJsonPath('error', 'impersonation_read_only');
+
+        $this->assertSame(0, $this->reached);
     }
 
     public function test_simulate_lets_the_submission_reach_the_controller(): void
