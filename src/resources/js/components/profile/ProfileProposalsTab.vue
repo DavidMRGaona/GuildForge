@@ -218,6 +218,15 @@ function confirm(): void {
                             <span v-if="!request.active" class="text-base-muted">
                                 ({{ t('proposals.requests.unavailable') }})
                             </span>
+                            <ul
+                                v-if="!request.applied && request.warnings.length > 0"
+                                class="mt-0.5 list-none space-y-0.5 pl-0 text-warning"
+                                data-testid="proposal-request-warnings"
+                            >
+                                <li v-for="warning in request.warnings" :key="warning">
+                                    {{ t('proposals.requests.warning', { text: warning }) }}
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </div>

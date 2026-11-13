@@ -335,6 +335,7 @@ export default {
             choose: 'Elige una opción',
             listHeading: 'Peticiones',
             unavailable: 'ya no está disponible',
+            warning: 'Aviso: {text}',
         },
         limits: {
             pending: 'En revisión',

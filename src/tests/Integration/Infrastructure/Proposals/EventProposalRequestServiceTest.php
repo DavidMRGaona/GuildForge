@@ -27,6 +27,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Tests\Support\Proposals\FixtureEventProposalRequest;
 use Tests\TestCase;
@@ -368,5 +369,90 @@ final class EventProposalRequestServiceTest extends TestCase
         EventModel::query()->findOrFail($id)->delete();
 
         $this->assertSame(0, EventProposalRequestModel::query()->count());
+    }
+
+    public function test_a_draft_shows_the_early_warnings_with_the_proposed_event_and_checked_values(): void
+    {
+        FixtureEventProposalRequest::$warnings = ['El espacio no está libre esos días.', 'Revisa <b>el aforo</b>.'];
+        $author = $this->userWith();
+        $id = $this->proposals()->createEvent((string) $author->id, $this->data($this->asked()));
+
+        $stored = $this->requests()->forEvent($id)[0];
+
+        $this->assertSame(['El espacio no está libre esos días.', 'Revisa <b>el aforo</b>.'], $stored->warnings);
+        $this->assertNotNull($this->row($id), 'Warnings never stop the draft from being saved');
+        $this->assertCount(1, FixtureEventProposalRequest::$warned);
+        $call = FixtureEventProposalRequest::$warned[0];
+        $this->assertSame(['capacity' => 20, 'waitlist' => true, 'mode' => 'open', 'note' => null], $call['values']);
+        $this->assertEquals(new DateTimeImmutable('2026-12-05 16:00:00 UTC'), $call['event']->startDate);
+        $this->assertEquals(new DateTimeImmutable('2026-12-05 21:00:00 UTC'), $call['event']->endDate);
+        $this->assertNull($call['event']->location);
+    }
+
+    public function test_warnings_do_not_block_submitting_and_follow_the_values_in_force(): void
+    {
+        FixtureEventProposalRequest::$warnings = ['Ocupado.'];
+        [$id] = $this->pending();
+
+        $this->assertSame(ProposalStatus::PendingReview, EventModel::query()->includingUnsubmittedProposals()->findOrFail($id)->proposalStatus());
+        $this->assertSame(['Ocupado.'], $this->requests()->forEvent($id)[0]->warnings);
+
+        $this->row($id)?->forceFill(['approved_values' => ['capacity' => 35, 'waitlist' => false, 'mode' => 'members', 'note' => null]])->save();
+        $this->requests()->forEvent($id);
+
+        $last = array_last(FixtureEventProposalRequest::$warned);
+        $this->assertNotNull($last);
+        $this->assertSame(['capacity' => 35, 'waitlist' => false, 'mode' => 'members', 'note' => null], $last['values']);
+    }
+
+    public function test_the_place_is_handed_to_the_check(): void
+    {
+        $author = $this->userWith();
+        $data = new EventProposalDataDTO(
+            title: 'Jornada',
+            description: '<p>x</p>',
+            startDate: new DateTimeImmutable('2026-12-05 16:00:00 UTC'),
+            endDate: new DateTimeImmutable('2026-12-05 21:00:00 UTC'),
+            location: 'Sala grande',
+            moduleRequests: $this->asked(),
+        );
+        $id = $this->proposals()->createEvent((string) $author->id, $data);
+
+        $this->requests()->forEvent($id);
+
+        $this->assertSame('Sala grande', FixtureEventProposalRequest::$warned[0]['event']->location);
+    }
+
+    public function test_a_failing_check_leaves_no_warning_and_logs_without_the_values(): void
+    {
+        FixtureEventProposalRequest::$warnFailWith = new RuntimeException('boom');
+        Log::shouldReceive('warning')->once()->withArgs(static fn (string $message, array $context): bool => ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), '41')
+            && ($context['call'] ?? null) === 'warnings');
+        $author = $this->userWith();
+        $id = $this->proposals()->createEvent((string) $author->id, $this->data($this->asked(['capacity' => '41', 'mode' => 'open'])));
+
+        $stored = $this->requests()->forEvent($id)[0];
+
+        $this->assertSame([], $stored->warnings);
+        $this->assertSame('Inscripciones, aforo de 41', $stored->description);
+    }
+
+    public function test_blank_warnings_are_dropped(): void
+    {
+        FixtureEventProposalRequest::$warnings = ['Bien.', '', '   '];
+        $author = $this->userWith();
+        $id = $this->proposals()->createEvent((string) $author->id, $this->data($this->asked()));
+
+        $this->assertSame(['Bien.'], $this->requests()->forEvent($id)[0]->warnings);
+    }
+
+    public function test_an_inactive_request_gives_no_warning(): void
+    {
+        FixtureEventProposalRequest::$warnings = ['Ocupado.'];
+        $author = $this->userWith();
+        $id = $this->proposals()->createEvent((string) $author->id, $this->data($this->asked()));
+        FixtureEventProposalRequest::$available = false;
+
+        $this->assertSame([], $this->requests()->forEvent($id)[0]->warnings);
     }
 }

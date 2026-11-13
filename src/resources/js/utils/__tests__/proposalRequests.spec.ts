@@ -70,6 +70,7 @@ describe('proposal requests', () => {
                 active: true,
                 values: { capacity: 20, waitlist: true },
                 description: null,
+                warnings: [],
                 applied: false,
             },
         ]);

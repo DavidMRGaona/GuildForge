@@ -60,6 +60,7 @@ final class OwnProposalResource extends JsonResource
                 'active' => $request->active,
                 'values' => $request->requestedValues,
                 'description' => $request->description,
+                'warnings' => $request->warnings,
                 'applied' => $request->appliedAt instanceof \DateTimeImmutable,
             ], $proposal->requests),
             'can' => [

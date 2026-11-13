@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Support\Proposals;
 
+use App\Application\Proposals\Contracts\ChecksProposalRequestEarly;
 use App\Application\Proposals\Contracts\EventProposalRequestInterface;
 use App\Application\Proposals\DTOs\ProposalRequestFieldDTO;
+use App\Application\Proposals\DTOs\ProposedEventDTO;
 use App\Domain\Proposals\Exceptions\ProposalRequestRefusedException;
 use App\Domain\ValueObjects\EventId;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +19,7 @@ use Throwable;
  * «fixture». apply() writes its configuration to the settings table, so it rolls back with the
  * approval, and refuses when the event already has one, as a real module must.
  */
-final class FixtureEventProposalRequest implements EventProposalRequestInterface
+final class FixtureEventProposalRequest implements ChecksProposalRequestEarly, EventProposalRequestInterface
 {
     public const string KEY = 'fixture.registrations';
 
@@ -25,10 +27,21 @@ final class FixtureEventProposalRequest implements EventProposalRequestInterface
 
     public static ?Throwable $failWith = null;
 
+    /** @var list<string> what warnings() answers */
+    public static array $warnings = [];
+
+    public static ?Throwable $warnFailWith = null;
+
+    /** @var list<array{event: ProposedEventDTO, values: array<string, bool|int|string|null>}> */
+    public static array $warned = [];
+
     public static function reset(): void
     {
         self::$available = true;
         self::$failWith = null;
+        self::$warnings = [];
+        self::$warnFailWith = null;
+        self::$warned = [];
     }
 
     public static function configKey(string $eventId): string
@@ -113,5 +126,16 @@ final class FixtureEventProposalRequest implements EventProposalRequestInterface
         }
 
         return implode(', ', $parts);
+    }
+
+    public function warnings(ProposedEventDTO $event, array $values): array
+    {
+        self::$warned[] = ['event' => $event, 'values' => $values];
+
+        if (self::$warnFailWith instanceof Throwable) {
+            throw self::$warnFailWith;
+        }
+
+        return self::$warnings;
     }
 }

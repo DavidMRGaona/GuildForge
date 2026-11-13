@@ -18,6 +18,7 @@ final readonly class StoredProposalRequestDTO
      * @param  ?array<string, bool|int|string|null>  $approvedValues  null until a reviewer saves them
      * @param  list<ProposalRequestFieldDTO>  $fields
      * @param  ?string  $description  the module's line for the values in force (approved, else requested)
+     * @param  list<string>  $warnings  early warnings (ChecksProposalRequestEarly) for the values in force, read each time; never block anything
      */
     public function __construct(
         public string $id,
@@ -30,6 +31,7 @@ final readonly class StoredProposalRequestDTO
         public ?DateTimeImmutable $appliedAt,
         public array $fields,
         public ?string $description,
+        public array $warnings = [],
     ) {}
 
     /**

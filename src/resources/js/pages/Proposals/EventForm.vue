@@ -41,6 +41,11 @@ const form = useForm({
     requests: initialRequests(props.moduleRequests, props.proposal?.requests ?? []),
 });
 
+/** What the modules already warn about the saved requests (core#612); never blocks sending. */
+const requestWarnings: Record<string, string[]> = Object.fromEntries(
+    (props.proposal?.requests ?? []).map((request) => [request.key, request.warnings])
+);
+
 function send(submit: boolean): void {
     // A PUT with a file goes as a POST that says so: PHP only reads uploads from a POST body
     const editing = props.proposal !== null;
@@ -227,6 +232,7 @@ function onStartDate(value: string): void {
         <ProposalModuleRequests
             v-model="form.requests"
             :definitions="moduleRequests"
+            :warnings="requestWarnings"
             :errors="form.errors as Record<string, string | undefined>"
         />
 

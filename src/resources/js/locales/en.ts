@@ -334,6 +334,7 @@ export default {
             choose: 'Choose an option',
             listHeading: 'Requests',
             unavailable: 'no longer available',
+            warning: 'Notice: {text}',
         },
         limits: {
             pending: 'In review',
