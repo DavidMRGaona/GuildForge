@@ -185,7 +185,7 @@ useOnNavigate(() => close(false));
                 aria-modal="true"
                 tabindex="-1"
                 :aria-label="t('search.panelLabel')"
-                class="flex h-full flex-col bg-elevated md:mx-auto md:h-auto md:max-h-[calc(100dvh-8rem)] md:max-w-2xl md:rounded-lg md:border md:border-default md:shadow-xl dark:shadow-neutral-900/50"
+                class="flex h-full flex-col bg-elevated md:mx-auto md:h-auto md:max-h-[calc(100dvh-8rem)] md:max-w-2xl md:rounded-lg md:border md:border-default md:shadow-xl dark:shadow-depth"
                 @keydown="onDialogKeydown"
             >
                 <div role="search" class="flex items-center gap-2 border-b border-default p-2">

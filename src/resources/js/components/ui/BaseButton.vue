@@ -23,8 +23,10 @@ const emit = defineEmits<{
 }>();
 
 const variantClasses: Record<NonNullable<typeof props.variant>, string> = {
+    // Solid, outline or ghost by the site setting: ThemeSettingsService sets these variables
+    // (defaults in app.css). The border is an inset ring, so the button keeps its size in every style
     primary:
-        'bg-primary text-white hover:bg-primary-700 focus:ring-primary-500 disabled:opacity-50',
+        'bg-(--button-primary-bg) text-(--button-primary-text) inset-ring inset-ring-(--button-primary-border) hover:bg-(--button-primary-hover-bg) hover:text-(--button-primary-hover-text) focus:ring-primary-500 disabled:opacity-50',
     secondary:
         'bg-muted text-base-primary hover:bg-neutral-200 dark:hover:bg-neutral-700 focus:ring-neutral-400 disabled:opacity-50',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50',

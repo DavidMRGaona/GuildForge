@@ -49,7 +49,7 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
         </div>
 
         <!-- overflow-clip, not overflow-hidden: a scroll container would stop the side column sticking -->
-        <article class="overflow-clip rounded-lg bg-surface shadow dark:shadow-neutral-900/50">
+        <article class="overflow-clip rounded-lg bg-surface shadow dark:shadow-depth">
             <img
                 v-if="heroImageUrl"
                 :src="heroImageUrl"

@@ -67,7 +67,7 @@ const calendarLinks = computed(() => {
 
 <template>
     <div
-        class="flex h-full flex-col rounded-lg border-default bg-surface p-4 shadow-sm dark:shadow-neutral-900/50"
+        class="flex h-full flex-col rounded-lg border-default bg-surface p-4 shadow-sm dark:shadow-depth"
     >
         <!-- Empty state -->
         <div v-if="!event" class="flex flex-1 flex-col items-center justify-center text-center">

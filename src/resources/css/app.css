@@ -212,11 +212,56 @@
    Design Tokens via @theme - creates utility classes
    ========================================================================== */
 @theme {
-    /* Typography */
-    --font-sans:
-        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-display: 'Playfair Display', ui-serif, Georgia, serif;
+    /* Typography, from the site settings (Configuración del sitio → Tipografía). The values are
+       the variables ThemeSettingsService writes; the defaults further down keep Inter without it */
+    --font-sans: var(--font-body);
+    --font-display: var(--font-heading);
+
+    /* Corner radii scale with the «Radio de bordes» setting (--border-radius, 0.5rem = «Medio»):
+       each step keeps its ratio to Tailwind's own scale, where rounded-lg is 0.5rem, so «Medio»
+       draws exactly Tailwind's radii (--radius is the bare `rounded`). rounded-full is not on
+       this scale and stays round. Module sheets compile the same classes against Tailwind's
+       defaults, but the core's copy sits in a higher layer and wins */
+    --radius: calc(var(--border-radius) * 0.5);
+    --radius-xs: calc(var(--border-radius) * 0.25);
+    --radius-sm: calc(var(--border-radius) * 0.5);
+    --radius-md: calc(var(--border-radius) * 0.75);
+    --radius-lg: var(--border-radius);
+    --radius-xl: calc(var(--border-radius) * 1.5);
+    --radius-2xl: calc(var(--border-radius) * 2);
+    --radius-3xl: calc(var(--border-radius) * 3);
+    --radius-4xl: calc(var(--border-radius) * 4);
+
+    /* Shadows: Tailwind's own, with the opacity multiplied by the «Intensidad de sombras»
+       setting (--shadow-intensity, 1 = «Medio», 0 = none). --shadow is the bare `shadow` */
+    --shadow:
+        0 1px 3px 0 rgb(0 0 0 / calc(0.1 * var(--shadow-intensity))),
+        0 1px 2px -1px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity)));
+    --shadow-2xs: 0 1px rgb(0 0 0 / calc(0.05 * var(--shadow-intensity)));
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / calc(0.05 * var(--shadow-intensity)));
+    --shadow-sm:
+        0 1px 3px 0 rgb(0 0 0 / calc(0.1 * var(--shadow-intensity))),
+        0 1px 2px -1px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity)));
+    --shadow-md:
+        0 4px 6px -1px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity))),
+        0 2px 4px -2px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity)));
+    --shadow-lg:
+        0 10px 15px -3px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity))),
+        0 4px 6px -4px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity)));
+    --shadow-xl:
+        0 20px 25px -5px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity))),
+        0 8px 10px -6px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity)));
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / calc(0.25 * var(--shadow-intensity)));
+
+    /* Shadow colours for the dark theme (dark:shadow-depth, dark:shadow-depth-strong). A colour
+       with its own opacity (shadow-neutral-900/50) would replace the token's colour and ignore
+       the setting, so the opacity is scaled here too */
+    --color-depth: color-mix(
+        in oklab,
+        var(--color-neutral-900) calc(50% * var(--shadow-intensity)),
+        transparent
+    );
+    --color-depth-strong: rgb(0 0 0 / calc(0.4 * var(--shadow-intensity)));
 
     /* Semantic colors as Tailwind tokens (enables bg-page, text-base-primary, etc.) */
     --color-page: var(--color-bg-page);
@@ -336,6 +381,40 @@
     --color-text-tooltip: #ffffff; /* white */
     --color-text-tooltip-secondary: #d6d3d1; /* stone-300 */
     --color-ring-tooltip: rgb(255 255 255 / 0.1);
+
+    /* Site settings (Tipografía, Apariencia): ThemeSettingsService writes the site's own values
+       over these, which are the defaults («Inter», «Normal», «Medio», «Sólido») */
+    --font-body:
+        'Inter', system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --font-heading: 'Inter', system-ui, sans-serif;
+    --font-size-base: 16px;
+    --border-radius: 0.5rem;
+    --shadow-intensity: 1;
+
+    /* Primary button (BaseButton). Palette variables, so the dark theme needs no copy */
+    --button-primary-bg: var(--color-primary);
+    --button-primary-text: #ffffff;
+    --button-primary-border: transparent;
+    --button-primary-hover-bg: var(--color-primary-700);
+    --button-primary-hover-text: #ffffff;
+}
+
+/* The base size and the heading family. In the base layer, so a utility on the element
+   (text-sm, font-sans) still wins */
+@layer base {
+    html {
+        font-size: var(--font-size-base);
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: var(--font-heading);
+    }
 }
 
 /* ==========================================================================
@@ -430,13 +509,13 @@
     .page-band {
         background-color: var(--color-bg-surface);
         box-shadow:
-            0 1px 3px 0 rgb(0 0 0 / 0.1),
-            0 1px 2px -1px rgb(0 0 0 / 0.1);
+            0 1px 3px 0 rgb(0 0 0 / calc(0.1 * var(--shadow-intensity))),
+            0 1px 2px -1px rgb(0 0 0 / calc(0.1 * var(--shadow-intensity)));
     }
     .dark .page-band {
         box-shadow:
-            0 1px 3px 0 rgb(23 23 23 / 0.5),
-            0 1px 2px -1px rgb(23 23 23 / 0.5);
+            0 1px 3px 0 rgb(23 23 23 / calc(0.5 * var(--shadow-intensity))),
+            0 1px 2px -1px rgb(23 23 23 / calc(0.5 * var(--shadow-intensity)));
     }
     .bg-primary {
         background-color: var(--color-primary);
@@ -747,7 +826,7 @@ button[data-headlessui-state]:hover {
     padding-inline: 1rem;
     /* The theme only draws the inline borders */
     border: 1px solid var(--fc-classic-strong-border);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-lg);
     background-color: transparent;
     color: var(--fc-classic-foreground);
     font-weight: 500;
@@ -792,7 +871,9 @@ button[data-headlessui-state]:hover {
     gap: 2px;
     padding: 2px;
     border: 1px solid var(--fc-classic-border);
-    border-radius: 0.625rem;
+    /* Scaled with the buttons' radius: at «Medio» theirs plus the 2px of padding (concentric
+       corners), and square when the setting is «Ninguno» */
+    border-radius: calc(var(--radius-lg) * 1.25);
     background-color: var(--fc-classic-muted);
 }
 
@@ -800,7 +881,7 @@ button[data-headlessui-state]:hover {
     min-height: calc(2.75rem - 6px);
     margin: 0;
     border-color: transparent;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-lg);
     /* The secondary text colour falls below 4.5:1 on the track in the light theme */
     color: var(--fc-classic-foreground);
 }
@@ -1273,7 +1354,7 @@ input[type='number'] {
     padding: 0.75rem 1rem;
     border-left-width: 4px;
     border-left-style: solid;
-    border-radius: 0.375rem;
+    border-radius: var(--radius-md);
     color: var(--color-text-primary);
 }
 
@@ -1305,7 +1386,7 @@ input[type='number'] {
     margin: 0.5rem 0;
     padding: 0.5rem 1rem;
     border: 2px solid var(--color-primary-link, var(--color-primary));
-    border-radius: 0.375rem;
+    border-radius: var(--radius-md);
     font-weight: 600;
     text-decoration: none;
 }

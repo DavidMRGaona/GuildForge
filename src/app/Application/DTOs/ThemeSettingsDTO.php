@@ -8,12 +8,31 @@ use App\Application\Services\SettingsServiceInterface;
 
 final readonly class ThemeSettingsDTO
 {
+    /** The generic system font: written to the CSS without quotes */
+    public const string SYSTEM_FONT = 'system-ui';
+
+    /** Families offered for body text, served by Bunny Fonts (all but the system font) */
+    public const array BODY_FONTS = ['Inter', 'Poppins', 'Montserrat', 'Roboto', 'Open Sans', self::SYSTEM_FONT];
+
+    /** Families offered for headings: the body ones plus a serif display face */
+    public const array HEADING_FONTS = ['Inter', 'Poppins', 'Montserrat', 'Roboto', 'Open Sans', 'Playfair Display', self::SYSTEM_FONT];
+
+    /** Families that fall back to a serif stack instead of a sans-serif one */
+    public const array SERIF_FONTS = ['Playfair Display'];
+
+    /** Looks of the primary button */
+    public const array BUTTON_STYLES = ['solid', 'outline', 'ghost'];
+
+    private const string DEFAULT_FONT = 'Inter';
+
+    private const string DEFAULT_BUTTON_STYLE = 'solid';
+
     public function __construct(
-        public string $fontHeading = 'Inter',
-        public string $fontBody = 'Inter',
+        public string $fontHeading = self::DEFAULT_FONT,
+        public string $fontBody = self::DEFAULT_FONT,
         public string $fontSizeBase = '16px',
         public string $borderRadius = '0.5rem',
-        public string $shadowIntensity = '0.5',
+        public string $shadowIntensity = '1',
         public string $buttonStyle = 'solid',
         public bool $darkModeDefault = false,
         public bool $darkModeToggleVisible = true,
@@ -27,25 +46,28 @@ final readonly class ThemeSettingsDTO
     public static function fromSettings(SettingsServiceInterface $settings): self
     {
         return new self(
-            fontHeading: self::getStringOrDefault($settings, 'theme_font_heading', 'Inter'),
-            fontBody: self::getStringOrDefault($settings, 'theme_font_body', 'Inter'),
+            fontHeading: self::oneOf($settings, 'theme_font_heading', self::HEADING_FONTS, self::DEFAULT_FONT),
+            fontBody: self::oneOf($settings, 'theme_font_body', self::BODY_FONTS, self::DEFAULT_FONT),
             fontSizeBase: self::mapFontSize((string) $settings->get('theme_font_size_base', 'normal')),
             borderRadius: self::mapBorderRadius((string) $settings->get('theme_border_radius', 'medium')),
-            shadowIntensity: self::mapShadowIntensity((string) $settings->get('theme_shadow_intensity', 'subtle')),
-            buttonStyle: self::getStringOrDefault($settings, 'theme_button_style', 'solid'),
+            shadowIntensity: self::mapShadowIntensity((string) $settings->get('theme_shadow_intensity', 'medium')),
+            buttonStyle: self::oneOf($settings, 'theme_button_style', self::BUTTON_STYLES, self::DEFAULT_BUTTON_STYLE),
             darkModeDefault: self::toBool($settings->get('theme_dark_mode_default', false)),
             darkModeToggleVisible: self::toBool($settings->get('theme_dark_mode_toggle_visible', true)),
         );
     }
 
     /**
-     * Get a string value, returning default if empty.
+     * The stored value when it is one of the options, the default otherwise. These values end up
+     * inside the site stylesheet, so nothing outside the list may get through.
+     *
+     * @param  list<string>  $options
      */
-    private static function getStringOrDefault(SettingsServiceInterface $settings, string $key, string $default): string
+    private static function oneOf(SettingsServiceInterface $settings, string $key, array $options, string $default): string
     {
-        $value = (string) $settings->get($key, '');
+        $value = $settings->get($key, '');
 
-        return $value !== '' ? $value : $default;
+        return is_string($value) && in_array($value, $options, true) ? $value : $default;
     }
 
     /**

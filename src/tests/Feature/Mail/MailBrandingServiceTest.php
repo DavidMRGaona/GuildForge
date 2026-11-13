@@ -119,17 +119,17 @@ final class MailBrandingServiceTest extends TestCase
         $this->assertStringNotContainsString("'", $branding->fontBody);
     }
 
-    public function test_an_unexpected_font_value_falls_back_to_the_system_font(): void
+    public function test_an_unexpected_font_value_falls_back_to_the_site_default_font(): void
     {
         $this->settings()->set('theme_font_body', "Inter'; } body { display: none");
 
         $branding = $this->service()->branding();
 
         $this->assertStringNotContainsString('display', $branding->fontBody);
-        $this->assertStringNotContainsString("'", $branding->fontBody);
+        $this->assertStringStartsWith("'Inter', ", $branding->fontBody);
     }
 
-    public function test_a_font_name_with_a_trailing_newline_falls_back_to_the_system_font(): void
+    public function test_a_font_name_with_a_trailing_newline_falls_back_to_the_site_default_font(): void
     {
         $this->settings()->set('theme_font_body', "Montserrat\n");
 

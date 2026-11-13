@@ -8,6 +8,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Infrastructure\Services\ThemeSettingsService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class ThemeSettingsServiceTest extends TestCase
@@ -45,7 +46,7 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertEquals('Inter', $dto->fontBody);
         $this->assertEquals('16px', $dto->fontSizeBase);
         $this->assertEquals('0.5rem', $dto->borderRadius);
-        $this->assertEquals('0.5', $dto->shadowIntensity);
+        $this->assertEquals('1', $dto->shadowIntensity);
         $this->assertEquals('solid', $dto->buttonStyle);
         $this->assertFalse($dto->darkModeDefault);
         $this->assertTrue($dto->darkModeToggleVisible);
@@ -207,7 +208,78 @@ final class ThemeSettingsServiceTest extends TestCase
         $this->assertStringContainsString("--font-body: 'Inter'", $css);
         $this->assertStringContainsString('--font-size-base: 16px;', $css);
         $this->assertStringContainsString('--border-radius: 0.5rem;', $css);
-        $this->assertStringContainsString('--shadow-intensity: 0.5;', $css);
+        $this->assertStringContainsString('--shadow-intensity: 1;', $css);
+    }
+
+    public function test_get_css_variables_gives_playfair_display_a_serif_fallback(): void
+    {
+        $this->settingsService->set('theme_font_heading', 'Playfair Display');
+
+        $css = $this->service->getCssVariables();
+
+        $this->assertSame("'Playfair Display', Georgia, serif", $this->cssVariable($css, 'font-heading'));
+    }
+
+    public function test_get_css_variables_names_the_system_font_without_quotes(): void
+    {
+        $this->settingsService->set('theme_font_body', 'system-ui');
+
+        $css = $this->service->getCssVariables();
+
+        $this->assertSame('system-ui, sans-serif', $this->cssVariable($css, 'font-body'));
+    }
+
+    public function test_get_css_variables_never_writes_a_font_outside_the_list(): void
+    {
+        $this->settingsService->set('theme_font_heading', "x'; } body { display: none } :root { --a: '");
+
+        $css = $this->service->getCssVariables();
+
+        $this->assertStringNotContainsString('display: none', $css);
+        $this->assertSame("'Inter', system-ui, sans-serif", $this->cssVariable($css, 'font-heading'));
+    }
+
+    /**
+     * @return iterable<string, array{string, array<string, string>}>
+     */
+    public static function buttonStyles(): iterable
+    {
+        yield 'solid' => ['solid', [
+            'button-primary-bg' => 'var(--color-primary)',
+            'button-primary-text' => '#FFFFFF',
+            'button-primary-border' => 'transparent',
+            'button-primary-hover-bg' => 'var(--color-primary-700)',
+            'button-primary-hover-text' => '#FFFFFF',
+        ]];
+        yield 'outline' => ['outline', [
+            'button-primary-bg' => 'transparent',
+            'button-primary-text' => 'var(--color-primary-link)',
+            'button-primary-border' => 'var(--color-primary-link)',
+            'button-primary-hover-bg' => 'var(--color-primary-light)',
+            'button-primary-hover-text' => 'var(--color-primary-link)',
+        ]];
+        yield 'ghost' => ['ghost', [
+            'button-primary-bg' => 'transparent',
+            'button-primary-text' => 'var(--color-primary-link)',
+            'button-primary-border' => 'transparent',
+            'button-primary-hover-bg' => 'var(--color-primary-light)',
+            'button-primary-hover-text' => 'var(--color-primary-link)',
+        ]];
+    }
+
+    /**
+     * @param  array<string, string>  $expected
+     */
+    #[DataProvider('buttonStyles')]
+    public function test_get_css_variables_describes_the_primary_button_style(string $style, array $expected): void
+    {
+        $this->settingsService->set('theme_button_style', $style);
+
+        $light = $this->extractLightModeSection($this->service->getCssVariables());
+
+        foreach ($expected as $name => $value) {
+            $this->assertSame($value, $this->cssVariable($light, $name), "--{$name} for {$style}");
+        }
     }
 
     public function test_get_css_variables_includes_system_ui_fallback_fonts(): void

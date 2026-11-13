@@ -30,7 +30,7 @@ const { categoryTag, additionalTags } = useTags(computed(() => props.gallery.tag
     <Link
         :href="routes.gallery.show(props.gallery.slug)"
         :aria-label="t('a11y.viewGallery', { title: props.gallery.title })"
-        class="group block overflow-hidden rounded-lg bg-surface shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:shadow-neutral-900/50 dark:focus:ring-offset-page"
+        class="group block overflow-hidden rounded-lg bg-surface shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:shadow-depth dark:focus:ring-offset-page"
     >
         <!-- Image -->
         <div class="relative">

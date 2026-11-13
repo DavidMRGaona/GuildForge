@@ -109,7 +109,7 @@ function selectTheme(mode: ThemeMode): void {
 
 <template>
     <header
-        class="relative z-50 bg-surface shadow-sm dark:border-b dark:border-white/10 dark:shadow-black/40"
+        class="relative z-50 bg-surface shadow-sm dark:border-b dark:border-white/10 dark:shadow-depth-strong"
     >
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div ref="headerRow" class="flex h-16 items-center justify-between">

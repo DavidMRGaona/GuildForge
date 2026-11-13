@@ -67,9 +67,7 @@ function handleKeydown(event: KeyboardEvent): void {
             @click="handleBackdropClick"
             @keydown="handleKeydown"
         >
-            <div
-                class="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl dark:shadow-neutral-900/50"
-            >
+            <div class="w-full max-w-md rounded-lg bg-surface p-6 shadow-xl dark:shadow-depth">
                 <h3 class="text-lg font-semibold text-base-primary">
                     {{ title }}
                 </h3>

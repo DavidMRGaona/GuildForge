@@ -179,6 +179,7 @@ return [
             'font_size_small' => 'Pequeño (14px)',
             'font_size_normal' => 'Normal (16px)',
             'font_size_large' => 'Grande (18px)',
+            'font_system' => 'Fuente del sistema',
         ],
         'appearance' => [
             'border_radius' => 'Radio de bordes',
