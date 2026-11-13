@@ -75,7 +75,7 @@ The mark travels with the action's extra attributes: an action whose attributes 
 
 Every site request that is not `GET` or `HEAD` is refused before its controller (except the way out, logout and `POST /broadcasting/auth`):
 
-- **Page visits** (Inertia) go back with the notice «Estás viendo el sitio como…: no se guardan cambios».
+- **Page visits** (Inertia) go back with the notice «Estás viendo el sitio como…: no se guardan cambios», flashed under its own key (`ApplyImpersonation::NOTICE_FLASH`) and shown by the core's band on any page, so a module page needs no flash renderer for it.
 - **JSON requests** get a `403` with `error: "impersonation_read_only"` and the header `X-Impersonation-Read-Only: 1`.
 
 A page that sends JSON with `fetch()` or axios would show its generic failure for any 403. Recognise this one by its code and header, never by the translated text:
@@ -87,7 +87,7 @@ if (response.status === 403 && response.headers.get('X-Impersonation-Read-Only')
 }
 ```
 
-The core's own pages use the composable `useImpersonationReadOnly()` (`resources/js/composables/useImpersonationReadOnly.ts`: `isReadOnlyRefusal()`, `notifyIfReadOnly()`, `notifyRefusal()`), which does this check and shows the notice. It is not yet part of the public frontend API (`public-api.json`), so a module build cannot import it. The banner and the shared Inertia prop `impersonation` (`{ targetName, mode }` or `null`) are drawn by the core: a module does not draw its own.
+The core's own pages use the composable `useImpersonationReadOnly()` (`resources/js/composables/useImpersonationReadOnly.ts`: `isReadOnlyRefusal()`, `notifyIfReadOnly()`, `notifyRefusal()`), which does this check and shows the notice. It is not yet part of the public frontend API (`public-api.json`), so a module build cannot import it. The banner and the shared Inertia prop `impersonation` (`{ targetName, mode, notice }` or `null`; `notice` is the message flashed for the administrator by the previous request, or `null`) are drawn by the core: a module does not draw its own.
 
 ## Testing
 

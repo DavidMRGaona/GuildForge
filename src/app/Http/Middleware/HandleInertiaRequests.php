@@ -90,7 +90,7 @@ final class HandleInertiaRequests extends Middleware
             // Where the browser opens the WebSocket (core#493); null without real time or session
             'realtime' => fn (): ?array => $this->getRealtimeConfig($request),
             // Whom the administrator is viewing the site as (core#580); null outside an impersonation
-            'impersonation' => $this->getImpersonation(...),
+            'impersonation' => fn (): ?array => $this->getImpersonation($request),
             'authSettings' => $this->getAuthSettings(...),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -264,9 +264,12 @@ final class HandleInertiaRequests extends Middleware
     /**
      * Who the administrator is viewing the site as, or null when no impersonation is active.
      *
-     * @return array{targetName: string|null, mode: string}|null
+     * The notice is a message for the administrator flashed by the previous request (a refused
+     * submission, the panel closed to the account), shown by the band on any page.
+     *
+     * @return array{targetName: string|null, mode: string, notice: string|null}|null
      */
-    private function getImpersonation(): ?array
+    private function getImpersonation(Request $request): ?array
     {
         try {
             $context = app(ImpersonationContextInterface::class);
@@ -281,12 +284,20 @@ final class HandleInertiaRequests extends Middleware
             return [
                 'targetName' => app(ResponseDTOFactoryInterface::class)->createUserDTO($target)->displayName,
                 'mode' => $mode->value,
+                'notice' => $this->impersonationNotice($request),
             ];
         } catch (\Throwable $e) {
             $this->logDebugError('getImpersonation', $e);
 
             return null;
         }
+    }
+
+    private function impersonationNotice(Request $request): ?string
+    {
+        $notice = $request->session()->get(ApplyImpersonation::NOTICE_FLASH);
+
+        return is_string($notice) && $notice !== '' ? $notice : null;
     }
 
     /**

@@ -56,6 +56,14 @@ function stop(): void {
                         {{ t('impersonationBanner.viewingAs', { name: impersonation.targetName }) }}
                     </p>
                     <p data-testid="impersonation-mode">{{ modeText }}</p>
+                    <p
+                        v-if="impersonation.notice"
+                        class="mt-1 font-semibold"
+                        role="alert"
+                        data-testid="impersonation-notice"
+                    >
+                        {{ impersonation.notice }}
+                    </p>
                 </div>
             </div>
 

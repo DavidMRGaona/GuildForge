@@ -52,7 +52,7 @@ final class SharedImpersonationPropTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('impersonation', ['targetName' => 'Ana Example', 'mode' => 'read_only']));
+                ->where('impersonation', ['targetName' => 'Ana Example', 'mode' => 'read_only', 'notice' => null]));
     }
 
     public function test_the_simulate_mode_is_shared(): void
@@ -62,6 +62,33 @@ final class SharedImpersonationPropTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->where('impersonation.mode', 'simulate'));
+    }
+
+    public function test_a_notice_for_the_administrator_reaches_the_band(): void
+    {
+        $this->startImpersonating(ImpersonationMode::ReadOnly);
+
+        $this->withSession(['impersonation_notice' => 'Aviso de prueba'])
+            ->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('impersonation.notice', 'Aviso de prueba'));
+    }
+
+    public function test_a_blocked_submission_explains_itself_on_any_page(): void
+    {
+        $this->startImpersonating(ImpersonationMode::ReadOnly);
+
+        $this->from('/eventos')
+            ->withHeader('X-Inertia', 'true')
+            ->post(route('profile.update'), ['name' => 'Otro'])
+            ->assertRedirect('/eventos');
+
+        $this->flushHeaders()
+            ->get('/eventos')
+            ->assertInertia(fn (Assert $page) => $page->where(
+                'impersonation.notice',
+                'Estás viendo el sitio como Ana Example: no se guardan cambios.',
+            ));
     }
 
     public function test_nothing_about_the_administrator_is_shared(): void

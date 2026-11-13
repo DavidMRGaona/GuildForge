@@ -42,9 +42,9 @@ final readonly class RedirectImpersonatedAccountWithoutPanelAccess
             return $next($request);
         }
 
-        // `error`: the site only draws success and error flashes (useFlashMessages), core#600
+        // The site's band shows it on any page (core#614)
         return redirect()
             ->route('home')
-            ->with('error', __('filament.impersonation.no_panel_access', ['name' => ImpersonatedName::of($target)]));
+            ->with(ApplyImpersonation::NOTICE_FLASH, __('filament.impersonation.no_panel_access', ['name' => ImpersonatedName::of($target)]));
     }
 }

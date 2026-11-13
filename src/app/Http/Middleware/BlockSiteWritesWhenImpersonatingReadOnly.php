@@ -65,7 +65,7 @@ final readonly class BlockSiteWritesWhenImpersonatingReadOnly
             );
         }
 
-        return back()->with('error', $message);
+        return back()->with(ApplyImpersonation::NOTICE_FLASH, $message);
     }
 
     private function targetName(): string

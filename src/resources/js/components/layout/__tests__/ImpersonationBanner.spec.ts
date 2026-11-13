@@ -63,6 +63,31 @@ describe('ImpersonationBanner', () => {
         );
     });
 
+    it('shows a notice for the administrator as an alert', () => {
+        page.props = {
+            impersonation: {
+                targetName: 'Ana Example',
+                mode: 'read_only',
+                notice: 'Estás viendo el sitio como Ana Example: no se guardan cambios.',
+            },
+        };
+
+        const notice = mountBanner().get('[data-testid="impersonation-notice"]');
+
+        expect(notice.attributes('role')).toBe('alert');
+        expect(notice.text()).toBe(
+            'Estás viendo el sitio como Ana Example: no se guardan cambios.'
+        );
+    });
+
+    it('shows no notice when there is none', () => {
+        page.props = {
+            impersonation: { targetName: 'Ana Example', mode: 'read_only', notice: null },
+        };
+
+        expect(mountBanner().find('[data-testid="impersonation-notice"]').exists()).toBe(false);
+    });
+
     it('posts to the stop route from the button', async () => {
         page.props = { impersonation: { targetName: 'Ana Example', mode: 'read_only' } };
 

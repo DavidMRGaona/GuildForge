@@ -51,7 +51,7 @@ final class BlockSiteWritesWhenReadOnlyTest extends TestCase
             ->withHeaders(['X-Inertia' => 'true'])
             ->post('/_test/readonly/submit')
             ->assertRedirect('/_test/readonly/read')
-            ->assertSessionHas('error', 'Estás viendo el sitio como Ana Prueba: no se guardan cambios.');
+            ->assertSessionHas('impersonation_notice', 'Estás viendo el sitio como Ana Prueba: no se guardan cambios.');
 
         $this->assertSame(0, $this->reached);
     }
