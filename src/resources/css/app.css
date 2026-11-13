@@ -1410,3 +1410,18 @@ input[type='number'] {
         text-align: center;
     }
 }
+
+/* Inline code in guides: the typography plugin wraps it in literal backticks,
+   which read as part of the text (an expression table looks written with them).
+   A muted background and the monospace face tell it apart instead. */
+.kb-prose :where(code):not(:where(pre *))::before,
+.kb-prose :where(code):not(:where(pre *))::after {
+    content: none;
+}
+
+.kb-prose :where(code):not(:where(pre *)) {
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    background-color: var(--color-bg-muted);
+    font-size: 0.875em;
+}
