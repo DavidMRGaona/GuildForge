@@ -8,10 +8,12 @@ use App\Application\Mail\DTOs\MailPreferenceDTO;
 use App\Application\Mail\DTOs\MailPreferenceSectionDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
+use App\Domain\SiteNews\SiteNewsKind;
 use App\Infrastructure\Mail\Preferences\CoreMailCategories;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\InactiveRolesManagerNotification;
 use App\Notifications\InactiveRolesNotification;
+use App\Notifications\SiteNewsNotification;
 use App\Notifications\VerifyPendingEmailNotification;
 use App\Notifications\WelcomeNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -57,6 +59,7 @@ final class CoreMailCategoriesTest extends TestCase
         yield 'welcome' => [new WelcomeNotification('Example site'), CoreMailCategories::ACCOUNT];
         yield 'inactive roles' => [new InactiveRolesNotification('Example site', 'Role'), CoreMailCategories::ACCOUNT];
         yield 'inactive roles to managers' => [new InactiveRolesManagerNotification('Person', 'Role', 'id', ['role']), CoreMailCategories::ROLE_MANAGEMENT];
+        yield 'site news' => [new SiteNewsNotification(SiteNewsKind::Event, '00000000-0000-4000-8000-000000000000'), CoreMailCategories::SITE_NEWS];
     }
 
     #[DataProvider('coreNotifications')]
@@ -72,7 +75,7 @@ final class CoreMailCategoriesTest extends TestCase
     {
         $sections = $this->app->make(MailPreferenceServiceInterface::class)->sectionsFor(UserModel::factory()->create());
 
-        $this->assertSame([__('mail.preferences.sections.account')], $this->labels($sections));
+        $this->assertSame([__('mail.preferences.sections.account'), __('mail.preferences.sections.news')], $this->labels($sections));
         $account = $sections[0]->categories[0];
         $this->assertSame(CoreMailCategories::ACCOUNT, $account->key);
         $this->assertTrue($account->mandatory);
@@ -89,6 +92,7 @@ final class CoreMailCategoriesTest extends TestCase
             __('mail.preferences.sections.account'),
             __('mail.preferences.sections.site_management'),
             __('mail.preferences.sections.proposals'),
+            __('mail.preferences.sections.news'),
         ], $this->labels($sections));
         $this->assertSame(
             [CoreMailCategories::ROLE_MANAGEMENT],

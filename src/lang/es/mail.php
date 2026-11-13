@@ -16,6 +16,7 @@ return [
             'account' => 'Cuenta',
             'site_management' => 'Gestión del sitio',
             'proposals' => 'Propuestas',
+            'news' => 'Novedades',
         ],
         'categories' => [
             'account' => [
@@ -34,6 +35,10 @@ return [
             'proposals_status' => [
                 'label' => 'Estado de mis propuestas',
                 'description' => 'Aviso cuando se aprueba, se devuelve o se rechaza un evento o un artículo que has propuesto.',
+            ],
+            'site_news' => [
+                'label' => 'Eventos, artículos y galerías nuevos',
+                'description' => 'Aviso en la web cuando se publica un evento, un artículo o una galería nuevos. Solo en la campana, nunca por correo.',
             ],
         ],
     ],

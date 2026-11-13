@@ -5,7 +5,7 @@ summary: Qué es la campana de la cabecera, cómo se leen los avisos y cómo ele
 category: account
 audience: site
 order: 41
-keywords: [avisos, notificaciones, campana, sin leer, marcar como leído, respuestas, menciones, me gusta, avisos en la web, contador, no me llegan avisos, demasiados avisos]
+keywords: [avisos, notificaciones, campana, sin leer, marcar como leído, respuestas, menciones, me gusta, avisos en la web, contador, no me llegan avisos, demasiados avisos, novedades, eventos nuevos, artículos nuevos, galerías nuevas]
 related: [core.account.mail-preferences]
 ---
 Además de los correos, {{site_name}} te avisa dentro de la web de lo que pasa mientras navegas: una respuesta en un tema que sigues, una mención, una plaza libre… Los avisos se ven en la campana de la cabecera, junto a tu nombre.
@@ -26,6 +26,14 @@ El número se actualiza solo cada minuto mientras tienes la web abierta, y tambi
 ## Avisos agrupados
 
 Cuando pasan varias cosas seguidas sobre lo mismo, como muchas respuestas en un tema, no te llega un aviso por cada una: mientras no los leas, se juntan en uno solo, por ejemplo «Ana y 3 más respondieron en…». Al abrirlo, el siguiente que llegue empieza un grupo nuevo.
+
+## Novedades del sitio
+
+Cuando se publica por primera vez un evento, un artículo o una galería, te llega un aviso en la campana, por ejemplo «Nuevo evento: …». Mientras no los leas, se juntan en uno solo, como «3 novedades en el sitio», que lleva a lo último que se ha publicado.
+
+- Solo se avisa la primera vez que se publica. Si después se corrige o se vuelve a publicar, no llega otro aviso.
+- No se avisa de lo que publicas tú, ni de lo que propusiste tú: de eso ya te llega el aviso de tu propuesta.
+- Estas novedades solo llegan a la web, nunca por correo. Si no las quieres, desactívalas en **Mi perfil**, pestaña **Avisos**, sección **Novedades**.
 
 ## Elegir qué avisos recibes
 

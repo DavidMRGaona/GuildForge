@@ -16,6 +16,7 @@ return [
             'account' => 'Account',
             'site_management' => 'Site management',
             'proposals' => 'Proposals',
+            'news' => 'News',
         ],
         'categories' => [
             'account' => [
@@ -34,6 +35,10 @@ return [
             'proposals_status' => [
                 'label' => 'Status of my proposals',
                 'description' => 'Notice when an event or an article you proposed is approved, returned or rejected.',
+            ],
+            'site_news' => [
+                'label' => 'New events, articles and galleries',
+                'description' => 'Notice on the site when a new event, article or gallery is published. In the bell only, never by mail.',
             ],
         ],
     ],
