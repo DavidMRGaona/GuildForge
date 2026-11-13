@@ -28,10 +28,8 @@
         {{-- Favicons: the site's own when configured; useFavicons.ts swaps them with the theme --}}
         <x-site-favicons />
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
-
-        {{-- The site palette and fonts for every page, with or without a layout (core#394): only the
-             families the site settings choose, Inter when they cannot be read --}}
+        {{-- The site palette and font variables for every page, with or without a layout (core#394); the
+             font files come with app.css (core#557), Inter when the settings cannot be read --}}
         <x-site-theme :theme="$page['props']['theme'] ?? null" />
 
         {{-- Import map for dynamic module loading (resolves vue, pinia, etc.) --}}

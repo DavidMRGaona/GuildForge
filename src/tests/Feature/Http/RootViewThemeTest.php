@@ -58,27 +58,17 @@ final class RootViewThemeTest extends TestCase
         $this->assertStringContainsString(':root.dark {', $head);
     }
 
-    public function test_the_head_loads_the_site_fonts(): void
+    public function test_the_head_asks_no_font_service_for_the_site_fonts(): void
     {
         app(SettingsServiceInterface::class)->set('theme_font_heading', 'Playfair Display');
         app(SettingsServiceInterface::class)->set('theme_font_body', 'Open Sans');
 
-        $this->assertStringContainsString(
-            '<link rel="stylesheet" href="https://fonts.bunny.net/css2?family=Playfair%20Display:wght@400;500;600;700&amp;family=Open%20Sans:wght@400;500;600;700&amp;display=swap" data-site-fonts>',
-            $this->rootHead(),
-        );
-    }
-
-    public function test_system_fonts_load_nothing(): void
-    {
-        app(SettingsServiceInterface::class)->set('theme_font_heading', 'system-ui');
-        app(SettingsServiceInterface::class)->set('theme_font_body', 'system-ui');
-
         $head = $this->rootHead();
 
+        // The families come with app.css (resources/css/fonts.css, core#557): nothing to preconnect or link
         $this->assertStringNotContainsString('data-site-fonts', $head);
-        // No fixed family either: the page downloads only what the settings choose
-        $this->assertStringNotContainsString('fonts.bunny.net/css', $head);
+        $this->assertStringNotContainsString('fonts.bunny.net', $head);
+        $this->assertStringContainsString("--font-heading: 'Playfair Display'", $head);
     }
 
     public function test_a_stored_value_cannot_close_the_style_element(): void

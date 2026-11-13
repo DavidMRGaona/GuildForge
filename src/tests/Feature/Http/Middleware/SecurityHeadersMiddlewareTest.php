@@ -134,16 +134,19 @@ final class SecurityHeadersMiddlewareTest extends TestCase
 
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
-        $this->assertStringContainsString("style-src 'self' 'unsafe-inline' https://fonts.bunny.net", $csp);
+        $this->assertStringContainsString("style-src 'self' 'unsafe-inline'", $csp);
     }
 
-    public function test_csp_font_src_allows_bunny_fonts(): void
+    public function test_csp_fonts_come_from_the_site_only(): void
     {
         $response = $this->get('/test-security-headers');
 
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
-        $this->assertStringContainsString("font-src 'self' https://fonts.bunny.net data:", $csp);
+        // The site serves its own fonts (core#557): no font service may be named, for styles or files
+        $this->assertStringContainsString("font-src 'self' data:;", $csp);
+        $this->assertStringNotContainsString('fonts.bunny.net', $csp);
+        $this->assertStringNotContainsString('jsdelivr', $csp);
     }
 
     public function test_csp_frame_src_is_self_when_no_module_adds_origins(): void

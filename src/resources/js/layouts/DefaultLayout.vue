@@ -19,24 +19,8 @@ const appStore = useAppStore();
 useFavicons();
 
 const theme = computed(() => page.props.theme as ThemeSettings | undefined);
+// The font files come with app.css (resources/css/fonts.css, core#557): the variables pick the family
 const cssVariables = computed(() => theme.value?.cssVariables ?? '');
-const fontHeading = computed(() => theme.value?.fontHeading ?? 'Inter');
-const fontBody = computed(() => theme.value?.fontBody ?? 'Inter');
-
-// Generate Bunny Fonts URL (privacy-friendly, CSP-allowed drop-in for Google Fonts)
-const fontsUrl = computed(() => {
-    const fonts = new Set<string>();
-    if (fontHeading.value !== 'system-ui') fonts.add(fontHeading.value);
-    if (fontBody.value !== 'system-ui') fonts.add(fontBody.value);
-
-    if (fonts.size === 0) return null;
-
-    const fontString = Array.from(fonts)
-        .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700`)
-        .join('&');
-
-    return `https://fonts.bunny.net/css2?${fontString}&display=swap`;
-});
 
 // Initialize theme settings immediately (synchronously) so components can read them
 // This ensures isThemeToggleVisible has the correct value on first render
@@ -59,11 +43,6 @@ watch(theme, (newTheme) => {
     <div class="flex min-h-screen flex-col bg-page transition-colors duration-200">
         <!-- Inject CSS Variables -->
         <component :is="'style'" v-if="cssVariables">{{ cssVariables }}</component>
-
-        <!-- Load Google Fonts -->
-        <Teleport to="head">
-            <link v-if="fontsUrl" rel="stylesheet" :href="fontsUrl" />
-        </Teleport>
 
         <a
             href="#main-content"
