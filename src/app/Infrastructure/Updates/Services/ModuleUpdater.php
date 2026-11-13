@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Updates\Services;
 
+use App\Application\Modules\Services\ModuleChangeWindowInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Updates\DTOs\ModuleUpdateResultDTO;
 use App\Application\Updates\DTOs\UpdatePreviewDTO;
@@ -54,6 +55,7 @@ final readonly class ModuleUpdater implements ModuleUpdaterInterface
         private ModulePackageInstallerInterface $installer,
         private ReleaseChannelPolicy $channelPolicy,
         private ModulePostUpdateRunnerInterface $postUpdateRunner,
+        private ModuleChangeWindowInterface $changeWindow,
         private ModulePathResolver $paths = new ModulePathResolver,
     ) {
         $this->tempPath = (string) config('updates.temp_path', storage_path('app/temp/updates'));
@@ -146,6 +148,7 @@ final readonly class ModuleUpdater implements ModuleUpdaterInterface
         $downloadPath = null;
         $stagedRoot = null;
         $previousPath = null;
+        $windowOpen = false;
 
         try {
             // Interrupted runs may have left staging/previous copies behind
@@ -213,6 +216,11 @@ final readonly class ModuleUpdater implements ModuleUpdaterInterface
             $this->updateStatus($history, UpdateStatus::Applying);
             $this->log($history->id, 'apply', 'started', 'Applying update...');
             $stagedRoot = $this->installer->stage($downloadPath, $name->value);
+
+            // Other queue workers wait from the swap until the update ends or is reverted; the
+            // download and staging above leave the installed module untouched (core#624)
+            $this->changeWindow->open();
+            $windowOpen = true;
 
             // Step 5: Swap. The module stays enabled: disabling it rebuilt the config cache
             // in this worker and left the module's bindings unresolvable for the steps below
@@ -316,6 +324,10 @@ final readonly class ModuleUpdater implements ModuleUpdaterInterface
 
             if ($stagedRoot !== null) {
                 $this->installer->discard(dirname($stagedRoot));
+            }
+
+            if ($windowOpen) {
+                $this->changeWindow->close();
             }
 
             $lock->release();

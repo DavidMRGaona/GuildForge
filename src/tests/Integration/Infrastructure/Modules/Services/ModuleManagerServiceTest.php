@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Modules\Services;
 
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Application\Modules\Services\ModuleChangeWindowInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
+use App\Domain\Modules\Events\ModuleDisabled;
+use App\Domain\Modules\Events\ModuleEnabled;
+use App\Domain\Modules\Events\ModuleUninstalled;
 use App\Domain\Modules\Exceptions\ModuleAlreadyDisabledException;
 use App\Domain\Modules\Exceptions\ModuleAlreadyEnabledException;
 use App\Domain\Modules\Exceptions\ModuleCannotUninstallException;
@@ -15,6 +19,7 @@ use App\Domain\Modules\Exceptions\ModuleDependencyException;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
+use App\Domain\Modules\ValueObjects\ModuleSetFingerprint;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
@@ -23,6 +28,7 @@ use App\Infrastructure\Updates\Persistence\Eloquent\Models\ModuleSeederHistoryMo
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
@@ -219,17 +225,19 @@ final class ModuleManagerServiceTest extends TestCase
             'requires' => null,
         ]);
 
+        // Closing the module change window reads the enabled modules afresh and may cache them
+        // again (core#624): what must never survive is the stale list
         Cache::put('modules.discovered', ['stale'], 3600);
         $this->service->enable(ModuleName::fromString('test-module'));
-        $this->assertFalse(Cache::has('modules.discovered'));
+        $this->assertNotSame(['stale'], Cache::get('modules.discovered'));
 
         Cache::put('modules.discovered', ['stale'], 3600);
         $this->service->disable(ModuleName::fromString('test-module'));
-        $this->assertFalse(Cache::has('modules.discovered'));
+        $this->assertNotSame(['stale'], Cache::get('modules.discovered'));
 
         Cache::put('modules.discovered', ['stale'], 3600);
         $this->service->uninstall(ModuleName::fromString('test-module'));
-        $this->assertFalse(Cache::has('modules.discovered'));
+        $this->assertNotSame(['stale'], Cache::get('modules.discovered'));
     }
 
     public function test_it_throws_when_disabling_already_disabled_module(): void
@@ -907,6 +915,78 @@ final class ModuleManagerServiceTest extends TestCase
         $this->assertSame(['test-module'], $resolver->names());
     }
 
+    public function test_enabling_holds_the_queue_workers_until_the_module_is_enabled_and_its_listeners_ran(): void
+    {
+        $this->createTestModule('test-module');
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value, 'path' => "{$this->testModulesPath}/test-module"]);
+        $window = app(ModuleChangeWindowInterface::class);
+        $duringListeners = null;
+        // A module's listeners queue its jobs here (the module is booted to run its seeders)
+        Event::listen(ModuleEnabled::class, function () use ($window, &$duringListeners): void {
+            $duringListeners = $window->inProgress();
+        });
+
+        $this->service->enable(ModuleName::fromString('test-module'));
+
+        $this->assertTrue($duringListeners);
+        $this->assertFalse($window->inProgress());
+        $this->assertTrue($this->fingerprintOfEnabledModules()->equals($window->currentFingerprint()));
+        $this->assertFalse(ModuleSetFingerprint::of([])->equals($window->currentFingerprint()));
+    }
+
+    public function test_a_module_that_cannot_be_enabled_leaves_the_queue_workers_free(): void
+    {
+        $this->createTestModule('test-module', ['requires' => ['core' => '^99.0']]);
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Disabled->value, 'path' => "{$this->testModulesPath}/test-module"]);
+        $window = app(ModuleChangeWindowInterface::class);
+
+        try {
+            $this->service->enable(ModuleName::fromString('test-module'));
+            $this->fail('Expected ModuleIncompatibleException');
+        } catch (ModuleIncompatibleException) {
+            // Refused before touching anything
+        }
+
+        $this->assertFalse($window->inProgress());
+        $this->assertTrue(ModuleSetFingerprint::of([])->equals($window->currentFingerprint()));
+    }
+
+    public function test_disabling_and_uninstalling_hold_the_queue_workers_while_they_run(): void
+    {
+        Queue::fake();
+        $this->createTestModule('test-module');
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Enabled->value, 'enabled_at' => now(), 'path' => "{$this->testModulesPath}/test-module"]);
+        $window = app(ModuleChangeWindowInterface::class);
+        $seen = [];
+        Event::listen([ModuleDisabled::class, ModuleUninstalled::class], function (object $event) use ($window, &$seen): void {
+            $seen[$event::class] = $window->inProgress();
+        });
+
+        $this->service->disable(ModuleName::fromString('test-module'));
+        $this->assertTrue(ModuleSetFingerprint::of([])->equals($window->currentFingerprint()));
+
+        ModuleModel::query()->where('name', 'test-module')->update(['status' => ModuleStatus::Enabled->value, 'enabled_at' => now()]);
+        app(EnabledModulesResolverInterface::class)->reset();
+        $this->service->uninstall(ModuleName::fromString('test-module'));
+
+        $this->assertSame([ModuleDisabled::class => true, ModuleUninstalled::class => true], $seen);
+        $this->assertFalse($window->inProgress());
+        $this->assertTrue(ModuleSetFingerprint::of([])->equals($window->currentFingerprint()));
+    }
+
+    public function test_discovering_a_new_version_of_an_enabled_module_records_it_for_the_queue_workers(): void
+    {
+        ModuleModel::create(['name' => 'test-module', 'display_name' => 'Test Module', 'version' => '1.0.0', 'status' => ModuleStatus::Enabled->value, 'enabled_at' => now(), 'installed_at' => now(), 'path' => "{$this->testModulesPath}/test-module"]);
+        $this->createTestModule('test-module', ['version' => '1.0.1']);
+        $window = app(ModuleChangeWindowInterface::class);
+
+        $this->service->discover();
+
+        $this->assertFalse($window->inProgress());
+        $this->assertTrue($this->fingerprintOfEnabledModules()->equals($window->currentFingerprint()));
+        $this->assertSame('1.0.1', ModuleModel::query()->where('name', 'test-module')->value('version'));
+    }
+
     public function test_discover_does_not_migrate_an_enabled_module_that_became_incompatible(): void
     {
         $this->createTestModule('test-module', ['version' => '1.1.0', 'requires' => ['core' => '^99.0']]);
@@ -950,6 +1030,14 @@ final class ModuleManagerServiceTest extends TestCase
         /** @var array<string, mixed> $manifest */
         $manifest = json_decode(self::readFile($path), true);
         file_put_contents($path, json_encode(array_merge($manifest, $values), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
+    }
+
+    private function fingerprintOfEnabledModules(): ModuleSetFingerprint
+    {
+        $resolver = app(EnabledModulesResolverInterface::class);
+        $resolver->reset();
+
+        return ModuleSetFingerprint::of($resolver->modules());
     }
 
     /**

@@ -12,6 +12,7 @@ use App\Application\Updates\Services\ModuleBackupServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Enums\ModuleStatus;
 use App\Domain\Modules\Enums\RequirementType;
+use App\Domain\Modules\Events\ModuleInstalled;
 use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Modules\Exceptions\ModuleIncompatibleException;
 use App\Domain\Modules\Exceptions\ModuleInstallationException;
@@ -35,6 +36,7 @@ use Illuminate\Support\Facades\Log;
 use JsonException;
 use Mockery;
 use Mockery\MockInterface;
+use Tests\Support\Modules\RecordingModuleChangeWindow;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -59,6 +61,8 @@ final class ModuleInstallerTest extends TestCase
     private MockInterface&ModuleCompatibilityServiceInterface $compatibility;
 
     private string $publicPath;
+
+    private RecordingModuleChangeWindow $changeWindow;
 
     protected function setUp(): void
     {
@@ -100,6 +104,8 @@ final class ModuleInstallerTest extends TestCase
         $this->compatibility = Mockery::mock(ModuleCompatibilityServiceInterface::class);
         $this->compatibility->shouldReceive('checkManifest')->andReturn(CompatibilityResult::compatible())->byDefault();
 
+        $this->changeWindow = new RecordingModuleChangeWindow;
+
         $this->installer = new ModuleInstaller(
             $this->dispatcher,
             $this->repository,
@@ -107,6 +113,7 @@ final class ModuleInstallerTest extends TestCase
             $this->migrationRunner,
             $this->seederRunner,
             $this->compatibility,
+            $this->changeWindow,
         );
     }
 
@@ -427,6 +434,56 @@ final class ModuleInstallerTest extends TestCase
         $this->assertEquals('2.0.0', $manifest->version);
         $this->assertTrue(File::exists($moduleDir.'/src/NewFile.php'));
         $this->assertFalse(File::exists($moduleDir.'/old-file.txt'));
+    }
+
+    public function test_installing_and_updating_from_a_zip_hold_the_queue_workers_while_they_run(): void
+    {
+        $moduleDir = $this->modulesPath.'/update-test-module';
+        File::makeDirectory($moduleDir, 0755, true);
+        $module = new Module(
+            id: ModuleId::generate(),
+            name: new ModuleName('update-test-module'),
+            displayName: 'Update Test Module',
+            description: '',
+            version: ModuleVersion::fromString('1.0.0'),
+            author: '',
+            requirements: ModuleRequirements::fromArray([]),
+            status: ModuleStatus::Enabled,
+            path: $moduleDir,
+        );
+        $this->repository->shouldReceive('findByName')->andReturn($module);
+        $this->repository->shouldReceive('save');
+        $this->backupService->shouldReceive('createBackup')->andReturn($this->tempDir.'/backup.zip');
+        $seen = [];
+        $this->dispatcher->shouldReceive('dispatch')->andReturnUsing(function (object $event) use (&$seen): void {
+            $seen[$event::class] = $this->changeWindow->inProgress();
+        });
+
+        $this->installer->installFromZip(new UploadedFile($this->createValidZip([
+            'module.json' => json_encode(['name' => 'fresh-test-module', 'version' => '1.0.0', 'namespace' => 'Modules\\FreshTestModule', 'provider' => 'Modules\\FreshTestModule\\ServiceProvider'], JSON_THROW_ON_ERROR),
+        ]), 'module.zip', 'application/zip', null, true));
+        $this->installer->updateFromZip(new UploadedFile($this->createValidZip([
+            'module.json' => json_encode(['name' => 'update-test-module', 'version' => '2.0.0', 'namespace' => 'Modules\\UpdateTestModule', 'provider' => 'Modules\\UpdateTestModule\\ServiceProvider'], JSON_THROW_ON_ERROR),
+        ]), 'module.zip', 'application/zip', null, true));
+
+        $this->assertSame([ModuleInstalled::class => true, ModuleUpdated::class => true], $seen);
+        $this->assertFalse($this->changeWindow->inProgress());
+        $this->assertSame(2, $this->changeWindow->closed);
+    }
+
+    public function test_a_zip_refused_before_touching_the_modules_never_holds_the_queue_workers(): void
+    {
+        $filePath = $this->tempDir.'/fake.zip';
+        File::put($filePath, 'this is not zip content');
+
+        try {
+            $this->installer->installFromZip(new UploadedFile($filePath, 'fake.zip', 'application/zip', null, true));
+            $this->fail('Expected ModuleInstallationException');
+        } catch (ModuleInstallationException) {
+            // Refused while validating the upload
+        }
+
+        $this->assertSame(0, $this->changeWindow->opened);
     }
 
     public function test_update_rejects_non_existent_module(): void

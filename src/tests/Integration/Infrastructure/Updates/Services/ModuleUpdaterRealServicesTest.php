@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Updates\Services;
 
+use App\Application\Modules\Services\ModuleChangeWindowInterface;
 use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Updates\DTOs\HealthCheckResultDTO;
@@ -204,6 +205,7 @@ final class ModuleUpdaterRealServicesTest extends TestCase
             app(ModulePackageInstaller::class),
             new ReleaseChannelPolicy(allowPrereleases: false),
             $inProcessRunner,
+            app(ModuleChangeWindowInterface::class),
         );
     }
 

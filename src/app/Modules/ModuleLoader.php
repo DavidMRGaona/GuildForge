@@ -25,6 +25,7 @@ use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
+use App\Domain\Modules\ValueObjects\ModuleSetFingerprint;
 use App\Infrastructure\Modules\Services\ModulePathResolver;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Log;
@@ -33,6 +34,9 @@ final class ModuleLoader
 {
     /** @var array<string, ModuleServiceProvider> */
     private array $loadedProviders = [];
+
+    /** The modules this process booted with, whether or not each one booted; null until boot() runs */
+    private ?ModuleSetFingerprint $bootedWith = null;
 
     public function __construct(
         private readonly Application $app,
@@ -46,6 +50,7 @@ final class ModuleLoader
     public function boot(): void
     {
         $modules = $this->getEnabledModules();
+        $this->bootedWith = ModuleSetFingerprint::of($modules);
 
         foreach ($modules as $module) {
             try {
@@ -479,6 +484,16 @@ final class ModuleLoader
         $this->resolver->reset();
 
         return in_array($moduleName, $this->resolver->names(), true);
+    }
+
+    /**
+     * The enabled modules this process booted with, so a long-running one (a queue worker) can
+     * tell when they changed under it. A module that failed to boot still counts: booting again
+     * would fail the same way, so it is no reason to start over. Null when boot() never ran.
+     */
+    public function bootedFingerprint(): ?ModuleSetFingerprint
+    {
+        return $this->bootedWith;
     }
 
     /**
