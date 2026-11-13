@@ -58,6 +58,9 @@ return [
             'create' => 'Crear evento',
             'update' => 'Editar evento',
             'delete' => 'Eliminar evento',
+            'propose' => 'Proponer eventos desde la web',
+            'review' => 'Revisar propuestas de eventos',
+            'publish_proposals_directly' => 'Publicar sus propuestas de eventos sin revisión',
         ],
         'articles' => [
             'view_any' => 'Ver listado de artículos',
@@ -65,6 +68,9 @@ return [
             'create' => 'Crear artículo',
             'update' => 'Editar artículo',
             'delete' => 'Eliminar artículo',
+            'propose' => 'Proponer artículos desde la web',
+            'review' => 'Revisar propuestas de artículos',
+            'publish_proposals_directly' => 'Publicar sus propuestas de artículos sin revisión',
         ],
         'galleries' => [
             'view_any' => 'Ver listado de galerías',
@@ -145,6 +151,14 @@ return [
     ],
 
     'permission_descriptions' => [
+        'events' => [
+            'propose' => 'Solo cuenta si el acceso a las propuestas de eventos es «Con el permiso».',
+            'publish_proposals_directly' => 'Al enviar una propuesta de evento, se publica sin pasar por revisión.',
+        ],
+        'articles' => [
+            'propose' => 'Solo cuenta si el acceso a las propuestas de artículos es «Con el permiso».',
+            'publish_proposals_directly' => 'Al enviar una propuesta de artículo, se publica sin pasar por revisión.',
+        ],
         'knowledge' => [
             'manage' => 'Escribir las guías propias del sitio, y ocultar o destacar las oficiales.',
         ],

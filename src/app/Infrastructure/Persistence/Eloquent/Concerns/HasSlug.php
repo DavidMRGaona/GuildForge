@@ -140,7 +140,10 @@ trait HasSlug
      */
     private function slugExistsForOther(string $slug, string $excludeId): bool
     {
-        return static::where('slug', $slug)
+        // Every row counts, those hidden by a global scope too (unsubmitted proposals, core#570): the
+        // column is unique in the table
+        return static::query()->withoutGlobalScopes()
+            ->where('slug', $slug)
             ->where('id', '!=', $excludeId)
             ->exists();
     }

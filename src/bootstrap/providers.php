@@ -10,6 +10,7 @@ use App\Providers\ImpersonationServiceProvider;
 use App\Providers\KnowledgeServiceProvider;
 use App\Providers\MailPreferencesServiceProvider;
 use App\Providers\MediaServiceProvider;
+use App\Providers\ProposalsServiceProvider;
 use App\Providers\PublicationServiceProvider;
 use App\Providers\RealtimeServiceProvider;
 use App\Providers\SearchServiceProvider;
@@ -24,6 +25,7 @@ return [
     KnowledgeServiceProvider::class,
     MailPreferencesServiceProvider::class,
     MediaServiceProvider::class,
+    ProposalsServiceProvider::class,
     PublicationServiceProvider::class,
     RealtimeServiceProvider::class,
     SearchServiceProvider::class,

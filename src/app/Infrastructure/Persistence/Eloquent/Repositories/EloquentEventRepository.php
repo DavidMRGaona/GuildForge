@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Eloquent\Repositories;
 
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Entities\Event;
+use App\Domain\Proposals\ValueObjects\ProposalReview;
 use App\Domain\Repositories\EventRepositoryInterface;
 use App\Domain\ValueObjects\EventId;
 use App\Domain\ValueObjects\Price;
@@ -18,9 +19,12 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
 {
     public function __construct(private ?TimezoneServiceInterface $timezone = null) {}
 
+    /**
+     * Any event, proposal drafts never submitted included (the proposals flow reads them here).
+     */
     public function findById(EventId $id): ?Event
     {
-        $model = EventModel::query()->find($id->value);
+        $model = EventModel::query()->includingUnsubmittedProposals()->find($id->value);
 
         if ($model === null) {
             return null;
@@ -87,15 +91,17 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
 
     public function save(Event $event): void
     {
-        EventModel::query()->updateOrCreate(
-            ['id' => $event->id()->value],
-            $this->toArray($event),
-        );
+        // Unsubmitted drafts included, or saving one would insert it again; the review columns are
+        // not fillable, so they are written with forceFill()
+        $model = EventModel::query()->includingUnsubmittedProposals()->find($event->id()->value) ?? new EventModel;
+
+        $model->forceFill([...$this->toArray($event), ...$this->proposalColumns($event->proposal())]);
+        $model->save();
     }
 
     public function delete(Event $event): void
     {
-        EventModel::query()->where('id', $event->id()->value)->delete();
+        EventModel::query()->includingUnsubmittedProposals()->where('id', $event->id()->value)->delete();
     }
 
     private function toDomain(EventModel $model): Event
@@ -122,7 +128,24 @@ final readonly class EloquentEventRepository implements EventRepositoryInterface
             updatedAt: $model->updated_at !== null
                 ? new DateTimeImmutable($model->updated_at->toDateTimeString())
                 : null,
+            proposal: $model->proposalReview(),
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function proposalColumns(?ProposalReview $proposal): array
+    {
+        return [
+            'proposal_status' => $proposal?->status,
+            'proposed_by' => $proposal?->proposedBy,
+            'proposal_note' => $proposal?->note,
+            'proposal_reason' => $proposal?->reason,
+            'submitted_at' => $proposal?->submittedAt,
+            'reviewed_at' => $proposal?->reviewedAt,
+            'reviewed_by' => $proposal?->reviewedBy,
+        ];
     }
 
     /**

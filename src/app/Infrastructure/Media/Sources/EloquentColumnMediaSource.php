@@ -135,12 +135,14 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
 
     /**
      * Base query over the records, trashed ones included: a soft-deleted record can still be restored.
+     * Global scopes never hide a use either (drafts kept out of the panel, core#570): only more uses are
+     * counted, so a file is kept rather than taken for unused.
      *
      * @return Builder<Model>
      */
     protected function query(): Builder
     {
-        $query = $this->modelClass()::query();
+        $query = $this->modelClass()::query()->withoutGlobalScopes();
 
         if ($this->usesSoftDeletes()) {
             // @phpstan-ignore method.notFound

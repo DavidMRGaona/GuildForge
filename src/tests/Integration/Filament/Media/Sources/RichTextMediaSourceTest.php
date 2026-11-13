@@ -340,4 +340,15 @@ final class RichTextMediaSourceTest extends TestCase
             ->where('record_id', 'guides:'.$guide->id)
             ->exists());
     }
+
+    public function test_the_text_of_a_draft_hidden_from_the_panel_still_counts(): void
+    {
+        $draft = ArticleModel::factory()->proposal()->create([
+            'title' => 'Borrador',
+            'content' => '<p><img src="'.self::BASE.'guildforge/articles/2026/11/d.jpg" alt=""></p>',
+        ]);
+
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('articles/2026/11/d')));
+        $this->assertSame([['articles/2026/11/d', 'articles:'.$draft->id, 'En el texto', 'Borrador']], $this->usages());
+    }
 }

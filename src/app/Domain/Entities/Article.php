@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Entities;
 
 use App\Domain\Exceptions\CannotPublishWithoutAuthorException;
+use App\Domain\Proposals\Exceptions\ProposalNotApprovedException;
+use App\Domain\Proposals\ValueObjects\ProposalReview;
 use App\Domain\ValueObjects\ArticleId;
 use App\Domain\ValueObjects\Slug;
 use DateTimeImmutable;
@@ -23,6 +25,7 @@ final class Article
         private ?DateTimeImmutable $publishedAt = null,
         private readonly ?DateTimeImmutable $createdAt = null,
         private readonly ?DateTimeImmutable $updatedAt = null,
+        private readonly ?ProposalReview $proposal = null,
     ) {}
 
     public function id(): ArticleId
@@ -80,8 +83,21 @@ final class Article
         return $this->updatedAt;
     }
 
+    /**
+     * The review data when the article was proposed from the web; null when created in the panel.
+     * The proposal stays its proposer's even if the displayed author changes.
+     */
+    public function proposal(): ?ProposalReview
+    {
+        return $this->proposal;
+    }
+
     public function publish(): void
     {
+        if ($this->proposal instanceof ProposalReview && $this->proposal->isUnapproved()) {
+            throw ProposalNotApprovedException::cannotPublish();
+        }
+
         if ($this->authorId === null) {
             throw CannotPublishWithoutAuthorException::create();
         }

@@ -8,6 +8,7 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
+use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
@@ -39,6 +40,7 @@ final readonly class UserService implements UserServiceInterface
         private SiteNotificationPreferenceRepositoryInterface $siteNotificationPreferences,
         private SiteNotificationServiceInterface $siteNotificationService,
         private MailDigestItemRepositoryInterface $mailDigestItems,
+        private ProposalServiceInterface $proposals,
     ) {}
 
     public function canAccessPanel(string $userId): bool
@@ -72,6 +74,8 @@ final readonly class UserService implements UserServiceInterface
             $this->mailPreferences->deleteForUser(UserId::fromString($userId));
             // And the notification centre, with its choices (core#491)
             $this->forgetSiteNotifications(UserId::fromString($userId));
+            // Unpublished proposals go; what was published stays (core#570)
+            $this->proposals->deleteUnpublishedOf($userId);
 
             $userModel->update([
                 'name' => $anonymousName,
@@ -115,6 +119,9 @@ final readonly class UserService implements UserServiceInterface
         }
 
         DB::transaction(function () use ($dto, $userModel): void {
+            // Before any transfer: unpublished proposals go, what was published stays (core#570)
+            $this->proposals->deleteUnpublishedOf($dto->userId);
+
             if ($dto->contentAction === 'transfer' && $dto->transferToUserId !== null) {
                 $this->transferUserContent($dto->userId, $dto->transferToUserId);
             }
