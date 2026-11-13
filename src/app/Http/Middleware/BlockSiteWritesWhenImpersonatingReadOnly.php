@@ -23,7 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Left alone on purpose:
  * - `impersonation.stop` and the logout routes (ApplyImpersonation::LOGOUT_ROUTES): the way out;
  * - `realtime.auth` (`POST /broadcasting/auth`): subscribing to a channel only reads;
- * - Livewire requests and the panel, which #576 covers with their own check.
+ * - Livewire update requests (by route name, never by a header the client can send) and the panel, which #576 covers with their own check.
  * What a request slips past this (a GET that writes) is the safety net's business (#572).
  */
 final readonly class BlockSiteWritesWhenImpersonatingReadOnly
@@ -39,7 +39,7 @@ final readonly class BlockSiteWritesWhenImpersonatingReadOnly
         'impersonation.stop',
         ...ApplyImpersonation::LOGOUT_ROUTES,
         'realtime.auth',
-        'livewire.*',
+        '*livewire.update',
         'filament.*',
     ];
 
@@ -51,7 +51,6 @@ final readonly class BlockSiteWritesWhenImpersonatingReadOnly
     {
         if ($this->context->mode() !== ImpersonationMode::ReadOnly
             || $request->isMethodSafe()
-            || $request->headers->has('X-Livewire')
             || $request->routeIs(...self::EXEMPT_ROUTES)) {
             return $next($request);
         }
