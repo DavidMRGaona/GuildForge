@@ -10,13 +10,13 @@ Complete guide to deploy, operate, and monitor GuildForge in production.
 
 ### Container stack
 
-The production environment is based on a multi-stage Docker image that includes Nginx, PHP-FPM, a queue worker and the scheduler, all managed by Supervisord within a single container.
+The production environment is based on a multi-stage Docker image that includes Nginx, PHP-FPM, a queue worker, the scheduler and, when the site turns real time on, the Reverb WebSocket server, all managed by Supervisord within a single container.
 
 The table below is prod-local (`docker-compose.prod.yml`). Production runs the same image on a deployment platform, with its own PostgreSQL and Redis: see [Deployment](#deployment).
 
 | Container | Image | Port | Function |
 |-----------|-------|------|----------|
-| `guildforge_app_prod` | Dockerfile.prod (PHP 8.5 FPM Alpine) | 8000 | Application (Nginx + PHP-FPM + queue worker + scheduler) |
+| `guildforge_app_prod` | Dockerfile.prod (PHP 8.5 FPM Alpine) | 8000 | Application (Nginx + PHP-FPM + queue worker + scheduler + Reverb when real time is on) |
 | `guildforge_db_prod` | postgres:17-alpine | - | PostgreSQL database |
 | `guildforge_redis_prod` | redis:7.2-alpine | - | Redis (available for cache, sessions and queues) |
 
@@ -153,13 +153,14 @@ The `docker/prod/entrypoint.sh` script runs when the container starts. It runs a
 8. Discovers modules (`module:discover`) and syncs permissions (`permissions:sync`)
    - then syncs the knowledge base (`knowledge:sync`) and the site search (`search:sync`); a failure only logs a warning and never stops the start
 9. Caches configuration, clears routes and caches views; on failure it records `fail` and stops
-10. Closes the deployment log entry (`core:record-deployment finish`)
-11. Lists any file in `storage/framework`, `storage/logs` or `bootstrap/cache` not owned by `www-data` as a warning and hands it back to `www-data` (the start goes on)
-12. Starts Supervisord
+10. Decides whether the Reverb server starts: `realtime:status` (on the cached configuration, the application's own rule) sets `SUPERVISOR_REVERB_AUTOSTART` to `true` or `false`
+11. Closes the deployment log entry (`core:record-deployment finish`)
+12. Lists any file in `storage/framework`, `storage/logs` or `bootstrap/cache` not owned by `www-data` as a warning and hands it back to `www-data` (the start goes on)
+13. Starts Supervisord
 
 ### Supervisord
 
-Manages four processes inside the production container:
+Manages five processes inside the production container:
 
 | Process | Command | Configuration |
 |---------|---------|---------------|
@@ -167,6 +168,7 @@ Manages four processes inside the production container:
 | php-fpm | `php-fpm` | Auto-start, auto-restart |
 | queue-worker | `php /var/www/html/artisan queue:work --sleep=3 --tries=3 --max-time=3600` | 1 process, www-data user, stop timeout 3600s, no `--force` (pauses under `artisan down`) |
 | scheduler | `php /var/www/html/artisan schedule:work` | www-data user (runs `CheckModuleUpdatesJob` daily at 04:00 and module tasks) |
+| reverb | `php /var/www/html/artisan reverb:start --host=127.0.0.1 --port=8080` | www-data user, auto-restart; starts only when real time is on (`SUPERVISOR_REVERB_AUTOSTART`, set by the entrypoint), otherwise `STOPPED`. See [Real time](./realtime.md) |
 
 `supervisorctl` talks to supervisord through `/run/supervisord.sock`:
 
@@ -342,7 +344,7 @@ To add a target, add its secret and a line to `WEBHOOKS` in `deploy.yml`; it is 
 | `SOURCE_COMMIT` | Deployed commit, injected by the deployment platform; do not set by hand (see `config/updates.php`) | - |
 | `CORE_GITHUB_BRANCH` | Branch the application deploys from, compared on the core updates page | `main` |
 
-> **Real time (optional):** `BROADCAST_CONNECTION=reverb` and the `REVERB_*` variables turn on WebSockets, with one more process (`php artisan reverb:start`) and a proxy rule for `/app/`. Without them the site polls. See [Real time](./realtime.md).
+> **Real time (optional):** `BROADCAST_CONNECTION=reverb` and the `REVERB_*` variables turn on WebSockets. The production image then starts the Reverb process and already sends `/app/` to it; set `REVERB_HOST=127.0.0.1` (and keep `REVERB_PORT` at `8080`). Without them the site polls. See [Real time](./realtime.md).
 
 > **Note on Redis vs database:** the default configuration uses `database` for cache, queues, and sessions, which simplifies deployment and does not require Redis to be available. For better performance in production, you can switch to `redis` for all three variables (`CACHE_STORE`, `QUEUE_CONNECTION`, `SESSION_DRIVER`), since Redis is part of the production stack.
 
@@ -687,6 +689,7 @@ Relevant configuration from `docker/prod/nginx.conf`:
 - Maximum upload size: 20MB
 - Hidden files denied (except `.well-known`)
 - `/health` endpoint for health checks
+- `/app/` (the real-time WebSocket) goes to the Reverb process on `127.0.0.1:8080`, with the upgrade headers and a 120 s read timeout; it answers 502 while real time is off. Reverb's publishing API (`/apps/…`) is not exposed
 
 ### Modules as separate repositories
 

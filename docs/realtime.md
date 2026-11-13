@@ -86,15 +86,23 @@ location /app/ {
 
 Keep the read timeout above Reverb's ping interval (60 s by default), or idle sockets are cut and the browsers reconnect over and over.
 
+## In the production image
+
+The production image (`Dockerfile.prod`) already runs the process and has the proxy rule:
+
+- On every start, after caching the configuration, the entrypoint asks `php artisan realtime:status`, which applies the same rule as the application (exit `0` when on, `1` when off). When on, supervisord starts `php artisan reverb:start --host=127.0.0.1 --port=8080` as `www-data` and starts it again whenever it stops; when off, the program stays `STOPPED` and never restarts in a loop.
+- Its nginx sends `/app/` to `127.0.0.1:8080` with the upgrade headers and a 120 s read timeout. While real time is off that path answers 502 and the pages keep polling. `/apps/…` is not exposed.
+- Reverb listens only inside the container, so set `REVERB_HOST=127.0.0.1` and keep `REVERB_PORT` at `8080`: the application publishes to the process next to it. `REVERB_SERVER_HOST` and `REVERB_SERVER_PORT` are not used there (the image fixes them).
+- A deploy replaces the container, so Reverb starts again with the new code and settings. To restart it by hand: `php artisan reverb:restart` (it stops within a few seconds and supervisord starts it again) or `supervisorctl restart reverb`; `supervisorctl status reverb` says whether it runs.
+
 ## Turning it on in a site
 
-1. Add the variables above to the site's environment (`BROADCAST_CONNECTION=reverb`, app id, key, secret and `REVERB_HOST`).
-2. Start `php artisan reverb:start` as a supervised process.
-3. Add the proxy rule for `/app/`.
-4. Deploy, and restart the queue worker so it reads the new settings.
-5. Check: signed in, the browser's network panel shows one WebSocket to `/app/<key>` and one `POST /broadcasting/auth` answered `200`. A notice sent to that account raises the bell without reloading.
+1. Add the variables above to the site's environment (`BROADCAST_CONNECTION=reverb`, app id, key, secret and `REVERB_HOST`; `127.0.0.1` with the production image).
+2. Without the production image: start `php artisan reverb:start` as a supervised process and add the proxy rule for `/app/`. The image does both on its own.
+3. Deploy. With your own processes, also restart the queue worker so it reads the new settings.
+4. Check: signed in, the browser's network panel shows one WebSocket to `/app/<key>` and one `POST /broadcasting/auth` answered `200`. A notice sent to that account raises the bell without reloading.
 
-To turn it off again, set `BROADCAST_CONNECTION=log` (or remove it) and restart the worker. Everything goes back to periodic requests.
+To turn it off again, set `BROADCAST_CONNECTION=log` (or remove it) and deploy (with your own processes, restart the worker; the Reverb process can be stopped). Everything goes back to periodic requests.
 
 ## Local development
 

@@ -73,6 +73,15 @@ artisan config:cache || record_failure "Config cache failed (see the container l
 artisan route:clear
 artisan view:cache || record_failure "View cache failed (see the container logs)"
 
+# Real time is optional (core#493): start the Reverb server only when this site turns it on,
+# decided by the application itself on the cached configuration. Always set, since
+# supervisord refuses a configuration that names a missing variable
+if artisan realtime:status; then
+    export SUPERVISOR_REVERB_AUTOSTART=true
+else
+    export SUPERVISOR_REVERB_AUTOSTART=false
+fi
+
 artisan core:record-deployment finish || echo "Warning: Could not record the deployment"
 
 # A file the app cannot rewrite breaks module updates (their view:cache) and any page whose
