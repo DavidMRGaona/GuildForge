@@ -136,7 +136,7 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 async function toggleRead(id: string, isUnread: boolean): Promise<void> {
-    if (busyId.value !== null) {
+    if (busyId.value !== null || marking.value) {
         return;
     }
 
@@ -152,7 +152,7 @@ async function toggleRead(id: string, isUnread: boolean): Promise<void> {
 
 /** Hide a notice and give the focus to the one now in its place, so the keyboard is not lost. */
 async function hideNotice(id: string, index: number): Promise<void> {
-    if (busyId.value !== null) {
+    if (busyId.value !== null || marking.value) {
         return;
     }
 
@@ -172,7 +172,7 @@ async function hideNotice(id: string, index: number): Promise<void> {
 }
 
 async function markAllRead(): Promise<void> {
-    if (marking.value) {
+    if (marking.value || busyId.value !== null) {
         return;
     }
 

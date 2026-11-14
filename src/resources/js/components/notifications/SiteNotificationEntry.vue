@@ -93,14 +93,15 @@ const others = computed(() => props.item.count - 1);
                 aria-hidden="true"
             />
         </a>
-        <SiteNotificationMenu
-            class="absolute top-1.5"
-            :class="compact ? 'right-1.5' : 'right-2'"
-            :title="item.title"
-            :unread="item.unread"
-            :busy="busy"
-            @toggle-read="emit('toggle-read')"
-            @hide="emit('hide')"
-        />
+        <!-- A wrapper places it: the menu's own root stays `relative` for its panel -->
+        <div class="absolute top-1.5" :class="compact ? 'right-1.5' : 'right-2'">
+            <SiteNotificationMenu
+                :title="item.title"
+                :unread="item.unread"
+                :busy="busy"
+                @toggle-read="emit('toggle-read')"
+                @hide="emit('hide')"
+            />
+        </div>
     </div>
 </template>

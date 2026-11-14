@@ -40,6 +40,9 @@ function close(returnFocus: boolean): void {
 }
 
 function toggle(): void {
+    if (props.busy) {
+        return;
+    }
     isOpen.value = !isOpen.value;
 }
 
@@ -53,8 +56,12 @@ function onEscape(event: KeyboardEvent): void {
     close(true);
 }
 
+/**
+ * The focus goes back to the «⋯» first: it stays there while the server answers and after a
+ * failure; when the notice is hidden, the list moves it on to the notice now in its place.
+ */
 function choose(action: 'toggle-read' | 'hide'): void {
-    close(action === 'toggle-read');
+    close(true);
     if (action === 'toggle-read') {
         emit('toggle-read');
     } else {
@@ -91,8 +98,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside));
             :title="label"
             :aria-expanded="isOpen"
             :aria-controls="panelId"
-            :disabled="props.busy"
-            class="rounded-md p-1.5 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+            :aria-disabled="props.busy ? 'true' : undefined"
+            class="rounded-md p-1.5 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 aria-disabled:opacity-50"
             data-testid="site-notification-menu"
             @click.stop.prevent="toggle"
         >

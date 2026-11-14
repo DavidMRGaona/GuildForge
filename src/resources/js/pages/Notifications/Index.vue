@@ -35,9 +35,11 @@ const marking = ref(false);
 const busyId = ref<string | null>(null);
 const liveMessage = ref('');
 const list = useTemplateRef<HTMLElement>('list');
+const heading = useTemplateRef<HTMLElement>('heading');
 
 function postRowAction(id: string, url: string, done: string, after?: () => void): void {
-    if (busyId.value !== null) {
+    // One change at a time, «Marcar todo como leído» included
+    if (busyId.value !== null || marking.value) {
         return;
     }
 
@@ -69,19 +71,33 @@ function toggleRead(id: string, isUnread: boolean): void {
     );
 }
 
+/**
+ * Hide a notice and give the focus to the one now in its place. The last one of a later page
+ * leaves it empty: go back a page. With nothing left, the focus goes to the page's title.
+ */
 function hideNotice(id: string, index: number): void {
     postRowAction(id, routes.notifications.hide(id), t('notifications.actions.hidden'), () => {
+        if (props.notifications.data.length === 0 && props.notifications.links.prev !== null) {
+            router.visit(props.notifications.links.prev);
+
+            return;
+        }
+
         void nextTick(() => {
             const links = Array.from(
                 list.value?.querySelectorAll<HTMLElement>('[data-testid="site-notification"]') ?? []
             );
-            (links[index] ?? links[index - 1])?.focus();
+            (links[index] ?? links[index - 1] ?? heading.value)?.focus();
         });
     });
 }
 const preferencesUrl = `${routes.profile}?tab=${MAIL_TAB}`;
 
 function markAllRead(): void {
+    if (busyId.value !== null || marking.value) {
+        return;
+    }
+
     router.post(
         routes.notifications.readAll,
         {},
@@ -104,7 +120,11 @@ function markAllRead(): void {
             class="mx-auto flex max-w-3xl flex-wrap items-end justify-between gap-4 px-4 py-6 sm:px-6 lg:px-8"
         >
             <div>
-                <h1 class="text-3xl font-bold tracking-tight text-base-primary">
+                <h1
+                    ref="heading"
+                    tabindex="-1"
+                    class="text-3xl font-bold tracking-tight text-base-primary focus:outline-none"
+                >
                     {{ t('notifications.title') }}
                 </h1>
                 <p class="mt-2 text-base text-base-secondary">

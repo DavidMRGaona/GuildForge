@@ -215,6 +215,10 @@ describe('NotificationBell', () => {
         );
         expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('1');
         expect(wrapper.get('[role="status"]').text()).toBe('Aviso marcado como no leído.');
+        // The keyboard stays in the bell: back on the «⋯» it came from
+        expect(document.activeElement).toBe(
+            wrapper.get('[data-testid="site-notification-menu"]').element
+        );
         wrapper.unmount();
     });
 
@@ -244,6 +248,21 @@ describe('NotificationBell', () => {
         expect(document.activeElement).toBe(entries[0]?.element);
         expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('1');
         expect(wrapper.get('[role="status"]').text()).toBe('Aviso oculto.');
+        wrapper.unmount();
+    });
+
+    it('places the «⋯» over the row through a wrapper, never on the menu root itself', async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ unread: 1, items: [notice()] }));
+        const wrapper = mountBell();
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+
+        // Two position classes on one element: the compiled CSS lets `relative` win
+        const menuRoot = wrapper.get('[data-testid="site-notification-menu"]').element
+            .parentElement;
+        expect(menuRoot?.classList.contains('relative')).toBe(true);
+        expect(menuRoot?.classList.contains('absolute')).toBe(false);
+        expect(menuRoot?.parentElement?.classList.contains('absolute')).toBe(true);
         wrapper.unmount();
     });
 
@@ -284,6 +303,9 @@ describe('NotificationBell', () => {
         expect(wrapper.findAll('[data-testid="site-notification"]')).toHaveLength(1);
         expect(wrapper.get('[role="status"]').text()).toBe(
             'No se ha podido cambiar el aviso. Inténtalo de nuevo.'
+        );
+        expect(document.activeElement).toBe(
+            wrapper.get('[data-testid="site-notification-menu"]').element
         );
         wrapper.unmount();
     });
