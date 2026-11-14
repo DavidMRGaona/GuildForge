@@ -9,4 +9,6 @@ export interface ImpersonationSharedProps {
     mode: ImpersonationMode;
     /** Message for the administrator from the previous request (core#614), shown by the band */
     notice: string | null;
+    /** Display names of the roles in a role view (core#644); null when an account is viewed */
+    viewedRoles: string[] | null;
 }

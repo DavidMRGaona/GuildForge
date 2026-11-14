@@ -24,6 +24,14 @@ const bandClasses = computed<string>(() =>
     isSimulate.value ? 'border-warning bg-warning-light' : 'border-info bg-info-light'
 );
 
+const headline = computed<string>(() => {
+    const roles = impersonation.value?.viewedRoles;
+
+    return roles
+        ? t('impersonationBanner.viewingAsRoles', { roles: roles.join(', ') })
+        : t('impersonationBanner.viewingAs', { name: impersonation.value?.targetName ?? '' });
+});
+
 const form = useForm({});
 
 function stop(): void {
@@ -53,7 +61,7 @@ function stop(): void {
                 <Eye v-else class="mt-0.5 h-5 w-5 shrink-0 text-info" aria-hidden="true" />
                 <div class="text-sm text-base-primary">
                     <p class="font-semibold">
-                        {{ t('impersonationBanner.viewingAs', { name: impersonation.targetName }) }}
+                        {{ headline }}
                     </p>
                     <p data-testid="impersonation-mode">{{ modeText }}</p>
                     <p

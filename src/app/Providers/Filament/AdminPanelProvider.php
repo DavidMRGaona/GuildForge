@@ -23,6 +23,7 @@ use App\Filament\Support\PanelSidebarMode;
 use App\Http\Middleware\ApplyImpersonation;
 use App\Http\Middleware\RedirectImpersonatedAccountWithoutPanelAccess;
 use App\Infrastructure\Impersonation\ImpersonatedName;
+use App\Infrastructure\Impersonation\ImpersonationContext;
 use App\Modules\ModuleAutoloader;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -381,9 +382,12 @@ class AdminPanelProvider extends PanelProvider
             }
 
             $simulate = $context->mode() === ImpersonationMode::Simulate;
+            // Only a role view has them (the account that carries them lives for the request alone)
+            $roles = app(ImpersonationContext::class)->viewedRoleNames();
 
             return view($view, [
                 'name' => ImpersonatedName::of($target),
+                'roles' => $roles === null ? null : implode(', ', $roles),
                 'color' => $simulate ? 'warning' : 'info',
                 'modeText' => __($simulate ? 'filament.impersonation.banner.simulate' : 'filament.impersonation.banner.read_only'),
             ])->render();

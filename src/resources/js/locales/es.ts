@@ -408,6 +408,7 @@ export default {
     impersonationBanner: {
         label: 'Impersonación',
         viewingAs: 'Estás viendo el sitio como {name}',
+        viewingAsRoles: 'Estás viendo el sitio con los roles {roles}',
         readOnly: 'Solo mirar: no se guardan cambios',
         simulate: 'Ejecutar y deshacer: lo que envíes se ejecuta y se deshace',
         stop: 'Volver a mi cuenta',

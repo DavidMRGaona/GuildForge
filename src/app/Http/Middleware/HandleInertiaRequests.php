@@ -22,6 +22,7 @@ use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Application\Social\SocialNetwork;
 use App\Domain\Modules\Entities\Module;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
+use App\Infrastructure\Impersonation\ImpersonationContext;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\SiteNotifications\SiteNotificationsRealtimeChannel;
 use App\Infrastructure\Social\SocialLinkResolver;
@@ -327,6 +328,8 @@ final class HandleInertiaRequests extends Middleware
                 'targetName' => app(ResponseDTOFactoryInterface::class)->createUserDTO($target)->displayName,
                 'mode' => $mode->value,
                 'notice' => $this->impersonationNotice($request),
+                // Role display names in a role view (the account is a throwaway); null for an account
+                'viewedRoles' => app(ImpersonationContext::class)->viewedRoleNames(),
             ];
         } catch (\Throwable $e) {
             $this->logDebugError('getImpersonation', $e);

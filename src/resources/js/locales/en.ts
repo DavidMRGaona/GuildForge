@@ -407,6 +407,7 @@ export default {
     impersonationBanner: {
         label: 'Impersonation',
         viewingAs: 'You are viewing the site as {name}',
+        viewingAsRoles: 'You are viewing the site with the roles {roles}',
         readOnly: 'View only: no changes are saved',
         simulate: 'Run and undo: what you submit is run and then undone',
         stop: 'Back to my account',

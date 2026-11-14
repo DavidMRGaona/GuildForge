@@ -462,11 +462,13 @@ return [
         ],
         'banner' => [
             'viewing_as' => 'Estás viendo como :name',
+            'viewing_as_roles' => 'Estás viendo con los roles :roles',
             'read_only' => 'Solo mirar: no se guardan cambios',
             'simulate' => 'Ejecutar y deshacer: las acciones se ejecutan y se deshacen; los avisos de «Guardado» no son reales',
             'stop' => 'Volver a mi cuenta',
         ],
         'reminder' => 'Como :name',
+        'reminder_roles' => 'Con los roles :roles',
         'no_panel_access' => ':name no tiene acceso al panel.',
         'history' => [
             'as_target' => 'Impersonaciones de esta cuenta',
@@ -474,6 +476,7 @@ return [
             'empty' => 'Sin impersonaciones',
             'open' => 'Sin cierre registrado',
             'deleted_account' => 'Cuenta anonimizada',
+            'viewed_roles' => 'Roles: :roles',
             'columns' => [
                 'impersonator' => 'Hecha por',
                 'target' => 'Cuenta impersonada',
