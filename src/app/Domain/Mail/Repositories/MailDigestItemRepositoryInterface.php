@@ -23,6 +23,13 @@ interface MailDigestItemRepositoryInterface
     public function deleteForActor(string $actorId): void;
 
     /**
+     * Delete the lines kept for the daily digest about a thing, whoever they belong to: of one
+     * category when the task they asked for is done, of every category when the thing is gone
+     * (core#681). How many lines went.
+     */
+    public function deleteForSubject(string $type, string $id, ?string $category = null): int;
+
+    /**
      * Accounts with notices kept before the instant.
      *
      * @return list<string>

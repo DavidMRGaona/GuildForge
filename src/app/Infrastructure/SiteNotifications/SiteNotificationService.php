@@ -8,6 +8,7 @@ use App\Application\Services\TimezoneServiceInterface;
 use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Application\SiteNotifications\DTOs\SiteNotificationItemDTO;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
+use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
 use App\Domain\SiteNotifications\ValueObjects\StoredSiteNotice;
 use App\Domain\ValueObjects\UserId;
@@ -19,6 +20,7 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
     public function __construct(
         private SiteNotificationRepositoryInterface $notices,
         private TimezoneServiceInterface $timezone,
+        private MailDigestItemRepositoryInterface $digestItems,
     ) {}
 
     public function unreadCount(object $user): int
@@ -104,6 +106,9 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
 
     public function resolveSubject(string $category, string $type, string $id): int
     {
+        // A line still waiting for the daily digest would ask for it again (core#681)
+        $this->digestItems->deleteForSubject($type, $id, $category);
+
         return $this->notices->markReadForSubject($category, $type, $id);
     }
 

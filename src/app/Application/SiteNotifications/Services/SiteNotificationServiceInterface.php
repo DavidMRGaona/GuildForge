@@ -52,8 +52,9 @@ interface SiteNotificationServiceInterface
      * The task a notice asked for is done (core#668): mark as read, for everybody, the notices of
      * the category about the thing (a proposal reviewed by someone else, a report already
      * moderated). By category, so other notices about the same thing (the author's «approved»)
-     * stay as they are; read, not deleted, so people still see there was something to do. Call
-     * it after the change is saved; how many rows changed.
+     * stay as they are; read, not deleted, so people still see there was something to do. The
+     * lines of that category about the thing still waiting for the daily digest are deleted
+     * (core#681). Call it after the change is saved; how many notices changed.
      */
     public function resolveSubject(string $category, string $type, string $id): int;
 

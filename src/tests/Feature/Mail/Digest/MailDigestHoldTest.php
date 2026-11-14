@@ -12,6 +12,7 @@ use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
+use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Domain\Mail\Enums\MailDelivery;
 use App\Domain\Mail\Enums\MailPauseDuration;
 use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
@@ -59,6 +60,13 @@ final class MailDigestHoldTest extends TestCase
                 section: 'Example section',
                 label: 'Sign-ups to your tables',
                 description: 'When someone joins',
+                digestible: true,
+            ),
+            MailCategoryDTO::optional(
+                key: 'example.comments',
+                section: 'Example section',
+                label: 'Comments on your tables',
+                description: 'When someone writes',
                 digestible: true,
             ),
             MailCategoryDTO::optional(
@@ -274,6 +282,52 @@ final class MailDigestHoldTest extends TestCase
 
         $this->assertSame(1, $this->sent);
         $this->assertSame(0, DB::table('user_mail_digest_items')->count());
+    }
+
+    public function test_a_task_done_takes_its_lines_out_of_the_digest_of_everybody(): void
+    {
+        $user = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        foreach ([$user, $other] as $who) {
+            $this->choose($who, 'example.sign-ups', MailDelivery::Digest);
+            $this->choose($who, 'example.comments', MailDelivery::Digest);
+        }
+        $table = new MailSubjectDTO('example.table', 't-1', 'La tumba');
+
+        $user->notify($this->line('example.sign-ups', 'Ana se ha apuntado', $table));
+        $other->notify($this->line('example.sign-ups', 'Ana se ha apuntado', $table));
+        // Same thing, another category: not the task that was done
+        $user->notify($this->line('example.comments', 'Luis ha comentado', $table));
+        // Same category, another thing still waiting
+        $user->notify($this->line('example.sign-ups', 'Eva se ha apuntado', new MailSubjectDTO('example.table', 't-2', 'Otra')));
+
+        $this->app->make(SiteNotificationServiceInterface::class)->resolveSubject('example.sign-ups', 'example.table', 't-1');
+
+        $this->assertSame(
+            ['Eva se ha apuntado', 'Luis ha comentado'],
+            DB::table('user_mail_digest_items')->orderBy('line')->pluck('line')->all(),
+        );
+    }
+
+    public function test_a_deleted_thing_takes_every_line_about_it_out_of_the_digest(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->choose($user, 'example.sign-ups', MailDelivery::Digest);
+        $this->choose($user, 'example.comments', MailDelivery::Digest);
+        $table = new MailSubjectDTO('example.table', 't-1', 'La tumba');
+
+        $user->notify($this->line('example.sign-ups', 'Ana se ha apuntado', $table));
+        $user->notify($this->line('example.comments', 'Luis ha comentado', $table));
+        $user->notify($this->line('example.sign-ups', 'Eva se ha apuntado', new MailSubjectDTO('example.table', 't-2', 'Otra')));
+
+        $this->app->make(MailSubjectMuteServiceInterface::class)->forgetSubject('example.table', 't-1');
+
+        $this->assertSame(['Eva se ha apuntado'], DB::table('user_mail_digest_items')->pluck('line')->all());
+    }
+
+    private function line(string $category, string $text, MailSubjectDTO $subject): DigestLineTestNotification
+    {
+        return new DigestLineTestNotification($category, new MailDigestLineDTO($text, 'https://example.test/mesas/1'), $subject);
     }
 
     private function choose(UserModel $user, string $key, MailDelivery $delivery): void

@@ -38,6 +38,15 @@ final readonly class EloquentMailDigestItemRepository implements MailDigestItemR
         UserMailDigestItemModel::query()->where('actor_id', $actorId)->delete();
     }
 
+    public function deleteForSubject(string $type, string $id, ?string $category = null): int
+    {
+        return UserMailDigestItemModel::query()
+            ->where('subject_type', $type)
+            ->where('subject_id', $id)
+            ->when($category !== null, static fn ($query) => $query->where('category', $category))
+            ->delete();
+    }
+
     public function userIdsWithItemsBefore(DateTimeInterface $before): array
     {
         /** @var list<string> */
