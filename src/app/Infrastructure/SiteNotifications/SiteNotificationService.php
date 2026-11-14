@@ -81,6 +81,11 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
         return $userId instanceof UserId ? $this->notices->markAllRead($userId) : 0;
     }
 
+    public function resolveSubject(string $category, string $type, string $id): int
+    {
+        return $this->notices->markReadForSubject($category, $type, $id);
+    }
+
     public function forgetSubject(string $type, string $id): void
     {
         $this->notices->deleteForSubject($type, $id);

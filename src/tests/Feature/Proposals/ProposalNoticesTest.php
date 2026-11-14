@@ -11,6 +11,7 @@ use App\Application\Proposals\DTOs\ProposalSettingsDTO;
 use App\Application\Proposals\DTOs\ProposalTypeSettingsDTO;
 use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
+use App\Application\SiteNotifications\DTOs\SiteNotificationItemDTO;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Domain\Proposals\Enums\ProposalType;
@@ -26,6 +27,7 @@ use Closure;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -194,6 +196,65 @@ final class ProposalNoticesTest extends TestCase
         $forAuthor = $notices->latest($author, 10);
         $this->assertCount(1, $forAuthor);
         $this->assertSame(route('profile.show', ['tab' => 'proposals'], absolute: false), $forAuthor[0]->url);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function resolutions(): iterable
+    {
+        yield 'approved' => ['approve'];
+        yield 'returned' => ['return'];
+        yield 'rejected' => ['reject'];
+        yield 'withdrawn' => ['withdraw'];
+    }
+
+    #[DataProvider('resolutions')]
+    public function test_review_notices_are_read_for_every_reviewer_once_the_proposal_is_resolved(string $resolution): void
+    {
+        $author = UserModel::factory()->create();
+        $reviewer = $this->userWith(['events.review']);
+        $otherReviewer = $this->userWith(['events.review']);
+        $id = $this->pending($author);
+        $stillPending = $this->pending($author, 'Otra jornada');
+        $notices = app(SiteNotificationServiceInterface::class);
+        $this->assertSame(2, $notices->unreadCount($otherReviewer));
+
+        match ($resolution) {
+            'approve' => $this->service()->approve($reviewer->id, ProposalType::Event, $id),
+            'return' => $this->service()->returnToDraft($reviewer->id, ProposalType::Event, $id, 'Falta la hora'),
+            'reject' => $this->service()->reject($reviewer->id, ProposalType::Event, $id, 'No encaja'),
+            'withdraw' => $this->service()->withdraw($author->id, ProposalType::Event, $id),
+            default => $this->fail('Unknown resolution '.$resolution),
+        };
+
+        // Nobody is asked any more to review what is already done; the other one still waits.
+        // (Approving publishes the event, whose «Nuevo evento» notice is news, not a task.)
+        $resolvedUrl = EventResource::getUrl('edit', ['record' => $id], isAbsolute: false);
+        $pendingUrl = EventResource::getUrl('edit', ['record' => $stillPending], isAbsolute: false);
+        foreach ([$reviewer, $otherReviewer] as $who) {
+            $rows = $notices->latest($who, 10);
+            $unreadUrls = array_map(
+                static fn (SiteNotificationItemDTO $item): string => $item->url,
+                array_filter($rows, static fn (SiteNotificationItemDTO $item): bool => $item->unread),
+            );
+            $allUrls = array_map(static fn (SiteNotificationItemDTO $item): string => $item->url, $rows);
+
+            $this->assertNotContains($resolvedUrl, $unreadUrls);
+            $this->assertContains($resolvedUrl, $allUrls, 'Read, not deleted.');
+            $this->assertContains($pendingUrl, $unreadUrls);
+        }
+    }
+
+    public function test_the_author_keeps_the_notice_of_what_became_of_it(): void
+    {
+        $author = UserModel::factory()->create();
+        $reviewer = $this->userWith(['events.review']);
+        $id = $this->pending($author);
+
+        $this->service()->approve($reviewer->id, ProposalType::Event, $id);
+
+        $this->assertSame(1, app(SiteNotificationServiceInterface::class)->unreadCount($author));
     }
 
     public function test_a_review_notice_is_dropped_when_the_proposal_was_already_reviewed(): void

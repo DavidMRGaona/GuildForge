@@ -37,6 +37,15 @@ interface SiteNotificationServiceInterface
     public function markAllRead(object $user): int;
 
     /**
+     * The task a notice asked for is done (core#668): mark as read, for everybody, the notices of
+     * the category about the thing (a proposal reviewed by someone else, a report already
+     * moderated). By category, so other notices about the same thing (the author's «approved»)
+     * stay as they are; read, not deleted, so people still see there was something to do. Call
+     * it after the change is saved; how many rows changed.
+     */
+    public function resolveSubject(string $category, string $type, string $id): int;
+
+    /**
      * Forget the notices about a thing that no longer exists, for everybody. Called together with
      * MailSubjectMuteServiceInterface::forgetSubject(), so modules make one call when they delete it.
      */

@@ -134,6 +134,16 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
             ->delete();
     }
 
+    public function markReadForSubject(string $category, string $type, string $id): int
+    {
+        return SiteNotificationModel::query()
+            ->where('category', $category)
+            ->where('subject_type', $type)
+            ->where('subject_id', $id)
+            ->whereNull('read_at')
+            ->update(['read_at' => $this->bound(now()), 'updated_at' => $this->bound(now())]);
+    }
+
     public function deleteForActor(string $actorId): void
     {
         SiteNotificationModel::query()->whereJsonContains('actor_ids', $actorId)->delete();
