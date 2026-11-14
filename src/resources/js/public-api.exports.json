@@ -25,6 +25,9 @@
     "@/components/layout/ModuleSlot.vue": [
         "default"
     ],
+    "@/components/layout/SiteBlock.vue": [
+        "default"
+    ],
     "@/components/ui/BaseButton.vue": [
         "default"
     ],

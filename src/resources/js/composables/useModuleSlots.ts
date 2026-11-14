@@ -124,8 +124,12 @@ async function loadDynamicComponent(
 
 /**
  * Resolve a component path to an async component, reusing the same instance for
- * every call with the same module and path.
+ * every call with the same module and path. Site blocks of modules load the same way.
  */
+export function resolveModuleComponent(module: string, componentPath: string): Component {
+    return resolveComponent(module, componentPath);
+}
+
 function resolveComponent(module: string, componentPath: string): Component {
     const cacheKey = `${module}/${componentPath}`;
     let component = resolvedComponentCache.get(cacheKey);

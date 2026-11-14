@@ -15,6 +15,7 @@ use App\Providers\ProposalsServiceProvider;
 use App\Providers\PublicationServiceProvider;
 use App\Providers\RealtimeServiceProvider;
 use App\Providers\SearchServiceProvider;
+use App\Providers\SiteBlocksServiceProvider;
 use App\Providers\SiteNotificationsServiceProvider;
 
 return [
@@ -31,5 +32,6 @@ return [
     PublicationServiceProvider::class,
     RealtimeServiceProvider::class,
     SearchServiceProvider::class,
+    SiteBlocksServiceProvider::class,
     SiteNotificationsServiceProvider::class,
 ];

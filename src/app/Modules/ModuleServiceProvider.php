@@ -21,6 +21,7 @@ use App\Application\Proposals\Contracts\EventProposalRequestInterface;
 use App\Application\Publications\Contracts\PublicationSourceInterface;
 use App\Application\Realtime\Contracts\RealtimeChannelInterface;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
+use App\Application\SiteBlocks\Contracts\SiteBlockInterface;
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
@@ -344,6 +345,18 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<RealtimeChannelInterface>>
      */
     public function registerRealtimeChannels(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the site blocks this module offers for the footer and the popups (core#696).
+     * Each key starts with the module name and a dot (`<module>.subscribe`); a module block only
+     * uses flat settings fields. A block that cannot be drawn is left out of the page, never breaks it.
+     *
+     * @return array<class-string<SiteBlockInterface>>
+     */
+    public function registerSiteBlocks(): array
     {
         return [];
     }

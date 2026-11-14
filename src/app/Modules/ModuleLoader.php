@@ -23,6 +23,7 @@ use App\Application\Proposals\Services\EventProposalRequestRegistryInterface;
 use App\Application\Publications\Services\PublicationSourceRegistryInterface;
 use App\Application\Realtime\Services\RealtimeChannelRegistryInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
+use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Exceptions\ModuleNotFoundException;
@@ -129,6 +130,9 @@ final class ModuleLoader
 
         // Register private real-time channels from the provider
         $this->registerProviderRealtimeChannels($provider, $module->name()->value);
+
+        // Register site blocks from the provider
+        $this->registerProviderSiteBlocks($provider, $module->name()->value);
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
@@ -339,6 +343,22 @@ final class ModuleLoader
 
         if ($this->app->bound(RealtimeChannelRegistryInterface::class)) {
             $this->app->make(RealtimeChannelRegistryInterface::class)->registerMany($channels, $moduleName);
+        }
+    }
+
+    /**
+     * Register site blocks (footer, popups) from a module provider.
+     */
+    private function registerProviderSiteBlocks(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $blocks = $provider->registerSiteBlocks();
+
+        if ($blocks === []) {
+            return;
+        }
+
+        if ($this->app->bound(SiteBlockRegistryInterface::class)) {
+            $this->app->make(SiteBlockRegistryInterface::class)->registerMany($blocks, $moduleName);
         }
     }
 
