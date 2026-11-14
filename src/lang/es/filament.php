@@ -38,6 +38,8 @@ return [
         'create_tooltip' => 'Crear contenido',
         'help' => 'Ayuda',
         'site' => 'Ver sitio web',
+        'notifications' => 'Avisos',
+        'notifications_unread' => 'Avisos, :count sin leer',
     ],
     'pages' => [
         'about' => [

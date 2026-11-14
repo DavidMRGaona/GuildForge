@@ -7,8 +7,10 @@ namespace App\Providers\Filament;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Modules\DTOs\RejectedModuleDTO;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
+use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
+use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\ValueObjects\NeutralPalette;
 use App\Filament\Pages\KnowledgeBasePage;
@@ -24,6 +26,7 @@ use App\Http\Middleware\ApplyImpersonation;
 use App\Http\Middleware\RedirectImpersonatedAccountWithoutPanelAccess;
 use App\Infrastructure\Impersonation\ImpersonatedName;
 use App\Infrastructure\Impersonation\ImpersonationContext;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Modules\ModuleAutoloader;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -46,6 +49,7 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Throwable;
@@ -274,6 +278,7 @@ class AdminPanelProvider extends PanelProvider
                         'createGroups' => PanelCreateMenu::groups(),
                         'helpUrl' => KnowledgeBasePage::getUrl(),
                         'siteUrl' => url('/'),
+                        'notifications' => $this->notificationsBell(),
                     ])->render()
                     : '',
             );
@@ -282,6 +287,43 @@ class AdminPanelProvider extends PanelProvider
         $this->discoverModuleResources($panel);
 
         return $panel;
+    }
+
+    /**
+     * The panel's bell (core#687): the unread count of the site's notification centre and a link
+     * to its «Avisos» page. Only where the site would show its own bell (not while the account
+     * must verify its email, whose /avisos routes are closed); left out if the count fails.
+     *
+     * @return array{count: int, badge: string, label: string, labelUnread: string, url: string, countUrl: string}|null
+     */
+    private function notificationsBell(): ?array
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof UserModel) {
+            return null;
+        }
+
+        try {
+            if (app(EmailVerificationPolicyInterface::class)->mustVerify($user)) {
+                return null;
+            }
+
+            $count = app(SiteNotificationServiceInterface::class)->unreadCount($user);
+        } catch (Throwable $exception) {
+            Log::warning('The panel bell could not read the unread notices; it is left out.', ['exception' => $exception]);
+
+            return null;
+        }
+
+        return [
+            'count' => $count,
+            'badge' => $count > 9 ? '9+' : (string) $count,
+            'label' => __('filament.topbar.notifications'),
+            'labelUnread' => __('filament.topbar.notifications_unread'),
+            'url' => route('site-notifications.index'),
+            'countUrl' => route('site-notifications.count'),
+        ];
     }
 
     private function getBrandLogo(string $key): ?string
