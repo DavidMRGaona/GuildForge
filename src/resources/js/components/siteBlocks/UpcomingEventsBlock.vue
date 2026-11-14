@@ -3,7 +3,7 @@ import { computed, inject } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { FOOTER_BLOCK_TITLE_ID } from '@/components/siteBlocks/footerBlockTitle';
-import type { FooterUpcomingEvent } from '@/types/siteBlocks';
+import type { FooterUpcomingEvent } from '@/types/footerBlocks';
 import { VENUE_TIMEZONE } from '@/utils/datetime';
 
 /**

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import type { FooterLogo } from '@/types/siteBlocks';
+import type { FooterLogo } from '@/types/footerBlocks';
 
 /**
  * Footer block `core.logos`: a row of logos, each with its alternative text and an optional link
