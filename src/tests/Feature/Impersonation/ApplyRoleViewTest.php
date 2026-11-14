@@ -152,7 +152,11 @@ final class ApplyRoleViewTest extends TestCase
         [$users, $assignments] = $this->counts();
 
         // Closing the entry has to survive the rollback of the request's transaction
-        $this->get('/_test/impersonation/whoami?page=2')->assertRedirect(url('/_test/impersonation/whoami?page=2'));
+        // 303 so the browser asks with a GET: HandleInertiaRequests runs inside this middleware,
+        // so Inertia's own 302 to 303 rewrite never sees this answer
+        $this->get('/_test/impersonation/whoami?page=2')
+            ->assertStatus(303)
+            ->assertRedirect(url('/_test/impersonation/whoami?page=2'));
 
         $this->assertEntryRevoked();
         $this->assertSame([$users, $assignments], $this->counts());
@@ -178,7 +182,23 @@ final class ApplyRoleViewTest extends TestCase
 
         $this->from('/_test/impersonation/whoami')
             ->post('/_test/impersonation/submit')
+            ->assertStatus(303)
             ->assertRedirect('/_test/impersonation/whoami');
+
+        $this->assertSame(0, $this->submitted);
+        $this->assertEntryRevoked();
+    }
+
+    public function test_a_failure_building_the_account_on_a_livewire_call_is_a_conflict(): void
+    {
+        $this->startViewing([$this->roleId('socio')]);
+        $this->failInsertingAccounts();
+
+        // A Livewire call would follow a redirect by XHR and swallow it
+        $this->withHeaders(['X-Livewire' => 'true'])
+            ->post('/_test/impersonation/submit')
+            ->assertStatus(409)
+            ->assertExactJson(['error' => 'impersonation_ended']);
 
         $this->assertSame(0, $this->submitted);
         $this->assertEntryRevoked();

@@ -233,15 +233,18 @@ final readonly class ApplyImpersonation
      */
     private function answerWithoutRunning(Request $request): Response
     {
-        if ($request->expectsJson() && ! $request->hasHeader('X-Inertia')) {
+        // A Livewire call follows a redirect by XHR, so it gets the error like JSON does
+        if ($request->hasHeader('X-Livewire') || ($request->expectsJson() && ! $request->hasHeader('X-Inertia'))) {
             return response()->json(['error' => self::ENDED_JSON_ERROR], Response::HTTP_CONFLICT);
         }
 
+        // 303 so the browser asks again with a GET: HandleInertiaRequests runs inside this
+        // middleware, so Inertia's own 302 to 303 rewrite never sees this answer
         if ($request->isMethodSafe()) {
-            return redirect()->to($request->fullUrl());
+            return redirect()->to($request->fullUrl(), Response::HTTP_SEE_OTHER);
         }
 
-        return redirect()->back();
+        return redirect()->back(Response::HTTP_SEE_OTHER);
     }
 
     /**
