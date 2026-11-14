@@ -1,5 +1,5 @@
-import { effectScope, readonly, ref, watch } from 'vue';
-import type { DeepReadonly, EffectScope, Ref } from 'vue';
+import { computed, effectScope, readonly, ref, watch } from 'vue';
+import type { ComputedRef, DeepReadonly, EffectScope, Ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { useRealtimeChannel } from '@/composables/useRealtimeChannel';
 import { useRoutes } from '@/composables/useRoutes';
@@ -8,6 +8,7 @@ import type { SiteNotificationItem, SiteNotificationsSharedProps } from '@/types
 
 interface SharedProps {
     siteNotifications?: SiteNotificationsSharedProps | null;
+    auth?: { user?: { mustVerifyEmail?: boolean } | null } | null;
 }
 
 /** How often the bell asks for the counter while the tab is visible and real time is not live. */
@@ -92,6 +93,22 @@ async function refresh(routes: ReturnType<typeof useRoutes>): Promise<void> {
 }
 
 /**
+ * Whether the page shows the bell (core#491): signed in, not while the account must verify its
+ * email (its routes are closed until then), and with the counter in the shared props. The header
+ * and the tab title (core#672) ask the same question.
+ */
+export function useBellVisible(): ComputedRef<boolean> {
+    const page = usePage();
+
+    return computed(() => {
+        const props = page.props as SharedProps | undefined;
+        const user = props?.auth?.user ?? null;
+
+        return user !== null && user.mustVerifyEmail !== true && props?.siteNotifications != null;
+    });
+}
+
+/**
  * The notification centre of the header (core#491): the unread counter, which every page brings
  * in its shared props and the bell refreshes every minute and on return to the tab (a light JSON
  * request, never a page visit), and the latest notices, loaded when the list opens. With real
@@ -103,7 +120,8 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
 
     // Each visit brings a fresh count with it (every bell watches: they write the same value)
     watch(
-        () => (page.props as SharedProps).siteNotifications?.unread,
+        // The app root runs before Inertia sets the first page, so props may not exist yet
+        () => (page.props as SharedProps | undefined)?.siteNotifications?.unread,
         (count) => {
             const value = readNumber(count);
             if (value !== null) {
