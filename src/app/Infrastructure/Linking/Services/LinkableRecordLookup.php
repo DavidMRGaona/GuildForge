@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Linking\Services;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Linking\Contracts\FindsLinkableRecordsInBatches;
 use App\Application\Linking\Contracts\LinkableRecordSourceInterface;
 use App\Application\Linking\DTOs\LinkableRecordDTO;
 use App\Application\Linking\Services\LinkableRecordLookupInterface;
 use App\Application\Linking\Services\LinkableRecordSourceRegistryInterface;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Generator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 final readonly class LinkableRecordLookup implements LinkableRecordLookupInterface
 {
     public function __construct(
         private LinkableRecordSourceRegistryInterface $registry,
+        private AuthorizationServiceInterface $authorization,
     ) {}
 
     public function find(string $type, string $id, string $viewerId): ?LinkableRecordDTO
@@ -26,6 +30,8 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
         if (! $source instanceof LinkableRecordSourceInterface) {
             return null;
         }
+
+        $viewerId = $this->askedAs($viewerId, $type);
 
         try {
             $record = $source->find($id, $viewerId);
@@ -74,6 +80,7 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
             ]);
         }
 
+        $viewerId = $this->askedAs($viewerId, $type);
         $answered = [];
         $strays = 0;
 
@@ -128,6 +135,7 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
         }
 
         $limit = min($limit, self::MAX_SEARCH_LIMIT);
+        $viewerId = $this->askedAs($viewerId, $type);
 
         $records = [];
         $strays = 0;
@@ -173,6 +181,35 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
         }
 
         return $types;
+    }
+
+    /**
+     * The viewer id a source gets: the viewer's own only when that account may open the panel,
+     * where drafts and panel-only records can be opened; anyone else is asked for as a visitor,
+     * so no source has to check panel access itself. Accounts are resolved as the sources do:
+     * a uuid, not deactivated (soft-deleted) and not anonymized. A failing check is a visitor.
+     */
+    private function askedAs(string $viewerId, string $type): string
+    {
+        if (! Str::isUuid($viewerId)) {
+            return LinkableRecordSourceInterface::VISITOR;
+        }
+
+        try {
+            $viewer = UserModel::query()->whereNull('anonymized_at')->find($viewerId);
+
+            if ($viewer instanceof UserModel && $this->authorization->can($viewer, 'admin.access')) {
+                return $viewerId;
+            }
+        } catch (Throwable $exception) {
+            Log::error('[LinkableRecordLookup] Panel access could not be checked, viewer asked for as a visitor', [
+                'type' => $type,
+                'exception' => $exception::class,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return LinkableRecordSourceInterface::VISITOR;
     }
 
     /**

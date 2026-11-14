@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Linking\Services;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Linking\Contracts\FindsLinkableRecordsInBatches;
+use App\Application\Linking\Contracts\LinkableRecordSourceInterface;
 use App\Application\Linking\DTOs\LinkableRecordDTO;
 use App\Application\Linking\Services\LinkableRecordLookupInterface;
 use App\Infrastructure\Linking\Services\LinkableRecordLookup;
 use App\Infrastructure\Linking\Services\LinkableRecordSourceRegistry;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use Mockery;
+use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\Support\Linking\BatchFakeLinkableRecordSource;
 use Tests\Support\Linking\FakeLinkableRecordSource;
 use Tests\Support\Linking\OtherFakeLinkableRecordSource;
@@ -21,11 +29,21 @@ use Tests\TestCase;
 
 final class LinkableRecordLookupTest extends TestCase
 {
+    use LazilyRefreshDatabase;
+
     private const string VIEWER = '0195f1a4-0000-7000-8000-000000000001';
 
     private LinkableRecordSourceRegistry $registry;
 
     private LinkableRecordLookup $lookup;
+
+    /** @var list<string> Accounts the fake authorization lets into the panel. */
+    private array $panelViewers = [];
+
+    private bool $authorizationFails = false;
+
+    /** @var list<string> Permissions the fake authorization was asked about. */
+    private array $askedPermissions = [];
 
     protected function setUp(): void
     {
@@ -33,7 +51,7 @@ final class LinkableRecordLookupTest extends TestCase
 
         $this->resetFakes();
         $this->registry = new LinkableRecordSourceRegistry($this->app);
-        $this->lookup = new LinkableRecordLookup($this->registry);
+        $this->lookup = new LinkableRecordLookup($this->registry, $this->fakeAuthorization());
     }
 
     protected function tearDown(): void
@@ -267,6 +285,104 @@ final class LinkableRecordLookupTest extends TestCase
     }
 
     #[Test]
+    public function a_viewer_who_may_open_the_panel_is_passed_to_the_source_as_given(): void
+    {
+        $viewer = UserModel::factory()->create();
+        $this->panelViewers = [$viewer->id];
+        $this->registry->registerMany([FakeLinkableRecordSource::class, BatchFakeLinkableRecordSource::class], 'example-module');
+        FakeLinkableRecordSource::$records = [$this->record('fake', 'one'), $this->record('batch-fake', 'two')];
+
+        $this->lookup->find('fake', 'one', $viewer->id);
+        $this->lookup->findMany('fake', ['one'], $viewer->id);
+        $this->lookup->findMany('batch-fake', ['two'], $viewer->id);
+        $this->lookup->search('fake', '', $viewer->id, 1);
+
+        $this->assertSame(array_fill(0, 4, $viewer->id), FakeLinkableRecordSource::$viewerIds);
+        $this->assertSame(['admin.access', 'admin.access', 'admin.access', 'admin.access'], $this->askedPermissions);
+    }
+
+    #[Test]
+    public function a_viewer_without_panel_access_is_passed_to_the_source_as_a_visitor(): void
+    {
+        $log = Log::spy();
+        $viewer = UserModel::factory()->create();
+        $this->registry->registerMany([FakeLinkableRecordSource::class, BatchFakeLinkableRecordSource::class], 'example-module');
+        FakeLinkableRecordSource::$records = [$this->record('fake', 'one'), $this->record('batch-fake', 'two')];
+
+        // What the source answers a visitor is still shown
+        $this->assertSame('one', $this->lookup->find('fake', 'one', $viewer->id)?->id);
+        $this->assertSame(['one'], array_keys($this->lookup->findMany('fake', ['one'], $viewer->id)));
+        $this->assertSame(['two'], array_keys($this->lookup->findMany('batch-fake', ['two'], $viewer->id)));
+        $this->assertCount(1, $this->lookup->search('fake', '', $viewer->id, 1));
+
+        $this->assertSame(array_fill(0, 4, LinkableRecordSourceInterface::VISITOR), FakeLinkableRecordSource::$viewerIds);
+        $log->shouldNotHaveReceived('error');
+    }
+
+    #[Test]
+    #[DataProvider('visitorAccounts')]
+    public function a_viewer_with_no_usable_account_is_a_visitor_without_asking_the_authorization(string $state): void
+    {
+        $log = Log::spy();
+        $viewerId = $this->viewerIn($state);
+        $this->panelViewers = [$viewerId];
+        $this->registry->register(FakeLinkableRecordSource::class, 'example-module');
+        FakeLinkableRecordSource::$records = [$this->record('fake', 'one')];
+
+        $this->lookup->find('fake', 'one', $viewerId);
+        $this->lookup->search('fake', '', $viewerId);
+
+        $this->assertSame([LinkableRecordSourceInterface::VISITOR, LinkableRecordSourceInterface::VISITOR], FakeLinkableRecordSource::$viewerIds);
+        $this->assertSame([], $this->askedPermissions);
+        $log->shouldNotHaveReceived('error');
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function visitorAccounts(): array
+    {
+        return [
+            'unknown' => ['unknown'],
+            'not a uuid' => ['malformed'],
+            'empty' => ['empty'],
+            'deactivated' => ['deactivated'],
+            'anonymized' => ['anonymized'],
+        ];
+    }
+
+    #[Test]
+    public function a_failing_panel_check_makes_the_viewer_a_visitor_and_logs_an_error(): void
+    {
+        $log = Log::spy();
+        $viewer = UserModel::factory()->create();
+        $this->panelViewers = [$viewer->id];
+        $this->authorizationFails = true;
+        $this->registry->register(FakeLinkableRecordSource::class, 'example-module');
+        FakeLinkableRecordSource::$records = [$this->record('fake', 'one')];
+
+        $this->assertSame('one', $this->lookup->find('fake', 'one', $viewer->id)?->id);
+        $this->assertSame(['one'], array_keys($this->lookup->findMany('fake', ['one'], $viewer->id)));
+        $this->assertCount(1, $this->lookup->search('fake', '', $viewer->id));
+
+        $this->assertSame(array_fill(0, 3, LinkableRecordSourceInterface::VISITOR), FakeLinkableRecordSource::$viewerIds);
+        $log->shouldHaveReceived('error')->times(3);
+    }
+
+    #[Test]
+    public function the_panel_check_is_skipped_when_nothing_would_be_asked(): void
+    {
+        $viewer = UserModel::factory()->create();
+        $this->registry->register(FakeLinkableRecordSource::class, 'example-module');
+
+        $this->lookup->find('missing-type', 'one', $viewer->id);
+        $this->lookup->findMany('fake', [], $viewer->id);
+        $this->lookup->search('fake', '', $viewer->id, 0);
+
+        $this->assertSame([], $this->askedPermissions);
+    }
+
+    #[Test]
     public function the_lookup_is_a_container_singleton(): void
     {
         $lookup = $this->app->make(LinkableRecordLookupInterface::class);
@@ -278,7 +394,41 @@ final class LinkableRecordLookupTest extends TestCase
     {
         FakeLinkableRecordSource::$records = [];
         FakeLinkableRecordSource::$askedIds = [];
+        FakeLinkableRecordSource::$viewerIds = [];
         BatchFakeLinkableRecordSource::$batches = [];
+    }
+
+    /**
+     * Lets into the panel only the accounts in $panelViewers, or throws while $authorizationFails.
+     */
+    private function fakeAuthorization(): AuthorizationServiceInterface&MockInterface
+    {
+        $authorization = Mockery::mock(AuthorizationServiceInterface::class);
+        $authorization->shouldReceive('can')->andReturnUsing(function (object $user, string $permissionKey): bool {
+            $this->askedPermissions[] = $permissionKey;
+
+            if ($this->authorizationFails) {
+                throw new RuntimeException('Authorization unavailable');
+            }
+
+            return $permissionKey === 'admin.access'
+                && $user instanceof UserModel
+                && in_array($user->id, $this->panelViewers, true);
+        });
+
+        return $authorization;
+    }
+
+    private function viewerIn(string $state): string
+    {
+        return match ($state) {
+            'unknown' => self::VIEWER,
+            'malformed' => 'not-a-uuid',
+            'empty' => '',
+            'deactivated' => tap(UserModel::factory()->create(), fn (UserModel $user): ?bool => $user->delete())->id,
+            'anonymized' => UserModel::factory()->create(['anonymized_at' => now()])->id,
+            default => throw new RuntimeException("Unknown state {$state}"),
+        };
     }
 
     private function record(string $type, string $id): LinkableRecordDTO

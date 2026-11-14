@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Filament\Linking\Sources;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Linking\DTOs\LinkableRecordDTO;
 use App\Application\Linking\Services\LinkableRecordLookupInterface;
 use App\Application\Linking\Services\LinkableRecordSourceRegistryInterface;
@@ -17,7 +18,10 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Mockery;
+use RuntimeException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
 
@@ -188,6 +192,53 @@ final class EventLinkableRecordSourceTest extends TestCase
         $this->assertSame([$second->id, $first->id], array_keys($records));
     }
 
+    public function test_the_lookup_shows_no_drafts_to_who_lists_events_without_panel_access(): void
+    {
+        $published = EventModel::factory()->published()->upcoming()->create(['title' => 'Example published']);
+        $draft = EventModel::factory()->draft()->upcoming()->create(['title' => 'Example draft']);
+        $viewer = $this->memberWithPermissions(['events.view_any']);
+
+        // The source alone would show the draft: the lookup asks it as a visitor
+        $this->assertSame($draft->id, $this->source()->find($draft->id, $viewer->id)?->id);
+
+        $this->assertNull($this->lookup()->find('event', $draft->id, $viewer->id));
+        $this->assertSame($published->id, $this->lookup()->find('event', $published->id, $viewer->id)?->id);
+        $this->assertSame([$published->id], array_keys($this->lookup()->findMany('event', [$draft->id, $published->id], $viewer->id)));
+        $this->assertSame([$published->id], $this->ids($this->lookup()->search('event', 'example', $viewer->id)));
+    }
+
+    public function test_the_lookup_shows_drafts_to_who_lists_events_in_the_panel(): void
+    {
+        $published = EventModel::factory()->published()->upcoming()->create(['title' => 'Example published']);
+        $draft = EventModel::factory()->draft()->upcoming()->create(['title' => 'Example draft']);
+        $viewer = $this->editorWithPermissions(['events.view_any', 'events.update']);
+
+        $this->assertSame($draft->id, $this->lookup()->find('event', $draft->id, $viewer->id)?->id);
+        $this->assertSame([$draft->id, $published->id], array_keys($this->lookup()->findMany('event', [$draft->id, $published->id], $viewer->id)));
+        $this->assertEqualsCanonicalizing([$published->id, $draft->id], $this->ids($this->lookup()->search('event', 'example', $viewer->id)));
+        $this->assertSame(EventResource::getUrl('edit', ['record' => $draft]), $this->lookup()->find('event', $draft->id, $viewer->id)?->panelUrl);
+    }
+
+    public function test_the_lookup_treats_a_failing_panel_check_as_a_visitor(): void
+    {
+        $published = EventModel::factory()->published()->upcoming()->create(['title' => 'Example published']);
+        $draft = EventModel::factory()->draft()->upcoming()->create(['title' => 'Example draft']);
+        $viewer = $this->editorWithPermissions(['events.view_any', 'events.update']);
+        $log = Log::spy();
+        $authorization = Mockery::mock(AuthorizationServiceInterface::class);
+        $authorization->shouldReceive('can')->andThrow(new RuntimeException('Authorization unavailable'));
+        $this->app->instance(AuthorizationServiceInterface::class, $authorization);
+        $this->app->forgetInstance(LinkableRecordLookupInterface::class);
+        $this->app->forgetInstance(EventLinkableRecordSource::class);
+
+        // A visitor is never checked by the source, so what is published is still shown
+        $this->assertNull($this->lookup()->find('event', $draft->id, $viewer->id));
+        $this->assertSame([$published->id], array_keys($this->lookup()->findMany('event', [$draft->id, $published->id], $viewer->id)));
+        $this->assertSame([$published->id], $this->ids($this->lookup()->search('event', 'example', $viewer->id)));
+        $this->assertNull($this->lookup()->find('event', $published->id, $viewer->id)?->panelUrl);
+        $log->shouldHaveReceived('error')->times(4);
+    }
+
     public function test_search_matches_every_word_of_the_title_ignoring_case(): void
     {
         $match = EventModel::factory()->published()->upcoming()->create(['title' => 'Autumn Painting Workshop']);
@@ -231,6 +282,11 @@ final class EventLinkableRecordSourceTest extends TestCase
         $this->assertSame([$newest->id, $middle->id, $older->id], $this->ids($this->source()->search('', $member->id, 10)));
         $this->assertSame([$newest->id, $middle->id], $this->ids($this->source()->search('', $member->id, 2)));
         $this->assertSame([], $this->source()->search('', $member->id, 0));
+    }
+
+    private function lookup(): LinkableRecordLookupInterface
+    {
+        return $this->app->make(LinkableRecordLookupInterface::class);
     }
 
     private function source(): EventLinkableRecordSource

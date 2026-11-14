@@ -14,6 +14,10 @@ use App\Application\Linking\DTOs\LinkableRecordDTO;
  * and a source that throws or answers with something else than what was asked are treated
  * alike: the record is not shown. Only the second is an error and is logged; the first is
  * ordinary (a module was turned off) and logs nothing. Nothing here throws.
+ *
+ * Drafts and panel-only records are for who may open the panel: a viewer without admin.access
+ * (or whose check fails, logged as an error) is asked for as LinkableRecordSourceInterface::VISITOR,
+ * so they still see what is published. Unknown, deactivated and anonymized accounts are visitors too.
  */
 interface LinkableRecordLookupInterface
 {

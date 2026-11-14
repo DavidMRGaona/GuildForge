@@ -30,6 +30,7 @@ class BatchFakeLinkableRecordSource extends FakeLinkableRecordSource implements 
     public function findMany(array $ids, string $viewerId): array
     {
         static::$batches[] = $ids;
+        static::$viewerIds[] = $viewerId;
 
         return array_values(array_filter(
             static::$records,
