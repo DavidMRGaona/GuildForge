@@ -54,7 +54,7 @@ const hasContent = computed(() => props.events.length > 0 || props.allUrl !== nu
             <li v-for="event in events" :key="event.id">
                 <Link
                     :href="event.url"
-                    :class="[linkClasses, 'block font-medium text-neutral-100']"
+                    :class="'block text-sm font-medium text-neutral-100 transition-colors hover:text-primary'"
                 >
                     {{ event.title }}
                 </Link>

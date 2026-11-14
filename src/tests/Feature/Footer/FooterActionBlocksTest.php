@@ -147,13 +147,13 @@ final class FooterActionBlocksTest extends TestCase
         $internal = $this->resolve('core.button', ['label' => 'Eventos', 'url' => '/eventos']);
 
         $this->assertSame('components/siteBlocks/ButtonBlock.vue', $external->component);
-        $this->assertSame(['label' => 'Únete', 'url' => 'https://example.com/unete', 'external' => true, 'style' => 'secondary'], $external->props);
-        $this->assertSame(['label' => 'Eventos', 'url' => '/eventos', 'external' => false, 'style' => 'primary'], $internal->props);
+        $this->assertSame(['label' => 'Únete', 'url' => 'https://example.com/unete', 'external' => true, 'variant' => 'secondary'], $external->props);
+        $this->assertSame(['label' => 'Eventos', 'url' => '/eventos', 'external' => false, 'variant' => 'primary'], $internal->props);
     }
 
     public function test_button_with_an_unknown_style_is_primary(): void
     {
-        $this->assertSame('primary', $this->resolve('core.button', ['label' => 'A', 'url' => '/a', 'style' => 'huge'])->props['style']);
+        $this->assertSame('primary', $this->resolve('core.button', ['label' => 'A', 'url' => '/a', 'style' => 'huge'])->props['variant']);
     }
 
     public function test_button_with_a_link_that_is_not_allowed_is_not_drawn(): void

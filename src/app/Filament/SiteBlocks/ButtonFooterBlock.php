@@ -71,7 +71,7 @@ final class ButtonFooterBlock extends CoreFooterBlock
             'label' => mb_substr($label, 0, self::MAX_LABEL_LENGTH),
             'url' => $url,
             'external' => LinkTargetRule::isExternal($url),
-            'style' => ($settings['style'] ?? null) === self::STYLE_SECONDARY ? self::STYLE_SECONDARY : self::STYLE_PRIMARY,
+            'variant' => ($settings['style'] ?? null) === self::STYLE_SECONDARY ? self::STYLE_SECONDARY : self::STYLE_PRIMARY,
         ];
     }
 }

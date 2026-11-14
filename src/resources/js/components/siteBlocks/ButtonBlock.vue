@@ -10,14 +10,15 @@ const props = defineProps<{
     label: string;
     url: string;
     external: boolean;
-    style: 'primary' | 'secondary';
+    // Not `style`: Vue reads a prop of that name as the element's inline style
+    variant: 'primary' | 'secondary';
 }>();
 
 // The footer is dark in both colour schemes, so the secondary style never follows the page's one
 const classes = computed(() => [
     'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition-colors',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-    props.style === 'secondary'
+    props.variant === 'secondary'
         ? 'bg-transparent text-white inset-ring inset-ring-neutral-500 hover:bg-white/10'
         : 'bg-(--button-primary-bg) text-(--button-primary-text) inset-ring inset-ring-(--button-primary-border) hover:bg-(--button-primary-hover-bg) hover:text-(--button-primary-hover-text)',
 ]);

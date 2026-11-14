@@ -248,14 +248,14 @@ describe('UpcomingEventsBlock', () => {
 describe('ButtonBlock', () => {
     it('draws a path of the site with Inertia and an address as a plain link', () => {
         const internal = mount(ButtonBlock, {
-            props: { label: 'Eventos', url: '/eventos', external: false, style: 'primary' },
+            props: { label: 'Eventos', url: '/eventos', external: false, variant: 'primary' },
         });
         const external = mount(ButtonBlock, {
             props: {
                 label: 'Únete',
                 url: 'https://example.com/unete',
                 external: true,
-                style: 'primary',
+                variant: 'primary',
             },
         });
 
@@ -268,10 +268,10 @@ describe('ButtonBlock', () => {
 
     it('tells the main style from the secondary one', () => {
         const primary = mount(ButtonBlock, {
-            props: { label: 'A', url: '/a', external: false, style: 'primary' },
+            props: { label: 'A', url: '/a', external: false, variant: 'primary' },
         });
         const secondary = mount(ButtonBlock, {
-            props: { label: 'A', url: '/a', external: false, style: 'secondary' },
+            props: { label: 'A', url: '/a', external: false, variant: 'secondary' },
         });
 
         expect(primary.get('a').classes().join(' ')).toContain('--button-primary-bg');
