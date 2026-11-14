@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ReadsTypedInput;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -12,6 +13,8 @@ use Illuminate\Console\Command;
 
 final class ModuleBuildCommand extends Command
 {
+    use ReadsTypedInput;
+
     protected $signature = 'module:build
                             {name? : The name of the module to build}
                             {--all : Build all modules with Vue components}
@@ -28,11 +31,11 @@ final class ModuleBuildCommand extends Command
 
     public function handle(): int
     {
-        $moduleName = $this->argument('name');
-        $buildAll = $this->option('all');
-        $force = $this->option('force');
+        $moduleName = $this->stringArgument('name');
+        $buildAll = $this->flag('all');
+        $force = $this->flag('force');
 
-        if (! $moduleName && ! $buildAll) {
+        if ($moduleName === '' && ! $buildAll) {
             $this->error('Please specify a module name or use --all to build all modules.');
             $this->newLine();
             $this->line('Usage: php artisan module:build <module-name>');

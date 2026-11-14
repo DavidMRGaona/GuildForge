@@ -70,6 +70,8 @@ final class ScheduleAndLayoutTimezoneTest extends TestCase
     {
         $timezone = $this->scheduledUpdateCheck()->timezone;
 
+        $this->assertNotNull($timezone);
+
         return $timezone instanceof DateTimeZone ? $timezone->getName() : $timezone;
     }
 }
