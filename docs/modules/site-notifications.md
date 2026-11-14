@@ -162,6 +162,20 @@ app(MailSubjectMuteServiceInterface::class)->forgetSubject('my-module.topic', $t
 
 It deletes every notice whose `HasMailSubject` was that thing, for everybody, so the bell never links to a page that is gone. `SiteNotificationServiceInterface::forgetSubject()` does the same for site notices alone.
 
+## When the task is done
+
+A notice that asks someone to act (review a proposal, moderate a report, check an agreement) often goes to several people, and one of them does it. Mark the others' notices read once the change is saved, so nobody is asked again for what is already done (core#668):
+
+```php
+app(SiteNotificationServiceInterface::class)->resolveSubject(
+    MyModuleMailCategories::MODERATION, // the category of the notice that asked for it
+    'my-module.report',                // the type of its HasMailSubject
+    $report->id,
+);
+```
+
+It marks read, for everybody, the unread notices of that category about that thing, and returns how many. It goes by category on purpose: other notices about the same thing (the author's «your report was handled») stay as they are. They are read, not deleted, so people still see there was something to do; a row already read keeps its first read instant. It needs a `HasMailSubject` on the notice that asked. Call it after the commit (a listener of the module's own «resolved» event is the usual place) and do not let it fail the action: the core's proposals catch and log any error. Needs core ≥ the release with #668. Make sure the notice that asked also checks in `shouldSend()` that the task is still open, for the queued ones that arrive afterwards.
+
 ## Retention and privacy
 
 - Read notices are deleted 90 days after they were read, unread ones 180 days after their latest notice: `site-notifications:prune`, scheduled daily.

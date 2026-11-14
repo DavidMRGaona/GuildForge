@@ -18,11 +18,13 @@ use App\Domain\Proposals\Events\ProposalApproved;
 use App\Domain\Proposals\Events\ProposalRejected;
 use App\Domain\Proposals\Events\ProposalReturned;
 use App\Domain\Proposals\Events\ProposalSubmitted;
+use App\Domain\Proposals\Events\ProposalWithdrawn;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Proposals\Listeners\NotifyProposalAuthor;
 use App\Infrastructure\Proposals\Listeners\NotifyProposalReviewers;
+use App\Infrastructure\Proposals\Listeners\ResolveProposalReviewNotices;
 use App\Infrastructure\Proposals\Services\EventProposalRequestRegistry;
 use App\Infrastructure\Proposals\Services\EventProposalRequestService;
 use App\Infrastructure\Proposals\Services\ProposalEditorImageUploadAuthorizer;
@@ -71,6 +73,12 @@ final class ProposalsServiceProvider extends ServiceProvider
         Event::listen(ProposalApproved::class, [NotifyProposalAuthor::class, 'approved']);
         Event::listen(ProposalReturned::class, [NotifyProposalAuthor::class, 'returned']);
         Event::listen(ProposalRejected::class, [NotifyProposalAuthor::class, 'rejected']);
+
+        // Resolved or withdrawn: the reviewers' notices asking for it are read (core#668)
+        Event::listen(
+            [ProposalApproved::class, ProposalReturned::class, ProposalRejected::class, ProposalWithdrawn::class],
+            ResolveProposalReviewNotices::class,
+        );
 
         // A deleted proposal (author, purge, account removal, the panel) leaves no mute and no
         // notice in the bell pointing at it

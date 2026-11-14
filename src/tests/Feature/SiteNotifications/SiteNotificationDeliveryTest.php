@@ -18,6 +18,7 @@ use App\Domain\Mail\Enums\MailPauseDuration;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Tests\Support\SiteNotifications\SiteTestNotification;
@@ -208,6 +209,43 @@ final class SiteNotificationDeliveryTest extends TestCase
 
         $this->assertSame(1, $this->service()->unreadCount($user));
         $log->shouldNotHaveReceived('warning');
+    }
+
+    public function test_resolving_a_subject_marks_its_notices_of_that_category_read_for_everybody(): void
+    {
+        $user = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+        $topic = new MailSubjectDTO('example.topic', 'topic-1', 'Tema');
+
+        $user->notify(new SiteTestNotification('example.moderation', $this->notice(), $topic));
+        $other->notify(new SiteTestNotification('example.moderation', $this->notice(), $topic));
+        // Same thing, another category: the author's own notice is not the reviewers' task
+        $user->notify(new SiteTestNotification('example.replies', $this->notice(), $topic));
+        // Same category, another thing still waiting
+        $user->notify(new SiteTestNotification('example.moderation', $this->notice(), new MailSubjectDTO('example.topic', 'topic-2', 'Otro')));
+
+        $resolved = $this->service()->resolveSubject('example.moderation', 'example.topic', 'topic-1');
+
+        $this->assertSame(2, $resolved);
+        $this->assertSame(2, $this->service()->unreadCount($user));
+        $this->assertSame(0, $this->service()->unreadCount($other));
+        // Read, not gone: the person still sees there was something to do
+        $this->assertCount(3, $this->service()->latest($user, 10));
+        $this->assertCount(1, $this->service()->latest($other, 10));
+    }
+
+    public function test_resolving_keeps_the_first_read_instant_of_a_notice_already_read(): void
+    {
+        $user = UserModel::factory()->create();
+        $topic = new MailSubjectDTO('example.topic', 'topic-1', 'Tema');
+        $user->notify(new SiteTestNotification('example.moderation', $this->notice(), $topic));
+        $this->service()->markAllRead($user);
+        $readAt = DB::table('site_notifications')->value('read_at');
+
+        $this->travel(2)->hours();
+
+        $this->assertSame(0, $this->service()->resolveSubject('example.moderation', 'example.topic', 'topic-1'));
+        $this->assertSame($readAt, DB::table('site_notifications')->value('read_at'));
     }
 
     public function test_nobody_is_notified_of_what_they_did_themselves(): void

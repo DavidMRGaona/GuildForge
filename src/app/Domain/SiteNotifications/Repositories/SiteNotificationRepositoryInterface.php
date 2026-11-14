@@ -41,6 +41,12 @@ interface SiteNotificationRepositoryInterface
     public function deleteForSubject(string $type, string $id): void;
 
     /**
+     * Mark as read, whoever they belong to, the unread rows of the category about the thing; how
+     * many rows changed. Rows already read keep their first read instant.
+     */
+    public function markReadForSubject(string $category, string $type, string $id): int;
+
+    /**
      * Delete every row, whoever it belongs to, that counts the account among its actors.
      */
     public function deleteForActor(string $actorId): void;
