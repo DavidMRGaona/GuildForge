@@ -11,6 +11,7 @@ const ENTRIES = [
     '@/components/form',
     '@/components/knowledge/HelpLink.vue',
     '@/components/layout/ModuleSlot.vue',
+    '@/components/layout/SiteBlock.vue',
     '@/components/ui/BaseButton.vue',
     '@/components/ui/BaseCard.vue',
     '@/components/ui/ConfirmDialog.vue',
