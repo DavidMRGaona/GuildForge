@@ -855,14 +855,18 @@ export interface CookieConsentProvider {
     hasDecided?(): boolean;
 }
 export type CookieConsentDecidedListener = () => void;
-export declare const CONSENT_PROVIDER_TIMEOUT_MS = 5000;
+export declare const CONSENT_PROVIDER_TIMEOUT_MS: number;
+export interface WhenConsentDecidedOptions {
+    signal?: AbortSignal;
+}
 export declare function registerCookieConsentProvider(next: CookieConsentProvider): void;
 export declare function notifyCookieConsentChanged(): void;
+export declare function notifyCookieConsentDecided(): void;
 export declare function hasCookieConsent(categorySlug: string): boolean;
 export declare function hasCookieConsentModule(): boolean;
 export declare function hasCookieConsentDecided(): boolean;
 export declare function onCookieConsentDecided(listener: CookieConsentDecidedListener): () => void;
-export declare function whenConsentDecided(): Promise<void>;
+export declare function whenConsentDecided(options?: WhenConsentDecidedOptions): Promise<void>;
 ```
 
 ## resources/js/types/env.d.ts

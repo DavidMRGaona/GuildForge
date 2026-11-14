@@ -113,7 +113,7 @@ final class HandleInertiaRequestsTest extends TestCase
         ]));
     }
 
-    public function test_cookie_consent_module_fails_closed_when_a_provider_throws(): void
+    public function test_cookie_consent_module_is_false_when_the_only_provider_throws(): void
     {
         $throwing = new class($this->app) extends ModuleServiceProvider
         {
@@ -129,6 +129,24 @@ final class HandleInertiaRequestsTest extends TestCase
         };
 
         $this->assertFalse($this->sharedCookieConsentModule([$throwing]));
+    }
+
+    public function test_a_provider_that_throws_does_not_hide_one_that_declares_itself(): void
+    {
+        $throwing = new class($this->app) extends ModuleServiceProvider
+        {
+            public function moduleName(): string
+            {
+                return 'throwing-module';
+            }
+
+            public function providesCookieConsent(): bool
+            {
+                throw new \RuntimeException('Broken module');
+            }
+        };
+
+        $this->assertTrue($this->sharedCookieConsentModule([$throwing, $this->providerWithConsent(true)]));
     }
 
     /**

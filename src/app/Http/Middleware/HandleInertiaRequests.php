@@ -166,8 +166,13 @@ final class HandleInertiaRequests extends Middleware
             }
 
             foreach (app(ModuleLoader::class)->getLoadedProviders() as $provider) {
-                if ($provider->providesCookieConsent()) {
-                    return true;
+                // Per provider: one that throws must not hide another that declares true
+                try {
+                    if ($provider->providesCookieConsent()) {
+                        return true;
+                    }
+                } catch (\Throwable $e) {
+                    $this->logDebugError('hasCookieConsentModule', $e);
                 }
             }
         } catch (\Throwable $e) {

@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/vue3';
 import { shallowRef } from 'vue';
+import { SLOT_COMPONENT_TIMEOUT_MS } from '@/utils/moduleLoadTimeout';
 
 /**
  * Cookie consent contract between modules.
@@ -13,8 +14,9 @@ export interface CookieConsentProvider {
     /** Whether the visitor consented to the category. */
     hasConsent(categorySlug: string): boolean;
     /**
-     * Whether the visitor already answered the banner (accepted, rejected or saved preferences).
-     * Optional so that providers written before it keep working: without it the contract treats
+     * Whether the banner is NOT waiting for an answer: the visitor answered it, or it is not
+     * showing (for example its configuration did not arrive). It is not «a saved decision exists»:
+     * a module that is active but shows no banner must not hold back whoever waits. Optional so that providers written before it keep working: without it the contract treats
      * the visitor as decided, so nothing waits for an answer the provider cannot report.
      */
     hasDecided?(): boolean;
@@ -24,12 +26,20 @@ export interface CookieConsentProvider {
 export type CookieConsentDecidedListener = () => void;
 
 /**
- * How long `whenConsentDecided()` waits for a provider to register before giving up. The page
- * declares a consent module (shared prop `cookieConsentModule`), whose bundle loads after the
- * page; if it never registers (failed to load, blocked), waiting longer would hold back the
- * caller forever. Once a provider registers there is no limit: the banner waits for the visitor.
+ * How long `whenConsentDecided()` waits for a provider to register before giving up: the time
+ * the core allows a lazy slot component (the banner) to load, plus a margin for its
+ * configuration. The page declares a consent module (shared prop `cookieConsentModule`) whose
+ * bundle loads after the page; if it never registers (failed to load, blocked), waiting longer
+ * would hold back the caller forever. Once a provider registers there is no limit: the banner
+ * waits for the visitor. A caller that opened something after giving up must close it if
+ * `hasCookieConsentDecided()` turns false again (a late provider whose banner is showing).
  */
-export const CONSENT_PROVIDER_TIMEOUT_MS = 5000;
+export const CONSENT_PROVIDER_TIMEOUT_MS = SLOT_COMPONENT_TIMEOUT_MS + 5000;
+
+export interface WhenConsentDecidedOptions {
+    /** Cancels the wait, for example when the caller unmounts: the promise rejects with the signal's reason. */
+    signal?: AbortSignal;
+}
 
 let provider: CookieConsentProvider | null = null;
 
@@ -46,15 +56,24 @@ export function registerCookieConsentProvider(next: CookieConsentProvider): void
     runAll(changeListeners);
 }
 
-/** Called by the provider whenever the visitor's choice changes. */
+/**
+ * Called by the provider whenever its state changes (configuration arrived, banner shown or
+ * hidden, choice changed). Readers follow it, and `whenConsentDecided()` re-checks; it never
+ * fires `onCookieConsentDecided()` listeners.
+ */
 export function notifyCookieConsentChanged(): void {
     revision.value += 1;
     runAll(changeListeners);
+}
 
-    // One call after each answer: accept, reject or saved preferences
-    if (hasCookieConsentDecided()) {
-        runAll(decidedListeners);
-    }
+/**
+ * Called by the provider only when the visitor answers the banner: accepting, rejecting or
+ * saving preferences. Runs the `onCookieConsentDecided()` listeners once, after readers have
+ * been told.
+ */
+export function notifyCookieConsentDecided(): void {
+    notifyCookieConsentChanged();
+    runAll(decidedListeners);
 }
 
 function runAll(listeners: ReadonlySet<() => void>): void {
@@ -97,9 +116,9 @@ export function hasCookieConsentModule(): boolean {
 }
 
 /**
- * Whether the visitor already answered the banner. Reactive like `hasCookieConsent()`.
- * False without a provider or when it fails; true for a provider that cannot tell
- * (no `hasDecided()`), so it never blocks.
+ * Whether the banner is not waiting for an answer (see `CookieConsentProvider.hasDecided()`).
+ * Reactive like `hasCookieConsent()`. False without a provider or when it fails; true for a
+ * provider that cannot tell (no `hasDecided()`), so it never blocks.
  */
 export function hasCookieConsentDecided(): boolean {
     void revision.value;
@@ -120,8 +139,9 @@ export function hasCookieConsentDecided(): boolean {
 }
 
 /**
- * Runs the listener each time the visitor answers the banner (accepting, rejecting or saving
- * preferences, including a later change of mind). Returns the function that unsubscribes.
+ * Runs the listener each time the provider reports an answer with `notifyCookieConsentDecided()`
+ * (accepting, rejecting or saving preferences, including a later change of mind), and only then:
+ * not on `notifyCookieConsentChanged()`. Returns the function that unsubscribes.
  */
 export function onCookieConsentDecided(listener: CookieConsentDecidedListener): () => void {
     decidedListeners.add(listener);
@@ -132,25 +152,42 @@ export function onCookieConsentDecided(listener: CookieConsentDecidedListener): 
 }
 
 /**
- * Resolves once the visitor has answered the banner, and at once when there is nothing to wait
- * for: no consent module on the page, or an answer already given. If the module is declared but
- * its provider does not register within `CONSENT_PROVIDER_TIMEOUT_MS` it resolves too, so a
- * module that failed to load never holds the caller back. Never rejects.
+ * Resolves once the banner is not waiting for an answer, and at once when there is nothing to
+ * wait for: no consent module on the page, or an answer already given. If the module is declared
+ * but its provider does not register within `CONSENT_PROVIDER_TIMEOUT_MS` it resolves too, so a
+ * module that failed to load never holds the caller back. It rejects only when the optional
+ * signal aborts.
  */
-export function whenConsentDecided(): Promise<void> {
+export function whenConsentDecided(options: WhenConsentDecidedOptions = {}): Promise<void> {
+    const { signal } = options;
+
+    if (signal?.aborted === true) {
+        return Promise.reject(signal.reason);
+    }
+
     if (!hasCookieConsentModule() || hasCookieConsentDecided()) {
         return Promise.resolve();
     }
 
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
         let timer: ReturnType<typeof setTimeout> | null = null;
 
-        const finish = (): void => {
+        const stop = (): void => {
             if (timer !== null) {
                 clearTimeout(timer);
             }
             changeListeners.delete(check);
+            signal?.removeEventListener('abort', abort);
+        };
+
+        const finish = (): void => {
+            stop();
             resolve();
+        };
+
+        const abort = (): void => {
+            stop();
+            reject(signal?.reason);
         };
 
         const check = (): void => {
@@ -170,6 +207,7 @@ export function whenConsentDecided(): Promise<void> {
         };
 
         changeListeners.add(check);
+        signal?.addEventListener('abort', abort, { once: true });
 
         if (provider === null) {
             timer = setTimeout(finish, CONSENT_PROVIDER_TIMEOUT_MS);

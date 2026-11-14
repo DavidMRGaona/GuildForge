@@ -85,6 +85,7 @@
         "hasCookieConsentDecided",
         "hasCookieConsentModule",
         "notifyCookieConsentChanged",
+        "notifyCookieConsentDecided",
         "onCookieConsentDecided",
         "registerCookieConsentProvider",
         "whenConsentDecided"
