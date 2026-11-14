@@ -9,12 +9,17 @@ const props = withDefaults(
         disabled?: boolean;
         id?: string;
         name?: string;
+        /** Ids of the elements that describe the checkbox (help text, error) */
+        describedby?: string;
+        invalid?: boolean;
     }>(),
     {
         label: '',
         disabled: false,
         id: '',
         name: '',
+        describedby: '',
+        invalid: false,
     }
 );
 
@@ -46,6 +51,8 @@ function toggle(): void {
             :name="name"
             :checked="modelValue"
             :disabled="disabled"
+            :aria-describedby="describedby || undefined"
+            :aria-invalid="invalid ? 'true' : undefined"
             class="peer sr-only"
             @change="toggle"
         />

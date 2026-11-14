@@ -30,11 +30,24 @@ export interface AuthSettings {
     emailVerificationRequired: boolean;
 }
 
+/**
+ * An optional field a module adds to the registration form (core#699). Only checkboxes for now,
+ * always unticked when the page opens.
+ */
+export interface RegistrationField {
+    key: string;
+    label: string;
+    description: string | null;
+    type: 'checkbox';
+}
+
 export interface RegisterFormData {
     name: string;
     email: string;
     password: string;
     password_confirmation: string;
+    /** Module fields keyed by field key (`<module>.<name>`) */
+    registration_fields: Record<string, boolean>;
 }
 
 export interface LoginFormData {

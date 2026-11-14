@@ -52,6 +52,8 @@ type __VLS_Props = {
     disabled?: boolean;
     id?: string;
     name?: string;
+    describedby?: string;
+    invalid?: boolean;
 };
 declare var __VLS_6: {};
 type __VLS_Slots = {} & {
@@ -65,7 +67,9 @@ declare const __VLS_base: import("vue").DefineComponent<__VLS_Props, {}, {}, {},
     label: string;
     id: string;
     name: string;
+    invalid: boolean;
     disabled: boolean;
+    describedby: string;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
 declare const __VLS_export: __VLS_WithSlots<typeof __VLS_base, __VLS_Slots>;
 declare const _default: typeof __VLS_export;
@@ -984,11 +988,18 @@ export interface AuthSettings {
     loginEnabled: boolean;
     emailVerificationRequired: boolean;
 }
+export interface RegistrationField {
+    key: string;
+    label: string;
+    description: string | null;
+    type: 'checkbox';
+}
 export interface RegisterFormData {
     name: string;
     email: string;
     password: string;
     password_confirmation: string;
+    registration_fields: Record<string, boolean>;
 }
 export interface LoginFormData {
     email: string;

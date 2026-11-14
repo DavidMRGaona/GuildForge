@@ -12,9 +12,12 @@ use Illuminate\Http\UploadedFile;
 interface AuthServiceInterface
 {
     /**
-     * Register a new user.
+     * Register a new user. When modules added fields to the form, their checked values (keyed by
+     * field key) are announced with RegistrationFieldsSubmitted once the account exists (core#699).
+     *
+     * @param  array<string, bool>  $registrationFields
      */
-    public function register(CreateUserDTO $dto): UserResponseDTO;
+    public function register(CreateUserDTO $dto, array $registrationFields = []): UserResponseDTO;
 
     /**
      * Attempt to log in a user.

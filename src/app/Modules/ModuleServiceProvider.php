@@ -20,6 +20,7 @@ use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Proposals\Contracts\EventProposalRequestInterface;
 use App\Application\Publications\Contracts\PublicationSourceInterface;
 use App\Application\Realtime\Contracts\RealtimeChannelInterface;
+use App\Application\Registration\Contracts\RegistrationFieldInterface;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use Filament\Pages\Page;
@@ -379,6 +380,19 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<EventProposalRequestInterface>>
      */
     public function registerEventProposalRequests(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the optional fields this module adds to the registration form (core#699).
+     * Each key starts with the module name and a dot (`<module>.subscribe`); the core draws them
+     * (checkboxes, always unticked), checks the values and, once the account exists, dispatches
+     * RegistrationFieldsSubmitted for a queued listener. A field that throws is left out.
+     *
+     * @return array<class-string<RegistrationFieldInterface>>
+     */
+    public function registerRegistrationFields(): array
     {
         return [];
     }

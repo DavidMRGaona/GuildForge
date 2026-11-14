@@ -48,6 +48,7 @@ use App\Application\Navigation\Services\MenuItemHrefResolverInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Navigation\Services\RouteRegistryInterface;
 use App\Application\QrCodes\Services\QrCodeRendererInterface;
+use App\Application\Registration\Services\RegistrationFieldRegistryInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\Security\Services\ContentSecurityPolicySourcesInterface;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
@@ -190,6 +191,7 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentSlugRedirectRep
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
 use App\Infrastructure\QrCodes\EndroidQrCodeRenderer;
 use App\Infrastructure\QrCodes\QrCodeContentPolicy;
+use App\Infrastructure\Registration\RegistrationFieldRegistry;
 use App\Infrastructure\Search\Services\SearchSourceRegistry;
 use App\Infrastructure\Security\ContentSecurityPolicySources;
 use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
@@ -307,6 +309,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ThemeSettingsServiceInterface::class, ThemeSettingsService::class);
         $this->app->singleton(ImageOptimizationServiceInterface::class, ImageOptimizationService::class);
         $this->app->singleton(AuthServiceInterface::class, AuthService::class);
+        // Fields modules add to the registration form (core#699), registered as they load
+        $this->app->singleton(RegistrationFieldRegistryInterface::class, RegistrationFieldRegistry::class);
         $this->app->singleton(EmailVerificationPolicyInterface::class, EmailVerificationPolicy::class);
         $this->app->singleton(UserModelQueryServiceInterface::class, UserModelQueryService::class);
         $this->app->singleton(UserServiceInterface::class, UserService::class);
