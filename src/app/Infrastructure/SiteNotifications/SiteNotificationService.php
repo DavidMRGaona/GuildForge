@@ -28,14 +28,14 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
         return $userId instanceof UserId ? $this->notices->unreadCount($userId) : 0;
     }
 
-    public function total(object $user): int
+    public function total(object $user, bool $onlyUnread = false): int
     {
         $userId = $this->userId($user);
 
-        return $userId instanceof UserId ? $this->notices->count($userId) : 0;
+        return $userId instanceof UserId ? $this->notices->count($userId, $onlyUnread) : 0;
     }
 
-    public function latest(object $user, int $limit, int $offset = 0): array
+    public function latest(object $user, int $limit, int $offset = 0, bool $onlyUnread = false): array
     {
         $userId = $this->userId($user);
 
@@ -53,7 +53,7 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
             count: $notice->count,
             unread: $notice->isUnread(),
             notifiedAt: $this->timezone->iso($notice->notifiedAt),
-        ), $this->notices->latest($userId, $limit, $offset));
+        ), $this->notices->latest($userId, $limit, $offset, $onlyUnread));
     }
 
     public function open(object $user, string $id): ?string

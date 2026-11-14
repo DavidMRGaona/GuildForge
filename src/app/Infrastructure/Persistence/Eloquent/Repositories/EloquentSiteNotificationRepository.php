@@ -74,15 +74,16 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
             ->count();
     }
 
-    public function count(UserId $userId): int
+    public function count(UserId $userId, bool $onlyUnread = false): int
     {
         return SiteNotificationModel::query()
             ->where('user_id', $userId->value())
             ->whereNull('hidden_at')
+            ->when($onlyUnread, static fn ($query) => $query->whereNull('read_at'))
             ->count();
     }
 
-    public function latest(UserId $userId, int $limit, int $offset): array
+    public function latest(UserId $userId, int $limit, int $offset, bool $onlyUnread = false): array
     {
         if ($limit < 1) {
             return [];
@@ -91,6 +92,7 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
         return array_values(SiteNotificationModel::query()
             ->where('user_id', $userId->value())
             ->whereNull('hidden_at')
+            ->when($onlyUnread, static fn ($query) => $query->whereNull('read_at'))
             ->orderByDesc('sort_key')
             ->orderByDesc('id')
             ->offset(max(0, $offset))

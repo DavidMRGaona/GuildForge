@@ -482,6 +482,18 @@ export default {
             markedUnread: 'Aviso marcado como no leído.',
             error: 'No se ha podido cambiar el aviso. Inténtalo de nuevo.',
         },
+        days: {
+            today: 'Hoy',
+            yesterday: 'Ayer',
+            thisWeek: 'Esta semana',
+            earlier: 'Antes',
+        },
+        filter: {
+            label: 'Mostrar',
+            all: 'Todos',
+            unread: 'Sin leer',
+        },
+        emptyUnread: 'No tienes avisos sin leer',
     },
     search: {
         title: 'Buscar',

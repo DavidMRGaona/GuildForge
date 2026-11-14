@@ -28,4 +28,6 @@ export interface SiteNotificationsSharedProps {
 export interface SiteNotificationsPageProps {
     notifications: PaginatedResponse<SiteNotificationItem>;
     unread: number;
+    /** «Todos» or «Sin leer» (`?filtro=sin-leer`, core#671). */
+    filter: 'all' | 'unread';
 }

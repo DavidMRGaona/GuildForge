@@ -259,6 +259,43 @@ final class SiteNotificationsControllerTest extends TestCase
         $this->assertNotNull($hidden->fresh()?->hidden_at);
     }
 
+    public function test_the_page_can_list_only_the_unread_notices_and_keeps_the_filter_in_its_links(): void
+    {
+        $user = UserModel::factory()->create();
+        foreach (range(1, 23) as $n) {
+            $this->notify($user, '/foro/'.$n, 'Aviso '.$n);
+        }
+        $read = SiteNotificationModel::query()->where('title', 'Aviso 23')->firstOrFail();
+        $this->actingAs($user)->get('/avisos/'.$read->id);
+
+        $this->actingAs($user)->get('/avisos?filtro=sin-leer')->assertOk()->assertInertia(
+            static fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('filter', 'unread')
+                ->has('notifications.data', 20)
+                ->where('notifications.data.0.title', 'Aviso 22')
+                ->where('notifications.meta.total', 22)
+                ->where('notifications.links.next', fn (string $next): bool => str_contains($next, 'filtro=sin-leer') && str_contains($next, 'page=2')),
+        );
+
+        $this->actingAs($user)->get('/avisos')->assertInertia(
+            static fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('filter', 'all')
+                ->where('notifications.meta.total', 23),
+        );
+    }
+
+    public function test_an_unknown_filter_lists_everything(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->notify($user, '/foro/1');
+
+        $this->actingAs($user)->get('/avisos?filtro=otra-cosa')->assertInertia(
+            static fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('filter', 'all')
+                ->where('notifications.meta.total', 1),
+        );
+    }
+
     private function notifyGroup(UserModel $user, string $title): void
     {
         $user->notify(new SiteTestNotification('example.replies', new SiteNotificationDTO(title: $title, url: '/foro/1', groupKey: 'forum.topic:1')));
