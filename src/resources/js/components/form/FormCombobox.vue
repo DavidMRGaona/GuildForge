@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Check, ChevronDown } from '@lucide/vue';
 import { ref, computed, watch } from 'vue';
+import { usePinnedPanel, type PinnedTarget } from '@/composables/usePinnedPanel';
 import {
     Combobox,
     ComboboxInput,
@@ -39,6 +40,11 @@ const emit = defineEmits<{
 }>();
 
 const query = ref('');
+
+// The open list is pinned to the field, so a dialog or scrolling card never clips it (core#636)
+const field = ref<PinnedTarget>(null);
+const list = ref<PinnedTarget>(null);
+const { style: listStyle } = usePinnedPanel(field, list);
 
 const selectedOption = computed(() => {
     if (props.modelValue === null || props.modelValue === '') return null;
@@ -79,7 +85,7 @@ watch(
         class="relative"
         @update:model-value="handleChange"
     >
-        <div class="relative">
+        <div ref="field" class="relative">
             <ComboboxInput
                 :id="id"
                 class="w-full rounded-lg border bg-surface px-4 py-2.5 pr-10 text-base-primary placeholder-base-muted transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-muted disabled:cursor-not-allowed"
@@ -114,7 +120,9 @@ watch(
             leave-to-class="transform scale-95 opacity-0"
         >
             <ComboboxOptions
-                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-surface border border-default shadow-lg focus:outline-none"
+                ref="list"
+                :style="listStyle"
+                class="z-50 max-h-60 overflow-auto rounded-lg bg-surface border border-default shadow-lg focus:outline-none"
             >
                 <div
                     v-if="filteredOptions.length === 0 && query !== ''"
