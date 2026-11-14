@@ -15,6 +15,7 @@ use Filament\Pages\Page;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\Support\Modules\RegistersBootedModuleProviders;
 use Tests\Support\Modules\UnregisteredClusterSettingsPage;
@@ -195,6 +196,42 @@ final class ModuleSettingsPageTest extends TestCase
         $page->save();
 
         $this->assertDatabaseMissing('settings', ['key' => 'module_settings:test-module']);
+    }
+
+    public function test_the_module_of_an_open_page_cannot_be_swapped_for_another(): void
+    {
+        // form() and save() follow $module: a client that rewrites it would edit another module
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
+        ModuleModel::factory()->enabled()->create(['name' => 'own-page-module']);
+        $this->loadTestModuleWithSettings();
+        $this->registerBootedProvider(new class(app()) extends ModuleServiceProvider
+        {
+            public function moduleName(): string
+            {
+                return 'own-page-module';
+            }
+
+            public function getSettingsPage(): string
+            {
+                return DashboardSettings::class;
+            }
+
+            public function getSettingsSchema(): array
+            {
+                return [TextInput::make('greeting')];
+            }
+        });
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $component = Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module']);
+
+        try {
+            $component->set('module', 'own-page-module')->set('data.greeting', 'hello')->call('save');
+            $this->fail('The module of the page must be locked.');
+        } catch (CannotUpdateLockedPropertyException) {
+            // Refused before anything runs
+        }
+
+        $this->assertDatabaseMissing('settings', ['key' => 'module_settings:own-page-module']);
     }
 
     /**

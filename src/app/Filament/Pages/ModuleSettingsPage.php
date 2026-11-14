@@ -19,6 +19,7 @@ use Filament\Pages\Page;
 use Filament\Panel;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Schema;
+use Livewire\Attributes\Locked;
 
 /**
  * @property Schema $form
@@ -35,6 +36,8 @@ final class ModuleSettingsPage extends Page implements HasForms
 
     protected static bool $shouldRegisterNavigation = false;
 
+    /** form() and save() follow it: a client must not swap it for another module. */
+    #[Locked]
     public string $module = '';
 
     // Primitive properties for module data (Livewire-compatible)
