@@ -22,12 +22,20 @@ final class ImpersonationContext implements ImpersonationContextInterface
 
     private ?string $logId = null;
 
-    public function activate(Authenticatable $impersonator, Authenticatable $target, ImpersonationMode $mode, string $logId): void
+    /** @var list<string>|null */
+    private ?array $viewedRoleNames = null;
+
+    /**
+     * @param  list<string>|null  $viewedRoleNames  display names of the roles of a role view,
+     *                                              whose target only lives during the request
+     */
+    public function activate(Authenticatable $impersonator, Authenticatable $target, ImpersonationMode $mode, string $logId, ?array $viewedRoleNames = null): void
     {
         $this->impersonator = $impersonator;
         $this->target = $target;
         $this->mode = $mode;
         $this->logId = $logId;
+        $this->viewedRoleNames = $viewedRoleNames;
     }
 
     public function clear(): void
@@ -36,6 +44,7 @@ final class ImpersonationContext implements ImpersonationContextInterface
         $this->target = null;
         $this->mode = null;
         $this->logId = null;
+        $this->viewedRoleNames = null;
     }
 
     public function isActive(): bool
@@ -62,5 +71,16 @@ final class ImpersonationContext implements ImpersonationContextInterface
     public function logId(): ?string
     {
         return $this->logId;
+    }
+
+    /**
+     * The display names of the roles being viewed; null when the impersonation is of an account
+     * (or none is active).
+     *
+     * @return list<string>|null
+     */
+    public function viewedRoleNames(): ?array
+    {
+        return $this->viewedRoleNames;
     }
 }
