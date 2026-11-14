@@ -244,6 +244,17 @@ abstract class ModuleServiceProvider extends ServiceProvider
     }
 
     /**
+     * Whether this module is the site's cookie consent provider: its frontend registers itself
+     * with `registerCookieConsentProvider()` from `@/contracts/cookieConsent`. The core shares it
+     * as the Inertia prop `cookieConsentModule`, so a page that has none never waits for a banner
+     * (core#700), whatever the module is called.
+     */
+    public function providesCookieConsent(): bool
+    {
+        return false;
+    }
+
+    /**
      * Register page prefixes provided by this module.
      * Allows module Vue pages to be resolved by Inertia. With usesCoreLayout the core renders
      * its persistent DefaultLayout around them, and the pages must not wrap one of their own.

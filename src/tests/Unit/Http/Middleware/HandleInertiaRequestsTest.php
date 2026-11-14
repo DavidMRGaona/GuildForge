@@ -7,6 +7,8 @@ namespace Tests\Unit\Http\Middleware;
 use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Modules\ModuleLoader;
+use App\Modules\ModuleServiceProvider;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Livewire\Livewire;
@@ -96,6 +98,90 @@ final class HandleInertiaRequestsTest extends TestCase
         $cloudinary = value($this->middleware->share($request)['cloudinary']);
 
         $this->assertSame(['cloudName' => '', 'prefix' => ''], $cloudinary);
+    }
+
+    public function test_cookie_consent_module_is_false_when_no_loaded_module_declares_itself(): void
+    {
+        $this->assertFalse($this->sharedCookieConsentModule([$this->providerWithConsent(false)]));
+    }
+
+    public function test_cookie_consent_module_is_true_when_a_loaded_module_declares_itself(): void
+    {
+        $this->assertTrue($this->sharedCookieConsentModule([
+            $this->providerWithConsent(false),
+            $this->providerWithConsent(true),
+        ]));
+    }
+
+    public function test_cookie_consent_module_is_false_when_the_only_provider_throws(): void
+    {
+        $throwing = new class($this->app) extends ModuleServiceProvider
+        {
+            public function moduleName(): string
+            {
+                return 'throwing-module';
+            }
+
+            public function providesCookieConsent(): bool
+            {
+                throw new \RuntimeException('Broken module');
+            }
+        };
+
+        $this->assertFalse($this->sharedCookieConsentModule([$throwing]));
+    }
+
+    public function test_a_provider_that_throws_does_not_hide_one_that_declares_itself(): void
+    {
+        $throwing = new class($this->app) extends ModuleServiceProvider
+        {
+            public function moduleName(): string
+            {
+                return 'throwing-module';
+            }
+
+            public function providesCookieConsent(): bool
+            {
+                throw new \RuntimeException('Broken module');
+            }
+        };
+
+        $this->assertTrue($this->sharedCookieConsentModule([$throwing, $this->providerWithConsent(true)]));
+    }
+
+    /**
+     * @param  array<int, ModuleServiceProvider>  $providers
+     */
+    private function sharedCookieConsentModule(array $providers): bool
+    {
+        $loader = $this->app->make(ModuleLoader::class);
+        (new ReflectionClass($loader))->getProperty('loadedProviders')->setValue($loader, $providers);
+
+        $request = Request::create('/test', 'GET');
+        $request->setLaravelSession($this->app['session']->driver());
+
+        return value($this->middleware->share($request)['cookieConsentModule']);
+    }
+
+    private function providerWithConsent(bool $provides): ModuleServiceProvider
+    {
+        return new class($this->app, $provides) extends ModuleServiceProvider
+        {
+            public function __construct($app, private readonly bool $provides)
+            {
+                parent::__construct($app);
+            }
+
+            public function moduleName(): string
+            {
+                return 'consent-test-module';
+            }
+
+            public function providesCookieConsent(): bool
+            {
+                return $this->provides;
+            }
+        };
     }
 
     public function test_module_translations_returns_empty_array_when_no_modules_loaded(): void

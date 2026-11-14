@@ -852,10 +852,21 @@ export declare function useVerificationGate(): VerificationGate;
 ```ts
 export interface CookieConsentProvider {
     hasConsent(categorySlug: string): boolean;
+    hasDecided?(): boolean;
+}
+export type CookieConsentDecidedListener = () => void;
+export declare const CONSENT_PROVIDER_TIMEOUT_MS: number;
+export interface WhenConsentDecidedOptions {
+    signal?: AbortSignal;
 }
 export declare function registerCookieConsentProvider(next: CookieConsentProvider): void;
 export declare function notifyCookieConsentChanged(): void;
+export declare function notifyCookieConsentDecided(): void;
 export declare function hasCookieConsent(categorySlug: string): boolean;
+export declare function hasCookieConsentModule(): boolean;
+export declare function hasCookieConsentDecided(): boolean;
+export declare function onCookieConsentDecided(listener: CookieConsentDecidedListener): () => void;
+export declare function whenConsentDecided(options?: WhenConsentDecidedOptions): Promise<void>;
 ```
 
 ## resources/js/types/env.d.ts
@@ -940,6 +951,8 @@ declare module '@inertiajs/vue3' {
         /** Unread notices of the bell (core#491); null for guests. */
         siteNotifications: SiteNotificationsSharedProps | null;
         realtime: RealtimeSharedProps | null;
+        /** Whether an enabled module declares itself the cookie consent provider (core#700). */
+        cookieConsentModule: boolean;
         /** Whom an administrator is viewing the site as (core#580); null outside an impersonation. */
         impersonation: ImpersonationSharedProps | null;
         authSettings: AuthSettings;

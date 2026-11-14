@@ -2,6 +2,7 @@ import { computed, defineAsyncComponent, type Component, type ComputedRef } from
 import { usePage } from '@inertiajs/vue3';
 import type { SlotRegistration, SlotPosition } from '@/types/slots';
 import { getModuleManifest } from '@/utils/moduleManifest';
+import { SLOT_COMPONENT_TIMEOUT_MS } from '@/utils/moduleLoadTimeout';
 import { attachModuleSourceStylesheet, attachModuleStylesheet } from '@/utils/moduleStyles';
 
 // Glob all module components for dynamic loading
@@ -161,7 +162,7 @@ function createAsyncComponent(module: string, componentPath: string): Component 
                 return result;
             },
             delay: 0,
-            timeout: 15000,
+            timeout: SLOT_COMPONENT_TIMEOUT_MS,
             onError: (error, _retry, fail, attempts) => {
                 console.error(
                     `[ModuleSlots] Failed to load component (attempt ${attempts}):`,
@@ -209,7 +210,7 @@ function createAsyncComponent(module: string, componentPath: string): Component 
             return result;
         },
         delay: 0,
-        timeout: 15000,
+        timeout: SLOT_COMPONENT_TIMEOUT_MS,
         onError: (error, _retry, fail, attempts) => {
             console.error(
                 `[ModuleSlots] Failed to load dynamic component (attempt ${attempts}):`,
