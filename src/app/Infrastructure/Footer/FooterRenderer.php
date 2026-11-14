@@ -19,7 +19,7 @@ use Throwable;
 /**
  * Resolves the stored footer for one person. Blocks go through the site block renderer, which leaves
  * out (and warns about) what cannot be drawn; a column left without blocks is dropped, so the others
- * take its room. Blocks are resolved on every request, never cached across requests: whether a
+ * take its room, and with no block left at all the site draws its fixed footer. Blocks are resolved on every request, never cached across requests: whether a
  * module's block can be drawn (a newsletter provider answering) and what a person may see change
  * between requests, and the stored layout already comes from the settings cache, forgotten on save.
  * Bound scoped: the shared prop asks once per request.
@@ -72,6 +72,11 @@ final class FooterRenderer implements FooterRendererInterface
                 if ($blocks !== []) {
                     $columns[] = $blocks;
                 }
+            }
+
+            // Nothing left to draw (every block unavailable or unknown): the fixed footer, not an empty one
+            if ($columns === []) {
+                return null;
             }
 
             return new FooterDTO($columns, $this->branding->siteName(), $this->legalLinks());

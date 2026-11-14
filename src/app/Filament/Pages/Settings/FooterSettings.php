@@ -27,6 +27,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
@@ -40,8 +41,9 @@ use Throwable;
  *
  * The block definitions come from every valid footer block (SiteBlockRegistryInterface::forPlacement),
  * available or not, so a stored block whose provider is down keeps its form and its settings; only the
- * available ones can be added. A stored block nobody registers now (its module disabled) keeps its
- * title and settings untouched in a hidden field, so saving never drops it.
+ * available ones can be added. A stored block without a form (nobody registers its key now, or its
+ * settings cannot be built) keeps its title and settings untouched in a hidden field, so saving never
+ * drops or empties it; that hidden copy is read for those stored blocks only.
  *
  * @property Schema $form
  */
@@ -69,8 +71,16 @@ final class FooterSettings extends Page implements HasForms
      */
     public ?array $data = [];
 
-    /** @var list<string>|null Keys of the stored blocks nobody registers now, read on mount */
+    /** @var list<string>|null Keys of the stored layout, read once per request */
     private ?array $storedKeys = null;
+
+    /**
+     * What the Builder needs, worked out once per request: Filament evaluates `blocks()` many times
+     * per request (once per column and more), and available() asks every module block isAvailable().
+     *
+     * @var array{blocks: list<SiteBlockInterface>, available: list<string>, schemas: array<string, bool>}|null
+     */
+    private ?array $catalog = null;
 
     public static function getNavigationLabel(): string
     {
@@ -192,38 +202,76 @@ final class FooterSettings extends Page implements HasForms
      */
     private function builderBlocks(): array
     {
-        $available = array_map(
-            static fn (SiteBlockInterface $block): string => $block->key(),
-            resolve(SiteBlockRendererInterface::class)->available(SiteBlockPlacement::Footer),
-        );
-
+        $catalog = $this->catalog();
         $blocks = [];
-        $known = [];
 
-        foreach (resolve(SiteBlockRegistryInterface::class)->forPlacement(SiteBlockPlacement::Footer) as $block) {
-            $known[] = $block->key();
-            $blocks[] = $this->definitionFor($block, in_array($block->key(), $available, true));
+        // Fresh components for every Builder: one component cannot belong to two columns
+        foreach ($catalog['blocks'] as $block) {
+            $blocks[] = $catalog['schemas'][$block->key()]
+                ? $this->definitionFor($block, in_array($block->key(), $catalog['available'], true))
+                : $this->preservedDefinition($block->key(), $block->label(), __('filament.footer.broken_block'));
         }
 
         foreach ($this->storedKeys() as $key) {
-            if (! in_array($key, $known, true)) {
-                $blocks[] = $this->unknownDefinition($key);
+            if (! array_key_exists($key, $catalog['schemas'])) {
+                $blocks[] = $this->preservedDefinition($key, __('filament.footer.unknown_block.label', ['key' => $key]), __('filament.footer.unknown_block.help'));
             }
         }
 
         return $blocks;
     }
 
+    /**
+     * @return array{blocks: list<SiteBlockInterface>, available: list<string>, schemas: array<string, bool>}
+     */
+    private function catalog(): array
+    {
+        if ($this->catalog === null) {
+            $blocks = resolve(SiteBlockRegistryInterface::class)->forPlacement(SiteBlockPlacement::Footer);
+            $schemas = [];
+
+            foreach ($blocks as $block) {
+                $schemas[$block->key()] = $this->schemaOf($block) !== null;
+            }
+
+            $this->catalog = [
+                'blocks' => $blocks,
+                'available' => array_map(
+                    static fn (SiteBlockInterface $block): string => $block->key(),
+                    resolve(SiteBlockRendererInterface::class)->available(SiteBlockPlacement::Footer),
+                ),
+                'schemas' => $schemas,
+            ];
+        }
+
+        return $this->catalog;
+    }
+
+    /**
+     * Whether the page has no form for this block (nobody registers its key now, or its settings
+     * cannot be built), so its stored settings travel untouched in a hidden field.
+     */
+    private function preservesSettings(string $key): bool
+    {
+        return ! ($this->catalog()['schemas'][$key] ?? false);
+    }
+
+    /**
+     * @return array<Component>|null null when the block's settings cannot be built
+     */
+    private function schemaOf(SiteBlockInterface $block): ?array
+    {
+        try {
+            return $block->settingsSchema();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     private function definitionFor(SiteBlockInterface $block, bool $available): Block
     {
         $label = $block->label();
-
-        try {
-            $settings = $block->settingsSchema();
-        } catch (Throwable) {
-            // The registry already left out a module block whose schema throws; a core one keeps its settings as they are
-            $settings = [];
-        }
+        $settings = $this->schemaOf($block) ?? [];
 
         return Block::make($block->key())
             ->label(static fn (?array $state): string => self::itemLabel($label, $state))
@@ -238,12 +286,12 @@ final class FooterSettings extends Page implements HasForms
             ->maxItems($available ? null : 0);
     }
 
-    private function unknownDefinition(string $key): Block
+    private function preservedDefinition(string $key, string $label, string $help): Block
     {
         return Block::make($key)
-            ->label(__('filament.footer.unknown_block.label', ['key' => $key]))
+            ->label($label)
             ->schema([
-                Text::make(__('filament.footer.unknown_block.help'))->color('warning'),
+                Text::make($help)->color('warning'),
                 Hidden::make('title'),
                 Hidden::make(self::STORED_SETTINGS),
             ])
@@ -292,7 +340,7 @@ final class FooterSettings extends Page implements HasForms
      */
     private function blockState(FooterBlock $block): array
     {
-        if (resolve(SiteBlockRegistryInterface::class)->find($block->key) instanceof SiteBlockInterface) {
+        if (! $this->preservesSettings($block->key)) {
             return ['type' => $block->key, 'data' => ['title' => $block->title, 'settings' => $block->settings]];
         }
 
@@ -335,16 +383,23 @@ final class FooterSettings extends Page implements HasForms
             return null;
         }
 
+        $type = $item['type'];
         $data = is_array($item['data'] ?? null) ? $item['data'] : [];
         $title = is_string($data['title'] ?? null) ? $data['title'] : null;
 
-        if (array_key_exists(self::STORED_SETTINGS, $data)) {
-            return new FooterBlock($item['type'], $title, $this->storedSettings($data[self::STORED_SETTINGS]));
+        if ($this->preservesSettings($type)) {
+            // Only a block that was stored: a key forged into the form is not kept
+            if (! in_array($type, $this->storedKeys(), true)) {
+                return null;
+            }
+
+            return new FooterBlock($type, $title, $this->storedSettings($data[self::STORED_SETTINGS] ?? null));
         }
 
+        // A block with a form: its fields, never a hidden copy sent along with them
         $settings = is_array($data['settings'] ?? null) ? $data['settings'] : [];
 
-        return new FooterBlock($item['type'], $title, array_filter($settings, is_string(...), ARRAY_FILTER_USE_KEY));
+        return new FooterBlock($type, $title, array_filter($settings, is_string(...), ARRAY_FILTER_USE_KEY));
     }
 
     /**

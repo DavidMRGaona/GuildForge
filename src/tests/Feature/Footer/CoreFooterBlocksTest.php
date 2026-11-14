@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Footer;
 
+use App\Application\Content\Services\RichTextSanitizerInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\SiteBlocks\DTOs\ResolvedSiteBlockDTO;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
+use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Domain\Navigation\Enums\MenuVisibility;
 use App\Domain\SiteBlocks\SiteBlockPlacement;
@@ -68,6 +70,31 @@ final class CoreFooterBlocksTest extends TestCase
         $this->assertStringNotContainsString('script', $block->props['html']);
         // Only the footer's own editor images are kept
         $this->assertStringNotContainsString('example.com', $block->props['html']);
+    }
+
+    public function test_text_is_sanitized_once_per_content(): void
+    {
+        $calls = 0;
+        $this->app->instance(RichTextSanitizerInterface::class, new class($calls) implements RichTextSanitizerInterface
+        {
+            public function __construct(private int &$calls) {}
+
+            public function sanitize(string $html, EditorImageOrigin $origin): string
+            {
+                $this->calls++;
+
+                return 'limpio:'.$html;
+            }
+        });
+        $this->app->forgetScopedInstances();
+
+        $first = $this->resolve('core.text', ['content' => '<p>Uno</p>']);
+        $this->resolve('core.text', ['content' => '<p>Uno</p>']);
+        $other = $this->resolve('core.text', ['content' => '<p>Dos</p>']);
+
+        $this->assertSame('limpio:<p>Uno</p>', $first->props['html']);
+        $this->assertSame('limpio:<p>Dos</p>', $other->props['html']);
+        $this->assertSame(2, $calls);
     }
 
     public function test_text_without_content_is_empty(): void

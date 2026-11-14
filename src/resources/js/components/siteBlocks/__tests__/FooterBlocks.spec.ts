@@ -5,6 +5,7 @@ import LinksBlock from '../LinksBlock.vue';
 import TextBlock from '../TextBlock.vue';
 import BrandBlock from '../BrandBlock.vue';
 import ContactBlock from '../ContactBlock.vue';
+import { FOOTER_BLOCK_TITLE_ID } from '../footerBlockTitle';
 import en from '@/locales/en';
 import es from '@/locales/es';
 import type { MenuItem } from '@/types/navigation';
@@ -35,6 +36,7 @@ function item(overrides: Partial<MenuItem>): MenuItem {
 describe('LinksBlock', () => {
     it('draws internal links with Inertia and external ones as plain links', () => {
         const wrapper = mount(LinksBlock, {
+            global: { plugins: [i18n] },
             props: {
                 items: [
                     item({ id: '1', label: 'Eventos', href: '/eventos' }),
@@ -57,9 +59,22 @@ describe('LinksBlock', () => {
         expect(links[2]?.element.parentElement?.className).toContain('ps-3');
     });
 
+    it('is a navigation landmark named after the block title, or a generic name', () => {
+        const items = [item({ id: '1', label: 'Eventos' })];
+        const titled = mount(LinksBlock, {
+            global: { plugins: [i18n], provide: { [FOOTER_BLOCK_TITLE_ID as symbol]: 'titulo-1' } },
+            props: { items },
+        });
+        const untitled = mount(LinksBlock, { global: { plugins: [i18n] }, props: { items } });
+
+        expect(titled.get('nav').attributes('aria-labelledby')).toBe('titulo-1');
+        expect(titled.get('nav').attributes('aria-label')).toBeUndefined();
+        expect(untitled.get('nav').attributes('aria-label')).toBe('Enlaces del pie');
+    });
+
     it('draws nothing without links', () => {
         expect(
-            mount(LinksBlock, { props: { items: [] } })
+            mount(LinksBlock, { global: { plugins: [i18n] }, props: { items: [] } })
                 .find('ul')
                 .exists()
         ).toBe(false);

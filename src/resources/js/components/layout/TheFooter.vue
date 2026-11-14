@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import SocialLinks from '@/components/ui/SocialLinks.vue';
-import SiteBlock from '@/components/layout/SiteBlock.vue';
+import FooterBlockSection from '@/components/layout/FooterBlockSection.vue';
 import type { MenuItem, Navigation } from '@/types/navigation';
 import type { SocialMediaLinks } from '@/types/models';
 import type { ConfiguredFooter } from '@/types/footer';
@@ -67,9 +67,12 @@ const footerLinks = computed(() => {
 const socialLinks = computed(() => page.props.socialLinks as SocialMediaLinks | undefined);
 
 // The configurable footer (core#697); without it the fixed footer below is drawn, unchanged
-const configured = computed(
-    () => (page.props.footer as ConfiguredFooter | null | undefined) ?? null
-);
+// The server sends it only with a block to draw; without one, the fixed footer is drawn
+const configured = computed(() => {
+    const footer = page.props.footer as ConfiguredFooter | null | undefined;
+
+    return footer && footer.columns.length > 0 ? footer : null;
+});
 
 // Literal classes, so Tailwind compiles them: one column on phones, two on tablets, the configured ones from lg
 const desktopColumns: Record<number, string> = {
@@ -108,16 +111,11 @@ const hasSocialLinks = computed(() => {
                     data-footer-column
                     class="flex min-w-0 flex-col gap-8"
                 >
-                    <section
+                    <FooterBlockSection
                         v-for="(entry, blockIndex) in column.blocks"
                         :key="`${entry.block.key}-${blockIndex}`"
-                        class="min-w-0"
-                    >
-                        <h2 v-if="entry.title" class="mb-3 text-base font-semibold text-white">
-                            {{ entry.title }}
-                        </h2>
-                        <SiteBlock :block="entry.block" />
-                    </section>
+                        :entry="entry"
+                    />
                 </div>
             </div>
 

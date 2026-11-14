@@ -590,6 +590,7 @@ return [
             'label' => 'Bloque no disponible (:key)',
             'help' => 'Este bloque es de un módulo que no está activo. Se conserva tal cual al guardar y vuelve a salir en la web si el módulo se activa. Bórralo si ya no lo quieres.',
         ],
+        'broken_block' => 'No se pueden mostrar los ajustes de este bloque. Se conservan tal cual al guardar.',
         'unavailable_block' => 'Ahora no se puede mostrar: no sale en la web hasta que vuelva a estar disponible.',
         'blocks' => [
             'links' => [

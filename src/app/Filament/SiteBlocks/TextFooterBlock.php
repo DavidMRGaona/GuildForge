@@ -10,6 +10,8 @@ use App\Filament\Forms\RichEditor\EditorImages;
 use App\Infrastructure\Content\Sources\FooterTextSource;
 use Filament\Forms\Components\RichEditor;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Cache\Repository as Cache;
+use Throwable;
 
 /**
  * A rich text. Its images go to the footer's editor folder (`footer/content/…`) and its text is an
@@ -19,8 +21,15 @@ final class TextFooterBlock extends CoreFooterBlock
 {
     public const string CONTENT_FIELD = FooterTextSource::CONTENT_FIELD;
 
+    /** Bump it when the sanitizing rules change, so no text cleaned by the old ones is served */
+    public const string CACHE_PREFIX = 'footer:text:v1:';
+
+    /** Seconds: an edited text gets a new hash at once, the old entry just expires */
+    public const int CACHE_TTL = 7 * 24 * 3600;
+
     public function __construct(
         private readonly RichTextSanitizerInterface $sanitizer,
+        private readonly Cache $cache,
     ) {}
 
     public function key(): string
@@ -61,7 +70,23 @@ final class TextFooterBlock extends CoreFooterBlock
         $html = $settings[self::CONTENT_FIELD] ?? null;
 
         return [
-            'html' => is_string($html) && $html !== '' ? $this->sanitizer->sanitize($html, EditorImageOrigin::Footer) : '',
+            'html' => is_string($html) && $html !== '' ? $this->clean($html) : '',
         ];
+    }
+
+    /**
+     * The sanitized text, kept in the cache by the hash of what is stored: the footer is on every page
+     * and HTMLPurifier is slow, but the stored text is never trusted as it is (it can be written outside
+     * the panel). A cache that fails only costs sanitizing again.
+     */
+    private function clean(string $html): string
+    {
+        $sanitize = fn (): string => $this->sanitizer->sanitize($html, EditorImageOrigin::Footer);
+
+        try {
+            return (string) $this->cache->remember(self::CACHE_PREFIX.hash('sha256', $html), self::CACHE_TTL, $sanitize);
+        } catch (Throwable) {
+            return $sanitize();
+        }
     }
 }

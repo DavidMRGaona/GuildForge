@@ -449,7 +449,8 @@ class AppServiceProvider extends ServiceProvider
         // Navigation system bindings
         $this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);
         $this->app->singleton(MenuItemHrefResolverInterface::class, MenuItemHrefResolver::class);
-        $this->app->singleton(MenuServiceInterface::class, MenuService::class);
+        // Scoped: it remembers each menu for one request or job
+        $this->app->scoped(MenuServiceInterface::class, MenuService::class);
         $this->app->singleton(RouteRegistryInterface::class, RouteRegistry::class);
         $this->app->singleton(FooterMenusInterface::class, SettingsFooterMenus::class);
 

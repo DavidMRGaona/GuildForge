@@ -14,8 +14,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 interface FooterRendererInterface
 {
     /**
-     * Null when no layout is stored (or it has no block): the site draws its fixed footer, unchanged.
-     * Never throws.
+     * Null when no layout is stored, it has no block, or none of its blocks can be drawn now: the site
+     * then draws its fixed footer, unchanged. Never throws.
      */
     public function forUser(?Authenticatable $user): ?FooterDTO;
 }

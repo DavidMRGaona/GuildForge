@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Footer\DTOs\FooterDTO;
 use App\Application\Footer\Services\FooterRendererInterface;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
@@ -738,7 +739,10 @@ final class HandleInertiaRequests extends Middleware
             $user = $request->user();
 
             $headerItems = $menuService->getHeaderMenu($user);
-            $footerItems = $menuService->getFooterMenu($user);
+            // The configurable footer draws its own menus (core#697): the fixed footer's is not needed then
+            $footerItems = app(FooterRendererInterface::class)->forUser($user) instanceof FooterDTO
+                ? []
+                : $menuService->getFooterMenu($user);
 
             return [
                 'header' => array_map(fn ($item) => $item->toArray(), $headerItems),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Settings;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Footer\Services\FooterLayoutServiceInterface;
 use App\Application\Navigation\Services\FooterMenusInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
@@ -12,12 +13,15 @@ use App\Domain\Footer\ValueObjects\FooterColumn;
 use App\Domain\Footer\ValueObjects\FooterLayout;
 use App\Filament\Pages\Settings\FooterSettings;
 use App\Filament\Support\PanelNavigationGroup;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\Builder;
 use Filament\Forms\Components\Builder\Block;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
+use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\SiteBlocks\FakeSiteBlock;
 use Tests\TestCase;
@@ -208,6 +212,83 @@ final class FooterSettingsTest extends TestCase
         $this->actingAs($this->userWith([]));
 
         Livewire::test(FooterSettings::class)->assertForbidden();
+    }
+
+    public function test_saving_is_refused_once_the_permission_is_taken_away(): void
+    {
+        $user = $this->userWith(['footer.manage']);
+        $this->actingAs($user);
+        $page = Livewire::test(FooterSettings::class)
+            ->fillForm(['columns' => [['blocks' => [['type' => 'core.text', 'data' => ['title' => 'Forzado', 'settings' => ['content' => '<p>x</p>']]]]]]])
+            ->instance();
+        $this->assertInstanceOf(FooterSettings::class, $page);
+
+        PermissionModel::query()->where('key', 'footer.manage')->firstOrFail()->roles()->detach();
+        app(AuthorizationServiceInterface::class)->invalidateCacheFor($user);
+
+        // The page refuses any later Livewire request; save() checks again on its own
+        try {
+            $page->save(app(FooterLayoutServiceInterface::class), app(FooterMenusInterface::class));
+            $this->fail('Saving without the permission was not refused.');
+        } catch (HttpException $e) {
+            $this->assertSame(403, $e->getStatusCode());
+        }
+
+        $this->assertTrue(app(FooterLayoutServiceInterface::class)->layout()->isEmpty());
+    }
+
+    public function test_a_hidden_copy_forged_into_a_block_with_a_form_is_ignored(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(FooterSettings::class)
+            ->fillForm(['columns' => [['blocks' => [
+                ['type' => 'core.text', 'data' => [
+                    'title' => null,
+                    'settings' => ['content' => '<p>Del formulario</p>'],
+                    'stored_settings' => '{"content":"<p>Forjado</p>","extra":"x"}',
+                ]],
+                // A key nobody registers and that was never stored
+                ['type' => 'forged-module.block', 'data' => ['title' => 'Forjado', 'stored_settings' => '{"html":"<script></script>"}']],
+            ]]]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $blocks = app(FooterLayoutServiceInterface::class)->layout()->columns[0]->blocks;
+        $this->assertCount(1, $blocks);
+        $this->assertSame('core.text', $blocks[0]->key);
+        $this->assertSame(['content' => '<p>Del formulario</p>'], $blocks[0]->settings);
+    }
+
+    public function test_a_core_block_whose_settings_cannot_be_built_keeps_them_when_saving(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $broken = new class extends FakeSiteBlock
+        {
+            public function key(): string
+            {
+                return 'core.broken';
+            }
+
+            public function settingsSchema(): array
+            {
+                throw new RuntimeException('Sin ajustes');
+            }
+        };
+        app(SiteBlockRegistryInterface::class)->register($broken::class);
+        app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+            new FooterColumn([new FooterBlock('core.broken', 'Roto', ['limit' => 3, 'label' => 'Hola'])]),
+        ]));
+
+        Livewire::test(FooterSettings::class)
+            ->assertSee('No se pueden mostrar los ajustes de este bloque')
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $block = app(FooterLayoutServiceInterface::class)->layout()->columns[0]->blocks[0];
+        $this->assertSame('core.broken', $block->key);
+        $this->assertSame('Roto', $block->title);
+        $this->assertSame(['limit' => 3, 'label' => 'Hola'], $block->settings);
     }
 
     /**

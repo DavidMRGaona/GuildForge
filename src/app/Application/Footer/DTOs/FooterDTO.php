@@ -13,7 +13,7 @@ use App\Application\SiteBlocks\DTOs\ResolvedSiteBlockDTO;
 final readonly class FooterDTO
 {
     /**
-     * @param  list<list<array{title: string|null, block: ResolvedSiteBlockDTO}>>  $columns  only columns with a block left
+     * @param  non-empty-list<list<array{title: string|null, block: ResolvedSiteBlockDTO}>>  $columns  only columns with a block left, at least one
      * @param  list<array{label: string, href: string}>  $legalLinks
      */
     public function __construct(

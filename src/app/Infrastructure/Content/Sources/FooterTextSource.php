@@ -66,25 +66,39 @@ final readonly class FooterTextSource implements EditorTextSourceInterface
             return false;
         }
 
-        [, $column, $position] = $matches;
-        $layout = $this->stored();
-        $block = $layout['columns'][(int) $column]['blocks'][(int) $position] ?? null;
+        $column = (int) $matches[1];
+        $position = (int) $matches[2];
 
-        if ($this->textOf($block) !== $text->html) {
-            return false;
+        // Read and written under a row lock: a save from the panel meanwhile is never overwritten
+        $written = DB::transaction(function () use ($text, $html, $column, $position): bool {
+            $layout = $this->stored(lock: true);
+
+            if (self::textOf($layout['columns'][$column]['blocks'][$position] ?? null) !== $text->html) {
+                return false;
+            }
+
+            $layout['columns'][$column]['blocks'][$position]['settings'][self::CONTENT_FIELD] = $html;
+
+            try {
+                $encoded = SettingsFooterLayoutService::encode($layout);
+            } catch (JsonException $e) {
+                throw new RuntimeException('The footer layout could not be written back.', $e->getCode(), previous: $e);
+            }
+
+            // Moving an image is not an edit: no model events and no updated_at
+            DB::table('settings')
+                ->where('key', FooterLayoutServiceInterface::SETTING_KEY)
+                ->update(['value' => $encoded]);
+
+            return true;
+        });
+
+        // Once committed, so nobody caches the old row again
+        if ($written) {
+            $this->settings->clearCache();
         }
 
-        $layout['columns'][(int) $column]['blocks'][(int) $position]['settings'][self::CONTENT_FIELD] = $html;
-
-        try {
-            $encoded = SettingsFooterLayoutService::encode($layout);
-        } catch (JsonException $e) {
-            throw new RuntimeException('The footer layout could not be written back.', $e->getCode(), previous: $e);
-        }
-
-        $this->settings->set(FooterLayoutServiceInterface::SETTING_KEY, $encoded);
-
-        return true;
+        return $written;
     }
 
     /**
@@ -92,9 +106,10 @@ final readonly class FooterTextSource implements EditorTextSourceInterface
      *
      * @return array<array-key, mixed>
      */
-    private function stored(): array
+    private function stored(bool $lock = false): array
     {
-        $value = DB::table('settings')->where('key', FooterLayoutServiceInterface::SETTING_KEY)->value('value');
+        $query = DB::table('settings')->where('key', FooterLayoutServiceInterface::SETTING_KEY);
+        $value = ($lock ? $query->lockForUpdate() : $query)->value('value');
 
         if (! is_string($value) || $value === '') {
             return [];

@@ -164,17 +164,27 @@ describe('TheFooter', () => {
             ]);
         });
 
-        it('draws only the bottom bar when no block is left to draw', () => {
+        it('draws the fixed footer when no block is left to draw', () => {
             page.props = {
-                ...page.props,
+                ...fixedFooterProps,
                 footer: { columns: [], siteName: 'Asociación configurada', legalLinks: [] },
             };
+            const empty = mountFooter().html();
 
+            page.props = { ...fixedFooterProps, footer: null };
+
+            expect(empty).toBe(mountFooter().html());
+        });
+
+        it('names each titled block after its heading', () => {
             const wrapper = mountFooter();
+            const sections = wrapper.findAll('[data-footer-column] section');
 
-            expect(wrapper.find('[data-footer-columns]').exists()).toBe(false);
-            expect(wrapper.find('[data-footer-bottom]').exists()).toBe(true);
-            expect(wrapper.find('[data-footer-bottom] nav').exists()).toBe(false);
+            const titled = sections[0];
+            const heading = titled?.get('h2');
+            expect(titled?.attributes('aria-labelledby')).toBe(heading?.attributes('id'));
+            expect(heading?.attributes('id')).toBeTruthy();
+            expect(sections[1]?.attributes('aria-labelledby')).toBeUndefined();
         });
     });
 });

@@ -12,7 +12,9 @@ use App\Domain\Footer\ValueObjects\FooterColumn;
 use App\Domain\Footer\ValueObjects\FooterLayout;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use RuntimeException;
 use Tests\TestCase;
@@ -68,6 +70,42 @@ final class SharedFooterPropTest extends TestCase
                 ['label' => 'Política de privacidad', 'href' => '/politica-de-privacidad'],
                 ['label' => 'Aviso legal', 'href' => '/aviso-legal'],
             ]));
+    }
+
+    public function test_with_no_block_left_to_draw_the_fixed_footer_is_kept(): void
+    {
+        MenuItemModel::factory()->create(['location' => MenuLocation::Footer, 'label' => 'Contacto', 'url' => '/nosotros']);
+        app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+            new FooterColumn([new FooterBlock('disabled-module.block', 'Nada', [])]),
+        ]));
+
+        $this->get('/')->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('footer', null)
+            ->where('navigation.footer.0.label', 'Contacto'));
+    }
+
+    public function test_a_configured_footer_reads_each_menu_once(): void
+    {
+        MenuItemModel::factory()->create(['location' => MenuLocation::Footer, 'label' => 'Contacto', 'url' => '/nosotros']);
+        app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+            new FooterColumn([new FooterBlock('core.links', 'Uno', ['menu' => 'footer'])]),
+            new FooterColumn([new FooterBlock('core.links', 'Dos', ['menu' => 'footer'])]),
+        ]));
+        $menuQueries = 0;
+        DB::listen(function (QueryExecuted $query) use (&$menuQueries): void {
+            if (str_contains($query->sql, 'from "menu_items"') && str_contains($query->sql, '"location"')) {
+                $menuQueries++;
+            }
+        });
+
+        $this->get('/')->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            // The fixed footer's menu is not sent: the configured footer draws its own
+            ->where('navigation.footer', [])
+            ->where('footer.columns.0.blocks.0.block.props.items.0.label', 'Contacto')
+            ->where('footer.columns.1.blocks.0.block.props.items.0.label', 'Contacto'));
+
+        // The header and the footer menu, once each
+        $this->assertSame(2, $menuQueries);
     }
 
     public function test_saving_another_layout_shows_on_the_next_page_view(): void
