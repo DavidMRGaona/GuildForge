@@ -1,6 +1,6 @@
 import type { EventInput } from '@fullcalendar/vue3';
 import type { CalendarEntry, CalendarSourceColor } from '@/types/models';
-import { VENUE_TIMEZONE, addVenueDays, venueDayKey, venueDayStart } from '@/utils/datetime';
+import { VENUE_TIMEZONE, addVenueDays, venueDayKey } from '@/utils/datetime';
 
 export interface CalendarLegendItem {
     sourceType: string;
@@ -48,6 +48,49 @@ function isExactVenueMidnight(date: Date): boolean {
     return date.getMilliseconds() === 0 && venueTimeFormatter.format(date) === '00:00:00';
 }
 
+const MINUTE_MS = 60_000;
+// Any venue day starts between 14 hours before and 12 hours after UTC midnight of
+// the same date (UTC+14 to UTC-12); one more hour each side leaves room to search.
+const DAY_START_EARLIEST_MINUTES = -15 * 60;
+const DAY_START_LATEST_MINUTES = 13 * 60;
+
+const venueDayStartCache = new Map<string, string>();
+
+/**
+ * First instant of a venue day ('YYYY-MM-DD'), as an ISO string.
+ *
+ * Usually venue midnight, but not on a day whose clocks jump over midnight
+ * (America/Santiago, America/Havana on their DST day go from 23:59 straight to
+ * 01:00): there it is 01:00. It is found by searching the minute where the venue
+ * day begins, since time zone offsets and their changes fall on whole minutes.
+ */
+function venueDayStart(dayKey: string): string {
+    const cached = venueDayStartCache.get(dayKey);
+    if (cached !== undefined) {
+        return cached;
+    }
+
+    const utcMidnight = Date.parse(`${dayKey}T00:00:00Z`);
+    // Invariant: the venue day at `low` is before `dayKey`, at `high` it is not.
+    let low = DAY_START_EARLIEST_MINUTES;
+    let high = DAY_START_LATEST_MINUTES;
+
+    while (high - low > 1) {
+        const middle = Math.floor((low + high) / 2);
+
+        if (venueDayKey(new Date(utcMidnight + middle * MINUTE_MS)) < dayKey) {
+            low = middle;
+        } else {
+            high = middle;
+        }
+    }
+
+    const start = new Date(utcMidnight + high * MINUTE_MS).toISOString();
+    venueDayStartCache.set(dayKey, start);
+
+    return start;
+}
+
 function expandEntry(entry: CalendarEntry, fromDayKey: string | undefined): CalendarEntry[] {
     if (entry.end === null) {
         return [entry];
@@ -88,7 +131,7 @@ function expandEntry(entry: CalendarEntry, fromDayKey: string | undefined): Cale
             // the first instant of their venue day, which lies inside that day in any
             // zone and is never later than the day's timed entries. UTC midnight only
             // worked ahead of UTC: behind it, it is still the previous day (core#690).
-            start: dayKey === startDayKey ? entry.start : venueDayStart(dayKey).toISOString(),
+            start: dayKey === startDayKey ? entry.start : venueDayStart(dayKey),
             end: null,
         });
 

@@ -161,6 +161,37 @@ describe('expandEntriesPerDay', () => {
     );
 });
 
+describe('first instant of a following venue day', () => {
+    afterEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    it.each([
+        ['Etc/GMT+12', '2026-11-20', '2026-11-20T12:00:00.000Z'],
+        ['America/Mexico_City', '2026-11-20', '2026-11-20T06:00:00.000Z'],
+        ['Europe/Madrid', '2026-11-20', '2026-11-19T23:00:00.000Z'],
+        ['Europe/Madrid', '2026-03-29', '2026-03-28T23:00:00.000Z'],
+        ['Europe/Madrid', '2026-03-30', '2026-03-29T22:00:00.000Z'],
+        ['Asia/Kathmandu', '2026-11-20', '2026-11-19T18:15:00.000Z'],
+        ['Pacific/Kiritimati', '2026-11-20', '2026-11-19T10:00:00.000Z'],
+        // Clocks jump from 00:00 to 01:00, so the day starts at 01:00
+        ['America/Santiago', '2026-09-06', '2026-09-06T04:00:00.000Z'],
+        ['America/Havana', '2026-03-08', '2026-03-08T05:00:00.000Z'],
+    ])('anchors the piece in %s on %s at %s', async (zone, dayKey, expected) => {
+        const { expandEntriesPerDay } = await loadIn(zone);
+        // From the day before to the day after in every zone from UTC-12 to UTC+14
+        const day = Date.parse(`${dayKey}T00:00:00Z`);
+        const start = new Date(day - 18 * 3_600_000).toISOString();
+        const end = new Date(day + 42 * 3_600_000).toISOString();
+
+        const piece = expandEntriesPerDay([entry(start, end)]).find(
+            (item) => item.id === `e1:${dayKey}`
+        );
+
+        expect(piece?.start).toBe(expected);
+    });
+});
+
 describe('collapseEntriesByActivityType with multi-day pieces', () => {
     afterEach(() => {
         document.head.innerHTML = '';
