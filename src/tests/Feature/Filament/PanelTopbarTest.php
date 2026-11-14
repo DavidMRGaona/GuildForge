@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Application\Mail\DTOs\MailCategoryDTO;
+use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\Services\EmailVerificationPolicyInterface;
+use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Resources\ArticleResource;
@@ -21,6 +25,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
+use Tests\Support\SiteNotifications\SiteTestNotification;
 use Tests\TestCase;
 
 /**
@@ -180,5 +185,65 @@ final class PanelTopbarTest extends TestCase
             ->assertSee(route('profile.show'), false)
             ->assertSee(__('filament.user_menu.profile'))
             ->assertSee(__('filament.user_menu.help'));
+    }
+
+    public function test_the_bell_shows_the_unread_notices_and_leads_to_them(): void
+    {
+        $user = UserModel::factory()->admin()->create();
+        $this->notify($user, 3);
+        $this->actingAs($user);
+
+        $this->get(Dashboard::getUrl())
+            ->assertOk()
+            ->assertSee('data-panel-notifications-bell', false)
+            ->assertSee('href="'.route('site-notifications.index').'"', false)
+            ->assertSee('aria-label="Avisos, 3 sin leer"', false)
+            ->assertSee('data-panel-notifications-badge', false)
+            ->assertSee('>3</span>', false)
+            ->assertSee('data-count-url="'.route('site-notifications.count').'"', false);
+    }
+
+    public function test_the_bell_caps_its_count_like_the_site_and_says_nothing_with_none_unread(): void
+    {
+        $busy = UserModel::factory()->admin()->create();
+        $this->notify($busy, 12);
+        $this->actingAs($busy);
+        $this->get(Dashboard::getUrl())->assertSee('>9+</span>', false)->assertSee('aria-label="Avisos, 12 sin leer"', false);
+
+        $calm = UserModel::factory()->admin()->create();
+        $this->actingAs($calm);
+        $content = $this->get(Dashboard::getUrl())
+            ->assertSee('data-panel-notifications-bell', false)
+            ->assertSee('aria-label="Avisos"', false)
+            ->getContent();
+        $this->assertMatchesRegularExpression('/data-panel-notifications-badge\s+hidden/', (string) $content);
+    }
+
+    public function test_the_bell_is_left_out_while_the_account_must_verify_its_email(): void
+    {
+        $this->app->instance(EmailVerificationPolicyInterface::class, new class implements EmailVerificationPolicyInterface
+        {
+            public function mustVerify(object $user): bool
+            {
+                return true;
+            }
+        });
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get(Dashboard::getUrl())
+            ->assertOk()
+            ->assertDontSee('data-panel-notifications-bell', false);
+    }
+
+    private function notify(UserModel $user, int $times): void
+    {
+        $this->app->make(MailCategoryRegistryInterface::class)->register(
+            MailCategoryDTO::optional(key: 'example.replies', section: 'Example', label: 'Replies', description: 'D', site: true),
+            'example',
+        );
+
+        foreach (range(1, $times) as $n) {
+            $user->notify(new SiteTestNotification('example.replies', new SiteNotificationDTO(title: 'Aviso '.$n, url: '/foro/'.$n)));
+        }
     }
 }
