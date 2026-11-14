@@ -482,6 +482,18 @@ export default {
             markedUnread: 'Notice marked as unread.',
             error: 'The notice could not be changed. Try again.',
         },
+        days: {
+            today: 'Today',
+            yesterday: 'Yesterday',
+            thisWeek: 'This week',
+            earlier: 'Earlier',
+        },
+        filter: {
+            label: 'Show',
+            all: 'All',
+            unread: 'Unread',
+        },
+        emptyUnread: 'You have no unread notices',
     },
     search: {
         title: 'Search',

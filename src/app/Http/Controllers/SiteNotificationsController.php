@@ -31,6 +31,9 @@ final class SiteNotificationsController extends Controller
     /** Rows in the bell's list. */
     public const int RECENT = 8;
 
+    /** Value of `?filtro=` that lists only the unread notices on the page. */
+    public const string UNREAD_FILTER = 'sin-leer';
+
     public function __construct(
         private readonly SiteNotificationServiceInterface $notices,
         private readonly SeoMetadataFactoryInterface $seo,
@@ -40,11 +43,14 @@ final class SiteNotificationsController extends Controller
     {
         $user = $this->user($request);
         $page = $this->getCurrentPage();
+        // «Sin leer» (core#671); anything else lists everything
+        $onlyUnread = $request->query('filtro') === self::UNREAD_FILTER;
 
         return Inertia::render('Notifications/Index', [
+            'filter' => $onlyUnread ? 'unread' : 'all',
             'notifications' => $this->buildPaginatedResponse(
-                items: $this->notices->latest($user, self::PER_PAGE, ($page - 1) * self::PER_PAGE),
-                total: $this->notices->total($user),
+                items: $this->notices->latest($user, self::PER_PAGE, ($page - 1) * self::PER_PAGE, $onlyUnread),
+                total: $this->notices->total($user, $onlyUnread),
                 page: $page,
                 perPage: self::PER_PAGE,
                 resourceClass: SiteNotificationResource::class,

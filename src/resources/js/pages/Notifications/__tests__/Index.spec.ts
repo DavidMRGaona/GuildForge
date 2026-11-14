@@ -49,12 +49,13 @@ function page(items: SiteNotificationItem[], prev: string | null = null): object
     };
 }
 
-function mountPage(items: SiteNotificationItem[]): VueWrapper {
+function mountPage(items: SiteNotificationItem[], filter: 'all' | 'unread' = 'all'): VueWrapper {
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
     return mount(Index, {
         props: {
             unread: items.filter((entry) => entry.unread).length,
+            filter,
             notifications: {
                 data: items,
                 meta: { currentPage: 1, lastPage: 1, perPage: 20, total: items.length },
@@ -109,7 +110,59 @@ describe('Notifications/Index', () => {
     });
 
     afterEach(() => {
+        vi.useRealTimers();
         document.body.innerHTML = '';
+    });
+
+    it('puts the notices under their day in the display zone', () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-11-19T09:00:00Z'));
+        const wrapper = mountPage([
+            item('a', { notifiedAt: '2026-11-19T08:00:00+01:00' }),
+            item('b', { notifiedAt: '2026-11-18T08:00:00+01:00' }),
+            item('c', { notifiedAt: '2026-11-16T08:00:00+01:00' }),
+            item('d', { notifiedAt: '2026-11-02T08:00:00+01:00' }),
+        ]);
+
+        const days = wrapper.findAll('[data-testid="site-notifications-day"]');
+        expect(days.map((day) => day.get('h2').text())).toEqual([
+            'Hoy',
+            'Ayer',
+            'Esta semana',
+            'Antes',
+        ]);
+        expect(days[0]?.attributes('aria-labelledby')).toBe(days[0]?.get('h2').attributes('id'));
+        expect(wrapper.findAll('[data-testid="site-notification"]')).toHaveLength(4);
+        wrapper.unmount();
+    });
+
+    it('marks the current filter and links to the other', () => {
+        const all = mountPage([item('a')]);
+        const links = all.get('[data-testid="site-notifications-filter"]').findAll('a');
+        expect(links.map((link) => [link.text(), link.attributes('href')])).toEqual([
+            ['Todos', '/avisos'],
+            ['Sin leer', '/avisos?filtro=sin-leer'],
+        ]);
+        expect(links[0]?.attributes('aria-current')).toBe('page');
+        expect(links[1]?.attributes('aria-current')).toBeUndefined();
+        all.unmount();
+
+        const unread = mountPage([item('a')], 'unread');
+        const unreadLinks = unread.get('[data-testid="site-notifications-filter"]').findAll('a');
+        expect(unreadLinks[1]?.attributes('aria-current')).toBe('page');
+        unread.unmount();
+    });
+
+    it('says the person is up to date when nothing is unread', () => {
+        const wrapper = mountPage([], 'unread');
+
+        expect(wrapper.get('[data-testid="site-notifications-empty"]').text()).toContain(
+            'No tienes avisos sin leer'
+        );
+        expect(wrapper.get('[data-testid="site-notifications-empty"]').text()).toContain(
+            'Estás al día.'
+        );
+        wrapper.unmount();
     });
 
     it('hides a notice through the server, keeping the scroll, and says so', async () => {

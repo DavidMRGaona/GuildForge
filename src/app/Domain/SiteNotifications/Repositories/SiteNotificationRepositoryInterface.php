@@ -22,12 +22,13 @@ interface SiteNotificationRepositoryInterface
 
     public function unreadCount(UserId $userId): int;
 
-    public function count(UserId $userId): int;
+    /** Visible rows of the person; only the unread ones with $onlyUnread (core#671). */
+    public function count(UserId $userId, bool $onlyUnread = false): int;
 
     /**
      * @return list<StoredSiteNotice> Newest first, by their latest notice.
      */
-    public function latest(UserId $userId, int $limit, int $offset): array;
+    public function latest(UserId $userId, int $limit, int $offset, bool $onlyUnread = false): array;
 
     /**
      * Mark the person's row as read (once: a read row keeps its first read instant).

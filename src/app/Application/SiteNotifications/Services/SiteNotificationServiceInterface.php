@@ -18,15 +18,15 @@ interface SiteNotificationServiceInterface
     /** Unread rows (a group counts once). */
     public function unreadCount(object $user): int;
 
-    /** Every row of the person. */
-    public function total(object $user): int;
+    /** Every visible row of the person; only the unread ones with $onlyUnread (core#671). */
+    public function total(object $user, bool $onlyUnread = false): int;
 
     /**
-     * Newest first (by its latest notice).
+     * Newest first (by its latest notice); only the unread ones with $onlyUnread (core#671).
      *
      * @return list<SiteNotificationItemDTO>
      */
-    public function latest(object $user, int $limit, int $offset = 0): array;
+    public function latest(object $user, int $limit, int $offset = 0, bool $onlyUnread = false): array;
 
     /**
      * Mark the person's notice as read and say where it leads, or null when it is not theirs.
