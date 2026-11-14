@@ -7,6 +7,7 @@ namespace App\Console\Commands\Content;
 use App\Application\Content\Contracts\EditorTextSourceInterface;
 use App\Application\Content\Services\EditorImageMoverInterface;
 use App\Application\Content\Services\EditorTextSourceRegistryInterface;
+use App\Console\Concerns\ReadsTypedInput;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
 
@@ -17,6 +18,8 @@ use Illuminate\Contracts\Console\Isolatable;
  */
 final class MoveEditorImagesToCloudinaryCommand extends Command implements Isolatable
 {
+    use ReadsTypedInput;
+
     protected $signature = 'content:move-editor-images-to-cloudinary
                             {--dry-run : List what would move without uploading, writing or deleting anything}
                             {--host=* : A previous host of the site whose "/storage/" URLs are local images too}
@@ -81,8 +84,8 @@ final class MoveEditorImagesToCloudinaryCommand extends Command implements Isola
     private function hosts(): ?array
     {
         $hosts = [];
-        foreach ($this->option('host') as $value) {
-            $host = strtolower(trim((string) $value));
+        foreach ($this->stringListOption('host') as $value) {
+            $host = strtolower(trim($value));
 
             if ($host === '' || filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false) {
                 $this->error("Not a host name: {$value}. Nothing was changed.");

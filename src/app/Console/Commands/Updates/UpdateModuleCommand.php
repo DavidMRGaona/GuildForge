@@ -7,12 +7,15 @@ namespace App\Console\Commands\Updates;
 use App\Application\Updates\DTOs\UpdatePreviewDTO;
 use App\Application\Updates\Services\ModuleUpdateCheckerInterface;
 use App\Application\Updates\Services\ModuleUpdaterInterface;
+use App\Console\Concerns\ReadsTypedInput;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\View\Modules\CompatibilityIssueFormatter;
 use Illuminate\Console\Command;
 
 final class UpdateModuleCommand extends Command
 {
+    use ReadsTypedInput;
+
     protected $signature = 'module:update
                             {name? : Module name to update}
                             {--all : Update all modules with available updates}
@@ -25,12 +28,12 @@ final class UpdateModuleCommand extends Command
         ModuleUpdateCheckerInterface $updateChecker,
         ModuleUpdaterInterface $updater,
     ): int {
-        $name = $this->argument('name');
-        $updateAll = $this->option('all');
-        $dryRun = $this->option('dry-run');
-        $force = $this->option('force');
+        $name = $this->stringArgument('name');
+        $updateAll = $this->flag('all');
+        $dryRun = $this->flag('dry-run');
+        $force = $this->flag('force');
 
-        if (! $name && ! $updateAll) {
+        if ($name === '' && ! $updateAll) {
             $this->error('Please specify a module name or use --all');
 
             return self::FAILURE;

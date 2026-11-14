@@ -6,6 +6,7 @@ namespace App\Console\Commands\Media;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
+use App\Console\Concerns\ReadsTypedInput;
 use App\Domain\Modules\Exceptions\InvalidModuleNameException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
@@ -19,6 +20,8 @@ use Illuminate\Console\Command;
  */
 final class MediaForgetSourceCommand extends Command
 {
+    use ReadsTypedInput;
+
     protected $signature = 'media:forget-source
         {type : Media source type whose usage rows are deleted (e.g. gametables.tables)}
         {--force : Delete without asking}';
@@ -27,7 +30,7 @@ final class MediaForgetSourceCommand extends Command
 
     public function handle(MediaSourceRegistryInterface $registry, ModuleRepositoryInterface $modules): int
     {
-        $type = (string) $this->argument('type');
+        $type = $this->stringArgument('type');
 
         // An active source rewrites its rows on every save and sync: forgetting them would only hide uses for a while
         if ($registry->source($type) instanceof MediaUsageSourceInterface) {
