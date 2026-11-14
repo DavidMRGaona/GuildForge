@@ -10,6 +10,8 @@ use App\Domain\SiteBlocks\SiteBlockPlacement;
 use App\Infrastructure\SiteBlocks\SiteBlockRegistry;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
@@ -176,6 +178,99 @@ final class SiteBlockRegistryTest extends TestCase
         $log->shouldHaveReceived('warning')->twice();
     }
 
+    public function test_a_broken_block_is_warned_about_once_a_day_across_requests(): void
+    {
+        $block = new class extends FakeSiteBlock
+        {
+            public function key(): string
+            {
+                return 'newsletter.Subscribe';
+            }
+        };
+        $cache = new Repository(new ArrayStore);
+        $log = Log::spy();
+
+        // Each request builds its own registry; the cache is what they share
+        foreach ([1, 2] as $request) {
+            $registry = new SiteBlockRegistry($this->app, cache: $cache);
+            $registry->register($block::class, 'newsletter');
+            $this->assertSame([], $registry->all());
+        }
+
+        $log->shouldHaveReceived('warning')->once();
+    }
+
+    public function test_a_block_that_cannot_be_built_logs_the_exception_class_but_never_its_message(): void
+    {
+        $failing = new class extends FakeSiteBlock
+        {
+            public static bool $fail = false;
+
+            public function __construct()
+            {
+                if (self::$fail) {
+                    throw new RuntimeException('No key for alice@example.com');
+                }
+            }
+
+            public function key(): string
+            {
+                return 'newsletter.subscribe';
+            }
+        };
+        $failing::$fail = true;
+        $log = Log::spy();
+
+        $registry = $this->registry();
+        $registry->register($failing::class, 'newsletter');
+        $this->assertSame([], $registry->all());
+
+        $log->shouldHaveReceived('warning')->once()->withArgs(
+            static fn (string $message, array $context): bool => ($context['exception'] ?? null) === RuntimeException::class
+                && ! str_contains((string) json_encode($context), 'alice'),
+        );
+    }
+
+    public function test_a_class_registered_by_a_second_owner_keeps_the_first_one(): void
+    {
+        $log = Log::spy();
+        $registry = $this->registry();
+        $registry->register($this->popupOnlyBlock()::class, 'newsletter');
+        $registry->register($this->popupOnlyBlock()::class, 'announcements');
+        // Registering it again for the same owner changes nothing and says nothing
+        $registry->register($this->popupOnlyBlock()::class, 'newsletter');
+
+        $this->assertSame('newsletter.subscribe', $registry->find('newsletter.subscribe')?->key());
+
+        $registry->unregisterModule('announcements');
+        $this->assertNotNull($registry->find('newsletter.subscribe'));
+        $log->shouldHaveReceived('warning')->once();
+    }
+
+    public function test_the_setting_names_of_a_module_block_are_its_fields(): void
+    {
+        $block = new class extends FakeSiteBlock
+        {
+            public function key(): string
+            {
+                return 'newsletter.subscribe';
+            }
+
+            public function settingsSchema(): array
+            {
+                return [TextInput::make('heading'), TextInput::make('button_label')];
+            }
+        };
+
+        $registry = $this->registry();
+        $registry->register($block::class, 'newsletter');
+        $registry->register($this->coreBlock()::class);
+
+        $this->assertSame(['heading', 'button_label'], $registry->settingNames('newsletter.subscribe'));
+        $this->assertNull($registry->settingNames('core.example'));
+        $this->assertNull($registry->settingNames('newsletter.unknown'));
+    }
+
     public function test_two_blocks_with_the_same_key_are_both_left_out(): void
     {
         $other = new class extends FakeSiteBlock
@@ -294,7 +389,7 @@ final class SiteBlockRegistryTest extends TestCase
 
     private function registry(): SiteBlockRegistry
     {
-        return new SiteBlockRegistry($this->app);
+        return new SiteBlockRegistry($this->app, cache: new Repository(new ArrayStore));
     }
 
     private function coreBlock(): FakeSiteBlock

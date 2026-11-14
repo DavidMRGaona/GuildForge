@@ -16,6 +16,7 @@ interface SiteBlockRegistryInterface
     /**
      * Registers a block class, built from the container the first time a block is asked for. A
      * class that cannot be built or is not valid (see SiteBlockInterface) is left out with a warning.
+     * A class already registered by another owner keeps its first owner (warning).
      *
      * @param  class-string<SiteBlockInterface>|class-string  $blockClass
      * @param  string|null  $module  the module that owns it; null for the core
@@ -50,4 +51,12 @@ interface SiteBlockRegistryInterface
      * The valid block with that key, or null.
      */
     public function find(string $key): ?SiteBlockInterface;
+
+    /**
+     * The names of a valid module block's settings fields, read once when it was checked: the only
+     * settings it gets back. Null for a core block (its settings are not filtered) or an unknown key.
+     *
+     * @return list<string>|null
+     */
+    public function settingNames(string $key): ?array;
 }

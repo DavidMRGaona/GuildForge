@@ -19,12 +19,13 @@ use Throwable;
  * in their own stored JSON, where no module could register an upload or an editor image as its
  * own (media library, editor image move), so the first version only allows fields that keep a
  * plain value: short text, numbers and links (TextInput), single choices (Select, Radio,
- * ToggleButtons) and switches (Toggle, Checkbox), named without dots. An allowlist, so a field
- * Filament adds later is refused until someone looks at it; a field that cannot be read is refused.
+ * ToggleButtons) and switches (Toggle, Checkbox), named without dots. An allowlist of exact
+ * classes, so neither a field Filament adds later nor a subclass (which could store anything) is
+ * accepted until someone looks at it; a field that cannot be read is refused.
  */
 final class FlatSettingsSchemaRule
 {
-    /** @var list<class-string<Field>> */
+    /** @var list<class-string<Field>> Exact classes: a subclass is not flat */
     private const array FLAT_FIELDS = [
         TextInput::class,
         Select::class,
@@ -39,32 +40,53 @@ final class FlatSettingsSchemaRule
      */
     public function allows(array $components): bool
     {
-        return array_all($components, fn ($component) => $this->isFlat($component));
+        return $this->names($components) !== null;
     }
 
-    private function isFlat(mixed $component): bool
+    /**
+     * The names of the fields, in order, when every one is flat; null otherwise. They are the only
+     * settings a module block gets back.
+     *
+     * @param  array<mixed>  $components
+     * @return list<string>|null
+     */
+    public function names(array $components): ?array
     {
-        if (! $component instanceof Field || ! $this->isAllowedField($component)) {
-            return false;
+        $names = [];
+
+        foreach ($components as $component) {
+            $name = $this->flatName($component);
+
+            if ($name === null) {
+                return null;
+            }
+
+            $names[] = $name;
+        }
+
+        return $names;
+    }
+
+    private function flatName(mixed $component): ?string
+    {
+        if (! is_object($component) || ! in_array($component::class, self::FLAT_FIELDS, true) || ! $component instanceof Field) {
+            return null;
         }
 
         try {
-            if (str_contains($component->getName(), '.')) {
-                return false;
+            $name = $component->getName();
+
+            if ($name === '' || str_contains($name, '.')) {
+                return null;
             }
 
             if (($component instanceof Select || $component instanceof ToggleButtons) && $component->isMultiple()) {
-                return false;
+                return null;
             }
         } catch (Throwable) {
-            return false;
+            return null;
         }
 
-        return true;
-    }
-
-    private function isAllowedField(Field $component): bool
-    {
-        return array_any(self::FLAT_FIELDS, fn ($class) => $component instanceof $class);
+        return $name;
     }
 }

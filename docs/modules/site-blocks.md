@@ -102,7 +102,9 @@ The footer and the popups keep the settings of their blocks inside their own sto
 - `Select`, `ToggleButtons` and `Radio` with a single choice;
 - `Toggle` and `Checkbox`.
 
-Each field is named without dots (`button_label`, not `button.label`). No uploads, rich editors, text areas, repeaters, hidden fields or layout components (`Section`, `Grid`…). The registry checks it (`FlatSettingsSchemaRule`, an allowlist) the first time the block is asked for and leaves out, with a warning, a module block with any other field or whose `settingsSchema()` throws. On top of that, a module block's `props()` only gets the scalar values of its stored settings (string, int, float, bool or `null`).
+Each field is named without dots (`button_label`, not `button.label`). No uploads, rich editors, text areas, repeaters, hidden fields or layout components (`Section`, `Grid`…). The registry checks it (`FlatSettingsSchemaRule`, an allowlist of exact classes: a subclass of `TextInput` is refused too) the first time the block is asked for and leaves out, with a warning, a module block with any other field or whose `settingsSchema()` throws. On top of that, a module block's `props()` only gets the scalar values (string, int, float, bool or `null`) of its own fields: a stored key that no field of the block has (one forged into the JSON, such as `innerHTML`) is dropped. Still, never pass `$settings` on to the component wholesale: return the props it needs.
+
+The core cannot tell what a module keeps in an allowed field (an image URL in a `TextInput`, for instance): keeping files and editor HTML out of block settings is part of the contract.
 
 Core blocks may use any field (the footer's text and logo blocks bring their own media and editor text sources).
 
@@ -110,7 +112,7 @@ Core blocks may use any field (the footer's text and logo blocks bring their own
 
 For whoever owns a placement (the footer in the core, the popups in announcements):
 
-1. **Offering.** Build the panel form from `SiteBlockRendererInterface::available($placement)` (valid and available now): each block's `key()` and `label()`, with its `settingsSchema()`.
+1. **Offering.** Build the panel form's block definitions from `SiteBlockRegistryInterface::forPlacement($placement)` (every valid block, available or not): each block's `key()` and `label()`, with its `settingsSchema()`. Use `SiteBlockRendererInterface::available($placement)` only to decide which blocks can be **added**. A form built from `available()` alone would not know a stored block whose provider is down while someone edits, and saving would drop it.
 2. **Storing.** Keep a list of `['key' => '<key>', 'settings' => [...]]` (plus anything of your own, such as a title).
 3. **Resolving.** For each request, `resolve($blocks, $placement, $user)` returns `list<ResolvedSiteBlockDTO>` in order, without what cannot be drawn; `resolveBlock($key, $settings, $placement, $user)` resolves one (`null` when it cannot be drawn), handy when each stored entry carries more than the block. Send `$dto->toArray()` (`key`, `module`, `component`, `props`; empty props go out as `{}`) to the page.
 4. **Drawing.** `SiteBlock.vue` from the public frontend API draws one resolved block:
@@ -134,7 +136,8 @@ A block never breaks the page around it:
 
 | Situation | What happens |
 |---|---|
-| The class cannot be built, is not a `SiteBlockInterface`, or its key, component path or placements are invalid | Left out of the registry, warning once per process |
+| The class cannot be built, is not a `SiteBlockInterface`, or its key, component path or placements are invalid | Left out of the registry, warning |
+| The same class registered by a second owner | The second registration is ignored, warning |
 | The key does not start with the module's own name (`core.` for the core), or a module called `core` | Left out, warning |
 | Two blocks with the same key | Both left out, warning |
 | A module block with settings that are not flat | Left out, warning |
@@ -144,7 +147,7 @@ A block never breaks the page around it:
 | `isAvailable()` or `props()` throws, or props are not keyed by name or cannot be encoded as JSON | Not drawn, warning |
 | The Vue component fails to load or render | `SiteBlock.vue` drops it (`onErrorCaptured`, like `ModuleSlot.vue`) |
 
-The renderer's warnings are kept apart for a day per key and reason (in the cache), so a footer shown on every page does not flood the log. Settings and props are never logged.
+Every request builds the registry and the renderer again, so warnings are kept apart for a day (in the cache): the registry's per class and reason, the renderer's per key and reason. A footer shown on every page does not flood the log. Warnings carry the class, the module, the key and the reason; settings, props and exception messages are never logged, and an exception is named only by its class, since a module's message may carry what a person can see (an email in a provider's error).
 
 ## Testing
 

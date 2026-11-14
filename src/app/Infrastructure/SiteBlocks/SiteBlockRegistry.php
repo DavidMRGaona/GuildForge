@@ -8,8 +8,8 @@ use App\Application\SiteBlocks\Contracts\SiteBlockInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Domain\SiteBlocks\SiteBlockPlacement;
 use App\Domain\SiteBlocks\ValueObjects\SiteBlockKey;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Container\Container;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -17,7 +17,13 @@ use Throwable;
  * block is asked for. It fails closed: a block that cannot be built, is not a SiteBlockInterface,
  * has an invalid key or one that is not its owner's, an invalid component path or placement, a key
  * another block also has, or (for a module block) settings that are not flat, is left out with a
- * warning once per process. A singleton built at boot, so it logs through the facade.
+ * warning once a day per class and reason (SiteBlockWarnings). Warnings name the class, the module,
+ * the key and the reason, and an exception only by its class. A singleton built at boot.
+ *
+ * In php-fpm every request builds it again, so the blocks are built and checked once per request,
+ * and only when something asks for a block. Checking a module block's settings builds its Filament
+ * fields (about 70 µs for five fields); caching that across requests would need invalidating on
+ * every core or module update and the blocks would still be built for isAvailable() and props().
  */
 final class SiteBlockRegistry implements SiteBlockRegistryInterface
 {
@@ -27,19 +33,40 @@ final class SiteBlockRegistry implements SiteBlockRegistryInterface
     /** @var array<class-string, ?string> Block class => owning module (null for the core) */
     private array $blocks = [];
 
-    /** @var array<string, array{block: SiteBlockInterface, placements: list<SiteBlockPlacement>}>|null Key => block */
+    /** @var array<string, array{block: SiteBlockInterface, placements: list<SiteBlockPlacement>, settingNames: list<string>|null}>|null Key => block */
     private ?array $resolved = null;
 
-    /** @var array<string, true> */
-    private array $warned = [];
+    private readonly SiteBlockWarnings $warnings;
 
+    /**
+     * @param  Cache|null  $cache  where warnings are remembered; the default store, asked for only when warning
+     */
     public function __construct(
         private readonly Container $container,
         private readonly FlatSettingsSchemaRule $flatSettings = new FlatSettingsSchemaRule,
-    ) {}
+        ?Cache $cache = null,
+    ) {
+        $this->warnings = new SiteBlockWarnings(
+            fn (): Cache => $cache ?? $this->container->make(Cache::class),
+        );
+    }
 
     public function register(string $blockClass, ?string $module = null): void
     {
+        // A second owner of the same class would take over the first one's blocks
+        if (array_key_exists($blockClass, $this->blocks)) {
+            if ($this->blocks[$blockClass] !== $module) {
+                $this->warnings->warn('registry|'.$blockClass.'|owner_conflict', 'A site block class is already registered by another owner; the second registration is ignored.', [
+                    'class' => $blockClass,
+                    'module' => $module,
+                    'owner' => $this->blocks[$blockClass],
+                    'reason' => 'owner_conflict',
+                ]);
+            }
+
+            return;
+        }
+
         $this->blocks[$blockClass] = $module;
         $this->resolved = null;
     }
@@ -86,8 +113,13 @@ final class SiteBlockRegistry implements SiteBlockRegistryInterface
         return ($this->resolveAll()[$key] ?? null)['block'] ?? null;
     }
 
+    public function settingNames(string $key): ?array
+    {
+        return ($this->resolveAll()[$key] ?? null)['settingNames'] ?? null;
+    }
+
     /**
-     * @return array<string, array{block: SiteBlockInterface, placements: list<SiteBlockPlacement>}>
+     * @return array<string, array{block: SiteBlockInterface, placements: list<SiteBlockPlacement>, settingNames: list<string>|null}>
      */
     private function resolveAll(): array
     {
@@ -95,7 +127,7 @@ final class SiteBlockRegistry implements SiteBlockRegistryInterface
             return $this->resolved;
         }
 
-        /** @var array<string, list<array{block: SiteBlockInterface, placements: list<SiteBlockPlacement>, class: string}>> $byKey */
+        /** @var array<string, list<array{block: SiteBlockInterface, placements: list<SiteBlockPlacement>, settingNames: list<string>|null, class: string}>> $byKey */
         $byKey = [];
 
         foreach ($this->blocks as $class => $module) {
@@ -110,25 +142,30 @@ final class SiteBlockRegistry implements SiteBlockRegistryInterface
         foreach ($byKey as $key => $entries) {
             // Two blocks with one key: whichever won, the other's stored settings would draw it
             if (count($entries) > 1) {
-                $this->warnOnce('key:'.$key, 'Two site blocks have the same key; neither is offered.', [
+                $this->warnings->warn('registry|'.$key.'|duplicate', 'Two site blocks have the same key; neither is offered.', [
                     'key' => $key,
                     'classes' => array_map(static fn (array $entry): string => $entry['class'], $entries),
+                    'reason' => 'duplicate',
                 ]);
 
                 continue;
             }
 
-            $resolved[$key] = ['block' => $entries[0]['block'], 'placements' => $entries[0]['placements']];
+            $resolved[$key] = [
+                'block' => $entries[0]['block'],
+                'placements' => $entries[0]['placements'],
+                'settingNames' => $entries[0]['settingNames'],
+            ];
         }
 
         return $this->resolved = $resolved;
     }
 
     /**
-     * The block with its key and placements, read once, or null (with a warning) when it cannot
-     * be offered.
+     * The block with its key, placements and (for a module block) setting names, read once, or null
+     * (with a warning) when it cannot be offered.
      *
-     * @return array{block: SiteBlockInterface, key: string, placements: list<SiteBlockPlacement>}|null
+     * @return array{block: SiteBlockInterface, key: string, placements: list<SiteBlockPlacement>, settingNames: list<string>|null}|null
      */
     private function build(string $class, ?string $module): ?array
     {
@@ -170,17 +207,23 @@ final class SiteBlockRegistry implements SiteBlockRegistryInterface
                 $placements[] = $placement;
             }
 
-            if ($module !== null && ! $this->flatSettings->allows($block->settingsSchema())) {
-                return $this->refuse($class, 'settings', 'A module site block has settings that are not flat fields; it is left out.', $context);
+            $settingNames = null;
+            if ($module !== null) {
+                $settingNames = $this->flatSettings->names($block->settingsSchema());
+
+                if ($settingNames === null) {
+                    return $this->refuse($class, 'settings', 'A module site block has settings that are not flat fields; it is left out.', $context);
+                }
             }
         } catch (Throwable $exception) {
+            // Only the class: a module's message may carry what a person can see
             return $this->refuse($class, 'build', 'A site block could not be built; it is left out.', [
                 ...$context,
-                'exception' => $exception->getMessage(),
+                'exception' => $exception::class,
             ]);
         }
 
-        return ['block' => $block, 'key' => $key->value, 'placements' => $placements];
+        return ['block' => $block, 'key' => $key->value, 'placements' => $placements, 'settingNames' => $settingNames];
     }
 
     /**
@@ -188,21 +231,8 @@ final class SiteBlockRegistry implements SiteBlockRegistryInterface
      */
     private function refuse(string $class, string $reason, string $message, array $context): null
     {
-        $this->warnOnce($class.'|'.$reason, $message, $context);
+        $this->warnings->warn('registry|'.$class.'|'.$reason, $message, [...$context, 'reason' => $reason]);
 
         return null;
-    }
-
-    /**
-     * @param  array<string, mixed>  $context
-     */
-    private function warnOnce(string $id, string $message, array $context): void
-    {
-        if (isset($this->warned[$id])) {
-            return;
-        }
-
-        $this->warned[$id] = true;
-        Log::warning($message, $context);
     }
 }

@@ -19,7 +19,8 @@ final class SiteBlocksServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(SiteBlockRegistryInterface::class, SiteBlockRegistry::class);
+        // Built by hand so the cache is only asked for when warning, not at boot
+        $this->app->singleton(SiteBlockRegistryInterface::class, static fn ($app): SiteBlockRegistry => new SiteBlockRegistry($app));
         $this->app->scoped(SiteBlockRendererInterface::class, SiteBlockRenderer::class);
     }
 }

@@ -12,28 +12,25 @@ use App\Domain\SiteBlocks\SiteBlockPlacement;
 use App\Domain\SiteBlocks\ValueObjects\SiteBlockKey;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Cache\Repository as Cache;
-use Illuminate\Support\Facades\Log;
 use JsonException;
 use Throwable;
 
 /**
  * Resolves stored blocks to what the browser draws and fails closed (see the interface). The
  * footer is on every page, so a block that keeps failing would log on every request: each key and
- * reason is warned about once a day, remembered in the cache (and in memory, for the request).
+ * reason is warned about once a day (SiteBlockWarnings). Warnings carry the key, the reason and an
+ * exception only by its class; never settings, props or exception messages.
  */
-final class SiteBlockRenderer implements SiteBlockRendererInterface
+final readonly class SiteBlockRenderer implements SiteBlockRendererInterface
 {
-    private const string WARNED_CACHE_PREFIX = 'site_blocks:warned:';
-
-    private const int WARNED_TTL_SECONDS = 86_400;
-
-    /** @var array<string, true> */
-    private array $warned = [];
+    private SiteBlockWarnings $warnings;
 
     public function __construct(
-        private readonly SiteBlockRegistryInterface $registry,
-        private readonly Cache $cache,
-    ) {}
+        private SiteBlockRegistryInterface $registry,
+        Cache $cache,
+    ) {
+        $this->warnings = new SiteBlockWarnings(static fn (): Cache => $cache);
+    }
 
     public function resolveBlock(string $key, array $settings, SiteBlockPlacement $placement, ?Authenticatable $user): ?ResolvedSiteBlockDTO
     {
@@ -63,7 +60,7 @@ final class SiteBlockRenderer implements SiteBlockRendererInterface
 
             // A module's code may not keep the promise of its PHPDoc
             /** @var array<mixed> $returned */
-            $returned = $block->props($module === null ? $settings : $this->flat($settings), $user);
+            $returned = $block->props($module === null ? $settings : $this->flat($settings, $this->registry->settingNames($key) ?? []), $user);
             $props = $this->keyed($returned);
 
             if (count($props) !== count($returned)) {
@@ -75,13 +72,12 @@ final class SiteBlockRenderer implements SiteBlockRendererInterface
             json_encode($props, JSON_THROW_ON_ERROR);
 
             return new ResolvedSiteBlockDTO($key, $module, $block->component(), $props);
-        } catch (JsonException $exception) {
-            $this->warnOnce($key, 'json', 'A site block returned props that cannot be sent to the browser; it is not drawn.', [
-                'exception' => $exception->getMessage(),
-            ]);
+        } catch (JsonException) {
+            $this->warnOnce($key, 'json', 'A site block returned props that cannot be sent to the browser; it is not drawn.');
         } catch (Throwable $exception) {
+            // Only the class: a module's message may carry what a person can see
             $this->warnOnce($key, 'failed', 'A site block failed; it is not drawn.', [
-                'exception' => $exception->getMessage(),
+                'exception' => $exception::class,
             ]);
         }
 
@@ -121,8 +117,8 @@ final class SiteBlockRenderer implements SiteBlockRendererInterface
                     $available[] = $block;
                 }
             } catch (Throwable $exception) {
-                $this->warnOnce($this->keyOf($block), 'failed', 'A site block failed its availability check; it is not offered.', [
-                    'exception' => $exception->getMessage(),
+                $this->warnOnce($this->keyOf($block), 'availability', 'A site block failed its availability check; it is not offered.', [
+                    'exception' => $exception::class,
                 ]);
             }
         }
@@ -131,16 +127,18 @@ final class SiteBlockRenderer implements SiteBlockRendererInterface
     }
 
     /**
-     * Only the plain values a module block's flat fields can hold; anything else was not written
-     * by its settings and is dropped.
+     * Only the plain values of the block's own fields: a key no field has (forged into the stored
+     * JSON, say `innerHTML`) or a value its flat fields never write is dropped, so nothing else can
+     * reach props() and, through a module that passes settings on, the component's attributes.
      *
      * @param  array<string, mixed>  $settings
+     * @param  list<string>  $names
      * @return array<string, string|int|float|bool|null>
      */
-    private function flat(array $settings): array
+    private function flat(array $settings, array $names): array
     {
         return array_filter(
-            $settings,
+            array_intersect_key($settings, array_flip($names)),
             static fn (mixed $value): bool => $value === null || is_scalar($value),
         );
     }
@@ -164,29 +162,11 @@ final class SiteBlockRenderer implements SiteBlockRendererInterface
     }
 
     /**
-     * Settings and props are never logged: they may hold what a person can see.
-     *
      * @param  array<string, mixed>  $context
      */
     private function warnOnce(string $key, string $reason, string $message, array $context = []): void
     {
-        $id = $reason.'|'.$key;
-
-        if (isset($this->warned[$id])) {
-            return;
-        }
-
-        $this->warned[$id] = true;
-
-        try {
-            if (! $this->cache->add(self::WARNED_CACHE_PREFIX.sha1($id), true, self::WARNED_TTL_SECONDS)) {
-                return;
-            }
-        } catch (Throwable) {
-            // Without a cache it still warns, once per request
-        }
-
-        Log::warning($message, [
+        $this->warnings->warn('renderer|'.$key.'|'.$reason, $message, [
             'key' => mb_substr($key, 0, SiteBlockKey::MAX_LENGTH),
             'reason' => $reason,
             ...$context,

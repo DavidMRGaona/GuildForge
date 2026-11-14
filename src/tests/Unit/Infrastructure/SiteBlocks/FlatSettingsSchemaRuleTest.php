@@ -70,6 +70,22 @@ final class FlatSettingsSchemaRuleTest extends TestCase
         $this->assertFalse((new FlatSettingsSchemaRule)->allows([TextInput::make('heading'), $field()]));
     }
 
+    public function test_a_subclass_of_a_flat_field_is_not_flat(): void
+    {
+        $field = new class('heading') extends TextInput {};
+
+        $this->assertFalse((new FlatSettingsSchemaRule)->allows([$field]));
+    }
+
+    public function test_the_names_of_flat_fields_are_listed_and_anything_else_has_none(): void
+    {
+        $rule = new FlatSettingsSchemaRule;
+
+        $this->assertSame(['heading', 'compact'], $rule->names([TextInput::make('heading'), Toggle::make('compact')]));
+        $this->assertSame([], $rule->names([]));
+        $this->assertNull($rule->names([TextInput::make('heading'), FileUpload::make('image')]));
+    }
+
     public function test_a_field_whose_settings_cannot_be_read_is_not_flat(): void
     {
         $field = Select::make('style')->multiple(static fn (): bool => throw new \RuntimeException('Not now'));

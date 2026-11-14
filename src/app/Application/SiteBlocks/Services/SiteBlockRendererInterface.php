@@ -13,7 +13,9 @@ use Illuminate\Contracts\Auth\Authenticatable;
  * Turns the blocks a page stored (footer columns, a popup) into what the browser draws, for one
  * person (core#696). It fails closed and never throws: a block that cannot be drawn is left out,
  * and anything unexpected (unknown key, a check or props() that throws, props not fit for the
- * browser) is logged once per key and reason for a day. Settings and props are never logged.
+ * browser) is logged once per key and reason for a day. Settings, props and exception messages are
+ * never logged (an exception only by its class). A module block only gets the scalar values of its
+ * own settings fields: any other stored key is dropped before props().
  */
 interface SiteBlockRendererInterface
 {

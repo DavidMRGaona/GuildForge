@@ -70,7 +70,9 @@ interface SiteBlockInterface
     /**
      * The props for the component, for this person: only what they may see. A string-keyed array
      * that survives json_encode(); anything else leaves the block out. A module block only gets the
-     * scalar values of its settings (string, int, float, bool or null).
+     * scalar values (string, int, float, bool or null) of the fields of its settingsSchema(); any
+     * other stored key is dropped. Never pass settings on to the component wholesale: pick what it
+     * needs. If this throws, only the exception class is logged, never its message.
      *
      * @param  array<string, mixed>  $settings
      * @return array<string, mixed>

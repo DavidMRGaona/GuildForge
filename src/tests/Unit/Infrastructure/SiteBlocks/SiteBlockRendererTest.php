@@ -10,6 +10,8 @@ use App\Domain\SiteBlocks\SiteBlockPlacement;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\SiteBlocks\SiteBlockRegistry;
 use App\Infrastructure\SiteBlocks\SiteBlockRenderer;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -28,8 +30,8 @@ final class SiteBlockRendererTest extends TestCase
     {
         parent::setUp();
 
-        $this->registry = new SiteBlockRegistry($this->app);
         $this->cache = new Repository(new ArrayStore);
+        $this->registry = new SiteBlockRegistry($this->app, cache: $this->cache);
     }
 
     public function test_the_renderer_is_scoped_to_the_request(): void
@@ -103,7 +105,7 @@ final class SiteBlockRendererTest extends TestCase
         $this->assertSame('{"key":"newsletter.subscribe","module":"newsletter","component":"components\/ExampleBlock.vue","props":{}}', json_encode($resolved?->toArray()));
     }
 
-    public function test_a_module_block_only_gets_flat_settings(): void
+    public function test_a_module_block_only_gets_the_plain_values_of_its_own_fields(): void
     {
         $this->registry->register($this->subscribeBlock()::class, 'newsletter');
 
@@ -113,8 +115,11 @@ final class SiteBlockRendererTest extends TestCase
             'ratio' => 0.5,
             'compact' => false,
             'link' => null,
-            'images' => ['a.png'],
+            // A field of the block holding what it never writes
             'nested' => ['label' => 'x'],
+            // Keys no field of the block has, forged into the stored JSON
+            'innerHTML' => '<img src=x onerror=alert(1)>',
+            'images' => 'a.png',
         ], SiteBlockPlacement::Footer, null);
 
         $this->assertSame(
@@ -198,6 +203,32 @@ final class SiteBlockRendererTest extends TestCase
         $this->assertNull($renderer->resolveBlock('newsletter.subscribe', [], SiteBlockPlacement::Footer, null));
         $this->assertNull($renderer->resolveBlock('newsletter.subscribe', [], SiteBlockPlacement::Footer, null));
         $log->shouldHaveReceived('warning')->once();
+    }
+
+    public function test_a_failing_block_logs_the_exception_class_but_never_its_message(): void
+    {
+        $block = new class extends FakeSiteBlock
+        {
+            public function key(): string
+            {
+                return 'newsletter.subscribe';
+            }
+
+            public function isAvailable(): bool
+            {
+                throw new RuntimeException('Mailchimp refused alice@example.com');
+            }
+        };
+        $this->registry->register($block::class, 'newsletter');
+        $log = Log::spy();
+
+        $this->assertNull($this->renderer()->resolveBlock('newsletter.subscribe', [], SiteBlockPlacement::Footer, null));
+        $this->assertSame([], $this->renderer()->available(SiteBlockPlacement::Footer));
+
+        $log->shouldHaveReceived('warning')->twice()->withArgs(
+            static fn (string $message, array $context): bool => ($context['exception'] ?? null) === RuntimeException::class
+                && ! str_contains((string) json_encode($context), 'alice'),
+        );
     }
 
     public function test_a_block_whose_props_throw_is_left_out(): void
@@ -334,6 +365,18 @@ final class SiteBlockRendererTest extends TestCase
             public function key(): string
             {
                 return 'newsletter.subscribe';
+            }
+
+            public function settingsSchema(): array
+            {
+                return [
+                    TextInput::make('heading'),
+                    TextInput::make('limit')->numeric(),
+                    TextInput::make('ratio')->numeric(),
+                    Toggle::make('compact'),
+                    TextInput::make('link')->url(),
+                    TextInput::make('nested'),
+                ];
             }
 
             public function component(): string
