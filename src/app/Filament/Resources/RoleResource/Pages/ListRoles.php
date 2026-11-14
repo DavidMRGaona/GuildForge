@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\RoleResource\Pages;
 
+use App\Filament\Actions\ViewAsRolesAction;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Resources\RoleResource;
 use Filament\Actions\Action;
@@ -23,6 +24,7 @@ class ListRoles extends ListRecords
     {
         return [
             CreateAction::make(),
+            ViewAsRolesAction::make(),
             ...array_filter([$this->knowledgeGuideAction('core.panel.roles-and-permissions')]),
         ];
     }
