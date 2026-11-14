@@ -39,6 +39,11 @@ export default defineConfig({
             '@': resolve(import.meta.dirname, 'resources/js'),
             '@modules': resolve(import.meta.dirname, 'modules'),
         },
+        // The dev server serves module sources through this config, with one dependency cache
+        // keyed by import name: a module's own copy of these packages would mix with the core's
+        // on the page, and ProseMirror refuses two copies in one editor. Module builds (their own
+        // root, vite.module.config.ts) still bundle the module's copies
+        dedupe: ['@tiptap/core', '@tiptap/pm', '@tiptap/vue-3'],
     },
     server: {
         host: '0.0.0.0',
