@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Check, ChevronDown } from '@lucide/vue';
 import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue';
+import { ref } from 'vue';
+import { usePinnedPanel, type PinnedTarget } from '@/composables/usePinnedPanel';
 
 interface Option {
     value: string | number;
@@ -33,6 +35,11 @@ const emit = defineEmits<{
     'update:modelValue': [value: string | number | null];
 }>();
 
+// The open list is pinned to the button, so a dialog or scrolling card never clips it (core#636)
+const button = ref<PinnedTarget>(null);
+const list = ref<PinnedTarget>(null);
+const { style: listStyle } = usePinnedPanel(button, list);
+
 function getSelectedLabel(): string {
     if (props.modelValue === null || props.modelValue === '') {
         return props.placeholder;
@@ -56,6 +63,7 @@ function handleChange(value: string | number | null): void {
     >
         <ListboxButton
             :id="id"
+            ref="button"
             :name="name"
             :aria-describedby="describedBy"
             :aria-invalid="error ? 'true' : undefined"
@@ -87,7 +95,9 @@ function handleChange(value: string | number | null): void {
             leave-to-class="transform scale-95 opacity-0"
         >
             <ListboxOptions
-                class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-surface border border-default shadow-lg focus:outline-none"
+                ref="list"
+                :style="listStyle"
+                class="z-50 max-h-60 overflow-auto rounded-lg bg-surface border border-default shadow-lg focus:outline-none"
             >
                 <!-- Placeholder option to allow clearing -->
                 <ListboxOption v-if="placeholder" v-slot="{ active }" :value="''" as="template">
