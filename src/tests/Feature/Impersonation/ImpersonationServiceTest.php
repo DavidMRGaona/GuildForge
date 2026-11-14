@@ -14,6 +14,7 @@ use App\Domain\Impersonation\Enums\ImpersonationRefusal;
 use App\Domain\Impersonation\Exceptions\ImpersonationNotAllowedException;
 use App\Infrastructure\Impersonation\ImpersonationSessionState;
 use App\Infrastructure\Persistence\Eloquent\Models\ImpersonationLogEntryModel;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
@@ -166,6 +167,96 @@ final class ImpersonationServiceTest extends TestCase
 
         $this->assertSame($idBefore, $this->sessionStore()->getId());
         $this->assertSame(0, ImpersonationLogEntryModel::query()->count());
+    }
+
+    public function test_it_starts_a_role_view_and_adds_member(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $this->actingAs($admin);
+        $socioId = $this->roleId('socio');
+        $memberId = $this->roleId('member');
+
+        $this->service()->startWithRoles($admin, [$socioId], ImpersonationMode::ReadOnly);
+
+        $entry = ImpersonationLogEntryModel::query()->sole();
+        $state = $this->sessionStore()->get(ImpersonationSessionState::SESSION_KEY);
+        $this->assertEqualsCanonicalizing([$memberId, $socioId], $state['role_ids']);
+        $this->assertSame($entry->id, $state['log_id']);
+        $this->assertSame($admin->id, $state['impersonator_id']);
+        $this->assertEqualsCanonicalizing(
+            [$memberId, $socioId],
+            array_column($entry->viewed_roles ?? [], 'id'),
+        );
+        $this->assertSame($state['target_id'], $entry->target_id);
+        $this->assertFalse(UserModel::query()->whereKey($entry->target_id)->exists());
+        $this->assertTrue(Auth::user()?->is($admin));
+    }
+
+    public function test_a_forged_admin_role_is_refused(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $this->assertRoleViewRefused([$this->roleId('admin')], ImpersonationRefusal::RoleIsAdmin, $admin);
+    }
+
+    public function test_an_unknown_role_is_refused(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $this->assertRoleViewRefused([(string) Str::uuid()], ImpersonationRefusal::RoleUnavailable, $admin);
+    }
+
+    public function test_a_role_view_may_not_start_while_already_impersonating(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $this->actingAs($admin);
+        $this->service()->start($admin, UserModel::factory()->create(), ImpersonationMode::ReadOnly);
+
+        try {
+            $this->service()->startWithRoles($admin, [$this->roleId('socio')], ImpersonationMode::ReadOnly);
+            $this->fail('A role view started over an impersonation');
+        } catch (ImpersonationNotAllowedException $exception) {
+            $this->assertSame(ImpersonationRefusal::AlreadyImpersonating, $exception->refusal);
+        }
+
+        $this->assertSame(1, ImpersonationLogEntryModel::query()->count());
+    }
+
+    public function test_stopping_a_role_view_closes_its_entry(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $this->actingAs($admin);
+        $this->service()->startWithRoles($admin, [$this->roleId('socio')], ImpersonationMode::ReadOnly);
+
+        $this->service()->stop(ImpersonationEndReason::Stopped);
+
+        $entry = ImpersonationLogEntryModel::query()->sole();
+        $this->assertNotNull($entry->ended_at);
+        $this->assertSame(ImpersonationEndReason::Stopped, $entry->ended_reason);
+        $this->assertFalse($this->sessionStore()->has(ImpersonationSessionState::SESSION_KEY));
+    }
+
+    /**
+     * @param  list<string>  $roleIds
+     */
+    private function assertRoleViewRefused(array $roleIds, ImpersonationRefusal $expected, UserModel $admin): void
+    {
+        try {
+            $this->service()->startWithRoles($admin, $roleIds, ImpersonationMode::ReadOnly);
+            $this->fail('The role view was not refused');
+        } catch (ImpersonationNotAllowedException $exception) {
+            $this->assertSame($expected, $exception->refusal);
+        }
+
+        $this->assertSame(0, ImpersonationLogEntryModel::query()->count());
+        $this->assertFalse($this->sessionStore()->has(ImpersonationSessionState::SESSION_KEY));
+    }
+
+    private function roleId(string $name): string
+    {
+        return (string) RoleModel::query()->where('name', $name)->value('id');
     }
 
     private function service(): ImpersonationServiceInterface
