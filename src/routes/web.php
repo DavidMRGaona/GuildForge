@@ -252,6 +252,15 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/avisos/leidos', [SiteNotificationsController::class, 'markAllRead'])
         ->middleware('throttle:30,1,site-notifications-read')
         ->name('site-notifications.read-all');
+    // One notice from its menu (core#670): read, unread again, or hidden for the person
+    Route::middleware('throttle:60,1,site-notifications-row')->whereUuid('notification')->group(function (): void {
+        Route::post('/avisos/{notification}/leido', [SiteNotificationsController::class, 'markRead'])
+            ->name('site-notifications.read');
+        Route::post('/avisos/{notification}/no-leido', [SiteNotificationsController::class, 'markUnread'])
+            ->name('site-notifications.unread');
+        Route::post('/avisos/{notification}/ocultar', [SiteNotificationsController::class, 'hide'])
+            ->name('site-notifications.hide');
+    });
     // Opening a notice marks it read, then goes where it leads
     Route::get('/avisos/{notification}', [SiteNotificationsController::class, 'open'])
         ->whereUuid('notification')

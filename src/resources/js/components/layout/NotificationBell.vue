@@ -38,6 +38,8 @@ const { unread, items, loading, failed } = notifications;
 
 const isOpen = ref(false);
 const marking = ref(false);
+// The notice whose menu choice the server is answering (core#670)
+const busyId = ref<string | null>(null);
 const liveMessage = ref('');
 const root = useTemplateRef<HTMLElement>('root');
 const button = useTemplateRef<HTMLButtonElement>('button');
@@ -131,6 +133,42 @@ function onKeydown(event: KeyboardEvent): void {
                 : links.length - 1
             : (current + step + links.length) % links.length;
     links[next]?.focus();
+}
+
+async function toggleRead(id: string, isUnread: boolean): Promise<void> {
+    if (busyId.value !== null) {
+        return;
+    }
+
+    busyId.value = id;
+    const done = await notifications.setRead(id, isUnread);
+    busyId.value = null;
+    liveMessage.value = !done
+        ? t('notifications.actions.error')
+        : isUnread
+          ? t('notifications.actions.markedRead')
+          : t('notifications.actions.markedUnread');
+}
+
+/** Hide a notice and give the focus to the one now in its place, so the keyboard is not lost. */
+async function hideNotice(id: string, index: number): Promise<void> {
+    if (busyId.value !== null) {
+        return;
+    }
+
+    busyId.value = id;
+    const done = await notifications.hide(id);
+    busyId.value = null;
+    liveMessage.value = done ? t('notifications.actions.hidden') : t('notifications.actions.error');
+    if (!done) {
+        return;
+    }
+
+    await nextTick();
+    const links = Array.from(
+        list.value?.querySelectorAll<HTMLElement>('[data-testid="site-notification"]') ?? []
+    );
+    (links[index] ?? links[index - 1] ?? button.value)?.focus();
 }
 
 async function markAllRead(): Promise<void> {
@@ -231,8 +269,14 @@ async function markAllRead(): Promise<void> {
                     {{ t('notifications.empty') }}
                 </p>
                 <ul v-else class="space-y-0.5" :aria-label="t('notifications.latest')">
-                    <li v-for="item in items" :key="item.id">
-                        <SiteNotificationEntry :item="item" compact />
+                    <li v-for="(item, index) in items" :key="item.id">
+                        <SiteNotificationEntry
+                            :item="item"
+                            compact
+                            :busy="busyId === item.id"
+                            @toggle-read="toggleRead(item.id, item.unread)"
+                            @hide="hideNotice(item.id, index)"
+                        />
                     </li>
                 </ul>
             </div>

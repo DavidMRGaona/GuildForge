@@ -472,6 +472,16 @@ export default {
             'You have {count} unread notification. | You have {count} unread notifications.',
         allCaughtUp: 'You are all caught up.',
         choose: 'Choose which notifications and mail you get',
+        actions: {
+            menu: 'Options for «{title}»',
+            markRead: 'Mark as read',
+            markUnread: 'Mark as unread',
+            hide: 'Hide',
+            hidden: 'Notice hidden.',
+            markedRead: 'Notice marked as read.',
+            markedUnread: 'Notice marked as unread.',
+            error: 'The notice could not be changed. Try again.',
+        },
     },
     search: {
         title: 'Search',

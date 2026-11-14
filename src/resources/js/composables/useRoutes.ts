@@ -63,6 +63,10 @@ export interface RouteDefinitions {
         count: string;
         recent: string;
         readAll: string;
+        /** One notice from its menu (core#670) */
+        read: (id: string) => string;
+        unread: (id: string) => string;
+        hide: (id: string) => string;
     };
 
     // Proposals of events and articles from the web (core#579)
@@ -154,6 +158,9 @@ const routes: RouteDefinitions = {
         count: '/avisos/contador',
         recent: '/avisos/recientes',
         readAll: '/avisos/leidos',
+        read: (id: string) => `/avisos/${id}/leido`,
+        unread: (id: string) => `/avisos/${id}/no-leido`,
+        hide: (id: string) => `/avisos/${id}/ocultar`,
     },
 
     // Proposals

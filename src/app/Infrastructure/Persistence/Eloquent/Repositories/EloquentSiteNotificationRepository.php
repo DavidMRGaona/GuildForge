@@ -31,6 +31,7 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
                 ->where('user_id', $userId->value())
                 ->where('group_key', $notice->groupKey)
                 ->whereNull('read_at')
+                ->whereNull('hidden_at')
                 ->orderByDesc('sort_key')
                 ->lockForUpdate()
                 ->first();
@@ -69,12 +70,16 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
         return SiteNotificationModel::query()
             ->where('user_id', $userId->value())
             ->whereNull('read_at')
+            ->whereNull('hidden_at')
             ->count();
     }
 
     public function count(UserId $userId): int
     {
-        return SiteNotificationModel::query()->where('user_id', $userId->value())->count();
+        return SiteNotificationModel::query()
+            ->where('user_id', $userId->value())
+            ->whereNull('hidden_at')
+            ->count();
     }
 
     public function latest(UserId $userId, int $limit, int $offset): array
@@ -85,6 +90,7 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
 
         return array_values(SiteNotificationModel::query()
             ->where('user_id', $userId->value())
+            ->whereNull('hidden_at')
             ->orderByDesc('sort_key')
             ->orderByDesc('id')
             ->offset(max(0, $offset))
@@ -111,6 +117,46 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
         }
 
         return $this->toStored($row);
+    }
+
+    public function markUnread(UserId $userId, string $id): bool
+    {
+        $row = SiteNotificationModel::query()
+            ->where('user_id', $userId->value())
+            ->whereNull('hidden_at')
+            ->whereKey($id)
+            ->first();
+
+        if (! $row instanceof SiteNotificationModel) {
+            return false;
+        }
+
+        if ($row->read_at !== null) {
+            $row->read_at = null;
+            $row->save();
+        }
+
+        return true;
+    }
+
+    public function hide(UserId $userId, string $id): bool
+    {
+        $row = SiteNotificationModel::query()
+            ->where('user_id', $userId->value())
+            ->whereKey($id)
+            ->first();
+
+        if (! $row instanceof SiteNotificationModel) {
+            return false;
+        }
+
+        if ($row->hidden_at === null) {
+            $row->hidden_at = now();
+            $row->read_at ??= now();
+            $row->save();
+        }
+
+        return true;
     }
 
     public function markAllRead(UserId $userId): int

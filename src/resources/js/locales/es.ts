@@ -472,6 +472,16 @@ export default {
         unreadSummary: 'Tienes {count} aviso sin leer. | Tienes {count} avisos sin leer.',
         allCaughtUp: 'Estás al día.',
         choose: 'Elegir qué avisos y correos recibes',
+        actions: {
+            menu: 'Opciones del aviso «{title}»',
+            markRead: 'Marcar como leído',
+            markUnread: 'Marcar como no leído',
+            hide: 'Ocultar',
+            hidden: 'Aviso oculto.',
+            markedRead: 'Aviso marcado como leído.',
+            markedUnread: 'Aviso marcado como no leído.',
+            error: 'No se ha podido cambiar el aviso. Inténtalo de nuevo.',
+        },
     },
     search: {
         title: 'Buscar',

@@ -74,6 +74,27 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
         return SiteNotificationDTO::isSitePath($notice->url) ? $notice->url : '/';
     }
 
+    public function markRead(object $user, string $id): bool
+    {
+        $userId = $this->userId($user);
+
+        return $userId instanceof UserId && Str::isUuid($id) && $this->notices->markRead($userId, $id) instanceof StoredSiteNotice;
+    }
+
+    public function markUnread(object $user, string $id): bool
+    {
+        $userId = $this->userId($user);
+
+        return $userId instanceof UserId && Str::isUuid($id) && $this->notices->markUnread($userId, $id);
+    }
+
+    public function hide(object $user, string $id): bool
+    {
+        $userId = $this->userId($user);
+
+        return $userId instanceof UserId && Str::isUuid($id) && $this->notices->hide($userId, $id);
+    }
+
     public function markAllRead(object $user): int
     {
         $userId = $this->userId($user);

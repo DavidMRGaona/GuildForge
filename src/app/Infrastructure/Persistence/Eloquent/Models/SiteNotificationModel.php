@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $notified_at
  * @property int $sort_key
  * @property Carbon|null $read_at
+ * @property Carbon|null $hidden_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -50,6 +51,7 @@ final class SiteNotificationModel extends Model
         'notified_at',
         'sort_key',
         'read_at',
+        'hidden_at',
     ];
 
     /**
@@ -63,6 +65,7 @@ final class SiteNotificationModel extends Model
             'actor_ids' => 'array',
             'notified_at' => 'datetime',
             'read_at' => 'datetime',
+            'hidden_at' => 'datetime',
         ];
     }
 }

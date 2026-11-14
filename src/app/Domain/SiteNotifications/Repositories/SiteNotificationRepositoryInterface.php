@@ -34,6 +34,17 @@ interface SiteNotificationRepositoryInterface
      */
     public function markRead(UserId $userId, string $id): ?StoredSiteNotice;
 
+    /**
+     * Mark the person's visible row as unread again; false when it is not theirs or is hidden.
+     */
+    public function markUnread(UserId $userId, string $id): bool;
+
+    /**
+     * Hide the person's row from their notification centre (core#670), marking it read too so the
+     * daily clean-up deletes it with the read ones; false when it is not theirs. Idempotent.
+     */
+    public function hide(UserId $userId, string $id): bool;
+
     public function markAllRead(UserId $userId): int;
 
     public function deleteForUser(UserId $userId): void;

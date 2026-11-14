@@ -37,6 +37,10 @@ export interface UseSiteNotificationsReturn {
     loadRecent: () => Promise<void>;
     /** Mark every notice read; true when the server did. */
     markAllRead: () => Promise<boolean>;
+    /** Mark one notice read or unread again without opening it (core#670); true when the server did. */
+    setRead: (id: string, read: boolean) => Promise<boolean>;
+    /** Hide one notice for the person (core#670): out of the list and the counter. */
+    hide: (id: string) => Promise<boolean>;
     /**
      * Start asking every minute and on return to the tab; stops when the last user stops. With
      * real time live, a delivered notice is heard at once and the minute's question is skipped.
@@ -168,9 +172,10 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
         }
     }
 
-    async function markAllRead(): Promise<boolean> {
+    /** POST to the notice routes; the new counter, or null when it failed. */
+    async function post(url: string): Promise<number | null> {
         try {
-            const response = await fetch(routes.notifications.readAll, {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     Accept: 'application/json',
@@ -180,15 +185,52 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
                 credentials: 'same-origin',
             });
             if (!response.ok) {
-                return false;
+                return null;
             }
-            unread.value = 0;
-            items.value = items.value.map((item) => ({ ...item, unread: false }));
 
-            return true;
+            const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+
+            return readNumber(body.unread) ?? unread.value;
         } catch {
+            return null;
+        }
+    }
+
+    async function markAllRead(): Promise<boolean> {
+        const count = await post(routes.notifications.readAll);
+        if (count === null) {
             return false;
         }
+        unread.value = count;
+        items.value = items.value.map((item) => ({ ...item, unread: false }));
+
+        return true;
+    }
+
+    async function setRead(id: string, read: boolean): Promise<boolean> {
+        const count = await post(
+            read ? routes.notifications.read(id) : routes.notifications.unread(id)
+        );
+        if (count === null) {
+            return false;
+        }
+        unread.value = count;
+        items.value = items.value.map((item) =>
+            item.id === id ? { ...item, unread: !read } : item
+        );
+
+        return true;
+    }
+
+    async function hide(id: string): Promise<boolean> {
+        const count = await post(routes.notifications.hide(id));
+        if (count === null) {
+            return false;
+        }
+        unread.value = count;
+        items.value = items.value.filter((item) => item.id !== id);
+
+        return true;
     }
 
     function listenInRealTime(): void {
@@ -249,6 +291,8 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
         refreshCount: () => refresh(routes),
         loadRecent,
         markAllRead,
+        setRead,
+        hide,
         startPolling,
     };
 }
