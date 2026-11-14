@@ -335,8 +335,13 @@
 /* ==========================================================================
    Semantic Tokens - Light Mode (Default)
    Following best practices: warm stone palette, no pure black/white
+   An element marked data-color-scheme="light" or "dark" gets these too, so it holds every
+   variable the root holds (button colours…) and resolves them against its own scheme's tokens,
+   whatever the page's mode (core#640). The site palette (ThemeSettingsService) does the same
    ========================================================================== */
-:root {
+:root,
+[data-color-scheme='light'],
+[data-color-scheme='dark'] {
     /* Primary Colors */
     --color-primary: #bb5b00; /* amber-600 darkened until white text reaches 4.5:1 */
     --color-primary-hover: #b45309; /* amber-700 */
@@ -417,11 +422,13 @@
        copies FormSelect (its open list stays the browser's, which no CSS reaches). In the base
        layer, so any utility on the element still wins. color-scheme darkens native calendars,
        dropdown lists and scrollbars in dark mode */
-    :root {
+    :root,
+    [data-color-scheme='light'] {
         color-scheme: light;
     }
 
-    .dark {
+    .dark,
+    [data-color-scheme='dark'] {
         color-scheme: dark;
     }
 
@@ -493,8 +500,10 @@
    - NO pure black (#000000) - using stone-900 (#1C1917) instead
    - NO pure white text - using stone-100 (#F5F5F4)
    - Reduced saturation on accent colors
+   Also for an element marked data-color-scheme="dark" in a light page (core#640)
    ========================================================================== */
-.dark {
+.dark,
+[data-color-scheme='dark'] {
     /* Primary Colors - Glowing amber for dark backgrounds */
     --color-primary: #b36100; /* amber-500 darkened until white text reaches 4.5:1 */
     --color-primary-hover: #fbbf24; /* amber-400 - lighter on hover */

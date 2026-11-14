@@ -56,8 +56,8 @@ final class ThemeSettingsServiceTest extends TestCase
     {
         $css = $this->service->getCssVariables();
 
-        $this->assertStringContainsString(':root {', $css);
-        $this->assertStringContainsString('.dark {', $css);
+        $this->assertStringContainsString(':root:root,', $css);
+        $this->assertStringContainsString(':root.dark,', $css);
         // New palette variables
         $this->assertStringContainsString('--color-primary-500:', $css);
         $this->assertStringContainsString('--color-accent-500:', $css);
@@ -141,10 +141,26 @@ final class ThemeSettingsServiceTest extends TestCase
 
         // One step more specific than app.css (:root and .dark): the site palette wins whatever
         // order the stylesheets load in (the dev server appends app.css after the head)
-        $this->assertStringStartsWith(':root:root {', trim($css));
+        $this->assertStringStartsWith(':root:root', trim($css));
         $this->assertMatchesRegularExpression('/--[\w-]+:\s*[^;]+;/', $css);
         $this->assertStringContainsString('}', $css);
-        $this->assertStringContainsString(':root.dark {', $css);
+        $this->assertContains(':root.dark', $this->selectorLists($css)[1] ?? []);
+    }
+
+    public function test_an_element_marked_with_a_colour_scheme_gets_the_site_tokens_of_that_scheme(): void
+    {
+        $css = $this->service->getCssVariables();
+
+        // The light block also covers an element marked dark, so it gets every variable the root
+        // gets (palettes, button colours) and resolves them against its own dark tokens, as the
+        // root does in dark mode. Same specificity as :root:root and :root.dark
+        $this->assertSame(
+            [
+                [':root:root', ":root [data-color-scheme='light']", ":root [data-color-scheme='dark']"],
+                [':root.dark', ":root [data-color-scheme='dark']"],
+            ],
+            $this->selectorLists($css),
+        );
     }
 
     public function test_get_css_variables_includes_dark_mode_overrides(): void
@@ -304,17 +320,35 @@ final class ThemeSettingsServiceTest extends TestCase
 
     private function extractLightModeSection(string $css): string
     {
-        $pattern = '/:root\s*\{([^}]+)\}/s';
-        preg_match($pattern, $css, $matches);
-
-        return $matches[1] ?? '';
+        return $this->blocks($css)[0]['body'] ?? '';
     }
 
     private function extractDarkModeSection(string $css): string
     {
-        $pattern = '/\.dark\s*\{([^}]+)\}/s';
-        preg_match($pattern, $css, $matches);
+        return $this->blocks($css)[1]['body'] ?? '';
+    }
 
-        return $matches[1] ?? '';
+    /**
+     * The selectors of each block, in order.
+     *
+     * @return list<list<string>>
+     */
+    private function selectorLists(string $css): array
+    {
+        return array_map(
+            fn (array $block): array => array_map(trim(...), explode(',', $block['selectors'])),
+            $this->blocks($css),
+        );
+    }
+
+    /**
+     * @return list<array{selectors: string, body: string}>
+     */
+    private function blocks(string $css): array
+    {
+        $withoutComments = (string) preg_replace('#/\*.*?\*/#s', '', $css);
+        preg_match_all('/([^{}]+)\{([^}]*)\}/s', $withoutComments, $matches, PREG_SET_ORDER);
+
+        return array_map(fn (array $match): array => ['selectors' => trim($match[1]), 'body' => $match[2]], $matches);
     }
 }

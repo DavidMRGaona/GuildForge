@@ -1195,6 +1195,20 @@ A list page opens with a title band: the core's `page-band` class (background, s
 
 Actions for the whole list (a list/calendar toggle, «create» buttons) go at the top right of the band, also on phones.
 
+### Fixed colour scheme
+
+A piece that must look light or dark whatever the page's mode (a banner theme the site chooses, say) asks the core for that scheme with `data-color-scheme="light"` or `data-color-scheme="dark"` on its root element. The element and everything inside it get the site's own tokens for that scheme: the palette chosen in *Configuración del sitio → Apariencia*, the muted text and primary colours computed for it, the button colours and `color-scheme` (native controls), from `app.css` and from the site theme (`ThemeSettingsService`) alike (core ≥ the release with #640).
+
+```vue
+<div :data-color-scheme="theme === 'dark' ? 'dark' : theme === 'light' ? 'light' : undefined" class="bg-surface text-base-primary border-default">
+    …
+</div>
+```
+
+- Never copy colour values into a module: a copy misses the next palette change and every site's own palette.
+- Inside the element use the semantic utilities (`bg-surface`, `text-base-primary`, `border-default`, `text-primary-link`…). `dark:` utilities and the core's `.dark …` rules follow the page's mode, not the attribute.
+- Leave the attribute out to follow the page's mode.
+
 ### Core safelist
 
 The core also safelists common utilities and the semantic design tokens, at a cost of +15-25KB gzipped CSS shared by all modules. These classes exist without the module stylesheet, including in dynamic bindings.

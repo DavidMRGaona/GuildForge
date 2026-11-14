@@ -52,10 +52,10 @@ final class RootViewThemeTest extends TestCase
     {
         $head = $this->rootHead();
 
-        $this->assertMatchesRegularExpression('#<style data-site-theme>\s*:root:root \{#', $head);
+        $this->assertMatchesRegularExpression('#<style data-site-theme>\s*:root:root,#', $head);
         $this->assertStringContainsString('--color-primary-700:', $head);
         $this->assertStringContainsString('--color-primary-action:', $head);
-        $this->assertStringContainsString(':root.dark {', $head);
+        $this->assertStringContainsString(':root.dark,', $head);
     }
 
     public function test_the_head_asks_no_font_service_for_the_site_fonts(): void
