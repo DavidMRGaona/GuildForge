@@ -88,6 +88,16 @@ describe('TextBlock', () => {
         expect(wrapper.html()).toContain('<strong>mundo</strong>');
     });
 
+    it('keeps light text on the dark footer in both colour schemes', () => {
+        const classes = mount(TextBlock, { props: { html: '<p>Hola</p>' } })
+            .get('div')
+            .classes();
+
+        // The site's prose follows the page's scheme and would draw dark text in light mode
+        expect(classes).not.toContain('prose');
+        expect(classes).toContain('text-neutral-300');
+    });
+
     it('draws nothing for an empty text', () => {
         expect(
             mount(TextBlock, { props: { html: '' } })

@@ -18,7 +18,7 @@ const hasSocialLinks = computed(() => Object.values(props.socialLinks).some((url
 </script>
 
 <template>
-    <div class="flex flex-col items-center gap-4 text-center sm:items-start sm:text-start">
+    <div class="flex flex-col items-start gap-4 text-start">
         <img
             v-if="logo"
             :src="logo"
