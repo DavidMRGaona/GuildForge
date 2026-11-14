@@ -24,13 +24,14 @@ final class NeutralPaletteTest extends TestCase
         }
     }
 
-    public function test_dark_backgrounds_are_the_warm_greys_of_the_panel(): void
+    public function test_dark_backgrounds_are_a_neutral_page_under_slightly_warm_surfaces(): void
     {
         $palette = NeutralPalette::palette();
 
-        $this->assertSame('#252220', $palette->shade(950)?->value);
-        $this->assertSame('#302D2A', $palette->shade(900)?->value);
-        $this->assertSame('#3D3936', $palette->shade(800)?->value);
+        $this->assertSame('#181818', $palette->shade(950)?->value);
+        $this->assertSame('#282624', $palette->shade(900)?->value);
+        $this->assertSame('#303030', $palette->shade(800)?->value);
+        $this->assertSame('#3B3B3B', $palette->shade(700)?->value);
     }
 
     public function test_light_backgrounds_are_the_stone_greys(): void

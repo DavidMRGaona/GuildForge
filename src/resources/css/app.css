@@ -508,12 +508,13 @@
     --color-secondary-hover: #d6d3d1; /* stone-300 */
     --color-secondary-light: #57534e; /* stone-600 */
 
-    /* Background Colors - the shared warm neutrals (App\Domain\ValueObjects\NeutralPalette, also the
-       panel's greys), lighter than stone for reduced eye strain. The site theme writes the same values */
-    --color-bg-page: #252220; /* neutral-950 - main background */
-    --color-bg-surface: #302d2a; /* neutral-900 - cards */
-    --color-bg-elevated: #3d3936; /* neutral-800 - modals, dropdowns */
-    --color-bg-muted: #3d3936; /* neutral-800 - subtle sections, one step above the surface */
+    /* Background Colors - the shared neutrals (App\Domain\ValueObjects\NeutralPalette, also the
+       panel's greys): a neutral near-black page under slightly warm surfaces. The site theme writes
+       the same values */
+    --color-bg-page: #181818; /* neutral-950 - main background */
+    --color-bg-surface: #282624; /* neutral-900 - cards */
+    --color-bg-elevated: #303030; /* neutral-800 - modals, dropdowns */
+    --color-bg-muted: #303030; /* neutral-800 - subtle sections, one step above the surface */
 
     /* Text Colors - WCAG AA compliant */
     --color-text-primary: #f5f5f4; /* stone-100 - 15:1 AAA */
@@ -522,7 +523,7 @@
     --color-text-inverted: #1c1917; /* stone-900 */
 
     /* Border Colors */
-    --color-border: #44403c; /* stone-700 */
+    --color-border: #3b3b3b; /* neutral-700 */
     --color-border-strong: #57534e; /* stone-600 */
 
     /* Status Colors - Dark Mode (slightly reduced saturation) */

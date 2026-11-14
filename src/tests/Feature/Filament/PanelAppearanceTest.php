@@ -30,9 +30,11 @@ final class PanelAppearanceTest extends TestCase
 
         $this->assertIsArray($gray);
         // Page, surface and elevated backgrounds of the public site in dark mode
-        $this->assertSame('#252220', $gray[950]);
-        $this->assertSame('#302d2a', $gray[900]);
-        $this->assertSame('#3d3936', $gray[800]);
+        $this->assertSame('#181818', $gray[950]);
+        $this->assertSame('#282624', $gray[900]);
+        $this->assertSame('#303030', $gray[800]);
+        // Border in dark mode
+        $this->assertSame('#3b3b3b', $gray[700]);
         // Page background in light mode
         $this->assertSame('#fafaf9', $gray[50]);
     }

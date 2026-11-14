@@ -7,8 +7,9 @@ namespace App\Domain\ValueObjects;
 /**
  * The greys of every surface: the public site, the admin panel and emails.
  *
- * Fixed and warm, whatever the site's accent colour: stone for the light shades and lighter,
- * warmer darks than stone for the dark theme backgrounds (page 950, surface 900, elevated 800).
+ * Fixed, whatever the site's accent colour: stone for the light shades, and for the dark theme a
+ * neutral near-black page (950) under slightly warm surfaces (900), a neutral elevated grey (800)
+ * and a soft border (700), as in current desktop apps in dark mode.
  */
 final class NeutralPalette
 {
@@ -23,10 +24,10 @@ final class NeutralPalette
         400 => '#a8a29e',
         500 => '#78716c',
         600 => '#57534e',
-        700 => '#44403c',
-        800 => '#3d3936',
-        900 => '#302d2a',
-        950 => '#252220',
+        700 => '#3b3b3b',
+        800 => '#303030',
+        900 => '#282624',
+        950 => '#181818',
     ];
 
     public static function palette(): ColorPalette
