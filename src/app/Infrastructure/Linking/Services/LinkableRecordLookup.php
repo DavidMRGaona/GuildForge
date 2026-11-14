@@ -64,6 +64,16 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
             return [];
         }
 
+        if (count($ids) > self::MANY_IDS_WARNING) {
+            // Still answered in full: the caller should ask one page at a time
+            Log::warning('[LinkableRecordLookup] More ids asked at once than a page holds', [
+                'source' => $source::class,
+                'type' => $type,
+                'count' => count($ids),
+                'batches' => $source instanceof FindsLinkableRecordsInBatches,
+            ]);
+        }
+
         $answered = [];
         $strays = 0;
 

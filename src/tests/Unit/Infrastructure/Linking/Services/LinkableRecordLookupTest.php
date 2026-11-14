@@ -238,6 +238,35 @@ final class LinkableRecordLookupTest extends TestCase
     }
 
     #[Test]
+    public function find_many_warns_about_more_ids_than_a_page_and_still_answers_them_all(): void
+    {
+        $log = Log::spy();
+        $this->registry->register(FakeLinkableRecordSource::class, 'example-module');
+        $ids = array_map(fn (int $index): string => "record-{$index}", range(1, LinkableRecordLookupInterface::MANY_IDS_WARNING + 1));
+        FakeLinkableRecordSource::$records = [$this->record('fake', 'record-1'), $this->record('fake', end($ids))];
+
+        $records = $this->lookup->findMany('fake', $ids, self::VIEWER);
+
+        $this->assertSame(['record-1', end($ids)], array_keys($records));
+        $this->assertCount(count($ids), FakeLinkableRecordSource::$askedIds);
+        $log->shouldHaveReceived('warning')->once();
+        $log->shouldNotHaveReceived('error');
+    }
+
+    #[Test]
+    public function find_many_does_not_warn_up_to_a_page_of_ids(): void
+    {
+        $log = Log::spy();
+        $this->registry->register(FakeLinkableRecordSource::class, 'example-module');
+        $ids = array_map(fn (int $index): string => "record-{$index}", range(1, LinkableRecordLookupInterface::MANY_IDS_WARNING));
+
+        // Repeated ids count once
+        $this->lookup->findMany('fake', [...$ids, 'record-1'], self::VIEWER);
+
+        $log->shouldNotHaveReceived('warning');
+    }
+
+    #[Test]
     public function the_lookup_is_a_container_singleton(): void
     {
         $lookup = $this->app->make(LinkableRecordLookupInterface::class);

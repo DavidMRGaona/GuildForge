@@ -23,6 +23,9 @@ interface LinkableRecordLookupInterface
     /** Most records a search may ask a source for. */
     public const int MAX_SEARCH_LIMIT = 50;
 
+    /** More distinct ids than this in one findMany() call are still answered, with a warning. */
+    public const int MANY_IDS_WARNING = 500;
+
     /**
      * The record as the viewer may see it, or null when it does not exist, the viewer may not
      * see it, its type has no source or the source failed.
@@ -32,10 +35,13 @@ interface LinkableRecordLookupInterface
     /**
      * The records of the type among $ids that the viewer may see, keyed by id, in the order
      * asked (repeated ids count once). An id that does not exist or is hidden is simply absent.
+     * Ids are matched exactly as given (lowercase uuids are the norm): an id spelled otherwise
+     * than the source's answer is dropped.
      *
-     * A source implementing FindsLinkableRecordsInBatches is asked at most
-     * FindsLinkableRecordsInBatches::MAX_IDS ids per call (longer lists are split); any other
-     * source is asked once per id through find(). Empty when the type has no source or the
+     * Pass one page of ids. FindsLinkableRecordsInBatches::MAX_IDS caps what a source gets per
+     * call, not this call: a batch source is asked once per MAX_IDS ids, any other source once
+     * per id through find(). Every id is answered, never truncated; more than MANY_IDS_WARNING
+     * distinct ids are logged as a warning. Empty when the type has no source or the
      * source failed for any of them; records answered for ids not asked, or of another type, are
      * dropped and logged.
      *
