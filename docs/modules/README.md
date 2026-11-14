@@ -782,7 +782,7 @@ Sort slots, so modules never depend on each other's numbers (core entries in bra
 | Contenido | [Eventos 10 · Artículos 20 · Galerías 30 · Biblioteca de medios 40 · Guías de ayuda 90] |
 | Actividades | game-tables Mesas 10 · tournaments Torneos 20 · venue-bookings Reservas 30 |
 | Comunicación | announcements Anuncios 10 · surveys Encuestas 20 · forum Foro 30, Moderación del foro 35 |
-| Personas | [Usuarios 10 · Roles 20] · memberships Socios 30 |
+| Personas | [Usuarios 10 · Roles 20] · memberships Socios 30 · contacts Contactos 40 |
 | Sitio web | [Hero slides 10 · Navegación 20 · Nosotros 30 · Páginas legales 40] · link-page Página de enlaces 50 · cookie-consent Cookies 60 |
 | Catálogos | game-tables Sistemas de juego 10, Editoriales 20, Avisos de contenido 30 · tournaments Perfiles de torneo 40 · [Etiquetas 90] |
 | Sistema | [Configuración 10 · Módulos 20 · Actualizaciones de módulos 30 · Actualización del core 40] |
