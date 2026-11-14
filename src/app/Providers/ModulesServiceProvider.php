@@ -26,6 +26,7 @@ use App\Console\Commands\Module\ModuleMakeVuePageCommand;
 use App\Console\Commands\Module\ModuleMigrateCommand;
 use App\Console\Commands\Module\ModulePublishAssetsCommand;
 use App\Console\Commands\Module\ModuleSyncFromImageCommand;
+use App\Filament\Support\ModuleSettingsPages;
 use App\Infrastructure\Modules\Listeners\KeepQueueWorkersInStepWithModules;
 use App\Infrastructure\Modules\Services\CacheModuleChangeWindow;
 use App\Infrastructure\Modules\Services\ModuleInstaller;
@@ -50,6 +51,8 @@ final class ModulesServiceProvider extends ServiceProvider
         $this->app->bind(ModuleInstallerInterface::class, ModuleInstaller::class);
         // Bound before any module provider registers: they read their settings through it
         $this->app->bind(ModuleSettingsStoreInterface::class, SettingsTableModuleSettingsStore::class);
+        // Scoped: works out each module's settings page once per request, so a problem is logged once
+        $this->app->scoped(ModuleSettingsPages::class);
         // One per process (never scoped: the queue worker forgets scoped instances between jobs), so
         // nested changes share their depth; the cache store is the one the queue restart signal uses
         $this->app->singleton(ModuleChangeWindowInterface::class, fn (Application $app): CacheModuleChangeWindow => new CacheModuleChangeWindow(

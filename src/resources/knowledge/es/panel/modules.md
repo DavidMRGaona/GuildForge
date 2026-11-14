@@ -19,12 +19,14 @@ Cada módulo sale en una tarjeta con su versión, su autor y sus dependencias. U
 
 1. En la tarjeta de un módulo habilitado, pulsa **Configuración**.
 2. Cambia sus opciones.
-3. Pulsa **Guardar configuración**.
+3. Guarda los cambios.
+
+Si el módulo tiene una página propia de ajustes en **Sistema → Configuración**, el botón te lleva allí. Esa página pide el permiso de ajustes del propio módulo: si no lo tienes, el botón no sale. Si no la tiene, sus opciones se cambian en una página de **Módulos**.
 
 Tus ajustes se conservan cuando el módulo se actualiza. Solo los módulos con opciones tienen este botón.
 
 > [!TIP]
-> Si solo puedes configurar módulos, esta es la única acción que verás. Instalar, habilitar y deshabilitar necesita otro permiso.
+> Si solo puedes configurar módulos, **Configuración** es la única acción que verás, y solo en los módulos sin página propia de ajustes. Para los que la tienen necesitas además el permiso de ese módulo. Instalar, habilitar y deshabilitar necesita otro permiso.
 
 ## Habilitar o deshabilitar
 

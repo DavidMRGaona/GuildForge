@@ -9,6 +9,7 @@ use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Support\ModuleSettingsPages;
 use App\Modules\ModuleLoader;
 use Filament\Actions\Action;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -18,6 +19,7 @@ use Filament\Pages\Page;
 use Filament\Panel;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Schema;
+use Livewire\Attributes\Locked;
 
 /**
  * @property Schema $form
@@ -34,6 +36,8 @@ final class ModuleSettingsPage extends Page implements HasForms
 
     protected static bool $shouldRegisterNavigation = false;
 
+    /** form() and save() follow it: a client must not swap it for another module. */
+    #[Locked]
     public string $module = '';
 
     // Primitive properties for module data (Livewire-compatible)
@@ -116,8 +120,22 @@ final class ModuleSettingsPage extends Page implements HasForms
         $this->moduleNamespace = $moduleEntity->namespace();
         $this->moduleIsEnabled = $moduleEntity->isEnabled();
 
+        // A module with its own settings page is edited there, under the module's permission: old
+        // links (opened with modules.configure) land on it, and a declared page that cannot be
+        // used leaves nothing to edit
+        $pages = app(ModuleSettingsPages::class);
+
+        if ($pages->declaresPage($module)) {
+            $url = $pages->pageUrl($module);
+
+            abort_if($url === null, 404);
+
+            $this->redirect($url);
+
+            return;
+        }
+
         // The generic page only edits getSettingsSchema(): a module without one has nothing here
-        // (a module with its own settings page lists that page in the panel navigation)
         if (! $this->hasSettings()) {
             Notification::make()
                 ->title(__('modules.filament.settings_page.no_settings'))
@@ -148,7 +166,8 @@ final class ModuleSettingsPage extends Page implements HasForms
      */
     protected function getModuleSettingsSchema(): array
     {
-        if ($this->module === '') {
+        // Fallback only: a module that declares its own settings page is never edited here
+        if ($this->module === '' || app(ModuleSettingsPages::class)->declaresPage($this->module)) {
             return [];
         }
 

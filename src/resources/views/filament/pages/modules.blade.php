@@ -181,11 +181,11 @@
                             {{-- Actions --}}
                             <div class="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-neutral-200 pt-4 dark:border-neutral-700">
                                 @if($module->isEnabled())
-                                    @if(\App\Filament\Pages\ModuleSettingsPage::canAccess() && $this->hasSettingsSchema($module->name()->value))
+                                    @if(($settingsUrl = $this->settingsUrl($module->name()->value)) !== null)
                                         <x-filament::button
                                             color="gray"
                                             tag="a"
-                                            :href="\App\Filament\Pages\ModuleSettingsPage::getUrl(['module' => $module->name()->value])"
+                                            :href="$settingsUrl"
                                             icon="heroicon-m-cog-6-tooth"
                                         >
                                             {{ __('modules.filament.actions.settings') }}

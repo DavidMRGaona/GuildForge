@@ -295,8 +295,19 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
     }
 
     /**
-     * Get the Filament form schema for module settings.
-     * Override to provide configurable settings that appear in the admin panel.
+     * The module's settings page in the «Configuración» cluster, guarded by a permission of the
+     * module. List it in registerFilamentPages() too; «Configuración» in Módulos opens it.
+     *
+     * @return class-string<Page>|null
+     */
+    public function getSettingsPage(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Fallback only: the form of the core's generic module settings page, used while
+     * getSettingsPage() declares no page of the module's own.
      *
      * @return array<Component>
      */

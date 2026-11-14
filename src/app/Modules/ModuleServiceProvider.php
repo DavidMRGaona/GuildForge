@@ -216,14 +216,31 @@ abstract class ModuleServiceProvider extends ServiceProvider
     }
 
     /**
-     * Get the Filament form schema for module settings.
-     * Override in subclass to provide configurable settings.
+     * Get the Filament form schema for module settings, rendered by the core's generic module
+     * settings page. That page is only a fallback for modules without a page of their own:
+     * once getSettingsPage() declares one, this schema is no longer used.
      *
      * @return array<Component>
      */
     public function getSettingsSchema(): array
     {
         return [];
+    }
+
+    /**
+     * The module's own settings page in the «Configuración» cluster, guarded by a permission of
+     * the module. The «Configuración» button of the modules page opens it, and the generic
+     * settings page no longer edits the module.
+     *
+     * The page must be one of this provider's registerFilamentPages() (never a page of the core or of
+     * another module) and join App\Filament\Clusters\SettingsCluster; otherwise neither page edits
+     * the module's settings (it fails closed and logs a warning).
+     *
+     * @return class-string<Page>|null
+     */
+    public function getSettingsPage(): ?string
+    {
+        return null;
     }
 
     /**
