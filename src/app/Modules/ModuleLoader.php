@@ -10,6 +10,7 @@ use App\Application\Calendar\Services\CalendarAttendanceSourceRegistryInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Content\Services\EditorTextSourceRegistryInterface;
 use App\Application\Knowledge\Services\KnowledgeCapabilityRegistryInterface;
+use App\Application\Linking\Services\LinkableRecordSourceRegistryInterface;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Modules\DTOs\PermissionDTO;
@@ -134,6 +135,9 @@ final class ModuleLoader
 
         // Register publication sources from the provider
         $this->registerProviderPublicationSources($provider, $module->name()->value);
+
+        // Register linkable record sources from the provider
+        $this->registerProviderLinkableRecordSources($provider, $module->name()->value);
 
         // Register event proposal requests from the provider
         $this->registerProviderEventProposalRequests($provider, $module->name()->value);
@@ -368,6 +372,22 @@ final class ModuleLoader
 
         if ($this->app->bound(PublicationSourceRegistryInterface::class)) {
             $this->app->make(PublicationSourceRegistryInterface::class)->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register linkable record sources from a module provider.
+     */
+    private function registerProviderLinkableRecordSources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerLinkableRecordSources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(LinkableRecordSourceRegistryInterface::class)) {
+            $this->app->make(LinkableRecordSourceRegistryInterface::class)->registerMany($sources, $moduleName);
         }
     }
 

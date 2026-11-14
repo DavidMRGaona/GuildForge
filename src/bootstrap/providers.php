@@ -8,6 +8,7 @@ use App\Providers\AuthorizationServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\ImpersonationServiceProvider;
 use App\Providers\KnowledgeServiceProvider;
+use App\Providers\LinkingServiceProvider;
 use App\Providers\MailPreferencesServiceProvider;
 use App\Providers\MediaServiceProvider;
 use App\Providers\ProposalsServiceProvider;
@@ -23,6 +24,7 @@ return [
     AdminPanelProvider::class,
     ImpersonationServiceProvider::class,
     KnowledgeServiceProvider::class,
+    LinkingServiceProvider::class,
     MailPreferencesServiceProvider::class,
     MediaServiceProvider::class,
     ProposalsServiceProvider::class,
