@@ -35,6 +35,11 @@ final readonly class MenuService implements MenuServiceInterface
         return $this->getMenuForLocation(MenuLocation::Footer, $user);
     }
 
+    public function getMenu(MenuLocation $location, ?Authenticatable $user): array
+    {
+        return $this->getMenuForLocation($location, $user);
+    }
+
     public function userCanSeeItem(?Authenticatable $user, string $visibility, array $permissions): bool
     {
         $visibilityEnum = MenuVisibility::tryFrom($visibility) ?? MenuVisibility::Public;

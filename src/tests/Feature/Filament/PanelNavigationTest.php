@@ -81,7 +81,7 @@ final class PanelNavigationTest extends TestCase
             '' => ['Escritorio'],
             'Contenido' => ['Eventos', 'Artículos', 'Galerías', 'Biblioteca de medios', 'Guías de ayuda'],
             'Personas' => ['Usuarios', 'Roles'],
-            'Sitio web' => ['Hero slides', 'Navegación', 'Nosotros', 'Páginas legales'],
+            'Sitio web' => ['Hero slides', 'Navegación', 'Pie de página', 'Nosotros', 'Páginas legales'],
             'Catálogos' => ['Etiquetas'],
             'Sistema' => ['Configuración', 'Módulos', 'Actualizaciones de módulos', 'Actualización del core'],
         ], $tree);

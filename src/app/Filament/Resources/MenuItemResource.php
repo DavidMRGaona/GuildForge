@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use App\Application\Navigation\Services\FooterMenusInterface;
 use App\Application\Navigation\Services\RouteRegistryInterface;
 use App\Domain\Navigation\Enums\LinkTarget;
 use App\Domain\Navigation\Enums\MenuLocation;
@@ -71,10 +72,7 @@ class MenuItemResource extends BaseResource
                     ->schema([
                         Select::make('location')
                             ->label(__('filament.menu_items.fields.location'))
-                            ->options([
-                                MenuLocation::Header->value => __('filament.menu_items.locations.header'),
-                                MenuLocation::Footer->value => __('filament.menu_items.locations.footer'),
-                            ])
+                            ->options(fn (): array => self::locationOptions())
                             ->required()
                             ->native(false)
                             ->live(),
@@ -356,6 +354,19 @@ class MenuItemResource extends BaseResource
         }
 
         return $data;
+    }
+
+    /**
+     * The header and every footer menu, with the names the footer page gives them (core#697).
+     *
+     * @return array<string, string>
+     */
+    public static function locationOptions(): array
+    {
+        return [
+            MenuLocation::Header->value => __('filament.menu_items.locations.header'),
+            ...resolve(FooterMenusInterface::class)->options(),
+        ];
     }
 
     /**

@@ -433,6 +433,16 @@ final class CorePermissionDefinitions
                 description: __('authorization.permission_descriptions.pages.manage'),
             ),
 
+            // Configurable footer (core#697)
+            new PermissionDefinitionDTO(
+                key: 'footer.manage',
+                label: __('authorization.permissions.footer.manage'),
+                resource: 'footer',
+                action: 'manage',
+                defaultRoles: ['editor'],
+                description: __('authorization.permission_descriptions.footer.manage'),
+            ),
+
             // Role assignment
             new PermissionDefinitionDTO(
                 key: 'users.assign_roles',

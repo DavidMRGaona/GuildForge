@@ -5,7 +5,7 @@ import type { ResolvedSiteBlock } from '@/types/siteBlocks';
 /** Where core blocks live, relative to resources/js (the path the server sends) */
 const CORE_BLOCKS_PATH = 'components/siteBlocks/';
 
-// Core blocks ship with the core build; there are none until the footer brings its own
+// Core blocks ship with the core build (the footer's, core#697)
 const coreBlockLoaders = import.meta.glob<{ default: Component }>(
     '../components/siteBlocks/**/*.vue'
 );

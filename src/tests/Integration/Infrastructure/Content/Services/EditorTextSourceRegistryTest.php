@@ -26,7 +26,7 @@ final class EditorTextSourceRegistryTest extends TestCase
             app(EditorTextSourceRegistryInterface::class)->sources(),
         );
 
-        $this->assertSame(['events', 'articles', 'guides', 'about', 'legal'], $types);
+        $this->assertSame(['events', 'articles', 'guides', 'about', 'legal', 'footer'], $types);
     }
 
     public function test_a_module_source_is_added_and_removed_with_its_module(): void

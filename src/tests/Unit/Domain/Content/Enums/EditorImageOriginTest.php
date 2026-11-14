@@ -20,6 +20,7 @@ final class EditorImageOriginTest extends TestCase
         $this->assertSame('knowledge/content/2026/11', EditorImageOrigin::Knowledge->directory($month));
         $this->assertSame('legal/content/2026/11', EditorImageOrigin::Legal->directory($month));
         $this->assertSame('about/content/2026/11', EditorImageOrigin::About->directory($month));
+        $this->assertSame('footer/content/2026/11', EditorImageOrigin::Footer->directory($month));
     }
 
     public function test_a_path_in_a_content_folder_names_its_origin(): void
