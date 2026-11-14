@@ -18,13 +18,15 @@ The registry builds the sources once per request or queued job (and again when t
 
 Viewer ids are account UUIDs. An id with no account sees what a visitor would.
 
+**Drafts are for who may open the panel.** Before asking any source, the lookup checks whether the viewer may open the panel (`admin.access`, through `AuthorizationServiceInterface`). Only then does the source get the viewer's own id; anyone else is asked for as a visitor, `LinkableRecordSourceInterface::VISITOR` (an empty string, which matches no account). So a role holding a type's `view_any` without panel access sees what is published and no drafts, in `find()`, `findMany()` and `search()` alike, whatever the source. Unknown, deactivated (soft-deleted) and anonymized accounts are visitors too, without asking. If the check itself fails, the viewer is a visitor and the lookup logs an error. This holds only through the lookup: a source called directly applies just its own rule.
+
 ## Offering records
 
 1. Implement the source:
    - `type()` never changes once released: consumers store it next to the id.
    - `search()` is for a picker in the panel: return only what the viewer may see, at most `$limit`, the most relevant first. An empty query lists the latest records. Every DTO carries your `type()`.
    - `find()` returns `null` both when the record does not exist and when the viewer may not see it, so nobody learns that a record exists without being allowed to see it. The DTO's `id` is the one asked for.
-   - Decide visibility with the same rule as your panel and pages (your policy, the access service you already use), never a looser one. Drafts and panel-only records are fine as long as the viewer could open them.
+   - Decide visibility with the same rule as your panel and pages (your policy, the access service you already use), never a looser one. Drafts and panel-only records are fine as long as the viewer could open them. You need not check panel access for that: the lookup only hands you the viewer's id when they may open the panel, and `VISITOR` otherwise. Treat any id that is not an account (`VISITOR` included) as a visitor.
    - `panelUrl` only when the viewer may open that page in the panel (panel access and your policy's `update` or `view`); otherwise `null`.
    - `date` is what consumers sort by and show: an instant (shown in the display zone) or, with `dateIsDay: true`, a calendar day that is never converted between zones.
    - A source that builds panel URLs from a Filament resource lives next to the panel code (the core's is `App\Filament\Linking\Sources\EventLinkableRecordSource`).
@@ -40,7 +42,7 @@ public function registerLinkableRecordSources(): array
 
 The registry only knows sources of enabled modules: a disabled or uninstalled module registers nothing, so its types have no source.
 
-The core offers its events (type `event`, label «Evento», with batches): published events for every viewer; drafts (unpublished events, proposals in review or rejected) for whoever holds `events.view_any`; proposals never submitted from the web stay hidden, as in the panel. A deactivated or anonymized account sees what a visitor would, whatever roles it kept. `date` is the start, and `panelUrl` the edit page for whoever has panel access and may edit the event.
+The core offers its events (type `event`, label «Evento», with batches): published events for every viewer; drafts (unpublished events, proposals in review or rejected) for whoever holds `events.view_any` (through the lookup, only with panel access too); proposals never submitted from the web stay hidden, as in the panel. A deactivated or anonymized account sees what a visitor would, whatever roles it kept. `date` is the start, and `panelUrl` the edit page for whoever has panel access and may edit the event.
 
 ## Consuming records
 

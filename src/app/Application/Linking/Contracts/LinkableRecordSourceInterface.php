@@ -16,10 +16,18 @@ use App\Application\Linking\DTOs\LinkableRecordDTO;
  *
  * Consumers go through LinkableRecordLookupInterface, which treats a type without a source and a
  * source that throws alike: the record is not shown (the second is logged as an error).
- * Viewer ids are account UUIDs; an id with no account sees only what a visitor would.
+ * Viewer ids are account UUIDs; an id with no account sees only what a visitor would. The lookup
+ * only hands a source the viewer's own id when that account may open the panel (admin.access);
+ * anyone else reaches it as VISITOR, so a source never checks panel access to hide its drafts.
  */
 interface LinkableRecordSourceInterface
 {
+    /**
+     * Viewer id the lookup passes for whoever may not open the panel (or has no usable account):
+     * no account has it, so the source answers what a visitor would see.
+     */
+    public const string VISITOR = '';
+
     /**
      * Unique, stable kebab-case type of the records this source offers (e.g. 'event'). Whoever
      * links to a record stores it, so it must never change.
