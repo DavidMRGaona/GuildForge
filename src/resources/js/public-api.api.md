@@ -263,30 +263,29 @@ export default _default;
 ## resources/js/components/form/FormSelect.vue
 
 ```ts
-interface Option {
-    value: string | number;
-    label: string;
-}
+import { type SelectOption } from './selectOptions';
 type __VLS_Props = {
     modelValue: string | number | null;
-    options: Option[];
-    placeholder?: string;
-    disabled?: boolean;
-    error?: string;
-    id?: string;
-    name?: string;
+    options: SelectOption[];
+    placeholder?: string | undefined;
+    disabled?: boolean | undefined;
+    error?: string | undefined;
+    id?: string | undefined;
+    name?: string | undefined;
     describedBy?: string | undefined;
+    searchable?: boolean | undefined;
 };
 declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {
     "update:modelValue": (value: string | number | null) => any;
 }, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{
     "onUpdate:modelValue"?: (value: string | number | null) => any;
 }>, {
-    id: string;
-    name: string;
-    error: string;
-    disabled: boolean;
-    placeholder: string;
+    id: string | undefined;
+    name: string | undefined;
+    error: string | undefined;
+    disabled: boolean | undefined;
+    placeholder: string | undefined;
+    searchable: boolean | undefined;
     describedBy: string | undefined;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
@@ -418,6 +417,29 @@ export { default as FormDatePicker } from './FormDatePicker.vue';
 export { default as FormTimePicker } from './FormTimePicker.vue';
 export type { CheckboxOption, CheckboxGroup } from './FormCheckboxGroup.vue';
 export type { RadioOption } from './FormRadioGroup.vue';
+export type { SelectOption } from './selectOptions';
+```
+
+## resources/js/components/form/selectOptions.ts
+
+```ts
+export interface SelectOption {
+    value: string | number;
+    label: string;
+    level?: 0 | 1;
+    disabled?: boolean;
+}
+export interface SelectRow {
+    option: SelectOption;
+    level: 0 | 1;
+    parentLabel: string | null;
+    hasChildren: boolean;
+    dividerBefore: boolean;
+}
+export declare const SEARCH_THRESHOLD = 8;
+export declare function normalizeForSearch(text: string): string;
+export declare function visibleRows(options: readonly SelectOption[], query: string): SelectRow[];
+export declare function wantsSearch(searchable: boolean | undefined, count: number): boolean;
 ```
 
 ## resources/js/components/knowledge/HelpLink.vue

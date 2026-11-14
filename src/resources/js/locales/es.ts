@@ -24,6 +24,8 @@ export default {
         readMore: 'Leer más',
         viewAll: 'Ver todos',
         noResults: 'No se encontraron resultados',
+        selectSearchLabel: 'Buscar en la lista',
+        selectSearchPlaceholder: 'Buscar…',
         showing: 'Mostrando',
         of: 'de',
         slideNavigation: 'Navegación del carrusel',

@@ -24,6 +24,8 @@ export default {
         readMore: 'Read more',
         viewAll: 'View all',
         noResults: 'No results found',
+        selectSearchLabel: 'Search the list',
+        selectSearchPlaceholder: 'Search…',
         showing: 'Showing',
         of: 'of',
         slideNavigation: 'Slide navigation',

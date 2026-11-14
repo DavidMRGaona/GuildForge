@@ -812,6 +812,10 @@ Core settings use 10–50 (Configuración del sitio 10 · Correo 20 · Estadíst
 
 Modules declare no groups of their own: `registerNavigationGroups()` was removed from `ModuleServiceProvider` once every module had migrated (core#429).
 
+### Dropdowns
+
+No dropdown opens the browser's own list (core ≥ the release with #648). In the panel, `Select`, `SelectFilter` and `SelectColumn` default to `native(false)` for the core and every module (`App\Filament\Support\PanelSelects`), and a `Select` with 8 or more fixed options gets `searchable()`; a field that calls `native()` or `searchable(false)` keeps its choice, and one fed by a relationship or a search callback keeps what it configures. On public pages use `FormSelect` from `@/components/form`, never a `<select>`: it adds a search box from 8 options and draws a two-level tree when options carry `level: 1` (a subcategory under its category, see `docs/component-inventory.md`).
+
 ### Policy registration
 
 Map the Eloquent models the resources use to their policies:

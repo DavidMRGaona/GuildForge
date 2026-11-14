@@ -13,3 +13,4 @@ export { default as FormTimePicker } from './FormTimePicker.vue';
 
 export type { CheckboxOption, CheckboxGroup } from './FormCheckboxGroup.vue';
 export type { RadioOption } from './FormRadioGroup.vue';
+export type { SelectOption } from './selectOptions';
