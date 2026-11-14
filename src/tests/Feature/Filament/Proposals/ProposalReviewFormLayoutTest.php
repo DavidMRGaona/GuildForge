@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Proposals;
 
+use App\Application\Proposals\DTOs\ArticleProposalDataDTO;
+use App\Application\Proposals\DTOs\ProposalSettingsDTO;
+use App\Application\Proposals\DTOs\ProposalTypeSettingsDTO;
+use App\Application\Proposals\Services\ProposalServiceInterface;
+use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
 use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Filament\Resources\ArticleResource\Pages\CreateArticle;
 use App\Filament\Resources\ArticleResource\Pages\EditArticle;
@@ -13,6 +18,8 @@ use App\Filament\Resources\EventResource\Pages\EditEvent;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
@@ -122,6 +129,35 @@ final class ProposalReviewFormLayoutTest extends TestCase
         foreach ([Livewire::test(CreateEvent::class), Livewire::test(CreateArticle::class)] as $page) {
             $page->assertSee(__('filament.proposals.slug_hint'));
         }
+    }
+
+    public function test_the_author_says_it_is_who_signs_the_article_on_the_site(): void
+    {
+        // Changing it never changes who proposed the article (proposed_by), only the byline
+        Livewire::test(CreateArticle::class)->assertSee(__('filament.proposals.author_hint'));
+        $this->editArticle(ProposalStatus::PendingReview)->assertSee(__('filament.proposals.author_hint'));
+    }
+
+    public function test_the_author_of_an_article_proposal_starts_as_its_proposer_and_can_be_found(): void
+    {
+        // A member without panel access and without a display name, as most proposers are
+        $proposer = UserModel::factory()->create(['name' => 'Persona que propone', 'display_name' => null]);
+        UserModel::factory()->count(3)->create();
+        app(ProposalSettingsServiceInterface::class)->save(new ProposalSettingsDTO(
+            events: new ProposalTypeSettingsDTO(enabled: false),
+            articles: new ProposalTypeSettingsDTO(enabled: true),
+        ));
+        $id = app(ProposalServiceInterface::class)->createArticle($proposer->id, new ArticleProposalDataDTO(title: 'Crónica', content: '<p>Fue genial</p>'));
+        $article = ArticleModel::query()->includingUnsubmittedProposals()->findOrFail($id);
+        $article->forceFill(['proposal_status' => ProposalStatus::PendingReview, 'submitted_at' => now()])->saveQuietly();
+
+        $page = Livewire::test(EditArticle::class, ['record' => $article->getRouteKey()])
+            ->assertFormSet(['author_id' => $proposer->id]);
+
+        $author = $this->form($page)->getFlatFields(withHidden: true)['author_id'] ?? null;
+        $this->assertInstanceOf(Select::class, $author);
+        $this->assertSame('Persona que propone', $author->getOptionLabel());
+        $this->assertArrayHasKey($proposer->id, $author->getSearchResults('Persona que'));
     }
 
     /**

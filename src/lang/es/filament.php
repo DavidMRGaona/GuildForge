@@ -837,6 +837,7 @@ return [
             'description' => 'Quien propone no ve estos campos.',
         ],
         'slug_hint' => 'Se genera con el título.',
+        'author_hint' => 'Es quien firma el artículo en la web.',
         'status' => [
             'draft' => 'Devuelta',
             'pending_review' => 'En revisión',

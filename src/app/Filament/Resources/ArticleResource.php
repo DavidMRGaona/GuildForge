@@ -160,9 +160,12 @@ class ArticleResource extends BaseResource
                         ->label(__('Autor'))
                         ->relationship('author', 'display_name')
                         ->getOptionLabelFromRecordUsing(fn (UserModel $record): string => $record->display_name ?? $record->name)
-                        ->searchable()
+                        // The label falls back to the name, so the search looks there too: most proposers have no display name
+                        ->searchable(['display_name', 'name'])
                         ->preload()
-                        ->required(),
+                        ->required()
+                        // Who proposed it is kept apart (proposed_by): changing this only changes the byline
+                        ->helperText(__('filament.proposals.author_hint')),
                 ]),
                 Toggle::make('is_published')
                     ->label(__('Publicado'))
