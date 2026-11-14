@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Linking\Sources;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
-use App\Application\Linking\Contracts\LinkableRecordSourceInterface;
+use App\Application\Linking\Contracts\FindsLinkableRecordsInBatches;
 use App\Application\Linking\DTOs\LinkableRecordDTO;
 use App\Filament\Resources\EventResource;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
@@ -19,10 +19,11 @@ use Illuminate\Support\Str;
  *
  * Published events are public, so every viewer finds them. Drafts (unpublished events and
  * proposals under review or rejected) only for who lists events in the panel (events.view_any);
- * drafts never submitted from the web stay hidden, as in the panel. The panel URL is the edit
- * page, given only to who may open the panel and edit the event.
+ * drafts never submitted from the web stay hidden, as in the panel. A deactivated or anonymized
+ * account sees what a visitor would, whatever roles it kept. The panel URL is the edit page,
+ * given only to who may open the panel and edit the event.
  */
-final readonly class EventLinkableRecordSource implements LinkableRecordSourceInterface
+final readonly class EventLinkableRecordSource implements FindsLinkableRecordsInBatches
 {
     public const string TYPE = 'event';
 
@@ -52,6 +53,7 @@ final readonly class EventLinkableRecordSource implements LinkableRecordSourceIn
 
         $viewer = $this->viewer($viewerId);
         $events = $this->visibleTo($viewer);
+        $mayOpenPanel = $this->mayOpenPanel($viewer);
 
         foreach ($this->terms($query) as $term) {
             $events->whereRaw(self::TITLE_CONTAINS, ['%'.$this->escapeLike($term).'%']);
@@ -59,7 +61,7 @@ final readonly class EventLinkableRecordSource implements LinkableRecordSourceIn
 
         $found = $events->orderByDesc('start_date')->orderBy('id')->limit($limit)->get();
 
-        return array_values($found->map(fn (EventModel $event): LinkableRecordDTO => $this->toRecord($event, $viewer))->all());
+        return array_values($found->map(fn (EventModel $event): LinkableRecordDTO => $this->toRecord($event, $viewer, $mayOpenPanel))->all());
     }
 
     public function find(string $id, string $viewerId): ?LinkableRecordDTO
@@ -72,7 +74,23 @@ final readonly class EventLinkableRecordSource implements LinkableRecordSourceIn
         $viewer = $this->viewer($viewerId);
         $event = $this->visibleTo($viewer)->whereKey($id)->first();
 
-        return $event instanceof EventModel ? $this->toRecord($event, $viewer) : null;
+        return $event instanceof EventModel ? $this->toRecord($event, $viewer, $this->mayOpenPanel($viewer)) : null;
+    }
+
+    public function findMany(array $ids, string $viewerId): array
+    {
+        // Keys are uuids: anything else matches no row, and PostgreSQL rejects it in the query
+        $ids = array_values(array_filter($ids, Str::isUuid(...)));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $viewer = $this->viewer($viewerId);
+        $mayOpenPanel = $this->mayOpenPanel($viewer);
+        $found = $this->visibleTo($viewer)->whereKey($ids)->get();
+
+        return array_values($found->map(fn (EventModel $event): LinkableRecordDTO => $this->toRecord($event, $viewer, $mayOpenPanel))->all());
     }
 
     /**
@@ -95,28 +113,31 @@ final readonly class EventLinkableRecordSource implements LinkableRecordSourceIn
             return null;
         }
 
-        $viewer = UserModel::query()->find($viewerId);
+        // Deactivated accounts are soft-deleted, so the query leaves them out; anonymized ones
+        // may still hold roles until they are cleaned up, and see what a visitor would
+        $viewer = UserModel::query()->whereNull('anonymized_at')->find($viewerId);
 
         return $viewer instanceof UserModel ? $viewer : null;
     }
 
-    private function toRecord(EventModel $event, ?UserModel $viewer): LinkableRecordDTO
+    private function mayOpenPanel(?UserModel $viewer): bool
+    {
+        return $viewer instanceof UserModel && $this->authorization->can($viewer, 'admin.access');
+    }
+
+    private function toRecord(EventModel $event, ?UserModel $viewer, bool $mayOpenPanel): LinkableRecordDTO
     {
         return new LinkableRecordDTO(
             type: self::TYPE,
             id: $event->id,
             title: $event->title,
             date: $event->start_date->toImmutable(),
-            panelUrl: $this->panelUrl($event, $viewer),
+            panelUrl: $mayOpenPanel && $viewer instanceof UserModel ? $this->panelUrl($event, $viewer) : null,
         );
     }
 
-    private function panelUrl(EventModel $event, ?UserModel $viewer): ?string
+    private function panelUrl(EventModel $event, UserModel $viewer): ?string
     {
-        if (! $viewer instanceof UserModel || ! $this->authorization->can($viewer, 'admin.access')) {
-            return null;
-        }
-
         if (! Gate::forUser($viewer)->allows('update', $event)) {
             return null;
         }

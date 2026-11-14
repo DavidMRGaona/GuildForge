@@ -14,7 +14,9 @@ use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
@@ -80,6 +82,40 @@ final class EventLinkableRecordSourceTest extends TestCase
         $this->assertSame($inReview->id, $this->source()->find($inReview->id, $viewer->id)?->id);
     }
 
+    public function test_a_rejected_proposal_is_found_only_by_who_lists_events_in_the_panel(): void
+    {
+        $rejected = EventModel::factory()->proposal(ProposalStatus::Rejected)->upcoming()->create();
+
+        $this->assertNull($this->source()->find($rejected->id, UserModel::factory()->create()->id));
+        $this->assertSame($rejected->id, $this->source()->find($rejected->id, $this->editorWithPermissions(['events.view_any'])->id)?->id);
+    }
+
+    public function test_a_deactivated_viewer_sees_only_what_a_visitor_would(): void
+    {
+        $published = EventModel::factory()->published()->upcoming()->create(['title' => 'Example published']);
+        $draft = EventModel::factory()->draft()->upcoming()->create(['title' => 'Example draft']);
+        $viewer = $this->editorWithPermissions(['events.view_any', 'events.update']);
+        $viewer->delete();
+
+        $this->assertNull($this->source()->find($draft->id, $viewer->id));
+        $this->assertNull($this->source()->find($published->id, $viewer->id)?->panelUrl);
+        $this->assertSame([$published->id], $this->ids($this->source()->search('example', $viewer->id, 10)));
+        $this->assertSame([$published->id], $this->ids($this->source()->findMany([$published->id, $draft->id], $viewer->id)));
+    }
+
+    public function test_an_anonymized_viewer_sees_only_what_a_visitor_would(): void
+    {
+        $published = EventModel::factory()->published()->upcoming()->create(['title' => 'Example published']);
+        $draft = EventModel::factory()->draft()->upcoming()->create(['title' => 'Example draft']);
+        $viewer = $this->editorWithPermissions(['events.view_any', 'events.update']);
+        $viewer->forceFill(['anonymized_at' => now()])->save();
+
+        $this->assertNull($this->source()->find($draft->id, $viewer->id));
+        $this->assertNull($this->source()->find($published->id, $viewer->id)?->panelUrl);
+        $this->assertSame([$published->id], $this->ids($this->source()->search('example', $viewer->id, 10)));
+        $this->assertSame([$published->id], $this->ids($this->source()->findMany([$published->id, $draft->id], $viewer->id)));
+    }
+
     public function test_unknown_and_malformed_ids_are_not_found(): void
     {
         $viewer = $this->editorWithPermissions(['events.view_any']);
@@ -100,6 +136,56 @@ final class EventLinkableRecordSourceTest extends TestCase
 
         $withoutPanel = $this->memberWithPermissions(['events.view_any', 'events.update']);
         $this->assertNull($this->source()->find($event->id, $withoutPanel->id)?->panelUrl);
+    }
+
+    public function test_search_gives_the_panel_url_to_who_may_edit_the_event_in_the_panel(): void
+    {
+        $event = EventModel::factory()->published()->upcoming()->create(['title' => 'Example event']);
+
+        $editor = $this->editorWithPermissions(['events.view_any', 'events.update']);
+        $this->assertSame([EventResource::getUrl('edit', ['record' => $event])], $this->panelUrls($this->source()->search('example', $editor->id, 10)));
+
+        $readOnly = $this->editorWithPermissions(['events.view_any']);
+        $this->assertSame([null], $this->panelUrls($this->source()->search('example', $readOnly->id, 10)));
+
+        $withoutPanel = $this->memberWithPermissions(['events.view_any', 'events.update']);
+        $this->assertSame([null], $this->panelUrls($this->source()->search('example', $withoutPanel->id, 10)));
+    }
+
+    public function test_find_many_reads_every_visible_event_in_one_query(): void
+    {
+        $published = EventModel::factory()->published()->upcoming()->create();
+        $draft = EventModel::factory()->draft()->upcoming()->create();
+        $other = EventModel::factory()->published()->upcoming()->create();
+        $editor = $this->editorWithPermissions(['events.view_any', 'events.update']);
+        $member = UserModel::factory()->create();
+
+        $eventQueries = 0;
+        DB::listen(function (QueryExecuted $query) use (&$eventQueries): void {
+            if (preg_match('/from\s+["`]?events["`]?/i', $query->sql) === 1) {
+                $eventQueries++;
+            }
+        });
+
+        $records = $this->source()->findMany([$published->id, $draft->id, (string) Str::uuid(), 'not-a-uuid', $other->id], $editor->id);
+
+        $this->assertSame(1, $eventQueries);
+        $this->assertEqualsCanonicalizing([$published->id, $draft->id, $other->id], $this->ids($records));
+        $this->assertContains(EventResource::getUrl('edit', ['record' => $draft]), $this->panelUrls($records));
+
+        $this->assertEqualsCanonicalizing([$published->id, $other->id], $this->ids($this->source()->findMany([$published->id, $draft->id, $other->id], $member->id)));
+        $this->assertSame([], $this->source()->findMany(['not-a-uuid'], $member->id));
+    }
+
+    public function test_the_lookup_asks_the_event_source_in_one_batch(): void
+    {
+        $first = EventModel::factory()->published()->upcoming()->create();
+        $second = EventModel::factory()->published()->upcoming()->create();
+        $member = UserModel::factory()->create();
+
+        $records = $this->app->make(LinkableRecordLookupInterface::class)->findMany('event', [$second->id, $first->id], $member->id);
+
+        $this->assertSame([$second->id, $first->id], array_keys($records));
     }
 
     public function test_search_matches_every_word_of_the_title_ignoring_case(): void
@@ -171,6 +257,15 @@ final class EventLinkableRecordSourceTest extends TestCase
         $user->roles()->attach($role->id);
 
         return $user;
+    }
+
+    /**
+     * @param  list<LinkableRecordDTO>  $records
+     * @return list<string|null>
+     */
+    private function panelUrls(array $records): array
+    {
+        return array_map(fn (LinkableRecordDTO $record): ?string => $record->panelUrl, $records);
     }
 
     /**

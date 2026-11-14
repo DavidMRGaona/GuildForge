@@ -17,6 +17,9 @@ class FakeLinkableRecordSource implements LinkableRecordSourceInterface
     /** @var list<LinkableRecordDTO> */
     public static array $records = [];
 
+    /** @var list<string> Ids asked through find(), in order. */
+    public static array $askedIds = [];
+
     public function type(): string
     {
         return 'fake';
@@ -34,6 +37,8 @@ class FakeLinkableRecordSource implements LinkableRecordSourceInterface
 
     public function find(string $id, string $viewerId): ?LinkableRecordDTO
     {
+        static::$askedIds[] = $id;
+
         foreach (static::$records as $record) {
             if ($record->id === $id) {
                 return $record;

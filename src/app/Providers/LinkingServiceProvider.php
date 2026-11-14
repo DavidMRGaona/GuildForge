@@ -9,6 +9,7 @@ use App\Application\Linking\Services\LinkableRecordSourceRegistryInterface;
 use App\Filament\Linking\Sources\EventLinkableRecordSource;
 use App\Infrastructure\Linking\Services\LinkableRecordLookup;
 use App\Infrastructure\Linking\Services\LinkableRecordSourceRegistry;
+use App\Infrastructure\Linking\Services\LinkableRecordSourceScope;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
@@ -29,6 +30,10 @@ final class LinkingServiceProvider extends ServiceProvider
 
             return $registry;
         });
+
+        // Registrations live as long as the application; the sources built from them only as long
+        // as one request or queued job (the framework forgets scoped instances between them)
+        $this->app->scoped(LinkableRecordSourceScope::class);
 
         $this->app->singleton(LinkableRecordLookupInterface::class, LinkableRecordLookup::class);
     }

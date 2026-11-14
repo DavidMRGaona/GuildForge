@@ -9,9 +9,12 @@ Requirement: set `requires.core` in `module.json` to the core release that intro
 | Piece | Where | What it does |
 |---|---|---|
 | `LinkableRecordSourceInterface` | `App\Application\Linking\Contracts` | `type()` (stable kebab-case, e.g. `tournament`), `label()` (translated, e.g. «Torneo»), `search($query, $viewerId, $limit)` and `find($id, $viewerId)` |
+| `FindsLinkableRecordsInBatches` | same | Optional, extends the source contract: `findMany(array $ids, $viewerId)` answers up to `MAX_IDS` (100) ids in one call |
 | `LinkableRecordDTO` | `App\Application\Linking\DTOs` | `type`, `id` (1 to 100 characters), `title`, `date` (optional), `dateIsDay` (false unless `date` is a calendar day) and `panelUrl` (optional, absolute http(s)) |
-| `LinkableRecordLookupInterface` | `App\Application\Linking\Services` | What consumers use: `find($type, $id, $viewerId)`, `search($type, $query, $viewerId, $limit = 20)` (at most 50) and `types()` (label per type) |
+| `LinkableRecordLookupInterface` | `App\Application\Linking\Services` | What consumers use: `find($type, $id, $viewerId)`, `findMany($type, $ids, $viewerId)` (keyed by id), `search($type, $query, $viewerId, $limit = 20)` (at most 50) and `types()` (label per type) |
 | `LinkableRecordSourceRegistryInterface` | same | `register`, `registerMany`, `all`, `sources()` keyed by type, `source($type)`, `unregisterModule()`, `clear()`: the first source registered for a type wins; one that cannot be built, is not a source or has an invalid type is skipped with a warning |
+
+The registry builds the sources once per request or queued job (and again when the registrations change), so a source that cannot be used is logged once there, not on every lookup. `clear()` drops every module's sources but keeps those the core registered itself (its events), which it offers whatever modules are enabled.
 
 Viewer ids are account UUIDs. An id with no account sees what a visitor would.
 
@@ -25,6 +28,7 @@ Viewer ids are account UUIDs. An id with no account sees what a visitor would.
    - `panelUrl` only when the viewer may open that page in the panel (panel access and your policy's `update` or `view`); otherwise `null`.
    - `date` is what consumers sort by and show: an instant (shown in the display zone) or, with `dateIsDay: true`, a calendar day that is never converted between zones.
    - A source that builds panel URLs from a Filament resource lives next to the panel code (the core's is `App\Filament\Linking\Sources\EventLinkableRecordSource`).
+   - Optionally, implement `FindsLinkableRecordsInBatches` instead of `LinkableRecordSourceInterface` (it extends it) to answer many ids in one query: `findMany($ids, $viewerId)` gets distinct ids, never more than `FindsLinkableRecordsInBatches::MAX_IDS` (100), and returns the visible records among them, in any order, leaving out the missing and hidden ones. Same visibility rule as `find()`. Without it the lookup calls `find()` once per id, so existing sources keep working unchanged.
 2. Return it from the provider:
 
 ```php
@@ -36,7 +40,7 @@ public function registerLinkableRecordSources(): array
 
 The registry only knows sources of enabled modules: a disabled or uninstalled module registers nothing, so its types have no source.
 
-The core offers its events (type `event`, label «Evento»): published events for every viewer; drafts (unpublished events, proposals in review or rejected) for whoever holds `events.view_any`; proposals never submitted from the web stay hidden, as in the panel. `date` is the start, and `panelUrl` the edit page for whoever has panel access and may edit the event.
+The core offers its events (type `event`, label «Evento», with batches): published events for every viewer; drafts (unpublished events, proposals in review or rejected) for whoever holds `events.view_any`; proposals never submitted from the web stay hidden, as in the panel. A deactivated or anonymized account sees what a visitor would, whatever roles it kept. `date` is the start, and `panelUrl` the edit page for whoever has panel access and may edit the event.
 
 ## Consuming records
 
@@ -50,8 +54,20 @@ if ($record === null) {
 }
 ```
 
-**It fails closed.** A type without a source (its module disabled or uninstalled, a source that cannot be built) and a source that throws, or answers with a record of another type or id, are treated alike: `find()` returns `null`, `search()` returns `[]` and nothing throws. Only the second is an error, logged by the lookup; the first is ordinary and logs nothing. Show such links the same way, whatever the reason (for example as a neutral count of links not available), and never with a title kept from earlier: that title would outlive the viewer's right to see the record.
+**It fails closed.** A type without a source (its module disabled or uninstalled, a source that cannot be built) and a source that throws, or answers with a record of another type or id, are treated alike: `find()` returns `null`, `search()` and `findMany()` return `[]` and nothing throws. Only the second is an error, logged by the lookup; the first is ordinary and logs nothing. Show such links the same way, whatever the reason (for example as a neutral count of links not available), and never with a title kept from earlier: that title would outlive the viewer's right to see the record.
 
 `types()` lists the types that can be linked right now with their labels, for a type picker; a source whose label cannot be read is left out (and logged).
 
-A lookup per link runs one query per record: fine for a record's page, not for a list of hundreds of rows. Nothing in the core consumes linkable records: without a consumer they do nothing.
+To show a list of links, ask for all the ids of one type at once:
+
+```php
+$records = $this->linkableRecords->findMany('event', $eventIds, $viewer->id);
+
+foreach ($links as $link) {
+    $record = $records[$link->recordId] ?? null; // null: not shown, as with find()
+}
+```
+
+`findMany()` returns the visible records keyed by id, in the order asked (repeated ids count once; PHP turns numeric ids into integer keys, so read them with `$records[$id]`). Ids are matched exactly as given: pass them as you stored them from the source (lowercase uuids are the norm), since an answer spelled otherwise is dropped. If the source throws for any of them, the whole answer is `[]` and the error is logged once; records it answers for ids not asked, or of another type, are dropped and logged.
+
+Pass one page of ids. The 100-id cap (`FindsLinkableRecordsInBatches::MAX_IDS`) limits what a source receives per call, not what `findMany()` accepts: a source with batches is asked once per 100 ids, and a source without them once per id, so a long list from a module without batches means one `find()` per record. Nothing is cut off: every id is answered, and a call with more than 500 distinct ids (`LinkableRecordLookupInterface::MANY_IDS_WARNING`) is logged as a warning. Nothing in the core consumes linkable records: without a consumer they do nothing.
