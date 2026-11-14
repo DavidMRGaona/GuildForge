@@ -57,10 +57,13 @@ export function venueDayKey(date: Date): string {
 /**
  * Shift a venue day key ('YYYY-MM-DD') by a whole number of days.
  *
- * The arithmetic is anchored at noon UTC, which always falls inside the venue
- * day whatever the offset, so it never lands on the hour a daylight-saving
- * transition adds or removes.
+ * A day key is a calendar date, not an instant, so the sum needs no timezone:
+ * it is done and read back in UTC, where every day lasts exactly 24 hours.
+ * Reading the result in the venue zone instead would shift it by a day in zones
+ * from UTC+12 onwards, where noon UTC is already the next day (core#684).
  */
 export function addVenueDays(dayKey: string, days: number): string {
-    return venueDayKey(new Date(Date.parse(`${dayKey}T12:00:00Z`) + days * 86_400_000));
+    return new Date(Date.parse(`${dayKey}T00:00:00Z`) + days * 86_400_000)
+        .toISOString()
+        .slice(0, 10);
 }

@@ -26,3 +26,53 @@ describe('VENUE_TIMEZONE', () => {
         expect(VENUE_TIMEZONE).toBe('Europe/Madrid');
     });
 });
+
+describe('addVenueDays', () => {
+    afterEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    async function addVenueDaysIn(zone: string): Promise<(dayKey: string, days: number) => string> {
+        document.head.innerHTML = `<meta name="display-timezone" content="${zone}">`;
+        vi.resetModules();
+        const { addVenueDays } = await import('../datetime');
+
+        return addVenueDays;
+    }
+
+    // UTC+13 in the southern summer, UTC+14, UTC-12 and the default zone: the day moves
+    // by exactly the days asked for whatever the offset (core#684)
+    it.each(['Pacific/Auckland', 'Pacific/Kiritimati', 'Etc/GMT+12', 'Europe/Madrid'])(
+        'moves a day by whole calendar days in %s',
+        async (zone) => {
+            const addVenueDays = await addVenueDaysIn(zone);
+
+            expect(addVenueDays('2026-11-19', -1)).toBe('2026-11-18');
+            expect(addVenueDays('2026-11-19', 0)).toBe('2026-11-19');
+            expect(addVenueDays('2026-11-19', 1)).toBe('2026-11-20');
+            expect(addVenueDays('2026-11-19', 7)).toBe('2026-11-26');
+            expect(addVenueDays('2026-11-19', -30)).toBe('2026-10-20');
+        }
+    );
+
+    it('crosses months, years and leap days', async () => {
+        const addVenueDays = await addVenueDaysIn('Pacific/Kiritimati');
+
+        expect(addVenueDays('2026-11-30', 1)).toBe('2026-12-01');
+        expect(addVenueDays('2026-12-31', 1)).toBe('2027-01-01');
+        expect(addVenueDays('2027-01-01', -1)).toBe('2026-12-31');
+        expect(addVenueDays('2028-02-28', 1)).toBe('2028-02-29');
+        expect(addVenueDays('2028-03-01', -1)).toBe('2028-02-29');
+        expect(addVenueDays('2027-02-28', 1)).toBe('2027-03-01');
+    });
+
+    it('is not moved by the daylight-saving changes of the venue zone', async () => {
+        const addVenueDays = await addVenueDaysIn('Europe/Madrid');
+
+        // Clocks go forward on 29 March 2026 and back on 25 October 2026 in Madrid
+        expect(addVenueDays('2026-03-28', 1)).toBe('2026-03-29');
+        expect(addVenueDays('2026-03-29', 1)).toBe('2026-03-30');
+        expect(addVenueDays('2026-10-25', -1)).toBe('2026-10-24');
+        expect(addVenueDays('2026-10-24', 2)).toBe('2026-10-26');
+    });
+});
