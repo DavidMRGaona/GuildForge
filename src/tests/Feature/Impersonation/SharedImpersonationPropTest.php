@@ -6,6 +6,7 @@ namespace Tests\Feature\Impersonation;
 
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -52,7 +53,21 @@ final class SharedImpersonationPropTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('impersonation', ['targetName' => 'Ana Example', 'mode' => 'read_only', 'notice' => null]));
+                ->where('impersonation', ['targetName' => 'Ana Example', 'mode' => 'read_only', 'notice' => null, 'viewedRoles' => null]));
+    }
+
+    public function test_the_shared_prop_carries_the_roles(): void
+    {
+        $this->actingAs($this->admin);
+        app(ImpersonationServiceInterface::class)->startWithRoles(
+            $this->admin,
+            [(string) RoleModel::query()->where('name', 'socio')->value('id')],
+            ImpersonationMode::ReadOnly,
+        );
+
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('impersonation.viewedRoles', ['Member', 'Socio']));
     }
 
     public function test_the_simulate_mode_is_shared(): void

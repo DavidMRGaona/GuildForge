@@ -46,9 +46,27 @@ Verás la portada del sitio con una banda fija: «Estás viendo como…». Naveg
 
 El modo no se cambia a mitad: vuelve a tu cuenta y empieza otra impersonación.
 
+## Ver como roles
+
+A veces no hay una cuenta concreta que mirar: quieres saber qué ve «cualquier socio» o «cualquier persona con el rol de moderación». Para eso, en **Personas → Usuarios** y en **Personas → Roles** tienes el botón **Ver como roles**.
+
+1. Pulsa **Ver como roles**.
+2. Marca los roles que quieras. Aparecen todos menos el de administración, que nunca se puede ver así.
+3. El rol base de toda cuenta va siempre marcado y no se puede quitar.
+4. Elige el modo, igual que al impersonar una cuenta, y confirma.
+
+Qué hay que saber:
+
+- En cada página se crea una cuenta nueva, recién registrada y con el correo verificado, que solo tiene esos roles. No existe de verdad: no se guarda y cada petición usa una distinta.
+- **No simula lo que una persona ha hecho**: altas, cuotas, mesas, mensajes… Verás lo que ve alguien que acaba de llegar con esos roles, no lo que vería una persona concreta con su historia.
+- Un rol que exige ser socio no cuenta mientras no marques también el rol de socio, igual que en una cuenta real.
+- Si un rol da acceso al panel, podrás entrar en él.
+- En cada petición se vuelve a comprobar que puedes impersonar, que los roles siguen existiendo y que ninguno es el de administración. Si algo falla, vuelves a tu cuenta.
+- La banda dice «Estás viendo con los roles …» y en el historial aparece como «Roles: …».
+
 ## Volver a tu cuenta
 
-Pulsa **Volver a mi cuenta** en la banda, en el sitio o en el panel: vuelves a la ficha de la persona que impersonabas. Si cierras sesión, la impersonación termina y tu sesión se cierra. No hay caducidad: dura hasta que vuelves o cierras sesión.
+Pulsa **Volver a mi cuenta** en la banda, en el sitio o en el panel: vuelves a la ficha de la persona que impersonabas. Después de **Ver como roles** vuelves a la página de inicio, porque no hay ninguna ficha a la que volver. Si cierras sesión, la impersonación termina y tu sesión se cierra. No hay caducidad: dura hasta que vuelves o cierras sesión.
 
 ## Historial
 

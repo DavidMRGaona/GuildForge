@@ -7,11 +7,13 @@ namespace App\Providers;
 use App\Application\Impersonation\Services\ImpersonationAccountsInterface;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Impersonation\Services\ImpersonationLoggerInterface;
+use App\Application\Impersonation\Services\ImpersonationRolesInterface;
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Filament\Impersonation\RefuseChangesWhileOnlyLooking;
 use App\Http\Middleware\AuthenticateImpersonatorSession;
 use App\Http\Middleware\AuthenticatePanelImpersonatorSession;
 use App\Infrastructure\Impersonation\EloquentImpersonationAccounts;
+use App\Infrastructure\Impersonation\EloquentImpersonationRoles;
 use App\Infrastructure\Impersonation\ImpersonationContext;
 use App\Infrastructure\Impersonation\ImpersonationLogger;
 use App\Infrastructure\Impersonation\ImpersonationService;
@@ -35,6 +37,7 @@ final class ImpersonationServiceProvider extends ServiceProvider
         $this->app->bind(ImpersonationServiceInterface::class, ImpersonationService::class);
         $this->app->bind(ImpersonationLoggerInterface::class, ImpersonationLogger::class);
         $this->app->bind(ImpersonationAccountsInterface::class, EloquentImpersonationAccounts::class);
+        $this->app->bind(ImpersonationRolesInterface::class, EloquentImpersonationRoles::class);
 
         // Singletons, not scoped: once engaged the outputs stay neutralised until the process
         // ends, terminating middleware and defer() callbacks included

@@ -31,6 +31,7 @@ final readonly class ImpersonationEligibilityRule
         private AuthorizationServiceInterface $authorization,
         private ImpersonationAccountsInterface $accounts,
         private ImpersonationContextInterface $context,
+        private ImpersonationRolesInterface $roles,
         private LoggerInterface $log,
     ) {}
 
@@ -66,6 +67,52 @@ final readonly class ImpersonationEligibilityRule
     public function continuationRefusal(Authenticatable $actor, Authenticatable $target): ?ImpersonationRefusal
     {
         return $this->guarded(fn (): ?ImpersonationRefusal => $this->actorRefusal($actor) ?? $this->targetRefusal($actor, $target));
+    }
+
+    /**
+     * Why the actor may not start viewing the site as these roles; null when they may.
+     *
+     * @param  list<string>  $roleIds
+     */
+    public function roleViewRefusal(Authenticatable $actor, array $roleIds): ?ImpersonationRefusal
+    {
+        return $this->guarded(fn (): ?ImpersonationRefusal => $this->context->isActive()
+            ? ImpersonationRefusal::AlreadyImpersonating
+            : $this->actorRefusal($actor) ?? $this->rolesRefusal($roleIds));
+    }
+
+    /**
+     * Why a view as roles under way must end; null while it may go on. Checked on every request.
+     *
+     * @param  list<string>  $roleIds
+     */
+    public function roleViewContinuationRefusal(Authenticatable $actor, array $roleIds): ?ImpersonationRefusal
+    {
+        return $this->guarded(fn (): ?ImpersonationRefusal => $this->actorRefusal($actor) ?? $this->rolesRefusal($roleIds));
+    }
+
+    /**
+     * @param  list<string>  $roleIds
+     */
+    private function rolesRefusal(array $roleIds): ?ImpersonationRefusal
+    {
+        if ($roleIds === []) {
+            return ImpersonationRefusal::NoRoles;
+        }
+
+        $found = $this->roles->find($roleIds);
+
+        if (count($found) !== count(array_unique($roleIds))) {
+            return ImpersonationRefusal::RoleUnavailable;
+        }
+
+        foreach ($found as $role) {
+            if ($role->name === UserRole::Admin->value) {
+                return ImpersonationRefusal::RoleIsAdmin;
+            }
+        }
+
+        return null;
     }
 
     private function actorRefusal(Authenticatable $actor): ?ImpersonationRefusal

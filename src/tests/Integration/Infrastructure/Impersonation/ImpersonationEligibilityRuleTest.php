@@ -8,6 +8,7 @@ use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\AdminOnlyPermissionRule;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Impersonation\Services\ImpersonationEligibilityRule;
+use App\Application\Impersonation\Services\ImpersonationRolesInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\Impersonation\Enums\ImpersonationRefusal;
 use App\Infrastructure\Authorization\CorePermissionDefinitions;
@@ -145,6 +146,98 @@ final class ImpersonationEligibilityRuleTest extends TestCase
         $this->assertFalse($this->rule()->mayImpersonate($admin));
         $this->assertSame(ImpersonationRefusal::CheckFailed, $this->rule()->startRefusal($admin, $member));
         $this->assertSame(ImpersonationRefusal::CheckFailed, $this->rule()->continuationRefusal($admin, $member));
+    }
+
+    public function test_an_administrator_may_view_as_member_and_socio(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $ids = $this->roleIds('member', 'socio');
+
+        $this->assertNull($this->rule()->roleViewRefusal($admin, $ids));
+        $this->assertNull($this->rule()->roleViewContinuationRefusal($admin, $ids));
+    }
+
+    public function test_viewing_as_admin_is_refused(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $ids = $this->roleIds('member', 'admin');
+
+        $this->assertSame(ImpersonationRefusal::RoleIsAdmin, $this->rule()->roleViewRefusal($admin, $ids));
+    }
+
+    public function test_an_unknown_role_is_refused(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $ids = [...$this->roleIds('member'), '00000000-0000-4000-8000-000000000000'];
+
+        $this->assertSame(ImpersonationRefusal::RoleUnavailable, $this->rule()->roleViewRefusal($admin, $ids));
+    }
+
+    public function test_no_roles_is_refused(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+
+        $this->assertSame(ImpersonationRefusal::NoRoles, $this->rule()->roleViewRefusal($admin, []));
+    }
+
+    public function test_someone_without_the_permission_may_not_view_as_roles(): void
+    {
+        $editor = UserModel::factory()->editor()->create();
+
+        $this->assertSame(ImpersonationRefusal::NotPermitted, $this->rule()->roleViewRefusal($editor, $this->roleIds('member')));
+        $this->assertSame(ImpersonationRefusal::NotPermitted, $this->rule()->roleViewContinuationRefusal($editor, $this->roleIds('member')));
+    }
+
+    public function test_a_role_deleted_after_starting_ends_the_view(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $ids = $this->roleIds('member', 'socio');
+        RoleModel::query()->where('name', 'socio')->delete();
+
+        $this->assertSame(ImpersonationRefusal::RoleUnavailable, $this->rule()->roleViewContinuationRefusal($admin, $ids));
+    }
+
+    public function test_a_second_view_cannot_start_while_one_is_under_way(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $member = UserModel::factory()->create();
+        app(ImpersonationContext::class)->activate($admin, $member, ImpersonationMode::ReadOnly, 'log-id');
+        $ids = $this->roleIds('member');
+
+        $this->assertSame(ImpersonationRefusal::AlreadyImpersonating, $this->rule()->roleViewRefusal($admin, $ids));
+        $this->assertNull($this->rule()->roleViewContinuationRefusal($admin, $ids));
+    }
+
+    public function test_a_failing_role_lookup_refuses(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $roles = $this->createStub(ImpersonationRolesInterface::class);
+        $roles->method('find')->willThrowException(new RuntimeException('database down'));
+        $this->app->instance(ImpersonationRolesInterface::class, $roles);
+
+        $this->assertSame(ImpersonationRefusal::CheckFailed, $this->rule()->roleViewRefusal($admin, ['x']));
+        $this->assertSame(ImpersonationRefusal::CheckFailed, $this->rule()->roleViewContinuationRefusal($admin, ['x']));
+    }
+
+    public function test_the_roles_offered_leave_out_admin(): void
+    {
+        $roles = app(ImpersonationRolesInterface::class);
+        $names = array_map(static fn ($role): string => $role->name, $roles->offered());
+
+        $this->assertContains('member', $names);
+        $this->assertNotContains('admin', $names);
+        $this->assertSame(RoleModel::query()->where('name', 'member')->value('id'), $roles->baseRoleId());
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function roleIds(string ...$names): array
+    {
+        return array_values(array_map(
+            static fn (string $name): string => (string) RoleModel::query()->where('name', $name)->value('id'),
+            $names,
+        ));
     }
 
     private function rule(): ImpersonationEligibilityRule

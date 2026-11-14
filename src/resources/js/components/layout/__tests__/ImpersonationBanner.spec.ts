@@ -46,6 +46,21 @@ describe('ImpersonationBanner', () => {
         );
     });
 
+    it('names the roles of a role view', () => {
+        page.props = {
+            impersonation: {
+                targetName: 'Member + Socio',
+                mode: 'read_only',
+                viewedRoles: ['Member', 'Socio'],
+            },
+        };
+
+        const wrapper = mountBanner();
+
+        expect(wrapper.text()).toContain('Estás viendo el sitio con los roles Member, Socio');
+        expect(wrapper.text()).not.toContain('Estás viendo el sitio como');
+    });
+
     it('explains the simulate mode with another colour', () => {
         page.props = { impersonation: { targetName: 'Ana Example', mode: 'simulate' } };
 

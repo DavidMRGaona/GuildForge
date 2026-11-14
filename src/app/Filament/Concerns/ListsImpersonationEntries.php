@@ -50,7 +50,7 @@ trait ListsImpersonationEntries
                     ->label(__($showsTarget
                         ? 'filament.impersonation.history.columns.target'
                         : 'filament.impersonation.history.columns.impersonator'))
-                    ->state(fn (ImpersonationLogEntryModel $record): string => self::accountName($showsTarget ? $record->target : $record->impersonator))
+                    ->state(fn (ImpersonationLogEntryModel $record): string => $showsTarget ? self::viewedName($record) : self::accountName($record->impersonator))
                     ->wrap(),
                 TextColumn::make('started_at')
                     ->label(__('filament.impersonation.history.columns.started_at'))
@@ -82,6 +82,24 @@ trait ListsImpersonationEntries
      * account that was viewed (it names who viewed it).
      */
     abstract protected function showsTarget(): bool;
+
+    /**
+     * A role view has no account to name (its target belonged to nobody), so it shows the roles
+     * kept in the entry, as they were called then.
+     */
+    private static function viewedName(ImpersonationLogEntryModel $record): string
+    {
+        $roles = $record->viewed_roles;
+
+        if (is_array($roles) && $roles !== []) {
+            return __('filament.impersonation.history.viewed_roles', [
+                // The display name is already the role name when it had none (EloquentImpersonationRoles)
+                'roles' => implode(', ', array_map(static fn (array $role): string => $role['display_name'], $roles)),
+            ]);
+        }
+
+        return self::accountName($record->target);
+    }
 
     private static function accountName(?UserModel $account): string
     {

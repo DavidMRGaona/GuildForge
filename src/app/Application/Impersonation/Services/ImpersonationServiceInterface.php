@@ -25,6 +25,17 @@ interface ImpersonationServiceInterface
     public function start(Authenticatable $actor, Authenticatable $target, ImpersonationMode $mode): void;
 
     /**
+     * Starts a view as a set of roles instead of an account: the base role is always added,
+     * ImpersonationEligibilityRule checks the actor and the roles, and the state holds the
+     * role ids with a target id that belongs to no account.
+     *
+     * @param  list<string>  $roleIds
+     *
+     * @throws ImpersonationNotAllowedException
+     */
+    public function startWithRoles(Authenticatable $actor, array $roleIds, ImpersonationMode $mode): void;
+
+    /**
      * Closes the log entry with the reason, drops the state and, in a request that runs as
      * the target, gives the guard back to the administrator. Does nothing without an
      * impersonation. The state is dropped even when the entry cannot be closed (it throws).

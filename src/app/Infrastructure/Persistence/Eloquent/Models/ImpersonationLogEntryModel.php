@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property ImpersonationEndReason|null $ended_reason
  * @property string|null $ip
  * @property string|null $user_agent
+ * @property list<array{id: string, name: string, display_name: string}>|null $viewed_roles
  */
 final class ImpersonationLogEntryModel extends Model
 {
@@ -44,6 +45,7 @@ final class ImpersonationLogEntryModel extends Model
         'ended_reason',
         'ip',
         'user_agent',
+        'viewed_roles',
     ];
 
     /**
@@ -74,6 +76,7 @@ final class ImpersonationLogEntryModel extends Model
             'ended_reason' => ImpersonationEndReason::class,
             'started_at' => 'datetime',
             'ended_at' => 'datetime',
+            'viewed_roles' => 'array',
         ];
     }
 }

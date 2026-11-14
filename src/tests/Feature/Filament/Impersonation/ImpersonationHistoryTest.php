@@ -12,6 +12,7 @@ use App\Filament\Resources\UserResource\RelationManagers\ImpersonationsAsTargetR
 use App\Infrastructure\Persistence\Eloquent\Models\ImpersonationLogEntryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\TestCase;
@@ -57,6 +58,24 @@ final class ImpersonationHistoryTest extends TestCase
             ->assertCanSeeTableRecords([$mine])
             ->assertCanNotSeeTableRecords([$other])
             ->assertSee('Persona Vista');
+    }
+
+    public function test_the_history_shows_a_role_view_by_its_roles(): void
+    {
+        ImpersonationLogEntryModel::query()->create([
+            'impersonator_id' => $this->admin->id,
+            'target_id' => (string) Str::uuid(),
+            'mode' => ImpersonationMode::ReadOnly,
+            'started_at' => now()->subHour(),
+            'viewed_roles' => [
+                ['id' => 'a', 'name' => 'member', 'display_name' => 'Member'],
+                ['id' => 'b', 'name' => 'socio', 'display_name' => 'Socio'],
+            ],
+        ]);
+
+        Livewire::test(ImpersonationsAsImpersonatorRelationManager::class, ['ownerRecord' => $this->admin, 'pageClass' => EditUser::class])
+            ->assertSee('Roles: Member, Socio')
+            ->assertDontSee(__('filament.impersonation.history.deleted_account'));
     }
 
     public function test_it_shows_mode_end_and_reason(): void

@@ -24,6 +24,15 @@ enum ImpersonationRefusal: string
 
     case TargetAnonymized = 'target_anonymized';
 
+    /** A role to view the site as no longer exists (or never did) */
+    case RoleUnavailable = 'role_unavailable';
+
+    /** The administrator role is never viewed as */
+    case RoleIsAdmin = 'role_is_admin';
+
+    /** A view as roles needs at least one role */
+    case NoRoles = 'no_roles';
+
     /** A check could not be made (it threw): refused, never allowed */
     case CheckFailed = 'check_failed';
 }

@@ -4,7 +4,7 @@
     class="flex items-center gap-1 rounded-full bg-custom-600 p-1 text-xs sm:ps-3 font-medium text-white dark:bg-custom-500"
     style="--color-500: var(--{{ $color }}-500); --color-600: var(--{{ $color }}-600);"
 >
-    <span class="hidden max-w-40 truncate sm:inline">{{ __('filament.impersonation.reminder', ['name' => $name]) }}</span>
+    <span class="hidden max-w-40 truncate sm:inline">{{ $roles !== null ? __('filament.impersonation.reminder_roles', ['roles' => $roles]) : __('filament.impersonation.reminder', ['name' => $name]) }}</span>
     <form method="POST" action="{{ route('impersonation.stop') }}">
         @csrf
         <button

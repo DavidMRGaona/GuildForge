@@ -6,6 +6,8 @@ namespace Tests\Feature\Filament\Impersonation;
 
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
@@ -41,6 +43,29 @@ final class ImpersonationPanelBannerTest extends TestCase
             ->assertSee(__('filament.impersonation.banner.stop'))
             ->assertSee('action="'.route('impersonation.stop').'"', false)
             ->assertSee('name="_token"', false);
+    }
+
+    public function test_the_panel_banner_names_the_roles(): void
+    {
+        $role = RoleModel::query()->create(['name' => 'panel-viewers', 'display_name' => 'Panel viewers']);
+        $panelAccess = PermissionModel::query()->firstOrCreate(
+            ['key' => 'admin.access'],
+            ['label' => 'admin.access', 'resource' => 'admin', 'action' => 'access'],
+        );
+        $role->permissions()->syncWithoutDetaching([$panelAccess->id]);
+
+        $this->actingAs($this->admin);
+        app(ImpersonationServiceInterface::class)->startWithRoles(
+            $this->admin,
+            [(string) $role->id],
+            ImpersonationMode::ReadOnly,
+        );
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertSee('Estás viendo con los roles Member, Panel viewers')
+            ->assertSee('Con los roles Member, Panel viewers')
+            ->assertDontSee('Estás viendo como');
     }
 
     public function test_simulate_mode_says_so_in_another_colour(): void
