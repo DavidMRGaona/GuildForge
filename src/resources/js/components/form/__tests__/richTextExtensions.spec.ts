@@ -42,12 +42,82 @@ describe('the editor HTML', () => {
         expect(html).toContain('alt="Foto"');
     });
 
+    it('writes underline, strike, subscript and superscript as the panel editor does', () => {
+        const html = '<p><u>u</u> <s>s</s> <sub>1</sub> <sup>2</sup></p>';
+
+        expect(htmlOf(html)).toBe(html);
+    });
+
+    it('aligns paragraphs and headings with the logical values the panel editor uses', () => {
+        const html =
+            '<h2 style="text-align: center;">T</h2><h3 style="text-align: end;">S</h3>' +
+            '<p style="text-align: center;">a</p><p style="text-align: end;">b</p><p>c</p>';
+
+        expect(htmlOf(html)).toBe(html);
+    });
+
+    it('reads the alignment back from the sanitised HTML', () => {
+        expect(
+            htmlOf('<p style="text-align:end;">a</p><h2 style="text-align:center;">b</h2>')
+        ).toBe('<p style="text-align: end;">a</p><h2 style="text-align: center;">b</h2>');
+    });
+
+    it('writes no alignment for the start, the default, and none it does not know', () => {
+        expect(htmlOf('<p style="text-align: start">a</p><p style="text-align: right">b</p>')).toBe(
+            '<p>a</p><p>b</p>'
+        );
+    });
+
+    it('writes code blocks as the panel editor does', () => {
+        const html = '<pre><code>if (a &lt; b) {}</code></pre>';
+
+        expect(htmlOf(html)).toBe(html);
+    });
+
+    it('writes tables as the panel editor does, without the widths of the editing view', () => {
+        const html =
+            '<table><tbody><tr><th><p>H</p></th><th><p>I</p></th></tr>' +
+            '<tr><td colspan="2"><p>c</p></td></tr></tbody></table>';
+
+        expect(htmlOf(html)).toBe(html);
+        // The panel writes the spans of one too; they mean the same
+        expect(
+            htmlOf(
+                '<table><tbody><tr><th rowspan="1" colspan="1"><p>H</p></th></tr></tbody></table>'
+            )
+        ).toBe('<table><tbody><tr><th><p>H</p></th></tr></tbody></table>');
+    });
+
+    it('moves between cells with Tab and lets it leave after the last one, adding no rows', () => {
+        const editor = new Editor({
+            element: document.createElement('div'),
+            extensions: createRichTextExtensions(),
+            content: '<table><tbody><tr><th><p>a</p></th><th><p>b</p></th></tr></tbody></table>',
+        });
+        editor.commands.setTextSelection(3);
+        const handled = (): boolean => {
+            const event = new KeyboardEvent('keydown', {
+                key: 'Tab',
+                bubbles: true,
+                cancelable: true,
+            });
+            editor.view.dom.dispatchEvent(event);
+
+            return event.defaultPrevented;
+        };
+
+        expect(handled()).toBe(true);
+        expect(handled()).toBe(false);
+        expect(editor.getHTML().match(/<tr>/g)).toHaveLength(1);
+        editor.destroy();
+    });
+
     it('drops what is outside the toolset', () => {
         const html = htmlOf(
-            '<h1>A</h1><p><s>x</s> <u>y</u> <code>z</code></p><pre><code>c</code></pre><hr><iframe src="https://e.example"></iframe>'
+            '<h1>A</h1><p><code>z</code> <mark>m</mark></p><hr><iframe src="https://e.example"></iframe>'
         );
 
-        expect(html).not.toMatch(/<h1|<s>|<u>|<code|<pre|<hr|<iframe/);
+        expect(html).not.toMatch(/<h1|<code|<mark|<hr|<iframe/);
     });
 
     it('refuses images embedded in the text', () => {

@@ -29,7 +29,7 @@ return [
             'HTML.Doctype' => 'HTML 4.01 Transitional',
             'HTML.Allowed' => implode(',', [
                 // Block elements
-                'h1,h2,h3,h4,h5,h6',
+                'h1[style],h2[style],h3[style],h4[style],h5[style],h6[style]',
                 'p[style],div[style],blockquote',
                 'ul,ol,li',
                 'pre,code',
