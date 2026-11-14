@@ -94,16 +94,17 @@ class ArticleResource extends BaseResource
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true)
-                    ->rules(['alpha_dash']),
-                EditorImages::configure(RichEditor::make('content')
-                    ->label(__('Contenido'))
-                    ->required()
-                    ->columnSpanFull(), EditorImageOrigin::Articles),
+                    ->rules(['alpha_dash'])
+                    ->helperText(__('filament.proposals.slug_hint')),
                 Textarea::make('excerpt')
                     ->label(__('Extracto'))
                     ->rows(3)
                     ->maxLength(255)
                     ->columnSpanFull(),
+                EditorImages::configure(RichEditor::make('content')
+                    ->label(__('Contenido'))
+                    ->required()
+                    ->columnSpanFull(), EditorImageOrigin::Articles),
                 MediaLibraryPicker::attachTo(
                     FileUpload::make('featured_image_public_id')
                         ->label(__('Imagen destacada'))
@@ -116,30 +117,6 @@ class ArticleResource extends BaseResource
                         ->maxSize(2048)
                         ->nullable(),
                 ),
-                Select::make('author_id')
-                    ->label(__('Autor'))
-                    ->relationship('author', 'display_name')
-                    ->getOptionLabelFromRecordUsing(fn (UserModel $record): string => $record->display_name ?? $record->name)
-                    ->searchable()
-                    ->preload()
-                    ->required(),
-                Select::make('category_id')
-                    ->label(__('filament.tags.fields.category'))
-                    ->options(fn () => TagModel::roots()
-                        ->forType('articles')
-                        ->ordered()
-                        ->pluck('name', 'id'))
-                    ->required()
-                    ->searchable()
-                    ->preload()
-                    ->afterStateHydrated(function (Select $component, ?Model $record): void {
-                        if ($record instanceof ArticleModel) {
-                            $categoryId = $record->tags()
-                                ->whereNull('parent_id')
-                                ->first()?->id;
-                            $component->state($categoryId);
-                        }
-                    }),
                 Select::make('additional_tag_ids')
                     ->label(__('filament.tags.fields.additional'))
                     ->options(fn (Get $get) => TagModel::whereNotNull('parent_id')
@@ -160,6 +137,36 @@ class ArticleResource extends BaseResource
                             $component->state($tagIds);
                         }
                     }),
+                // What the web never asks for, after what it shares with the panel (core#655)
+                ProposalReviewPanel::reviewerBlock([
+                    Select::make('category_id')
+                        ->label(__('filament.tags.fields.category'))
+                        ->options(fn () => TagModel::roots()
+                            ->forType('articles')
+                            ->ordered()
+                            ->pluck('name', 'id'))
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                        ->afterStateHydrated(function (Select $component, ?Model $record): void {
+                            if ($record instanceof ArticleModel) {
+                                $categoryId = $record->tags()
+                                    ->whereNull('parent_id')
+                                    ->first()?->id;
+                                $component->state($categoryId);
+                            }
+                        }),
+                    Select::make('author_id')
+                        ->label(__('Autor'))
+                        ->relationship('author', 'display_name')
+                        ->getOptionLabelFromRecordUsing(fn (UserModel $record): string => $record->display_name ?? $record->name)
+                        // The label falls back to the name, so the search looks there too: most proposers have no display name
+                        ->searchable(['display_name', 'name'])
+                        ->preload()
+                        ->required()
+                        // Who proposed it is kept apart (proposed_by): changing this only changes the byline
+                        ->helperText(__('filament.proposals.author_hint')),
+                ]),
                 Toggle::make('is_published')
                     ->label(__('Publicado'))
                     ->default(false)

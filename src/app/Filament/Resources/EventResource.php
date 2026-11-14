@@ -125,12 +125,10 @@ class EventResource extends BaseResource
                     ->required()
                     ->maxLength(255)
                     ->unique(ignoreRecord: true)
-                    ->rules(['alpha_dash']),
-                EditorImages::configure(RichEditor::make('description')
-                    ->label(__('Descripción'))
-                    ->required()
-                    ->columnSpanFull(), EditorImageOrigin::Events),
-                Section::make(__('Fechas'))
+                    ->rules(['alpha_dash'])
+                    ->helperText(__('filament.proposals.slug_hint')),
+                // The place goes with the dates, as on the web form, so it never stands alone in half a row
+                Section::make(__('Fecha y lugar'))
                     ->schema([
                         DateTimePicker::make('start_date')
                             ->label(__('Fecha de inicio'))
@@ -143,25 +141,15 @@ class EventResource extends BaseResource
                             ->native(false)
                             ->displayFormat('d/m/Y H:i')
                             ->after('start_date'),
+                        TextInput::make('location')
+                            ->label(__('Ubicación'))
+                            ->maxLength(255)
+                            ->columnSpanFull(),
                     ])->columns(2),
-                TextInput::make('location')
-                    ->label(__('Ubicación'))
-                    ->maxLength(255),
-                Section::make(__('Precios'))
-                    ->schema([
-                        TextInput::make('member_price')
-                            ->label(__('Precio socios'))
-                            ->numeric()
-                            ->prefix('€')
-                            ->minValue(0)
-                            ->step(0.01),
-                        TextInput::make('non_member_price')
-                            ->label(__('Precio no socios'))
-                            ->numeric()
-                            ->prefix('€')
-                            ->minValue(0)
-                            ->step(0.01),
-                    ])->columns(2),
+                EditorImages::configure(RichEditor::make('description')
+                    ->label(__('Descripción'))
+                    ->required()
+                    ->columnSpanFull(), EditorImageOrigin::Events),
                 MediaLibraryPicker::attachTo(
                     FileUpload::make('image_public_id')
                         ->label(__('Imagen'))
@@ -174,45 +162,6 @@ class EventResource extends BaseResource
                         ->maxSize(2048)
                         ->nullable(),
                 ),
-                Section::make(__('Enlaces de descarga'))
-                    ->schema([
-                        Repeater::make('download_links')
-                            ->label(__('Enlaces de descarga'))
-                            ->schema([
-                                TextInput::make('label')
-                                    ->label(__('Etiqueta'))
-                                    ->required()
-                                    ->maxLength(255),
-                                TextInput::make('url')
-                                    ->label(__('URL'))
-                                    ->required()
-                                    ->url()
-                                    ->maxLength(2048),
-                                TextInput::make('description')
-                                    ->label(__('Descripción'))
-                                    ->maxLength(500),
-                            ])
-                            ->columns(1)
-                            ->collapsible()
-                            ->defaultItems(0),
-                    ]),
-                Select::make('category_id')
-                    ->label(__('filament.tags.fields.category'))
-                    ->options(fn () => TagModel::roots()
-                        ->forType('events')
-                        ->ordered()
-                        ->pluck('name', 'id'))
-                    ->required()
-                    ->searchable()
-                    ->preload()
-                    ->afterStateHydrated(function (Select $component, ?Model $record): void {
-                        if ($record instanceof EventModel) {
-                            $categoryId = $record->tags()
-                                ->whereNull('parent_id')
-                                ->first()?->id;
-                            $component->state($categoryId);
-                        }
-                    }),
                 Select::make('additional_tag_ids')
                     ->label(__('filament.tags.fields.additional'))
                     ->options(fn (Get $get) => TagModel::whereNotNull('parent_id')
@@ -233,6 +182,63 @@ class EventResource extends BaseResource
                             $component->state($tagIds);
                         }
                     }),
+                // What the web never asks for, after what it shares with the panel (core#655)
+                ProposalReviewPanel::reviewerBlock([
+                    Select::make('category_id')
+                        ->label(__('filament.tags.fields.category'))
+                        ->options(fn () => TagModel::roots()
+                            ->forType('events')
+                            ->ordered()
+                            ->pluck('name', 'id'))
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                        ->afterStateHydrated(function (Select $component, ?Model $record): void {
+                            if ($record instanceof EventModel) {
+                                $categoryId = $record->tags()
+                                    ->whereNull('parent_id')
+                                    ->first()?->id;
+                                $component->state($categoryId);
+                            }
+                        }),
+                    Section::make(__('Precios'))
+                        ->schema([
+                            TextInput::make('member_price')
+                                ->label(__('Precio socios'))
+                                ->numeric()
+                                ->prefix('€')
+                                ->minValue(0)
+                                ->step(0.01),
+                            TextInput::make('non_member_price')
+                                ->label(__('Precio no socios'))
+                                ->numeric()
+                                ->prefix('€')
+                                ->minValue(0)
+                                ->step(0.01),
+                        ])->columns(2),
+                    Section::make(__('Enlaces de descarga'))
+                        ->schema([
+                            Repeater::make('download_links')
+                                ->label(__('Enlaces de descarga'))
+                                ->schema([
+                                    TextInput::make('label')
+                                        ->label(__('Etiqueta'))
+                                        ->required()
+                                        ->maxLength(255),
+                                    TextInput::make('url')
+                                        ->label(__('URL'))
+                                        ->required()
+                                        ->url()
+                                        ->maxLength(2048),
+                                    TextInput::make('description')
+                                        ->label(__('Descripción'))
+                                        ->maxLength(500),
+                                ])
+                                ->columns(1)
+                                ->collapsible()
+                                ->defaultItems(0),
+                        ]),
+                ]),
                 Toggle::make('is_published')
                     ->label(__('Publicado'))
                     ->default(false)
