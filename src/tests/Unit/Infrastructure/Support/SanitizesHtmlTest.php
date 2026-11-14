@@ -151,4 +151,37 @@ final class SanitizesHtmlTest extends TestCase
         $this->assertStringNotContainsString('onerror', $result);
         $this->assertStringNotContainsString('alert', $result);
     }
+
+    public function test_it_keeps_the_alignments_the_panel_editor_writes_on_paragraphs_and_headings(): void
+    {
+        $html = '<p style="text-align: end">a</p><h2 style="text-align: center">b</h2>'
+            .'<h3 style="text-align: start">c</h3><p style="text-align: justify">d</p>';
+
+        $result = $this->sanitizeHtml($html);
+
+        $this->assertStringContainsString('<p style="text-align:end;">a</p>', $result);
+        $this->assertStringContainsString('<h2 style="text-align:center;">b</h2>', $result);
+        $this->assertStringContainsString('<h3 style="text-align:start;">c</h3>', $result);
+        $this->assertStringContainsString('<p style="text-align:justify;">d</p>', $result);
+    }
+
+    public function test_it_drops_alignments_that_are_not_alignments(): void
+    {
+        $result = $this->sanitizeHtml(
+            '<p style="text-align: expression(alert(1))">a</p><h2 style="text-align: url(https://e.example/x)">b</h2>'
+            .'<h3 style="position: fixed; text-align: end">c</h3>',
+        );
+
+        $this->assertStringNotContainsString('expression', $result);
+        $this->assertStringNotContainsString('url(', $result);
+        $this->assertStringNotContainsString('position', $result);
+        $this->assertStringContainsString('<h3 style="text-align:end;">c</h3>', $result);
+    }
+
+    public function test_it_keeps_underline_strike_subscript_superscript_and_code_blocks(): void
+    {
+        $result = $this->sanitizeHtml('<p><u>u</u> <s>s</s> <sub>1</sub> <sup>2</sup></p><pre><code>x &lt; y</code></pre>');
+
+        $this->assertSame('<p><u>u</u> <s>s</s> <sub>1</sub> <sup>2</sup></p><pre><code>x &lt; y</code></pre>', $result);
+    }
 }

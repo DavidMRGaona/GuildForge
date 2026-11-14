@@ -100,6 +100,7 @@ final class CoreMailTemplatesTest extends TestCase
         $user = UserModel::factory()->create();
 
         $message = (new ResetPassword('token-de-prueba'))->toMail($user);
+        $this->assertInstanceOf(MailMessage::class, $message);
         $html = (string) $message->render();
 
         $this->assertSame('Restablece tu contraseña', $message->subject);
@@ -116,6 +117,7 @@ final class CoreMailTemplatesTest extends TestCase
         $user = UserModel::factory()->unverified()->create();
 
         $message = (new VerifyEmail)->toMail($user);
+        $this->assertInstanceOf(MailMessage::class, $message);
         $html = (string) $message->render();
 
         $this->assertSame('Verifica tu correo electrónico', $message->subject);
