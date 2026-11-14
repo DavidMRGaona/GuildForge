@@ -13,6 +13,7 @@ use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
 use App\Application\Proposals\Services\ProposalQueryServiceInterface;
 use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
+use App\Application\Proposals\Services\ProposalTagOptionsInterface;
 use App\Domain\Proposals\Events\ProposalApproved;
 use App\Domain\Proposals\Events\ProposalRejected;
 use App\Domain\Proposals\Events\ProposalReturned;
@@ -29,6 +30,7 @@ use App\Infrastructure\Proposals\Services\ProposalEligibilityService;
 use App\Infrastructure\Proposals\Services\ProposalQueryService;
 use App\Infrastructure\Proposals\Services\ProposalService;
 use App\Infrastructure\Proposals\Services\ProposalSettingsService;
+use App\Infrastructure\Proposals\Services\ProposalTagOptions;
 use App\Infrastructure\Proposals\Steps\ApplyEventProposalRequests;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
@@ -47,6 +49,7 @@ final class ProposalsServiceProvider extends ServiceProvider
         $this->app->bind(ProposalEligibilityServiceInterface::class, ProposalEligibilityService::class);
         $this->app->bind(ProposalServiceInterface::class, ProposalService::class);
         $this->app->bind(ProposalQueryServiceInterface::class, ProposalQueryService::class);
+        $this->app->bind(ProposalTagOptionsInterface::class, ProposalTagOptions::class);
         // Module requests of event proposals (core#581): modules register into the registry while they boot
         $this->app->singleton(EventProposalRequestRegistryInterface::class, EventProposalRequestRegistry::class);
         $this->app->bind(EventProposalRequestServiceInterface::class, EventProposalRequestService::class);

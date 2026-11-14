@@ -5,7 +5,7 @@ summary: Envía tu propuesta a la administración y sigue su estado en «Mis pro
 category: community
 audience: site
 order: 30
-keywords: [proponer, propuesta, evento, artículo, borrador, revisión, enviar, mis propuestas, peticiones, inscripciones]
+keywords: [proponer, propuesta, evento, artículo, borrador, revisión, enviar, mis propuestas, peticiones, inscripciones, etiquetas, categoría]
 related: [core.events.find-events, core.content.read-articles]
 ---
 Si la asociación lo permite, puedes proponer eventos y artículos desde la web. La administración los revisa antes de publicarlos.
@@ -29,4 +29,4 @@ Si la administración te la devuelve, vuelve a ser un borrador con el motivo par
 > [!TIP]
 > Hay un máximo de propuestas en revisión, de borradores abiertos y de envíos por hora. La pestaña te dice cuántos te quedan.
 
-Los precios y los enlaces de descarga de un evento los pone quien revisa la propuesta.
+Los precios y los enlaces de descarga de un evento los pone quien revisa la propuesta. La **categoría** también: tú solo eliges las etiquetas. Si puedes publicar tus propuestas sin revisión, el formulario te pide además la categoría.

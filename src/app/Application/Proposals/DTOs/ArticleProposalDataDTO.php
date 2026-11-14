@@ -12,6 +12,8 @@ final readonly class ArticleProposalDataDTO
     /**
      * @param  list<string>  $tagIds  tags that do not exist or do not apply to articles are ignored
      * @param  ?string  $note  private note for the administration
+     * @param  ?string  $categoryId  only taken from whoever may publish articles directly
+     *                               (ProposalTagOptionsInterface); null keeps the stored category
      */
     public function __construct(
         public string $title,
@@ -20,5 +22,6 @@ final readonly class ArticleProposalDataDTO
         public ?string $featuredImagePublicId = null,
         public array $tagIds = [],
         public ?string $note = null,
+        public ?string $categoryId = null,
     ) {}
 }

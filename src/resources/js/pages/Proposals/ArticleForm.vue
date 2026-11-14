@@ -2,6 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import RichTextEditor from '@/components/form/RichTextEditor.vue';
+import ProposalCategoryField from '@/components/proposals/ProposalCategoryField.vue';
 import ProposalField from '@/components/proposals/ProposalField.vue';
 import ProposalFormActions from '@/components/proposals/ProposalFormActions.vue';
 import ProposalImageField from '@/components/proposals/ProposalImageField.vue';
@@ -27,7 +28,12 @@ const form = useForm({
     content: props.proposal?.body ?? '',
     image: null as File | null,
     remove_image: false,
-    tags: [...(props.proposal?.tagIds ?? [])],
+    // The stored tags split as in the panel (core#654): additional tags here, the category apart
+    tags: (props.proposal?.tagIds ?? []).filter((id) => props.tags.some((tag) => tag.id === id)),
+    category:
+        (props.proposal?.tagIds ?? []).find((id) =>
+            props.categories.some((category) => category.id === id)
+        ) ?? (null as string | null),
 });
 
 function send(submit: boolean): void {
@@ -130,7 +136,17 @@ function send(submit: boolean): void {
             :error="form.errors.image"
         />
 
-        <ProposalTagsField v-model="form.tags" :tags="tags" />
+        <ProposalCategoryField
+            v-model="form.category"
+            :categories="categories"
+            :error="form.errors.category"
+        />
+
+        <ProposalTagsField
+            v-model="form.tags"
+            :tags="tags"
+            :with-category="categories.length > 0"
+        />
 
         <ProposalFormActions
             :processing="form.processing"

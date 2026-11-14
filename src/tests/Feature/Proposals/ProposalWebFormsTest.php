@@ -115,7 +115,9 @@ final class ProposalWebFormsTest extends TestCase
     public function test_it_saves_an_event_as_a_draft_reading_the_dates_in_the_display_zone(): void
     {
         $user = UserModel::factory()->create();
-        $tag = TagModel::factory()->create(['applies_to' => ['events']]);
+        // An additional tag: whoever proposes never picks the category (core#654)
+        $category = TagModel::factory()->create(['applies_to' => ['events']]);
+        $tag = TagModel::factory()->withParent($category)->create(['applies_to' => ['events']]);
 
         $this->actingAs($user)
             ->post('/propuestas/eventos', $this->eventForm(['tags' => [$tag->id]]))

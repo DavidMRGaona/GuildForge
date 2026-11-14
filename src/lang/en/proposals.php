@@ -52,6 +52,7 @@ return [
         'end_time' => 'end time',
         'image' => 'image',
         'tags' => 'tags',
+        'category' => 'category',
         'note' => 'note for the administration',
         'excerpt' => 'excerpt',
         'content' => 'content',
