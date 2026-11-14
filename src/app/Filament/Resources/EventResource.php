@@ -127,7 +127,8 @@ class EventResource extends BaseResource
                     ->unique(ignoreRecord: true)
                     ->rules(['alpha_dash'])
                     ->helperText(__('filament.proposals.slug_hint')),
-                Section::make(__('Fechas'))
+                // The place goes with the dates, as on the web form, so it never stands alone in half a row
+                Section::make(__('Fecha y lugar'))
                     ->schema([
                         DateTimePicker::make('start_date')
                             ->label(__('Fecha de inicio'))
@@ -140,10 +141,11 @@ class EventResource extends BaseResource
                             ->native(false)
                             ->displayFormat('d/m/Y H:i')
                             ->after('start_date'),
+                        TextInput::make('location')
+                            ->label(__('Ubicación'))
+                            ->maxLength(255)
+                            ->columnSpanFull(),
                     ])->columns(2),
-                TextInput::make('location')
-                    ->label(__('Ubicación'))
-                    ->maxLength(255),
                 EditorImages::configure(RichEditor::make('description')
                     ->label(__('Descripción'))
                     ->required()

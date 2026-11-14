@@ -85,6 +85,22 @@ final class ProposalReviewFormLayoutTest extends TestCase
         $this->assertSame(self::ARTICLE_ORDER, $this->order($this->editArticle(ProposalStatus::PendingReview), self::ARTICLE_ORDER));
     }
 
+    public function test_the_place_of_an_event_goes_with_its_dates(): void
+    {
+        $dates = $this->form(Livewire::test(CreateEvent::class))->getComponent(
+            static fn (mixed $component): bool => $component instanceof Section
+                && array_key_exists('start_date', $component->getChildSchema()?->getFlatFields(withHidden: true) ?? []),
+            withHidden: true,
+        );
+
+        $this->assertInstanceOf(Section::class, $dates);
+        $this->assertSame('Fecha y lugar', $dates->getHeading());
+        $this->assertSame(
+            ['start_date', 'end_date', 'location'],
+            array_keys($dates->getChildSchema()?->getFlatFields(withHidden: true) ?? []),
+        );
+    }
+
     public function test_an_event_proposal_boxes_what_the_reviewer_completes(): void
     {
         $page = $this->editEvent(ProposalStatus::PendingReview);

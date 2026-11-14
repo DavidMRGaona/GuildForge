@@ -18,11 +18,11 @@ Los eventos salen en el calendario y en la lista de eventos de la web, pero solo
 1. En el menú lateral, abre **Contenido** y elige **Eventos**.
 2. Pulsa **Crear evento**.
 3. Escribe el **Título**. El **Slug**, la parte final de la dirección de la página, se rellena solo.
-4. Escribe la **Descripción**.
-5. En **Fechas**, elige la **Fecha de inicio** y la **Fecha de fin**. El fin tiene que ser posterior al inicio.
-6. Si quieres, rellena la **Ubicación**, los **Precios** y la **Imagen** (hasta 2 MB).
-7. En **Enlaces de descarga** puedes añadir documentos, como reglamentos o listas, con su **Etiqueta** y su **URL**.
-8. Elige la **Categoría**. Si quieres, añade **Etiquetas adicionales**.
+4. En **Fecha y lugar**, elige la **Fecha de inicio** y la **Fecha de fin**. El fin tiene que ser posterior al inicio. Si quieres, rellena la **Ubicación**.
+5. Escribe la **Descripción**.
+6. Si quieres, sube una **Imagen** (hasta 2 MB) y añade **Etiquetas adicionales**.
+7. Elige la **Categoría**. Si quieres, rellena los **Precios**.
+8. En **Enlaces de descarga** puedes añadir documentos, como reglamentos o listas, con su **Etiqueta** y su **URL**.
 9. Activa **Publicado** si ya quieres que se vea.
 10. Pulsa **Crear**. Con **Crear y crear otro** guardas y empiezas otro evento.
 
