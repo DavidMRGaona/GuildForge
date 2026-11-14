@@ -15,7 +15,7 @@
 @source '../../../../resources/views/filament/**/*';
 
 /* On desktop the sidebar shares the page background, so a thin rule in the site's border colour
-   (stone-200 light, #44403c dark) tells it from the content, folded to icons or not */
+   (stone-200 light, #3b3b3b dark) tells it from the content, folded to icons or not */
 @media (min-width: 1024px) {
     .fi-main-sidebar {
         border-inline-end: 1px solid var(--gray-200);
