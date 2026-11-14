@@ -185,12 +185,6 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
                             <AddToCalendarMenu :links="props.calendarLinks" block />
                         </div>
 
-                        <!-- Conversation about the event, filled by a forum module -->
-                        <ModuleSlot
-                            name="subject-discussion"
-                            :props="{ subjectType: 'event', subjectId: props.event.id }"
-                        />
-
                         <!-- Download links -->
                         <div
                             v-if="props.event.downloadLinks.length > 0"
@@ -229,6 +223,18 @@ const asideFits = useFitsViewportHeight(aside, STICKY_MARGIN_PX);
                             </ul>
                         </div>
                     </div>
+                </div>
+
+                <!--
+                    Conversation about the event, filled by a forum module: full width, since the
+                    side column is too narrow to read or write in. The slot leaves a wrapper even
+                    when the module draws nothing, so the margin applies only while it has content
+                -->
+                <div data-testid="event-discussion" class="has-[[data-slot-key]:not(:empty)]:mt-8">
+                    <ModuleSlot
+                        name="subject-discussion"
+                        :props="{ subjectType: 'event', subjectId: props.event.id }"
+                    />
                 </div>
 
                 <div class="mt-8 border-t border-default pt-6">
