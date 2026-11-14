@@ -80,9 +80,14 @@
         "useVerificationGate"
     ],
     "@/contracts/cookieConsent": [
+        "CONSENT_PROVIDER_TIMEOUT_MS",
         "hasCookieConsent",
+        "hasCookieConsentDecided",
+        "hasCookieConsentModule",
         "notifyCookieConsentChanged",
-        "registerCookieConsentProvider"
+        "onCookieConsentDecided",
+        "registerCookieConsentProvider",
+        "whenConsentDecided"
     ],
     "@/utils/calendarTheme": [
         "calendarClassOptions",

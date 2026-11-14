@@ -132,6 +132,8 @@ final class HandleInertiaRequests extends Middleware
             'siteNotifications' => fn (): ?array => $this->getSiteNotifications($request),
             // Where the browser opens the WebSocket (core#493); null without real time or session
             'realtime' => fn (): ?array => $this->getRealtimeConfig($request),
+            // Whether an enabled module is the cookie consent provider (core#700); lets the browser tell «no banner» from «not loaded yet»
+            'cookieConsentModule' => $this->hasCookieConsentModule(...),
             // Whom the administrator is viewing the site as (core#580); null outside an impersonation
             'impersonation' => fn (): ?array => $this->getImpersonation($request),
             'authSettings' => $this->getAuthSettings(...),
@@ -151,6 +153,28 @@ final class HandleInertiaRequests extends Middleware
             // Site-wide defaults; a page's own `seo` prop overrides this one
             'seo' => fn (): array => app(SeoMetadataFactoryInterface::class)->forSite()->toArray(),
         ];
+    }
+
+    /**
+     * Whether an enabled module declares itself the cookie consent provider (core#700).
+     */
+    private function hasCookieConsentModule(): bool
+    {
+        try {
+            if (! app()->bound(ModuleLoader::class)) {
+                return false;
+            }
+
+            foreach (app(ModuleLoader::class)->getLoadedProviders() as $provider) {
+                if ($provider->providesCookieConsent()) {
+                    return true;
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logDebugError('hasCookieConsentModule', $e);
+        }
+
+        return false;
     }
 
     /**
