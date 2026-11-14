@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Impersonation;
 
+use App\Application\Impersonation\DTOs\ViewedRoleDTO;
+use App\Application\Impersonation\Services\ImpersonationRolesInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Filament\Actions\RowDetailsAction;
@@ -17,7 +19,10 @@ use App\Filament\Resources\TagResource\Pages\CreateTag;
 use App\Filament\Resources\TagResource\Pages\EditTag;
 use App\Filament\Resources\TagResource\Pages\ListTags;
 use App\Infrastructure\Impersonation\ImpersonationContext;
+use App\Infrastructure\Impersonation\RoleViewAccount;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
+use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Actions\DeleteBulkAction;
@@ -67,6 +72,22 @@ final class PanelReadOnlyTest extends TestCase
         Livewire::test(ListTags::class)
             ->callAction(TestAction::make('delete')->table($tag))
             ->assertNotified($this->refusal());
+
+        $this->assertNotNull($tag->fresh());
+    }
+
+    /**
+     * A role view (core#644) runs as a throwaway account holding the roles: the panel refuses
+     * the same calls it refuses for an account.
+     */
+    public function test_a_row_action_is_refused_in_a_role_view(): void
+    {
+        $tag = TagModel::factory()->create();
+        $account = $this->viewAsRoleWith(['admin.access', 'tags.view_any', 'tags.delete']);
+
+        Livewire::test(ListTags::class)
+            ->callAction(TestAction::make('delete')->table($tag))
+            ->assertNotified(__('filament.impersonation_read_only.refused', ['name' => $account->display_name]));
 
         $this->assertNotNull($tag->fresh());
     }
@@ -314,6 +335,41 @@ final class PanelReadOnlyTest extends TestCase
     {
         $this->actingAs($this->target);
         app(ImpersonationContext::class)->activate($this->admin, $this->target, $mode, 'log-id');
+    }
+
+    /**
+     * As ApplyImpersonation leaves a read-only role view for the request: signed in as the
+     * account built from the base role and a role with the permissions.
+     *
+     * @param  list<string>  $permissionKeys
+     */
+    private function viewAsRoleWith(array $permissionKeys): UserModel
+    {
+        $role = RoleModel::create(['name' => 'panel-viewers', 'display_name' => 'Panel viewers']);
+        foreach ($permissionKeys as $key) {
+            [$resource, $action] = explode('.', $key, 2);
+            $permission = PermissionModel::firstOrCreate(
+                ['key' => $key],
+                ['label' => $key, 'resource' => $resource, 'action' => $action],
+            );
+            $role->permissions()->attach($permission->id);
+        }
+
+        $roles = app(ImpersonationRolesInterface::class);
+        $viewed = $roles->find(array_values(array_filter([$roles->baseRoleId(), (string) $role->id])));
+        $this->assertCount(2, $viewed);
+
+        $account = app(RoleViewAccount::class)->create($viewed);
+        $this->actingAs($account);
+        app(ImpersonationContext::class)->activate(
+            $this->admin,
+            $account,
+            ImpersonationMode::ReadOnly,
+            'log-id',
+            array_map(static fn (ViewedRoleDTO $viewedRole): string => $viewedRole->displayName, $viewed),
+        );
+
+        return $account;
     }
 
     private function refusal(): string
