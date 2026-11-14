@@ -20,6 +20,7 @@ use App\Filament\Resources\EventResource\Pages\ListEvents;
 use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
+use Closure;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
@@ -58,6 +59,28 @@ class EventResource extends BaseResource
     public static function getNavigationGroup(): string
     {
         return PanelNavigationGroup::Content->getLabel();
+    }
+
+    /**
+     * Panel URLs carry the slug (EventModel::getRouteKeyName()), but links kept in mails and in the
+     * bell carry the id, which stays when a new title changes the slug (core#652). Both go through
+     * the resource's query, so whatever it hides stays hidden.
+     */
+    public static function resolveRecordRouteBinding(int|string $key, ?Closure $modifyQuery = null): ?Model
+    {
+        $record = parent::resolveRecordRouteBinding($key, $modifyQuery);
+
+        if ($record instanceof Model || ! Str::isUuid((string) $key)) {
+            return $record;
+        }
+
+        $query = static::getRecordRouteBindingEloquentQuery();
+
+        if ($modifyQuery instanceof Closure) {
+            $query = $modifyQuery($query) ?? $query;
+        }
+
+        return $query->whereKey((string) $key)->first();
     }
 
     public static function getNavigationBadge(): ?string
