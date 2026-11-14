@@ -52,6 +52,16 @@ public function sendTest(): void
 
 Requirement: set `requires.core` in `module.json` to the core release that introduces impersonation, otherwise an older core does not bind the interface.
 
+## Viewing as a set of roles
+
+The header of the users and roles lists also offers **Ver como roles** (`App\Filament\Actions\ViewAsRolesAction`, same permission and modes): the administrator picks roles (never `admin`; the base role is always included) instead of an account.
+
+- `target()` can then be an account that **only exists during the request**: each request creates a freshly registered, verified account holding those roles inside the transaction that is always rolled back, so its id differs on every request. Never store it, cache it or compare it across requests.
+- Work that runs after the response (terminating middleware, `defer()`) no longer sees that account.
+- It does not simulate what a person did (sign-ups, fees, tables, posts). Roles that require being a member of the association are inactive unless the association role is ticked, as on a real account.
+- Every request re-checks that the viewer may still impersonate and that the roles exist and none is `admin`; otherwise it goes back to the administrator.
+- Modules need no changes: `isActive()`, the safety net and the notes above apply as they are.
+
 ## Panel pages in `read_only`
 
 In `read_only` the panel refuses, by default, everything that is not browsing: running or submitting a Filament action (row, header, bulk or form), saving or creating on resource and settings pages, and any public Livewire method of a page. Filtering, sorting, paginating, searching and opening forms, confirmations and «Ver detalles» keep working. It fails closed, so a module's actions and pages are covered without doing anything.
