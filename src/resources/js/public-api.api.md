@@ -467,6 +467,18 @@ declare const _default: typeof __VLS_export;
 export default _default;
 ```
 
+## resources/js/components/layout/SiteBlock.vue
+
+```ts
+import type { ResolvedSiteBlock } from '@/types/siteBlocks';
+type __VLS_Props = {
+    block: ResolvedSiteBlock;
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+```
+
 ## resources/js/components/ui/BaseButton.vue
 
 ```ts
@@ -1196,6 +1208,17 @@ export interface RealtimeSharedProps {
 export type RealtimeStatus = 'off' | 'connecting' | 'live' | 'offline';
 export type RealtimePayload = Readonly<Record<string, unknown>>;
 export type RealtimeListener = (payload: RealtimePayload) => void;
+```
+
+## resources/js/types/siteBlocks.ts
+
+```ts
+export interface ResolvedSiteBlock {
+    key: string;
+    module: string | null;
+    component: string;
+    props: Record<string, unknown>;
+}
 ```
 
 ## resources/js/types/slots.ts
