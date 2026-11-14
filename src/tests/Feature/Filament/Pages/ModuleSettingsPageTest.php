@@ -204,17 +204,19 @@ final class ModuleSettingsPageTest extends TestCase
 
     public function test_saving_a_module_with_its_own_settings_page_stores_nothing(): void
     {
-        // A save() reaching the component after mount() sent it away must not store the schema
+        // mount() redirects such a module, so Livewire leaves no component to call save() on (and
+        // the locked $module keeps an open page from switching to it): this checks the guard in
+        // save() itself, the defence of last resort
         ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
         $this->registerOnAdminPanel(pages: [OwnClusterSettingsPage::class]);
         $this->registerBootedProvider(SettingsPageModuleProvider::owning(app(), 'test-module', OwnClusterSettingsPage::class));
         $this->actingAs(UserModel::factory()->admin()->create());
 
-        Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module'])
-            ->assertRedirect(OwnClusterSettingsPage::getUrl())
-            ->set('data.greeting', 'hello')
-            ->call('save')
-            ->assertNotNotified(__('modules.filament.settings_page.saved'));
+        $page = app(ModuleSettingsPage::class);
+        $page->module = 'test-module';
+
+        $this->assertFalse($page->hasSettings());
+        $page->save();
 
         $this->assertDatabaseMissing('settings', ['key' => 'module_settings:test-module']);
     }
