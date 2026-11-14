@@ -60,7 +60,10 @@ function mountPage(props: { event: Event; calendarLinks?: AddToCalendarLinks | n
         global: {
             plugins: [createI18n({ legacy: false, locale: 'es', messages: { es, en } })],
             stubs: {
-                ModuleSlot: { template: '<div data-module-slot />' },
+                ModuleSlot: {
+                    props: { name: { type: String, required: true } },
+                    template: '<div data-module-slot :data-slot-name="name" />',
+                },
                 AddToCalendarMenu: { template: '<div data-add-to-calendar />' },
             },
         },
@@ -169,6 +172,37 @@ describe('Events/Show', () => {
 
             expect(page.get('[data-testid="event-aside"]').classes()).not.toContain('lg:sticky');
             asideFits.value = true;
+        });
+    });
+
+    describe('conversation', () => {
+        const discussionSlot = '[data-slot-name="subject-discussion"]';
+
+        it('is a block of its own, not part of the narrow side column', () => {
+            const page = mountPage({ event: event() });
+
+            expect(page.find(discussionSlot).exists()).toBe(true);
+            expect(page.get('[data-testid="event-aside"]').find(discussionSlot).exists()).toBe(
+                false
+            );
+        });
+
+        it('comes after the description and the side column, before the link to every event', () => {
+            const page = mountPage({ event: event() });
+
+            const html = page.html();
+            const slotAt = html.indexOf('data-slot-name="subject-discussion"');
+            expect(slotAt).toBeGreaterThan(html.indexOf('data-testid="event-aside"'));
+            expect(slotAt).toBeLessThan(html.indexOf('Ver todos los eventos'));
+        });
+
+        it('leaves room only while a module draws something in it', () => {
+            const page = mountPage({ event: event() });
+
+            const block = page.get('[data-testid="event-discussion"]');
+            expect(block.find(discussionSlot).exists()).toBe(true);
+            expect(block.classes()).toContain('has-[[data-slot-key]:not(:empty)]:mt-8');
+            expect(block.classes()).not.toContain('mt-8');
         });
     });
 });
