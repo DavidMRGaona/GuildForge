@@ -59,6 +59,8 @@ Showing notices in the notification centre (the bell in the header) is covered i
 
 Telling open pages at once that something changed (a new post, a like) is covered in [Real time](./realtime.md): offer private channels with `registerRealtimeChannels()`, publish ids and numbers with `RealtimePublisherInterface`, and listen with `useRealtimeChannel`, keeping the page's polling for when it is not live.
 
+Offering blocks the administration places in the footer or inside a popup (a subscription form, a button) is covered in [Site blocks](./site-blocks.md): implement `SiteBlockInterface` with flat settings fields, return it from `registerSiteBlocks()` and draw it with a Vue component; whoever owns a placement resolves the stored blocks with `SiteBlockRendererInterface` and draws them with `SiteBlock.vue`.
+
 ---
 
 ## Getting started
@@ -2384,6 +2386,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerMediaSources()` | `class-string<MediaUsageSourceInterface>[]` | Sources of the panel media library: which records use stored files and which folders the module claims; types prefixed with the module (see [Media sources](./media-sources.md)) |
 | `registerEditorTextSources()` | `class-string<EditorTextSourceInterface>[]` | Texts written with a rich editor, whose old local images the core moves to the media storage; types prefixed with the module (see [Editor images](./editor-images.md)) |
 | `registerRealtimeChannels()` | `class-string<RealtimeChannelInterface>[]` | Private real-time channels; names start with the module, every subscription is checked on the server and fails closed (see [Real time](./realtime.md)) |
+| `registerSiteBlocks()` | `class-string<SiteBlockInterface>[]` | Blocks the administration places in the footer and inside popups; keys start with the module, settings only flat fields, drawing fails closed (see [Site blocks](./site-blocks.md)) |
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerPublicationSources()` | `class-string<PublicationSourceInterface>[]` | Published records other modules may announce elsewhere (see [Publication sources](./publications.md)) |
 | `registerLinkableRecordSources()` | `class-string<LinkableRecordSourceInterface>[]` | Records other modules may link their data to, as each viewer may see them; `find()` returns `null` for what the viewer may not see (see [Linkable records](./linkable-records.md)) |
