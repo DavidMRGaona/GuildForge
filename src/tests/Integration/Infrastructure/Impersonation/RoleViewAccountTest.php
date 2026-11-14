@@ -41,6 +41,22 @@ final class RoleViewAccountTest extends TestCase
         $this->assertNotNull($account->email_verified_at);
     }
 
+    public function test_long_role_names_are_cut_to_fit_the_columns(): void
+    {
+        // users.name and users.display_name are varchar(255): PostgreSQL rejects anything longer
+        // (SQLite does not, hence the explicit length checks)
+        RoleModel::create(['name' => 'long-one', 'display_name' => str_repeat('Ñ', 200)]);
+        RoleModel::create(['name' => 'long-two', 'display_name' => str_repeat('á', 200)]);
+
+        $account = $this->account()->create($this->rolesNamed('member', 'long-one', 'long-two'));
+
+        $this->assertIsString($account->display_name);
+        $this->assertLessThanOrEqual(255, mb_strlen($account->name));
+        $this->assertLessThanOrEqual(255, mb_strlen($account->display_name));
+        $this->assertStringEndsWith('…', $account->name);
+        $this->assertStringEndsWith('…', $account->display_name);
+    }
+
     public function test_each_account_gets_a_new_id(): void
     {
         $roles = $this->rolesNamed('member');

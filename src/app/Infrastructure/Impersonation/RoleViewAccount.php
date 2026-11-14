@@ -21,6 +21,9 @@ final readonly class RoleViewAccount
     /** Bcrypt hash of a random secret that was thrown away: nobody can sign in with it. */
     public const string PASSWORD_HASH = '$2y$12$iOpSY2EQ2o6WBi4eRmOS4OvrGQXmXZ7EzDsGtF48SdwaqFF777oVi';
 
+    /** Length of users.name and users.display_name: PostgreSQL rejects anything longer. */
+    private const int NAME_MAX_LENGTH = 255;
+
     /**
      * @param  non-empty-list<ViewedRoleDTO>  $roles
      */
@@ -28,7 +31,7 @@ final readonly class RoleViewAccount
     {
         $id = (string) Str::uuid7();
         $now = now();
-        $name = implode(' + ', array_map(static fn (ViewedRoleDTO $role): string => $role->displayName, $roles));
+        $name = $this->fitted(implode(' + ', array_map(static fn (ViewedRoleDTO $role): string => $role->displayName, $roles)));
 
         DB::table('users')->insert([
             'id' => $id,
@@ -49,5 +52,14 @@ final readonly class RoleViewAccount
         ], $roles));
 
         return UserModel::query()->findOrFail($id);
+    }
+
+    private function fitted(string $name): string
+    {
+        if (mb_strlen($name) <= self::NAME_MAX_LENGTH) {
+            return $name;
+        }
+
+        return rtrim(mb_substr($name, 0, self::NAME_MAX_LENGTH - 1)).'…';
     }
 }
