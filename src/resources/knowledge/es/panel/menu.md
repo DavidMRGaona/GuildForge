@@ -6,18 +6,20 @@ category: content
 audience: panel
 order: 60
 keywords: [menú, navegación, enlaces, cabecera, pie de página, submenú, ordenar menú, ocultar enlace, añadir enlace, enlace externo]
-related: [core.panel.legal-pages, core.panel.site-settings]
+related: [core.panel.footer, core.panel.legal-pages, core.panel.site-settings]
 conditions:
   permissions:
     all: [menu_items.view_any]
 ---
 El menú de la web tiene dos partes: la **Cabecera** y el **Pie de página**. Cada una es una pestaña de la lista.
 
+El pie de página configurable puede usar hasta cuatro menús de pie. Los que ya tienen nombre o algún enlace salen como una pestaña más. Sus nombres se ponen en **Sitio web** → **Pie de página**.
+
 ## Añadir un enlace
 
 1. En el menú lateral, abre **Sitio web** y elige **Navegación**. La página se llama «Elementos de menú».
 2. Pulsa **Crear elemento de menú**.
-3. Elige la **Ubicación**: cabecera o pie de página.
+3. Elige la **Ubicación**: la cabecera o uno de los menús del pie.
 4. Para un submenú, elige el **Elemento padre**. Déjalo vacío para un enlace de primer nivel.
 5. Escribe la **Etiqueta**: el texto del enlace.
 6. Elige la **Página** de destino. Para un enlace a otra web, escribe la **URL externa**.

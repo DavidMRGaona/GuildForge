@@ -564,6 +564,61 @@ return [
             'roles' => 'Roles inactivos',
         ],
     ],
+    'footer' => [
+        'navigation' => 'Pie de página',
+        'title' => 'Pie de página',
+        'saved' => 'Pie de página guardado',
+        'intro' => 'Compón el pie de la web por columnas. Mientras no haya ningún bloque, la web muestra el pie de siempre.',
+        'sections' => [
+            'columns' => 'Columnas',
+            'columns_help' => 'Hasta :max columnas. En el móvil se ven una debajo de otra y en tableta de dos en dos. Debajo siempre sale una barra con el copyright y los enlaces a las páginas legales publicadas.',
+            'menus' => 'Menús de enlaces',
+            'menus_help' => 'Nombres de los menús del pie, para distinguirlos en la navegación y en los bloques de enlaces. En la web solo se ve el título del bloque.',
+        ],
+        'fields' => [
+            'columns' => 'Columnas',
+            'column' => 'Columna',
+            'add_column' => 'Añadir columna',
+            'blocks' => 'Bloques',
+            'add_block' => 'Añadir bloque',
+            'title' => 'Título',
+            'title_help' => 'Opcional. Sale encima del bloque.',
+            'settings' => 'Ajustes del bloque',
+            'menu_name' => 'Nombre de «:default»',
+        ],
+        'unknown_block' => [
+            'label' => 'Bloque no disponible (:key)',
+            'help' => 'Este bloque es de un módulo que no está activo. Se conserva tal cual al guardar y vuelve a salir en la web si el módulo se activa. Bórralo si ya no lo quieres.',
+        ],
+        'broken_block' => 'No se pueden mostrar los ajustes de este bloque. Se conservan tal cual al guardar.',
+        'unavailable_block' => 'Ahora no se puede mostrar: no sale en la web hasta que vuelva a estar disponible.',
+        'blocks' => [
+            'links' => [
+                'label' => 'Enlaces',
+                'menu' => 'Menú',
+                'menu_help' => 'Los enlaces se editan en Sitio web → Navegación, en la pestaña del menú.',
+            ],
+            'text' => [
+                'label' => 'Texto',
+                'content' => 'Texto',
+            ],
+            'brand' => [
+                'label' => 'Marca y redes',
+                'show_logo' => 'Mostrar el logotipo',
+                'show_name' => 'Mostrar el nombre de la asociación',
+                'description' => 'Texto breve',
+                'show_social' => 'Mostrar las redes sociales',
+                'show_social_help' => 'Las que tienen dirección y están visibles en «Nosotros».',
+            ],
+            'contact' => [
+                'label' => 'Contacto',
+                'show_email' => 'Mostrar el email',
+                'show_phone' => 'Mostrar el teléfono',
+                'show_address' => 'Mostrar la dirección',
+                'show_link' => 'Enlazar al formulario de contacto',
+            ],
+        ],
+    ],
     'menu_items' => [
         'navigation' => 'Navegación',
         'singular' => 'elemento de menú',
@@ -599,6 +654,7 @@ return [
         'locations' => [
             'header' => 'Cabecera',
             'footer' => 'Pie de página',
+            'footer_numbered' => 'Pie de página :number',
         ],
         'targets' => [
             'self' => 'Misma pestaña',

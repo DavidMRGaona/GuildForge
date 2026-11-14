@@ -23,6 +23,8 @@ use App\Application\Content\Services\TrixContentMigratorInterface;
 use App\Application\Content\Services\TrixHtmlConverterInterface;
 use App\Application\Cookies\Services\CookieDeclarationRegistryInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Footer\Services\FooterLayoutServiceInterface;
+use App\Application\Footer\Services\FooterRendererInterface;
 use App\Application\Legal\Services\LegalMailNoticeRegistryInterface;
 use App\Application\Legal\Services\LegalMailNoticeServiceInterface;
 use App\Application\Mail\Services\EmailQuotaServiceInterface;
@@ -44,6 +46,7 @@ use App\Application\Modules\Services\ModulePermissionRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleScaffoldingServiceInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
+use App\Application\Navigation\Services\FooterMenusInterface;
 use App\Application\Navigation\Services\MenuItemHrefResolverInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\Navigation\Services\RouteRegistryInterface;
@@ -126,10 +129,13 @@ use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Content\Sources\AboutHistoryTextSource;
 use App\Infrastructure\Content\Sources\ArticleContentTextSource;
 use App\Infrastructure\Content\Sources\EventDescriptionTextSource;
+use App\Infrastructure\Content\Sources\FooterTextSource;
 use App\Infrastructure\Content\Sources\LegalPagesTextSource;
 use App\Infrastructure\Content\Sources\SiteGuideBodyTextSource;
 use App\Infrastructure\Cookies\CookieDeclarationRegistry;
 use App\Infrastructure\Factories\EloquentResponseDTOFactory;
+use App\Infrastructure\Footer\FooterRenderer;
+use App\Infrastructure\Footer\SettingsFooterLayoutService;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Legal\LegalMailNoticeRegistry;
 use App\Infrastructure\Legal\LegalMailNoticeService;
@@ -174,6 +180,7 @@ use App\Infrastructure\Navigation\Persistence\Eloquent\Repositories\EloquentMenu
 use App\Infrastructure\Navigation\Services\MenuItemHrefResolver;
 use App\Infrastructure\Navigation\Services\MenuService;
 use App\Infrastructure\Navigation\Services\RouteRegistry;
+use App\Infrastructure\Navigation\Services\SettingsFooterMenus;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -442,8 +449,14 @@ class AppServiceProvider extends ServiceProvider
         // Navigation system bindings
         $this->app->bind(MenuItemRepositoryInterface::class, EloquentMenuItemRepository::class);
         $this->app->singleton(MenuItemHrefResolverInterface::class, MenuItemHrefResolver::class);
-        $this->app->singleton(MenuServiceInterface::class, MenuService::class);
+        // Scoped: it remembers each menu for one request or job
+        $this->app->scoped(MenuServiceInterface::class, MenuService::class);
         $this->app->singleton(RouteRegistryInterface::class, RouteRegistry::class);
+        $this->app->singleton(FooterMenusInterface::class, SettingsFooterMenus::class);
+
+        // Configurable footer (core#697): the layout in settings and its blocks resolved per request
+        $this->app->singleton(FooterLayoutServiceInterface::class, SettingsFooterLayoutService::class);
+        $this->app->scoped(FooterRendererInterface::class, FooterRenderer::class);
 
         // Images inserted with the rich editors: Cloudinary URLs built locally (core#481)
         $this->app->singleton(EditorImageUrlsInterface::class, EditorImageUrls::class);
@@ -459,6 +472,7 @@ class AppServiceProvider extends ServiceProvider
                 SiteGuideBodyTextSource::class,
                 AboutHistoryTextSource::class,
                 LegalPagesTextSource::class,
+                FooterTextSource::class,
             ]);
 
             return $registry;

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\MenuItemResource\Pages;
 
+use App\Application\Navigation\Services\FooterMenusInterface;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Resources\MenuItemResource;
+use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -35,14 +37,29 @@ class ListMenuItems extends ListRecords
      */
     public function getTabs(): array
     {
-        return [
+        $menus = resolve(FooterMenusInterface::class);
+        $tabs = [
             'header' => Tab::make(__('filament.menu_items.locations.header'))
                 ->icon('heroicon-o-window')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('menu_items.location', MenuLocation::Header->value)),
-
-            'footer' => Tab::make(__('filament.menu_items.locations.footer'))
-                ->icon('heroicon-o-bars-3-bottom-left')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('menu_items.location', MenuLocation::Footer->value)),
         ];
+
+        // The first footer menu always; the others once named or holding a link, so an unused one adds no tab
+        $named = $menus->names();
+        $used = MenuItemModel::query()->distinct()->pluck('location')
+            ->map(static fn (MenuLocation $location): string => $location->value)
+            ->all();
+
+        foreach (MenuLocation::footers() as $location) {
+            if ($location !== MenuLocation::Footer && ! isset($named[$location->value]) && ! in_array($location->value, $used, true)) {
+                continue;
+            }
+
+            $tabs[$location->value] = Tab::make($menus->label($location))
+                ->icon('heroicon-o-bars-3-bottom-left')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('menu_items.location', $location->value));
+        }
+
+        return $tabs;
     }
 }

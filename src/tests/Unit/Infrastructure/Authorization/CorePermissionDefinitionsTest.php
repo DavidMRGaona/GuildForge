@@ -40,6 +40,15 @@ final class CorePermissionDefinitionsTest extends TestCase
         $this->assertSame([], $this->findDefinition('media.delete')->defaultRoles);
     }
 
+    public function test_footer_manage_is_suggested_for_editor(): void
+    {
+        $definition = $this->findDefinition('footer.manage');
+
+        $this->assertSame(['editor'], $definition->defaultRoles);
+        $this->assertSame('footer', $definition->resource);
+        $this->assertNotEmpty($definition->description);
+    }
+
     public function test_sensitive_core_permissions_have_a_description(): void
     {
         foreach (['settings.manage', 'users.assign_roles', 'modules.configure', 'modules.manage', 'pages.manage', 'admin.access'] as $key) {

@@ -431,6 +431,9 @@ export default {
     layout: {
         copyright: '© {year} {appName}. All rights reserved.',
         madeWith: 'Made with ❤️',
+        legalLinks: 'Legal pages',
+        contactForm: 'Contact us',
+        footerLinks: 'Footer links',
         selectTheme: 'Theme',
         systemTheme: 'System',
         lightTheme: 'Light',

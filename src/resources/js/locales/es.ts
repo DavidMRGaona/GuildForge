@@ -432,6 +432,9 @@ export default {
     layout: {
         copyright: '© {year} {appName}. Todos los derechos reservados.',
         madeWith: 'Hecho con ❤️',
+        legalLinks: 'Páginas legales',
+        contactForm: 'Escríbenos',
+        footerLinks: 'Enlaces del pie',
         selectTheme: 'Tema',
         systemTheme: 'Sistema',
         lightTheme: 'Claro',

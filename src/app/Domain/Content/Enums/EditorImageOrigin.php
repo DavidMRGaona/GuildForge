@@ -19,6 +19,8 @@ enum EditorImageOrigin: string
     case Knowledge = 'knowledge';
     case Legal = 'legal';
     case About = 'about';
+    /** Text blocks of the configurable footer (core#697) */
+    case Footer = 'footer';
 
     public const string FOLDER = EditorImageFolder::FOLDER;
 

@@ -65,7 +65,9 @@ final class ModuleLoaderSiteBlocksTest extends TestCase
         $this->assertSame([], $provider->registerSiteBlocks());
         $this->registerSiteBlocks($provider);
 
-        $this->assertSame([], $this->app->make(SiteBlockRegistryInterface::class)->all());
+        // Only the core's own blocks
+        $keys = array_map(static fn (SiteBlockInterface $block): string => $block->key(), $this->app->make(SiteBlockRegistryInterface::class)->all());
+        $this->assertSame([], array_values(array_filter($keys, static fn (string $key): bool => ! str_starts_with($key, 'core.'))));
     }
 
     private function registerSiteBlocks(ModuleServiceProvider $provider): void

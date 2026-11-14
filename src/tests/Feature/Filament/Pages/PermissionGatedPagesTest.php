@@ -9,6 +9,7 @@ use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\Settings\AboutPageSettings;
 use App\Filament\Pages\Settings\DashboardSettings;
+use App\Filament\Pages\Settings\FooterSettings;
 use App\Filament\Pages\Settings\LegalPagesSettings;
 use App\Filament\Pages\Settings\MailSettings;
 use App\Filament\Pages\Settings\MailStatisticsPage;
@@ -37,6 +38,7 @@ final class PermissionGatedPagesTest extends TestCase
             'dashboard settings' => [DashboardSettings::class, 'dashboard.configure', 'canAccess'],
             'legal pages' => [LegalPagesSettings::class, 'pages.manage', 'canAccess'],
             'about page' => [AboutPageSettings::class, 'pages.manage', 'canAccess'],
+            'footer page' => [FooterSettings::class, 'footer.manage', 'canAccess'],
             'mail settings' => [MailSettings::class, 'mail.configure', 'canAccess'],
             'mail health widget' => [MailHealthWidget::class, 'mail.configure', 'canView'],
             'mail statistics' => [MailStatisticsPage::class, 'mail.view_stats', 'canAccess'],

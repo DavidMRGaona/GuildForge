@@ -17,12 +17,19 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-final readonly class MenuService implements MenuServiceInterface
+/**
+ * Bound scoped: each menu is read once per request and person, however many times the page asks for it
+ * (the header, the fixed footer, several links blocks of the configurable footer).
+ */
+final class MenuService implements MenuServiceInterface
 {
+    /** @var array<string, array<MenuItemDTO>> Location and person => items, for this request */
+    private array $menus = [];
+
     public function __construct(
-        private MenuItemRepositoryInterface $repository,
-        private AuthorizationServiceInterface $authService,
-        private MenuItemHrefResolverInterface $hrefResolver,
+        private readonly MenuItemRepositoryInterface $repository,
+        private readonly AuthorizationServiceInterface $authService,
+        private readonly MenuItemHrefResolverInterface $hrefResolver,
     ) {}
 
     public function getHeaderMenu(?Authenticatable $user): array
@@ -33,6 +40,11 @@ final readonly class MenuService implements MenuServiceInterface
     public function getFooterMenu(?Authenticatable $user): array
     {
         return $this->getMenuForLocation(MenuLocation::Footer, $user);
+    }
+
+    public function getMenu(MenuLocation $location, ?Authenticatable $user): array
+    {
+        return $this->getMenuForLocation($location, $user);
     }
 
     public function userCanSeeItem(?Authenticatable $user, string $visibility, array $permissions): bool
@@ -52,9 +64,12 @@ final readonly class MenuService implements MenuServiceInterface
      */
     private function getMenuForLocation(MenuLocation $location, ?Authenticatable $user): array
     {
-        $menuItems = $this->repository->findActiveByLocationWithChildren($location);
+        $memo = $location->value.'|'.($user instanceof Authenticatable ? 'user:'.$user->getAuthIdentifier() : 'guest');
 
-        return $this->filterAndTransformItems($menuItems, $user);
+        return $this->menus[$memo] ??= $this->filterAndTransformItems(
+            $this->repository->findActiveByLocationWithChildren($location),
+            $user,
+        );
     }
 
     /**

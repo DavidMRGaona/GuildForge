@@ -58,6 +58,19 @@ final readonly class LegalPageService implements LegalPageServiceInterface
         return isset(self::LEGAL_PAGES[$slug]);
     }
 
+    public function getPublishedTitles(): array
+    {
+        $titles = [];
+
+        foreach (self::LEGAL_PAGES as $slug => $page) {
+            if ($this->isPagePublished((string) $this->settings->get($page['prefix'].'published', ''))) {
+                $titles[$slug] = __($page['title_key']);
+            }
+        }
+
+        return $titles;
+    }
+
     private function isPagePublished(string $value): bool
     {
         return $value === '1' || $value === 'true';

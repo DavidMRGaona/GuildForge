@@ -19,4 +19,11 @@ interface LegalPageServiceInterface
      * Check if a slug corresponds to a known legal page.
      */
     public function isValidSlug(string $slug): bool;
+
+    /**
+     * The published legal pages, in their usual order: slug => title.
+     *
+     * @return array<string, string>
+     */
+    public function getPublishedTitles(): array;
 }

@@ -6,6 +6,8 @@ namespace App\Http\Middleware;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Footer\DTOs\FooterDTO;
+use App\Application\Footer\Services\FooterRendererInterface;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
@@ -149,6 +151,8 @@ final class HandleInertiaRequests extends Middleware
             'moduleTranslations' => $this->getModuleTranslations(...),
             'cloudinary' => $this->getCloudinaryConfig(...),
             'navigation' => fn () => $this->getNavigation($request),
+            // The configurable footer (core#697); null keeps the fixed footer, as without a layout
+            'footer' => fn (): ?array => $this->getFooter($request),
             'socialLinks' => $this->getSocialLinks(...),
             // Site-wide defaults; a page's own `seo` prop overrides this one
             'seo' => fn (): array => app(SeoMetadataFactoryInterface::class)->forSite()->toArray(),
@@ -735,7 +739,10 @@ final class HandleInertiaRequests extends Middleware
             $user = $request->user();
 
             $headerItems = $menuService->getHeaderMenu($user);
-            $footerItems = $menuService->getFooterMenu($user);
+            // The configurable footer draws its own menus (core#697): the fixed footer's is not needed then
+            $footerItems = app(FooterRendererInterface::class)->forUser($user) instanceof FooterDTO
+                ? []
+                : $menuService->getFooterMenu($user);
 
             return [
                 'header' => array_map(fn ($item) => $item->toArray(), $headerItems),
@@ -748,6 +755,22 @@ final class HandleInertiaRequests extends Middleware
                 'header' => [],
                 'footer' => [],
             ];
+        }
+    }
+
+    /**
+     * The configurable footer resolved for this person, or null for the fixed footer.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function getFooter(Request $request): ?array
+    {
+        try {
+            return app(FooterRendererInterface::class)->forUser($request->user())?->toArray();
+        } catch (\Throwable $e) {
+            $this->logDebugError('getFooter', $e);
+
+            return null;
         }
     }
 

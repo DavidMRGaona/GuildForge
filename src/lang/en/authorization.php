@@ -27,6 +27,7 @@ return [
         'modules' => 'Modules',
         'dashboard' => 'Dashboard',
         'pages' => 'Pages',
+        'footer' => 'Footer',
     ],
 
     'actions' => [
@@ -141,6 +142,9 @@ return [
         'pages' => [
             'manage' => 'Manage legal pages and "About us"',
         ],
+        'footer' => [
+            'manage' => 'Compose the footer',
+        ],
     ],
 
     'permission_descriptions' => [
@@ -168,6 +172,9 @@ return [
         ],
         'pages' => [
             'manage' => 'Legal notice, privacy policy and "About us".',
+        ],
+        'footer' => [
+            'manage' => 'Columns and blocks of the site footer, and names of the footer menus.',
         ],
         'admin' => [
             'access' => 'Enter the admin panel.',

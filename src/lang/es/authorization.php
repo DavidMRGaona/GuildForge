@@ -37,6 +37,7 @@ return [
         'modules' => 'Módulos',
         'dashboard' => 'Escritorio',
         'pages' => 'Páginas',
+        'footer' => 'Pie de página',
     ],
 
     'actions' => [
@@ -151,6 +152,9 @@ return [
         'pages' => [
             'manage' => 'Gestionar páginas legales y «Sobre nosotros»',
         ],
+        'footer' => [
+            'manage' => 'Componer el pie de página',
+        ],
     ],
 
     'permission_descriptions' => [
@@ -178,6 +182,9 @@ return [
         ],
         'pages' => [
             'manage' => 'Aviso legal, política de privacidad y «Sobre nosotros».',
+        ],
+        'footer' => [
+            'manage' => 'Columnas y bloques del pie de la web, y nombres de los menús del pie.',
         ],
         'admin' => [
             'access' => 'Entrar en el panel de administración.',

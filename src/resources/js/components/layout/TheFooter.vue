@@ -3,8 +3,10 @@ import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import SocialLinks from '@/components/ui/SocialLinks.vue';
+import FooterBlockSection from '@/components/layout/FooterBlockSection.vue';
 import type { MenuItem, Navigation } from '@/types/navigation';
 import type { SocialMediaLinks } from '@/types/models';
+import type { ConfiguredFooter } from '@/types/footer';
 
 const { t } = useI18n();
 const page = usePage();
@@ -63,6 +65,32 @@ const footerLinks = computed(() => {
 });
 
 const socialLinks = computed(() => page.props.socialLinks as SocialMediaLinks | undefined);
+
+// The configurable footer (core#697); without it the fixed footer below is drawn, unchanged
+// The server sends it only with a block to draw; without one, the fixed footer is drawn
+const configured = computed(() => {
+    const footer = page.props.footer as ConfiguredFooter | null | undefined;
+
+    return footer && footer.columns.length > 0 ? footer : null;
+});
+
+// Literal classes, so Tailwind compiles them: one column on phones, two on tablets, the configured ones from lg
+const desktopColumns: Record<number, string> = {
+    1: 'lg:grid-cols-1',
+    2: 'lg:grid-cols-2',
+    3: 'lg:grid-cols-3',
+    4: 'lg:grid-cols-4',
+};
+
+function columnClasses(footer: ConfiguredFooter): string[] {
+    const count = footer.columns.length;
+
+    return [
+        'grid grid-cols-1 gap-x-8 gap-y-10',
+        count > 1 ? 'sm:grid-cols-2' : '',
+        desktopColumns[Math.min(count, 4)] ?? '',
+    ];
+}
 const hasSocialLinks = computed(() => {
     if (!socialLinks.value) return false;
     return Object.values(socialLinks.value).some((url) => url);
@@ -70,7 +98,58 @@ const hasSocialLinks = computed(() => {
 </script>
 
 <template>
-    <footer class="bg-neutral-800 dark:bg-neutral-900">
+    <footer v-if="configured" class="bg-neutral-800 dark:bg-neutral-900">
+        <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+            <div
+                v-if="configured.columns.length > 0"
+                data-footer-columns
+                :class="columnClasses(configured)"
+            >
+                <div
+                    v-for="(column, columnIndex) in configured.columns"
+                    :key="columnIndex"
+                    data-footer-column
+                    class="flex min-w-0 flex-col gap-8"
+                >
+                    <FooterBlockSection
+                        v-for="(entry, blockIndex) in column.blocks"
+                        :key="`${entry.block.key}-${blockIndex}`"
+                        :entry="entry"
+                    />
+                </div>
+            </div>
+
+            <!-- Fixed bottom bar: copyright and the published legal pages -->
+            <div
+                data-footer-bottom
+                :class="[
+                    'flex flex-col items-center gap-3 text-center md:flex-row md:justify-between md:text-left',
+                    configured.columns.length > 0
+                        ? 'mt-10 border-t border-neutral-700 pt-6 dark:border-neutral-800'
+                        : '',
+                ]"
+            >
+                <p class="text-sm text-neutral-300 dark:text-neutral-400">
+                    {{ t('layout.copyright', { year: currentYear, appName: configured.siteName }) }}
+                </p>
+                <nav
+                    v-if="configured.legalLinks.length > 0"
+                    :aria-label="t('layout.legalLinks')"
+                    class="flex flex-wrap justify-center gap-x-6 gap-y-2 md:justify-end"
+                >
+                    <Link
+                        v-for="link in configured.legalLinks"
+                        :key="link.href"
+                        :href="link.href"
+                        class="text-sm text-neutral-300 transition-colors hover:text-primary dark:text-neutral-400 dark:hover:text-primary"
+                    >
+                        {{ link.label }}
+                    </Link>
+                </nav>
+            </div>
+        </div>
+    </footer>
+    <footer v-else class="bg-neutral-800 dark:bg-neutral-900">
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="md:flex md:items-center md:justify-between">
                 <!-- Footer links -->

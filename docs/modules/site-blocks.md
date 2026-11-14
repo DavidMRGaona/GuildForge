@@ -164,3 +164,12 @@ $this->assertSame('components/SubscribeBlock.vue', $block?->component);
 
 - Check that a block with your schema passes the rule: `$this->assertTrue((new FlatSettingsSchemaRule)->allows($block->settingsSchema()))`.
 - Vue specs mount the module's component with the props `props()` returns; `SiteBlock.vue` itself is covered by the core.
+
+## The footer
+
+The core owns the footer placement (core ≥ the release with #697). *Sitio web → Pie de página* (`footer.manage`) composes up to four columns of blocks, each with an optional title, stored in the settings row `footer_layout` as `{"version":1,"columns":[{"blocks":[{"key","title","settings"}]}]}`. Without it, or without any block, the site draws its fixed footer unchanged.
+
+- The page offers every valid footer block (`forPlacement(Footer)`); one that is not available now keeps its form and settings but cannot be added. A stored block nobody registers (its module disabled) is kept as it is when saving and is drawn again once its module comes back.
+- Each request resolves the blocks for the person viewing (`FooterRendererInterface`, shared prop `footer`); a column left without blocks is dropped. A fixed bottom bar shows the copyright and the published legal pages.
+- Core blocks: `core.links` (one of the four footer menus, `MenuLocation::footers()`, named on the same page), `core.text` (rich text, images in `footer/content/`, editor text source `footer`), `core.brand` and `core.contact`.
+- Columns: one on phones, two from `sm`, the configured number from `lg`.

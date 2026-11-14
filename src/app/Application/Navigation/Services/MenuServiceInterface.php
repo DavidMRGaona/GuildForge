@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Navigation\Services;
 
 use App\Application\Navigation\DTOs\MenuItemDTO;
+use App\Domain\Navigation\Enums\MenuLocation;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 interface MenuServiceInterface
@@ -22,6 +23,13 @@ interface MenuServiceInterface
      * @return array<MenuItemDTO>
      */
     public function getFooterMenu(?Authenticatable $user): array;
+
+    /**
+     * Get the items of any menu (the header or one of the footer menus) filtered by user visibility.
+     *
+     * @return array<MenuItemDTO>
+     */
+    public function getMenu(MenuLocation $location, ?Authenticatable $user): array;
 
     /**
      * Check if user can see a menu item based on visibility rules.

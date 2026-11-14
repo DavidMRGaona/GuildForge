@@ -82,7 +82,7 @@ final class MoveEditorImagesToCloudinaryCommandTest extends TestCase
         $this->app->instance(EditorImageMoverInterface::class, $mover);
 
         $this->artisanCommand('content:move-editor-images-to-cloudinary', ['--source' => 'nope'])
-            ->expectsOutput('Unknown source: nope. Nothing was changed. Sources: events, articles, guides, about, legal, testing.notes.')
+            ->expectsOutput('Unknown source: nope. Nothing was changed. Sources: events, articles, guides, about, legal, footer, testing.notes.')
             ->assertExitCode(1);
     }
 

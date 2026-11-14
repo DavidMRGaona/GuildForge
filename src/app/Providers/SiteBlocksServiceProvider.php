@@ -6,6 +6,10 @@ namespace App\Providers;
 
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
+use App\Filament\SiteBlocks\BrandFooterBlock;
+use App\Filament\SiteBlocks\ContactFooterBlock;
+use App\Filament\SiteBlocks\LinksFooterBlock;
+use App\Filament\SiteBlocks\TextFooterBlock;
 use App\Infrastructure\SiteBlocks\SiteBlockRegistry;
 use App\Infrastructure\SiteBlocks\SiteBlockRenderer;
 use Illuminate\Support\ServiceProvider;
@@ -17,10 +21,24 @@ use Illuminate\Support\ServiceProvider;
  */
 final class SiteBlocksServiceProvider extends ServiceProvider
 {
+    /** In the order the footer's block picker offers them */
+    public const array CORE_BLOCKS = [
+        LinksFooterBlock::class,
+        TextFooterBlock::class,
+        BrandFooterBlock::class,
+        ContactFooterBlock::class,
+    ];
+
     public function register(): void
     {
-        // Built by hand so the cache is only asked for when warning, not at boot
-        $this->app->singleton(SiteBlockRegistryInterface::class, static fn ($app): SiteBlockRegistry => new SiteBlockRegistry($app));
+        // Built by hand so the cache is only asked for when warning, not at boot. The core's blocks come
+        // first (core#697), the modules add theirs as they load.
+        $this->app->singleton(SiteBlockRegistryInterface::class, static function ($app): SiteBlockRegistry {
+            $registry = new SiteBlockRegistry($app);
+            $registry->registerMany(self::CORE_BLOCKS);
+
+            return $registry;
+        });
         $this->app->scoped(SiteBlockRendererInterface::class, SiteBlockRenderer::class);
     }
 }
