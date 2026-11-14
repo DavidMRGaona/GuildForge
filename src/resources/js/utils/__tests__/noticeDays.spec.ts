@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { groupByNoticeDay, noticeDayOf } from '../noticeDays';
 
 // Thursday 19 November 2026, 10:00 in Madrid (the default venue zone in tests)
@@ -48,5 +48,24 @@ describe('groupByNoticeDay', () => {
 
     it('gives nothing for an empty page', () => {
         expect(groupByNoticeDay([], NOW)).toEqual([]);
+    });
+});
+
+describe('noticeDayOf in a zone ahead of UTC+12', () => {
+    afterEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    it('still finds yesterday and the Monday of the week (core#684)', async () => {
+        document.head.innerHTML = '<meta name="display-timezone" content="Pacific/Auckland">';
+        vi.resetModules();
+        const { noticeDayOf: noticeDayIn } = await import('../noticeDays');
+        // Thursday 19 November 2026, 10:00 in Auckland (UTC+13)
+        const now = new Date('2026-11-18T21:00:00Z');
+
+        expect(noticeDayIn('2026-11-19T08:00:00+13:00', now)).toBe('today');
+        expect(noticeDayIn('2026-11-18T12:00:00+13:00', now)).toBe('yesterday');
+        expect(noticeDayIn('2026-11-16T08:00:00+13:00', now)).toBe('thisWeek');
+        expect(noticeDayIn('2026-11-15T22:00:00+13:00', now)).toBe('earlier');
     });
 });
