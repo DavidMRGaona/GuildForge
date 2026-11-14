@@ -8,6 +8,7 @@ use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
+use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Resources\ArticleResource;
@@ -22,7 +23,10 @@ use Filament\Facades\Filament;
 use Filament\Livewire\GlobalSearch;
 use Filament\Navigation\NavigationGroup;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
+use Mockery;
+use RuntimeException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Knowledge\CreatesKnowledgeRecords;
 use Tests\Support\SiteNotifications\SiteTestNotification;
@@ -233,6 +237,23 @@ final class PanelTopbarTest extends TestCase
         $this->get(Dashboard::getUrl())
             ->assertOk()
             ->assertDontSee('data-panel-notifications-bell', false);
+    }
+
+    public function test_a_count_that_cannot_be_read_leaves_the_bell_out_and_the_panel_working(): void
+    {
+        $notices = Mockery::mock(SiteNotificationServiceInterface::class);
+        $notices->shouldReceive('unreadCount')->andThrow(new RuntimeException('Database down'));
+        $this->app->instance(SiteNotificationServiceInterface::class, $notices);
+        $log = Log::spy();
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get(Dashboard::getUrl())
+            ->assertOk()
+            ->assertSee('data-panel-help-link', false)
+            ->assertDontSee('data-panel-notifications-bell', false);
+        $log->shouldHaveReceived('warning')->withArgs(
+            static fn (string $message): bool => str_contains($message, 'panel bell'),
+        )->once();
     }
 
     private function notify(UserModel $user, int $times): void
