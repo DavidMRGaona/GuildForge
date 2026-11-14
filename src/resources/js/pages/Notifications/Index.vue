@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, ref, useTemplateRef } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { Bell } from '@lucide/vue';
@@ -12,7 +12,8 @@ import type { SiteNotificationsPageProps } from '@/types/siteNotifications';
 
 /**
  * Every notice of the person (core#491), newest first, 20 per page, with «Marcar todo como
- * leído» and a link to choose which ones they get.
+ * leído» and a link to choose which ones they get. Each notice's menu marks it read or unread
+ * again or hides it (core#670); the page reloads its props in place and keeps the keyboard focus.
  */
 const props = defineProps<SiteNotificationsPageProps>();
 
@@ -31,9 +32,72 @@ const {
 } = usePagination(() => props.notifications);
 
 const marking = ref(false);
+const busyId = ref<string | null>(null);
+const liveMessage = ref('');
+const list = useTemplateRef<HTMLElement>('list');
+const heading = useTemplateRef<HTMLElement>('heading');
+
+function postRowAction(id: string, url: string, done: string, after?: () => void): void {
+    // One change at a time, «Marcar todo como leído» included
+    if (busyId.value !== null || marking.value) {
+        return;
+    }
+
+    busyId.value = id;
+    router.post(
+        url,
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                liveMessage.value = done;
+                after?.();
+            },
+            onError: () => {
+                liveMessage.value = t('notifications.actions.error');
+            },
+            onFinish: () => {
+                busyId.value = null;
+            },
+        }
+    );
+}
+
+function toggleRead(id: string, isUnread: boolean): void {
+    postRowAction(
+        id,
+        isUnread ? routes.notifications.read(id) : routes.notifications.unread(id),
+        isUnread ? t('notifications.actions.markedRead') : t('notifications.actions.markedUnread')
+    );
+}
+
+/**
+ * Hide a notice and give the focus to the one now in its place. The last one of a later page
+ * leaves it empty: go back a page. With nothing left, the focus goes to the page's title.
+ */
+function hideNotice(id: string, index: number): void {
+    postRowAction(id, routes.notifications.hide(id), t('notifications.actions.hidden'), () => {
+        if (props.notifications.data.length === 0 && props.notifications.links.prev !== null) {
+            router.visit(props.notifications.links.prev);
+
+            return;
+        }
+
+        void nextTick(() => {
+            const links = Array.from(
+                list.value?.querySelectorAll<HTMLElement>('[data-testid="site-notification"]') ?? []
+            );
+            (links[index] ?? links[index - 1] ?? heading.value)?.focus();
+        });
+    });
+}
 const preferencesUrl = `${routes.profile}?tab=${MAIL_TAB}`;
 
 function markAllRead(): void {
+    if (busyId.value !== null || marking.value) {
+        return;
+    }
+
     router.post(
         routes.notifications.readAll,
         {},
@@ -56,7 +120,11 @@ function markAllRead(): void {
             class="mx-auto flex max-w-3xl flex-wrap items-end justify-between gap-4 px-4 py-6 sm:px-6 lg:px-8"
         >
             <div>
-                <h1 class="text-3xl font-bold tracking-tight text-base-primary">
+                <h1
+                    ref="heading"
+                    tabindex="-1"
+                    class="text-3xl font-bold tracking-tight text-base-primary focus:outline-none"
+                >
                     {{ t('notifications.title') }}
                 </h1>
                 <p class="mt-2 text-base text-base-secondary">
@@ -83,12 +151,19 @@ function markAllRead(): void {
     </div>
 
     <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+        <span class="sr-only" role="status" aria-live="polite">{{ liveMessage }}</span>
         <ul
             v-if="props.notifications.data.length > 0"
+            ref="list"
             class="space-y-1 rounded-lg border border-default bg-surface p-1"
         >
-            <li v-for="item in props.notifications.data" :key="item.id">
-                <SiteNotificationEntry :item="item" />
+            <li v-for="(item, index) in props.notifications.data" :key="item.id">
+                <SiteNotificationEntry
+                    :item="item"
+                    :busy="busyId === item.id"
+                    @toggle-read="toggleRead(item.id, item.unread)"
+                    @hide="hideNotice(item.id, index)"
+                />
             </li>
         </ul>
 

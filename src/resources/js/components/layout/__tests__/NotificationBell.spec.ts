@@ -191,6 +191,125 @@ describe('NotificationBell', () => {
         wrapper.unmount();
     });
 
+    it('marks one notice unread again from its menu', async () => {
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse({ unread: 0, items: [notice({ unread: false })] }))
+            .mockResolvedValueOnce(jsonResponse({ unread: 1 }));
+        const wrapper = mountBell();
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+
+        await wrapper.get('[data-testid="site-notification-menu"]').trigger('click');
+        expect(wrapper.get('[data-testid="site-notification-toggle-read"]').text()).toBe(
+            'Marcar como no leído'
+        );
+        await wrapper.get('[data-testid="site-notification-toggle-read"]').trigger('click');
+        await flushPromises();
+
+        expect(fetchMock).toHaveBeenLastCalledWith(
+            '/avisos/0193b2c4-7f1e-7a00-9c3d-5e6f7a8b9c0d/no-leido',
+            expect.objectContaining({ method: 'POST' })
+        );
+        expect(wrapper.get('[data-testid="site-notification"]').attributes('data-unread')).toBe(
+            'true'
+        );
+        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('1');
+        expect(wrapper.get('[role="status"]').text()).toBe('Aviso marcado como no leído.');
+        // The keyboard stays in the bell: back on the «⋯» it came from
+        expect(document.activeElement).toBe(
+            wrapper.get('[data-testid="site-notification-menu"]').element
+        );
+        wrapper.unmount();
+    });
+
+    it('hides a notice and moves the focus to the one in its place', async () => {
+        fetchMock
+            .mockResolvedValueOnce(
+                jsonResponse({
+                    unread: 2,
+                    items: [notice(), notice({ id: 'b', href: '/avisos/b', title: 'Segundo' })],
+                })
+            )
+            .mockResolvedValueOnce(jsonResponse({ unread: 1 }));
+        const wrapper = mountBell();
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+
+        await wrapper.findAll('[data-testid="site-notification-menu"]')[0]?.trigger('click');
+        await wrapper.get('[data-testid="site-notification-hide"]').trigger('click');
+        await flushPromises();
+
+        expect(fetchMock).toHaveBeenLastCalledWith(
+            '/avisos/0193b2c4-7f1e-7a00-9c3d-5e6f7a8b9c0d/ocultar',
+            expect.objectContaining({ method: 'POST' })
+        );
+        const entries = wrapper.findAll('[data-testid="site-notification"]');
+        expect(entries).toHaveLength(1);
+        expect(document.activeElement).toBe(entries[0]?.element);
+        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('1');
+        expect(wrapper.get('[role="status"]').text()).toBe('Aviso oculto.');
+        wrapper.unmount();
+    });
+
+    it('places the «⋯» over the row through a wrapper, never on the menu root itself', async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ unread: 1, items: [notice()] }));
+        const wrapper = mountBell();
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+
+        // Two position classes on one element: the compiled CSS lets `relative` win
+        const menuRoot = wrapper.get('[data-testid="site-notification-menu"]').element
+            .parentElement;
+        expect(menuRoot?.classList.contains('relative')).toBe(true);
+        expect(menuRoot?.classList.contains('absolute')).toBe(false);
+        expect(menuRoot?.parentElement?.classList.contains('absolute')).toBe(true);
+        wrapper.unmount();
+    });
+
+    it('closes the menu with Escape and leaves the bell open', async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ unread: 1, items: [notice()] }));
+        const wrapper = mountBell();
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+        const menu = wrapper.get('[data-testid="site-notification-menu"]');
+
+        await menu.trigger('click');
+        await wrapper
+            .get('[data-testid="site-notification-hide"]')
+            .trigger('keydown', { key: 'Escape' });
+        await flushPromises();
+
+        expect(wrapper.find('[data-testid="site-notification-hide"]').exists()).toBe(false);
+        expect(menu.attributes('aria-expanded')).toBe('false');
+        expect(document.activeElement).toBe(menu.element);
+        expect(wrapper.get('[data-testid="notification-bell"]').attributes('aria-expanded')).toBe(
+            'true'
+        );
+        wrapper.unmount();
+    });
+
+    it('keeps the notice and says so when the server refuses', async () => {
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse({ unread: 1, items: [notice()] }))
+            .mockResolvedValueOnce(jsonResponse({ message: 'Error' }, 500));
+        const wrapper = mountBell();
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+
+        await wrapper.get('[data-testid="site-notification-menu"]').trigger('click');
+        await wrapper.get('[data-testid="site-notification-hide"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.findAll('[data-testid="site-notification"]')).toHaveLength(1);
+        expect(wrapper.get('[role="status"]').text()).toBe(
+            'No se ha podido cambiar el aviso. Inténtalo de nuevo.'
+        );
+        expect(document.activeElement).toBe(
+            wrapper.get('[data-testid="site-notification-menu"]').element
+        );
+        wrapper.unmount();
+    });
+
     it('says when there is nothing yet', async () => {
         fetchMock.mockResolvedValue(jsonResponse({ unread: 0, items: [] }));
         const wrapper = mountBell();

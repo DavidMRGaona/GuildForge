@@ -33,6 +33,18 @@ interface SiteNotificationServiceInterface
      */
     public function open(object $user, string $id): ?string;
 
+    /** Mark the person's notice as read without opening it; false when it is not theirs. */
+    public function markRead(object $user, string $id): bool;
+
+    /** Mark the person's visible notice as unread again (core#670); false when it is not theirs. */
+    public function markUnread(object $user, string $id): bool;
+
+    /**
+     * Hide the person's notice from their notification centre (core#670), for them only; it counts
+     * as read and goes with the daily clean-up. False when it is not theirs.
+     */
+    public function hide(object $user, string $id): bool;
+
     /** Mark every notice of the person as read; how many were unread. */
     public function markAllRead(object $user): int;
 

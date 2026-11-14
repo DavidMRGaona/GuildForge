@@ -84,11 +84,46 @@ final class SiteNotificationsController extends Controller
         return redirect()->to($url);
     }
 
+    public function markRead(Request $request, string $notification): JsonResponse|RedirectResponse
+    {
+        $user = $this->user($request);
+        abort_unless($this->notices->markRead($user, $notification), 404);
+
+        return $this->answer($request, $user);
+    }
+
+    public function markUnread(Request $request, string $notification): JsonResponse|RedirectResponse
+    {
+        $user = $this->user($request);
+        abort_unless($this->notices->markUnread($user, $notification), 404);
+
+        return $this->answer($request, $user);
+    }
+
+    /**
+     * Hide the notice for the person (core#670). A notice of someone else is not found.
+     */
+    public function hide(Request $request, string $notification): JsonResponse|RedirectResponse
+    {
+        $user = $this->user($request);
+        abort_unless($this->notices->hide($user, $notification), 404);
+
+        return $this->answer($request, $user);
+    }
+
     public function markAllRead(Request $request): JsonResponse|RedirectResponse
     {
         $user = $this->user($request);
         $this->notices->markAllRead($user);
 
+        return $this->answer($request, $user);
+    }
+
+    /**
+     * The bell gets the new counter as JSON; the «Avisos» page goes back where it was.
+     */
+    private function answer(Request $request, UserModel $user): JsonResponse|RedirectResponse
+    {
         if ($request->expectsJson()) {
             return response()->json(['unread' => $this->notices->unreadCount($user)]);
         }

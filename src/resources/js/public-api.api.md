@@ -797,6 +797,9 @@ export interface RouteDefinitions {
         count: string;
         recent: string;
         readAll: string;
+        read: (id: string) => string;
+        unread: (id: string) => string;
+        hide: (id: string) => string;
     };
     proposals: {
         mine: string;
