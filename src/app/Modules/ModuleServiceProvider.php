@@ -8,6 +8,7 @@ use App\Application\Calendar\Contracts\CalendarAttendanceSourceInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Content\Contracts\EditorTextSourceInterface;
 use App\Application\Knowledge\Contracts\KnowledgeCapabilityInterface;
+use App\Application\Linking\Contracts\LinkableRecordSourceInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Modules\DTOs\ModuleRouteDTO;
@@ -337,6 +338,18 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<PublicationSourceInterface>>
      */
     public function registerPublicationSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register linkable record sources provided by this module.
+     * Lets other modules link their data to the module's records (drafts and panel-only ones
+     * included, as each viewer may see them) without depending on the module.
+     *
+     * @return array<class-string<LinkableRecordSourceInterface>>
+     */
+    public function registerLinkableRecordSources(): array
     {
         return [];
     }
