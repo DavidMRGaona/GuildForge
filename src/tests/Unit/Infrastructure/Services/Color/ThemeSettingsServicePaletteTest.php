@@ -347,7 +347,7 @@ final class ThemeSettingsServicePaletteTest extends TestCase
 
     private function extractRootSection(string $css): string
     {
-        if (preg_match('/:root\s*\{([^}]+)\}/s', $css, $matches)) {
+        if (preg_match('/:root:root[^{]*\{([^}]+)\}/s', $css, $matches)) {
             return $matches[1];
         }
 
@@ -356,7 +356,7 @@ final class ThemeSettingsServicePaletteTest extends TestCase
 
     private function extractDarkSection(string $css): string
     {
-        if (preg_match('/\.dark\s*\{([^}]+)\}/s', $css, $matches)) {
+        if (preg_match('/:root\.dark[^{]*\{([^}]+)\}/s', $css, $matches)) {
             return $matches[1];
         }
 

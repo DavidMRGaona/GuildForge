@@ -64,9 +64,13 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
         $button = $this->primaryButtonCss($theme->buttonStyle);
 
         // One step more specific than the defaults in app.css (:root and .dark), so the site palette
-        // wins whatever order the stylesheets load in: the dev server appends app.css after the head
+        // wins whatever order the stylesheets load in: the dev server appends app.css after the head.
+        // An element marked data-color-scheme gets the same blocks as the root in that mode (core#640):
+        // the first one for both schemes, so the variables pointing at others (buttons) resolve there
         return <<<CSS
-        :root:root {
+        :root:root,
+        :root [data-color-scheme='light'],
+        :root [data-color-scheme='dark'] {
           /* Primary palette */
           {$primaryCss}
 
@@ -144,7 +148,8 @@ final readonly class ThemeSettingsService implements ThemeSettingsServiceInterfa
           {$button}
         }
 
-        :root.dark {
+        :root.dark,
+        :root [data-color-scheme='dark'] {
           /* Semantic aliases (override app.css hardcoded values) */
           --color-primary: {$primaryDark};
           --color-primary-hover: var(--color-primary-400);
