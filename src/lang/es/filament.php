@@ -832,6 +832,11 @@ return [
         ],
     ],
     'proposals' => [
+        'reviewer_block' => [
+            'heading' => 'Lo completa quien revisa',
+            'description' => 'Quien propone no ve estos campos.',
+        ],
+        'slug_hint' => 'Se genera con el título.',
         'status' => [
             'draft' => 'Devuelta',
             'pending_review' => 'En revisión',

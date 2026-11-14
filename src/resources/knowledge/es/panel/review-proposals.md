@@ -27,7 +27,7 @@ Los borradores que la persona aún no ha enviado no salen en el panel.
 1. Pulsa la propuesta en la lista.
 2. Arriba, en **Propuesta desde la web**, ves quién la propuso, cuándo la envió y la **Nota para la administración** que dejó. Si ya la devolviste antes, también ves el **Último motivo**.
 3. Elige la **Categoría**: quien propone solo marca las **Etiquetas adicionales**, y sin categoría no se puede aprobar. Si la devuelves, la categoría se mantiene aunque la persona edite la propuesta.
-4. Si hace falta, retoca lo que quieras del formulario. La persona que la propuso no recibe el detalle de los cambios.
+4. Si hace falta, retoca lo que quieras del formulario. Los campos van en el mismo orden que en la web, y lo que la web no pide (la categoría; los precios y los enlaces de descarga en los eventos; el autor en los artículos) está al final, en el recuadro **Lo completa quien revisa**. La persona que la propuso no recibe el detalle de los cambios.
 5. Elige qué hacer con ella:
    - **Aprobar y publicar**: guarda los cambios del formulario y la publica tal como está.
    - **Devolver**: vuelve a su autor como borrador para que la corrija. Escribe el **Motivo**, que verá quien la propuso.

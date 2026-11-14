@@ -12,6 +12,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Tables\Columns\TextColumn;
@@ -199,6 +200,26 @@ final class ProposalReviewPanel
             ->columns(2)
             ->visible(fn (?Model $record): bool => ($record instanceof EventModel || $record instanceof ArticleModel)
                 && $record->proposalStatus() instanceof ProposalStatus)
+            ->columnSpanFull();
+    }
+
+    /**
+     * What the web proposal form never asks for, placed after the fields it shares with the panel
+     * (core#655). While the record is an unapproved proposal it is boxed as «Lo completa quien
+     * revisa», so an empty field never reads as something its author forgot; on any other record
+     * the same fields stand loose, as the rest of the form.
+     *
+     * @param  array<Component>  $components
+     */
+    public static function reviewerBlock(array $components): Section
+    {
+        return Section::make()
+            ->heading(fn (?Model $record): ?string => self::isUnapproved($record) ? self::text('filament.proposals.reviewer_block.heading') : null)
+            ->description(fn (?Model $record): ?string => self::isUnapproved($record) ? self::text('filament.proposals.reviewer_block.description') : null)
+            ->icon(fn (?Model $record): ?string => self::isUnapproved($record) ? 'heroicon-o-clipboard-document-check' : null)
+            ->contained(fn (?Model $record): bool => self::isUnapproved($record))
+            ->schema($components)
+            ->columns(2)
             ->columnSpanFull();
     }
 }
