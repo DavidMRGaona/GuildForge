@@ -111,8 +111,10 @@ final class ApplyRoleViewTest extends TestCase
         $this->startViewing([$this->roleId('socio')]);
         [$users, $assignments] = $this->counts();
 
-        $this->getJson('/_test/impersonation/whoami')->assertOk();
+        $response = $this->getJson('/_test/impersonation/whoami')->assertOk()->assertJsonPath('active', true);
 
+        $this->assertNotSame($this->admin->id, $response->json('user'));
+        $this->assertViewStillLive();
         $this->assertSame([$users, $assignments], $this->counts());
     }
 
@@ -123,6 +125,7 @@ final class ApplyRoleViewTest extends TestCase
 
         $this->getJson('/_test/impersonation/throws')->assertServerError();
 
+        $this->assertViewStillLive();
         $this->assertSame([$users, $assignments], $this->counts());
     }
 
@@ -208,6 +211,9 @@ final class ApplyRoleViewTest extends TestCase
         $this->startViewing([(string) $role->id]);
 
         $this->get('/admin')->assertOk();
+
+        // The administrator opens the panel too: only a live view proves it was the role
+        $this->assertViewStillLive();
     }
 
     public function test_only_the_base_role_gets_no_panel(): void
@@ -258,7 +264,8 @@ final class ApplyRoleViewTest extends TestCase
 
     /**
      * The roles as usual for the continuation check (the first read of the request), failing
-     * for the read that comes after it.
+     * for the read that comes after it. It relies on the rule reading the roles once before the
+     * middleware does.
      */
     private function rolesFailingAfterTheCheck(): ImpersonationRolesInterface
     {
@@ -304,6 +311,12 @@ final class ApplyRoleViewTest extends TestCase
                 throw new RuntimeException('database down');
             }
         });
+    }
+
+    private function assertViewStillLive(): void
+    {
+        $this->assertNull(ImpersonationLogEntryModel::query()->sole()->ended_at);
+        $this->assertTrue(app(Session::class)->has(ImpersonationSessionState::SESSION_KEY));
     }
 
     private function assertEntryRevoked(): void
