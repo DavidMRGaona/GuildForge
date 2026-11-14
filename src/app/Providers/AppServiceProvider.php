@@ -103,6 +103,7 @@ use App\Domain\Repositories\GalleryRepositoryInterface;
 use App\Domain\Repositories\PhotoRepositoryInterface;
 use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
+use App\Filament\Support\PanelSelects;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Calendar\Export\AddToCalendarLinksFactory;
 use App\Infrastructure\Calendar\Export\ICalendarWriter;
@@ -654,6 +655,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->preserveFilamentV3Defaults();
         $this->centreIconColumns();
+        PanelSelects::apply();
         $this->showFilamentDatesInDisplayTimezone();
         $this->keepSentenceCaseInBulkDeleteHeadings();
 

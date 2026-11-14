@@ -406,9 +406,9 @@ Located in `src/resources/js/components/`.
 #### FormSelect
 
 - **File**: `form/FormSelect.vue`
-- **Props**: `modelValue: string | number | null`, `options: Option[]`, `placeholder?: string`, `disabled?: boolean`, `error?: string`, `id?: string`, `name?: string`
+- **Props**: `modelValue: string | number | null`, `options: SelectOption[]`, `placeholder?: string`, `disabled?: boolean`, `error?: string`, `id?: string`, `name?: string`, `describedBy?: string`, `searchable?: boolean`
 - **Emits**: `update:modelValue`
-- **Features**: Styled select dropdown with HeadlessUI `Listbox`
+- **Features**: The site's dropdown, never the browser's list (core#648). Own implementation of the ARIA select-only combobox pattern (arrows, Home/End, Enter, Escape, Tab, type-to-find), list pinned to the button (`usePinnedPanel`, core#636). From 8 options (`SEARCH_THRESHOLD` in `selectOptions.ts`), or with `searchable`, the list starts with a search box that ignores accents and case. `SelectOption` (`value`, `label`, `level?: 0 | 1`, `disabled?`, exported from `@/components/form`): an option with `level: 1` hangs from the level-0 option above it, is drawn indented with a guide line and named with its parent (closed field and `aria-label`); blocks with children are divided; searching a child shows its parent, searching the parent shows all its children. The placeholder is a first option that clears the field (hidden while searching)
 
 #### FormCombobox
 
