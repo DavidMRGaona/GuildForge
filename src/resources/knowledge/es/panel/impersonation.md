@@ -66,7 +66,7 @@ Qué hay que saber:
 
 ## Volver a tu cuenta
 
-Pulsa **Volver a mi cuenta** en la banda, en el sitio o en el panel: vuelves a la ficha de la persona que impersonabas. Si cierras sesión, la impersonación termina y tu sesión se cierra. No hay caducidad: dura hasta que vuelves o cierras sesión.
+Pulsa **Volver a mi cuenta** en la banda, en el sitio o en el panel: vuelves a la ficha de la persona que impersonabas. Después de **Ver como roles** vuelves a la página de inicio, porque no hay ninguna ficha a la que volver. Si cierras sesión, la impersonación termina y tu sesión se cierra. No hay caducidad: dura hasta que vuelves o cierras sesión.
 
 ## Historial
 
