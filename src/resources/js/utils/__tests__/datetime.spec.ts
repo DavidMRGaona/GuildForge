@@ -76,3 +76,32 @@ describe('addVenueDays', () => {
         expect(addVenueDays('2026-10-24', 2)).toBe('2026-10-26');
     });
 });
+
+describe('venueDayStart', () => {
+    afterEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    async function dayStartIn(zone: string, dayKey: string): Promise<string> {
+        document.head.innerHTML = `<meta name="display-timezone" content="${zone}">`;
+        vi.resetModules();
+        const { venueDayStart } = await import('../datetime');
+
+        return venueDayStart(dayKey).toISOString();
+    }
+
+    it.each([
+        ['Etc/GMT+12', '2026-11-20', '2026-11-20T12:00:00.000Z'],
+        ['America/Mexico_City', '2026-11-20', '2026-11-20T06:00:00.000Z'],
+        ['Europe/Madrid', '2026-11-20', '2026-11-19T23:00:00.000Z'],
+        ['Europe/Madrid', '2026-03-29', '2026-03-28T23:00:00.000Z'],
+        ['Europe/Madrid', '2026-03-30', '2026-03-29T22:00:00.000Z'],
+        ['Asia/Kathmandu', '2026-11-20', '2026-11-19T18:15:00.000Z'],
+        ['Pacific/Kiritimati', '2026-11-20', '2026-11-19T10:00:00.000Z'],
+        // Clocks jump from 00:00 to 01:00, so the day starts at 01:00
+        ['America/Santiago', '2026-09-06', '2026-09-06T04:00:00.000Z'],
+        ['America/Havana', '2026-03-08', '2026-03-08T05:00:00.000Z'],
+    ])('returns the first instant of the venue day in %s on %s', async (zone, dayKey, expected) => {
+        expect(await dayStartIn(zone, dayKey)).toBe(expected);
+    });
+});

@@ -1,6 +1,6 @@
 import type { EventInput } from '@fullcalendar/vue3';
 import type { CalendarEntry, CalendarSourceColor } from '@/types/models';
-import { VENUE_TIMEZONE, addVenueDays, venueDayKey } from '@/utils/datetime';
+import { VENUE_TIMEZONE, addVenueDays, venueDayKey, venueDayStart } from '@/utils/datetime';
 
 export interface CalendarLegendItem {
     sourceType: string;
@@ -84,10 +84,11 @@ function expandEntry(entry: CalendarEntry, fromDayKey: string | undefined): Cale
         pieces.push({
             ...entry,
             id: `${entry.id}:${dayKey}`,
-            // Continuation days are markers, not real instants. Anchoring them at
-            // UTC midnight keeps them inside the same venue day (Madrid is UTC+1/+2)
-            // and sorts them ahead of that day's timed entries, as before.
-            start: dayKey === startDayKey ? entry.start : `${dayKey}T00:00:00Z`,
+            // Continuation days are markers, not real instants. They are anchored at
+            // the first instant of their venue day, which lies inside that day in any
+            // zone and is never later than the day's timed entries. UTC midnight only
+            // worked ahead of UTC: behind it, it is still the previous day (core#690).
+            start: dayKey === startDayKey ? entry.start : venueDayStart(dayKey).toISOString(),
             end: null,
         });
 
@@ -121,9 +122,13 @@ function expandEntry(entry: CalendarEntry, fromDayKey: string | undefined): Cale
  * - `id`: suffixed with the covered day (`${id}:${dayKey}`) so `entryUid`
  *   stays unique per day and doesn't collide with the original id or with
  *   other days of the same entry.
- * - `start`: the original start time on the first day; a UTC-midnight anchor
- *   for the covered venue day on every following day (see `expandEntry`).
- *   These continuation values are day markers, not real instants.
+ * - `start`: the original start time on the first day; on every following
+ *   day, the first instant of that venue day (venue midnight, or 01:00 where
+ *   the clocks skip midnight; see `venueDayStart`). These continuation values
+ *   are day markers, not real instants: they put the piece on its day and sort
+ *   it ahead of that day's timed entries (a tie with an entry at 00:00 keeps
+ *   the one given first; the server sends entries in start order, so the
+ *   multi-day one).
  * - `end`: always `null` -- each piece is a single-day marker, not a source
  *   of truth for the entry's real duration. Callers that need the real
  *   start/end (tooltips, detail panels) must look them up via the ORIGINAL
