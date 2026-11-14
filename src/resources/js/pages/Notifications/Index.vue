@@ -67,33 +67,44 @@ function postRowAction(id: string, url: string, done: string, after?: () => void
     );
 }
 
-function toggleRead(id: string, isUnread: boolean): void {
+/**
+ * A notice left the page (hidden, or read under «Sin leer»): the focus goes to the one now in
+ * its place. The last one of a later page leaves it empty: go back a page. With nothing left,
+ * the focus goes to the page's title.
+ */
+function afterRowLeft(index: number): void {
+    if (props.notifications.data.length === 0 && props.notifications.links.prev !== null) {
+        router.visit(props.notifications.links.prev);
+
+        return;
+    }
+
+    void nextTick(() => {
+        const links = Array.from(
+            list.value?.querySelectorAll<HTMLElement>('[data-testid="site-notification"]') ?? []
+        );
+        (links[index] ?? links[index - 1] ?? heading.value)?.focus();
+    });
+}
+
+function toggleRead(id: string, isUnread: boolean, index: number): void {
     postRowAction(
         id,
         isUnread ? routes.notifications.read(id) : routes.notifications.unread(id),
-        isUnread ? t('notifications.actions.markedRead') : t('notifications.actions.markedUnread')
+        isUnread ? t('notifications.actions.markedRead') : t('notifications.actions.markedUnread'),
+        () => {
+            // Under «Sin leer», a notice marked read is no longer listed
+            if (!props.notifications.data.some((item) => item.id === id)) {
+                afterRowLeft(index);
+            }
+        }
     );
 }
 
-/**
- * Hide a notice and give the focus to the one now in its place. The last one of a later page
- * leaves it empty: go back a page. With nothing left, the focus goes to the page's title.
- */
 function hideNotice(id: string, index: number): void {
-    postRowAction(id, routes.notifications.hide(id), t('notifications.actions.hidden'), () => {
-        if (props.notifications.data.length === 0 && props.notifications.links.prev !== null) {
-            router.visit(props.notifications.links.prev);
-
-            return;
-        }
-
-        void nextTick(() => {
-            const links = Array.from(
-                list.value?.querySelectorAll<HTMLElement>('[data-testid="site-notification"]') ?? []
-            );
-            (links[index] ?? links[index - 1] ?? heading.value)?.focus();
-        });
-    });
+    postRowAction(id, routes.notifications.hide(id), t('notifications.actions.hidden'), () =>
+        afterRowLeft(index)
+    );
 }
 const preferencesUrl = `${routes.profile}?tab=${MAIL_TAB}`;
 const unreadUrl = `${routes.notifications.index}?filtro=sin-leer`;
@@ -211,7 +222,7 @@ function markAllRead(): void {
                         <SiteNotificationEntry
                             :item="entry.item"
                             :busy="busyId === entry.item.id"
-                            @toggle-read="toggleRead(entry.item.id, entry.item.unread)"
+                            @toggle-read="toggleRead(entry.item.id, entry.item.unread, entry.index)"
                             @hide="hideNotice(entry.item.id, entry.index)"
                         />
                     </li>

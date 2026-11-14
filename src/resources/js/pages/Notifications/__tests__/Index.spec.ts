@@ -91,6 +91,61 @@ describe('Notifications/Index', () => {
         wrapper.unmount();
     });
 
+    it('under «Sin leer», a notice marked read leaves like a hidden one', async () => {
+        const wrapper = mountPage([item('a'), item('b')], 'unread');
+        post.mockImplementation((_url, _data, options) => {
+            void wrapper.setProps({ notifications: page([item('b')]) }).then(() => {
+                options.onSuccess?.();
+                options.onFinish?.();
+            });
+        });
+
+        await wrapper.findAll('[data-testid="site-notification-menu"]')[0]?.trigger('click');
+        await wrapper.get('[data-testid="site-notification-toggle-read"]').trigger('click');
+        await flushPromises();
+
+        expect(post).toHaveBeenCalledWith('/avisos/a/leido', {}, expect.anything());
+        expect(document.activeElement).toBe(
+            wrapper.get('[data-testid="site-notification"]').element
+        );
+        wrapper.unmount();
+    });
+
+    it('under «Sin leer», reading the last notice of a later page goes back a page', async () => {
+        const wrapper = mountPage([item('a')], 'unread');
+        await wrapper.setProps({
+            notifications: page([item('a')], '/avisos?filtro=sin-leer&page=1'),
+        });
+        post.mockImplementation((_url, _data, options) => {
+            void wrapper
+                .setProps({ notifications: page([], '/avisos?filtro=sin-leer&page=1') })
+                .then(() => {
+                    options.onSuccess?.();
+                    options.onFinish?.();
+                });
+        });
+
+        await wrapper.get('[data-testid="site-notification-menu"]').trigger('click');
+        await wrapper.get('[data-testid="site-notification-toggle-read"]').trigger('click');
+        await flushPromises();
+
+        expect(visit).toHaveBeenCalledWith('/avisos?filtro=sin-leer&page=1');
+        wrapper.unmount();
+    });
+
+    it('moves the groups on at midnight while the page stays open', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-11-19T22:59:00Z'));
+        const wrapper = mountPage([item('a', { notifiedAt: '2026-11-19T20:00:00+01:00' })]);
+        expect(wrapper.get('[data-testid="site-notifications-day"] h2').text()).toBe('Hoy');
+
+        // 00:00 in Madrid
+        await vi.advanceTimersByTimeAsync(2 * 60_000);
+
+        expect(wrapper.get('[data-testid="site-notifications-day"] h2').text()).toBe('Ayer');
+        wrapper.unmount();
+    });
+
     it('gives the focus to the title when the last notice is hidden', async () => {
         const wrapper = mountPage([item('a')]);
         post.mockImplementation((_url, _data, options) => {
