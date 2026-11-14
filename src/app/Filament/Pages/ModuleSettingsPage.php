@@ -9,6 +9,7 @@ use App\Domain\Modules\Exceptions\ModuleNotFoundException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Support\ModuleSettingsPages;
 use App\Modules\ModuleLoader;
 use Filament\Actions\Action;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -116,8 +117,21 @@ final class ModuleSettingsPage extends Page implements HasForms
         $this->moduleNamespace = $moduleEntity->namespace();
         $this->moduleIsEnabled = $moduleEntity->isEnabled();
 
+        // A module with its own settings page is edited there, under the module's permission:
+        // old links land on it, and a declared page that cannot be used leaves nothing to edit
+        $pages = app(ModuleSettingsPages::class);
+
+        if ($pages->declaresPage($module)) {
+            $page = $pages->usablePage($module);
+
+            abort_if($page === null, 404);
+
+            $this->redirect($page::getUrl());
+
+            return;
+        }
+
         // The generic page only edits getSettingsSchema(): a module without one has nothing here
-        // (a module with its own settings page lists that page in the panel navigation)
         if (! $this->hasSettings()) {
             Notification::make()
                 ->title(__('modules.filament.settings_page.no_settings'))
@@ -148,7 +162,8 @@ final class ModuleSettingsPage extends Page implements HasForms
      */
     protected function getModuleSettingsSchema(): array
     {
-        if ($this->module === '') {
+        // Fallback only: a module that declares its own settings page is never edited here
+        if ($this->module === '' || app(ModuleSettingsPages::class)->declaresPage($this->module)) {
             return [];
         }
 

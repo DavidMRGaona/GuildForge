@@ -6,14 +6,18 @@ namespace Tests\Feature\Filament\Pages;
 
 use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
+use App\Filament\Pages\Settings\DashboardSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Components\TextInput;
+use Filament\Pages\Page;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 use Tests\Support\Modules\RegistersBootedModuleProviders;
+use Tests\Support\Modules\UnregisteredClusterSettingsPage;
 use Tests\TestCase;
 
 final class ModuleSettingsPageTest extends TestCase
@@ -153,6 +157,77 @@ final class ModuleSettingsPageTest extends TestCase
         $breadcrumbs = $page->getBreadcrumbs();
 
         $this->assertArrayHasKey(ModulesPage::getUrl(), $breadcrumbs);
+    }
+
+    public function test_a_module_with_its_own_settings_page_is_sent_to_that_page(): void
+    {
+        // Old links and bookmarks keep working; the page itself checks the module's permission
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
+        $this->loadTestModuleWithSettingsPage(DashboardSettings::class);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get(ModuleSettingsPage::getUrl(['module' => 'test-module']))
+            ->assertRedirect(DashboardSettings::getUrl());
+    }
+
+    public function test_a_module_whose_declared_page_cannot_be_used_is_not_found(): void
+    {
+        // Not edited here either: the module chose to leave the generic page
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
+        $this->loadTestModuleWithSettingsPage(UnregisteredClusterSettingsPage::class);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $this->get(ModuleSettingsPage::getUrl(['module' => 'test-module']))
+            ->assertNotFound();
+    }
+
+    public function test_saving_a_module_with_its_own_settings_page_stores_nothing(): void
+    {
+        // A Livewire call to save() bypasses mount(): the guard in save() must refuse it too
+        ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
+        $this->loadTestModuleWithSettingsPage(DashboardSettings::class);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $page = app(ModuleSettingsPage::class);
+        $page->module = 'test-module';
+
+        $this->assertFalse($page->hasSettings());
+        $page->save();
+
+        $this->assertDatabaseMissing('settings', ['key' => 'module_settings:test-module']);
+    }
+
+    /**
+     * @param  class-string<Page>  $page
+     */
+    private function loadTestModuleWithSettingsPage(string $page): void
+    {
+        $this->registerBootedProvider(new class(app(), $page) extends ModuleServiceProvider
+        {
+            /**
+             * @param  class-string<Page>  $page
+             */
+            public function __construct(Application $app, private readonly string $page)
+            {
+                parent::__construct($app);
+            }
+
+            public function moduleName(): string
+            {
+                return 'test-module';
+            }
+
+            public function getSettingsPage(): string
+            {
+                return $this->page;
+            }
+
+            // Still returned, as by a module that has not dropped it yet: the declared page wins
+            public function getSettingsSchema(): array
+            {
+                return [TextInput::make('greeting')];
+            }
+        });
     }
 
     private function loadTestModuleWithSettings(): void

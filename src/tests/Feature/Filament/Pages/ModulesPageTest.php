@@ -15,22 +15,28 @@ use App\Domain\Modules\ValueObjects\CompatibilityIssue;
 use App\Domain\Modules\ValueObjects\CompatibilityResult;
 use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
+use App\Filament\Pages\Settings\DashboardSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Livewire;
 use Mockery;
+use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Modules\RegistersBootedModuleProviders;
+use Tests\Support\Modules\UnregisteredClusterSettingsPage;
 use Tests\TestCase;
 
 final class ModulesPageTest extends TestCase
 {
+    use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
     use RegistersBootedModuleProviders;
 
@@ -187,6 +193,80 @@ final class ModulesPageTest extends TestCase
 
         Livewire::test(ModulesPage::class)
             ->assertSee(ModuleSettingsPage::getUrl(['module' => 'configurable-module']));
+    }
+
+    public function test_a_module_with_its_own_settings_page_links_to_that_page(): void
+    {
+        // Its settings live in the cluster, guarded by its own permission, not in the generic page
+        ModuleModel::factory()->enabled()->create(['name' => 'own-page-module', 'display_name' => 'Own Page Module']);
+        $this->registerModuleWithSettingsPage('own-page-module', DashboardSettings::class);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModulesPage::class)
+            ->assertSee(DashboardSettings::getUrl())
+            ->assertDontSee(ModuleSettingsPage::getUrl(['module' => 'own-page-module']));
+    }
+
+    public function test_the_settings_link_needs_the_permission_of_the_page_it_opens(): void
+    {
+        // modules.configure alone would only lead to a 403 on the module's page
+        ModuleModel::factory()->enabled()->create(['name' => 'own-page-module', 'display_name' => 'Own Page Module']);
+        $this->registerModuleWithSettingsPage('own-page-module', DashboardSettings::class);
+
+        $this->actingAs($this->editorWithPermissions(['modules.configure']));
+        Livewire::test(ModulesPage::class)
+            ->assertSee('Own Page Module')
+            ->assertDontSee(DashboardSettings::getUrl())
+            ->assertDontSee(ModuleSettingsPage::getUrl(['module' => 'own-page-module']));
+
+        $this->actingAs($this->editorWithPermissions(['modules.configure', 'dashboard.configure']));
+        Livewire::test(ModulesPage::class)
+            ->assertSee(DashboardSettings::getUrl());
+    }
+
+    public function test_a_module_whose_declared_page_cannot_be_used_has_no_settings_link(): void
+    {
+        // Falling back to the generic page would let modules.configure edit what the module guards
+        ModuleModel::factory()->enabled()->create(['name' => 'broken-module', 'display_name' => 'Broken Module']);
+        $this->registerModuleWithSettingsPage('broken-module', UnregisteredClusterSettingsPage::class);
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(ModulesPage::class)
+            ->assertSee('Broken Module')
+            ->assertDontSee(ModuleSettingsPage::getUrl(['module' => 'broken-module']));
+    }
+
+    /**
+     * @param  class-string<Page>  $page
+     */
+    private function registerModuleWithSettingsPage(string $name, string $page): void
+    {
+        $this->registerBootedProvider(new class(app(), $name, $page) extends ModuleServiceProvider
+        {
+            /**
+             * @param  class-string<Page>  $page
+             */
+            public function __construct(Application $app, private readonly string $name, private readonly string $page)
+            {
+                parent::__construct($app);
+            }
+
+            public function moduleName(): string
+            {
+                return $this->name;
+            }
+
+            public function getSettingsPage(): string
+            {
+                return $this->page;
+            }
+
+            // Still returned, as by a module that has not dropped it yet: the declared page wins
+            public function getSettingsSchema(): array
+            {
+                return [TextInput::make('greeting')];
+            }
+        });
     }
 
     public function test_can_enable_disabled_module(): void

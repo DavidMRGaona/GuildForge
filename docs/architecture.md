@@ -485,7 +485,8 @@ src/modules/
 | `registerCalendarAttendanceSources()` | `class-string<CalendarAttendanceSourceInterface>[]` | Which entries each person takes part in, for the personal calendar (see `docs/modules/calendar.md`) |
 | `registerPolicies()` | `array<model, policy>` | Authorization policies |
 | `registerFilamentPages()` | `Page[]` | Filament pages |
-| `getSettingsSchema()` | `Component[]` | Module settings form |
+| `getSettingsPage()` | `class-string<Page>\|null` | The module's settings page in the «Configuración» cluster, opened by «Configuración» in *Módulos* (core#666) |
+| `getSettingsSchema()` | `Component[]` | Settings form of the generic page, only for modules without `getSettingsPage()` |
 | `onEnable()` / `onDisable()` | `void` | Lifecycle callbacks |
 
 Modules may also define `registerFilamentWidgets()`: it is not declared on `ModuleServiceProvider`, and the panel calls it only when it exists.
@@ -892,7 +893,7 @@ Location: `src/app/Filament/Pages/`
 | `Dashboard` | Main panel with configurable widgets |
 | `SiteSettings` | General site configuration |
 | `ModulesPage` | Listing and management of installed modules |
-| `ModuleSettingsPage` | Individual settings for each module, stored in the `settings` table under `module_settings:<name>` and deep-merged over the module's `config/settings.php` release defaults (stored values win, lists replace defaults whole), so they survive module updates, redeploys and rollbacks |
+| `ModuleSettingsPage` | Fallback for modules without a settings page of their own in the «Configuración» cluster (a module that declares one with `getSettingsPage()` is redirected there, core#666): renders the module's `getSettingsSchema()`; values stored in the `settings` table under `module_settings:<name>` and deep-merged over the module's `config/settings.php` release defaults (stored values win, lists replace defaults whole), so they survive module updates, redeploys and rollbacks |
 | `ModuleUpdatesPage` | Checking module updates and queueing them (`updates.apply`, maintenance mode required) |
 | `CoreUpdatesPage` | Deployed commit and commits pending on the deploy branch (`updates.apply`); deploys run from `deploy.yml`, the page only reports |
 
@@ -930,7 +931,7 @@ Modules can:
 - Add widgets to the dashboard
 - Register Filament pages via `registerFilamentPages()`
 - Place their entries in the core's navigation groups (`PanelNavigationGroup`) and their settings pages in the «Configuración» cluster (`SettingsCluster`); see `docs/modules/README.md` → Navigation groups
-- Provide settings forms via `getSettingsSchema()`
+- Declare their settings page in the «Configuración» cluster via `getSettingsPage()`, guarded by a permission of the module; `getSettingsSchema()` and the generic `ModuleSettingsPage` are only a fallback for modules without one
 
 ---
 

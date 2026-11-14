@@ -22,6 +22,7 @@ use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Impersonation\ReadsOnly;
+use App\Filament\Support\ModuleSettingsPages;
 use App\Filament\Support\PanelNavigationGroup;
 use App\Modules\ModuleLoader;
 use App\View\Modules\CompatibilityIssueFormatter;
@@ -448,14 +449,28 @@ final class ModulesPage extends Page implements HasForms
     }
 
     /**
-     * The generic settings page only edits getSettingsSchema(): without one it has nothing to show
-     * (a module with its own settings page lists that page in the panel navigation).
+     * Where the «Configuración» button of a module leads, or null for no button. A module that
+     * declares its own settings page gets that page, only for users who may open it (never a link
+     * that ends in a 403) and never the generic page instead. Any other module gets the generic
+     * page when it has a settings schema, since without one that page has nothing to show.
      */
-    public function hasSettingsSchema(string $name): bool
+    public function settingsUrl(string $name): ?string
     {
+        $pages = app(ModuleSettingsPages::class);
+
+        if ($pages->declaresPage($name)) {
+            $page = $pages->usablePage($name);
+
+            return $page !== null && $page::canAccess() ? $page::getUrl() : null;
+        }
+
         $provider = app(ModuleLoader::class)->getProvider($name);
 
-        return $provider !== null && $provider->getSettingsSchema() !== [];
+        if ($provider === null || $provider->getSettingsSchema() === [] || ! ModuleSettingsPage::canAccess()) {
+            return null;
+        }
+
+        return ModuleSettingsPage::getUrl(['module' => $name]);
     }
 
     private function resolveUploadedFile(mixed $tempFile): UploadedFile

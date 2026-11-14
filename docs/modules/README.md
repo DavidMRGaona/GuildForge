@@ -479,7 +479,7 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
 
 Register dynamic relationships on core models in `register()`, not `boot()` (see [Extending core functionality](#extending-core-functionality)).
 
-The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerPublicationSources()`, `registerLinkableRecordSources()`, `registerKnowledgeCapabilities()`, `registerMailCategories()` and `registerNavigation()`. The panel reads `registerFilamentPages()`, `registerFilamentWidgets()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
+The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerPublicationSources()`, `registerLinkableRecordSources()`, `registerKnowledgeCapabilities()`, `registerMailCategories()` and `registerNavigation()`. The panel reads `registerFilamentPages()`, `registerFilamentWidgets()`, `getSettingsPage()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
 
 `onEnable()` and `onDisable()` are declared on the base class, but the core never calls them: set up data in migrations and seeders, which run when the module is first enabled.
 
@@ -668,9 +668,33 @@ The values saved from the panel are stored in the core's `settings` table under 
 - Uninstalling the module with its data deleted removes the row; a plain uninstall keeps it, so a reinstall gets the settings back.
 - Core 3.6.0 moved, once, the values that older cores had written into `config/settings.php` from the panel into the table.
 
-### Settings form schema
+### Where settings are edited (core ≥ the release with #666)
 
-Override `getSettingsSchema()` in the provider. The core's module settings page renders it, reached from *Sistema → Módulos* (admins only):
+*Módulos* is for the module's lifecycle (install, enable, update, uninstall). Its settings live in *Sistema → Configuración*, on a page of the module guarded by a permission of the module:
+
+```php
+use Modules\MyModule\Filament\Pages\MyModuleSettings;
+
+public function registerFilamentPages(): array
+{
+    return [MyModuleSettings::class];
+}
+
+public function getSettingsPage(): ?string
+{
+    return MyModuleSettings::class;
+}
+```
+
+- `getSettingsPage()` returns the page class (`null` by default). The page is listed in `registerFilamentPages()`, joins the cluster (`$cluster = SettingsCluster::class`) and takes a free sort slot (see *Navigation groups*). The «Configuración» button of the module's card opens it, and only shows to users the page's `canAccess()` lets in, so it never leads to a 403.
+- Once a page is declared, the generic settings page (`/admin/modules/<name>/settings`) no longer edits the module: it redirects to the declared page, and `getSettingsSchema()` is ignored even if it still returns fields.
+- It fails closed: a declared page that does not exist, is not a Filament page, is not registered in the panel or is outside the cluster gives no button, the generic page answers 404 and a warning goes to the log. The generic page never takes over.
+- The generic page with `getSettingsSchema()` stays as a fallback for modules without a page of their own (third-party ones), behind `modules.configure`. That permission is not admin-only and is not the module's, so new modules do not rely on it.
+- Moving from the schema to a page of your own keeps the saved values as long as the page reads and writes them with `ModuleManagerServiceInterface::getSettings()` / `updateSettings()` (the same `module_settings:<name>` row).
+
+### Settings form schema (fallback)
+
+For modules without a page of their own, override `getSettingsSchema()` in the provider. The core's generic module settings page renders it, reached from the «Configuración» button in *Sistema → Módulos* (permission `modules.configure`):
 
 ```php
 use Filament\Forms\Components\TextInput;
@@ -703,7 +727,7 @@ public function getSettingsSchema(): array
 }
 ```
 
-A module without a settings schema has no generic settings page; it can still ship its own settings page (see below).
+A module without a settings schema has no generic settings page.
 
 ### Panel code for core 3 (Filament 5)
 
@@ -712,8 +736,8 @@ Core 3.0 runs Filament 5 on Livewire 4. A module that adds panel code declares `
 - **Namespaces.** Forms and infolists are schemas: `form(Schema $schema): Schema` and `infolist(Schema $schema): Schema` with `Filament\Schemas\Schema`. Layout components (`Section`, `Grid`, `Fieldset`, `Tabs`, `Group`, `Wizard`) live in `Filament\Schemas\Components`, and `Get`/`Set` in `Filament\Schemas\Components\Utilities`. Every action (row, bulk, header, form) is a `Filament\Actions\*` class; tables use `->recordActions()` and `->toolbarActions()`. `Filament\Support\Enums\Width` replaces `MaxWidth`.
 - **Resources** extend `App\Filament\Resources\BaseResource` and type their static properties as Filament 5 does: `protected static string|\BackedEnum|null $navigationIcon`, `protected static string|\UnitEnum|null $navigationGroup`. `php artisan module:make-filament-resource` (and `module:make-relation-manager` and `module:make-widget`) generate this shape.
 - **Registering panel code.** The panel only looks at enabled, compatible modules. Resources are discovered from `src/Filament/Resources/*Resource.php`; pages come from `registerFilamentPages()` (declared on `ModuleServiceProvider`, returns page classes); widgets come from a `registerFilamentWidgets()` method on the module's provider (not declared on `ModuleServiceProvider`: the panel calls it only when it exists; `module:make` adds it). There is no `registerFilamentResources()`.
-- **Settings.** `getSettingsSchema()` returns schema components (`Filament\Schemas\Components\*` for layout, `Filament\Forms\Components\*` for fields), rendered by the core's module settings page. Enum-backed fields are stored as their value (`$enum->value`); inside the form, `$get()` returns the enum instance (compare with `=== MyEnum::Case`).
-- **Settings pages of your own** that render the core's `filament.pages.simple-settings` view set `protected string $view` (no longer static) and define `form(Schema $schema): Schema` (state path `data`), `getFormActions(): array` and `save(): void`. The view renders `<form wire:submit="save">` with the form and `<x-filament::actions :actions="$this->getFormActions()" />`. Read the values with `ModuleManagerServiceInterface::getSettings()` and save them with `updateSettings()`, so they land in the same `module_settings:<name>` row as the generic page's.
+- **Settings.** `getSettingsSchema()` returns schema components (`Filament\Schemas\Components\*` for layout, `Filament\Forms\Components\*` for fields), rendered by the core's generic module settings page while the module declares no page of its own (`getSettingsPage()`). Enum-backed fields are stored as their value (`$enum->value`); inside the form, `$get()` returns the enum instance (compare with `=== MyEnum::Case`).
+- **Settings pages of your own** (declared with `getSettingsPage()`, see *Where settings are edited*) that render the core's `filament.pages.simple-settings` view set `protected string $view` (no longer static) and define `form(Schema $schema): Schema` (state path `data`), `getFormActions(): array` and `save(): void`. The view renders `<form wire:submit="save">` with the form and `<x-filament::actions :actions="$this->getFormActions()" />`. Read the values with `ModuleManagerServiceInterface::getSettings()` and save them with `updateSettings()`, so they land in the same `module_settings:<name>` row as the generic page's.
 - **Defaults kept from core 2.** The core sets them globally with `configureUsing()`, so the panel behaves as it did on core 2 and module code inherits them too: table filters apply on change (`deferFilters(false)`), no implicit key sort (`defaultKeySort(false)`), page sizes `5, 10, 25, 50, all`; `Section`, `Grid` and `Fieldset` span the full width; `FileUpload`, `ImageColumn` and `ImageEntry` use public visibility. Override them per component when you need otherwise.
 - **Tables that fit.** Every list table, relation manager and table widget fits at 375, 768, 1024 and 1280 px with the sidebar open: more than one row action goes in a single `ActionGroup` (the ⋯ menu), secondary columns show with `->visibleFrom('sm'|'md'|'xl'|'2xl')` and the main text column wraps (`->wrap()`). A table that hides columns adds `App\Filament\Actions\RowDetailsAction::make()` first in that menu, or `RowDetailsAction::makeIconButton()` when it has no other row action (core ≥ the release with #399): it opens a slide-over with every column of the row, drawn as the table draws it, and hides itself from the width where every column already shows. Tables whose rows come from `->records()` (arrays, not models) are supported from core 3.41.1 (#403). Icon and colour columns are centred globally; centre short counters with `->alignCenter()`.
 - **No panel CSS.** The panel theme (`resources/css/filament/admin/theme.css`, built with Vite) only scans the core's `app/Filament` and `resources/views/filament`: module views and classes are not compiled into it, and modules cannot add a stylesheet to the panel. Style module panel code with Filament components and their props (`badge()`, `color()`, `icon()`, `->extraAttributes()` with existing classes), never with Tailwind classes of your own.
@@ -808,7 +832,7 @@ protected static ?string $cluster = SettingsCluster::class;
 protected static ?int $navigationSort = 130;
 ```
 
-Core settings use 10–50 (Configuración del sitio 10 · Correo 20 · Estadísticas de correo 30 · Escritorio 40 · Propuestas 50). Module slots: Banner de cookies 110 · Encuestas 120 · Foro 125 · Mesas 130 · Notificaciones a canales 140 · Página de enlaces 150 · Reservas 160 · Socios 170. A clustered page's path and route name gain the cluster prefix (`/admin/configuracion/<slug>`, `filament.admin.configuracion.pages.<slug>`). The core keeps a redirect under the old path and route name, query string included, so existing links and guides keep working; new guides use the new name.
+Core settings use 10–50 (Configuración del sitio 10 · Correo 20 · Estadísticas de correo 30 · Escritorio 40 · Propuestas 50). Module slots: Anuncios 105 · Banner de cookies 110 · Encuestas 120 · Foro 125 · Inscripciones 127 · Mesas 130 · Notificaciones a canales 140 · Página de enlaces 150 · Reservas 160 · Socios 170 · Torneos 180. A module declares its page with `getSettingsPage()` too, so the «Configuración» button of *Módulos* opens it (see [Module settings](#module-settings)). A clustered page's path and route name gain the cluster prefix (`/admin/configuracion/<slug>`, `filament.admin.configuracion.pages.<slug>`). The core keeps a redirect under the old path and route name, query string included, so existing links and guides keep working; new guides use the new name.
 
 Modules declare no groups of their own: `registerNavigationGroups()` was removed from `ModuleServiceProvider` once every module had migrated (core#429).
 
@@ -2369,5 +2393,6 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |
 | `registerFilamentPages()` | `class-string<Page>[]` | Filament pages |
 | `registerFilamentWidgets()` | `class-string<Widget>[]` | Dashboard widgets (optional method, not declared on the base class) |
-| `getSettingsSchema()` | `Filament\Schemas\Components\Component[]` | Form schema of the module settings page |
+| `getSettingsPage()` | `class-string<Page>\|null` | The module's settings page in the «Configuración» cluster (see [Where settings are edited](#where-settings-are-edited-core--the-release-with-666)) |
+| `getSettingsSchema()` | `Filament\Schemas\Components\Component[]` | Form schema of the generic module settings page, ignored once `getSettingsPage()` declares a page |
 | `onEnable()`, `onDisable()` | `void` | Declared, but never called by the core |
