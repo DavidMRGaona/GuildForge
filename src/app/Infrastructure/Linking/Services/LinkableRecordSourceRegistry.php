@@ -16,6 +16,12 @@ final class LinkableRecordSourceRegistry implements LinkableRecordSourceRegistry
     /** @var array<class-string, ?string> Map of source class to owning module (null for core). */
     private array $sources = [];
 
+    /** @var array<string, LinkableRecordSourceInterface>|null Sources built in, keyed by type. */
+    private ?array $resolved = null;
+
+    /** The request or job the sources were built in; another one builds them again. */
+    private ?LinkableRecordSourceScope $resolvedIn = null;
+
     public function __construct(
         private readonly Container $container,
     ) {}
@@ -23,6 +29,7 @@ final class LinkableRecordSourceRegistry implements LinkableRecordSourceRegistry
     public function register(string $sourceClass, ?string $module = null): void
     {
         $this->sources[$sourceClass] = $module;
+        $this->forgetResolved();
     }
 
     /**
@@ -47,6 +54,46 @@ final class LinkableRecordSourceRegistry implements LinkableRecordSourceRegistry
      * @return array<string, LinkableRecordSourceInterface>
      */
     public function sources(): array
+    {
+        $scope = $this->container->make(LinkableRecordSourceScope::class);
+
+        if ($this->resolved === null || $this->resolvedIn !== $scope) {
+            $this->resolved = $this->build();
+            $this->resolvedIn = $scope;
+        }
+
+        return $this->resolved;
+    }
+
+    public function source(string $type): ?LinkableRecordSourceInterface
+    {
+        return $this->sources()[$type] ?? null;
+    }
+
+    public function unregisterModule(string $module): void
+    {
+        $this->sources = array_filter(
+            $this->sources,
+            fn (?string $sourceModule): bool => $sourceModule !== $module
+        );
+        $this->forgetResolved();
+    }
+
+    public function clear(): void
+    {
+        $this->sources = array_filter(
+            $this->sources,
+            fn (?string $sourceModule): bool => $sourceModule === null
+        );
+        $this->forgetResolved();
+    }
+
+    /**
+     * Build every registered source, keyed by type; what cannot be used is skipped and logged.
+     *
+     * @return array<string, LinkableRecordSourceInterface>
+     */
+    private function build(): array
     {
         $resolved = [];
 
@@ -80,22 +127,10 @@ final class LinkableRecordSourceRegistry implements LinkableRecordSourceRegistry
         return $resolved;
     }
 
-    public function source(string $type): ?LinkableRecordSourceInterface
+    private function forgetResolved(): void
     {
-        return $this->sources()[$type] ?? null;
-    }
-
-    public function unregisterModule(string $module): void
-    {
-        $this->sources = array_filter(
-            $this->sources,
-            fn (?string $sourceModule): bool => $sourceModule !== $module
-        );
-    }
-
-    public function clear(): void
-    {
-        $this->sources = [];
+        $this->resolved = null;
+        $this->resolvedIn = null;
     }
 
     /**

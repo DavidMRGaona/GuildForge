@@ -37,6 +37,9 @@ interface LinkableRecordSourceRegistryInterface
      * for a type wins. Only enabled modules register sources, so a disabled or uninstalled
      * module's types have no source.
      *
+     * The sources are built once per request or queued job and kept until it ends or the
+     * registrations change, so a source that cannot be used is logged once, not on every call.
+     *
      * @return array<string, LinkableRecordSourceInterface>
      */
     public function sources(): array;
@@ -52,7 +55,9 @@ interface LinkableRecordSourceRegistryInterface
     public function unregisterModule(string $module): void;
 
     /**
-     * Clear all registered linkable record source classes.
+     * Unregister every module's linkable record source classes. Those the core registered
+     * itself (without a module, like its events) stay: the core offers them whatever modules
+     * are enabled.
      */
     public function clear(): void;
 }

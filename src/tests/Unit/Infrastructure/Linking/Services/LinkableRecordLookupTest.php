@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Linking\Services;
 
+use App\Application\Linking\Contracts\FindsLinkableRecordsInBatches;
 use App\Application\Linking\DTOs\LinkableRecordDTO;
 use App\Application\Linking\Services\LinkableRecordLookupInterface;
 use App\Infrastructure\Linking\Services\LinkableRecordLookup;
 use App\Infrastructure\Linking\Services\LinkableRecordSourceRegistry;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Support\Linking\BatchFakeLinkableRecordSource;
 use Tests\Support\Linking\FakeLinkableRecordSource;
 use Tests\Support\Linking\OtherFakeLinkableRecordSource;
+use Tests\Support\Linking\StrayBatchLinkableRecordSource;
+use Tests\Support\Linking\ThrowingBatchLinkableRecordSource;
 use Tests\Support\Linking\ThrowingLinkableRecordSource;
 use Tests\TestCase;
 
@@ -27,14 +31,14 @@ final class LinkableRecordLookupTest extends TestCase
     {
         parent::setUp();
 
-        FakeLinkableRecordSource::$records = [];
+        $this->resetFakes();
         $this->registry = new LinkableRecordSourceRegistry($this->app);
         $this->lookup = new LinkableRecordLookup($this->registry);
     }
 
     protected function tearDown(): void
     {
-        FakeLinkableRecordSource::$records = [];
+        $this->resetFakes();
 
         parent::tearDown();
     }
@@ -130,11 +134,122 @@ final class LinkableRecordLookupTest extends TestCase
     }
 
     #[Test]
+    public function find_many_asks_a_batch_source_once_and_keys_the_answer_by_id_in_the_order_asked(): void
+    {
+        $this->registry->register(BatchFakeLinkableRecordSource::class, 'example-module');
+        FakeLinkableRecordSource::$records = [
+            $this->record('batch-fake', 'one'),
+            $this->record('batch-fake', 'two'),
+            $this->record('batch-fake', 'three'),
+        ];
+
+        $records = $this->lookup->findMany('batch-fake', ['two', 'missing', 'one', 'two'], self::VIEWER);
+
+        $this->assertSame(['two', 'one'], array_keys($records));
+        $this->assertSame('one', $records['one']->id);
+        $this->assertSame([['two', 'missing', 'one']], BatchFakeLinkableRecordSource::$batches);
+    }
+
+    #[Test]
+    public function find_many_falls_back_to_one_find_per_id_for_sources_without_batches(): void
+    {
+        $this->registry->register(FakeLinkableRecordSource::class, 'example-module');
+        FakeLinkableRecordSource::$records = [$this->record('fake', 'one'), $this->record('fake', 'two')];
+
+        $records = $this->lookup->findMany('fake', ['two', 'missing', 'one', 'one'], self::VIEWER);
+
+        $this->assertSame(['two', 'one'], array_keys($records));
+        $this->assertSame(['two', 'missing', 'one'], FakeLinkableRecordSource::$askedIds);
+    }
+
+    #[Test]
+    public function find_many_without_ids_asks_nothing(): void
+    {
+        $this->registry->register(BatchFakeLinkableRecordSource::class, 'example-module');
+
+        $this->assertSame([], $this->lookup->findMany('batch-fake', [], self::VIEWER));
+        $this->assertSame([], BatchFakeLinkableRecordSource::$batches);
+    }
+
+    #[Test]
+    public function find_many_for_a_type_without_a_source_shows_nothing_and_is_not_an_error(): void
+    {
+        $log = Log::spy();
+
+        $this->assertSame([], $this->lookup->findMany('fake', ['one'], self::VIEWER));
+        $log->shouldNotHaveReceived('error');
+    }
+
+    #[Test]
+    public function find_many_shows_nothing_and_logs_once_when_the_source_throws(): void
+    {
+        $log = Log::spy();
+        $this->registry->registerMany([ThrowingBatchLinkableRecordSource::class, ThrowingLinkableRecordSource::class], 'broken-module');
+
+        $this->assertSame([], $this->lookup->findMany('throwing-batch', ['one', 'two'], self::VIEWER));
+        $this->assertSame([], $this->lookup->findMany('throwing', ['one', 'two'], self::VIEWER));
+        $log->shouldHaveReceived('error')->twice();
+    }
+
+    #[Test]
+    public function find_many_drops_records_not_asked_for_or_of_another_type(): void
+    {
+        $log = Log::spy();
+        $this->registry->register(StrayBatchLinkableRecordSource::class, 'example-module');
+        FakeLinkableRecordSource::$records = [
+            $this->record('batch-fake', 'one'),
+            $this->record('batch-fake', 'not-asked'),
+            $this->record('other-fake', 'two'),
+            $this->record('batch-fake', 'one'),
+        ];
+
+        $records = $this->lookup->findMany('batch-fake', ['one', 'two'], self::VIEWER);
+
+        $this->assertSame(['one'], array_keys($records));
+        $log->shouldHaveReceived('error')->once();
+    }
+
+    #[Test]
+    public function find_many_in_the_fallback_drops_records_answered_for_another_type_or_id(): void
+    {
+        $log = Log::spy();
+        $this->registry->register(OtherFakeLinkableRecordSource::class, 'example-module');
+        FakeLinkableRecordSource::$records = [$this->record('fake', 'one'), $this->record('fake', 'two')];
+
+        // The source answers with 'fake' records although it offers 'other-fake'
+        $this->assertSame([], $this->lookup->findMany('other-fake', ['one', 'two'], self::VIEWER));
+        $log->shouldHaveReceived('error')->once();
+    }
+
+    #[Test]
+    public function find_many_never_hands_a_source_more_ids_than_the_cap_at_once(): void
+    {
+        $this->registry->register(BatchFakeLinkableRecordSource::class, 'example-module');
+        $ids = array_map(fn (int $index): string => "record-{$index}", range(1, FindsLinkableRecordsInBatches::MAX_IDS + 5));
+        FakeLinkableRecordSource::$records = array_map(fn (string $id): LinkableRecordDTO => $this->record('batch-fake', $id), $ids);
+
+        $records = $this->lookup->findMany('batch-fake', $ids, self::VIEWER);
+
+        $this->assertSame($ids, array_keys($records));
+        $this->assertSame(
+            [FindsLinkableRecordsInBatches::MAX_IDS, 5],
+            array_map(count(...), BatchFakeLinkableRecordSource::$batches),
+        );
+    }
+
+    #[Test]
     public function the_lookup_is_a_container_singleton(): void
     {
         $lookup = $this->app->make(LinkableRecordLookupInterface::class);
 
         $this->assertSame($lookup, $this->app->make(LinkableRecordLookupInterface::class));
+    }
+
+    private function resetFakes(): void
+    {
+        FakeLinkableRecordSource::$records = [];
+        FakeLinkableRecordSource::$askedIds = [];
+        BatchFakeLinkableRecordSource::$batches = [];
     }
 
     private function record(string $type, string $id): LinkableRecordDTO

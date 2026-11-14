@@ -30,6 +30,21 @@ interface LinkableRecordLookupInterface
     public function find(string $type, string $id, string $viewerId): ?LinkableRecordDTO;
 
     /**
+     * The records of the type among $ids that the viewer may see, keyed by id, in the order
+     * asked (repeated ids count once). An id that does not exist or is hidden is simply absent.
+     *
+     * A source implementing FindsLinkableRecordsInBatches is asked at most
+     * FindsLinkableRecordsInBatches::MAX_IDS ids per call (longer lists are split); any other
+     * source is asked once per id through find(). Empty when the type has no source or the
+     * source failed for any of them; records answered for ids not asked, or of another type, are
+     * dropped and logged.
+     *
+     * @param  list<string>  $ids
+     * @return array<string, LinkableRecordDTO>
+     */
+    public function findMany(string $type, array $ids, string $viewerId): array;
+
+    /**
      * Records of the type matching the query that the viewer may see, at most $limit (capped at
      * MAX_SEARCH_LIMIT; below 1 nothing). Empty when the type has no source or the source failed.
      *
