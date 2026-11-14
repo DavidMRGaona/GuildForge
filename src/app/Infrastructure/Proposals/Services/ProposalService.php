@@ -6,6 +6,7 @@ namespace App\Infrastructure\Proposals\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Content\Services\RichTextSanitizerInterface;
+use App\Application\DTOs\Response\TagResponseDTO;
 use App\Application\Proposals\Contracts\ProposalApprovalStepInterface;
 use App\Application\Proposals\DTOs\ArticleProposalDataDTO;
 use App\Application\Proposals\DTOs\EventProposalDataDTO;
@@ -13,6 +14,7 @@ use App\Application\Proposals\Services\EventProposalRequestServiceInterface;
 use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
 use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
+use App\Application\Proposals\Services\ProposalTagOptionsInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Domain\Proposals\Enums\ProposalAuthorAction;
@@ -30,7 +32,6 @@ use App\Domain\Proposals\Exceptions\ProposalNotAllowedException;
 use App\Domain\Proposals\Exceptions\ProposalNotFoundException;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
-use App\Infrastructure\Persistence\Eloquent\Models\TagModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\Builder;
@@ -58,15 +59,17 @@ final readonly class ProposalService implements ProposalServiceInterface
         private RichTextSanitizerInterface $sanitizer,
         private Container $container,
         private EventProposalRequestServiceInterface $requests,
+        private ProposalTagOptionsInterface $tagOptions,
     ) {}
 
     public function createEvent(string $userId, EventProposalDataDTO $data): string
     {
         $this->assertEligible(ProposalType::Event, $userId);
         $attributes = $this->eventAttributes($data);
-        $tagIds = $this->tagIds(ProposalType::Event, $data->tagIds);
+        $tagIds = $this->additionalTagIds(ProposalType::Event, $data->tagIds);
+        $categoryId = $this->categoryId(ProposalType::Event, $userId, $data->categoryId);
 
-        return DB::transaction(function () use ($userId, $attributes, $tagIds, $data): string {
+        return DB::transaction(function () use ($userId, $attributes, $tagIds, $categoryId, $data): string {
             $this->lockAccount($userId);
             $this->assertDraftsBelowCap($userId);
 
@@ -78,7 +81,7 @@ final readonly class ProposalService implements ProposalServiceInterface
                 'proposed_by' => $userId,
             ]);
             $event->save();
-            $event->tags()->sync($tagIds);
+            $this->syncTags($event, $tagIds, $categoryId);
             $this->saveModuleRequests((string) $event->getKey(), $data);
 
             return (string) $event->getKey();
@@ -88,14 +91,15 @@ final readonly class ProposalService implements ProposalServiceInterface
     public function updateEvent(string $userId, string $eventId, EventProposalDataDTO $data): void
     {
         $attributes = $this->eventAttributes($data);
-        $tagIds = $this->tagIds(ProposalType::Event, $data->tagIds);
+        $tagIds = $this->additionalTagIds(ProposalType::Event, $data->tagIds);
+        $categoryId = $this->categoryId(ProposalType::Event, $userId, $data->categoryId);
 
-        DB::transaction(function () use ($userId, $eventId, $attributes, $tagIds, $data): void {
+        DB::transaction(function () use ($userId, $eventId, $attributes, $tagIds, $categoryId, $data): void {
             $event = $this->authorsProposal(ProposalType::Event, $eventId, $userId, ProposalAuthorAction::Edit, 'edited');
 
             $event->forceFill($attributes);
             $event->save();
-            $event->tags()->sync($tagIds);
+            $this->syncTags($event, $tagIds, $categoryId);
             $this->saveModuleRequests($eventId, $data);
         });
     }
@@ -104,9 +108,10 @@ final readonly class ProposalService implements ProposalServiceInterface
     {
         $this->assertEligible(ProposalType::Article, $userId);
         $attributes = $this->articleAttributes($data);
-        $tagIds = $this->tagIds(ProposalType::Article, $data->tagIds);
+        $tagIds = $this->additionalTagIds(ProposalType::Article, $data->tagIds);
+        $categoryId = $this->categoryId(ProposalType::Article, $userId, $data->categoryId);
 
-        return DB::transaction(function () use ($userId, $attributes, $tagIds): string {
+        return DB::transaction(function () use ($userId, $attributes, $tagIds, $categoryId): string {
             $this->lockAccount($userId);
             $this->assertDraftsBelowCap($userId);
 
@@ -123,7 +128,7 @@ final readonly class ProposalService implements ProposalServiceInterface
                 'proposed_by' => $userId,
             ]);
             $article->save();
-            $article->tags()->sync($tagIds);
+            $this->syncTags($article, $tagIds, $categoryId);
 
             return (string) $article->getKey();
         });
@@ -132,9 +137,10 @@ final readonly class ProposalService implements ProposalServiceInterface
     public function updateArticle(string $userId, string $articleId, ArticleProposalDataDTO $data): void
     {
         $attributes = $this->articleAttributes($data);
-        $tagIds = $this->tagIds(ProposalType::Article, $data->tagIds);
+        $tagIds = $this->additionalTagIds(ProposalType::Article, $data->tagIds);
+        $categoryId = $this->categoryId(ProposalType::Article, $userId, $data->categoryId);
 
-        DB::transaction(function () use ($userId, $articleId, $attributes, $tagIds): void {
+        DB::transaction(function () use ($userId, $articleId, $attributes, $tagIds, $categoryId): void {
             $article = $this->authorsProposal(ProposalType::Article, $articleId, $userId, ProposalAuthorAction::Edit, 'edited');
 
             if ($article->getAttribute('title') !== $attributes['title']) {
@@ -144,7 +150,7 @@ final readonly class ProposalService implements ProposalServiceInterface
 
             $article->forceFill($attributes);
             $article->save();
-            $article->tags()->sync($tagIds);
+            $this->syncTags($article, $tagIds, $categoryId);
         });
     }
 
@@ -176,7 +182,7 @@ final readonly class ProposalService implements ProposalServiceInterface
 
         $user = UserModel::query()->find($userId);
 
-        if ($user instanceof UserModel && $this->authorization->can($user, $type->publishDirectlyPermission())) {
+        if ($user instanceof UserModel && $this->authorization->can($user, $type->publishDirectlyPermission()) && $this->hasCategoryWhenNeeded($type, $id)) {
             try {
                 $this->approveProposal($type, $id, null, $userId);
 
@@ -579,21 +585,69 @@ final readonly class ProposalService implements ProposalServiceInterface
     }
 
     /**
+     * The additional tags (subtags) of the type among the ones sent: whoever proposes never sets a
+     * category, which the panel's form keeps apart and would drop on approval (core#654).
+     *
      * @param  list<string>  $ids
      * @return list<string>
      */
-    private function tagIds(ProposalType $type, array $ids): array
+    private function additionalTagIds(ProposalType $type, array $ids): array
     {
-        $ids = array_values(array_filter(array_unique($ids), Str::isUuid(...)));
+        $allowed = array_map(static fn (TagResponseDTO $tag): string => $tag->id, $this->tagOptions->additionalTags($type));
 
-        if ($ids === []) {
-            return [];
+        return array_values(array_intersect(array_unique($ids), $allowed));
+    }
+
+    /**
+     * The category sent, when the person is offered the categories of the type (whoever may
+     * publish it directly) and it is one of them; null otherwise.
+     */
+    private function categoryId(ProposalType $type, string $userId, ?string $categoryId): ?string
+    {
+        if ($categoryId === null) {
+            return null;
         }
 
-        /** @var list<string> $existing */
-        $existing = TagModel::query()->forType($type->value)->whereIn('id', $ids)->pluck('id')->all();
+        foreach ($this->tagOptions->categoriesFor($type, $userId) as $category) {
+            if ($category->id === $categoryId) {
+                return $categoryId;
+            }
+        }
 
-        return $existing;
+        return null;
+    }
+
+    /**
+     * Replaces the additional tags with the ones sent. The category stays as it is unless a new
+     * one comes: whoever reviews may have picked it before returning the proposal to a draft.
+     *
+     * @param  list<string>  $tagIds
+     */
+    private function syncTags(EventModel|ArticleModel $proposal, array $tagIds, ?string $categoryId): void
+    {
+        /** @var list<string> $categories */
+        $categories = $categoryId !== null
+            ? [$categoryId]
+            : $proposal->tags()->whereNull('tags.parent_id')->pluck('tags.id')->all();
+
+        $proposal->tags()->sync([...$categories, ...$tagIds]);
+    }
+
+    /**
+     * Publishing directly needs what the panel needs to save: a category, when the type has any.
+     * Without one the proposal stays in review and whoever reviews picks it.
+     */
+    private function hasCategoryWhenNeeded(ProposalType $type, string $id): bool
+    {
+        if (! $this->tagOptions->hasCategories($type)) {
+            return true;
+        }
+
+        $model = $type === ProposalType::Event ? EventModel::class : ArticleModel::class;
+
+        return $model::query()->includingUnsubmittedProposals()->whereKey($id)
+            ->whereHas('tags', static fn (Builder $query): Builder => $query->whereNull('tags.parent_id'))
+            ->exists();
     }
 
     /**

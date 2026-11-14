@@ -52,6 +52,7 @@ return [
         'end_time' => 'hora de fin',
         'image' => 'imagen',
         'tags' => 'etiquetas',
+        'category' => 'categoría',
         'note' => 'nota para la administración',
         'excerpt' => 'extracto',
         'content' => 'contenido',

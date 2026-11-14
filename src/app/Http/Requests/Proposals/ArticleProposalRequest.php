@@ -45,6 +45,7 @@ final class ArticleProposalRequest extends ProposalRequest
             excerpt: $this->optionalString('excerpt'),
             featuredImagePublicId: $featuredImagePublicId,
             tagIds: $this->tagIds(),
+            categoryId: $this->categoryId(),
         );
     }
 }

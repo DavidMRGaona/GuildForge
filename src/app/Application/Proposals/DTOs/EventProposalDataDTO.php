@@ -17,6 +17,8 @@ final readonly class EventProposalDataDTO
      * @param  ?string  $note  private note for the administration
      * @param  ?array<array-key, mixed>  $moduleRequests  what the form sent for the module requests
      *                                                    (EventProposalRequestServiceInterface); null leaves the stored ones alone
+     * @param  ?string  $categoryId  only taken from whoever may publish events directly
+     *                               (ProposalTagOptionsInterface); null keeps the stored category
      */
     public function __construct(
         public string $title,
@@ -28,5 +30,6 @@ final readonly class EventProposalDataDTO
         public array $tagIds = [],
         public ?string $note = null,
         public ?array $moduleRequests = null,
+        public ?string $categoryId = null,
     ) {}
 }

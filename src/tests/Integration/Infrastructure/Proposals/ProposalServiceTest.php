@@ -147,10 +147,12 @@ final class ProposalServiceTest extends TestCase
     public function test_creating_an_event_proposal_stores_an_unsubmitted_draft(): void
     {
         $user = UserModel::factory()->create();
-        $tag = TagModel::factory()->create(['applies_to' => ['events']]);
-        $articleTag = TagModel::factory()->create(['applies_to' => ['articles']]);
+        // Additional tags only: whoever proposes never picks the category (core#654)
+        $category = TagModel::factory()->create(['applies_to' => ['events', 'articles']]);
+        $tag = TagModel::factory()->withParent($category)->create(['applies_to' => ['events']]);
+        $articleTag = TagModel::factory()->withParent($category)->create(['applies_to' => ['articles']]);
 
-        $id = $this->service()->createEvent($user->id, $this->eventData(tags: [$tag->id, $articleTag->id, 'not-a-uuid']));
+        $id = $this->service()->createEvent($user->id, $this->eventData(tags: [$tag->id, $articleTag->id, $category->id, 'not-a-uuid']));
 
         $event = $this->event($id);
         $this->assertSame(ProposalStatus::Draft, $event->proposal_status);

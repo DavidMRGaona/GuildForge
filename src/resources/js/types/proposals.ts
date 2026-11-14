@@ -111,7 +111,10 @@ export interface ProfileProposals {
 export interface ProposalFormProps {
     /** Null when creating. */
     proposal: Proposal | null;
+    /** Additional tags (subtags): whoever proposes picks only these (core#654). */
     tags: Tag[];
+    /** Categories, offered only to whoever may publish the type directly; empty otherwise. */
+    categories: Tag[];
 }
 
 export interface EventProposalFormProps extends ProposalFormProps {

@@ -9,7 +9,17 @@ const i18n = createI18n({
     locale: 'es',
     missingWarn: false,
     fallbackWarn: false,
-    messages: { es: { proposals: { form: { tags: 'Etiquetas' } } } },
+    messages: {
+        es: {
+            proposals: {
+                form: {
+                    tags: 'Etiquetas',
+                    tagsHint: 'La categoría la elige quien revisa la propuesta.',
+                    additionalTags: 'Etiquetas adicionales',
+                },
+            },
+        },
+    },
 });
 
 const tags = [
@@ -28,6 +38,28 @@ describe('ProposalTagsField', () => {
         expect(inputs).toHaveLength(2);
         inputs.forEach((input) => expect(input.classes()).toContain('sr-only'));
         expect((inputs[1]!.element as HTMLInputElement).checked).toBe(true);
+    });
+
+    it('says who picks the category when it is not offered', () => {
+        const wrapper = mount(ProposalTagsField, {
+            props: { tags, modelValue: [] },
+            global: { plugins: [i18n] },
+        });
+
+        expect(wrapper.find('legend').text()).toBe('Etiquetas');
+        const hint = wrapper.find('p');
+        expect(hint.text()).toBe('La categoría la elige quien revisa la propuesta.');
+        expect(wrapper.find('fieldset').attributes('aria-describedby')).toBe(hint.attributes('id'));
+    });
+
+    it('reads as additional tags next to the category field', () => {
+        const wrapper = mount(ProposalTagsField, {
+            props: { tags, modelValue: [], withCategory: true },
+            global: { plugins: [i18n] },
+        });
+
+        expect(wrapper.find('legend').text()).toBe('Etiquetas adicionales');
+        expect(wrapper.find('p').exists()).toBe(false);
     });
 
     it('adds and removes a tag when its box is ticked', async () => {

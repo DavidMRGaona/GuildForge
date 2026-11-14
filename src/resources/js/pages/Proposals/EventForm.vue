@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import RichTextEditor from '@/components/form/RichTextEditor.vue';
 import FormDatePicker from '@/components/form/FormDatePicker.vue';
 import FormTimePicker from '@/components/form/FormTimePicker.vue';
+import ProposalCategoryField from '@/components/proposals/ProposalCategoryField.vue';
 import ProposalField from '@/components/proposals/ProposalField.vue';
 import ProposalFormActions from '@/components/proposals/ProposalFormActions.vue';
 import ProposalImageField from '@/components/proposals/ProposalImageField.vue';
@@ -36,7 +37,12 @@ const form = useForm({
     end_time: props.proposal?.endTime ?? '21:00',
     image: null as File | null,
     remove_image: false,
-    tags: [...(props.proposal?.tagIds ?? [])],
+    // The stored tags split as in the panel (core#654): additional tags here, the category apart
+    tags: (props.proposal?.tagIds ?? []).filter((id) => props.tags.some((tag) => tag.id === id)),
+    category:
+        (props.proposal?.tagIds ?? []).find((id) =>
+            props.categories.some((category) => category.id === id)
+        ) ?? (null as string | null),
     note: props.proposal?.note ?? '',
     requests: initialRequests(props.moduleRequests, props.proposal?.requests ?? []),
 });
@@ -209,7 +215,17 @@ function onStartDate(value: string): void {
             :error="form.errors.image"
         />
 
-        <ProposalTagsField v-model="form.tags" :tags="tags" />
+        <ProposalCategoryField
+            v-model="form.category"
+            :categories="categories"
+            :error="form.errors.category"
+        />
+
+        <ProposalTagsField
+            v-model="form.tags"
+            :tags="tags"
+            :with-category="categories.length > 0"
+        />
 
         <ProposalField
             :label="t('proposals.form.note')"

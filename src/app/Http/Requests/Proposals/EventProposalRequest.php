@@ -84,6 +84,7 @@ final class EventProposalRequest extends ProposalRequest
             tagIds: $this->tagIds(),
             note: $this->optionalString('note'),
             moduleRequests: $this->submittedRequests(),
+            categoryId: $this->categoryId(),
         );
     }
 

@@ -8,9 +8,9 @@ use App\Application\Proposals\DTOs\OwnProposalDTO;
 use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
 use App\Application\Proposals\Services\ProposalQueryServiceInterface;
 use App\Application\Proposals\Services\ProposalServiceInterface;
+use App\Application\Proposals\Services\ProposalTagOptionsInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
-use App\Application\Services\TagQueryServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Proposals\Enums\ProposalAuthorAction;
 use App\Domain\Proposals\Enums\ProposalStatus;
@@ -41,7 +41,7 @@ abstract class ProposalFormController extends Controller
         protected readonly ProposalServiceInterface $proposals,
         protected readonly ProposalQueryServiceInterface $queries,
         protected readonly ProposalEligibilityServiceInterface $eligibility,
-        protected readonly TagQueryServiceInterface $tags,
+        protected readonly ProposalTagOptionsInterface $tags,
         protected readonly TimezoneServiceInterface $timezone,
         protected readonly SeoMetadataFactoryInterface $seo,
     ) {}
@@ -60,7 +60,9 @@ abstract class ProposalFormController extends Controller
 
         return Inertia::render($this->page(), [
             'proposal' => $proposal instanceof OwnProposalDTO ? OwnProposalResource::make($proposal)->resolve() : null,
-            'tags' => TagResource::collection($this->tags->getByType($type->value))->resolve(),
+            // The panel's split (core#654): additional tags for everyone, categories only for whoever may publish directly
+            'tags' => TagResource::collection($this->tags->additionalTags($type))->resolve(),
+            'categories' => TagResource::collection($this->tags->categoriesFor($type, $this->userId($request)))->resolve(),
             ...$this->extraProps(),
             'seo' => $this->seo->forPage(new SeoPageDTO(
                 title: (string) __('proposals.seo.'.$type->value),

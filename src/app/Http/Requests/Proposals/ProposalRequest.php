@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Proposals;
 
+use App\Application\DTOs\Response\TagResponseDTO;
 use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
+use App\Application\Proposals\Services\ProposalTagOptionsInterface;
 use App\Domain\Proposals\Enums\ProposalType;
 use App\Filament\Forms\RichEditor\EditorImages;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * What every proposal form accepts. Only the fields in rules() reach the controller (validated()
@@ -47,7 +50,33 @@ abstract class ProposalRequest extends FormRequest
             'note' => ['nullable', 'string', 'max:'.self::MAX_NOTE],
             // Save as a draft (false) or send to review right after saving (true)
             'submit' => ['nullable', 'boolean'],
+            ...$this->categoryRules(),
         ];
+    }
+
+    /**
+     * Only whoever is offered the categories (ProposalTagOptionsInterface) sends one, required to
+     * send it, since sending publishes it; for anyone else the field is not read at all (core#654).
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private function categoryRules(): array
+    {
+        $ids = array_map(
+            static fn (TagResponseDTO $tag): string => $tag->id,
+            app(ProposalTagOptionsInterface::class)->categoriesFor($this->type(), (string) $this->user()?->getAuthIdentifier()),
+        );
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return ['category' => [Rule::requiredIf(fn (): bool => $this->wantsToSubmit()), 'nullable', 'string', Rule::in($ids)]];
+    }
+
+    public function categoryId(): ?string
+    {
+        return $this->optionalString('category');
     }
 
     public function wantsToSubmit(): bool
@@ -77,7 +106,7 @@ abstract class ProposalRequest extends FormRequest
     {
         $attributes = [];
 
-        foreach (['title', 'description', 'location', 'start_date', 'start_time', 'end_date', 'end_time', 'image', 'tags', 'note', 'excerpt', 'content'] as $field) {
+        foreach (['title', 'description', 'location', 'start_date', 'start_time', 'end_date', 'end_time', 'image', 'tags', 'category', 'note', 'excerpt', 'content'] as $field) {
             $attributes[$field] = (string) __('proposals.fields.'.$field);
         }
 
