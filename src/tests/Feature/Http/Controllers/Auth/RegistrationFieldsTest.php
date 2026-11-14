@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\Auth;
 
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Registration\Services\RegistrationFieldRegistryInterface;
 use App\Domain\Events\RegistrationFieldsSubmitted;
 use App\Domain\Events\UserRegistered;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Notifications\WelcomeNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -193,6 +196,7 @@ final class RegistrationFieldsTest extends TestCase
 
     public function test_a_listener_that_fails_never_stops_the_registration(): void
     {
+        RoleModel::query()->firstOrCreate(['name' => 'member'], ['display_name' => 'Member']);
         $log = Log::spy();
         Event::listen(RegistrationFieldsSubmitted::class, static function (): never {
             throw new RuntimeException('Mailing list down');
@@ -200,8 +204,10 @@ final class RegistrationFieldsTest extends TestCase
 
         $this->register([self::KEY => true])->assertRedirect(route('home'));
 
-        $this->assertDatabaseHas('users', ['email' => 'nuevo@example.com']);
-        $this->assertAuthenticated();
+        $user = UserModel::query()->where('email', 'nuevo@example.com')->sole();
+        $this->assertAuthenticatedAs($user);
+        $this->assertTrue(app(AuthorizationServiceInterface::class)->hasRole($user, 'member'));
+        Notification::assertSentTo($user, WelcomeNotification::class);
         $log->shouldHaveReceived('error')->withArgs(
             static fn (string $message, array $context): bool => str_contains($message, 'RegistrationFieldsSubmitted')
                 && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), 'nuevo@example.com'),

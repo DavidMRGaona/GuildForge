@@ -46,8 +46,8 @@ export interface RegisterFormData {
     email: string;
     password: string;
     password_confirmation: string;
-    /** Module fields keyed by field key (`<module>.<name>`) */
-    registration_fields: Record<string, boolean>;
+    /** Module fields keyed by field key (`<module>.<name>`); optional, so older callers keep compiling */
+    registration_fields?: Record<string, boolean>;
 }
 
 export interface LoginFormData {

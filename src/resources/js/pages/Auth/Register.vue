@@ -30,7 +30,10 @@ const { authSettings } = useAuth();
 const notifications = useNotifications();
 const routes = useRoutes();
 
-const form = useForm<RegisterFormData>({
+/** The page always sends the module fields, even when there are none */
+type RegisterForm = RegisterFormData & { registration_fields: Record<string, boolean> };
+
+const form = useForm<RegisterForm>({
     name: '',
     email: '',
     password: '',
@@ -41,9 +44,12 @@ const form = useForm<RegisterFormData>({
     ),
 });
 
-/** Keys hold dots, so the id keeps only safe characters */
+/**
+ * Keys are `<module>.<name>` in kebab case, which never holds `--`: the dot becomes `--`, so
+ * `event.registrations-x` and `event-registrations.x` keep different ids
+ */
 function fieldId(field: RegistrationField): string {
-    return `registration-field-${field.key.replace(/[^a-z0-9-]/g, '-')}`;
+    return `registration-field-${field.key.replaceAll('.', '--')}`;
 }
 
 /** Errors of module fields are keyed `registration_fields.<key>` */

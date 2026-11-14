@@ -104,7 +104,7 @@ final class RegistrationFieldRegistry implements RegistrationFieldRegistryInterf
         try {
             $field = $this->container->make($fieldClass);
         } catch (Throwable $exception) {
-            $this->warn('Failed to resolve registration field', $fieldClass, $module, ['error' => $exception->getMessage()]);
+            $this->warn('Failed to resolve registration field', $fieldClass, $module, ['exception' => $exception::class]);
 
             return null;
         }
@@ -146,7 +146,7 @@ final class RegistrationFieldRegistry implements RegistrationFieldRegistryInterf
             $rules = $field->rules();
             $type = $field->type();
         } catch (Throwable $exception) {
-            $this->warn('Failed to read registration field, field skipped', $field::class, $module, ['error' => $exception->getMessage()]);
+            $this->warn('Failed to read registration field, field skipped', $field::class, $module, ['exception' => $exception::class]);
 
             return null;
         }

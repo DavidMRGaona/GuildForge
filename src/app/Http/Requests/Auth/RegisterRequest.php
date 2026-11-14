@@ -99,7 +99,7 @@ final class RegisterRequest extends FormRequest
             } catch (Throwable $exception) {
                 Log::warning('[RegisterRequest] Registration field could not be checked, value dropped', [
                     'key' => $field->key,
-                    'error' => $exception->getMessage(),
+                    'exception' => $exception::class,
                 ]);
 
                 continue;

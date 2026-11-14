@@ -56,7 +56,7 @@ The event carries no email or name. Read the account by its id when the work nee
 
 ### Listen with a queued listener
 
-The account is already stored when the event fires (`AuthService::register()` opens no transaction), but anything that leaves the request (a mailing list, an external API) must not run inside it: the person would wait for it, and its failure would only be logged. Queue the listener and mark it `afterCommit`, so it also stays correct if registration is ever wrapped in a transaction:
+The account is already stored when the event fires (`AuthService::register()` opens no transaction), but anything that leaves the request (a mailing list, an external API) must not run inside it: the person would wait for it, and its failure would only be logged. Queue the listener and mark it `afterCommit`, so it also stays correct if registration is ever wrapped in a transaction. A synchronous listener is worse than slow: the dispatcher stops at the first listener that throws, so the listeners after it (other modules' included) never hear of the registration. The core only logs that failure; it cannot run the rest:
 
 ```php
 use App\Domain\Events\RegistrationFieldsSubmitted;

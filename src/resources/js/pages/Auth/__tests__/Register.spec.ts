@@ -91,7 +91,7 @@ describe('Register page', () => {
         expect(form().registration_fields).toEqual({ 'newsletter.subscribe': false });
 
         const id = checkbox.attributes('id');
-        expect(id).toBe('registration-field-newsletter-subscribe');
+        expect(id).toBe('registration-field-newsletter--subscribe');
         const label = wrapper.find(`label[for="${id}"]`);
         expect(label.text()).toContain('Quiero recibir el boletín');
     });
@@ -100,11 +100,11 @@ describe('Register page', () => {
         const wrapper = mountPage([{ ...NEWSLETTER, description: 'Sin <b>spam</b>' }]);
 
         const checkbox = wrapper.find('input[type="checkbox"]');
-        const description = wrapper.find('#registration-field-newsletter-subscribe-description');
+        const description = wrapper.find('#registration-field-newsletter--subscribe-description');
         expect(description.text()).toBe('Sin <b>spam</b>');
         expect(wrapper.find('b').exists()).toBe(false);
         expect(checkbox.attributes('aria-describedby')).toBe(
-            'registration-field-newsletter-subscribe-description'
+            'registration-field-newsletter--subscribe-description'
         );
     });
 
@@ -123,13 +123,28 @@ describe('Register page', () => {
         await wrapper.vm.$nextTick();
 
         const checkbox = wrapper.find('input[type="checkbox"]');
-        expect(wrapper.find('#registration-field-newsletter-subscribe-error').text()).toBe(
+        expect(wrapper.find('#registration-field-newsletter--subscribe-error').text()).toBe(
             'Debes aceptar el boletín.'
         );
         expect(checkbox.attributes('aria-invalid')).toBe('true');
         expect(checkbox.attributes('aria-describedby')).toBe(
-            'registration-field-newsletter-subscribe-error'
+            'registration-field-newsletter--subscribe-error'
         );
+    });
+
+    it('gives keys that only differ in where the dot is ids of their own', () => {
+        const wrapper = mountPage([
+            { ...NEWSLETTER, key: 'event.registrations-x' },
+            { ...NEWSLETTER, key: 'event-registrations.x' },
+        ]);
+
+        const ids = wrapper
+            .findAll('input[type="checkbox"]')
+            .map((input) => input.attributes('id'));
+        expect(ids).toEqual([
+            'registration-field-event--registrations-x',
+            'registration-field-event-registrations--x',
+        ]);
     });
 
     it('draws fields in the order they come', () => {
@@ -146,8 +161,8 @@ describe('Register page', () => {
         expect(
             wrapper.findAll('input[type="checkbox"]').map((input) => input.attributes('id'))
         ).toEqual([
-            'registration-field-newsletter-subscribe',
-            'registration-field-other-module-updates',
+            'registration-field-newsletter--subscribe',
+            'registration-field-other-module--updates',
         ]);
         expect(form().registration_fields).toEqual({
             'newsletter.subscribe': false,

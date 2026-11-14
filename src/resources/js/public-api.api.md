@@ -999,7 +999,7 @@ export interface RegisterFormData {
     email: string;
     password: string;
     password_confirmation: string;
-    registration_fields: Record<string, boolean>;
+    registration_fields?: Record<string, boolean>;
 }
 export interface LoginFormData {
     email: string;
