@@ -40,6 +40,15 @@ describe('useNow', () => {
         expect(vi.getTimerCount()).toBe(0);
     });
 
+    it('never starts a clock outside a scope, where nothing could stop it', () => {
+        vi.setSystemTime(new Date('2026-11-14T11:00:00Z'));
+
+        const now = useNow();
+
+        expect(now.value.toISOString()).toBe('2026-11-14T11:00:00.000Z');
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
     it('starts from the current instant when a reader comes back', () => {
         const first = effectScope();
         first.run(() => useNow());
