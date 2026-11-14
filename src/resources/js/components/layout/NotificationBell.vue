@@ -2,15 +2,17 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { Bell } from '@lucide/vue';
+import { Bell, Settings2 } from '@lucide/vue';
 import SiteNotificationEntry from '@/components/notifications/SiteNotificationEntry.vue';
 import { useOnNavigate } from '@/composables/useOnNavigate';
+import { MAIL_TAB } from '@/composables/useProfileTabs';
 import { useRoutes } from '@/composables/useRoutes';
 import { useSiteNotifications } from '@/composables/useSiteNotifications';
 
 /**
  * The bell of the header (core#491): the unread counter (up to «9+») and, on click, the latest
- * notices with «Marcar todo como leído» and a link to the «Avisos» page. A disclosure: Tab moves
+ * notices with «Marcar todo como leído», a shortcut to the notice settings (core#669) and a link to
+ * the «Avisos» page. A disclosure: Tab moves
  * through the list, the arrows go from notice to notice, Escape closes it and gives the focus back
  * to the bell. A rise of the counter is announced to screen readers.
  */
@@ -41,6 +43,7 @@ const root = useTemplateRef<HTMLElement>('root');
 const button = useTemplateRef<HTMLButtonElement>('button');
 const list = useTemplateRef<HTMLElement>('list');
 
+const settingsUrl = `${routes.profile}?tab=${MAIL_TAB}`;
 const headingId = computed(() => `${props.panelId}-heading`);
 const badge = computed(() => (unread.value > 9 ? '9+' : String(unread.value)));
 const buttonLabel = computed(() =>
@@ -179,15 +182,26 @@ async function markAllRead(): Promise<void> {
                 <h2 :id="headingId" class="text-sm font-semibold text-base-primary">
                     {{ t('notifications.title') }}
                 </h2>
-                <button
-                    v-if="unread > 0"
-                    type="button"
-                    class="rounded text-sm font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
-                    :disabled="marking"
-                    @click="markAllRead"
-                >
-                    {{ t('notifications.markAllRead') }}
-                </button>
+                <div class="flex items-center gap-2">
+                    <button
+                        v-if="unread > 0"
+                        type="button"
+                        class="rounded text-sm font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+                        :disabled="marking"
+                        @click="markAllRead"
+                    >
+                        {{ t('notifications.markAllRead') }}
+                    </button>
+                    <Link
+                        :href="settingsUrl"
+                        :aria-label="t('notifications.choose')"
+                        :title="t('notifications.choose')"
+                        class="rounded-md p-1 text-base-secondary hover:bg-muted hover:text-base-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        data-testid="notification-settings"
+                    >
+                        <Settings2 class="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                </div>
             </div>
 
             <div ref="list" class="max-h-[min(28rem,70vh)] overflow-y-auto p-1">

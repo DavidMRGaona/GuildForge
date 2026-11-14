@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatRelativeTime } from '../relativeTime';
+import { formatAbsoluteTime, formatRelativeTime } from '../relativeTime';
 
 const NOW = new Date('2026-11-10T12:00:00Z');
 
@@ -26,5 +26,21 @@ describe('formatRelativeTime', () => {
 
     it('follows the locale', () => {
         expect(formatRelativeTime('2026-11-10T11:55:00Z', 'en', NOW)).toBe('5 minutes ago');
+    });
+});
+
+describe('formatAbsoluteTime', () => {
+    it('gives the date and time in the given zone', () => {
+        expect(formatAbsoluteTime('2026-12-19T17:00:00Z', 'es', 'Europe/Madrid')).toBe(
+            '19/12/2026, 18:00'
+        );
+        expect(formatAbsoluteTime('2026-12-19T18:00:00+01:00', 'es', 'UTC')).toBe(
+            '19/12/2026, 17:00'
+        );
+    });
+
+    it('gives nothing for a missing or unreadable instant', () => {
+        expect(formatAbsoluteTime(null, 'es', 'Europe/Madrid')).toBe('');
+        expect(formatAbsoluteTime('ayer', 'es', 'Europe/Madrid')).toBe('');
     });
 });

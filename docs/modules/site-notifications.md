@@ -148,7 +148,8 @@ For a category with `mail: false`, the mail channel sends nothing even if `via()
 - The counter refreshes with a light JSON request (`GET /avisos/contador`, never a page visit) every minute while the tab is visible, and on return to the tab. Opening the bell loads the latest 8 (`GET /avisos/recientes`). Both answer `{ unread, items? }` and are limited to 120 requests per minute.
 - Every row links to `/avisos/{id}`, which marks it read and redirects to its `url`, so a link to a message (`#m42`) lands on it. Someone else's notice is a 404.
 - `/avisos` lists every row, 20 per page, newest first. `POST /avisos/leidos` marks everything read (JSON for the bell, a redirect back for the page).
-- Nothing is real time: core#493 covers that.
+- Each row shows up to two lines of `body` in both places, so write the important part first. The relative time («hace 5 minutos») moves on every minute with one clock shared by the page (`useNow()`), and its `title` gives the full date and time in the display zone (core#669). The bell's header has a shortcut to the notice settings (`/perfil?tab=mail`).
+- With real time on (core#493), the bell asks for its counter as soon as a notice is delivered instead of every minute; off, it keeps polling.
 
 ## When the module deletes the thing
 

@@ -3,18 +3,20 @@ import { computed } from 'vue';
 import type { DeepReadonly } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { SiteNotificationItem } from '@/types/siteNotifications';
+import { useNow } from '@/composables/useNow';
 import { resolveSiteNotificationIcon } from '@/utils/icons';
-import { formatRelativeTime } from '@/utils/relativeTime';
+import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime';
 
 /**
  * One row of the notification centre, in the bell's list or on the «Avisos» page. The whole row
  * is a link through the core (`/avisos/{id}`), which marks it read and then goes where it leads:
  * a full visit, so a link to a message (`#m42`) lands on it. Unread rows are marked with a dot and
- * say so to screen readers.
+ * say so to screen readers. The excerpt keeps two lines in both places, and the relative time moves
+ * on with the page's clock and gives the full date on hover (core#669).
  */
 interface Props {
     item: DeepReadonly<SiteNotificationItem>;
-    /** The bell's list: one line of excerpt, smaller paddings. */
+    /** The bell's list: smaller paddings. */
     compact?: boolean;
 }
 
@@ -23,7 +25,9 @@ const props = withDefaults(defineProps<Props>(), { compact: false });
 const { t, locale } = useI18n();
 
 const icon = computed(() => resolveSiteNotificationIcon(props.item.icon));
-const when = computed(() => formatRelativeTime(props.item.notifiedAt, locale.value));
+const now = useNow();
+const when = computed(() => formatRelativeTime(props.item.notifiedAt, locale.value, now.value));
+const fullDate = computed(() => formatAbsoluteTime(props.item.notifiedAt, locale.value));
 const others = computed(() => props.item.count - 1);
 </script>
 
@@ -53,13 +57,15 @@ const others = computed(() => props.item.count - 1);
             </span>
             <span
                 v-if="item.body"
-                class="mt-0.5 block text-sm text-base-secondary"
-                :class="compact ? 'truncate' : 'line-clamp-2'"
+                class="mt-0.5 line-clamp-2 block text-sm text-base-secondary"
+                data-testid="site-notification-body"
             >
                 {{ item.body }}
             </span>
             <span class="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-base-muted">
-                <time v-if="item.notifiedAt" :datetime="item.notifiedAt">{{ when }}</time>
+                <time v-if="item.notifiedAt" :datetime="item.notifiedAt" :title="fullDate">{{
+                    when
+                }}</time>
                 <span v-if="others > 0" data-testid="site-notification-count">
                     {{ t('notifications.moreInGroup', { count: others }, others) }}
                 </span>
