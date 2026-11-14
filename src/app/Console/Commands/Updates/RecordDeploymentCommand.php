@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands\Updates;
 
 use App\Application\Updates\Services\CoreVersionServiceInterface;
+use App\Console\Concerns\ReadsTypedInput;
 use App\Domain\Updates\Enums\UpdateStatus;
 use App\Infrastructure\Updates\Persistence\Eloquent\Models\CoreUpdateHistoryModel;
 use Illuminate\Console\Command;
@@ -22,6 +23,8 @@ use Illuminate\Console\Command;
  */
 final class RecordDeploymentCommand extends Command
 {
+    use ReadsTypedInput;
+
     protected $signature = 'core:record-deployment
         {step : start, finish or fail}
         {--error= : What failed (for the fail step)}';
@@ -30,7 +33,7 @@ final class RecordDeploymentCommand extends Command
 
     public function handle(CoreVersionServiceInterface $versionService): int
     {
-        $step = (string) $this->argument('step');
+        $step = $this->stringArgument('step');
 
         if (! in_array($step, ['start', 'finish', 'fail'], true)) {
             $this->error("Unknown step '{$step}': use start, finish or fail.");
@@ -52,7 +55,7 @@ final class RecordDeploymentCommand extends Command
         match ($step) {
             'start' => $this->start($current, $latest, $commit, $versionService->getCurrentVersion()->value()),
             'finish' => $current?->update(['status' => UpdateStatus::Completed, 'error_message' => null]),
-            'fail' => $current?->update(['status' => UpdateStatus::Failed, 'error_message' => (string) ($this->option('error') ?? 'Deployment failed')]),
+            'fail' => $current?->update(['status' => UpdateStatus::Failed, 'error_message' => $this->stringOption('error') ?? 'Deployment failed']),
         };
 
         return self::SUCCESS;

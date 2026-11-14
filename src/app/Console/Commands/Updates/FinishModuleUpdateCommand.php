@@ -7,6 +7,7 @@ namespace App\Console\Commands\Updates;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Updates\DTOs\PostUpdateReportDTO;
 use App\Application\Updates\Services\ModuleHealthCheckerInterface;
+use App\Console\Concerns\ReadsTypedInput;
 use App\Domain\Authorization\Enums\RoleAuditSource;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
@@ -44,6 +45,8 @@ use RuntimeException;
  */
 final class FinishModuleUpdateCommand extends Command
 {
+    use ReadsTypedInput;
+
     protected $signature = 'module:finish-update
         {name : Module name}
         {version : Version whose files are now installed}
@@ -91,8 +94,8 @@ final class FinishModuleUpdateCommand extends Command
             /** @var MigrationRepositoryInterface $migrationRepository */
             $migrationRepository = $this->laravel->make('migration.repository');
 
-            $name = new ModuleName((string) $this->argument('name'));
-            $version = ModuleVersion::fromString((string) $this->argument('version'));
+            $name = new ModuleName($this->stringArgument('name'));
+            $version = ModuleVersion::fromString($this->stringArgument('version'));
             $module = $modules->findByName($name);
 
             if (! $module instanceof Module) {
