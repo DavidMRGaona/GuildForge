@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Impersonation\Services;
 
+use App\Application\Impersonation\DTOs\ViewedRoleDTO;
 use App\Domain\Impersonation\Enums\ImpersonationEndReason;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 
@@ -16,9 +17,12 @@ use App\Domain\Impersonation\Enums\ImpersonationMode;
 interface ImpersonationLoggerInterface
 {
     /**
-     * Opens an entry and returns its id.
+     * Opens an entry and returns its id. $viewedRoles is set when the administrator views the
+     * site as roles instead of as an account.
+     *
+     * @param  list<ViewedRoleDTO>|null  $viewedRoles
      */
-    public function started(string $impersonatorId, string $targetId, ImpersonationMode $mode, ?string $ip, ?string $userAgent): string;
+    public function started(string $impersonatorId, string $targetId, ImpersonationMode $mode, ?string $ip, ?string $userAgent, ?array $viewedRoles = null): string;
 
     /**
      * Closes the entry; one already closed keeps its first end.

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Impersonation;
 
+use App\Application\Impersonation\DTOs\ViewedRoleDTO;
+use App\Application\Impersonation\Services\ImpersonationLoggerInterface;
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Domain\Events\UserLoggedIn;
 use App\Domain\Impersonation\Enums\ImpersonationEndReason;
@@ -19,6 +21,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -28,6 +31,22 @@ use Tests\TestCase;
 final class ImpersonationServiceTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    public function test_the_log_keeps_the_viewed_roles(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $roleId = (string) Str::uuid();
+        $logger = $this->app->make(ImpersonationLoggerInterface::class);
+
+        $withRoles = $logger->started($admin->id, $admin->id, ImpersonationMode::ReadOnly, null, null, [new ViewedRoleDTO($roleId, 'socio', 'Socio')]);
+        $without = $logger->started($admin->id, $admin->id, ImpersonationMode::ReadOnly, null, null);
+
+        $this->assertSame(
+            [['id' => $roleId, 'name' => 'socio', 'display_name' => 'Socio']],
+            ImpersonationLogEntryModel::query()->findOrFail($withRoles)->viewed_roles,
+        );
+        $this->assertNull(ImpersonationLogEntryModel::query()->findOrFail($without)->viewed_roles);
+    }
 
     public function test_starting_stores_the_state_in_the_session_and_opens_the_log(): void
     {
