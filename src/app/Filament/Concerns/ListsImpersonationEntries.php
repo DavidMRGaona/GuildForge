@@ -93,7 +93,8 @@ trait ListsImpersonationEntries
 
         if (is_array($roles) && $roles !== []) {
             return __('filament.impersonation.history.viewed_roles', [
-                'roles' => implode(', ', array_map(static fn (array $role): string => (string) ($role['display_name'] ?? $role['name'] ?? ''), $roles)),
+                // The display name is already the role name when it had none (EloquentImpersonationRoles)
+                'roles' => implode(', ', array_map(static fn (array $role): string => $role['display_name'], $roles)),
             ]);
         }
 
