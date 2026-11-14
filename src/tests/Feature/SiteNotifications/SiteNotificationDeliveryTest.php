@@ -179,6 +179,37 @@ final class SiteNotificationDeliveryTest extends TestCase
         )->once();
     }
 
+    public function test_an_icon_the_bell_does_not_draw_is_kept_and_warns_once(): void
+    {
+        $log = Log::spy();
+        $user = UserModel::factory()->create();
+        $other = UserModel::factory()->create();
+
+        $user->notify(new SiteTestNotification('example.replies', $this->noticeWithIcon('not-an-icon')));
+        $other->notify(new SiteTestNotification('example.replies', $this->noticeWithIcon('not-an-icon')));
+
+        // A visual slip never costs the notice: it shows with the bell's default icon
+        $this->assertSame(1, $this->service()->unreadCount($user));
+        $this->assertSame(1, $this->service()->unreadCount($other));
+        $this->assertDatabaseHas('site_notifications', ['user_id' => $user->id, 'icon' => 'not-an-icon']);
+        $log->shouldHaveReceived('warning')->withArgs(
+            static fn (string $message, array $context = []): bool => str_contains($message, 'icon the bell does not draw')
+                && ($context['icon'] ?? null) === 'not-an-icon'
+                && ($context['notification'] ?? null) === SiteTestNotification::class,
+        )->once();
+    }
+
+    public function test_an_icon_the_bell_draws_does_not_warn(): void
+    {
+        $log = Log::spy();
+        $user = UserModel::factory()->create();
+
+        $user->notify(new SiteTestNotification('example.replies', $this->noticeWithIcon('clipboard-check')));
+
+        $this->assertSame(1, $this->service()->unreadCount($user));
+        $log->shouldNotHaveReceived('warning');
+    }
+
     public function test_nobody_is_notified_of_what_they_did_themselves(): void
     {
         $user = UserModel::factory()->create();
@@ -297,6 +328,11 @@ final class SiteNotificationDeliveryTest extends TestCase
     private function notice(?string $actorId = null): SiteNotificationDTO
     {
         return new SiteNotificationDTO(title: 'Nueva respuesta', url: '/foro/temas/1', actorId: $actorId);
+    }
+
+    private function noticeWithIcon(string $icon): SiteNotificationDTO
+    {
+        return new SiteNotificationDTO(title: 'Nueva respuesta', url: '/foro/temas/1', icon: $icon);
     }
 
     private function reply(string $actor, string $actorId, string $url, string $group = 'forum.topic:1'): SiteNotificationDTO

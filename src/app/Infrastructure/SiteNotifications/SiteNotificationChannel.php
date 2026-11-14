@@ -13,6 +13,7 @@ use App\Application\SiteNotifications\Contracts\HasSiteNotification;
 use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Application\SiteNotifications\DTOs\SiteNotificationGroupDTO;
 use App\Application\SiteNotifications\Services\SiteNotificationPreferenceServiceInterface;
+use App\Application\SiteNotifications\SiteNotificationIcons;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
 use App\Domain\SiteNotifications\ValueObjects\SiteNotice;
 use App\Domain\ValueObjects\UserId;
@@ -28,7 +29,8 @@ use Throwable;
  *
  * Everything is decided here, when the notice is delivered (inside the queue worker for a queued
  * notification), so a choice made or an access lost while it waited counts. Bound scoped, so a
- * request or a job warns once per notification class that cannot be shown.
+ * request or a job warns once per notification class that cannot be shown, and once per class
+ * and icon the bell does not draw.
  */
 final class SiteNotificationChannel
 {
@@ -36,6 +38,11 @@ final class SiteNotificationChannel
      * @var array<class-string, true>
      */
     private array $warned = [];
+
+    /**
+     * @var array<string, true>
+     */
+    private array $warnedIcons = [];
 
     public function __construct(
         private readonly MailCategoryRegistryInterface $categories,
@@ -87,6 +94,8 @@ final class SiteNotificationChannel
             return;
         }
 
+        $this->warnOnUnknownIcon($notification, $notice);
+
         $this->notices->deliver(UserId::fromString($notifiable->id), $this->toNotice($category, $notice, $subject));
 
         // With real time on, the bell hears of it at once and asks for its counter (core#493)
@@ -109,6 +118,30 @@ final class SiteNotificationChannel
                 new SiteNotificationGroupDTO(count: $count, otherActors: $otherActors),
             ),
         );
+    }
+
+    /**
+     * An icon the bell does not draw (a typo, or a module newer than this core) is stored as it
+     * is and shown with the bell's default icon: a visual slip never costs the notice (core#667).
+     */
+    private function warnOnUnknownIcon(Notification $notification, SiteNotificationDTO $notice): void
+    {
+        if ($notice->icon === null || SiteNotificationIcons::isKnown($notice->icon)) {
+            return;
+        }
+
+        $key = $notification::class.'|'.$notice->icon;
+
+        if (isset($this->warnedIcons[$key])) {
+            return;
+        }
+
+        $this->warnedIcons[$key] = true;
+
+        Log::warning('A site notification asks for an icon the bell does not draw; it shows the default icon.', [
+            'notification' => $notification::class,
+            'icon' => $notice->icon,
+        ]);
     }
 
     private function warnOnce(Notification $notification): void

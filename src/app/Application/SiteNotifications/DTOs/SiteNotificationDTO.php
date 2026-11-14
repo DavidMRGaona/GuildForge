@@ -41,7 +41,8 @@ final readonly class SiteNotificationDTO
      * @param  string  $title  What happened, in one line («Ana respondió en «La tumba»»).
      * @param  string  $url  Path of the site the notice opens («/foro/temas/la-tumba#m42»).
      * @param  string|null  $body  A short excerpt, plain text.
-     * @param  string|null  $icon  Lucide icon name («message-square»); an unknown one shows a bell.
+     * @param  string|null  $icon  Lucide icon name («message-square»), one of SiteNotificationIcons::NAMES;
+     *                             any other is kept, shown with the default icon and logged by the channel.
      * @param  string|null  $groupKey  Unread notices with the same key become one row («forum.topic:<id>»).
      * @param  string|null  $actorId  Account that caused it: a notice to that same account is never stored,
      *                                and the group counts distinct actors with it.
