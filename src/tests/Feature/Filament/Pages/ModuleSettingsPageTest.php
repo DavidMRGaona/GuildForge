@@ -6,23 +6,25 @@ namespace Tests\Feature\Filament\Pages;
 
 use App\Filament\Pages\ModuleSettingsPage;
 use App\Filament\Pages\ModulesPage;
-use App\Filament\Pages\Settings\DashboardSettings;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Components\TextInput;
-use Filament\Pages\Page;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\Modules\InteractsWithModulePanel;
+use Tests\Support\Modules\OwnClusterSettingsPage;
 use Tests\Support\Modules\RegistersBootedModuleProviders;
+use Tests\Support\Modules\SettingsPageModuleProvider;
 use Tests\Support\Modules\UnregisteredClusterSettingsPage;
 use Tests\TestCase;
 
 final class ModuleSettingsPageTest extends TestCase
 {
+    use InteractsWithModulePanel;
     use LazilyRefreshDatabase;
     use RegistersBootedModuleProviders;
 
@@ -162,20 +164,38 @@ final class ModuleSettingsPageTest extends TestCase
 
     public function test_a_module_with_its_own_settings_page_is_sent_to_that_page(): void
     {
-        // Old links and bookmarks keep working; the page itself checks the module's permission
+        // Old links keep working for whoever may open this page (modules.configure); the module's
+        // page then checks its own permission
         ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
-        $this->loadTestModuleWithSettingsPage(DashboardSettings::class);
+        $this->registerOnAdminPanel(pages: [OwnClusterSettingsPage::class]);
+        $this->registerBootedProvider(SettingsPageModuleProvider::owning(app(), 'test-module', OwnClusterSettingsPage::class));
         $this->actingAs(UserModel::factory()->admin()->create());
 
         $this->get(ModuleSettingsPage::getUrl(['module' => 'test-module']))
-            ->assertRedirect(DashboardSettings::getUrl());
+            ->assertRedirect(OwnClusterSettingsPage::getUrl());
     }
 
-    public function test_a_module_whose_declared_page_cannot_be_used_is_not_found(): void
+    /**
+     * @return array<string, array{\Closure(): SettingsPageModuleProvider}>
+     */
+    public static function modulesWithUnusablePages(): array
+    {
+        return [
+            'a page the panel does not register' => [fn (): SettingsPageModuleProvider => SettingsPageModuleProvider::owning(app(), 'test-module', UnregisteredClusterSettingsPage::class)],
+            'a page outside the settings cluster' => [fn (): SettingsPageModuleProvider => SettingsPageModuleProvider::owning(app(), 'test-module', ModulesPage::class)],
+            'a provider that throws' => [fn (): SettingsPageModuleProvider => SettingsPageModuleProvider::throwing(app(), 'test-module')],
+        ];
+    }
+
+    /**
+     * @param  \Closure(): SettingsPageModuleProvider  $provider
+     */
+    #[DataProvider('modulesWithUnusablePages')]
+    public function test_a_module_whose_declared_page_cannot_be_used_is_not_found(\Closure $provider): void
     {
         // Not edited here either: the module chose to leave the generic page
         ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
-        $this->loadTestModuleWithSettingsPage(UnregisteredClusterSettingsPage::class);
+        $this->registerBootedProvider($provider());
         $this->actingAs(UserModel::factory()->admin()->create());
 
         $this->get(ModuleSettingsPage::getUrl(['module' => 'test-module']))
@@ -184,16 +204,17 @@ final class ModuleSettingsPageTest extends TestCase
 
     public function test_saving_a_module_with_its_own_settings_page_stores_nothing(): void
     {
-        // A Livewire call to save() bypasses mount(): the guard in save() must refuse it too
+        // A save() reaching the component after mount() sent it away must not store the schema
         ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
-        $this->loadTestModuleWithSettingsPage(DashboardSettings::class);
+        $this->registerOnAdminPanel(pages: [OwnClusterSettingsPage::class]);
+        $this->registerBootedProvider(SettingsPageModuleProvider::owning(app(), 'test-module', OwnClusterSettingsPage::class));
         $this->actingAs(UserModel::factory()->admin()->create());
 
-        $page = app(ModuleSettingsPage::class);
-        $page->module = 'test-module';
-
-        $this->assertFalse($page->hasSettings());
-        $page->save();
+        Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module'])
+            ->assertRedirect(OwnClusterSettingsPage::getUrl())
+            ->set('data.greeting', 'hello')
+            ->call('save')
+            ->assertNotNotified(__('modules.filament.settings_page.saved'));
 
         $this->assertDatabaseMissing('settings', ['key' => 'module_settings:test-module']);
     }
@@ -204,23 +225,8 @@ final class ModuleSettingsPageTest extends TestCase
         ModuleModel::factory()->enabled()->create(['name' => 'test-module']);
         ModuleModel::factory()->enabled()->create(['name' => 'own-page-module']);
         $this->loadTestModuleWithSettings();
-        $this->registerBootedProvider(new class(app()) extends ModuleServiceProvider
-        {
-            public function moduleName(): string
-            {
-                return 'own-page-module';
-            }
-
-            public function getSettingsPage(): string
-            {
-                return DashboardSettings::class;
-            }
-
-            public function getSettingsSchema(): array
-            {
-                return [TextInput::make('greeting')];
-            }
-        });
+        $this->registerOnAdminPanel(pages: [OwnClusterSettingsPage::class]);
+        $this->registerBootedProvider(SettingsPageModuleProvider::owning(app(), 'own-page-module', OwnClusterSettingsPage::class));
         $this->actingAs(UserModel::factory()->admin()->create());
         $component = Livewire::test(ModuleSettingsPage::class, ['module' => 'test-module']);
 
@@ -232,39 +238,6 @@ final class ModuleSettingsPageTest extends TestCase
         }
 
         $this->assertDatabaseMissing('settings', ['key' => 'module_settings:own-page-module']);
-    }
-
-    /**
-     * @param  class-string<Page>  $page
-     */
-    private function loadTestModuleWithSettingsPage(string $page): void
-    {
-        $this->registerBootedProvider(new class(app(), $page) extends ModuleServiceProvider
-        {
-            /**
-             * @param  class-string<Page>  $page
-             */
-            public function __construct(Application $app, private readonly string $page)
-            {
-                parent::__construct($app);
-            }
-
-            public function moduleName(): string
-            {
-                return 'test-module';
-            }
-
-            public function getSettingsPage(): string
-            {
-                return $this->page;
-            }
-
-            // Still returned, as by a module that has not dropped it yet: the declared page wins
-            public function getSettingsSchema(): array
-            {
-                return [TextInput::make('greeting')];
-            }
-        });
     }
 
     private function loadTestModuleWithSettings(): void

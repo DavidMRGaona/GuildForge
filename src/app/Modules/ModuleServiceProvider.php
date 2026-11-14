@@ -232,8 +232,9 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * the module. The «Configuración» button of the modules page opens it, and the generic
      * settings page no longer edits the module.
      *
-     * The page must be listed in registerFilamentPages() and join App\Filament\Clusters\SettingsCluster;
-     * otherwise neither page edits the module's settings (it fails closed and logs a warning).
+     * The page must be one of this provider's registerFilamentPages() (never a page of the core or of
+     * another module) and join App\Filament\Clusters\SettingsCluster; otherwise neither page edits
+     * the module's settings (it fails closed and logs a warning).
      *
      * @return class-string<Page>|null
      */

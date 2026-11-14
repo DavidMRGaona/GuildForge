@@ -459,9 +459,7 @@ final class ModulesPage extends Page implements HasForms
         $pages = app(ModuleSettingsPages::class);
 
         if ($pages->declaresPage($name)) {
-            $page = $pages->usablePage($name);
-
-            return $page !== null && $page::canAccess() ? $page::getUrl() : null;
+            return $pages->accessibleUrl($name);
         }
 
         $provider = app(ModuleLoader::class)->getProvider($name);

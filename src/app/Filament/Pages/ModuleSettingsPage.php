@@ -120,16 +120,17 @@ final class ModuleSettingsPage extends Page implements HasForms
         $this->moduleNamespace = $moduleEntity->namespace();
         $this->moduleIsEnabled = $moduleEntity->isEnabled();
 
-        // A module with its own settings page is edited there, under the module's permission:
-        // old links land on it, and a declared page that cannot be used leaves nothing to edit
+        // A module with its own settings page is edited there, under the module's permission: old
+        // links (opened with modules.configure) land on it, and a declared page that cannot be
+        // used leaves nothing to edit
         $pages = app(ModuleSettingsPages::class);
 
         if ($pages->declaresPage($module)) {
-            $page = $pages->usablePage($module);
+            $url = $pages->pageUrl($module);
 
-            abort_if($page === null, 404);
+            abort_if($url === null, 404);
 
-            $this->redirect($page::getUrl());
+            $this->redirect($url);
 
             return;
         }

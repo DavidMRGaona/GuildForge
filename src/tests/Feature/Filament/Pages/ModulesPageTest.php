@@ -22,21 +22,26 @@ use App\Modules\ModuleServiceProvider;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Livewire;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
+use Tests\Support\Modules\InteractsWithModulePanel;
+use Tests\Support\Modules\OwnClusterSettingsPage;
 use Tests\Support\Modules\RegistersBootedModuleProviders;
+use Tests\Support\Modules\SettingsPageModuleProvider;
+use Tests\Support\Modules\ThrowingAccessClusterSettingsPage;
 use Tests\Support\Modules\UnregisteredClusterSettingsPage;
 use Tests\TestCase;
 
 final class ModulesPageTest extends TestCase
 {
     use CreatesUsersWithPermissions;
+    use InteractsWithModulePanel;
     use LazilyRefreshDatabase;
     use RegistersBootedModuleProviders;
 
@@ -199,11 +204,12 @@ final class ModulesPageTest extends TestCase
     {
         // Its settings live in the cluster, guarded by its own permission, not in the generic page
         ModuleModel::factory()->enabled()->create(['name' => 'own-page-module', 'display_name' => 'Own Page Module']);
-        $this->registerModuleWithSettingsPage('own-page-module', DashboardSettings::class);
+        $this->registerOnAdminPanel(pages: [OwnClusterSettingsPage::class]);
+        $this->registerBootedProvider(SettingsPageModuleProvider::owning(app(), 'own-page-module', OwnClusterSettingsPage::class));
         $this->actingAs(UserModel::factory()->admin()->create());
 
         Livewire::test(ModulesPage::class)
-            ->assertSee(DashboardSettings::getUrl())
+            ->assertSee(OwnClusterSettingsPage::getUrl())
             ->assertDontSee(ModuleSettingsPage::getUrl(['module' => 'own-page-module']));
     }
 
@@ -211,62 +217,64 @@ final class ModulesPageTest extends TestCase
     {
         // modules.configure alone would only lead to a 403 on the module's page
         ModuleModel::factory()->enabled()->create(['name' => 'own-page-module', 'display_name' => 'Own Page Module']);
-        $this->registerModuleWithSettingsPage('own-page-module', DashboardSettings::class);
+        $this->registerOnAdminPanel(pages: [OwnClusterSettingsPage::class]);
+        $this->registerBootedProvider(SettingsPageModuleProvider::owning(app(), 'own-page-module', OwnClusterSettingsPage::class));
 
         $this->actingAs($this->editorWithPermissions(['modules.configure']));
         Livewire::test(ModulesPage::class)
             ->assertSee('Own Page Module')
-            ->assertDontSee(DashboardSettings::getUrl())
+            ->assertDontSee(OwnClusterSettingsPage::getUrl())
             ->assertDontSee(ModuleSettingsPage::getUrl(['module' => 'own-page-module']));
 
-        $this->actingAs($this->editorWithPermissions(['modules.configure', 'dashboard.configure']));
+        $this->actingAs($this->editorWithPermissions(['modules.configure', OwnClusterSettingsPage::PERMISSION]));
         Livewire::test(ModulesPage::class)
-            ->assertSee(DashboardSettings::getUrl());
+            ->assertSee(OwnClusterSettingsPage::getUrl());
     }
 
-    public function test_a_module_whose_declared_page_cannot_be_used_has_no_settings_link(): void
+    /**
+     * @return array<string, array{\Closure(): SettingsPageModuleProvider}>
+     */
+    public static function modulesWithUnusablePages(): array
+    {
+        return [
+            'a page the panel does not register' => [fn (): SettingsPageModuleProvider => SettingsPageModuleProvider::owning(app(), 'broken-module', UnregisteredClusterSettingsPage::class)],
+            'a page of the core it does not own' => [fn (): SettingsPageModuleProvider => new SettingsPageModuleProvider(app(), 'broken-module', DashboardSettings::class)],
+            'a provider that throws' => [fn (): SettingsPageModuleProvider => SettingsPageModuleProvider::throwing(app(), 'broken-module')],
+        ];
+    }
+
+    /**
+     * @param  \Closure(): SettingsPageModuleProvider  $provider
+     */
+    #[DataProvider('modulesWithUnusablePages')]
+    public function test_a_module_whose_declared_page_cannot_be_used_has_no_settings_link(\Closure $provider): void
     {
         // Falling back to the generic page would let modules.configure edit what the module guards
         ModuleModel::factory()->enabled()->create(['name' => 'broken-module', 'display_name' => 'Broken Module']);
-        $this->registerModuleWithSettingsPage('broken-module', UnregisteredClusterSettingsPage::class);
+        $this->registerBootedProvider($provider());
         $this->actingAs(UserModel::factory()->admin()->create());
 
         Livewire::test(ModulesPage::class)
             ->assertSee('Broken Module')
-            ->assertDontSee(ModuleSettingsPage::getUrl(['module' => 'broken-module']));
+            ->assertDontSee(ModuleSettingsPage::getUrl(['module' => 'broken-module']))
+            ->assertDontSee(DashboardSettings::getUrl());
     }
 
-    /**
-     * @param  class-string<Page>  $page
-     */
-    private function registerModuleWithSettingsPage(string $name, string $page): void
+    public function test_an_access_check_that_throws_leaves_the_page_working_for_everyone(): void
     {
-        $this->registerBootedProvider(new class(app(), $name, $page) extends ModuleServiceProvider
-        {
-            /**
-             * @param  class-string<Page>  $page
-             */
-            public function __construct(Application $app, private readonly string $name, private readonly string $page)
-            {
-                parent::__construct($app);
-            }
+        // The admin who comes to disable a broken module must still get the page
+        ModuleModel::factory()->enabled()->create(['name' => 'failing-module', 'display_name' => 'Failing Module']);
+        ModuleModel::factory()->enabled()->create(['name' => 'configurable-module', 'display_name' => 'Configurable Module']);
+        $this->registerOnAdminPanel(pages: [ThrowingAccessClusterSettingsPage::class]);
+        $this->registerBootedProvider(SettingsPageModuleProvider::owning(app(), 'failing-module', ThrowingAccessClusterSettingsPage::class));
+        $this->registerBootedProvider(new SettingsPageModuleProvider(app(), 'configurable-module', null));
+        $this->actingAs(UserModel::factory()->admin()->create());
 
-            public function moduleName(): string
-            {
-                return $this->name;
-            }
-
-            public function getSettingsPage(): string
-            {
-                return $this->page;
-            }
-
-            // Still returned, as by a module that has not dropped it yet: the declared page wins
-            public function getSettingsSchema(): array
-            {
-                return [TextInput::make('greeting')];
-            }
-        });
+        $this->get(ModulesPage::getUrl())->assertOk();
+        Livewire::test(ModulesPage::class)
+            ->assertSee('Failing Module')
+            ->assertDontSee(ThrowingAccessClusterSettingsPage::getUrl())
+            ->assertSee(ModuleSettingsPage::getUrl(['module' => 'configurable-module']));
     }
 
     public function test_can_enable_disabled_module(): void
