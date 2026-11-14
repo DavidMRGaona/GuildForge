@@ -17,6 +17,8 @@ import {
 } from '@/utils/moduleTranslations';
 import { setCloudinaryConfig, type CloudinaryConfig } from '@/utils/cloudinary';
 import { removeServerSeoTags, useServerSeo } from '@/composables/useSeo';
+import { useBellVisible } from '@/composables/useSiteNotifications';
+import { useUnreadTitle } from '@/composables/useUnreadTitle';
 
 const i18n = createI18n({
     legacy: false,
@@ -137,6 +139,9 @@ void createInertiaApp({
         createApp({
             setup(): () => VNode {
                 useServerSeo();
+                // Wherever the bell shows, the tab title says how many notices are unread
+                const bellVisible = useBellVisible();
+                useUnreadTitle(() => bellVisible.value);
                 return () => h(App, props);
             },
         })

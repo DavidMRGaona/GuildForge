@@ -145,11 +145,12 @@ For a category with `mail: false`, the mail channel sends nothing even if `via()
 ## The bell and the «Avisos» page
 
 - The shared Inertia prop `siteNotifications` is `{ unread: number }` for a signed-in account and `null` for guests. The bell is hidden for accounts that must still verify their email (its routes are closed to them, like every signed-in route).
-- The counter refreshes with a light JSON request (`GET /avisos/contador`, never a page visit) every minute while the tab is visible, and on return to the tab. Opening the bell loads the latest 8 (`GET /avisos/recientes`). Both answer `{ unread, items? }` and are limited to 120 requests per minute.
+- The counter refreshes with a light JSON request (`GET /avisos/contador`, never a page visit) every minute while the tab is visible, every five minutes while it is hidden (so the tab title can tell, core#672), and on return to the tab. Opening the bell loads the latest 8 (`GET /avisos/recientes`). Both answer `{ unread, items? }` and are limited to 120 requests per minute.
 - Every row links to `/avisos/{id}`, which marks it read and redirects to its `url`, so a link to a message (`#m42`) lands on it. Someone else's notice is a 404.
 - `/avisos` lists every row, 20 per page, newest first. `POST /avisos/leidos` marks everything read (JSON for the bell, a redirect back for the page).
 - Each row shows up to two lines of `body` in both places, so write the important part first. The relative time («hace 5 minutos») moves on every minute with one clock shared by the page (`useNow()`), and its `title` gives the full date and time in the display zone (core#669). The bell's header has a shortcut to the notice settings (`/perfil?tab=mail`).
 - With real time on (core#493), the bell asks for its counter as soon as a notice is delivered instead of every minute; off, it keeps polling.
+- Wherever the bell shows (`useBellVisible()`: signed in, no pending email verification, counter in the shared props), the tab title starts with the unread count, «(3) Eventos · …», capped at «9+» like the badge (core#672). It is a title template set once in the app root (`useUnreadTitle()`), so it wraps whatever title the page sets and follows the same counter as the bell, with no request of its own. A notice delivered in real time is asked for at once even in a hidden tab.
 
 ## When the module deletes the thing
 

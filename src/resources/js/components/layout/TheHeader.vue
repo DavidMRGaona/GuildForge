@@ -10,6 +10,7 @@ import { useRoutes } from '@/composables/useRoutes';
 import { useOnNavigate } from '@/composables/useOnNavigate';
 import { useFitsWithoutOverflow } from '@/composables/useFitsWithoutOverflow';
 import { useSiteLogo } from '@/composables/useSiteLogo';
+import { useBellVisible } from '@/composables/useSiteNotifications';
 import SearchPanel from '@/components/search/SearchPanel.vue';
 import TheNavigation from './TheNavigation.vue';
 import UserDropdown from './UserDropdown.vue';
@@ -17,7 +18,7 @@ import NotificationBell from './NotificationBell.vue';
 import AuthLinks from './AuthLinks.vue';
 
 const { t } = useI18n();
-const { isAuthenticated, mustVerifyEmail } = useAuth();
+const { isAuthenticated } = useAuth();
 const routes = useRoutes();
 const page = usePage();
 const appStore = useAppStore();
@@ -55,14 +56,8 @@ watch(isSearchOpen, (isOpen) => {
 
 const appName = computed(() => page.props.appName as string);
 
-// The bell (core#491): signed in, and not while the account must verify its email (its routes are
-// closed until then)
-const showBell = computed(
-    () =>
-        isAuthenticated.value &&
-        !mustVerifyEmail.value &&
-        (page.props as { siteNotifications?: unknown }).siteNotifications != null
-);
+// The bell (core#491): signed in, and not while the account must verify its email
+const showBell = useBellVisible();
 const { logo: currentLogo, markFailed: markLogoFailed } = useSiteLogo();
 
 function toggleMobileMenu(): void {
