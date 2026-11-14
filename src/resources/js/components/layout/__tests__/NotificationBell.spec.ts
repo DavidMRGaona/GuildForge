@@ -129,6 +129,59 @@ describe('NotificationBell', () => {
         wrapper.unmount();
     });
 
+    it('keeps two lines of each excerpt and gives the full date on the time', async () => {
+        fetchMock.mockResolvedValue(
+            jsonResponse({
+                unread: 1,
+                items: [notice({ notifiedAt: '2026-12-19T18:00:00+01:00' })],
+            })
+        );
+        const wrapper = mountBell();
+
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+
+        const excerpt = wrapper.get('[data-testid="site-notification-body"]');
+        expect(excerpt.classes()).toContain('line-clamp-2');
+        expect(excerpt.classes()).not.toContain('truncate');
+        const time = wrapper.get('[data-testid="site-notification"] time');
+        expect(time.attributes('datetime')).toBe('2026-12-19T18:00:00+01:00');
+        expect(time.attributes('title')).toBe('19/12/2026, 18:00');
+        wrapper.unmount();
+    });
+
+    it('moves the times on while the list is open', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-11-14T10:00:00Z'));
+        fetchMock.mockResolvedValue(
+            jsonResponse({ unread: 1, items: [notice({ notifiedAt: '2026-11-14T09:59:30Z' })] })
+        );
+        const wrapper = mountBell();
+
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+        expect(wrapper.get('[data-testid="site-notification"] time').text()).toBe('ahora');
+
+        await vi.advanceTimersByTimeAsync(2 * 60_000);
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="site-notification"] time').text()).toBe('hace 2 minutos');
+        wrapper.unmount();
+    });
+
+    it('links to the notice settings from its header', async () => {
+        fetchMock.mockResolvedValue(jsonResponse({ unread: 0, items: [] }));
+        const wrapper = mountBell();
+
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+
+        const settings = wrapper.get('[data-testid="notification-settings"]');
+        expect(settings.attributes('href')).toBe('/perfil?tab=mail');
+        expect(settings.attributes('aria-label')).toBe('Elegir qué avisos y correos recibes');
+        wrapper.unmount();
+    });
+
     it('says when there is nothing yet', async () => {
         fetchMock.mockResolvedValue(jsonResponse({ unread: 0, items: [] }));
         const wrapper = mountBell();
