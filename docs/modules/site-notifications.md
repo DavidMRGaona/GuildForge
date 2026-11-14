@@ -109,7 +109,7 @@ final class ReplyPostedNotification extends Notification implements HasMailCateg
 | `title` | What happened, in one line («Ana respondió en «La tumba»»). Required. |
 | `url` | A path of this site (`/foro/temas/la-tumba#m42`). Absolute addresses, `//host`, backslashes and whitespace throw `InvalidArgumentException`. Use `route(..., absolute: false)`. |
 | `body` | A short excerpt, optional. Plain text: never HTML. |
-| `icon` | Optional Lucide name in kebab case. The bell knows a closed list (`siteNotificationIconMap` in `resources/js/utils/icons.ts`: the [mail section icons](./mail-categories.md#declaring-them) plus `at-sign`, `message-circle`, `message-square`, `quote`, `thumbs-up`, `user-plus` and `vote`) and shows a bell for any other. |
+| `icon` | Optional Lucide name in kebab case. The bell draws a closed list, `App\Application\SiteNotifications\SiteNotificationIcons::NAMES` (the [mail section icons](./mail-categories.md#declaring-them) plus `at-sign`, `ban`, `chart-bar`, `circle-check`, `clipboard-check`, `file-text`, `flag`, `images`, `message-circle`, `message-square`, `quote`, `thumbs-up`, `user-plus` and `vote`; the same names as `siteNotificationIconMap` in `resources/js/utils/icons.ts`, kept equal by a core test). Any other name is stored and shown with the bell's default icon, and the channel logs a warning once per class and icon (core#667). Needs core ≥ the release with #667 for the six icons after `at-sign`; on an older core they show a bell. |
 | `groupKey` | Optional. Unread notices of the person with the same key become one row (see below). `[A-Za-z0-9._:-]{1,191}`; start it with the module name. |
 | `actorId` | Optional. The account that caused the notice. A notice to that same account is never stored, and groups count distinct actors with it. |
 | `groupedTitle` | Optional closure `fn (SiteNotificationGroupDTO $group): string`, the title of a group row. Called only while the group holds more than one notice. |
@@ -135,7 +135,8 @@ When a notification goes through the `site` channel to an account, the core, at 
 3. Shows mandatory categories always. Holds back an optional one the person turned off **on the site**, or one about a thing they muted (`HasMailSubject`, the same mutes as the mail). Turning the mail off, or pausing it, does not touch the site notices. If the choices cannot be read, the notice is shown.
 4. Calls `toSiteNotification($notifiable)`. `null` stores nothing; an exception stores nothing and logs a warning.
 5. Stores nothing when `actorId` is the recipient.
-6. Stores the notice, or adds it to the unread row of its group.
+6. Logs a warning, once per class and icon, when `icon` is not one the bell draws (`SiteNotificationIcons::isKnown()`); the notice is still stored and shows the default icon.
+7. Stores the notice, or adds it to the unread row of its group.
 
 For a category with `mail: false`, the mail channel sends nothing even if `via()` lists `mail`, and the profile has no mail control for it.
 
@@ -190,3 +191,11 @@ $this->assertSame('Ana respondió en «La tumba»', $items[0]->title);
 ```
 
 Register the module's categories first in tests that build their own registry. To check that a person who lost access gets nothing, make `toSiteNotification()` return `null` and assert `unreadCount()` is 0.
+
+Check that every notice asks for an icon the bell draws, so a typo fails in the module's CI instead of showing a bell:
+
+```php
+$notice = (new ReplyPostedNotification(/* … */))->toSiteNotification($user);
+
+$this->assertTrue(SiteNotificationIcons::isKnown((string) $notice?->icon));
+```

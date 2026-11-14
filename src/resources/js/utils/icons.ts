@@ -4,20 +4,24 @@ import type { ProfileTabIcon as ProfileTabIconType } from '@/types/profile';
 import type { NotificationType } from '@/composables/useNotifications';
 import {
     AtSign,
+    Ban,
     Bell,
     BookOpen,
     Building2,
     Calendar,
     CalendarCheck,
     CalendarDays,
+    ChartBar,
     CircleAlert,
     CircleCheck,
     CircleUserRound,
+    ClipboardCheck,
     ClipboardList,
     Clock,
     CreditCard,
     Dices,
     FileText,
+    Flag,
     Handshake,
     Heart,
     IdCard,
@@ -157,11 +161,19 @@ export function resolveMailSectionIcon(icon: string | null): Component {
 
 /**
  * Icons a module may name for its notices in the notification centre (core#491): the mail
- * section ones plus a few for conversations. A closed list, like the mail sections.
+ * section ones plus a few for conversations, reviews and moderation. A closed list, like the
+ * mail sections; the server keeps the same names in `SiteNotificationIcons::NAMES` and a test
+ * checks both lists match (core#667).
  */
 export const siteNotificationIconMap: Record<string, Component> = {
     ...mailSectionIconMap,
     'at-sign': AtSign,
+    ban: Ban,
+    'chart-bar': ChartBar,
+    'circle-check': CircleCheck,
+    'clipboard-check': ClipboardCheck,
+    'file-text': FileText,
+    flag: Flag,
     images: Images,
     'message-circle': MessageCircle,
     'message-square': MessageSquare,
