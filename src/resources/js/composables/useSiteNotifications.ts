@@ -14,6 +14,12 @@ interface SharedProps {
 /** How often the bell asks for the counter while the tab is visible and real time is not live. */
 export const POLL_INTERVAL_MS = 60_000;
 
+/**
+ * How often it asks while the tab is hidden (core#672): rarely, but enough for the tab title to
+ * say that something arrived while the person is elsewhere.
+ */
+export const HIDDEN_POLL_INTERVAL_MS = 5 * 60_000;
+
 /** What the account's channel says when a notice is delivered (core#493): nothing but that. */
 export const DELIVERED_EVENT = 'site-notification.delivered';
 
@@ -49,6 +55,8 @@ let timer: ReturnType<typeof setInterval> | null = null;
 // One subscription for the whole page, however many bells it has
 let realtimeScope: EffectScope | null = null;
 let live = false;
+// When the counter was last asked for, so a hidden tab asks only every few minutes
+let lastAskedAt = 0;
 
 function readNumber(value: unknown): number | null {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -76,11 +84,23 @@ function onVisibilityChange(routes: ReturnType<typeof useRoutes>): () => void {
     };
 }
 
-async function refresh(routes: ReturnType<typeof useRoutes>): Promise<void> {
-    // A hidden tab waits: it asks again when the person comes back
-    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+function isHidden(): boolean {
+    return typeof document !== 'undefined' && document.visibilityState === 'hidden';
+}
+
+/**
+ * Ask for the counter. A hidden tab asks only when told to (a notice delivered in real time, or
+ * the few-minutes question): its tab title shows the count (core#672).
+ */
+async function refresh(
+    routes: ReturnType<typeof useRoutes>,
+    { evenHidden = false }: { evenHidden?: boolean } = {}
+): Promise<void> {
+    if (isHidden() && !evenHidden) {
         return;
     }
+
+    lastAskedAt = Date.now();
 
     try {
         const count = readNumber((await getJson(routes.notifications.count)).unread);
@@ -176,7 +196,7 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
         realtimeScope.run(() => {
             const { status } = useRealtimeChannel(
                 () => (page.props as SharedProps).siteNotifications?.channel ?? null,
-                { [DELIVERED_EVENT]: () => void refresh(routes) }
+                { [DELIVERED_EVENT]: () => void refresh(routes, { evenHidden: true }) }
             );
             watch(status, (now, before) => {
                 live = now === 'live';
@@ -193,8 +213,13 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
         pollers++;
         if (pollers === 1) {
             timer = setInterval(() => {
-                if (!live) {
+                if (live) {
+                    return;
+                }
+                if (!isHidden()) {
                     void refresh(routes);
+                } else if (Date.now() - lastAskedAt >= HIDDEN_POLL_INTERVAL_MS) {
+                    void refresh(routes, { evenHidden: true });
                 }
             }, POLL_INTERVAL_MS);
             listenInRealTime();
@@ -242,4 +267,5 @@ export function resetSiteNotificationsState(): void {
     realtimeScope?.stop();
     realtimeScope = null;
     live = false;
+    lastAskedAt = 0;
 }

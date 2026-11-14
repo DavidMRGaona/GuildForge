@@ -8,6 +8,7 @@ import en from '@/locales/en';
 import es from '@/locales/es';
 import {
     DELIVERED_EVENT,
+    HIDDEN_POLL_INTERVAL_MS,
     POLL_INTERVAL_MS,
     resetSiteNotificationsState,
 } from '@/composables/useSiteNotifications';
@@ -53,6 +54,13 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
+function hideTab(): void {
+    Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+    });
+}
+
 function mountBell(): VueWrapper {
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
@@ -73,6 +81,7 @@ describe('NotificationBell', () => {
         setRealtimeClientFactory(null);
         vi.unstubAllGlobals();
         vi.useRealTimers();
+        Reflect.deleteProperty(document, 'visibilityState');
         document.body.innerHTML = '';
     });
 
@@ -272,6 +281,24 @@ describe('NotificationBell', () => {
         wrapper.unmount();
     });
 
+    it('keeps asking every few minutes while the tab is hidden, for the tab title', async () => {
+        vi.useFakeTimers();
+        fetchMock.mockResolvedValue(jsonResponse({ unread: 6 }));
+        const wrapper = mountBell();
+        hideTab();
+
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(wrapper.find('[data-testid="notification-badge"]').text()).toBe('6');
+
+        await vi.advanceTimersByTimeAsync(HIDDEN_POLL_INTERVAL_MS - POLL_INTERVAL_MS);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        wrapper.unmount();
+    });
+
     it('stops asking once unmounted', async () => {
         vi.useFakeTimers();
         fetchMock.mockResolvedValue(jsonResponse({ unread: 5 }));
@@ -352,6 +379,20 @@ describe('NotificationBell', () => {
             await goLive();
 
             expect(subscriptions).toEqual([CHANNEL]);
+            events.get(DELIVERED_EVENT)?.({});
+            await flushPromises();
+
+            expect(fetchMock).toHaveBeenCalledWith('/avisos/contador', expect.anything());
+            expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('4');
+            wrapper.unmount();
+        });
+
+        it('hears a delivered notice in a hidden tab too', async () => {
+            fetchMock.mockResolvedValue(jsonResponse({ unread: 4 }));
+            const wrapper = mountBell();
+            await goLive();
+            hideTab();
+
             events.get(DELIVERED_EVENT)?.({});
             await flushPromises();
 
