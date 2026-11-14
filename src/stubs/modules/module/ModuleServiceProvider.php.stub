@@ -12,6 +12,7 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
 use App\Application\Proposals\Contracts\EventProposalRequestInterface;
+use App\Application\Registration\Contracts\RegistrationFieldInterface;
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
 use App\Modules\ModuleServiceProvider;
 use Filament\Pages\Page;
@@ -290,6 +291,18 @@ final class {{ moduleNameStudly }}ServiceProvider extends ModuleServiceProvider
      * @return array<class-string<EventProposalRequestInterface>>
      */
     public function registerEventProposalRequests(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the optional fields this module adds to the registration form (checkboxes, always
+     * unticked). The core checks the values and dispatches RegistrationFieldsSubmitted once the
+     * account exists. Keys start with "{{ moduleName }}.". See docs/modules/registration-fields.md.
+     *
+     * @return array<class-string<RegistrationFieldInterface>>
+     */
+    public function registerRegistrationFields(): array
     {
         return [];
     }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Application\DTOs\CreateUserDTO;
+use App\Application\Registration\DTOs\RegistrationFieldDTO;
+use App\Application\Registration\Services\RegistrationFieldRegistryInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
@@ -21,6 +23,7 @@ final class RegisterController extends Controller
         private readonly AuthServiceInterface $authService,
         private readonly SeoMetadataFactoryInterface $seo,
         private readonly EmailVerificationPolicyInterface $emailVerification,
+        private readonly RegistrationFieldRegistryInterface $registrationFields,
     ) {}
 
     public function create(): Response
@@ -30,16 +33,21 @@ final class RegisterController extends Controller
                 title: (string) __('seo.titles.register'),
                 noindex: true,
             ))->toArray(),
+            // Module fields (core#699), without their rules; the registry never throws
+            'registrationFields' => array_map(
+                static fn (RegistrationFieldDTO $field): array => $field->toArray(),
+                $this->registrationFields->available(),
+            ),
         ]);
     }
 
     public function store(RegisterRequest $request): RedirectResponse
     {
-        /** @var array{name: string, email: string, password: string} $validated */
+        /** @var array{name: string, email: string, password: string, registration_fields?: mixed} $validated */
         $validated = $request->validated();
 
         $dto = CreateUserDTO::fromArray($validated);
-        $this->authService->register($dto);
+        $this->authService->register($dto, $request->registrationFieldValues());
 
         $this->authService->attemptLogin(
             $validated['email'],

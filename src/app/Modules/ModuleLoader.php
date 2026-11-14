@@ -22,6 +22,7 @@ use App\Application\Modules\Services\ModuleSlotRegistryInterface;
 use App\Application\Proposals\Services\EventProposalRequestRegistryInterface;
 use App\Application\Publications\Services\PublicationSourceRegistryInterface;
 use App\Application\Realtime\Services\RealtimeChannelRegistryInterface;
+use App\Application\Registration\Services\RegistrationFieldRegistryInterface;
 use App\Application\Search\Services\SearchSourceRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
@@ -145,6 +146,9 @@ final class ModuleLoader
 
         // Register event proposal requests from the provider
         $this->registerProviderEventProposalRequests($provider, $module->name()->value);
+
+        // Register registration form fields from the provider
+        $this->registerProviderRegistrationFields($provider, $module->name()->value);
 
         // Register knowledge capabilities from the provider
         $this->registerProviderKnowledgeCapabilities($provider, $module->name()->value);
@@ -424,6 +428,22 @@ final class ModuleLoader
 
         if ($this->app->bound(EventProposalRequestRegistryInterface::class)) {
             $this->app->make(EventProposalRequestRegistryInterface::class)->registerMany($requests, $moduleName);
+        }
+    }
+
+    /**
+     * Register registration form fields from a module provider.
+     */
+    private function registerProviderRegistrationFields(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $fields = $provider->registerRegistrationFields();
+
+        if ($fields === []) {
+            return;
+        }
+
+        if ($this->app->bound(RegistrationFieldRegistryInterface::class)) {
+            $this->app->make(RegistrationFieldRegistryInterface::class)->registerMany($fields, $moduleName);
         }
     }
 

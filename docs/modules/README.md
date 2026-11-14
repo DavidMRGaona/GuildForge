@@ -43,6 +43,8 @@ Letting other modules link their data to a module's records (drafts and panel-on
 
 Adding requests to the events people propose from the web («¿Quieres inscripciones?»), which become the module's configuration when the proposal is approved, is covered in [Event proposal requests](./proposal-requests.md).
 
+Adding optional checkboxes to the registration form («Quiero recibir el boletín»), always unticked, and hearing what the person chose once the account exists is covered in [Registration fields](./registration-fields.md).
+
 What the safety net of an administrator viewing the site as another account already covers, when a module must refuse an external call, and how its panel pages and frontend behave meanwhile is covered in [Impersonation](./impersonation.md).
 
 Putting a module's entries in the public calendar and in each person's personal calendar is covered in [Calendar sources, the public feed and the personal calendar](./calendar.md), which also shows how to offer the public calendar subscription (`PublicCalendarFeedInterface`).
@@ -2394,6 +2396,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerPublicationSources()` | `class-string<PublicationSourceInterface>[]` | Published records other modules may announce elsewhere (see [Publication sources](./publications.md)) |
 | `registerLinkableRecordSources()` | `class-string<LinkableRecordSourceInterface>[]` | Records other modules may link their data to, as each viewer may see them; `find()` returns `null` for what the viewer may not see (see [Linkable records](./linkable-records.md)) |
 | `registerEventProposalRequests()` | `class-string<EventProposalRequestInterface>[]` | Requests added to event proposals made from the web; keys prefixed with the module, values checked by the core and applied on approval (see [Event proposal requests](./proposal-requests.md)) |
+| `registerRegistrationFields()` | `class-string<RegistrationFieldInterface>[]` | Optional checkboxes added to the registration form, always unticked; keys prefixed with the module, values checked by the core and announced with `RegistrationFieldsSubmitted` once the account exists (see [Registration fields](./registration-fields.md)) |
 | `registerKnowledgeCapabilities()` | `class-string<KnowledgeCapabilityInterface>[]` | Capabilities that guide conditions can ask about (see [Writing knowledge guides](./knowledge-guides.md)) |
 | `registerMailCategories()` | `MailCategoryDTO[]` | Categories of the module's mail, which people turn off in their profile when optional; keys prefixed with the module (see [Mail categories](./mail-categories.md)) |
 | `registerPolicies()` | `array<class-string, class-string>` | Model to policy mappings |

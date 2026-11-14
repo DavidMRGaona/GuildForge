@@ -14,6 +14,7 @@ use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
+use App\Domain\Events\RegistrationFieldsSubmitted;
 use App\Domain\Events\UserLoggedIn;
 use App\Domain\Events\UserLoggedOut;
 use App\Domain\Events\UserPasswordChanged;
@@ -31,8 +32,10 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 final readonly class AuthService implements AuthServiceInterface
 {
@@ -46,7 +49,7 @@ final readonly class AuthService implements AuthServiceInterface
         private AvatarPath $avatarPaths = new AvatarPath,
     ) {}
 
-    public function register(CreateUserDTO $dto): UserResponseDTO
+    public function register(CreateUserDTO $dto, array $registrationFields = []): UserResponseDTO
     {
         $user = $this->userRepository->create($dto);
         $userModel = $this->userModelQuery->findModelById($user->id());
@@ -60,6 +63,7 @@ final readonly class AuthService implements AuthServiceInterface
 
         event(new Registered($userModel));
         Event::dispatch(new UserRegistered($user->id()->value, $user->email()));
+        $this->announceRegistrationFields($user->id()->value, $registrationFields);
 
         // Send welcome email
         $userModel->notify(new WelcomeNotification($this->siteBranding->siteName()));
@@ -290,6 +294,29 @@ final readonly class AuthService implements AuthServiceInterface
         $userModel = $this->userModelQuery->findModelById(UserId::fromString($userId));
 
         return $userModel instanceof UserModel && $userModel->hasVerifiedEmail();
+    }
+
+    /**
+     * Module fields of the form (core#699). Listeners are the modules' and should be queued; one
+     * that throws is logged without personal data and never undoes nor stops the registration.
+     *
+     * @param  array<string, bool>  $values
+     */
+    private function announceRegistrationFields(string $userId, array $values): void
+    {
+        if ($values === []) {
+            return;
+        }
+
+        try {
+            Event::dispatch(new RegistrationFieldsSubmitted($userId, $values));
+        } catch (Throwable $exception) {
+            Log::error('[AuthService] A RegistrationFieldsSubmitted listener failed', [
+                'userId' => $userId,
+                'fields' => array_keys($values),
+                'exception' => $exception::class,
+            ]);
+        }
     }
 
     private function deleteReplacedAvatar(UserModel $userModel, string $newAvatarPublicId): void
