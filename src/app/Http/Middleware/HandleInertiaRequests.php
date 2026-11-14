@@ -310,7 +310,7 @@ final class HandleInertiaRequests extends Middleware
      * The notice is a message for the administrator flashed by the previous request (a refused
      * submission, the panel closed to the account), shown by the band on any page.
      *
-     * @return array{targetName: string|null, mode: string, notice: string|null}|null
+     * @return array{targetName: string|null, mode: string, notice: string|null, viewedRoles: list<string>|null}|null
      */
     private function getImpersonation(Request $request): ?array
     {
