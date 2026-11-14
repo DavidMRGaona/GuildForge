@@ -48,7 +48,16 @@ final readonly class EloquentImpersonationRoles implements ImpersonationRolesInt
     private function toDtos(Builder $query): array
     {
         return array_values($query->get()
-            ->map(static fn (RoleModel $role): ViewedRoleDTO => new ViewedRoleDTO($role->id, $role->name, $role->display_name))
+            ->map(static fn (RoleModel $role): ViewedRoleDTO => new ViewedRoleDTO($role->id, $role->name, self::displayName($role)))
             ->all());
+    }
+
+    /**
+     * Its display name, or its name when it has none: the dialog, the throwaway account, the
+     * bands and the log all name the role the same way.
+     */
+    private static function displayName(RoleModel $role): string
+    {
+        return trim($role->display_name) !== '' ? $role->display_name : $role->name;
     }
 }

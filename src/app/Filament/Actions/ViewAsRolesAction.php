@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Actions;
 
-use App\Application\Impersonation\DTOs\ViewedRoleDTO;
 use App\Application\Impersonation\Services\ImpersonationEligibilityRule;
 use App\Application\Impersonation\Services\ImpersonationRolesInterface;
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
@@ -44,7 +43,7 @@ final class ViewAsRolesAction
                 $baseRoleId = $roles->baseRoleId();
                 $options = [];
                 foreach ($roles->offered() as $role) {
-                    $options[$role->id] = self::label($role);
+                    $options[$role->id] = $role->displayName;
                 }
 
                 return [
@@ -87,10 +86,5 @@ final class ViewAsRolesAction
                 $action->success();
                 $livewire->redirect(route('home'));
             });
-    }
-
-    private static function label(ViewedRoleDTO $role): string
-    {
-        return $role->displayName !== '' ? $role->displayName : $role->name;
     }
 }
