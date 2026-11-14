@@ -672,12 +672,15 @@ The `docker/prod/php.ini` file sets:
 | `expose_php` | `Off` | Do not expose PHP version |
 | `session.upload_progress.enabled` | `0` | No upload progress tracking; the app uses Laravel sessions, not PHP's |
 | `fatal_error_backtraces` | `0` | No backtraces attached to fatal errors |
+| `zend.exception_ignore_args` | `On` | Stack traces leave out call arguments, so logged exceptions (`laravel.log`, `failed_jobs.exception`) never carry the emails, tokens or keys passed to the functions in the trace |
 | `memory_limit` | `256M` | Memory limit per process |
 | `post_max_size` | `20M` | Maximum POST size |
 | `upload_max_filesize` | `20M` | Maximum upload size |
 | `max_execution_time` | `60` (seconds) | Execution timeout |
 | `display_errors` | `Off` | Do not display errors to users |
 | `date.timezone` | `Europe/Madrid` | Timezone |
+
+The image does not load `php.ini-production`: only this file is added to PHP's built-in defaults, so any hardening setting from that template has to be written here. An installation that runs the core without this image should set `zend.exception_ignore_args=On` in its own `php.ini` too.
 
 ### Production Nginx
 

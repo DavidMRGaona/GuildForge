@@ -1668,6 +1668,21 @@ public function register(): void
 }
 ```
 
+### 11. Mark sensitive parameters
+
+The production image sets `zend.exception_ignore_args=On`, so stack traces leave out call arguments. Another installation may run with a different `php.ini`, where a logged exception would print the first 15 characters of every argument to `laravel.log` and `failed_jobs.exception`. Mark parameters that hold secrets or personal data (API keys, tokens, passwords, email addresses) with `#[\SensitiveParameter]`: PHP then replaces them with a `SensitiveParameterValue` in every trace, whatever the setting:
+
+```php
+public function subscribe(
+    #[\SensitiveParameter] string $email,
+    #[\SensitiveParameter] string $apiKey,
+): void {
+    // ...
+}
+```
+
+Promoted constructor properties take the attribute too (a value object holding a key, for example).
+
 ---
 
 ## Legal notices in emails
