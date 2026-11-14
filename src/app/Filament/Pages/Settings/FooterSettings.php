@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\Pages\Settings;
 
 use App\Application\Footer\Services\FooterLayoutServiceInterface;
+use App\Application\Media\Services\MediaFileReleaserInterface;
+use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Navigation\Services\FooterMenusInterface;
 use App\Application\SiteBlocks\Contracts\SiteBlockInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
+use App\Domain\Footer\FooterLogos;
 use App\Domain\Footer\ValueObjects\FooterBlock;
 use App\Domain\Footer\ValueObjects\FooterColumn;
 use App\Domain\Footer\ValueObjects\FooterLayout;
@@ -16,6 +19,7 @@ use App\Domain\Navigation\Enums\MenuLocation;
 use App\Domain\SiteBlocks\SiteBlockPlacement;
 use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
+use App\Filament\Media\Sources\FooterMediaSource;
 use App\Filament\Support\PanelNavigationGroup;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Builder;
@@ -33,6 +37,7 @@ use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Log;
 use JsonException;
 use Throwable;
 
@@ -166,13 +171,55 @@ final class FooterSettings extends Page implements HasForms
 
         $state = $this->form->getState();
 
-        $layouts->save($this->layoutFrom($state['columns'] ?? []));
+        $previous = $this->logoPathsIn($layouts->layout());
+        $layout = $this->layoutFrom($state['columns'] ?? []);
+
+        $layouts->save($layout);
+        $this->releaseAndRefreshMedia(array_diff($previous, $this->logoPathsIn($layout)));
         $menus->saveNames(is_array($state['menu_names'] ?? null) ? $state['menu_names'] : []);
 
         Notification::make()
             ->title(__('filament.footer.saved'))
             ->success()
             ->send();
+    }
+
+    /**
+     * Logos that left the footer are released (deleted only if nobody else uses them, the footer
+     * itself included, which is read again from the table) and the library's uses of the footer are
+     * refreshed. Never fails the save: the nightly sync settles what was not refreshed.
+     *
+     * @param  array<array-key, string>  $removed
+     */
+    private function releaseAndRefreshMedia(array $removed): void
+    {
+        try {
+            foreach (array_unique($removed) as $path) {
+                resolve(MediaFileReleaserInterface::class)->release($path);
+            }
+
+            resolve(MediaIndexerInterface::class)->refresh(FooterMediaSource::TYPE, FooterMediaSource::RECORD_ID);
+        } catch (Throwable $e) {
+            Log::warning('[Media] Could not refresh the media usages of the saved footer.', ['exception' => $e]);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function logoPathsIn(FooterLayout $layout): array
+    {
+        $paths = [];
+
+        foreach ($layout->columns as $column) {
+            foreach ($column->blocks as $block) {
+                if ($block->key === FooterLogos::BLOCK_KEY) {
+                    array_push($paths, ...FooterLogos::pathsIn($block->settings));
+                }
+            }
+        }
+
+        return $paths;
     }
 
     /**

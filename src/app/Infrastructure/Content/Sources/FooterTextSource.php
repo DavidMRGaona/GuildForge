@@ -11,6 +11,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Domain\Content\ValueObjects\EditorImageFolder;
 use App\Infrastructure\Footer\SettingsFooterLayoutService;
+use App\Infrastructure\Footer\StoredFooterLayout;
 use Illuminate\Support\Facades\DB;
 use JsonException;
 use RuntimeException;
@@ -108,20 +109,7 @@ final readonly class FooterTextSource implements EditorTextSourceInterface
      */
     private function stored(bool $lock = false): array
     {
-        $query = DB::table('settings')->where('key', FooterLayoutServiceInterface::SETTING_KEY);
-        $value = ($lock ? $query->lockForUpdate() : $query)->value('value');
-
-        if (! is_string($value) || $value === '') {
-            return [];
-        }
-
-        try {
-            $decoded = json_decode($value, true, 32, JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            throw new RuntimeException('The stored footer layout is not valid JSON.', $e->getCode(), previous: $e);
-        }
-
-        return is_array($decoded) ? $decoded : [];
+        return (new StoredFooterLayout)->read($lock);
     }
 
     private function textOf(mixed $block): ?string

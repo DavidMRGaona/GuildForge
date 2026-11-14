@@ -6,6 +6,8 @@ namespace Tests\Feature\Filament\Settings;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Footer\Services\FooterLayoutServiceInterface;
+use App\Application\Media\Services\MediaFileReleaserInterface;
+use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Navigation\Services\FooterMenusInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Domain\Footer\ValueObjects\FooterBlock;
@@ -19,7 +21,9 @@ use Filament\Forms\Components\Builder;
 use Filament\Forms\Components\Builder\Block;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Mockery\MockInterface;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
@@ -191,6 +195,111 @@ final class FooterSettingsTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertTrue(app(FooterLayoutServiceInterface::class)->layout()->isEmpty());
+    }
+
+    public function test_a_button_with_a_link_that_is_not_allowed_is_refused(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        foreach (['javascript:alert(1)', '//evil.example', 'ftp://example.com'] as $url) {
+            Livewire::test(FooterSettings::class)
+                ->fillForm(['columns' => [['blocks' => [
+                    ['type' => 'core.button', 'data' => ['title' => null, 'settings' => ['label' => 'Entrar', 'url' => $url, 'style' => 'primary']]],
+                ]]]])
+                ->call('save')
+                ->assertHasFormErrors();
+        }
+
+        $this->assertTrue(app(FooterLayoutServiceInterface::class)->layout()->isEmpty());
+    }
+
+    public function test_a_button_with_an_https_link_or_a_path_is_saved(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(FooterSettings::class)
+            ->fillForm(['columns' => [['blocks' => [
+                ['type' => 'core.button', 'data' => ['title' => null, 'settings' => ['label' => 'Únete', 'url' => 'https://example.com/unete', 'style' => 'secondary']]],
+                ['type' => 'core.button', 'data' => ['title' => null, 'settings' => ['label' => 'Eventos', 'url' => '/eventos', 'style' => 'primary']]],
+                ['type' => 'core.upcoming_events', 'data' => ['title' => 'Próximos', 'settings' => ['limit' => 4, 'show_all_link' => true]]],
+            ]]]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $blocks = app(FooterLayoutServiceInterface::class)->layout()->columns[0]->blocks;
+
+        $this->assertSame(['core.button', 'core.button', 'core.upcoming_events'], array_map(static fn (FooterBlock $b): string => $b->key, $blocks));
+        $this->assertSame('/eventos', $blocks[1]->settings['url']);
+        $this->assertSame(4, $blocks[2]->settings['limit']);
+    }
+
+    public function test_a_logo_without_alternative_text_is_refused_and_a_bad_link_too(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+            new FooterColumn([new FooterBlock('core.logos', null, ['logos' => [['image' => 'footer/logos/a.png', 'alt' => 'Club', 'url' => '']]])]),
+        ]));
+        $mount = Livewire::test(FooterSettings::class);
+        $logo = static fn (string $alt, string $url): array => ['columns' => [['blocks' => [
+            ['type' => 'core.logos', 'data' => ['title' => null, 'settings' => ['logos' => [['image' => ['a' => 'footer/logos/a.png'], 'alt' => $alt, 'url' => $url]]]]],
+        ]]]];
+
+        $mount->fillForm($logo('', ''))->call('save')->assertHasFormErrors();
+        $mount->fillForm($logo('Club', 'javascript:alert(1)'))->call('save')->assertHasFormErrors();
+        $mount->fillForm($logo('Club', 'https://example.com'))->call('save')->assertHasNoFormErrors();
+
+        $this->assertSame('https://example.com', app(FooterLayoutServiceInterface::class)->layout()->columns[0]->blocks[0]->settings['logos'][0]['url']);
+    }
+
+    public function test_saving_refreshes_the_media_usages_and_releases_the_logos_that_left(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        // Filament drops from the form any stored file the disk does not have
+        Storage::fake('images');
+        Storage::disk('images')->put('footer/logos/keep.png', 'x');
+        Storage::disk('images')->put('footer/logos/gone.png', 'x');
+        app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+            new FooterColumn([new FooterBlock('core.logos', null, ['logos' => [
+                ['image' => 'footer/logos/keep.png', 'alt' => 'Se queda', 'url' => ''],
+                ['image' => 'footer/logos/gone.png', 'alt' => 'Se va', 'url' => ''],
+            ]])]),
+        ]));
+        $this->mock(MediaFileReleaserInterface::class, static function (MockInterface $releaser): void {
+            $releaser->shouldReceive('release')->once()->with('footer/logos/gone.png');
+        });
+        $this->mock(MediaIndexerInterface::class, static function (MockInterface $indexer): void {
+            $indexer->shouldReceive('refresh')->once()->with('footer', 'layout');
+        });
+
+        $component = Livewire::test(FooterSettings::class);
+        $columns = $component->get('data.columns');
+        $column = array_key_first($columns);
+        $block = array_key_first($columns[$column]['blocks']);
+        $path = 'data.columns.'.$column.'.blocks.'.$block.'.data.settings.logos';
+        $logos = $component->get($path);
+        $first = array_key_first($logos);
+
+        $component->set($path, [$first => $logos[$first]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(['footer/logos/keep.png'], array_column(app(FooterLayoutServiceInterface::class)->layout()->columns[0]->blocks[0]->settings['logos'], 'image'));
+    }
+
+    public function test_a_media_failure_never_fails_the_save(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        $this->mock(MediaIndexerInterface::class, static function (MockInterface $indexer): void {
+            $indexer->shouldReceive('refresh')->andThrow(new RuntimeException('index down'));
+        });
+
+        Livewire::test(FooterSettings::class)
+            ->fillForm(['columns' => [['blocks' => [['type' => 'core.text', 'data' => ['title' => null, 'settings' => ['content' => '<p>Hola</p>']]]]]]])
+            ->call('save')
+            ->assertHasNoFormErrors()
+            ->assertNotified('Pie de página guardado');
+
+        $this->assertFalse(app(FooterLayoutServiceInterface::class)->layout()->isEmpty());
     }
 
     public function test_it_names_the_footer_menus(): void

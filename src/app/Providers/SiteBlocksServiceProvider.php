@@ -7,9 +7,12 @@ namespace App\Providers;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
 use App\Filament\SiteBlocks\BrandFooterBlock;
+use App\Filament\SiteBlocks\ButtonFooterBlock;
 use App\Filament\SiteBlocks\ContactFooterBlock;
 use App\Filament\SiteBlocks\LinksFooterBlock;
+use App\Filament\SiteBlocks\LogosFooterBlock;
 use App\Filament\SiteBlocks\TextFooterBlock;
+use App\Filament\SiteBlocks\UpcomingEventsFooterBlock;
 use App\Infrastructure\SiteBlocks\SiteBlockRegistry;
 use App\Infrastructure\SiteBlocks\SiteBlockRenderer;
 use Illuminate\Support\ServiceProvider;
@@ -27,6 +30,9 @@ final class SiteBlocksServiceProvider extends ServiceProvider
         TextFooterBlock::class,
         BrandFooterBlock::class,
         ContactFooterBlock::class,
+        UpcomingEventsFooterBlock::class,
+        ButtonFooterBlock::class,
+        LogosFooterBlock::class,
     ];
 
     public function register(): void

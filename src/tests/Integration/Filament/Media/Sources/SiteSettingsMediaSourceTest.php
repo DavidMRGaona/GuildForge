@@ -107,6 +107,8 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $this->assertSame('avatars', $registry->claimingSource(new MediaFileId('users/x'))?->type());
         // The rich text source claims no folder
         $this->assertSame('rich_text', $registry->source('rich_text')?->type());
-        $this->assertCount(7, $registry->sources());
+        // The footer source claims the footer's folders, editor images included (core#698)
+        $this->assertSame('footer', $registry->claimingSource(new MediaFileId('footer/content/2026/11/x'))?->type());
+        $this->assertCount(8, $registry->sources());
     }
 }
