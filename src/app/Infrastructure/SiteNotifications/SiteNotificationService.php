@@ -8,17 +8,21 @@ use App\Application\Services\TimezoneServiceInterface;
 use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Application\SiteNotifications\DTOs\SiteNotificationItemDTO;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
+use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
 use App\Domain\SiteNotifications\ValueObjects\StoredSiteNotice;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 final readonly class SiteNotificationService implements SiteNotificationServiceInterface
 {
     public function __construct(
         private SiteNotificationRepositoryInterface $notices,
         private TimezoneServiceInterface $timezone,
+        private MailDigestItemRepositoryInterface $digestItems,
     ) {}
 
     public function unreadCount(object $user): int
@@ -104,7 +108,22 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
 
     public function resolveSubject(string $category, string $type, string $id): int
     {
-        return $this->notices->markReadForSubject($category, $type, $id);
+        $resolved = $this->notices->markReadForSubject($category, $type, $id);
+
+        // A line still waiting for the daily digest would ask for it again (core#681). After the
+        // notices: a failure here never leaves the bell asking for a task already done
+        try {
+            $this->digestItems->deleteForSubject($type, $id, $category);
+        } catch (Throwable $exception) {
+            Log::error('Could not delete the digest lines of a resolved subject.', [
+                'category' => $category,
+                'subject_type' => $type,
+                'subject_id' => $id,
+                'exception' => $exception,
+            ]);
+        }
+
+        return $resolved;
     }
 
     public function forgetSubject(string $type, string $id): void

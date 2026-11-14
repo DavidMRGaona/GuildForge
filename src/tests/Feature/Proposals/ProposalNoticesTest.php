@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Proposals;
 
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\Proposals\DTOs\EventProposalDataDTO;
 use App\Application\Proposals\DTOs\ProposalSettingsDTO;
@@ -13,6 +14,7 @@ use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
 use App\Application\SiteNotifications\DTOs\SiteNotificationItemDTO;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
+use App\Domain\Mail\Enums\MailDelivery;
 use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Domain\Proposals\Enums\ProposalType;
 use App\Filament\Resources\EventResource;
@@ -26,6 +28,7 @@ use App\Notifications\ProposalToReviewNotification;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -244,6 +247,23 @@ final class ProposalNoticesTest extends TestCase
             $this->assertContains($resolvedUrl, $allUrls, 'Read, not deleted.');
             $this->assertContains($pendingUrl, $unreadUrls);
         }
+    }
+
+    public function test_a_review_line_held_for_the_daily_digest_goes_once_the_proposal_is_resolved(): void
+    {
+        $author = UserModel::factory()->create();
+        $reviewer = $this->userWith(['events.review']);
+        app(MailPreferenceServiceInterface::class)->update($reviewer, [CoreMailCategories::PROPOSALS_REVIEW => MailDelivery::Digest]);
+        $id = $this->pending($author);
+        $stillPending = $this->pending($author, 'Otra jornada');
+        $this->assertSame(2, DB::table('user_mail_digest_items')->where('user_id', $reviewer->id)->count());
+
+        $this->service()->approve($reviewer->id, ProposalType::Event, $id);
+
+        $this->assertSame(
+            [$stillPending],
+            DB::table('user_mail_digest_items')->where('user_id', $reviewer->id)->pluck('subject_id')->all(),
+        );
     }
 
     public function test_the_author_keeps_the_notice_of_what_became_of_it(): void

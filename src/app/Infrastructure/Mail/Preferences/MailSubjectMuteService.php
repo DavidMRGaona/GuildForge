@@ -6,6 +6,7 @@ namespace App\Infrastructure\Mail\Preferences;
 
 use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
+use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\Mail\Repositories\MailSubjectMuteRepositoryInterface;
 use App\Domain\Mail\ValueObjects\MutedMailSubject;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
@@ -17,6 +18,7 @@ final readonly class MailSubjectMuteService implements MailSubjectMuteServiceInt
     public function __construct(
         private MailSubjectMuteRepositoryInterface $mutes,
         private SiteNotificationRepositoryInterface $siteNotifications,
+        private MailDigestItemRepositoryInterface $digestItems,
     ) {}
 
     public function mutedFor(object $user): array
@@ -49,5 +51,7 @@ final readonly class MailSubjectMuteService implements MailSubjectMuteServiceInt
         $this->mutes->forgetSubject($type, $id);
         // Its notices in the notification centre would lead nowhere (core#491)
         $this->siteNotifications->deleteForSubject($type, $id);
+        // Nor would the lines kept for the daily digest (core#681)
+        $this->digestItems->deleteForSubject($type, $id);
     }
 }

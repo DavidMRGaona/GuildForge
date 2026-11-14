@@ -161,7 +161,7 @@ Forget its notices together with its mutes, with the call the mail already asks 
 app(MailSubjectMuteServiceInterface::class)->forgetSubject('my-module.topic', $topic->id);
 ```
 
-It deletes every notice whose `HasMailSubject` was that thing, for everybody, so the bell never links to a page that is gone. `SiteNotificationServiceInterface::forgetSubject()` does the same for site notices alone.
+It deletes every notice whose `HasMailSubject` was that thing, for everybody, so the bell never links to a page that is gone; lines about it still waiting for the daily digest go too (core#681). `SiteNotificationServiceInterface::forgetSubject()` does the same for site notices alone.
 
 ## When the task is done
 
@@ -175,7 +175,7 @@ app(SiteNotificationServiceInterface::class)->resolveSubject(
 );
 ```
 
-It marks read, for everybody, the unread notices of that category about that thing, and returns how many. It goes by category on purpose: other notices about the same thing (the author's «your report was handled») stay as they are. They are read, not deleted, so people still see there was something to do; a row already read keeps its first read instant. It needs a `HasMailSubject` on the notice that asked. Call it after the commit (a listener of the module's own «resolved» event is the usual place) and do not let it fail the action: the core's proposals catch and log any error. Needs core ≥ the release with #668. Make sure the notice that asked also checks in `shouldSend()` that the task is still open, for the queued ones that arrive afterwards.
+It marks read, for everybody, the unread notices of that category about that thing, and returns how many. Lines of that category about the thing still waiting for the daily digest are deleted too (core#681), so the evening digest does not ask for it again. It goes by category on purpose: other notices about the same thing (the author's «your report was handled») stay as they are. They are read, not deleted, so people still see there was something to do; a row already read keeps its first read instant. It needs a `HasMailSubject` on the notice that asked. Call it after the commit (a listener of the module's own «resolved» event is the usual place) and do not let it fail the action: the core's proposals catch and log any error. Needs core ≥ the release with #668. Make sure the notice that asked also checks in `shouldSend()` that the task is still open, for the queued ones that arrive afterwards.
 
 ## Retention and privacy
 
