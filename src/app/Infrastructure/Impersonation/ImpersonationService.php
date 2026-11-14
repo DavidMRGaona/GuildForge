@@ -74,7 +74,8 @@ final readonly class ImpersonationService implements ImpersonationServiceInterfa
         }
 
         $impersonatorId = (string) $actor->getAuthIdentifier();
-        // Belongs to no account: the request builds a throwaway one with this id
+        // Identifies the view in the log and is never an account id: each request builds its
+        // throwaway account with a fresh id
         $targetId = (string) Str::uuid7();
         $logId = $this->logger->started(
             $impersonatorId,

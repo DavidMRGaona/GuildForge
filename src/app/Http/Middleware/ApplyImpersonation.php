@@ -61,6 +61,9 @@ final readonly class ApplyImpersonation
      */
     public const string NOTICE_FLASH = 'impersonation_notice';
 
+    /** JSON answer when a role view ends because its account could not be built */
+    public const string ENDED_JSON_ERROR = 'impersonation_ended';
+
     /** «Volver a mi cuenta»: it closes the log entry, so it runs outside the rolled back transaction */
     public const string STOP_ROUTE = 'impersonation.stop';
 
@@ -99,8 +102,8 @@ final readonly class ApplyImpersonation
             return $next($request);
         }
 
-        if ($target instanceof ImpersonationSessionState && $actor instanceof Authenticatable) {
-            return $this->runRoleView($request, $next, $actor, $target);
+        if (is_array($target) && $actor instanceof Authenticatable) {
+            return $this->runRoleView($request, $next, $actor, $target['state'], $target['roles']);
         }
 
         if (! $target instanceof Authenticatable || $actor === null) {
@@ -123,11 +126,13 @@ final readonly class ApplyImpersonation
     }
 
     /**
-     * The account the request runs as, or the state of a role view, whose account can only be
-     * built inside the rolled back transaction; null when it runs as whoever the session
+     * The account the request runs as, or the state and roles of a role view, whose account can
+     * only be built inside the rolled back transaction; null when it runs as whoever the session
      * belongs to.
+     *
+     * @return Authenticatable|array{state: ImpersonationSessionState, roles: non-empty-list<ViewedRoleDTO>}|null
      */
-    private function resolveTarget(Request $request, ?Authenticatable $actor): Authenticatable|ImpersonationSessionState|null
+    private function resolveTarget(Request $request, ?Authenticatable $actor): Authenticatable|array|null
     {
         if ($request->routeIs(...self::LOGOUT_ROUTES)) {
             $this->impersonation->stop(ImpersonationEndReason::Logout);
@@ -160,9 +165,12 @@ final readonly class ApplyImpersonation
 
     /**
      * Checked from the roles: the view's account does not exist out here, so accounts->find()
-     * and continuationRefusal() would always revoke it.
+     * and continuationRefusal() would always revoke it. The roles are read here too, outside
+     * the transaction, so a failure revokes before the safety net engages, as for an account.
+     *
+     * @return array{state: ImpersonationSessionState, roles: non-empty-list<ViewedRoleDTO>}|null
      */
-    private function resolveRoleView(ImpersonationSessionState $state, ?Authenticatable $actor): ?ImpersonationSessionState
+    private function resolveRoleView(ImpersonationSessionState $state, ?Authenticatable $actor): ?array
     {
         if (! $actor instanceof Authenticatable
             || (string) $actor->getAuthIdentifier() !== $state->impersonatorId
@@ -172,10 +180,13 @@ final readonly class ApplyImpersonation
             return null;
         }
 
-        return $state;
+        return ['state' => $state, 'roles' => $this->viewedRoles($state)];
     }
 
-    private function runRoleView(Request $request, Closure $next, Authenticatable $actor, ImpersonationSessionState $state): Response
+    /**
+     * @param  non-empty-list<ViewedRoleDTO>  $roles
+     */
+    private function runRoleView(Request $request, Closure $next, Authenticatable $actor, ImpersonationSessionState $state, array $roles): Response
     {
         // Outside the transaction there is no account: «Volver a mi cuenta» runs as the
         // administrator and stop() closes the entry from the state
@@ -185,9 +196,8 @@ final readonly class ApplyImpersonation
 
         $guard = $this->auth->guard();
 
-        $result = $this->safetyNet->run(function () use ($request, $next, $actor, $state, $guard): Response|Throwable {
+        $result = $this->safetyNet->run(function () use ($request, $next, $actor, $state, $roles, $guard): Response|Throwable {
             try {
-                $roles = $this->viewedRoles($state);
                 $account = $this->roleViewAccount->create($roles);
             } catch (Throwable $exception) {
                 // Handed out rather than revoked here: closing the entry inside the transaction
@@ -211,10 +221,27 @@ final readonly class ApplyImpersonation
         if ($result instanceof Throwable) {
             $this->revokeAfterFailure($request, $result);
 
-            return $next($request);
+            return $this->answerWithoutRunning($request);
         }
 
         return $result;
+    }
+
+    /**
+     * The safety net is engaged by now for the rest of the process: the administrator's own
+     * request never runs under it, so the browser asks again and that request runs clean.
+     */
+    private function answerWithoutRunning(Request $request): Response
+    {
+        if ($request->expectsJson() && ! $request->hasHeader('X-Inertia')) {
+            return response()->json(['error' => self::ENDED_JSON_ERROR], Response::HTTP_CONFLICT);
+        }
+
+        if ($request->isMethodSafe()) {
+            return redirect()->to($request->fullUrl());
+        }
+
+        return redirect()->back();
     }
 
     /**

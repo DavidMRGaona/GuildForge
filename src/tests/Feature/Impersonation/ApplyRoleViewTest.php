@@ -15,6 +15,7 @@ use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Infrastructure\Impersonation\EloquentImpersonationRoles;
 use App\Infrastructure\Impersonation\ImpersonatedName;
 use App\Infrastructure\Impersonation\ImpersonationSessionState;
+use App\Infrastructure\Impersonation\SafetyNet\ImpersonationSafetyNet;
 use App\Infrastructure\Impersonation\SafetyNet\RolledBackTransaction;
 use App\Infrastructure\Persistence\Eloquent\Models\ImpersonationLogEntryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
@@ -25,7 +26,9 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Testing\TestResponse;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 /**
@@ -39,6 +42,8 @@ final class ApplyRoleViewTest extends TestCase
 
     private UserModel $admin;
 
+    private int $submitted = 0;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -47,6 +52,7 @@ final class ApplyRoleViewTest extends TestCase
             ImpersonationContextInterface $context,
             AuthorizationServiceInterface $authorization,
             AssociationMembershipServiceInterface $membership,
+            ImpersonationSafetyNet $safetyNet,
         ): array {
             $user = Auth::user();
             $roles = $user === null ? [] : $authorization->getRoles($user);
@@ -58,6 +64,7 @@ final class ApplyRoleViewTest extends TestCase
                 'roles' => $roles,
                 'association' => $user !== null && $membership->isAssociationMember($user),
                 'name' => ImpersonatedName::of($context->target()),
+                'engaged' => $safetyNet->isEngaged(),
             ];
         });
 
@@ -65,7 +72,11 @@ final class ApplyRoleViewTest extends TestCase
             throw new RuntimeException('the page failed');
         });
 
-        Route::middleware('web')->post('/_test/impersonation/submit', static fn (): array => ['saved' => true]);
+        Route::middleware('web')->post('/_test/impersonation/submit', function (): array {
+            $this->submitted++;
+
+            return ['saved' => true];
+        });
 
         $this->admin = UserModel::factory()->admin()->create();
     }
@@ -123,15 +134,51 @@ final class ApplyRoleViewTest extends TestCase
         $this->assertRevokedOnTheNextRequest();
     }
 
-    public function test_a_failure_building_the_account_revokes_the_view_and_keeps_the_entry_closed(): void
+    public function test_a_failure_reading_the_roles_runs_as_the_administrator_outside_the_net(): void
     {
         $this->startViewing([$this->roleId('socio')]);
-        $this->app->instance(ImpersonationRolesInterface::class, $this->rolesThatFailInsideTheTransaction());
+        $this->app->instance(ImpersonationRolesInterface::class, $this->rolesFailingAfterTheCheck());
+
+        $this->assertRevokedOnTheNextRequest()->assertJsonPath('engaged', false);
+    }
+
+    public function test_a_failure_building_the_account_on_a_page_asks_again(): void
+    {
+        $this->startViewing([$this->roleId('socio')]);
+        $this->failInsertingAccounts();
         [$users, $assignments] = $this->counts();
 
         // Closing the entry has to survive the rollback of the request's transaction
-        $this->assertRevokedOnTheNextRequest();
+        $this->get('/_test/impersonation/whoami?page=2')->assertRedirect(url('/_test/impersonation/whoami?page=2'));
+
+        $this->assertEntryRevoked();
         $this->assertSame([$users, $assignments], $this->counts());
+    }
+
+    public function test_a_failure_building_the_account_on_a_json_submission_is_a_conflict(): void
+    {
+        $this->startViewing([$this->roleId('socio')]);
+        $this->failInsertingAccounts();
+
+        $this->postJson('/_test/impersonation/submit')
+            ->assertStatus(409)
+            ->assertExactJson(['error' => 'impersonation_ended']);
+
+        $this->assertSame(0, $this->submitted);
+        $this->assertEntryRevoked();
+    }
+
+    public function test_a_failure_building_the_account_on_a_form_submission_goes_back(): void
+    {
+        $this->startViewing([$this->roleId('socio')]);
+        $this->failInsertingAccounts();
+
+        $this->from('/_test/impersonation/whoami')
+            ->post('/_test/impersonation/submit')
+            ->assertRedirect('/_test/impersonation/whoami');
+
+        $this->assertSame(0, $this->submitted);
+        $this->assertEntryRevoked();
     }
 
     public function test_stopping_runs_as_the_administrator_and_closes_the_entry(): void
@@ -210,25 +257,21 @@ final class ApplyRoleViewTest extends TestCase
     }
 
     /**
-     * The roles as usual outside the request's rolled back transaction (the continuation check
-     * reads them before it), failing inside it, where the account is built.
+     * The roles as usual for the continuation check (the first read of the request), failing
+     * for the read that comes after it.
      */
-    private function rolesThatFailInsideTheTransaction(): ImpersonationRolesInterface
+    private function rolesFailingAfterTheCheck(): ImpersonationRolesInterface
     {
-        $real = app(EloquentImpersonationRoles::class);
-        $transaction = app(RolledBackTransaction::class);
-
-        return new readonly class($real, $transaction) implements ImpersonationRolesInterface
+        return new class(app(EloquentImpersonationRoles::class)) implements ImpersonationRolesInterface
         {
-            public function __construct(
-                private ImpersonationRolesInterface $real,
-                private RolledBackTransaction $transaction,
-            ) {}
+            private int $reads = 0;
+
+            public function __construct(private readonly ImpersonationRolesInterface $real) {}
 
             /** @return list<ViewedRoleDTO> */
             public function find(array $ids): array
             {
-                if ($this->transaction->isOpen()) {
+                if (++$this->reads > 1) {
                     throw new RuntimeException('database down');
                 }
 
@@ -248,15 +291,40 @@ final class ApplyRoleViewTest extends TestCase
         };
     }
 
-    private function assertRevokedOnTheNextRequest(): void
+    /**
+     * Inserting an account fails inside the request's rolled back transaction, where the role
+     * view builds its account.
+     */
+    private function failInsertingAccounts(): void
     {
-        $this->getJson('/_test/impersonation/whoami')
-            ->assertJsonPath('user', $this->admin->id)
-            ->assertJsonPath('active', false);
+        $transaction = app(RolledBackTransaction::class);
 
+        DB::connection()->beforeExecuting(static function (string $query) use ($transaction): void {
+            if ($transaction->isOpen() && str_starts_with($query, 'insert into "users"')) {
+                throw new RuntimeException('database down');
+            }
+        });
+    }
+
+    private function assertEntryRevoked(): void
+    {
         $entry = ImpersonationLogEntryModel::query()->sole();
         $this->assertNotNull($entry->ended_at);
         $this->assertSame(ImpersonationEndReason::Revoked, $entry->ended_reason);
         $this->assertFalse(app(Session::class)->has(ImpersonationSessionState::SESSION_KEY));
+    }
+
+    /**
+     * @return TestResponse<Response>
+     */
+    private function assertRevokedOnTheNextRequest(): TestResponse
+    {
+        $response = $this->getJson('/_test/impersonation/whoami')
+            ->assertJsonPath('user', $this->admin->id)
+            ->assertJsonPath('active', false);
+
+        $this->assertEntryRevoked();
+
+        return $response;
     }
 }
