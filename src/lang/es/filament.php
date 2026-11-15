@@ -173,7 +173,7 @@ return [
             'primary_base' => 'Color primario',
             'primary_base_help' => 'Color principal para botones, enlaces y acciones. Se generarán automáticamente las variaciones.',
             'accent_base' => 'Color de acento',
-            'accent_base_help' => 'Color secundario para badges, tags y acentos visuales. También genera la paleta de neutros.',
+            'accent_base_help' => 'Color secundario para detalles concretos, como algunas entradas del calendario. Los botones, los enlaces y las etiquetas usan el color primario.',
             'preview_section' => 'Vista previa de paletas',
             'preview_description' => 'Visualización de las paletas generadas automáticamente a partir de los colores base.',
         ],
