@@ -41,6 +41,17 @@ final class SiteBlockRegistryTest extends TestCase
         $this->assertNull($registry->find('newsletter.unknown'));
     }
 
+    public function test_a_block_offered_for_the_link_page_is_listed_only_there(): void
+    {
+        $registry = $this->registry();
+        $registry->register($this->coreBlock()::class);
+        $registry->registerMany([$this->linkPageBlock()::class], 'newsletter');
+
+        $this->assertSame(['newsletter.subscribe'], $this->keys($registry->forPlacement(SiteBlockPlacement::LinkPage)));
+        $this->assertNotContains('newsletter.subscribe', $this->keys($registry->forPlacement(SiteBlockPlacement::Footer)));
+        $this->assertNotContains('newsletter.subscribe', $this->keys($registry->forPlacement(SiteBlockPlacement::Popup)));
+    }
+
     public function test_a_module_can_only_register_keys_that_start_with_its_name(): void
     {
         $log = Log::spy();
@@ -399,6 +410,27 @@ final class SiteBlockRegistryTest extends TestCase
             public function key(): string
             {
                 return 'core.example';
+            }
+        };
+    }
+
+    private function linkPageBlock(): FakeSiteBlock
+    {
+        return new class extends FakeSiteBlock
+        {
+            public function key(): string
+            {
+                return 'newsletter.subscribe';
+            }
+
+            public function placements(): array
+            {
+                return [SiteBlockPlacement::LinkPage];
+            }
+
+            public function component(): string
+            {
+                return 'components/SubscribeBlock.vue';
             }
         };
     }

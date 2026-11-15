@@ -34,6 +34,7 @@ final class FooterActionBlocksTest extends TestCase
         foreach (['core.upcoming_events', 'core.button', 'core.logos'] as $key) {
             $this->assertContains($key, array_map(static fn ($block): string => $block->key(), $registry->forPlacement(SiteBlockPlacement::Footer)));
             $this->assertNotContains($key, array_map(static fn ($block): string => $block->key(), $registry->forPlacement(SiteBlockPlacement::Popup)));
+            $this->assertNotContains($key, array_map(static fn ($block): string => $block->key(), $registry->forPlacement(SiteBlockPlacement::LinkPage)));
         }
     }
 

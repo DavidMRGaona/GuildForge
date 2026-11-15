@@ -1,8 +1,9 @@
 /**
  * Where a site block is drawn (core#718), the same values as `App\Domain\SiteBlocks\SiteBlockPlacement`:
- * the footer (dark in both colour schemes) or a popup (follows the page's colour scheme).
+ * the footer (dark in both colour schemes), a popup or the link page (both follow the page's colour
+ * scheme).
  */
-export type SiteBlockPlacement = 'footer' | 'popup';
+export type SiteBlockPlacement = 'footer' | 'popup' | 'link_page';
 
 /**
  * A site block resolved on the server for the person viewing the page (core#696): the footer and

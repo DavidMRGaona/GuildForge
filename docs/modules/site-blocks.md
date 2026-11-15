@@ -1,6 +1,6 @@
 # Site blocks
 
-A site block is a piece of the public site that the administration places where it wants: a column of the configurable footer or the inside of a popup of the announcements module. The core and the modules offer blocks; the footer and the popups store which ones were chosen with their settings, and ask the core to draw them for each person. No module depends on another: a popup can hold a newsletter block without either module knowing the other.
+A site block is a piece of the public site that the administration places where it wants: a column of the configurable footer, the inside of a popup of the announcements module or the link page of the link-page module. The core and the modules offer blocks; the footer, the popups and the link page store which ones were chosen with their settings, and ask the core to draw them for each person. No module depends on another: a popup can hold a newsletter block without either module knowing the other.
 
 Requires core ≥ the release with #696; set `requires.core` to it.
 
@@ -86,7 +86,7 @@ The component lives in the module's `resources/js/components/SubscribeBlock.vue`
 |---|---|
 | `key()` | `<module>.<block>` (the module's own name only) or `core.<block>` for the core. The owner is kebab-case, the block name snake_case or kebab-case, 100 characters at most. It is stored with the footer and the popups: never change it once a block is offered |
 | `label()` | The name shown in the panel when choosing a block, translated |
-| `placements()` | `list<SiteBlockPlacement>`: `Footer`, `Popup` (enum in `App\Domain\SiteBlocks`) |
+| `placements()` | `list<SiteBlockPlacement>`: `Footer`, `Popup`, `LinkPage` (enum in `App\Domain\SiteBlocks`; `LinkPage` requires core ≥ the release with #755) |
 | `settingsSchema()` | The Filament fields of the block's settings, possibly none. Their values come back to `props()` keyed by field name. Module blocks: [flat fields only](#flat-settings) |
 | `component()` | The Vue component, relative to the owner's `resources/js` and under `components/`, a `.vue` file (`components/SubscribeBlock.vue`). Core blocks live in `resources/js/components/siteBlocks/` |
 | `isAvailable()` | Whether the block can be offered in the panel and drawn now (a provider configured and answering). Asked on every page that shows it: keep it cheap |
@@ -130,11 +130,11 @@ defineProps<{ blocks: ResolvedSiteBlock[] }>();
 </template>
 ```
 
-`placement` (`'footer' | 'popup'`, type `SiteBlockPlacement` in `@/types/siteBlocks`; `footer` when omitted) says where the block is drawn. The owner of a placement always passes its own: the footer passes `footer`, and the announcements popup will pass `popup`.
+`placement` (`'footer' | 'popup' | 'link_page'`, type `SiteBlockPlacement` in `@/types/siteBlocks`; `footer` when omitted) says where the block is drawn. The owner of a placement always passes its own: the footer passes `footer`, the announcements popup `popup` and the link page `link_page`.
 
 ### Knowing where the block is drawn (core#718)
 
-A block that looks different depending on where it is (the footer is dark in both colour schemes; a popup follows the page's) asks for its placement and never inspects the markup around it (the footer's `data-footer-column`, for instance, is the core's business and may change):
+A block that looks different depending on where it is (the footer is dark in both colour schemes; a popup and the link page follow the page's) asks for its placement and never inspects the markup around it (the footer's `data-footer-column`, for instance, is the core's business and may change):
 
 ```vue
 <script setup lang="ts">

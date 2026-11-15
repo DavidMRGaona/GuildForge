@@ -1300,7 +1300,7 @@ export type RealtimeListener = (payload: RealtimePayload) => void;
 ## resources/js/types/siteBlocks.ts
 
 ```ts
-export type SiteBlockPlacement = 'footer' | 'popup';
+export type SiteBlockPlacement = 'footer' | 'popup' | 'link_page';
 export interface ResolvedSiteBlock {
     key: string;
     module: string | null;
