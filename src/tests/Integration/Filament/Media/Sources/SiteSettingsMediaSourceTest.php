@@ -109,6 +109,8 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $this->assertSame('rich_text', $registry->source('rich_text')?->type());
         // The footer source claims the footer's folders, editor images included (core#698)
         $this->assertSame('footer', $registry->claimingSource(new MediaFileId('footer/content/2026/11/x'))?->type());
-        $this->assertCount(8, $registry->sources());
+        // The banners of public profiles (core#743)
+        $this->assertSame('core.profile-banner', $registry->claimingSource(new MediaFileId('profiles/banners/2026/11/x'))?->type());
+        $this->assertCount(9, $registry->sources());
     }
 }
