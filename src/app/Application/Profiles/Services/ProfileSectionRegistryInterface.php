@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Application\Profiles\Services;
 
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
+use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
 
 /**
  * The profile sections the core and the enabled modules offer (core#742). It only knows which
- * sections exist and are valid; whether one is available now, and drawing it, is
+ * sections exist and are valid, as ProfileRegistrationDTO (never an instance: drawing builds each
+ * one in the current request or job); whether one is available now, and drawing it, is
  * ProfileRendererInterface.
  */
 interface ProfileSectionRegistryInterface
@@ -36,17 +38,12 @@ interface ProfileSectionRegistryInterface
     /**
      * Every valid section, by default order (then key), whether or not it is available now.
      *
-     * @return list<ProfileSectionInterface>
+     * @return list<ProfileRegistrationDTO>
      */
     public function all(): array;
 
     /**
      * The valid section with that key, or null.
      */
-    public function find(string $key): ?ProfileSectionInterface;
-
-    /**
-     * The module that owns a valid section, or null for the core's (and for an unknown key).
-     */
-    public function moduleOf(string $key): ?string;
+    public function find(string $key): ?ProfileRegistrationDTO;
 }

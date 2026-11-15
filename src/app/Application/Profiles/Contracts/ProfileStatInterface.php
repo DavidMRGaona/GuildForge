@@ -11,7 +11,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 /**
  * A counter of the public profile (core#742): messages written, tables run… Apart from sections, so a
  * counter does not vanish because its list is turned off, nor the other way round. A module returns
- * its classes from registerProfileStats(); each one is built from the container.
+ * its classes from registerProfileStats(); each one is built from the container again in every request
+ * or job that draws profiles.
  *
  * The registry leaves a stat out (with a warning) when its key is invalid, not its owner's or shared
  * with another stat. Drawing it fails closed like a section.

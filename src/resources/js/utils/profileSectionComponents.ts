@@ -1,13 +1,13 @@
 import { defineAsyncComponent, type Component } from 'vue';
 import { resolveModuleComponent } from '@/composables/useModuleSlots';
-import type { ResolvedProfileSection } from '@/types/profiles';
+import type { ResolvedProfileSection } from '@/types/profileSections';
 
 /** Where core sections live, relative to resources/js (the path the server sends) */
 const CORE_SECTIONS_PATH = 'components/profileSections/';
 
 // Core sections ship with the core build (core#742)
 const coreSectionLoaders = import.meta.glob<{ default: Component }>(
-    '../components/profileSections/*.vue'
+    '../components/profileSections/**/*.vue'
 );
 
 // Vue tells components apart by identity: one async wrapper per path, or the section remounts

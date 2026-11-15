@@ -474,7 +474,7 @@ export default _default;
 ## resources/js/components/layout/ProfileSection.vue
 
 ```ts
-import type { ResolvedProfileSection } from '@/types/profiles';
+import type { ResolvedProfileSection } from '@/types/profileSections';
 type __VLS_Props = {
     section: ResolvedProfileSection;
 };
@@ -1244,7 +1244,7 @@ export interface ProfileTabMetadata {
 }
 ```
 
-## resources/js/types/profiles.ts
+## resources/js/types/profileSections.ts
 
 ```ts
 export type ProfileRegion = 'main' | 'aside';

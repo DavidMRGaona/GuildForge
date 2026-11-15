@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Profiles;
 
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
+use App\Application\Exceptions\NothingToDrawException;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
@@ -16,7 +17,7 @@ use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Services\TimezoneServiceInterface;
-use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
+use App\Application\SiteBlocks\Exceptions\NothingToDrawException as SiteBlockNothingToDrawException;
 use App\Domain\Profiles\ProfileRegion;
 use App\Domain\Profiles\ValueObjects\ProfileLayout;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -158,6 +159,79 @@ final class ProfileRendererTest extends TestCase
         $this->assertSame([[['text' => '<img src=x onerror=alert(1)> javascript:alert(1)', 'href' => null]]], $props['lines']);
     }
 
+    public function test_a_later_request_or_job_reads_the_bio_again(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->profileOf($user)->update(['bio' => 'Antes']);
+        $this->assertSame('Antes', $this->render($user, null)->aside[0]->props['lines'][0][0]['text']);
+
+        $this->profileOf($user)->update(['bio' => 'Después']);
+        $this->app->forgetScopedInstances();
+
+        $this->assertSame('Después', $this->render($user, null)->aside[0]->props['lines'][0][0]['text']);
+    }
+
+    public function test_each_request_or_job_builds_its_own_sections_and_stats(): void
+    {
+        $built = 0;
+        $this->app->bind('counted-section', static function () use (&$built): ProfileSectionInterface {
+            $built++;
+
+            return new class extends FakeProfileSection
+            {
+                public function key(): string
+                {
+                    return 'forum.counted';
+                }
+            };
+        });
+        $this->sections(['counted-section']);
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+
+        $this->render($user, null);
+        $this->app->forgetScopedInstances();
+        $this->render($user, null);
+
+        // Once to check it, then once per render scope
+        $this->assertSame(3, $built);
+    }
+
+    public function test_a_section_built_with_another_key_than_it_registered_with_is_left_out(): void
+    {
+        $calls = 0;
+        $this->app->bind('shifting-section', static function () use (&$calls): ProfileSectionInterface {
+            $key = ++$calls === 1 ? 'forum.first' : 'forum.other';
+
+            return new class($key) extends FakeProfileSection
+            {
+                public function __construct(private readonly string $sectionKey = '') {}
+
+                public function key(): string
+                {
+                    return $this->sectionKey;
+                }
+            };
+        });
+        $this->sections(['shifting-section']);
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $log = Log::spy();
+
+        $this->assertSame([], $this->render($user, null)->main);
+        $log->shouldHaveReceived('warning')->withArgs(static fn (string $message, array $context): bool => ($context['reason'] ?? null) === 'build')->once();
+    }
+
+    public function test_the_public_name_comes_from_the_account_never_from_the_caller(): void
+    {
+        $user = UserModel::factory()->create(['name' => 'Ana García López', 'display_name' => 'Ana']);
+
+        $profile = $this->app->make(ProfileRendererInterface::class)->render(
+            new ProfileOwnerDTO($user->id, 'ana', 'Ana García López'),
+            null,
+        );
+
+        $this->assertSame('Ana', $profile->header->publicName);
+    }
+
     public function test_an_empty_about_me_is_left_out_quietly(): void
     {
         $user = UserModel::factory()->create(['display_name' => 'Ana']);
@@ -251,6 +325,16 @@ final class ProfileRendererTest extends TestCase
     public function test_a_section_with_nothing_to_draw_is_left_out_quietly(): void
     {
         $this->sections([$this->section('forum.empty', props: static fn (): never => throw NothingToDrawException::make())]);
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $log = Log::spy();
+
+        $this->assertSame([], $this->render($user, null)->main);
+        $log->shouldNotHaveReceived('warning');
+    }
+
+    public function test_the_site_blocks_name_of_nothing_to_draw_is_quiet_too(): void
+    {
+        $this->sections([$this->section('forum.empty', props: static fn (): never => throw SiteBlockNothingToDrawException::make())]);
         $user = UserModel::factory()->create(['display_name' => 'Ana']);
         $log = Log::spy();
 

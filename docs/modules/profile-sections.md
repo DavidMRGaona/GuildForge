@@ -11,7 +11,7 @@ Requires core ≥ the release with #742; set `requires.core` to it.
 3. [Stats](#stats)
 4. [Checklist for every section and stat](#checklist-for-every-section-and-stat)
 5. [The owner's layout](#the-owners-layout)
-6. [Drawing a profile](#drawing-a-profile)
+6. [How the core draws a profile](#how-the-core-draws-a-profile)
 7. [Failing closed](#failing-closed)
 8. [The core's section](#the-cores-section)
 9. [Testing](#testing)
@@ -20,10 +20,12 @@ Requires core ≥ the release with #742; set `requires.core` to it.
 
 Implement `App\Application\Profiles\Contracts\ProfileSectionInterface` and return the class from the provider's `registerProfileSections()`. Sections are built from the container, so they may take dependencies in their constructor.
 
+The registry keeps only the class and what it read when checking it (key, owner, default order), never an instance. The core builds the section again from the container every time it draws profiles in a request or a job, so a constructor dependency (a request-scoped service, a row read once) is always the current one. Never keep state across requests yourself: no static properties or caches inside the section.
+
 ```php
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
-use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
+use App\Application\Exceptions\NothingToDrawException;
 use App\Domain\Profiles\ProfileRegion;
 use Illuminate\Contracts\Auth\Authenticatable;
 
@@ -117,7 +119,9 @@ The component lives in the module's `resources/js/components/LatestPostsSection.
 
 `ProfileOwnerDTO` carries only the owner's account `id` (to query the module's own data), `handle` and `publicName` (`null` only when the owner looks at their own profile before choosing one). Never the email, the account name or the roles: a module that needs to know something else about the owner asks its own services, for the viewer.
 
-The registry (`ProfileSectionRegistryInterface`: `all()`, `find()`, `moduleOf()`; a singleton) only lists valid sections, by default order; drawing them is the renderer's business.
+`NothingToDrawException` is `App\Application\Exceptions\NothingToDrawException`, shared with site blocks; the older `App\Application\SiteBlocks\Exceptions\NothingToDrawException` is a subclass kept for the blocks that already throw it, so either name works, but new code throws the common one.
+
+The registry (`ProfileSectionRegistryInterface`, a singleton: `all()` and `find()` return `ProfileRegistrationDTO` with `key`, `module`, `class` and `order`) only lists valid sections, by default order; drawing them is the core's business.
 
 ## Stats
 
@@ -192,6 +196,7 @@ Review a section or stat against this list before offering it:
 - **The core already decided the profile is visible.** A section never repeats or loosens that decision, and never leaks something because the profile is public: a public profile does not make the owner's private things public.
 - **Nothing to show is quiet.** An empty list throws `NothingToDrawException` (the title goes with it); a count the viewer cannot see is `null`.
 - **Plain data in props.** Ids, titles, links and counts the component needs, picked one by one: never models, settings or HTML. Text is drawn as text by the component; a component that must draw HTML sanitizes it on the server first.
+- **Safe links.** Every link in props (and a stat's `url`) comes from the module's own routes (`route()`, a path it builds from ids) or goes through `App\Domain\SiteBlocks\LinkTargetRule::normalize()`. Never pass on an address a person typed (a website field, a link in a post) without validating it: the component binds it to `href`.
 - **Cheap.** A profile is drawn on every visit: one or two queries per section, limited (a handful of rows), no N+1, nothing slow in `isAvailable()`.
 
 ## The owner's layout
@@ -203,11 +208,11 @@ The owner's choices are stored with their profile (`user_profiles.layout`, `Prof
 - **Unknown keys** (a disabled or uninstalled module): ignored when drawing and kept in the layout, so turning the module on again brings the owner's choice back.
 - Sections are ordered within their own region: the layout's order only decides among the sections of one column.
 
-## Drawing a profile
+## How the core draws a profile
 
-For whoever draws a profile (the core's profile page, a summary card):
+**Modules never call `ProfileRendererInterface`.** Only the core draws a profile: its profile page (and the core's summary card), after `PublicProfileServiceInterface::findByHandle()` (core#741) has applied `ProfileAccessRule` to decide whether the person may see the profile at all. The renderer does not decide that, so a module calling it could draw a hidden profile. A module that wants to show a person's summary uses what the core offers for it (the card endpoint), never the renderer. This section is for reading what the page receives.
 
-1. **Access first.** Decide whether the person may see the profile at all (the core's `ProfileAccessRule`); the renderer does not.
+1. **Access first.** `PublicProfileServiceInterface::findByHandle($handle, $viewer)` applies the access rule (and the redirect of an old address); only a visible profile goes on.
 2. **Render.** `ProfileRendererInterface::render(ProfileOwnerDTO $owner, ?Authenticatable $viewer): ResolvedProfileDTO` (scoped to the request; it never throws). Send `$dto->toArray()` to the page:
 
 ```json
@@ -229,7 +234,7 @@ For whoever draws a profile (the core's profile page, a summary card):
 }
 ```
 
-   - `header.memberSince` is when the account was created, an ISO instant with the display zone's offset (`TimezoneServiceInterface::iso()`); `showsMembership` is true only when the owner chose to show the badge and holds the association role (a failing check hides it); `isOwner` says whether the viewer is the owner. The account name and the email never travel.
+   - `header.publicName` is the account's public name (`display_name`), read by the renderer, never taken from the caller; `header.memberSince` is when the account was created, an ISO instant with the display zone's offset (`TimezoneServiceInterface::iso()`); `showsMembership` is true only when the owner chose to show the badge and holds the association role (a failing check hides it); `isOwner` says whether the viewer is the owner. The account name and the email never travel.
    - `stats` and each region's `sections` are in the owner's order and hold only what can be drawn; empty props go out as `{}`.
 
 3. **Draw.** Each section with `ProfileSection.vue` from the public frontend API; it draws the card and the title (an `<h2>` labelling the `<section>`) and the owner's component inside:
@@ -237,7 +242,7 @@ For whoever draws a profile (the core's profile page, a summary card):
 ```vue
 <script setup lang="ts">
 import ProfileSection from '@/components/layout/ProfileSection.vue';
-import type { ResolvedProfile } from '@/types/profiles';
+import type { ResolvedProfile } from '@/types/profileSections';
 
 defineProps<{ profile: ResolvedProfile }>();
 </script>
@@ -254,7 +259,7 @@ defineProps<{ profile: ResolvedProfile }>();
 </template>
 ```
 
-Types in `@/types/profiles`: `ResolvedProfile`, `ProfileHeader`, `ResolvedProfileStat`, `ResolvedProfileSection`, `ProfileRegion` (`'main' | 'aside'`) and `ProfileTextSegment` (a piece of the «Sobre mí» text).
+Types in `@/types/profileSections`: `ResolvedProfile`, `ProfileHeader`, `ResolvedProfileStat`, `ResolvedProfileSection`, `ProfileRegion` (`'main' | 'aside'`) and `ProfileTextSegment` (a piece of the «Sobre mí» text).
 
 ## Failing closed
 
@@ -263,9 +268,10 @@ A section or stat never breaks the profile around it:
 | Situation | What happens |
 |---|---|
 | The class cannot be built, is not a `ProfileSectionInterface` / `ProfileStatInterface`, its key is invalid, or (sections) its component path is invalid or `region()` throws | Left out of the registry, warning |
+| Built again when drawing, it cannot be built, has another key than when it was registered or (sections) an invalid component path | Not drawn, warning |
 | The same class registered by a second owner | The second registration is ignored, warning |
 | The key does not start with the module's own name (`core.` for the core), or a module called `core` | Left out, warning |
-| Two sections (or two stats) with the same key | Both left out, warning |
+| Two sections (or two stats) with the same key | Both left out, warning (once per key) |
 | A key the owner turned on that nobody registers (its module disabled or uninstalled) | Not drawn, warning (only for something shaped like a key: free text in a layout is never logged) |
 | Turned off by the owner, or off by default and never turned on | Not drawn, no warning |
 | `isAvailable()` is false | Not drawn, no warning |
@@ -274,15 +280,15 @@ A section or stat never breaks the profile around it:
 | The Vue component fails to load or render | `ProfileSection.vue` drops it, title included (`onErrorCaptured`, like `SiteBlock.vue`) |
 | The profile row or the account cannot be read, or the membership check throws | The header is drawn without what failed (no badge), the layout takes the defaults, warning |
 
-Every request builds the registries and the renderer again, so warnings are kept apart for a day in the cache (`App\Infrastructure\Support\DailyWarnings`, prefix `profiles:warned:`, the same mechanism as site blocks): the registries' per class and reason, the renderer's per key and reason. Warnings carry the class, the module, the key and the reason; props, counts and exception messages are never logged, and an exception is named only by its class.
+Every request builds the registries and the renderer again, so warnings are kept apart for a day in the cache (`App\Infrastructure\Support\DailyWarnings`, prefix `profiles:warned:`, the same mechanism as site blocks): the registries' per class and reason (a duplicated key, per key), the renderer's per key and reason. Warnings carry the class, the module, the key and the reason; props, counts and exception messages are never logged, and an exception is named only by its class.
 
 ## The core's section
 
-`core.about` («Sobre mí», `App\Infrastructure\Profiles\Sections\AboutProfileSection`): the owner's bio, in the aside, on by default. It is plain text: the server cuts it into lines and pieces of text and links (`App\Domain\Profiles\ProfileBioText`), and `AboutSection.vue` draws every piece as text, so nothing the owner wrote is ever drawn as HTML. Line breaks are kept (a run of blank lines counts as one); only `http` and `https` addresses become links (never with a user name before the host, never over 2048 characters, the sentence's punctuation left out), drawn with `rel="nofollow ugc noopener"`. An empty bio draws nothing.
+`core.about` («Sobre mí», `App\Infrastructure\Profiles\Sections\AboutProfileSection`): the owner's bio, in the aside, on by default. It is plain text: the server cuts it into lines and pieces of text and links (`App\Domain\Profiles\ProfileBioText`), and `AboutSection.vue` draws every piece as text, so nothing the owner wrote is ever drawn as HTML. At most 500 characters are drawn (`ProfileBioText::MAX_LENGTH`, the editor's limit). Line breaks are kept (a run of blank lines counts as one); control characters and the invisible direction marks (U+202A–U+202E, U+2066–U+2069, U+200E, U+200F, U+061C) are dropped, so a link cannot be made to read as another. Only `http` and `https` addresses become links: the host is letters, digits, dots and hyphens (an international name only in its `xn--` form), with no user name before it and no backslash anywhere; quotes of any kind (`«»“”‘’`) end an address, and the sentence's punctuation, an ellipsis or an unbalanced bracket at its end stay out. Links are drawn with `rel="nofollow ugc noopener"`. An empty bio draws nothing.
 
 ## Testing
 
-- Module tests: register the section and render a profile as the core will.
+- Module tests: register the section and render a profile as the core will (in tests only: module code never calls the renderer).
 
 ```php
 $this->app->make(ProfileSectionRegistryInterface::class)->register(LatestPostsProfileSection::class, 'forum');

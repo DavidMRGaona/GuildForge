@@ -7,6 +7,7 @@ namespace Tests\Unit\Modules;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
+use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Modules\ModuleLoader;
@@ -66,8 +67,8 @@ final class ModuleLoaderProfilesTest extends TestCase
 
         $sections = $this->app->make(ProfileSectionRegistryInterface::class);
         $stats = $this->app->make(ProfileStatRegistryInterface::class);
-        $this->assertSame('example-module', $sections->moduleOf('example-module.latest'));
-        $this->assertSame('example-module.count', $stats->find('example-module.count')?->key());
+        $this->assertSame('example-module', $sections->find('example-module.latest')?->module);
+        $this->assertSame($stat::class, $stats->find('example-module.count')?->class);
 
         $sections->unregisterModule('example-module');
         $stats->unregisterModule('example-module');
@@ -91,7 +92,7 @@ final class ModuleLoaderProfilesTest extends TestCase
 
         // Only the core's own section, and no stat
         $this->assertSame(['core.about'], array_map(
-            static fn (ProfileSectionInterface $section): string => $section->key(),
+            static fn (ProfileRegistrationDTO $registration): string => $registration->key,
             $this->app->make(ProfileSectionRegistryInterface::class)->all(),
         ));
         $this->assertSame([], $this->app->make(ProfileStatRegistryInterface::class)->all());

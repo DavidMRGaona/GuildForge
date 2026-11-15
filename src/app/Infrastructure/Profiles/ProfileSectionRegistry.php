@@ -16,12 +16,7 @@ use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 final class ProfileSectionRegistry extends ProfileContributionRegistry implements ProfileSectionRegistryInterface
 {
     /** Relative to the owner's resources/js, under components/, a .vue file, never climbing out */
-    private const string COMPONENT_PATTERN = '#^components/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.vue$#';
-
-    public function find(string $key): ?ProfileSectionInterface
-    {
-        return $this->item($key);
-    }
+    public const string COMPONENT_PATTERN = '#^components/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.vue$#';
 
     protected function kind(): string
     {

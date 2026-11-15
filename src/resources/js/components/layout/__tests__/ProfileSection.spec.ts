@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { h, type FunctionalComponent } from 'vue';
 import ProfileSection from '../ProfileSection.vue';
-import type { ResolvedProfileSection } from '@/types/profiles';
+import type { ResolvedProfileSection } from '@/types/profileSections';
 
 const LatestPosts: FunctionalComponent<{ count: number }> = (props) =>
     h('p', { 'data-testid': 'latest' }, `${props.count} mensajes`);

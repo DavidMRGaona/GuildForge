@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\SiteBlocks;
 
+use App\Application\Exceptions\NothingToDrawException;
 use App\Application\SiteBlocks\Contracts\SiteBlockInterface;
 use App\Application\SiteBlocks\DTOs\ResolvedSiteBlockDTO;
-use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
 use App\Domain\SiteBlocks\SiteBlockPlacement;

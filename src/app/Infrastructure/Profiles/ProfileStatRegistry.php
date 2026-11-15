@@ -15,11 +15,6 @@ use App\Application\Profiles\Services\ProfileStatRegistryInterface;
  */
 final class ProfileStatRegistry extends ProfileContributionRegistry implements ProfileStatRegistryInterface
 {
-    public function find(string $key): ?ProfileStatInterface
-    {
-        return $this->item($key);
-    }
-
     protected function kind(): string
     {
         return 'stat';

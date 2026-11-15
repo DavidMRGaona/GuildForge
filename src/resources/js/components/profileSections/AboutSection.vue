@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProfileTextSegment } from '@/types/profiles';
+import type { ProfileTextSegment } from '@/types/profileSections';
 
 /**
  * «Sobre mí» (`core.about`): the owner's text, cut on the server into lines and pieces of text and

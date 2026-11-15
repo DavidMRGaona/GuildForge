@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Infrastructure\Profiles;
 
 use App\Application\Profiles\Contracts\ProfileStatInterface;
+use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Infrastructure\Profiles\ProfileStatRegistry;
 use Illuminate\Cache\ArrayStore;
@@ -43,9 +44,9 @@ final class ProfileStatRegistryTest extends TestCase
             $this->stat('forum.likes', 20),
         ], 'forum');
 
-        $this->assertSame('forum.topics', $this->registry->find('forum.topics')?->key());
+        $this->assertSame('forum.topics', $this->registry->find('forum.topics')?->key);
         $this->assertSame(['forum.messages', 'forum.likes', 'forum.topics'], array_map(
-            static fn (ProfileStatInterface $stat): string => $stat->key(),
+            static fn (ProfileRegistrationDTO $registration): string => $registration->key,
             $this->registry->all(),
         ));
 

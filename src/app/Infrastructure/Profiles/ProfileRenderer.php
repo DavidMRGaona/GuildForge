@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Infrastructure\Profiles;
 
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
+use App\Application\Exceptions\NothingToDrawException;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
 use App\Application\Profiles\DTOs\ProfileHeaderDTO;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
+use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
 use App\Application\Profiles\DTOs\ProfileStatDTO;
 use App\Application\Profiles\DTOs\ResolvedProfileDTO;
 use App\Application\Profiles\DTOs\ResolvedProfileSectionDTO;
@@ -17,7 +19,6 @@ use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Services\TimezoneServiceInterface;
-use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use App\Domain\Profiles\ProfileRegion;
 use App\Domain\Profiles\ValueObjects\ProfileKey;
 use App\Domain\Profiles\ValueObjects\ProfileLayout;
@@ -28,11 +29,15 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use App\Infrastructure\Support\DailyWarnings;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Contracts\Container\Container;
 use JsonException;
 use Throwable;
 
 /**
- * Draws a public profile for one person and fails closed (see the interface). A profile is drawn on
+ * Draws a public profile for one person and fails closed (see the interface). Bound scoped, it builds
+ * every section and stat from the container itself, at most once per request or job, from what the
+ * registries keep (a class, never an instance): nothing a section read in one request reaches the
+ * next. A profile is drawn on
  * every visit, so a section or stat that keeps failing would log on every request: each key and
  * reason is warned about once a day (DailyWarnings). Warnings carry the key, the reason and an
  * exception only by its class; never props, counts or exception messages.
@@ -47,6 +52,7 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
         private StoredProfiles $profiles,
         private AssociationMembershipServiceInterface $membership,
         private TimezoneServiceInterface $timezone,
+        private Container $container,
         Cache $cache,
     ) {
         $this->warnings = new DailyWarnings(ProfileContributionRegistry::WARNING_PREFIX, static fn (): Cache => $cache);
@@ -56,10 +62,11 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
     {
         $profile = $this->profileOf($owner);
         $layout = $profile instanceof UserProfileModel ? $profile->layout : ProfileLayout::empty();
+        $user = $this->accountOf($owner);
 
         $sections = [ProfileRegion::Main->value => [], ProfileRegion::Aside->value => []];
-        foreach ($this->ordered($this->registeredSections(), $layout->sections, 'section') as $key => $section) {
-            $resolved = $this->resolveSection($key, $section, $layout, $owner, $viewer);
+        foreach ($this->ordered($this->registered('section'), $layout->sections, 'section') as $key => $registration) {
+            $resolved = $this->resolveSection($key, $registration, $layout, $owner, $viewer);
 
             if ($resolved instanceof ResolvedProfileSectionDTO) {
                 $sections[$resolved->region->value][] = $resolved;
@@ -67,8 +74,8 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
         }
 
         $stats = [];
-        foreach ($this->ordered($this->registeredStats(), $layout->stats, 'stat') as $key => $stat) {
-            $resolved = $this->resolveStat($key, $stat, $layout, $owner, $viewer);
+        foreach ($this->ordered($this->registered('stat'), $layout->stats, 'stat') as $key => $registration) {
+            $resolved = $this->resolveStat($key, $registration, $layout, $owner, $viewer);
 
             if ($resolved instanceof ResolvedProfileStatDTO) {
                 $stats[] = $resolved;
@@ -76,16 +83,25 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
         }
 
         return new ResolvedProfileDTO(
-            $this->header($owner, $profile, $viewer),
+            $this->header($owner, $profile, $user, $viewer),
             $stats,
             $sections[ProfileRegion::Main->value],
             $sections[ProfileRegion::Aside->value],
         );
     }
 
-    private function resolveSection(string $key, ProfileSectionInterface $section, ProfileLayout $layout, ProfileOwnerDTO $owner, ?Authenticatable $viewer): ?ResolvedProfileSectionDTO
+    private function resolveSection(string $key, ProfileRegistrationDTO $registration, ProfileLayout $layout, ProfileOwnerDTO $owner, ?Authenticatable $viewer): ?ResolvedProfileSectionDTO
     {
         try {
+            $section = $this->container->make($registration->class);
+
+            // The registry checked an instance built for that; this one is checked again
+            if (! $section instanceof ProfileSectionInterface || $section->key() !== $key || preg_match(ProfileSectionRegistry::COMPONENT_PATTERN, $section->component()) !== 1) {
+                $this->warnOnce('section', $key, 'build', 'A profile section was built differently from when it was registered; it is not drawn.');
+
+                return null;
+            }
+
             if (! ($layout->sectionEnabled($key) ?? $section->enabledByDefault()) || ! $section->isAvailable()) {
                 return null;
             }
@@ -105,7 +121,7 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
 
             return new ResolvedProfileSectionDTO(
                 $key,
-                $this->sections->moduleOf($key),
+                $registration->module,
                 $section->component(),
                 $section->region(),
                 $section->label(),
@@ -126,9 +142,17 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
         return null;
     }
 
-    private function resolveStat(string $key, ProfileStatInterface $stat, ProfileLayout $layout, ProfileOwnerDTO $owner, ?Authenticatable $viewer): ?ResolvedProfileStatDTO
+    private function resolveStat(string $key, ProfileRegistrationDTO $registration, ProfileLayout $layout, ProfileOwnerDTO $owner, ?Authenticatable $viewer): ?ResolvedProfileStatDTO
     {
         try {
+            $stat = $this->container->make($registration->class);
+
+            if (! $stat instanceof ProfileStatInterface || $stat->key() !== $key) {
+                $this->warnOnce('stat', $key, 'build', 'A profile stat was built differently from when it was registered; it is not drawn.');
+
+                return null;
+            }
+
             if (! ($layout->statEnabled($key) ?? $stat->enabledByDefault()) || ! $stat->isAvailable()) {
                 return null;
             }
@@ -166,17 +190,24 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
         return null;
     }
 
-    private function header(ProfileOwnerDTO $owner, ?UserProfileModel $profile, ?Authenticatable $viewer): ProfileHeaderDTO
+    /**
+     * The owner's account, read once: the public name comes from it, never from the caller.
+     */
+    private function accountOf(ProfileOwnerDTO $owner): ?UserModel
     {
-        $user = null;
         try {
-            $user = UserModel::query()->find($owner->id);
+            return UserModel::query()->find($owner->id);
         } catch (Throwable $exception) {
             $this->warnOnce('header', '', 'account', 'The account of a public profile could not be read; its header is drawn without it.', [
                 'exception' => $exception::class,
             ]);
-        }
 
+            return null;
+        }
+    }
+
+    private function header(ProfileOwnerDTO $owner, ?UserProfileModel $profile, ?UserModel $user, ?Authenticatable $viewer): ProfileHeaderDTO
+    {
         $memberSince = null;
         try {
             $memberSince = $this->timezone->iso($user?->created_at);
@@ -188,7 +219,7 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
 
         return new ProfileHeaderDTO(
             $owner->handle,
-            $owner->publicName,
+            $this->filled($user?->display_name),
             $this->filled($user?->avatar_public_id),
             $this->filled($profile?->banner_public_id),
             $memberSince,
@@ -238,11 +269,9 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
      * the rest by their default order. A key the layout turns on that nobody registers (a disabled
      * module) is warned about; one it turns off, or that is not a valid key, asks for nothing.
      *
-     * @template T of object
-     *
-     * @param  array<string, T>  $registered  key => item, by default order
+     * @param  array<string, ProfileRegistrationDTO>  $registered  key => registration, by default order
      * @param  list<ProfileLayoutEntry>  $entries
-     * @return array<string, T>
+     * @return array<string, ProfileRegistrationDTO>
      */
     private function ordered(array $registered, array $entries, string $kind): array
     {
@@ -261,47 +290,28 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
     }
 
     /**
-     * @return array<string, ProfileSectionInterface>
+     * The registrations of a kind, key => registration, by default order.
+     *
+     * @param  'section'|'stat'  $kind
+     * @return array<string, ProfileRegistrationDTO>
      */
-    private function registeredSections(): array
+    private function registered(string $kind): array
     {
-        $sections = [];
+        $registered = [];
 
         try {
-            foreach ($this->sections->all() as $section) {
-                $sections[$section->key()] = $section;
+            foreach (($kind === 'section' ? $this->sections : $this->stats)->all() as $registration) {
+                $registered[$registration->key] = $registration;
             }
         } catch (Throwable $exception) {
-            $this->warnOnce('section', '', 'registry', 'The profile sections could not be listed; none is drawn.', [
+            $this->warnOnce($kind, '', 'registry', sprintf('The profile %ss could not be listed; none is drawn.', $kind), [
                 'exception' => $exception::class,
             ]);
 
             return [];
         }
 
-        return $sections;
-    }
-
-    /**
-     * @return array<string, ProfileStatInterface>
-     */
-    private function registeredStats(): array
-    {
-        $stats = [];
-
-        try {
-            foreach ($this->stats->all() as $stat) {
-                $stats[$stat->key()] = $stat;
-            }
-        } catch (Throwable $exception) {
-            $this->warnOnce('stat', '', 'registry', 'The profile stats could not be listed; none is drawn.', [
-                'exception' => $exception::class,
-            ]);
-
-            return [];
-        }
-
-        return $stats;
+        return $registered;
     }
 
     private function filled(?string $value): ?string

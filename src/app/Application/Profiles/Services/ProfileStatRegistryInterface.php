@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Application\Profiles\Services;
 
 use App\Application\Profiles\Contracts\ProfileStatInterface;
+use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
 
 /**
  * The profile stats the core and the enabled modules offer (core#742). It only knows which stats
- * exist and are valid; counting them is ProfileRendererInterface.
+ * exist and are valid, as ProfileRegistrationDTO (never an instance: drawing builds each one in the
+ * current request or job); counting them is ProfileRendererInterface.
  */
 interface ProfileStatRegistryInterface
 {
@@ -35,12 +37,12 @@ interface ProfileStatRegistryInterface
     /**
      * Every valid stat, by default order (then key), whether or not it is available now.
      *
-     * @return list<ProfileStatInterface>
+     * @return list<ProfileRegistrationDTO>
      */
     public function all(): array;
 
     /**
      * The valid stat with that key, or null.
      */
-    public function find(string $key): ?ProfileStatInterface;
+    public function find(string $key): ?ProfileRegistrationDTO;
 }

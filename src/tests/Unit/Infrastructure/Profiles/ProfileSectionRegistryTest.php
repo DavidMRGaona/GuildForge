@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tests\Unit\Infrastructure\Profiles;
 
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
+use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Domain\Profiles\ProfileRegion;
 use App\Infrastructure\Profiles\ProfileSectionRegistry;
+use App\Infrastructure\Profiles\Sections\AboutProfileSection;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
 use Illuminate\Support\Facades\Log;
@@ -35,17 +37,43 @@ final class ProfileSectionRegistryTest extends TestCase
         $registry = $this->app->make(ProfileSectionRegistryInterface::class);
 
         $this->assertSame($registry, $this->app->make(ProfileSectionRegistryInterface::class));
-        $this->assertSame(ProfileRegion::Aside, $registry->find('core.about')?->region());
-        $this->assertNull($registry->moduleOf('core.about'));
+        $about = $registry->find('core.about');
+        $this->assertSame(AboutProfileSection::class, $about?->class);
+        $this->assertNull($about->module);
     }
 
     public function test_a_module_section_is_found_by_key_with_its_module(): void
     {
         $this->registry->register($this->section('forum.latest_posts'), 'forum');
 
-        $this->assertSame('forum.latest_posts', $this->registry->find('forum.latest_posts')?->key());
-        $this->assertSame('forum', $this->registry->moduleOf('forum.latest_posts'));
+        $registration = $this->registry->find('forum.latest_posts');
+        $this->assertSame('forum.latest_posts', $registration?->key);
+        $this->assertSame('forum', $registration->module);
+        $this->assertSame(100, $registration->order);
         $this->assertNull($this->registry->find('forum.other'));
+    }
+
+    public function test_the_registry_keeps_what_it_read_never_an_instance(): void
+    {
+        $built = 0;
+        $this->app->bind('counted-section', static function () use (&$built): ProfileSectionInterface {
+            $built++;
+
+            return new class extends FakeProfileSection
+            {
+                public function key(): string
+                {
+                    return 'forum.counted';
+                }
+            };
+        });
+        $this->registry->register('counted-section', 'forum');
+
+        $this->assertSame('counted-section', $this->registry->find('forum.counted')?->class);
+        $this->registry->all();
+
+        // Built once, only to check it: drawing builds its own in each request or job
+        $this->assertSame(1, $built);
     }
 
     public function test_sections_are_listed_by_default_order_then_key(): void
@@ -57,7 +85,7 @@ final class ProfileSectionRegistryTest extends TestCase
         ], 'forum');
 
         $this->assertSame(['forum.first', 'forum.a', 'forum.b'], array_map(
-            static fn (ProfileSectionInterface $section): string => $section->key(),
+            static fn (ProfileRegistrationDTO $registration): string => $registration->key,
             $this->registry->all(),
         ));
     }
@@ -145,7 +173,7 @@ final class ProfileSectionRegistryTest extends TestCase
         $this->registry->register($section, 'forum');
         $this->registry->register($section, 'game-tables');
 
-        $this->assertSame('forum', $this->registry->moduleOf('forum.latest_posts'));
+        $this->assertSame('forum', $this->registry->find('forum.latest_posts')?->module);
         $log->shouldHaveReceived('warning')->once();
     }
 

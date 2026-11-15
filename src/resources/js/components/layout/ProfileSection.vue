@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onErrorCaptured, ref, useId, watch } from 'vue';
-import type { ResolvedProfileSection } from '@/types/profiles';
+import type { ResolvedProfileSection } from '@/types/profileSections';
 import { resolveProfileSectionComponent } from '@/utils/profileSectionComponents';
 
 /**

@@ -10,7 +10,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
  * Turns a public profile into what the browser draws, for one person (core#742). It does not decide
- * whether the person may see the profile at all: the caller has already asked ProfileAccessRule.
+ * whether the person may see the profile at all, so only the core's own profile page calls it, once
+ * the access rule has let the person see it; modules never call it.
  *
  * The owner's layout decides order and on/off; a section or stat it does not mention takes its own
  * default (after the ones it orders) and a key it holds that nobody registers is ignored. It fails

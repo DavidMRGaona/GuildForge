@@ -6,6 +6,7 @@ namespace App\Infrastructure\Profiles;
 
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
+use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
 use App\Domain\Profiles\ValueObjects\ProfileKey;
 use App\Infrastructure\Support\DailyWarnings;
 use Illuminate\Contracts\Cache\Repository as Cache;
@@ -14,7 +15,10 @@ use Throwable;
 
 /**
  * What the section and stat registries share (core#742): classes registered by the core and the
- * modules, built the first time one is asked for and checked once. It fails closed: a class that
+ * modules, each built once the first time one is asked for, only to check it and read its key and
+ * default order. The registry keeps what it read and the class (ProfileRegistrationDTO), never the
+ * instance: it is a singleton, and an instance kept here would carry what it read in one request or
+ * job (a scoped service, a row) into the next. Whoever draws them builds them again in its own scope. It fails closed: a class that
  * cannot be built, is not of the expected interface, has an invalid key or one that is not its
  * owner's, fails a check of its own kind, or has a key another one also has, is left out with a
  * warning once a day per class and reason (DailyWarnings). Warnings name the class, the module, the
@@ -31,7 +35,7 @@ abstract class ProfileContributionRegistry
     /** @var array<string, ?string> Class (or container id) => owning module (null for the core) */
     private array $classes = [];
 
-    /** @var array<string, array{item: T, module: string|null}>|null Key => entry, by default order then key */
+    /** @var array<string, ProfileRegistrationDTO>|null Key => registration, by default order then key */
     private ?array $resolved = null;
 
     protected readonly DailyWarnings $warnings;
@@ -89,29 +93,16 @@ abstract class ProfileContributionRegistry
     }
 
     /**
-     * @return list<T>
+     * @return list<ProfileRegistrationDTO>
      */
     public function all(): array
     {
-        return array_values(array_map(
-            static fn (array $entry): object => $entry['item'],
-            $this->resolveAll(),
-        ));
+        return array_values($this->resolveAll());
     }
 
-    /**
-     * The valid item with that key; each registry narrows it to its own interface in find().
-     *
-     * @return T|null
-     */
-    protected function item(string $key): ?object
+    public function find(string $key): ?ProfileRegistrationDTO
     {
-        return ($this->resolveAll()[$key] ?? null)['item'] ?? null;
-    }
-
-    public function moduleOf(string $key): ?string
-    {
-        return ($this->resolveAll()[$key] ?? null)['module'] ?? null;
+        return $this->resolveAll()[$key] ?? null;
     }
 
     /** `section` or `stat`, for warnings */
@@ -140,7 +131,7 @@ abstract class ProfileContributionRegistry
     abstract protected function orderOf(object $item): int;
 
     /**
-     * @return array<string, array{item: T, module: string|null}>
+     * @return array<string, ProfileRegistrationDTO>
      */
     private function resolveAll(): array
     {
@@ -148,7 +139,7 @@ abstract class ProfileContributionRegistry
             return $this->resolved;
         }
 
-        /** @var array<string, list<array{item: T, module: string|null, order: int, class: string}>> $byKey */
+        /** @var array<string, list<array{key: string, order: int, module: string|null, class: string}>> $byKey */
         $byKey = [];
 
         foreach ($this->classes as $class => $module) {
@@ -158,7 +149,7 @@ abstract class ProfileContributionRegistry
             }
         }
 
-        /** @var list<array{key: string, item: T, module: string|null, order: int}> $valid */
+        /** @var list<ProfileRegistrationDTO> $valid */
         $valid = [];
 
         foreach ($byKey as $key => $entries) {
@@ -173,23 +164,24 @@ abstract class ProfileContributionRegistry
                 continue;
             }
 
-            $valid[] = ['key' => $key, 'item' => $entries[0]['item'], 'module' => $entries[0]['module'], 'order' => $entries[0]['order']];
+            $valid[] = new ProfileRegistrationDTO($key, $entries[0]['module'], $entries[0]['class'], $entries[0]['order']);
         }
 
-        usort($valid, static fn (array $a, array $b): int => [$a['order'], $a['key']] <=> [$b['order'], $b['key']]);
+        usort($valid, static fn (ProfileRegistrationDTO $a, ProfileRegistrationDTO $b): int => [$a->order, $a->key] <=> [$b->order, $b->key]);
 
         $resolved = [];
-        foreach ($valid as $entry) {
-            $resolved[$entry['key']] = ['item' => $entry['item'], 'module' => $entry['module']];
+        foreach ($valid as $registration) {
+            $resolved[$registration->key] = $registration;
         }
 
         return $this->resolved = $resolved;
     }
 
     /**
-     * The item with its key and order, read once, or null (with a warning) when it cannot be offered.
+     * The key and order of the class, read once from an instance built only for this, or null (with a
+     * warning) when it cannot be offered.
      *
-     * @return array{item: T, key: string, order: int}|null
+     * @return array{key: string, order: int}|null
      */
     private function build(string $class, ?string $module): ?array
     {
@@ -230,7 +222,7 @@ abstract class ProfileContributionRegistry
             ]);
         }
 
-        return ['item' => $item, 'key' => $key->value, 'order' => $order];
+        return ['key' => $key->value, 'order' => $order];
     }
 
     /**

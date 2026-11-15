@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\SiteBlocks;
 
+use App\Application\Exceptions\NothingToDrawException;
 use App\Application\SiteBlocks\DTOs\ResolvedSiteBlockDTO;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
 use App\Domain\SiteBlocks\SiteBlockPlacement;
@@ -159,6 +160,27 @@ final class SiteBlockRendererTest extends TestCase
 
         $this->assertNull($this->renderer()->resolveBlock('newsletter.subscribe', [], SiteBlockPlacement::Footer, null));
         $this->assertNotNull($this->renderer()->resolveBlock('newsletter.subscribe', [], SiteBlockPlacement::Popup, null));
+    }
+
+    public function test_a_block_throwing_the_common_nothing_to_draw_is_left_out_quietly(): void
+    {
+        $block = new class extends FakeSiteBlock
+        {
+            public function key(): string
+            {
+                return 'newsletter.subscribe';
+            }
+
+            public function props(array $settings, ?Authenticatable $user): array
+            {
+                throw NothingToDrawException::make();
+            }
+        };
+        $this->registry->register($block::class, 'newsletter');
+        $log = Log::spy();
+
+        $this->assertNull($this->renderer()->resolveBlock('newsletter.subscribe', [], SiteBlockPlacement::Footer, null));
+        $log->shouldNotHaveReceived('warning');
     }
 
     public function test_an_unavailable_block_is_left_out_without_a_warning(): void

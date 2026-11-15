@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\Application\Profiles\Contracts;
 
+use App\Application\Exceptions\NothingToDrawException;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
-use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use App\Domain\Profiles\ProfileRegion;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
  * A section of the public profile (core#742): a list, a summary or a text about the owner, drawn in
  * the wide column or the narrow one. The core registers its own (`core.about`); a module returns its
- * classes from registerProfileSections(). Each one is built from the container, so it may take
- * dependencies.
+ * classes from registerProfileSections(). Each one is built from the container again in every
+ * request or job that draws profiles, so it may take dependencies (scoped ones too); it never keeps
+ * state of its own across them.
  *
  * The registry leaves a section out (with a warning) when its key is invalid or not its owner's, its
  * component path is invalid, its region is not a ProfileRegion, or another section has the same key.

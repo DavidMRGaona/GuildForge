@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Profiles\Sections;
 
+use App\Application\Exceptions\NothingToDrawException;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
-use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use App\Domain\Profiles\ProfileBioText;
 use App\Domain\Profiles\ProfileRegion;
 use App\Infrastructure\Profiles\StoredProfiles;
