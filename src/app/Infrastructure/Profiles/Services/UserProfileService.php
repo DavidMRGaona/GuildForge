@@ -155,25 +155,27 @@ final readonly class UserProfileService implements UserProfileServiceInterface
                 $profiles->selectRaw('1')->from('user_profiles')->whereColumn('user_profiles.user_id', 'users.id');
             });
 
-        if ($dryRun) {
-            $created = $missing->count();
-        } else {
-            // By id, so rows created along the way never shift the next chunk
-            $missing->select('users.id')->chunkById($chunk, function (Collection $users) use (&$created, &$failed): void {
-                foreach ($users as $user) {
-                    $userId = (string) $user->getKey();
+        // By id, so rows created along the way never shift the next chunk
+        $missing->select(['users.id', 'users.display_name'])->chunkById($chunk, function (Collection $users) use ($dryRun, &$created, &$failed): void {
+            foreach ($users as $user) {
+                $userId = (string) $user->getKey();
 
-                    try {
-                        if ($this->createFor($userId)) {
-                            $created++;
-                        }
-                    } catch (Throwable $e) {
-                        $failed++;
-                        $this->logFailure('The public profile of an account could not be created.', $userId, $e);
-                    }
+                if ($dryRun) {
+                    $this->wouldFind($user->display_name, $userId) ? $created++ : $failed++;
+
+                    continue;
                 }
-            }, 'users.id', 'id');
-        }
+
+                try {
+                    if ($this->createFor($userId)) {
+                        $created++;
+                    }
+                } catch (Throwable $e) {
+                    $failed++;
+                    $this->logFailure('The public profile of an account could not be created.', $userId, $e);
+                }
+            }
+        }, 'users.id', 'id');
 
         // Addresses left behind by a failed move when the public name changed
         UserProfileModel::query()
@@ -189,7 +191,7 @@ final readonly class UserProfileService implements UserProfileServiceInterface
                     }
 
                     if ($dryRun) {
-                        $realigned++;
+                        $this->wouldFind($profile->user?->display_name, $profile->user_id) ? $realigned++ : $failed++;
 
                         continue;
                     }
@@ -210,6 +212,21 @@ final readonly class UserProfileService implements UserProfileServiceInterface
         }
 
         return new ProfileCreationResultDTO($created, $realigned, $failed);
+    }
+
+    /**
+     * For the dry run, without writing: whether some address is free for this account now. The random
+     * candidates are drawn again, and a clash with another write meanwhile is only seen by the real run.
+     */
+    private function wouldFind(?string $publicName, string $userId): bool
+    {
+        foreach (ProfileHandleCandidates::for($publicName) as $handle) {
+            if ($this->isFreeFor($handle, $userId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

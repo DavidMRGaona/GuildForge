@@ -18,7 +18,8 @@ use Tests\TestCase;
 
 /**
  * Another account taking an address between the check and the write, forced without threads: right after
- * the service reads the history for an address, a listener writes that address for somebody else. Each
+ * the service reads the history for an address, a listener writes that address for somebody else (before
+ * the read, for the dry run, which never writes). Each
  * save runs inside an outer transaction, as the panel's user form does, and keeps going after the clash
  * (in PostgreSQL a failed statement outside a savepoint would abort it).
  */
@@ -120,6 +121,32 @@ final class UserProfileClashTest extends TestCase
         $this->assertSame(0, $result->realigned);
         $this->assertSame(2, $result->failed);
         $this->assertNull(UserProfileModel::query()->find($user->id));
+        $this->assertSame('bea', UserProfileModel::query()->findOrFail($stale->id)->handle);
+    }
+
+    public function test_a_dry_run_counts_as_failed_what_would_find_no_free_address(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $stale = UserModel::factory()->create(['display_name' => 'Bea']);
+        UserProfileModel::query()->whereKey($user->id)->delete();
+        UserProfileHandleModel::query()->where('user_id', $user->id)->delete();
+        DB::table('users')->where('id', $stale->id)->update(['display_name' => 'Carla']);
+        // The dry run only reads: every address is somebody else's by the time it is checked
+        $otherId = (string) $this->other->id;
+        DB::beforeExecuting(static function (string $sql, array $bindings) use ($otherId): void {
+            $hash = $bindings[0] ?? null;
+
+            if (is_string($hash) && preg_match('/^[0-9a-f]{64}$/', $hash) === 1
+                && str_starts_with(strtolower(ltrim($sql)), 'select') && str_contains($sql, 'user_profile_handles')) {
+                DB::table('user_profile_handles')->insertOrIgnore(['handle_hash' => $hash, 'handle' => null, 'user_id' => $otherId, 'retired_at' => null]);
+            }
+        });
+
+        $result = app(UserProfileServiceInterface::class)->createMissing(dryRun: true, chunk: 500);
+
+        $this->assertSame(0, $result->created);
+        $this->assertSame(0, $result->realigned);
+        $this->assertSame(2, $result->failed);
         $this->assertSame('bea', UserProfileModel::query()->findOrFail($stale->id)->handle);
     }
 

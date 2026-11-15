@@ -46,7 +46,7 @@ final class UserProfileLifecycleTest extends TestCase
 
         $user = UserModel::query()->where('email', 'nuevo@example.com')->firstOrFail();
         $profile = UserProfileModel::query()->findOrFail($user->id);
-        $this->assertMatchesRegularExpression('/^miembro-[a-z2-9]{6}$/', $profile->handle);
+        $this->assertMatchesRegularExpression('/^miembro-(?=[a-z]*[2-9])[abcdefghjkmnpqrstuvwxyz23456789]{6}$/', $profile->handle);
     }
 
     public function test_an_account_is_created_and_the_error_logged_when_its_profile_cannot_be(): void
@@ -228,7 +228,7 @@ final class UserProfileLifecycleTest extends TestCase
 
         $this->artisanCommand('profiles:create-missing')
             ->expectsOutputToContain('2 perfiles creados')
-            ->expectsOutputToContain('1 perfil no se pudo crear')
+            ->expectsOutputToContain('1 cuenta se quedó sin perfil o sin realinear')
             ->assertFailed();
     }
 

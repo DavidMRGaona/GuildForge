@@ -23,8 +23,8 @@ final class UserProfileServiceTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    /** Six characters without look-alikes (no 0/o, 1/l/i) */
-    private const string RANDOM = '[abcdefghjkmnpqrstuvwxyz23456789]{6}';
+    /** Six characters without look-alikes (no 0/o, 1/l/i), at least one a digit */
+    private const string RANDOM = '(?=[a-z]*[2-9])[abcdefghjkmnpqrstuvwxyz23456789]{6}';
 
     private UserProfileServiceInterface $profiles;
 
@@ -372,6 +372,40 @@ final class UserProfileServiceTest extends TestCase
         } catch (QueryException) {
             $this->assertSame('ana', UserProfileHandleModel::query()->findOrFail(ProfileHandle::hashOf('ana'))->handle);
         }
+    }
+
+    public function test_a_surname_taken_out_of_the_public_name_leaves_the_address(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana Vargas']);
+        $this->assertSame('ana-vargas', $this->profileOf($user)->handle);
+
+        $user->update(['display_name' => 'Ana']);
+
+        $this->assertSame('ana', $this->profileOf($user)->handle);
+    }
+
+    public function test_clearing_a_public_name_that_looks_random_still_gives_a_random_address(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Miembro Suárez']);
+        $before = $this->profileOf($user);
+        $this->assertSame('miembro-suarez', $before->handle);
+
+        $user->update(['display_name' => null]);
+
+        $after = $this->profileOf($user)->handle;
+        $this->assertMatchesRegularExpression('/^miembro-'.self::RANDOM.'$/', $after);
+        $this->assertTrue(UserProfileHandleModel::query()->whereKey(ProfileHandle::hashOf('miembro-suarez'))->whereNotNull('retired_at')->exists());
+    }
+
+    public function test_forgetting_retires_the_address_in_use(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->assertNull(UserProfileHandleModel::query()->findOrFail(ProfileHandle::hashOf('ana'))->retired_at);
+
+        $this->profiles->forget((string) $user->id);
+
+        $this->assertSame(0, UserProfileHandleModel::query()->whereNull('retired_at')->count());
+        $this->assertNotNull(UserProfileHandleModel::query()->findOrFail(ProfileHandle::hashOf('ana'))->retired_at);
     }
 
     private function retiredCount(): int

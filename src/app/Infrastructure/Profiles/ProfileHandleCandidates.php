@@ -22,6 +22,16 @@ final class ProfileHandleCandidates
 
     public const string RANDOM_PREFIX = 'miembro';
 
+    /** The digits of the alphabet: every random suffix has at least one */
+    private const string RANDOM_DIGITS = '23456789';
+
+    /**
+     * A random suffix: six characters of the alphabet with at least one digit. The digit is what tells it
+     * from a word: without it, a six-letter surname (`ana-suarez`, `miembro-vargas`) would pass for a
+     * random suffix and stay in the address after the person took it out of their public name.
+     */
+    private const string RANDOM_SUFFIX_PATTERN = '(?=[a-z]*[2-9])[abcdefghjkmnpqrstuvwxyz23456789]{6}';
+
     /** The slug and its numbered forms: the slug itself is the first */
     private const int NUMBERED_TRIES = 20;
 
@@ -76,7 +86,7 @@ final class ProfileHandleCandidates
             }
         }
 
-        return preg_match('/^'.preg_quote(self::cut($base, ProfileHandle::MAX_LENGTH - self::RANDOM_LENGTH - 1), '/').'-['.self::RANDOM_ALPHABET.']{'.self::RANDOM_LENGTH.'}$/', $handle) === 1;
+        return preg_match('/^'.preg_quote(self::cut($base, ProfileHandle::MAX_LENGTH - self::RANDOM_LENGTH - 1), '/').'-'.self::RANDOM_SUFFIX_PATTERN.'$/', $handle) === 1;
     }
 
     /**
@@ -84,7 +94,7 @@ final class ProfileHandleCandidates
      */
     public static function isRandom(string $handle): bool
     {
-        return preg_match('/^'.self::RANDOM_PREFIX.'-['.self::RANDOM_ALPHABET.']{'.self::RANDOM_LENGTH.'}$/', $handle) === 1;
+        return preg_match('/^'.self::RANDOM_PREFIX.'-'.self::RANDOM_SUFFIX_PATTERN.'$/', $handle) === 1;
     }
 
     /**
@@ -122,6 +132,9 @@ final class ProfileHandleCandidates
         return rtrim(substr($slug, 0, $length), '-');
     }
 
+    /**
+     * Six characters of the alphabet, one of them (at a random place) always a digit.
+     */
     private static function randomSuffix(): string
     {
         $last = strlen(self::RANDOM_ALPHABET) - 1;
@@ -130,6 +143,8 @@ final class ProfileHandleCandidates
         for ($i = 0; $i < self::RANDOM_LENGTH; $i++) {
             $suffix .= self::RANDOM_ALPHABET[random_int(0, $last)];
         }
+
+        $suffix[random_int(0, self::RANDOM_LENGTH - 1)] = self::RANDOM_DIGITS[random_int(0, strlen(self::RANDOM_DIGITS) - 1)];
 
         return $suffix;
     }

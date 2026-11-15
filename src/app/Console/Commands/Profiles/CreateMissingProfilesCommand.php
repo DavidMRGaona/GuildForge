@@ -40,8 +40,18 @@ final class CreateMissingProfilesCommand extends Command
         ));
 
         if ($result->failed > 0) {
-            $this->components->error(trans_choice('profiles.create_missing.failed', $result->failed, ['count' => $result->failed]));
+            $this->components->error(trans_choice(
+                $dryRun ? 'profiles.create_missing.would_fail' : 'profiles.create_missing.failed',
+                $result->failed,
+                ['count' => $result->failed],
+            ));
+        }
 
+        if ($dryRun) {
+            $this->components->info((string) __('profiles.create_missing.dry_run_note'));
+        }
+
+        if ($result->failed > 0) {
             return self::FAILURE;
         }
 
