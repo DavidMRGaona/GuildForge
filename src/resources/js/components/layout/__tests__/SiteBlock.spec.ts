@@ -2,18 +2,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { h, type FunctionalComponent } from 'vue';
 import SiteBlock from '../SiteBlock.vue';
+import { useSiteBlockPlacement } from '@/composables/useSiteBlockPlacement';
 import type { ResolvedSiteBlock } from '@/types/siteBlocks';
 
 const Subscribe: FunctionalComponent<{ heading: string }> = (props) =>
     h('p', { 'data-testid': 'subscribe' }, props.heading);
 Subscribe.props = ['heading'];
 
+const Placed: FunctionalComponent = () => {
+    const placement = useSiteBlockPlacement();
+
+    return h('p', { 'data-testid': 'placed' }, placement.value);
+};
+
 const Broken: FunctionalComponent = () => {
     throw new Error('Broken block');
 };
 
 const resolveModuleComponent = vi.fn((_module: string, path: string) =>
-    path === 'components/Broken.vue' ? Broken : Subscribe
+    path === 'components/Broken.vue'
+        ? Broken
+        : path === 'components/Placed.vue'
+          ? Placed
+          : Subscribe
 );
 
 vi.mock('@/composables/useModuleSlots', () => ({
@@ -47,6 +58,36 @@ describe('SiteBlock', () => {
         );
         expect(wrapper.get('[data-testid="subscribe"]').text()).toBe('Suscríbete');
         expect(wrapper.find('[data-site-block="newsletter.subscribe"]').exists()).toBe(true);
+    });
+
+    it.each(['footer', 'popup'] as const)(
+        'tells the block it is drawn in the %s',
+        async (placement) => {
+            const wrapper = mount(SiteBlock, {
+                props: { block: block({ component: 'components/Placed.vue' }), placement },
+            });
+            await flushPromises();
+
+            expect(wrapper.get('[data-testid="placed"]').text()).toBe(placement);
+            // A context, not an attribute: nothing reaches the block's markup
+            expect(wrapper.get('[data-site-block]').attributes('placement')).toBeUndefined();
+        }
+    );
+
+    it('draws in the footer when nobody says otherwise', async () => {
+        const wrapper = mount(SiteBlock, {
+            props: { block: block({ component: 'components/Placed.vue' }) },
+        });
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="placed"]').text()).toBe('footer');
+    });
+
+    it('still draws a block that never asks for its placement', async () => {
+        const wrapper = mount(SiteBlock, { props: { block: block(), placement: 'popup' } });
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="subscribe"]').text()).toBe('Suscríbete');
     });
 
     it('keeps a failing block to itself', async () => {

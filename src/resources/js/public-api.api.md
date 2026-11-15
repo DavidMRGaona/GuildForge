@@ -474,11 +474,14 @@ export default _default;
 ## resources/js/components/layout/SiteBlock.vue
 
 ```ts
-import type { ResolvedSiteBlock } from '@/types/siteBlocks';
+import type { ResolvedSiteBlock, SiteBlockPlacement } from '@/types/siteBlocks';
 type __VLS_Props = {
     block: ResolvedSiteBlock;
+    placement?: SiteBlockPlacement;
 };
-declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {
+    placement: SiteBlockPlacement;
+}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
 export default _default;
 ```
@@ -842,6 +845,16 @@ export interface RouteDefinitions {
 declare const routes: RouteDefinitions;
 export declare function useRoutes(): RouteDefinitions;
 export { routes };
+```
+
+## resources/js/composables/useSiteBlockPlacement.ts
+
+```ts
+import { type ComputedRef, type InjectionKey } from 'vue';
+import type { SiteBlockPlacement } from '@/types/siteBlocks';
+export declare const SITE_BLOCK_PLACEMENT: InjectionKey<ComputedRef<SiteBlockPlacement>>;
+export declare const DEFAULT_SITE_BLOCK_PLACEMENT: SiteBlockPlacement;
+export declare function useSiteBlockPlacement(): ComputedRef<SiteBlockPlacement>;
 ```
 
 ## resources/js/composables/useVerificationGate.ts
@@ -1237,6 +1250,7 @@ export type RealtimeListener = (payload: RealtimePayload) => void;
 ## resources/js/types/siteBlocks.ts
 
 ```ts
+export type SiteBlockPlacement = 'footer' | 'popup';
 export interface ResolvedSiteBlock {
     key: string;
     module: string | null;

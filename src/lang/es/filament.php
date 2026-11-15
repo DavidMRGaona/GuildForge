@@ -599,6 +599,7 @@ return [
                 'label' => 'Enlaces',
                 'menu' => 'Menú',
                 'menu_help' => 'Los enlaces se editan en Sitio web → Navegación, en la pestaña del menú.',
+                'menu_empty' => 'Este menú no tiene ningún enlace activo: el bloque no saldrá en la web hasta que lo tenga. Los enlaces se editan en Sitio web → Navegación, en la pestaña del menú.',
             ],
             'text' => [
                 'label' => 'Texto',

@@ -22,6 +22,6 @@ provide(FOOTER_BLOCK_TITLE_ID, props.entry.title ? titleId : null);
         <h2 v-if="entry.title" :id="titleId" class="mb-3 text-base font-semibold text-white">
             {{ entry.title }}
         </h2>
-        <SiteBlock :block="entry.block" />
+        <SiteBlock :block="entry.block" placement="footer" />
     </section>
 </template>
