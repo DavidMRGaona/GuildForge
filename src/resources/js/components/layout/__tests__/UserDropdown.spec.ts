@@ -6,6 +6,7 @@ import UserDropdown from '../UserDropdown.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
 import type { User } from '@/types/models';
+import { setCloudinaryConfig } from '@/utils/cloudinary';
 
 const page = reactive<{ url: string; props: { auth: { user: User | null } } }>({
     url: '/',
@@ -78,5 +79,53 @@ describe('UserDropdown', () => {
         expect(wrapper.text()).not.toContain('auth.userMenu.help');
         expect(wrapper.find('a[href="/ayuda"]').exists()).toBe(true);
         expect(en.auth.userMenu.help).toBe('Help');
+    });
+
+    it('shows the avatar beside the name, with an empty alt since the name says who it is', async () => {
+        setCloudinaryConfig({ cloudName: 'demo', prefix: '' });
+        const wrapper = await openMenuFor({
+            ...userWith(['member'], []),
+            avatarPublicId: 'users/1/avatar.jpg',
+        });
+
+        const avatar = wrapper.get('[data-testid="user-menu-avatar"] img');
+        expect(avatar.attributes('src')).toContain('/users/1/avatar');
+        expect(avatar.attributes('src')).toContain('w_56,h_56');
+        expect(avatar.attributes('alt')).toBe('');
+    });
+
+    it('shows the initials of the shown name when there is no avatar', async () => {
+        const wrapper = await openMenuFor({
+            ...userWith(['member'], []),
+            displayName: 'Ana María Prueba',
+        });
+
+        const avatar = wrapper.get('[data-testid="user-menu-avatar"]');
+        expect(avatar.find('img').exists()).toBe(false);
+        expect(avatar.text()).toBe('AP');
+        expect(avatar.attributes('aria-hidden')).toBe('true');
+    });
+
+    it('falls back to the person icon when the name gives no initials', async () => {
+        const wrapper = await openMenuFor({ ...userWith(['member'], []), name: '***' });
+
+        const avatar = wrapper.get('[data-testid="user-menu-avatar"]');
+        expect(avatar.text()).toBe('');
+        expect(avatar.find('svg').exists()).toBe(true);
+    });
+
+    it('shows the initials instead of a broken image when the photo fails to load', async () => {
+        setCloudinaryConfig({ cloudName: 'demo', prefix: '' });
+        const wrapper = await openMenuFor({
+            ...userWith(['member'], []),
+            displayName: 'Ana Prueba',
+            avatarPublicId: 'users/1/gone.jpg',
+        });
+
+        await wrapper.get('[data-testid="user-menu-avatar"] img').trigger('error');
+
+        const avatar = wrapper.get('[data-testid="user-menu-avatar"]');
+        expect(avatar.find('img').exists()).toBe(false);
+        expect(avatar.text()).toBe('AP');
     });
 });
