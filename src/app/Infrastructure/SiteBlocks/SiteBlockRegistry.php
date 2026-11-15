@@ -8,6 +8,7 @@ use App\Application\SiteBlocks\Contracts\SiteBlockInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Domain\SiteBlocks\SiteBlockPlacement;
 use App\Domain\SiteBlocks\ValueObjects\SiteBlockKey;
+use App\Infrastructure\Support\DailyWarnings;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Container\Container;
 use Throwable;
@@ -17,7 +18,7 @@ use Throwable;
  * block is asked for. It fails closed: a block that cannot be built, is not a SiteBlockInterface,
  * has an invalid key or one that is not its owner's, an invalid component path or placement, a key
  * another block also has, or (for a module block) settings that are not flat, is left out with a
- * warning once a day per class and reason (SiteBlockWarnings). Warnings name the class, the module,
+ * warning once a day per class and reason (DailyWarnings). Warnings name the class, the module,
  * the key and the reason, and an exception only by its class. A singleton built at boot.
  *
  * In php-fpm every request builds it again, so the blocks are built and checked once per request,
@@ -27,6 +28,9 @@ use Throwable;
  */
 final class SiteBlockRegistry implements SiteBlockRegistryInterface
 {
+    /** Where the registry's and the renderer's warnings are remembered for a day */
+    public const string WARNING_PREFIX = 'site_blocks:warned:';
+
     /** Relative to the owner's resources/js, under components/, a .vue file, never climbing out */
     private const string COMPONENT_PATTERN = '#^components/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.vue$#';
 
@@ -36,7 +40,7 @@ final class SiteBlockRegistry implements SiteBlockRegistryInterface
     /** @var array<string, array{block: SiteBlockInterface, placements: list<SiteBlockPlacement>, settingNames: list<string>|null}>|null Key => block */
     private ?array $resolved = null;
 
-    private readonly SiteBlockWarnings $warnings;
+    private readonly DailyWarnings $warnings;
 
     /**
      * @param  Cache|null  $cache  where warnings are remembered; the default store, asked for only when warning
@@ -46,7 +50,8 @@ final class SiteBlockRegistry implements SiteBlockRegistryInterface
         private readonly FlatSettingsSchemaRule $flatSettings = new FlatSettingsSchemaRule,
         ?Cache $cache = null,
     ) {
-        $this->warnings = new SiteBlockWarnings(
+        $this->warnings = new DailyWarnings(
+            self::WARNING_PREFIX,
             fn (): Cache => $cache ?? $this->container->make(Cache::class),
         );
     }

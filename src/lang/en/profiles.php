@@ -12,4 +12,10 @@ return [
         'would_fail' => '{1} :count account would be left without a free address|[0,*] :count accounts would be left without a free address',
         'dry_run_note' => 'Dry run: nothing was written. A clash with another write is only seen by a real run.',
     ],
+    'sections' => [
+        'about' => [
+            'label' => 'About me',
+            'description' => 'What you tell about yourself, with the links you want to share.',
+        ],
+    ],
 ];

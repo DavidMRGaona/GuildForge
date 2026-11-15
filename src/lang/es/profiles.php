@@ -12,4 +12,10 @@ return [
         'would_fail' => '{1} :count cuenta se quedaría sin dirección libre|[0,*] :count cuentas se quedarían sin dirección libre',
         'dry_run_note' => 'Simulación: no se ha escrito nada. Una carrera con otra escritura solo se ve al ejecutarlo de verdad.',
     ],
+    'sections' => [
+        'about' => [
+            'label' => 'Sobre mí',
+            'description' => 'Lo que cuentas de ti, con los enlaces que quieras compartir.',
+        ],
+    ],
 ];

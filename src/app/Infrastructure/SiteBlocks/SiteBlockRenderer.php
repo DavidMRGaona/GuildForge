@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\SiteBlocks;
 
+use App\Application\Exceptions\NothingToDrawException;
 use App\Application\SiteBlocks\Contracts\SiteBlockInterface;
 use App\Application\SiteBlocks\DTOs\ResolvedSiteBlockDTO;
-use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
 use App\Domain\SiteBlocks\SiteBlockPlacement;
 use App\Domain\SiteBlocks\ValueObjects\SiteBlockKey;
+use App\Infrastructure\Support\DailyWarnings;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use JsonException;
@@ -19,18 +20,18 @@ use Throwable;
 /**
  * Resolves stored blocks to what the browser draws and fails closed (see the interface). The
  * footer is on every page, so a block that keeps failing would log on every request: each key and
- * reason is warned about once a day (SiteBlockWarnings). Warnings carry the key, the reason and an
+ * reason is warned about once a day (DailyWarnings). Warnings carry the key, the reason and an
  * exception only by its class; never settings, props or exception messages.
  */
 final readonly class SiteBlockRenderer implements SiteBlockRendererInterface
 {
-    private SiteBlockWarnings $warnings;
+    private DailyWarnings $warnings;
 
     public function __construct(
         private SiteBlockRegistryInterface $registry,
         Cache $cache,
     ) {
-        $this->warnings = new SiteBlockWarnings(static fn (): Cache => $cache);
+        $this->warnings = new DailyWarnings(SiteBlockRegistry::WARNING_PREFIX, static fn (): Cache => $cache);
     }
 
     public function resolveBlock(string $key, array $settings, SiteBlockPlacement $placement, ?Authenticatable $user): ?ResolvedSiteBlockDTO

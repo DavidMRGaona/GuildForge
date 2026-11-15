@@ -19,6 +19,8 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
+use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
+use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Proposals\Services\EventProposalRequestRegistryInterface;
 use App\Application\Publications\Services\PublicationSourceRegistryInterface;
 use App\Application\Realtime\Services\RealtimeChannelRegistryInterface;
@@ -134,6 +136,10 @@ final class ModuleLoader
 
         // Register site blocks from the provider
         $this->registerProviderSiteBlocks($provider, $module->name()->value);
+
+        // Register public profile sections and stats from the provider
+        $this->registerProviderProfileSections($provider, $module->name()->value);
+        $this->registerProviderProfileStats($provider, $module->name()->value);
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
@@ -363,6 +369,38 @@ final class ModuleLoader
 
         if ($this->app->bound(SiteBlockRegistryInterface::class)) {
             $this->app->make(SiteBlockRegistryInterface::class)->registerMany($blocks, $moduleName);
+        }
+    }
+
+    /**
+     * Register public profile sections from a module provider.
+     */
+    private function registerProviderProfileSections(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sections = $provider->registerProfileSections();
+
+        if ($sections === []) {
+            return;
+        }
+
+        if ($this->app->bound(ProfileSectionRegistryInterface::class)) {
+            $this->app->make(ProfileSectionRegistryInterface::class)->registerMany($sections, $moduleName);
+        }
+    }
+
+    /**
+     * Register public profile stats from a module provider.
+     */
+    private function registerProviderProfileStats(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $stats = $provider->registerProfileStats();
+
+        if ($stats === []) {
+            return;
+        }
+
+        if ($this->app->bound(ProfileStatRegistryInterface::class)) {
+            $this->app->make(ProfileStatRegistryInterface::class)->registerMany($stats, $moduleName);
         }
     }
 
