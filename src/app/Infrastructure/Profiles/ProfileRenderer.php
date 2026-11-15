@@ -236,7 +236,7 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
     /**
      * The registered items in the owner's order: first those the layout lists (in its order), then
      * the rest by their default order. A key the layout turns on that nobody registers (a disabled
-     * module) is warned about; one it turns off asks for nothing.
+     * module) is warned about; one it turns off, or that is not a valid key, asks for nothing.
      *
      * @template T of object
      *
@@ -251,7 +251,8 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
         foreach ($entries as $entry) {
             if (isset($registered[$entry->key])) {
                 $ordered[$entry->key] = $registered[$entry->key];
-            } elseif ($entry->enabled) {
+            } elseif ($entry->enabled && ProfileKey::tryFrom($entry->key) instanceof ProfileKey) {
+                // Only something shaped like a key: a forged layout never writes free text to the log
                 $this->warnOnce($kind, $entry->key, 'unknown', sprintf('A profile %s the owner turned on is not registered (its module may be disabled); it is not drawn.', $kind));
             }
         }

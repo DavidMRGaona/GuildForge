@@ -266,7 +266,7 @@ A section or stat never breaks the profile around it:
 | The same class registered by a second owner | The second registration is ignored, warning |
 | The key does not start with the module's own name (`core.` for the core), or a module called `core` | Left out, warning |
 | Two sections (or two stats) with the same key | Both left out, warning |
-| A key the owner turned on that nobody registers (its module disabled or uninstalled) | Not drawn, warning |
+| A key the owner turned on that nobody registers (its module disabled or uninstalled) | Not drawn, warning (only for something shaped like a key: free text in a layout is never logged) |
 | Turned off by the owner, or off by default and never turned on | Not drawn, no warning |
 | `isAvailable()` is false | Not drawn, no warning |
 | `props()` throws `NothingToDrawException`, or `stat()` returns `null` | Not drawn, no warning: a section's title is not left alone either |

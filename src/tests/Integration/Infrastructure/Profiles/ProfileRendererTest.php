@@ -224,6 +224,8 @@ final class ProfileRendererTest extends TestCase
         $this->profileOf($user)->update(['layout' => ProfileLayout::fromArray(['sections' => [
             ['key' => 'game-tables.tables', 'enabled' => true],
             ['key' => 'game-tables.campaigns', 'enabled' => false],
+            // Not a key at all (a forged layout): never written to the log
+            ['key' => 'Hola <script> ¿qué tal?', 'enabled' => true],
         ], 'stats' => [['key' => 'forum.messages', 'enabled' => true]]])]);
         $log = Log::spy();
 
