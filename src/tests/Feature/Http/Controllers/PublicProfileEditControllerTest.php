@@ -439,6 +439,8 @@ final class PublicProfileEditControllerTest extends TestCase
     {
         Storage::fake('images');
         app(SettingsServiceInterface::class)->set('auth_email_verification_required', '1');
+        // The clock is frozen today: the cutoff the migration wrote at the real time may come after it
+        app(SettingsServiceInterface::class)->set('email_verification_enforced_since', '2026-01-01T00:00:00+00:00');
         $owner = $this->owner(['email_verified_at' => null]);
 
         $this->actingAs($owner)->get('/miembros/ana-prueba')
