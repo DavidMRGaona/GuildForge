@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Application\Services\SettingsServiceInterface;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -67,7 +67,8 @@ return new class extends Migration
             ]);
         }
 
-        Cache::forget('site_settings');
+        // After the commit when the migrator runs this inside a transaction
+        app(SettingsServiceInterface::class)->clearCache();
     }
 
     public function down(): void

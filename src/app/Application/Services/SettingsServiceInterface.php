@@ -35,7 +35,21 @@ interface SettingsServiceInterface
     public function setEncrypted(string $key, string $value): void;
 
     /**
-     * Clear the settings cache.
+     * Read a setting from the table, never from the cache. get() may lag behind a write made
+     * by another request; code that decides a write on what it reads (compare and set, a
+     * background check storing its result) reads with this.
+     */
+    public function getStored(string $key, mixed $default = null): mixed;
+
+    /**
+     * Read an encrypted setting from the table, never from the cache, decrypting it.
+     * Missing, empty or undecryptable values return the default.
+     */
+    public function getStoredEncrypted(string $key, mixed $default = null): mixed;
+
+    /**
+     * Invalidate the settings cache once the current transaction commits (at once outside
+     * one). Call it after writing the settings table without set().
      */
     public function clearCache(): void;
 

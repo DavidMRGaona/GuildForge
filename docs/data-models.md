@@ -290,6 +290,7 @@ Same structure: `{resource}_id` uuid + `tag_id` uuid (composite PK, both FK CASC
 | created_at / updated_at | timestamp | nullable |
 
 - Key/value store behind `SettingsServiceInterface` (site, theme, mail, maintenance, dashboard and module settings). Model: `SettingModel`.
+- Cached as one entry, `site_settings_<version>`, with the version in `site_settings_version` (core ≥ the release with #722). A write renews the version after its commit, so an older read can never cache the previous rows again; `getStored()` / `getStoredEncrypted()` read the table directly. Details in `docs/modules/README.md` → *Reading and writing site settings*.
 - Authorization and verification keys: `association_member_role` (name of the association member role; `socio` when unset or blank) and `email_verification_enforced_since` (written once by a migration, ISO 8601 in UTC: accounts created earlier are not required to verify their email). `auth_email_verification_required` turns the required verification on.
 
 #### menu_items

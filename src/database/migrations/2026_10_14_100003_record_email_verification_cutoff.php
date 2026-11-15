@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Application\Services\SettingsServiceInterface;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -35,10 +35,9 @@ return new class extends Migration
 
         // SettingsService caches every setting: a stale copy would read as "no cutoff" for an hour
         // and lock out every unverified account. The migrator runs this inside a transaction on
-        // PostgreSQL, so clear the cache after the commit: cleared earlier, a request in between
-        // would cache the settings without the uncommitted row again. Outside a transaction
-        // afterCommit() runs the callback at once.
-        DB::afterCommit(static fn () => Cache::forget('site_settings'));
+        // PostgreSQL; clearCache() invalidates only after the commit (at once outside one), so a
+        // request in between cannot cache the settings without the uncommitted row again.
+        app(SettingsServiceInterface::class)->clearCache();
     }
 
     public function down(): void

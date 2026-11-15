@@ -208,7 +208,7 @@ Contracts that define application layer operations:
 - `UserServiceInterface` - User management
 - `ContactServiceInterface` - Contact form
 - `LegalPageServiceInterface` - Legal pages
-- `SettingsServiceInterface` - Site configuration
+- `SettingsServiceInterface` - Site configuration (cached under a version renewed after each write commits; `getStored()` reads the table for read-then-write code, core#722)
 - `ThemeSettingsServiceInterface` - Visual theme
 - `DashboardWidgetConfigServiceInterface` - Dashboard widget configuration
 - `ImageOptimizationServiceInterface` - Image optimization
