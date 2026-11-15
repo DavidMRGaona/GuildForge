@@ -6,6 +6,7 @@ namespace App\Infrastructure\SiteBlocks;
 
 use App\Application\SiteBlocks\Contracts\SiteBlockInterface;
 use App\Application\SiteBlocks\DTOs\ResolvedSiteBlockDTO;
+use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
 use App\Domain\SiteBlocks\SiteBlockPlacement;
@@ -72,6 +73,9 @@ final readonly class SiteBlockRenderer implements SiteBlockRendererInterface
             json_encode($props, JSON_THROW_ON_ERROR);
 
             return new ResolvedSiteBlockDTO($key, $module, $block->component(), $props);
+        } catch (NothingToDrawException) {
+            // Not a failure: the block has nothing to show
+            return null;
         } catch (JsonException) {
             $this->warnOnce($key, 'json', 'A site block returned props that cannot be sent to the browser; it is not drawn.');
         } catch (Throwable $exception) {

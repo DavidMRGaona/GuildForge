@@ -20,6 +20,7 @@ use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Filament\Media\Sources\ArticleMediaSource;
 use App\Filament\Media\Sources\EventMediaSource;
+use App\Filament\Media\Sources\FooterMediaSource;
 use App\Filament\Media\Sources\GalleryPhotoMediaSource;
 use App\Filament\Media\Sources\HeroSlideMediaSource;
 use App\Filament\Media\Sources\RichTextMediaSource;
@@ -97,6 +98,7 @@ final class MediaServiceProvider extends ServiceProvider
             SiteSettingsMediaSource::class,
             AvatarMediaSource::class,
             RichTextMediaSource::class,
+            FooterMediaSource::class,
         ]);
 
         // Observer instances carry their arguments, so they are attached as model event listeners

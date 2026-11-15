@@ -87,6 +87,15 @@ final readonly class CloudinaryImageUrlBuilder
     }
 
     /**
+     * A media library file scaled down to the given height at most, uncropped, in the best format and
+     * quality for the browser (logos). An SVG is served as uploaded (see isVector()).
+     */
+    public function mediaHeightLimited(string $fileId, int $height, ?string $format = null): ?string
+    {
+        return $this->buildMedia($fileId, 'image', $this->isVector($format) ? null : "h_{$height},c_limit,q_auto,f_auto");
+    }
+
+    /**
      * The file as it was uploaded.
      */
     public function mediaOriginal(string $fileId, string $resourceType = 'image'): ?string

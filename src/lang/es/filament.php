@@ -590,6 +590,8 @@ return [
             'label' => 'Bloque no disponible (:key)',
             'help' => 'Este bloque es de un módulo que no está activo. Se conserva tal cual al guardar y vuelve a salir en la web si el módulo se activa. Bórralo si ya no lo quieres.',
         ],
+        'link_help' => 'Una dirección que empiece por https:// o una ruta de esta web, como /eventos.',
+        'link_invalid' => 'Escribe una dirección que empiece por https:// o una ruta de esta web que empiece por una sola barra (/eventos).',
         'broken_block' => 'No se pueden mostrar los ajustes de este bloque. Se conservan tal cual al guardar.',
         'unavailable_block' => 'Ahora no se puede mostrar: no sale en la web hasta que vuelva a estar disponible.',
         'blocks' => [
@@ -616,6 +618,30 @@ return [
                 'show_phone' => 'Mostrar el teléfono',
                 'show_address' => 'Mostrar la dirección',
                 'show_link' => 'Enlazar al formulario de contacto',
+            ],
+            'upcoming_events' => [
+                'label' => 'Próximos eventos',
+                'limit' => 'Cuántos eventos',
+                'show_all_link' => 'Enlazar a todos los eventos',
+            ],
+            'button' => [
+                'label' => 'Botón',
+                'text' => 'Texto del botón',
+                'url' => 'Enlace',
+                'style' => 'Estilo',
+                'styles' => [
+                    'primary' => 'Principal',
+                    'secondary' => 'Secundario',
+                ],
+            ],
+            'logos' => [
+                'label' => 'Logotipos',
+                'logos' => 'Logotipos',
+                'add' => 'Añadir logotipo',
+                'image' => 'Imagen',
+                'alt' => 'Texto alternativo',
+                'alt_help' => 'Obligatorio: lo leen los lectores de pantalla. Di a quién o qué pertenece el logotipo.',
+                'url' => 'Enlace (opcional)',
             ],
         ],
     ],
@@ -1357,6 +1383,11 @@ return [
             'settings' => 'Configuración del sitio',
             'avatars' => 'Avatares',
             'rich_text' => 'Textos',
+            'footer' => 'Pie de página',
+        ],
+        'footer_titles' => [
+            'logo' => 'Pie de página · logotipo «:alt»',
+            'text' => 'Pie de página · texto de la columna :column',
         ],
         'rich_text_titles' => [
             'legal_privacy_content' => 'Política de privacidad',
@@ -1377,6 +1408,7 @@ return [
             'site_favicon_dark' => 'Favicon oscuro',
             'about_hero_image' => 'Imagen de Nosotros',
             'in_text' => 'En el texto',
+            'footer_logo' => 'Logotipo del pie',
         ],
     ],
 ];
