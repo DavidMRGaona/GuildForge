@@ -18,9 +18,11 @@ use App\Domain\Profiles\ValueObjects\ProfileLayoutEntry;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileHandleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Mockery\MockInterface;
@@ -121,6 +123,41 @@ final class UserProfileEditingTest extends TestCase
         $profile = $this->profileOf($owner);
         $this->assertSame('ana-prueba', $profile->handle);
         $this->assertNull($profile->bio);
+    }
+
+    public function test_an_address_taken_between_the_check_and_the_claim_is_refused_and_nothing_is_saved(): void
+    {
+        $owner = $this->owner();
+        $other = UserModel::factory()->create(['display_name' => 'Berta Prueba']);
+        $raced = false;
+
+        // Another account takes the address right after the service found it free
+        DB::listen(function (QueryExecuted $query) use (&$raced, $other): void {
+            if ($raced || ! str_contains($query->sql, 'user_profile_handles') || ! str_starts_with(strtolower($query->sql), 'select')) {
+                return;
+            }
+
+            $raced = true;
+            UserProfileHandleModel::query()->insert([
+                'handle_hash' => ProfileHandle::hashOf('ana-rol'),
+                'handle' => 'ana-rol',
+                'user_id' => $other->id,
+                'retired_at' => null,
+            ]);
+        });
+
+        try {
+            $this->service()->update($owner->id, $this->update(handle: 'ana-rol', bio: 'No se guarda'));
+            $this->fail('An address taken meanwhile was given.');
+        } catch (ProfileHandleTakenException) {
+            // Expected: the history's primary key decided
+        }
+
+        $this->assertTrue($raced);
+        $profile = $this->profileOf($owner);
+        $this->assertSame('ana-prueba', $profile->handle);
+        $this->assertNull($profile->bio);
+        $this->assertFalse($profile->handle_chosen);
     }
 
     public function test_an_address_somebody_else_held_before_is_never_given(): void

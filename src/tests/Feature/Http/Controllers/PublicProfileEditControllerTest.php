@@ -12,8 +12,10 @@ use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\Profiles\ProfileVisibility;
+use App\Domain\Profiles\ValueObjects\ProfileHandle;
 use App\Http\Middleware\BlockSiteWritesWhenImpersonatingReadOnly;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserProfileHandleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -333,6 +335,23 @@ final class PublicProfileEditControllerTest extends TestCase
         $this->assertNotNull($this->profileOf($owner)->banner_public_id);
     }
 
+    public function test_a_banner_is_judged_by_its_bytes_never_by_its_name(): void
+    {
+        Storage::fake('images');
+        $owner = $this->owner();
+        $this->actingAs($owner);
+        // Drawn by browsers but able to carry scripts, and other things dressed as a JPEG. A real upload,
+        // not a fake one: a fake file reports the type its name says
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><script>alert(1)</script></svg>';
+
+        $this->postJson('/miembros/ana-prueba/banner', ['banner' => $this->uploaded('b.svg', $svg)])->assertJsonValidationErrors(['banner']);
+        $this->postJson('/miembros/ana-prueba/banner', ['banner' => $this->uploaded('b.jpg', $svg)])->assertJsonValidationErrors(['banner']);
+        $this->postJson('/miembros/ana-prueba/banner', ['banner' => $this->uploaded('b.jpg', "<?php echo 'hola';\n")])->assertJsonValidationErrors(['banner']);
+
+        $this->assertSame([], Storage::disk('images')->allFiles());
+        $this->assertNull($this->profileOf($owner)->banner_public_id);
+    }
+
     public function test_a_read_only_impersonation_saves_nothing(): void
     {
         Storage::fake('images');
@@ -358,6 +377,28 @@ final class PublicProfileEditControllerTest extends TestCase
         $profile = $this->profileOf($owner);
         $this->assertNull($profile->bio);
         $this->assertSame('profiles/banners/2026/10/a.jpg', $profile->banner_public_id);
+        $this->assertSame([], Storage::disk('images')->allFiles());
+    }
+
+    public function test_a_simulated_impersonation_runs_the_saves_and_keeps_none_of_them(): void
+    {
+        Storage::fake('images');
+        $owner = $this->owner();
+        UserProfileModel::query()->whereKey($owner->id)->update(['banner_public_id' => 'profiles/banners/2026/10/a.jpg']);
+        $admin = UserModel::factory()->admin()->create();
+        $this->actingAs($admin);
+        app(ImpersonationServiceInterface::class)->start($admin, $owner, ImpersonationMode::Simulate);
+
+        $this->put('/miembros/ana-prueba', $this->payload(['handle' => 'ana-rol', 'bio' => 'Simulado']))->assertRedirect('/miembros/ana-rol');
+        $this->post('/miembros/ana-prueba/banner', ['banner' => UploadedFile::fake()->image('b.jpg')])->assertRedirect();
+        $this->delete('/miembros/ana-prueba/banner')->assertRedirect();
+
+        $profile = $this->profileOf($owner);
+        $this->assertSame('ana-prueba', $profile->handle);
+        $this->assertNull($profile->bio);
+        $this->assertFalse($profile->handle_chosen);
+        $this->assertSame('profiles/banners/2026/10/a.jpg', $profile->banner_public_id);
+        $this->assertNull(UserProfileHandleModel::query()->find(ProfileHandle::hashOf('ana-rol')));
         $this->assertSame([], Storage::disk('images')->allFiles());
     }
 
@@ -490,6 +531,18 @@ final class PublicProfileEditControllerTest extends TestCase
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertExactJson(['status' => $status]);
+    }
+
+    /**
+     * A file as a browser sends it: its type is read from its bytes, never from its name.
+     */
+    private function uploaded(string $name, string $content): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'banner');
+        $this->assertIsString($path);
+        file_put_contents($path, $content);
+
+        return new UploadedFile($path, $name, null, null, true);
     }
 
     private function profileOf(UserModel $user): UserProfileModel

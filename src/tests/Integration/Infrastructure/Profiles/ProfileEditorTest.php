@@ -80,6 +80,10 @@ final class ProfileEditorTest extends TestCase
         $this->assertNull($editor->ownerId('ana-prueba', null));
         $this->assertNull($editor->ownerId('Ana-Prueba', $owner));
 
+        $anonymized = UserModel::factory()->create(['display_name' => 'Carla Prueba']);
+        $anonymized->forceFill(['anonymized_at' => now()])->save();
+        $this->assertNull($editor->ownerId('carla-prueba', $anonymized));
+
         $owner->delete();
         $this->app->forgetScopedInstances();
         $this->assertNull(app(ProfileEditorInterface::class)->ownerId('ana-prueba', $owner));
