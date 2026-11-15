@@ -1,11 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { defineComponent, h, reactive, type VNode } from 'vue';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import Show from '../Show.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
+import { useNotifications } from '@/composables/useNotifications';
 import { setCloudinaryConfig } from '@/utils/cloudinary';
+import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
 import type { PublicProfilePageProps } from '@/types/profilePage';
 import type {
     ProfileHeader,
@@ -13,8 +16,10 @@ import type {
     ResolvedProfileStat,
 } from '@/types/profileSections';
 
+const page = reactive<{ props: { flash?: { success?: string } } }>({ props: {} });
 vi.mock('@inertiajs/vue3', () => ({
     Link: { name: 'InertiaLink', props: ['href'], template: '<a :href="href"><slot /></a>' },
+    usePage: (): typeof page => page,
 }));
 
 vi.mock('@/components/layout/ProfileSection.vue', () => ({
@@ -23,6 +28,62 @@ vi.mock('@/components/layout/ProfileSection.vue', () => ({
         template: '<section :data-profile-section="section.key">{{ section.label }}</section>',
     },
 }));
+
+/** The panel's own behaviour has its own tests: here it only sends a draft, or closes */
+let sendPreview: ((form: ProfileEditorForm) => void) | null = null;
+vi.mock('@/components/profileEditor/ProfileEditorPanel.vue', () => ({
+    default: defineComponent({
+        props: { editor: { type: Object, required: true } },
+        emits: ['preview', 'close'],
+        setup(_, { emit }) {
+            sendPreview = (form: ProfileEditorForm): void => emit('preview', form);
+            return (): VNode =>
+                h('div', { 'data-testid': 'profile-editor' }, [
+                    h('button', { 'data-testid': 'close-editor', onClick: () => emit('close') }),
+                ]);
+        },
+    }),
+}));
+
+// A page left mounted would keep answering the flash messages of later tests
+enableAutoUnmount(afterEach);
+
+function editor(): ProfileEditor {
+    return {
+        handle: 'ana-prueba',
+        visibility: 'members',
+        bio: '',
+        bannerPublicId: null,
+        showMembership: false,
+        canShowMembership: true,
+        nextHandleChangeAt: null,
+        sections: [
+            {
+                key: 'core.about',
+                label: 'Sobre mí',
+                description: '',
+                enabled: true,
+                region: 'aside',
+                module: null,
+                component: 'components/profileSections/AboutSection.vue',
+            },
+        ],
+        stats: [{ key: 'forum.posts', label: 'Mensajes', description: '', enabled: true }],
+        limits: {
+            bio: 500,
+            handleMin: 3,
+            handleMax: 30,
+            handleChangeDays: 30,
+            bannerKilobytes: 5120,
+            bannerTypes: ['jpg', 'png', 'webp'],
+        },
+        urls: {
+            update: '/miembros/ana-prueba',
+            availability: '/miembros/ana-prueba/disponibilidad',
+            banner: '/miembros/ana-prueba/banner',
+        },
+    };
+}
 
 function section(key: string, region: 'main' | 'aside'): ResolvedProfileSection {
     return { key, module: null, component: 'components/X.vue', region, label: key, props: {} };
@@ -52,7 +113,8 @@ function props(
             sections: { main: rest.main ?? [], aside: rest.aside ?? [] },
         },
         notices: rest.notices ?? { choosePublicName: false, onlyOwner: false },
-        editUrl: rest.editUrl ?? null,
+        accountUrl: rest.accountUrl ?? null,
+        editor: rest.editor ?? null,
         seo: {} as PublicProfilePageProps['seo'],
     };
 }
@@ -66,6 +128,8 @@ function mountPage(pageProps: PublicProfilePageProps): VueWrapper {
 describe('Profiles/Show', () => {
     beforeEach(() => {
         setCloudinaryConfig({ cloudName: 'demo', prefix: 'site' });
+        page.props = {};
+        useNotifications().clearAll();
     });
 
     it('shows the public name and the joining month of the display zone, never a handle', () => {
@@ -205,20 +269,83 @@ describe('Profiles/Show', () => {
         expect(wrapper.find('[data-testid="profile-owner-notice"]').exists()).toBe(false);
     });
 
-    it('invites the owner to edit an empty profile', () => {
-        const wrapper = mountPage(props({ isOwner: true }, { editUrl: '/perfil' }));
+    it('invites the owner to edit an empty profile, from the editor', async () => {
+        const wrapper = mountPage(
+            props({ isOwner: true }, { accountUrl: '/perfil', editor: editor() })
+        );
 
         const empty = wrapper.get('[data-testid="profile-empty-owner"]');
         expect(empty.text()).toContain('Tu perfil todavía está vacío');
-        expect(empty.get('a').attributes('href')).toBe('/perfil');
         expect(wrapper.find('[data-testid="profile-empty-visitor"]').exists()).toBe(false);
+
+        await empty.get('[data-testid="profile-empty-edit"]').trigger('click');
+        expect(wrapper.find('[data-testid="profile-editor"]').exists()).toBe(true);
+    });
+
+    it('shows what a save answered as a notice, each time it answers', async () => {
+        page.props = { flash: { success: 'Perfil guardado.' } };
+        const wrapper = mountPage(props({ isOwner: true }, { editor: editor() }));
+        expect(useNotifications().notifications.value.map((n) => n.message)).toEqual([
+            'Perfil guardado.',
+        ]);
+
+        page.props = { flash: { success: 'Perfil guardado.' } };
+        await wrapper.vm.$nextTick();
+        expect(useNotifications().notifications.value).toHaveLength(2);
+    });
+
+    it('offers the editor only to the owner', () => {
+        expect(mountPage(props()).find('[data-testid="profile-edit"]').exists()).toBe(false);
+        expect(
+            mountPage(props({ isOwner: true }, { editor: editor() }))
+                .find('[data-testid="profile-edit"]')
+                .exists()
+        ).toBe(true);
+    });
+
+    it('turns the page into the preview of the editor while it is open, and back when it closes', async () => {
+        const wrapper = mountPage(
+            props(
+                { isOwner: true },
+                {
+                    editor: editor(),
+                    stats: [{ key: 'forum.posts', label: 'Mensajes', value: 4, url: null }],
+                }
+            )
+        );
+
+        await wrapper.get('[data-testid="profile-edit"]').trigger('click');
+        expect(wrapper.get('[data-testid="profile-edit"]').attributes('aria-expanded')).toBe(
+            'true'
+        );
+        expect(wrapper.get('article').attributes('inert')).toBeDefined();
+
+        sendPreview?.({
+            handle: 'ana-prueba',
+            visibility: 'members',
+            bio: 'Juego a rol',
+            show_membership: true,
+            sections: [{ key: 'core.about', enabled: true }],
+            stats: [{ key: 'forum.posts', enabled: false }],
+        });
+        await flushPromises();
+
+        expect(wrapper.find('[data-profile-section="core.about"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="profile-stats"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="profile-membership"]').exists()).toBe(true);
+
+        await wrapper.get('[data-testid="close-editor"]').trigger('click');
+        expect(wrapper.find('[data-testid="profile-editor"]').exists()).toBe(false);
+        expect(wrapper.find('[data-profile-section="core.about"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="profile-stats"]').exists()).toBe(true);
+        expect(wrapper.get('article').attributes('inert')).toBeUndefined();
     });
 
     it('tells the owner of a hidden profile that only they see it', () => {
         const wrapper = mountPage(
             props(
                 { isOwner: true },
-                { editUrl: '/perfil', notices: { choosePublicName: false, onlyOwner: true } }
+                { accountUrl: '/perfil', notices: { choosePublicName: false, onlyOwner: true } }
             )
         );
 
@@ -231,7 +358,7 @@ describe('Profiles/Show', () => {
         const wrapper = mountPage(
             props(
                 { publicName: null, isOwner: true },
-                { editUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: true } }
+                { accountUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: true } }
             )
         );
 
@@ -244,7 +371,7 @@ describe('Profiles/Show', () => {
         const wrapper = mountPage(
             props(
                 { publicName: null, isOwner: true },
-                { editUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: false } }
+                { accountUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: false } }
             )
         );
 

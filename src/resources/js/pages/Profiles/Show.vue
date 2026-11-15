@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { computed, nextTick, ref, watch } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { BadgeCheck, Calendar, EyeOff, PencilLine, UserRound } from '@lucide/vue';
 import ProfileSection from '@/components/layout/ProfileSection.vue';
+import ProfileEditorPanel from '@/components/profileEditor/ProfileEditorPanel.vue';
+import { useNotifications } from '@/composables/useNotifications';
 import { buildAvatarUrl, buildImageUrl } from '@/utils/cloudinary';
 import { initialsOf } from '@/utils/initials';
 import { isInertiaPage } from '@/utils/inertiaLinks';
+import { previewProfile } from '@/utils/profilePreview';
+import type { ProfileEditorForm } from '@/types/profileEditor';
+import type { FlashMessages } from '@/types';
 import type { PublicProfilePageProps } from '@/types/profilePage';
 
 /**
@@ -15,7 +20,8 @@ import type { PublicProfilePageProps } from '@/types/profilePage';
  * below it the counters and the sections the core and the modules add (core#742), in a main and a side
  * column. Whoever reaches this page may see it: the server decided, and resolved every section and
  * counter for this person. The owner also sees why nobody else does, when that is the case, and an
- * invitation to fill an empty profile.
+ * invitation to fill an empty profile, and edits it from here (core#743): while the editor is open,
+ * the page behind is its preview and takes no clicks.
  */
 const props = defineProps<PublicProfilePageProps>();
 
@@ -24,7 +30,44 @@ const { t, locale } = useI18n();
 /** The section that leads on narrow screens, before the main column */
 const LEADING_SECTION = 'core.about';
 
-const header = computed(() => props.profile.header);
+const editorOpen = ref(false);
+const draft = ref<ProfileEditorForm | null>(null);
+const editButton = ref<HTMLButtonElement | null>(null);
+
+/** What is drawn: the profile, or while editing, how it will look once saved */
+const shown = computed(() =>
+    editorOpen.value && props.editor && draft.value
+        ? previewProfile(props.profile, props.editor, draft.value)
+        : props.profile
+);
+
+/**
+ * What the owner's saves answer («Perfil guardado», «Banner actualizado») as a notice. Every answer
+ * brings a new `flash` object, so the same message twice in a row is shown twice.
+ */
+const page = usePage<{ flash?: FlashMessages }>();
+const notifications = useNotifications();
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.success) {
+            notifications.success(flash.success);
+        }
+    },
+    { immediate: true }
+);
+
+function openEditor(): void {
+    editorOpen.value = true;
+}
+
+function closeEditor(): void {
+    editorOpen.value = false;
+    draft.value = null;
+    void nextTick(() => editButton.value?.focus());
+}
+
+const header = computed(() => shown.value.header);
 const bannerUrl = computed(() =>
     buildImageUrl(header.value.bannerPublicId, {
         width: 1500,
@@ -55,27 +98,27 @@ const memberSince = computed(() => {
     );
 });
 
-const stats = computed(() => props.profile.stats);
-const mainSections = computed(() => props.profile.sections.main);
+const stats = computed(() => shown.value.stats);
+const mainSections = computed(() => shown.value.sections.main);
 const leadingAside = computed(() =>
-    props.profile.sections.aside.filter((section) => section.key === LEADING_SECTION)
+    shown.value.sections.aside.filter((section) => section.key === LEADING_SECTION)
 );
 const otherAside = computed(() =>
-    props.profile.sections.aside.filter((section) => section.key !== LEADING_SECTION)
+    shown.value.sections.aside.filter((section) => section.key !== LEADING_SECTION)
 );
 const hasSections = computed(
-    () => mainSections.value.length > 0 || props.profile.sections.aside.length > 0
+    () => mainSections.value.length > 0 || shown.value.sections.aside.length > 0
 );
 const isEmpty = computed(() => stats.value.length === 0 && !hasSections.value);
 const twoColumns = computed(
-    () => mainSections.value.length > 0 && props.profile.sections.aside.length > 0
+    () => mainSections.value.length > 0 && shown.value.sections.aside.length > 0
 );
 
 const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
 </script>
 
 <template>
-    <article class="pb-12 sm:pb-16" aria-labelledby="profile-name">
+    <article class="pb-12 sm:pb-16" aria-labelledby="profile-name" :inert="editorOpen || undefined">
         <!-- The band of the account page (/perfil); with a banner, the banner is its background -->
         <div class="relative overflow-hidden bg-muted py-8 sm:py-12" data-testid="profile-band">
             <template v-if="bannerUrl">
@@ -116,7 +159,7 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                         />
                     </div>
 
-                    <div class="min-w-0 text-center sm:text-left">
+                    <div class="min-w-0 flex-1 text-center sm:text-left">
                         <h1
                             id="profile-name"
                             class="text-2xl font-bold break-words sm:text-3xl"
@@ -147,6 +190,20 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                             </span>
                         </p>
                     </div>
+
+                    <button
+                        v-if="editor"
+                        ref="editButton"
+                        type="button"
+                        class="inline-flex shrink-0 items-center gap-2 rounded-md bg-surface px-4 py-2 text-sm font-medium text-base-primary shadow-sm inset-ring inset-ring-(--color-border) transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-page) motion-reduce:transition-none"
+                        :aria-expanded="editorOpen"
+                        aria-haspopup="dialog"
+                        data-testid="profile-edit"
+                        @click="openEditor"
+                    >
+                        <PencilLine class="h-4 w-4" aria-hidden="true" />
+                        {{ t('publicProfile.editProfile') }}
+                    </button>
                 </div>
             </header>
         </div>
@@ -169,8 +226,8 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                         </div>
                     </div>
                     <Link
-                        v-if="notices.choosePublicName && editUrl"
-                        :href="editUrl"
+                        v-if="notices.choosePublicName && accountUrl"
+                        :href="accountUrl"
                         class="inline-flex shrink-0 items-center justify-center rounded-md px-3 py-1.5 font-medium underline underline-offset-2 hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50 dark:focus-visible:ring-amber-300 dark:focus-visible:ring-offset-amber-950"
                     >
                         {{ t('publicProfile.choosePublicNameAction') }}
@@ -282,14 +339,16 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                     <p class="mx-auto mt-2 max-w-md text-sm text-base-muted">
                         {{ t('publicProfile.emptyOwnerDescription') }}
                     </p>
-                    <Link
-                        v-if="editUrl"
-                        :href="editUrl"
+                    <button
+                        v-if="editor"
+                        type="button"
                         class="mt-6 inline-flex items-center justify-center gap-2 rounded-md bg-(--button-primary-bg) px-4 py-2 text-sm font-medium text-(--button-primary-text) inset-ring inset-ring-(--button-primary-border) transition-colors hover:bg-(--button-primary-hover-bg) hover:text-(--button-primary-hover-text) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-surface) motion-reduce:transition-none"
+                        data-testid="profile-empty-edit"
+                        @click="openEditor"
                     >
                         <PencilLine class="h-4 w-4" aria-hidden="true" />
                         {{ t('publicProfile.editProfile') }}
-                    </Link>
+                    </button>
                 </div>
                 <p
                     v-else
@@ -300,5 +359,13 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                 </p>
             </div>
         </div>
+
+        <!-- Teleported to the body: outside the page made inert behind it -->
+        <ProfileEditorPanel
+            v-if="editor && editorOpen"
+            :editor="editor"
+            @preview="draft = $event"
+            @close="closeEditor"
+        />
     </article>
 </template>
