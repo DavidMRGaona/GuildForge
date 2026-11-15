@@ -200,6 +200,22 @@ final class SettingsServiceTest extends TestCase
         $this->assertSame('new_value', $this->settingsService->get('committed_key'));
     }
 
+    public function test_two_writes_in_one_transaction_are_both_read_after_the_commit(): void
+    {
+        SettingModel::create(['key' => 'first_key', 'value' => 'old_first']);
+        SettingModel::create(['key' => 'second_key', 'value' => 'old_second']);
+        $this->settingsService->get('first_key');
+
+        DB::transaction(function (): void {
+            $this->settingsService->set('first_key', 'new_first');
+            $this->settingsService->set('second_key', 'new_second');
+        });
+
+        $this->startAnotherRequest();
+        $this->assertSame('new_first', $this->settingsService->get('first_key'));
+        $this->assertSame('new_second', $this->settingsService->get('second_key'));
+    }
+
     public function test_a_rolled_back_write_is_never_cached(): void
     {
         SettingModel::create(['key' => 'rolled_back_key', 'value' => 'old_value']);

@@ -777,22 +777,26 @@ $apiKey = config('modules.settings.my-module.api_key');
 `SettingsServiceInterface` (`App\Application\Services`) reads and writes the `settings` table one key at a time (`get()`, `set()`, `getEncrypted()`, `setEncrypted()`). Reads come from a cache shared by every request:
 
 - **`get()` may lag.** A request reads the cache version once and keeps it until it ends, so a write made meanwhile by another request shows up from its next request or job. The writing request reads its own writes at once.
-- **Writes are never hidden by an older read.** `set()` renews the cache version once the transaction commits (at once outside one), instead of forgetting a fixed key: a request that loaded the old rows before the commit can only cache them under a version nobody asks for again.
+- **Writes are never hidden by an older read.** `set()` renews the cache version once the transaction commits (at once outside one), instead of forgetting a fixed key: a request that loaded the old rows before the commit can only cache them under a version nobody asks for again. Only a request that starts in the instant between the commit and the renewal may still read the old value, until it ends.
 - **Decide a write on `getStored()`.** Code that reads a setting to decide what to write (compare and set, a background check that stores its result only if the setting is still what it checked) reads with `getStored()` or `getStoredEncrypted()`, which go to the table and never to the cache. They do not lock the row: when two processes may write the same key, take a lock first (`Cache::lock()`, or a transaction with `lockForUpdate()` on the row).
 - **Writing the table directly** (query builder, a migration): call `clearCache()` afterwards, inside the same transaction if there is one; it waits for the commit by itself. Never forget a cache key of the settings by name: the keys carry the version and change.
 
 ```php
 use App\Application\Services\SettingsServiceInterface;
+use Illuminate\Support\Facades\Cache;
 
 $settings = app(SettingsServiceInterface::class);
 
 $checkedKey = $settings->getStoredEncrypted('my-module.api_key');
 $healthy = $client->ping($checkedKey);
 
-// Store the result only if nobody changed the key while the check ran
-if ($settings->getStoredEncrypted('my-module.api_key') === $checkedKey) {
-    $settings->set('my-module.api_key_healthy', $healthy ? '1' : '0');
-}
+// Store the result only if nobody changed the key while the check ran. The panel page that
+// saves the key takes the same lock, so the check and the save cannot interleave.
+Cache::lock('my-module.api_key', 10)->block(5, function () use ($settings, $checkedKey, $healthy): void {
+    if ($settings->getStoredEncrypted('my-module.api_key') === $checkedKey) {
+        $settings->set('my-module.api_key_healthy', $healthy ? '1' : '0');
+    }
+});
 ```
 
 ---
