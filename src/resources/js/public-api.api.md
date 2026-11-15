@@ -471,6 +471,18 @@ declare const _default: typeof __VLS_export;
 export default _default;
 ```
 
+## resources/js/components/layout/ProfileSection.vue
+
+```ts
+import type { ResolvedProfileSection } from '@/types/profiles';
+type __VLS_Props = {
+    section: ResolvedProfileSection;
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+```
+
 ## resources/js/components/layout/SiteBlock.vue
 
 ```ts
@@ -1229,6 +1241,44 @@ export interface ProfileTabMetadata {
     icon: ProfileTabIcon;
     label: string;
     order: number;
+}
+```
+
+## resources/js/types/profiles.ts
+
+```ts
+export type ProfileRegion = 'main' | 'aside';
+export interface ProfileHeader {
+    handle: string;
+    publicName: string | null;
+    avatarPublicId: string | null;
+    bannerPublicId: string | null;
+    memberSince: string | null;
+    showsMembership: boolean;
+    isOwner: boolean;
+}
+export interface ResolvedProfileStat {
+    key: string;
+    label: string;
+    value: number;
+    url: string | null;
+}
+export interface ResolvedProfileSection {
+    key: string;
+    module: string | null;
+    component: string;
+    region: ProfileRegion;
+    label: string;
+    props: Record<string, unknown>;
+}
+export interface ResolvedProfile {
+    header: ProfileHeader;
+    stats: ResolvedProfileStat[];
+    sections: Record<ProfileRegion, ResolvedProfileSection[]>;
+}
+export interface ProfileTextSegment {
+    text: string;
+    href: string | null;
 }
 ```
 

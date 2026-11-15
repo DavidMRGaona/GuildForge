@@ -17,6 +17,8 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
+use App\Application\Profiles\Contracts\ProfileSectionInterface;
+use App\Application\Profiles\Contracts\ProfileStatInterface;
 use App\Application\Proposals\Contracts\EventProposalRequestInterface;
 use App\Application\Publications\Contracts\PublicationSourceInterface;
 use App\Application\Realtime\Contracts\RealtimeChannelInterface;
@@ -358,6 +360,31 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<SiteBlockInterface>>
      */
     public function registerSiteBlocks(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the sections this module draws on public profiles (core#742).
+     * Each key starts with the module name and a dot (`<module>.latest_posts`); a section decides
+     * for the person viewing, with the module's own access service, and never shows anything private
+     * about the owner. A section that cannot be drawn is left out of the profile, never breaks it.
+     *
+     * @return array<class-string<ProfileSectionInterface>>
+     */
+    public function registerProfileSections(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the counters this module shows on public profiles (core#742), apart from its
+     * sections. Same key rules; a count is for the person viewing, and null when there is nothing
+     * to show.
+     *
+     * @return array<class-string<ProfileStatInterface>>
+     */
+    public function registerProfileStats(): array
     {
         return [];
     }
