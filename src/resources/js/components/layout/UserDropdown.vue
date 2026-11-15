@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { ChevronDown, User, Settings, LogOut, CircleHelp } from '@lucide/vue';
+import { ChevronDown, User, UserRound, Settings, LogOut, CircleHelp } from '@lucide/vue';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
 import { useOnNavigate } from '@/composables/useOnNavigate';
+import { buildAvatarUrl } from '@/utils/cloudinary';
+import { initialsOf } from '@/utils/initials';
 
 const emit = defineEmits<{
     (e: 'navigate'): void;
@@ -17,6 +19,14 @@ const routes = useRoutes();
 
 const isOpen = ref(false);
 const userName = computed(() => user.value?.displayName || user.value?.name);
+// A 28 px circle: twice the pixels for sharp screens; without a photo, the initials of the shown name
+const avatarUrl = computed(() => buildAvatarUrl(user.value?.avatarPublicId, 56));
+// A photo that fails to load (deleted from the store) shows the initials, never a broken image
+const avatarFailed = ref(false);
+watch(avatarUrl, () => {
+    avatarFailed.value = false;
+});
+const initials = computed(() => initialsOf(userName.value));
 const dropdownRef = ref<HTMLElement | null>(null);
 
 function toggleDropdown(): void {
@@ -60,6 +70,24 @@ onUnmounted(() => {
             @click="toggleDropdown"
         >
             <span class="sr-only">{{ t('auth.userMenu.openMenu') }}</span>
+            <!-- The name is right beside it: nothing to add for a screen reader -->
+            <span
+                class="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700"
+                aria-hidden="true"
+                data-testid="user-menu-avatar"
+            >
+                <img
+                    v-if="avatarUrl && !avatarFailed"
+                    :src="avatarUrl"
+                    alt=""
+                    class="size-full object-cover"
+                    @error="avatarFailed = true"
+                />
+                <span v-else-if="initials" class="text-xs font-semibold text-base-secondary">
+                    {{ initials }}
+                </span>
+                <UserRound v-else class="size-4 text-neutral-500 dark:text-neutral-400" />
+            </span>
             <span class="max-w-40 truncate" :title="userName">{{ userName }}</span>
             <ChevronDown
                 class="h-4 w-4 transition-transform"
