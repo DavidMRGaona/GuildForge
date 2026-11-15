@@ -148,6 +148,7 @@ const onDark = computed(() => placement.value === 'footer');
 
 - It is a `provide`/`inject` context (`useSiteBlockPlacement()`, public entry `@/composables/useSiteBlockPlacement`), not a prop: the block's props are exactly what `props()` returned, so a block that does not ask for the placement receives and renders what it always did, and nothing reaches its markup as an attribute.
 - The value is reactive (`ComputedRef`). Outside `SiteBlock.vue` (a spec mounting the component alone) it is `footer`, unless the spec provides `SITE_BLOCK_PLACEMENT` (also exported) with its own `computed`.
+- A module that imports `@/composables/useSiteBlockPlacement` needs a core with this entry (core ≥ the release with #718): on an older core the import map has no such entry and the module's chunk does not load, so it raises `requires.core` accordingly. A block that only reads `data-footer-column` keeps working, but should move to the placement.
 - It is the placement the block was **drawn** in, not a setting: the PHP side already decides which blocks a placement offers (`placements()`).
 
 ## Failing closed
@@ -193,7 +194,7 @@ The core owns the footer placement (core ≥ the release with #697). *Sitio web 
 - The page offers every valid footer block (`forPlacement(Footer)`); one that is not available now keeps its form and settings but cannot be added. A stored block nobody registers (its module disabled) is kept as it is when saving and is drawn again once its module comes back.
 - Each request resolves the blocks for the person viewing (`FooterRendererInterface`, shared prop `footer`); a column left without blocks is dropped. A fixed bottom bar shows the copyright and the published legal pages.
 - Core blocks: `core.links` (one of the four footer menus, `MenuLocation::footers()`, named on the same page), `core.text` (rich text, images in `footer/content/`, editor text source `footer`), `core.brand`, `core.contact`, and, since #698, `core.upcoming_events`, `core.button` and `core.logos` (below).
-- A `core.links` block whose menu has no link the person can see (empty, all inactive, or only for another audience) throws `NothingToDrawException`, so it is not drawn and its title goes with it; the panel warns beside the menu selector when the chosen menu has no active link at all.
+- A `core.links` block whose menu has no link the person can see (empty, all inactive, or only for another audience) throws `NothingToDrawException`, so it is not drawn and its title goes with it; the panel warns beside the menu selector when the chosen menu has no link a visitor without an account would see (resolved by `MenuService`, as the site does; asked once per menu and request).
 - Columns: one on phones, two from `sm`, the configured number from `lg`.
 
 ### Upcoming events, button and logos (core#698)

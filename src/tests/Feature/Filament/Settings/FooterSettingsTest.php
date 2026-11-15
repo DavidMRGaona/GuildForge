@@ -122,8 +122,25 @@ final class FooterSettingsTest extends TestCase
             ]));
 
             $test = Livewire::test(FooterSettings::class);
-            $warns ? $test->assertSee('no tiene ningún enlace activo') : $test->assertDontSee('no tiene ningún enlace activo');
+            $warns ? $test->assertSee('no tiene enlaces visibles') : $test->assertDontSee('no tiene enlaces visibles');
         }
+    }
+
+    public function test_the_warning_follows_the_menu_chosen_while_editing(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        MenuItemModel::factory()->create(['location' => MenuLocation::Footer2, 'label' => 'Discord', 'url' => '/d']);
+        app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+            new FooterColumn([new FooterBlock('core.links', 'Enlaces', ['menu' => 'footer_2'])]),
+        ]));
+
+        $component = Livewire::test(FooterSettings::class)->assertDontSee('no tiene enlaces visibles');
+        $columnKey = (string) array_key_first($component->get('data.columns'));
+        $blockKey = (string) array_key_first($component->get("data.columns.{$columnKey}.blocks"));
+        $path = "data.columns.{$columnKey}.blocks.{$blockKey}.data.settings.menu";
+
+        $component->set($path, 'footer_3')->assertSee('no tiene enlaces visibles');
+        $component->set($path, 'footer_2')->assertDontSee('no tiene enlaces visibles');
     }
 
     public function test_a_stored_block_that_cannot_be_drawn_now_is_kept_but_cannot_be_added(): void

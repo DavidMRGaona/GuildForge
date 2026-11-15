@@ -17,9 +17,5 @@ export const DEFAULT_SITE_BLOCK_PLACEMENT: SiteBlockPlacement = 'footer';
  * component alone) it is the footer.
  */
 export function useSiteBlockPlacement(): ComputedRef<SiteBlockPlacement> {
-    return inject(
-        SITE_BLOCK_PLACEMENT,
-        computed(() => DEFAULT_SITE_BLOCK_PLACEMENT),
-        true
-    );
+    return inject(SITE_BLOCK_PLACEMENT, () => computed(() => DEFAULT_SITE_BLOCK_PLACEMENT), true);
 }

@@ -122,7 +122,8 @@ describe('TheFooter', () => {
 
             const blocks = wrapper.findAllComponents(SiteBlock);
             expect(blocks.length).toBeGreaterThan(0);
-            expect(blocks.map((block) => block.props('placement'))).toEqual(
+            // The vnode's own props: `props()` would also show the component's default
+            expect(blocks.map((block) => block.vm.$.vnode.props?.placement)).toEqual(
                 blocks.map(() => 'footer')
             );
         });

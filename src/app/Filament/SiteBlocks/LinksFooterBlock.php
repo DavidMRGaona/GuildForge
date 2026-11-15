@@ -9,7 +9,6 @@ use App\Application\Navigation\Services\FooterMenusInterface;
 use App\Application\Navigation\Services\MenuServiceInterface;
 use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use App\Domain\Navigation\Enums\MenuLocation;
-use App\Domain\Navigation\Repositories\MenuItemRepositoryInterface;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -19,10 +18,12 @@ use Illuminate\Contracts\Auth\Authenticatable;
  */
 final class LinksFooterBlock extends CoreFooterBlock
 {
+    /** @var array<string, bool> Whether a menu has links for a visitor, per location: the form asks on every render */
+    private array $visibleForVisitors = [];
+
     public function __construct(
         private readonly MenuServiceInterface $menus,
         private readonly FooterMenusInterface $footerMenus,
-        private readonly MenuItemRepositoryInterface $items,
     ) {}
 
     public function key(): string
@@ -40,7 +41,7 @@ final class LinksFooterBlock extends CoreFooterBlock
         return [
             Select::make('menu')
                 ->label(__('filament.footer.blocks.links.menu'))
-                ->helperText(fn (Get $get): string => $this->hasActiveLinks($this->location(['menu' => $get('menu')]))
+                ->helperText(fn (Get $get): string => $this->hasLinksForVisitors($this->location(['menu' => $get('menu')]))
                     ? __('filament.footer.blocks.links.menu_help')
                     : __('filament.footer.blocks.links.menu_empty'))
                 ->live()
@@ -71,11 +72,12 @@ final class LinksFooterBlock extends CoreFooterBlock
     }
 
     /**
-     * Whether the menu has any active link for anybody; the panel warns when it has none.
+     * Whether a visitor without an account sees any link in the menu, as the site resolves it (inactive links,
+     * links of a disabled module and other audiences left out); the panel warns when none. Remembered per menu.
      */
-    private function hasActiveLinks(MenuLocation $location): bool
+    private function hasLinksForVisitors(MenuLocation $location): bool
     {
-        return $this->items->findActiveByLocationWithChildren($location) !== [];
+        return $this->visibleForVisitors[$location->value] ??= $this->menus->getMenu($location, null) !== [];
     }
 
     /**
