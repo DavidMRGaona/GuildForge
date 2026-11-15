@@ -42,7 +42,7 @@ final class PublicProfileControllerTest extends TestCase
      * @param  array<string, mixed>  $cookies
      * @param  array<string, mixed>  $files
      * @param  array<string, mixed>  $server
-     * @return TestResponse<\Symfony\Component\HttpFoundation\Response>
+     * @return TestResponse<Response>
      */
     public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
     {
