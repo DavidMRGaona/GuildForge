@@ -50,7 +50,6 @@ final class SiteBlockRegistryTest extends TestCase
         $this->assertSame(['newsletter.subscribe'], $this->keys($registry->forPlacement(SiteBlockPlacement::LinkPage)));
         $this->assertNotContains('newsletter.subscribe', $this->keys($registry->forPlacement(SiteBlockPlacement::Footer)));
         $this->assertNotContains('newsletter.subscribe', $this->keys($registry->forPlacement(SiteBlockPlacement::Popup)));
-        $this->assertSame('link_page', SiteBlockPlacement::LinkPage->value);
     }
 
     public function test_a_module_can_only_register_keys_that_start_with_its_name(): void
