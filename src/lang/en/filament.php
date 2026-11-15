@@ -285,6 +285,19 @@ return [
     'users' => [
         'fields' => [
             'rolesHelp' => 'Every account always has the "member" role, the base role: that is why it is ticked and cannot be unticked.',
+            'emailChangeHelp' => 'If you change it, the account keeps its current email until the person confirms the new one with the link sent to that address.',
+            'emailPendingHelp' => 'Change waiting for confirmation: :email. It applies when the person follows the link sent to that address.',
+            'markEmailVerified' => 'Mark the email as verified',
+            'markEmailVerifiedHelp' => 'Tick it only if you have checked the address belongs to this person. Otherwise they get a link to verify it. Who ticks it is logged.',
+        ],
+        'notifications' => [
+            'emailChangeRequested' => 'Confirmation link sent',
+            'emailChangeRequestedBody' => 'The email changes when the person follows the link sent to the new address. Until then it keeps the current one.',
+        ],
+        'actions' => [
+            'cancelPendingEmail' => 'Withdraw the email change',
+            'cancelPendingEmailConfirm' => 'Withdraw the pending change to :email? The account keeps its current email and the link sent to that address stops working.',
+            'pendingEmailCancelled' => 'Email change withdrawn',
         ],
     ],
 

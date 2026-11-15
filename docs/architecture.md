@@ -749,6 +749,14 @@ While an email change is pending, *Reenviar* (`verification.send`) sends that co
 
 Verification and email change links are only accepted for the signed-in account: any other id in the link is treated as an invalid link.
 
+#### Accounts handled in the panel
+
+The panel never makes an address count as verified on its own (#723), since modules act on a verified email (`hasVerifiedEmail()`), for instance to unsubscribe that address from a newsletter:
+
+- **Changing the email** in the user form (`EditUser`) goes through the same pending change as the profile: a new address is stored as `pending_email` and receives `VerifyPendingEmailNotification`, after the save commits; `email` and `email_verified_at` stay as they are until the link is followed. Submitting the current or the pending address changes nothing and sends nothing, so saving other fields never cancels a change the person asked for. The field shows the pending address below it, and after the save it shows the current address again. A wrong pending address is withdrawn with the header action *Anular el cambio de correo* (`cancelPendingEmail`, `update` policy), which clears `pending_email`, so the link sent to it stops working.
+- **Creating an account** (`CreateUser`) leaves it unverified and sends Laravel's verification link with the welcome mail, unless *Marcar el correo como verificado* (`UserResource::MARK_EMAIL_VERIFIED_FIELD`, create form only, unticked) is ticked; then `email_verified_at` is written in the same transaction as the account.
+- All three are logged at `info` with the ids only, never the addresses: `Account email change requested from the panel`, `Pending account email change cancelled from the panel` and `Account email marked as verified from the panel`, with `actor_id` and `user_id`.
+
 #### Always reachable
 
 - `verification.*`: the notice, resending the link and the verification links;

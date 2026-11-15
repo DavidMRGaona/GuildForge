@@ -5,7 +5,7 @@ summary: Busca cuentas, crea usuarios, dales roles, desactívalas y, si hace fal
 category: users-and-roles
 audience: panel
 order: 10
-keywords: [usuarios, usuario, cuentas, cuenta, crear usuario, dar rol, asignar rol, quitar rol, desactivar, bloquear, restaurar, anonimizar, borrar cuenta, rgpd, gdpr, contraseña olvidada, verificación]
+keywords: [usuarios, usuario, cuentas, cuenta, crear usuario, dar rol, asignar rol, quitar rol, desactivar, bloquear, restaurar, anonimizar, borrar cuenta, rgpd, gdpr, contraseña olvidada, verificación, cambiar correo, cambiar email, correo verificado]
 related: [core.panel.roles-and-permissions, core.panel.association-role]
 conditions:
   permissions:
@@ -27,6 +27,21 @@ Usa el buscador o los filtros de la lista:
 2. Rellena **Nombre de usuario**, **Nombre para mostrar**, **Correo electrónico** y **Contraseña** (mínimo 8 caracteres).
 3. Si puedes, marca sus roles en **Roles y permisos**.
 4. Pulsa **Crear**.
+
+La cuenta nace con el correo sin verificar: a la persona le llegan la bienvenida y un enlace para verificarlo. Marca **Marcar el correo como verificado** solo si ya has comprobado que la dirección es suya.
+
+> [!WARNING]
+> Un correo verificado permite actuar sobre esa dirección, por ejemplo darla de baja de un boletín. Por eso queda registrado quién marca la casilla.
+
+## Cambiar el correo de alguien
+
+1. Abre la cuenta.
+2. Escribe la nueva dirección en **Correo electrónico**.
+3. Pulsa **Guardar cambios**.
+
+El correo no cambia en ese momento. A la nueva dirección le llega un enlace, y el cambio se aplica cuando la persona lo pulsa con su sesión iniciada. Hasta entonces la cuenta conserva el correo actual, y bajo el campo verás el cambio pendiente. Queda registrado quién lo pidió.
+
+Si la dirección pendiente es un error, pulsa **Anular el cambio de correo** arriba en la cuenta. La cuenta conserva su correo y el enlace enviado deja de servir. Volver a guardar el correo actual no anula el cambio, para no deshacer uno que haya pedido la propia persona.
 
 ## Cambiar los roles de alguien
 

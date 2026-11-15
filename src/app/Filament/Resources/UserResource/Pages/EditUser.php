@@ -12,6 +12,7 @@ use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Concerns\SavesRolesThroughTheGrantRule;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Notifications\VerifyPendingEmailNotification;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\RestoreAction;
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 
 class EditUser extends EditRecord
 {
@@ -32,8 +34,15 @@ class EditUser extends EditRecord
 
     protected static string $resource = UserResource::class;
 
-    /** @var list<string> */
-    private const array PROFILE_FIELDS = ['name', 'display_name', 'email', 'avatar_public_id'];
+    /**
+     * The address is not one of them: it never changes from here (splitEmailChange())
+     *
+     * @var list<string>
+     */
+    private const array PROFILE_FIELDS = ['name', 'display_name', 'avatar_public_id'];
+
+    /** Whether the save being handled asked for a new address: the field then shows the current one again */
+    private bool $emailChangeRequested = false;
 
     /**
      * @param  array<string, mixed>  $data
@@ -57,8 +66,10 @@ class EditUser extends EditRecord
     {
         /** @var UserModel $record */
         [$data, $submittedRoles] = $this->splitSubmittedRoles($data);
+        [$data, $newEmail] = $this->splitEmailChange($record, $data);
+        $actorId = (string) Auth::id();
 
-        return $this->saveAccountWithRoles($record, $submittedRoles, static function () use ($record, $data): UserModel {
+        $saved = $this->saveAccountWithRoles($record, $submittedRoles, static function () use ($record, $data, $newEmail, $actorId): UserModel {
             $record->update($data);
 
             // The same event as when the person edits their own profile, once and after the
@@ -70,8 +81,67 @@ class EditUser extends EditRecord
                 });
             }
 
+            // Only once the change is saved: a refused role change rolls it back and sends nothing
+            if ($newEmail !== null) {
+                DB::afterCommit(static function () use ($record, $newEmail, $actorId): void {
+                    // Logged first: the change is already saved, whatever happens to the mail.
+                    // Ids only: the addresses are personal data and stay out of the log
+                    Log::info('Account email change requested from the panel', [
+                        'actor_id' => $actorId,
+                        'user_id' => (string) $record->getKey(),
+                    ]);
+
+                    $record->notify(new VerifyPendingEmailNotification($newEmail));
+                });
+            }
+
             return $record;
         });
+
+        $this->emailChangeRequested = $newEmail !== null;
+
+        if ($newEmail !== null) {
+            Notification::make()
+                ->title(__('filament.users.notifications.emailChangeRequested'))
+                ->body(__('filament.users.notifications.emailChangeRequestedBody'))
+                ->info()
+                ->send();
+        }
+
+        return $saved;
+    }
+
+    protected function afterSave(): void
+    {
+        // The account keeps its address until the link is followed: the field says so again,
+        // with the pending one below it, instead of the address just typed
+        if ($this->emailChangeRequested) {
+            $this->refreshFormData(['email']);
+        }
+    }
+
+    /**
+     * The address is never written from here: a new one becomes the pending change, and only the
+     * link sent to it makes it the account's (AuthService::verifyPendingEmail()), as on the
+     * profile page. Until then the account keeps its address and its verification. The current
+     * address and the pending one change nothing, so saving other fields never cancels a change
+     * the person requested and never sends the link again.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{array<string, mixed>, string|null} the data to save, and the address to send the link to
+     */
+    private function splitEmailChange(UserModel $record, array $data): array
+    {
+        $email = $data['email'] ?? null;
+        unset($data['email']);
+
+        if (! is_string($email) || $email === $record->email || $email === $record->pending_email) {
+            return [$data, null];
+        }
+
+        $data['pending_email'] = $email;
+
+        return [$data, $email];
     }
 
     /**
@@ -84,6 +154,32 @@ class EditUser extends EditRecord
 
         return [
             ImpersonateAction::make(static fn (): UserModel => $record),
+            // Saving the current address keeps a pending change (splitEmailChange()): this is
+            // how a wrong one is withdrawn. Its link stops working, since it names that address
+            Action::make('cancelPendingEmail')
+                ->authorize('update')
+                ->label(__('filament.users.actions.cancelPendingEmail'))
+                ->icon('heroicon-o-envelope')
+                ->color('gray')
+                ->visible(fn (): bool => filled($record->pending_email) && ! $record->trashed())
+                ->requiresConfirmation()
+                ->modalHeading(__('filament.users.actions.cancelPendingEmail'))
+                ->modalDescription(fn (): string => (string) __('filament.users.actions.cancelPendingEmailConfirm', ['email' => $record->pending_email]))
+                ->action(function () use ($record): void {
+                    $record->update(['pending_email' => null]);
+
+                    Log::info('Pending account email change cancelled from the panel', [
+                        'actor_id' => (string) Auth::id(),
+                        'user_id' => (string) $record->getKey(),
+                    ]);
+
+                    $this->refreshFormData(['email']);
+
+                    Notification::make()
+                        ->title(__('filament.users.actions.pendingEmailCancelled'))
+                        ->success()
+                        ->send();
+                }),
             Action::make('deactivate')
                 ->authorize('delete')
                 ->label(__('filament.users.actions.deactivate'))
