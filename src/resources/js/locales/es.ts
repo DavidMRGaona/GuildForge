@@ -600,6 +600,8 @@ export default {
         memberSince: 'Miembro desde {date}',
         choosePublicName: 'Elige un nombre público para que los demás puedan ver tu perfil.',
         choosePublicNameAction: 'Elegir nombre público',
+        verifyEmail: 'Verifica tu correo electrónico para poder editar tu perfil.',
+        verifyEmailAction: 'Verificar correo',
         onlyOwner: 'Solo tú ves este perfil.',
         emptyVisitor: 'Todavía no hay nada que mostrar.',
         emptyOwnerTitle: 'Tu perfil todavía está vacío',

@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { BadgeCheck, Calendar, EyeOff, PencilLine, UserRound } from '@lucide/vue';
+import { BadgeCheck, Calendar, EyeOff, MailWarning, PencilLine, UserRound } from '@lucide/vue';
 import ProfileSection from '@/components/layout/ProfileSection.vue';
 import ProfileEditorPanel from '@/components/profileEditor/ProfileEditorPanel.vue';
 import { useNotifications } from '@/composables/useNotifications';
@@ -209,6 +209,26 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
         </div>
 
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <!-- The owner must verify the email before editing: the routes that save refuse until then -->
+            <div v-if="notices.verifyEmail && verifyEmailUrl" class="mt-6">
+                <div
+                    class="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100"
+                    role="status"
+                    data-testid="profile-verify-notice"
+                >
+                    <div class="flex items-start gap-2">
+                        <MailWarning class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                        <p>{{ t('publicProfile.verifyEmail') }}</p>
+                    </div>
+                    <Link
+                        :href="verifyEmailUrl"
+                        class="inline-flex shrink-0 items-center justify-center rounded-md px-3 py-1.5 font-medium underline underline-offset-2 hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50 dark:focus-visible:ring-amber-300 dark:focus-visible:ring-offset-amber-950"
+                    >
+                        {{ t('publicProfile.verifyEmailAction') }}
+                    </Link>
+                </div>
+            </div>
+
             <!-- Only the owner ever gets these: nobody else reaches a profile in either state -->
             <div v-if="notices.choosePublicName || notices.onlyOwner" class="mt-6">
                 <div

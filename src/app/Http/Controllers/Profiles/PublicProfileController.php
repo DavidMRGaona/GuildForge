@@ -12,12 +12,16 @@ use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
+use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Domain\Profiles\ProfileVisibility;
 use App\Http\Controllers\Controller;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * The public profile page, `/miembros/{handle}` (core#741). Whoever may not see it gets the 404 an
@@ -42,6 +46,8 @@ final class PublicProfileController extends Controller
         PublicProfileServiceInterface $profiles,
         ProfileRendererInterface $renderer,
         ProfileEditorInterface $editor,
+        EmailVerificationPolicyInterface $emails,
+        LoggerInterface $log,
     ): Response|RedirectResponse {
         $lookup = $profiles->findByHandle($handle, $request->user());
 
@@ -61,16 +67,21 @@ final class PublicProfileController extends Controller
             $request->user(),
         );
 
+        // The routes that save refuse an owner who must verify the email first: no editor to draw then
+        $mustVerify = $lookup->isOwner && $this->mustVerify($emails, $log, $request->user());
+
         return Inertia::render('Profiles/Show', [
             'profile' => $resolved->toArray(),
             'notices' => [
                 'choosePublicName' => $lookup->isOwner && ! $profile->hasPublicName(),
                 // Both when both hold: hidden, and nobody else could see it even if it were not
                 'onlyOwner' => $lookup->isOwner && $profile->visibility === ProfileVisibility::Hidden,
+                'verifyEmail' => $mustVerify,
             ],
             // Where the owner sets their public name: the account page
             'accountUrl' => $lookup->isOwner ? route('profile.show') : null,
-            'editor' => $lookup->isOwner ? $this->editorFor($editor, $request, $profile->handle) : null,
+            'verifyEmailUrl' => $mustVerify ? route('verification.notice') : null,
+            'editor' => $lookup->isOwner && ! $mustVerify ? $this->editorFor($editor, $request, $profile->handle) : null,
             'seo' => $this->seo->forPage(new SeoPageDTO(
                 title: $profile->shownPublicName()
                     ?? (string) __('seo.titles.public_profile', ['handle' => $profile->handle]),
@@ -102,5 +113,25 @@ final class PublicProfileController extends Controller
                 'banner' => route('profiles.banner.store', ['handle' => $handle]),
             ],
         ];
+    }
+
+    /**
+     * Fails closed: a check that throws counts as having to verify, so no editor is drawn.
+     */
+    private function mustVerify(EmailVerificationPolicyInterface $emails, LoggerInterface $log, ?Authenticatable $user): bool
+    {
+        if (! $user instanceof Authenticatable) {
+            return true;
+        }
+
+        try {
+            return $emails->mustVerify($user);
+        } catch (Throwable $exception) {
+            $log->warning('[Profiles] Whether a profile owner must verify the email could not be checked; the editor is not drawn.', [
+                'exception' => $exception::class,
+            ]);
+
+            return true;
+        }
     }
 }

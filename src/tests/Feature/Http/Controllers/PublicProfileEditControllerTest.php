@@ -9,6 +9,7 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Application\Media\Services\MediaFileReleaserInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
+use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\Profiles\ProfileVisibility;
 use App\Http\Middleware\BlockSiteWritesWhenImpersonatingReadOnly;
@@ -391,6 +392,38 @@ final class PublicProfileEditControllerTest extends TestCase
             ->assertInertia(fn (Assert $page): Assert => $page->where('editor', null)->where('accountUrl', null));
         $this->actingAs(UserModel::factory()->admin()->create())->get('/miembros/ana-prueba')
             ->assertInertia(fn (Assert $page): Assert => $page->where('editor', null));
+    }
+
+    public function test_an_owner_who_must_verify_the_email_gets_a_notice_instead_of_the_editor(): void
+    {
+        Storage::fake('images');
+        app(SettingsServiceInterface::class)->set('auth_email_verification_required', '1');
+        $owner = $this->owner(['email_verified_at' => null]);
+
+        $this->actingAs($owner)->get('/miembros/ana-prueba')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->where('editor', null)
+                ->where('notices.verifyEmail', true)
+                ->where('verifyEmailUrl', route('verification.notice')));
+
+        // The routes refuse too, whatever the page draws
+        $this->actingAs($owner)->put('/miembros/ana-prueba', $this->payload(['bio' => 'Sin verificar']))->assertRedirect(route('verification.notice'));
+        $this->actingAs($owner)->putJson('/miembros/ana-prueba', $this->payload(['bio' => 'Sin verificar']))
+            ->assertForbidden()
+            ->assertJsonPath('error', 'email_verification_required');
+        $this->actingAs($owner)->postJson('/miembros/ana-prueba/banner', ['banner' => UploadedFile::fake()->image('b.jpg')])->assertForbidden();
+        $this->actingAs($owner)->getJson('/miembros/ana-prueba/disponibilidad?direccion=ana-rol')->assertForbidden();
+
+        $this->assertNull($this->profileOf($owner)->bio);
+        $this->assertSame([], Storage::disk('images')->allFiles());
+
+        $owner->forceFill(['email_verified_at' => now()])->save();
+        $this->actingAs($owner)->get('/miembros/ana-prueba')
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->where('editor.handle', 'ana-prueba')
+                ->where('notices.verifyEmail', false)
+                ->where('verifyEmailUrl', null));
     }
 
     public function test_the_editor_tells_when_the_address_can_change_again_in_the_display_zone(): void

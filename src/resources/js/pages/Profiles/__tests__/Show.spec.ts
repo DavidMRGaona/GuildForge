@@ -112,7 +112,8 @@ function props(
             stats: rest.stats ?? [],
             sections: { main: rest.main ?? [], aside: rest.aside ?? [] },
         },
-        notices: rest.notices ?? { choosePublicName: false, onlyOwner: false },
+        notices: rest.notices ?? { choosePublicName: false, onlyOwner: false, verifyEmail: false },
+        verifyEmailUrl: rest.verifyEmailUrl ?? null,
         accountUrl: rest.accountUrl ?? null,
         editor: rest.editor ?? null,
         seo: {} as PublicProfilePageProps['seo'],
@@ -294,6 +295,23 @@ describe('Profiles/Show', () => {
         expect(useNotifications().notifications.value).toHaveLength(2);
     });
 
+    it('asks an owner who must verify the email to do it, with no editor', () => {
+        const wrapper = mountPage(
+            props(
+                { isOwner: true },
+                {
+                    notices: { choosePublicName: false, onlyOwner: false, verifyEmail: true },
+                    verifyEmailUrl: '/verificar-email',
+                }
+            )
+        );
+
+        const notice = wrapper.get('[data-testid="profile-verify-notice"]');
+        expect(notice.text()).toContain('Verifica tu correo electrónico para poder editar tu perfil.');
+        expect(notice.get('a').attributes('href')).toBe('/verificar-email');
+        expect(wrapper.find('[data-testid="profile-edit"]').exists()).toBe(false);
+    });
+
     it('offers the editor only to the owner', () => {
         expect(mountPage(props()).find('[data-testid="profile-edit"]').exists()).toBe(false);
         expect(
@@ -345,7 +363,7 @@ describe('Profiles/Show', () => {
         const wrapper = mountPage(
             props(
                 { isOwner: true },
-                { accountUrl: '/perfil', notices: { choosePublicName: false, onlyOwner: true } }
+                { accountUrl: '/perfil', notices: { choosePublicName: false, onlyOwner: true, verifyEmail: false } }
             )
         );
 
@@ -358,7 +376,7 @@ describe('Profiles/Show', () => {
         const wrapper = mountPage(
             props(
                 { publicName: null, isOwner: true },
-                { accountUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: true } }
+                { accountUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: true, verifyEmail: false } }
             )
         );
 
@@ -371,7 +389,7 @@ describe('Profiles/Show', () => {
         const wrapper = mountPage(
             props(
                 { publicName: null, isOwner: true },
-                { accountUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: false } }
+                { accountUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: false, verifyEmail: false } }
             )
         );
 
