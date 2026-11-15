@@ -13,8 +13,10 @@ use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Domain\Footer\ValueObjects\FooterBlock;
 use App\Domain\Footer\ValueObjects\FooterColumn;
 use App\Domain\Footer\ValueObjects\FooterLayout;
+use App\Domain\Navigation\Enums\MenuLocation;
 use App\Filament\Pages\Settings\FooterSettings;
 use App\Filament\Support\PanelNavigationGroup;
+use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Forms\Components\Builder;
@@ -106,6 +108,39 @@ final class FooterSettingsTest extends TestCase
         // Saving untouched keeps it as it was
         $component->call('save')->assertHasNoFormErrors();
         $this->assertSame('footer_3', app(FooterLayoutServiceInterface::class)->layout()->columns[0]->blocks[0]->settings['menu']);
+    }
+
+    public function test_a_links_block_warns_when_its_menu_has_no_active_link(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        MenuItemModel::factory()->create(['location' => MenuLocation::Footer2, 'label' => 'Discord', 'url' => '/d']);
+        MenuItemModel::factory()->create(['location' => MenuLocation::Footer3, 'label' => 'Inactivo', 'url' => '/i', 'is_active' => false]);
+
+        foreach (['footer_3' => true, 'footer_4' => true, 'footer_2' => false] as $menu => $warns) {
+            app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+                new FooterColumn([new FooterBlock('core.links', 'Enlaces', ['menu' => $menu])]),
+            ]));
+
+            $test = Livewire::test(FooterSettings::class);
+            $warns ? $test->assertSee('no tiene enlaces visibles') : $test->assertDontSee('no tiene enlaces visibles');
+        }
+    }
+
+    public function test_the_warning_follows_the_menu_chosen_while_editing(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        MenuItemModel::factory()->create(['location' => MenuLocation::Footer2, 'label' => 'Discord', 'url' => '/d']);
+        app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+            new FooterColumn([new FooterBlock('core.links', 'Enlaces', ['menu' => 'footer_2'])]),
+        ]));
+
+        $component = Livewire::test(FooterSettings::class)->assertDontSee('no tiene enlaces visibles');
+        $columnKey = (string) array_key_first($component->get('data.columns'));
+        $blockKey = (string) array_key_first($component->get("data.columns.{$columnKey}.blocks"));
+        $path = "data.columns.{$columnKey}.blocks.{$blockKey}.data.settings.menu";
+
+        $component->set($path, 'footer_3')->assertSee('no tiene enlaces visibles');
+        $component->set($path, 'footer_2')->assertDontSee('no tiene enlaces visibles');
     }
 
     public function test_a_stored_block_that_cannot_be_drawn_now_is_kept_but_cannot_be_added(): void

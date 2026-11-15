@@ -4,6 +4,7 @@ import type { VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { reactive } from 'vue';
 import TheFooter from '../TheFooter.vue';
+import SiteBlock from '../SiteBlock.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
 
@@ -110,6 +111,21 @@ describe('TheFooter', () => {
                     ],
                 },
             };
+        });
+
+        it('tells every block it is drawn in the footer', async () => {
+            const wrapper = mountFooter();
+            await vi.waitFor(async () => {
+                await flushPromises();
+                expect(wrapper.html()).toContain('<p>Tres</p>');
+            });
+
+            const blocks = wrapper.findAllComponents(SiteBlock);
+            expect(blocks.length).toBeGreaterThan(0);
+            // The vnode's own props: `props()` would also show the component's default
+            expect(blocks.map((block) => block.vm.$.vnode.props?.placement)).toEqual(
+                blocks.map(() => 'footer')
+            );
         });
 
         it('draws its columns with their titles and blocks', async () => {

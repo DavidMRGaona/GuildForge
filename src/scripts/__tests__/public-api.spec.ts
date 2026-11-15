@@ -27,6 +27,7 @@ const ENTRIES = [
     '@/composables/usePagination',
     '@/composables/useRealtimeChannel',
     '@/composables/useRoutes',
+    '@/composables/useSiteBlockPlacement',
     '@/composables/useVerificationGate',
     '@/contracts/cookieConsent',
     '@/utils/calendarTheme',

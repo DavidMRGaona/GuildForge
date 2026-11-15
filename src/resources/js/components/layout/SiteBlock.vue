@@ -1,15 +1,32 @@
 <script setup lang="ts">
-import { computed, onErrorCaptured, ref, watch } from 'vue';
-import type { ResolvedSiteBlock } from '@/types/siteBlocks';
+import { computed, onErrorCaptured, provide, ref, watch } from 'vue';
+import {
+    DEFAULT_SITE_BLOCK_PLACEMENT,
+    SITE_BLOCK_PLACEMENT,
+} from '@/composables/useSiteBlockPlacement';
+import type { ResolvedSiteBlock, SiteBlockPlacement } from '@/types/siteBlocks';
 import { resolveSiteBlockComponent } from '@/utils/siteBlockComponents';
 
 /**
  * Draws one site block resolved on the server (footer column, popup). Like ModuleSlot, a block
  * that fails to load or render is left out and never breaks the page around it.
+ *
+ * `placement` says where it is drawn (`footer` by default); the block reads it with
+ * `useSiteBlockPlacement()` (core#718). It travels as a context, not as a prop, so a block that does
+ * not ask for it receives and renders exactly what it did before.
  */
-const props = defineProps<{
-    block: ResolvedSiteBlock;
-}>();
+const props = withDefaults(
+    defineProps<{
+        block: ResolvedSiteBlock;
+        placement?: SiteBlockPlacement;
+    }>(),
+    { placement: DEFAULT_SITE_BLOCK_PLACEMENT }
+);
+
+provide(
+    SITE_BLOCK_PLACEMENT,
+    computed(() => props.placement)
+);
 
 const component = computed(() => resolveSiteBlockComponent(props.block));
 

@@ -34,6 +34,7 @@
         "@/composables/usePagination": "resources/js/composables/usePagination.ts",
         "@/composables/useRealtimeChannel": "resources/js/composables/useRealtimeChannel.ts",
         "@/composables/useRoutes": "resources/js/composables/useRoutes.ts",
+        "@/composables/useSiteBlockPlacement": "resources/js/composables/useSiteBlockPlacement.ts",
         "@/composables/useVerificationGate": "resources/js/composables/useVerificationGate.ts",
         "@/contracts/cookieConsent": "resources/js/contracts/cookieConsent.ts",
         "@/utils/calendarTheme": "resources/js/utils/calendarTheme.ts",

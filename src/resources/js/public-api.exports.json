@@ -77,6 +77,11 @@
         "routes",
         "useRoutes"
     ],
+    "@/composables/useSiteBlockPlacement": [
+        "DEFAULT_SITE_BLOCK_PLACEMENT",
+        "SITE_BLOCK_PLACEMENT",
+        "useSiteBlockPlacement"
+    ],
     "@/composables/useVerificationGate": [
         "VERIFICATION_REQUIRED_ERROR",
         "VERIFICATION_REQUIRED_HEADER",

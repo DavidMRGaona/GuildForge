@@ -610,6 +610,7 @@ return [
                 'label' => 'Enlaces',
                 'menu' => 'Menú',
                 'menu_help' => 'Los enlaces se editan en Sitio web → Navegación, en la pestaña del menú.',
+                'menu_empty' => 'Este menú no tiene enlaces visibles para quien no ha iniciado sesión: el bloque no saldrá para esas personas hasta que los tenga. Los enlaces se editan en Sitio web → Navegación, en la pestaña del menú.',
             ],
             'text' => [
                 'label' => 'Texto',

@@ -51,6 +51,21 @@ final class CoreFooterBlocksTest extends TestCase
         $this->assertSame(['Discord', 'Mi perfil'], array_column($member->props['items'], 'label'));
     }
 
+    public function test_links_with_nothing_visible_for_that_person_are_not_drawn(): void
+    {
+        MenuItemModel::factory()->create(['location' => MenuLocation::Footer2, 'label' => 'Inactivo', 'url' => '/i', 'is_active' => false]);
+        MenuItemModel::factory()->create(['location' => MenuLocation::Footer3, 'label' => 'Mi perfil', 'url' => '/perfil', 'visibility' => MenuVisibility::Authenticated]);
+
+        $renderer = app(SiteBlockRendererInterface::class);
+        $user = UserModel::factory()->create();
+
+        // Empty menu, only inactive links, and links of another audience: no block at all (title included)
+        $this->assertNull($renderer->resolveBlock('core.links', ['menu' => 'footer_4'], SiteBlockPlacement::Footer, null));
+        $this->assertNull($renderer->resolveBlock('core.links', ['menu' => 'footer_2'], SiteBlockPlacement::Footer, null));
+        $this->assertNull($renderer->resolveBlock('core.links', ['menu' => 'footer_3'], SiteBlockPlacement::Footer, null));
+        $this->assertNotNull($renderer->resolveBlock('core.links', ['menu' => 'footer_3'], SiteBlockPlacement::Footer, $user));
+    }
+
     public function test_links_fall_back_to_the_first_footer_menu(): void
     {
         MenuItemModel::factory()->create(['location' => MenuLocation::Header, 'label' => 'Cabecera', 'url' => '/c']);
