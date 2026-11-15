@@ -102,12 +102,16 @@ final class UpdatePublicProfileRequest extends FormRequest
     }
 
     /**
-     * The format here, with a field error; a reserved word gets the answer of an address somebody holds.
+     * The format of a new address here, with a field error; a reserved word gets the answer of an address
+     * somebody holds.
      */
     private function handleRule(): Closure
     {
-        return static function (string $attribute, mixed $value, Closure $fail): void {
-            if (! is_string($value)) {
+        // The address in the route is the owner's current one (OwnsProfile): kept as it is, never checked again
+        $current = $this->route('handle');
+
+        return static function (string $attribute, mixed $value, Closure $fail) use ($current): void {
+            if (! is_string($value) || ProfileHandle::normalise($value) === $current) {
                 return;
             }
 

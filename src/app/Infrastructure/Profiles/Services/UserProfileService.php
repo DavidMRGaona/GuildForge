@@ -236,15 +236,15 @@ final readonly class UserProfileService implements UserProfileServiceInterface
 
     public function handleAvailability(string $userId, string $handle): ProfileHandleAvailability
     {
+        if (UserProfileModel::query()->whereKey($userId)->value('handle') === ProfileHandle::normalise($handle)) {
+            return ProfileHandleAvailability::Current;
+        }
+
         try {
             $wanted = ProfileHandle::fromString($handle);
         } catch (InvalidProfileHandleException $exception) {
             // A reserved word is said to be unavailable, like an address somebody holds
             return $exception->reserved ? ProfileHandleAvailability::Unavailable : ProfileHandleAvailability::Malformed;
-        }
-
-        if (UserProfileModel::query()->whereKey($userId)->value('handle') === $wanted->value) {
-            return ProfileHandleAvailability::Current;
         }
 
         return $this->isFreeFor($wanted, $userId) ? ProfileHandleAvailability::Available : ProfileHandleAvailability::Unavailable;
@@ -261,7 +261,7 @@ final readonly class UserProfileService implements UserProfileServiceInterface
 
     public function update(string $userId, ProfileUpdateDTO $update): void
     {
-        $wanted = ProfileHandle::fromString($update->handle);
+        $wanted = ProfileHandle::normalise($update->handle);
 
         try {
             DB::transaction(function () use ($userId, $update, $wanted): void {
@@ -278,7 +278,11 @@ final readonly class UserProfileService implements UserProfileServiceInterface
                     'layout' => $profile->layout->chosen($update->sections, $update->stats, $update->offeredSections, $update->offeredStats),
                 ];
 
-                if ($wanted->value !== $profile->handle) {
+                // The current address is kept as it is, never checked again as a new one: one that became a
+                // reserved word since it was given must not block the rest of the save
+                if ($wanted !== $profile->handle) {
+                    $chosen = ProfileHandle::fromString($wanted);
+
                     // Read under the lock: two saves at once never both change it
                     $next = ProfileHandleChangeRule::nextChangeAt($profile->handle_changed_at, now());
 
@@ -286,13 +290,13 @@ final readonly class UserProfileService implements UserProfileServiceInterface
                         throw ProfileHandleChangeTooSoonException::until($next);
                     }
 
-                    if (! $this->isFreeFor($wanted, $userId)) {
+                    if (! $this->isFreeFor($chosen, $userId)) {
                         throw ProfileHandleTakenException::create();
                     }
 
-                    $this->claim($wanted, $userId);
+                    $this->claim($chosen, $userId);
                     $this->retire($profile->handle, $userId);
-                    $attributes['handle'] = $wanted->value;
+                    $attributes['handle'] = $chosen->value;
                     $attributes['handle_chosen'] = true;
                     $attributes['handle_changed_at'] = now();
                 }

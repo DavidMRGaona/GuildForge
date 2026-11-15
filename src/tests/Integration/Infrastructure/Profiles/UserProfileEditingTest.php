@@ -167,6 +167,21 @@ final class UserProfileEditingTest extends TestCase
         $this->service()->update($owner->id, $this->update(handle: 'admin'));
     }
 
+    public function test_a_current_address_that_became_a_reserved_word_does_not_block_the_rest(): void
+    {
+        $owner = $this->owner();
+        // Given before the word was reserved
+        UserProfileModel::query()->whereKey($owner->id)->update(['handle' => 'staff']);
+
+        $this->service()->update($owner->id, $this->update(handle: ' Staff ', bio: 'Se guarda'));
+
+        $profile = $this->profileOf($owner);
+        $this->assertSame('staff', $profile->handle);
+        $this->assertSame('Se guarda', $profile->bio);
+        $this->assertFalse($profile->handle_chosen);
+        $this->assertSame(ProfileHandleAvailability::Current, $this->service()->handleAvailability($owner->id, 'staff'));
+    }
+
     public function test_the_address_can_be_chosen_again_only_after_thirty_days(): void
     {
         $owner = $this->owner();

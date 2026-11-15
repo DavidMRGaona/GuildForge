@@ -209,6 +209,19 @@ final class PublicProfileEditControllerTest extends TestCase
         $this->assertSame('ana-prueba', $this->profileOf($owner)->handle);
     }
 
+    public function test_a_current_address_that_became_a_reserved_word_still_saves_the_rest(): void
+    {
+        $owner = $this->owner();
+        UserProfileModel::query()->whereKey($owner->id)->update(['handle' => 'staff']);
+
+        $this->actingAs($owner)
+            ->put('/miembros/staff', $this->payload(['handle' => 'staff', 'bio' => 'Se guarda']))
+            ->assertRedirect('/miembros/staff')
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Se guarda', $this->profileOf($owner)->bio);
+    }
+
     public function test_the_address_changes_once_every_thirty_days(): void
     {
         $owner = $this->owner();

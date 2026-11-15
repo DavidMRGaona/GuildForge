@@ -51,7 +51,7 @@ final class PublicProfileEditController extends Controller
         }
 
         return redirect()
-            ->route('profiles.show', ['handle' => ProfileHandle::fromString($update->handle)->value])
+            ->route('profiles.show', ['handle' => ProfileHandle::normalise($update->handle)])
             ->with('success', __('profiles.editor.saved'));
     }
 
