@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { buttonSizeClasses } from '@/utils/buttonClasses';
 import LoadingSpinner from './LoadingSpinner.vue';
 
 interface Props {
@@ -37,12 +38,6 @@ const variantClasses: Record<NonNullable<typeof props.variant>, string> = {
         'bg-transparent text-base-primary inset-ring inset-ring-(--color-border) hover:bg-muted focus:ring-neutral-400 disabled:opacity-50',
 };
 
-const sizeClasses: Record<NonNullable<typeof props.size>, string> = {
-    sm: 'px-4 py-2 text-sm min-h-[44px] min-w-[44px]',
-    md: 'px-4 py-2 text-base min-h-[44px]',
-    lg: 'px-6 py-3 text-lg min-h-[44px]',
-};
-
 const spinnerSizes: Record<NonNullable<typeof props.size>, 'sm' | 'md' | 'lg'> = {
     sm: 'sm',
     md: 'sm',
@@ -62,7 +57,7 @@ const buttonClasses = computed(() => [
     'focus:outline-none focus:ring-2 focus:ring-offset-2',
     'disabled:cursor-not-allowed',
     variantClasses[props.variant],
-    sizeClasses[props.size],
+    buttonSizeClasses[props.size],
 ]);
 
 const spinnerColor = computed(() => spinnerColors[props.variant]);

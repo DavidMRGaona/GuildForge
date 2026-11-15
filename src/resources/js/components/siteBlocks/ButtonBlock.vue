@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { buttonSizeClasses } from '@/utils/buttonClasses';
 import { isInertiaPage } from '@/utils/inertiaLinks';
 
 /**
@@ -16,7 +17,9 @@ const props = defineProps<{
 
 // The footer is dark in both colour schemes, so the secondary style never follows the page's one
 const classes = computed(() => [
-    'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition-colors',
+    'inline-flex items-center justify-center rounded-md font-semibold transition-colors',
+    // Same size as `BaseButton` `sm`, the one module blocks use in the footer
+    buttonSizeClasses.sm,
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
     props.variant === 'secondary'
         ? 'bg-transparent text-white inset-ring inset-ring-neutral-500 hover:bg-white/10'

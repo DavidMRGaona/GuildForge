@@ -37,6 +37,16 @@ describe('BaseButton', () => {
         expect(classes).not.toContain('bg-muted');
     });
 
+    it.each([
+        ['sm', ['px-4', 'py-2', 'text-sm', 'min-h-[44px]', 'min-w-[44px]']],
+        ['md', ['px-4', 'py-2', 'text-base', 'min-h-[44px]']],
+        ['lg', ['px-6', 'py-3', 'text-lg', 'min-h-[44px]']],
+    ] as const)('keeps the %s size classes', (size, expected) => {
+        const classes = mount(BaseButton, { props: { size } }).classes();
+
+        expect(classes).toEqual(expect.arrayContaining([...expected]));
+    });
+
     it.each(['secondary', 'danger', 'ghost', 'outline'] as const)(
         'keeps the %s variant outside the button style setting',
         (variant) => {
