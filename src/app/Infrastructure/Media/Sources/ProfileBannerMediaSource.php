@@ -71,11 +71,13 @@ final class ProfileBannerMediaSource extends EloquentColumnMediaSource
     }
 
     /**
+     * The public names for the titles, in the same query; usesFile() reads only the banners.
+     *
      * @return Builder<Model>
      */
-    protected function query(): Builder
+    protected function usagesQuery(): Builder
     {
-        return parent::query()->with('user:id,display_name');
+        return parent::usagesQuery()->with('user:id,display_name');
     }
 
     protected function titleOf(Model $record): string

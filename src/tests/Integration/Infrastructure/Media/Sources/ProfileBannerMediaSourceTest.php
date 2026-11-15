@@ -12,6 +12,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -82,6 +83,40 @@ final class ProfileBannerMediaSourceTest extends TestCase
 
         $this->setBanner($owner, 'profiles/banners/2026/11/a.jpg');
         Bus::assertDispatched(RefreshMediaUsagesJob::class, static fn (RefreshMediaUsagesJob $job): bool => $job->type === 'core.profile-banner' && $job->recordId === (string) $owner->id);
+    }
+
+    public function test_a_new_public_name_or_address_refreshes_the_title_of_the_usage(): void
+    {
+        $owner = UserModel::factory()->create(['display_name' => 'Ana Prueba']);
+        $this->setBanner($owner, 'profiles/banners/2026/11/a.jpg');
+        Bus::fake();
+
+        $owner->update(['display_name' => 'Ana Nueva']);
+        Bus::assertDispatched(RefreshMediaUsagesJob::class, static fn (RefreshMediaUsagesJob $job): bool => $job->type === 'core.profile-banner' && $job->recordId === (string) $owner->id);
+
+        Bus::fake();
+        UserProfileModel::query()->findOrFail($owner->id)->update(['handle' => 'ana-rol']);
+        Bus::assertDispatched(RefreshMediaUsagesJob::class, static fn (RefreshMediaUsagesJob $job): bool => $job->type === 'core.profile-banner');
+
+        // Saved on every sign-in: nothing to refresh when neither changed
+        Bus::fake();
+        $owner->forceFill(['remember_token' => 'otro-token'])->save();
+        Bus::assertNotDispatched(RefreshMediaUsagesJob::class, static fn (RefreshMediaUsagesJob $job): bool => $job->type === 'core.profile-banner');
+    }
+
+    public function test_checking_a_file_reads_only_the_banners(): void
+    {
+        $owner = UserModel::factory()->create(['display_name' => 'Ana Prueba']);
+        $this->setBanner($owner, 'profiles/banners/2026/11/a.jpg');
+        DB::enableQueryLog();
+
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('profiles/banners/2026/11/a')));
+
+        $tables = array_map(static fn (array $query): string => $query['query'], DB::getQueryLog());
+        $this->assertNotEmpty($tables);
+        foreach ($tables as $sql) {
+            $this->assertStringNotContainsString('"users"', $sql);
+        }
     }
 
     private function setBanner(UserModel $owner, string $banner): void

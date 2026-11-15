@@ -64,7 +64,7 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
     {
         $column = $this->column();
 
-        $records = $this->query()
+        $records = $this->usagesQuery()
             ->whereNotNull($column)
             ->where($column, '!=', '')
             ->lazyById(self::CHUNK_SIZE);
@@ -134,6 +134,17 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
     }
 
     /**
+     * The query usages are read from: the base query by default. A source whose titles need related rows
+     * eager-loads them here, so usesFile(), which only reads the column, never loads them.
+     *
+     * @return Builder<Model>
+     */
+    protected function usagesQuery(): Builder
+    {
+        return $this->query();
+    }
+
+    /**
      * Base query over the records, trashed ones included: a soft-deleted record can still be restored.
      * Global scopes never hide a use either (drafts kept out of the panel, core#570): only more uses are
      * counted, so a file is kept rather than taken for unused.
@@ -179,7 +190,7 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
             return null;
         }
 
-        return $this->query()->whereKey($recordId)->first();
+        return $this->usagesQuery()->whereKey($recordId)->first();
     }
 
     private function usesSoftDeletes(): bool

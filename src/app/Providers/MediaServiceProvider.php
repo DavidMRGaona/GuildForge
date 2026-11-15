@@ -129,15 +129,21 @@ final class MediaServiceProvider extends ServiceProvider
             return $relevant ? [(string) $user->getKey()] : [];
         }));
 
-        // Profiles are saved for every choice of their owner: only a change of banner is refreshed (core#743)
+        // Profiles are saved for every choice of their owner: only a change of banner or of the address (the
+        // title without a public name) is refreshed (core#743)
         $this->refreshOnChange(UserProfileModel::class, new RefreshMediaUsagesObserver(ProfileBannerMediaSource::TYPE, static function (Model $profile): array {
             $banner = $profile->getAttribute('banner_public_id');
             $relevant = ! $profile->exists
-                || $profile->wasChanged('banner_public_id')
+                || $profile->wasChanged(['banner_public_id', 'handle'])
                 || ($profile->wasRecentlyCreated && is_string($banner) && $banner !== '');
 
             return $relevant ? [(string) $profile->getKey()] : [];
         }));
+        // The public name titles the banner too; a profile without a banner refreshes to nothing
+        $this->refreshOnChange(UserModel::class, new RefreshMediaUsagesObserver(
+            ProfileBannerMediaSource::TYPE,
+            static fn (Model $user): array => $user->exists && $user->wasChanged('display_name') ? [(string) $user->getKey()] : [],
+        ));
 
         // A module's sources come and go with it: the library syncs instead of waiting for the night (core#517)
         foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {
