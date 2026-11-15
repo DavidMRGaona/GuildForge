@@ -98,17 +98,18 @@ final class FooterActionBlocksTest extends TestCase
     public function test_the_dates_are_the_display_zones_around_the_clock_change(bool $utc): void
     {
         $this->storeAs($utc);
-        // Madrid goes back from 03:00 to 02:00 on 25 October 2026 (01:00 UTC): it is 02:30 summer time
+        // Madrid goes back from 03:00 to 02:00 on 25 October 2026 (01:00 UTC): it is 02:30 summer time.
+        // The repeated hour (00:00–01:00 UTC) is avoided in the starts: a wall time stored in Madrid cannot tell it apart
         $this->travelTo(CarbonImmutable::parse('2026-10-25 00:30:00', 'UTC'));
 
-        $this->event('Ya terminó', '2026-10-24 21:00:00', end: '2026-10-25 00:29:00');
-        $this->event('Dos veces las 02:30', '2026-10-25 00:45:00');
+        $this->event('Ya terminó', '2026-10-24 21:00:00', end: '2026-10-24 23:00:00');
+        $this->event('Justo después del cambio', '2026-10-25 02:00:00');
         $this->event('Después del cambio', '2026-10-25 11:00:00');
 
         $events = $this->resolve('core.upcoming_events', [])->props['events'];
 
-        $this->assertSame(['Dos veces las 02:30', 'Después del cambio'], array_column($events, 'title'));
-        $this->assertSame('2026-10-25T02:45:00+02:00', $events[0]['startDate']);
+        $this->assertSame(['Justo después del cambio', 'Después del cambio'], array_column($events, 'title'));
+        $this->assertSame('2026-10-25T03:00:00+01:00', $events[0]['startDate']);
         $this->assertSame('2026-10-25T12:00:00+01:00', $events[1]['startDate']);
     }
 
@@ -221,7 +222,7 @@ final class FooterActionBlocksTest extends TestCase
 
     public function test_button_with_a_link_that_is_not_allowed_is_not_drawn(): void
     {
-        $log = Log::spy();
+        Log::spy();
 
         foreach (['javascript:alert(1)', '//evil.example', '/\\evil.example', 'data:text/html,x', 'ftp://example.com', '', null, ['https://example.com']] as $url) {
             $this->assertNull($this->resolveOrNull('core.button', ['label' => 'Entrar', 'url' => $url]), var_export($url, true));
