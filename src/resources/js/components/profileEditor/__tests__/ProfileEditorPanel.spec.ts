@@ -89,6 +89,36 @@ describe('ProfileEditorPanel', () => {
         expect(confirm).not.toHaveBeenCalled();
     });
 
+    it('once a visit elsewhere was accepted, nothing stops the page from going', async () => {
+        vi.stubGlobal(
+            'confirm',
+            vi.fn(() => true)
+        );
+        const wrapper = mountPanel();
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+
+        expect(visitTo('/eventos').defaultPrevented).toBe(false);
+
+        // A visit Inertia ends with a full reload (a new deploy) must not be asked about again
+        const unload = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(unload);
+        expect(unload.defaultPrevented).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('asks the browser before leaving the site with changes', async () => {
+        const wrapper = mountPanel();
+        const untouched = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(untouched);
+        expect(untouched.defaultPrevented).toBe(false);
+
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+        const edited = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(edited);
+        expect(edited.defaultPrevented).toBe(true);
+        wrapper.unmount();
+    });
+
     it('names the membership error on its switch', async () => {
         const wrapper = mountPanel(editorFixture({ canShowMembership: true }));
         vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {

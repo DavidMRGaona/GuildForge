@@ -92,8 +92,20 @@ const APP_ROOT_ID = 'app';
 let appRoot: HTMLElement | null = null;
 let appRootWasInert = false;
 
-/** Whether changes would be lost: not while they are being saved */
-const unsaved = computed(() => form.isDirty && !form.processing);
+/** The person accepted to leave and lose the changes: until the draft is reset, nothing asks again */
+const leaving = ref(false);
+
+/** Whether changes would be lost: not while they are being saved, nor once leaving was accepted */
+const unsaved = computed(() => form.isDirty && !form.processing && !leaving.value);
+
+watch(
+    () => form.isDirty,
+    (dirty) => {
+        if (!dirty) {
+            leaving.value = false;
+        }
+    }
+);
 
 /** The editor's own requests (saving, the banner) are never a visit elsewhere */
 const ownPaths = computed(
@@ -118,7 +130,13 @@ const stopGuardingVisits = router.on('before', (event) => {
 
     if (!window.confirm(t('publicProfile.editor.leaveConfirm'))) {
         event.preventDefault();
+        return;
     }
+
+    // Accepted: the changes are gone, so nothing asks again if the visit ends in a full reload (a
+    // new deploy answers Inertia with a 409 and the browser loads the page itself)
+    leaving.value = true;
+    form.reset();
 });
 
 /** Closing or reloading the tab with changes: the browser's own question */
