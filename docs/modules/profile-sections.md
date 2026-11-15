@@ -149,6 +149,11 @@ final readonly class MessagesProfileStat implements ProfileStatInterface
         return __('forum::messages.profile.messages');
     }
 
+    public function description(): string
+    {
+        return __('forum::messages.profile.messages_description');
+    }
+
     public function order(): int
     {
         return 10;
@@ -178,6 +183,7 @@ final readonly class MessagesProfileStat implements ProfileStatInterface
 |---|---|
 | `key()` | Same rules as a section key; stats and sections are stored apart in the layout, but a module should still not reuse a section key for a stat |
 | `label()` | The name beside the number and in the profile editor, translated |
+| `description()` | One line for the profile editor saying what it counts, translated (core ≥ the release with #743: a stat written for an earlier core must add it) |
 | `order()` | The default position on the stats row, lowest first; the owner may reorder |
 | `enabledByDefault()` | Whether the stat shows when the owner never turned it on or off |
 | `isAvailable()` | Whether the stat can be offered and counted now; keep it cheap |
@@ -207,6 +213,12 @@ The owner's choices are stored with their profile (`user_profiles.layout`, `Prof
 - **On or off**: the layout's choice, or `enabledByDefault()` when the layout does not mention the key.
 - **Unknown keys** (a disabled or uninstalled module): ignored when drawing and kept in the layout, so turning the module on again brings the owner's choice back.
 - Sections are ordered within their own region: the layout's order only decides among the sections of one column.
+
+### The profile editor
+
+The owner edits their profile from the profile itself («Editar perfil», core ≥ the release with #743). The editor lists every section and every stat that is registered and available now (`isAvailable()`), in the owner's order, each with its `label()`, its `description()`, a switch and buttons to move it up or down. To list them the core builds each one from the container once per request (`ProfileLayoutOptionsInterface`) and reads only those three methods, never `props()` or `stat()`; keep the constructor and `isAvailable()` cheap. One that cannot be built, has another key than it was registered with, or throws is not offered (warned once a day, like the renderer).
+
+Saving (`PUT /miembros/{handle}`) accepts only the keys offered at that moment: anything else is refused with a field error. What the layout said of keys not offered now (a disabled module, an unavailable section) is kept after the new choice, so it comes back with its module. The editor's preview can only show what the page already drew: a section or stat turned on there appears once saved, except «Sobre mí», which the preview draws from the text being written.
 
 ## How the core draws a profile
 
