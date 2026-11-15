@@ -106,7 +106,9 @@ export const createEchoClient: RealtimeClientFactory = async (config) => {
         forceTLS: config.tls,
         // One scheme, the same one `RealtimeClientConfigDTO::origin()` gives the CSP's connect-src
         // (both read `tls`): trying the other one is blocked by the CSP and delays reconnecting.
-        enabledTransports: config.tls ? ['wss'] : ['ws'],
+        // pusher-js has a single WebSocket transport, `ws`, which `forceTLS` turns into wss://;
+        // a name it does not know (`wss`) leaves no transport and the connection fails silently.
+        enabledTransports: ['ws'],
         Pusher,
         withoutInterceptors: true,
         channelAuthorization: {
