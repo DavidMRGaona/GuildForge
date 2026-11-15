@@ -9,10 +9,14 @@ const Subscribe: FunctionalComponent<{ heading: string }> = (props) =>
     h('p', { 'data-testid': 'subscribe' }, props.heading);
 Subscribe.props = ['heading'];
 
-const Placed: FunctionalComponent = () => {
+const Placed: FunctionalComponent = (props) => {
     const placement = useSiteBlockPlacement();
 
-    return h('p', { 'data-testid': 'placed' }, placement.value);
+    return h(
+        'p',
+        { 'data-testid': 'placed', 'data-received': JSON.stringify(props) },
+        placement.value
+    );
 };
 
 const Broken: FunctionalComponent = () => {
@@ -69,8 +73,10 @@ describe('SiteBlock', () => {
             await flushPromises();
 
             expect(wrapper.get('[data-testid="placed"]').text()).toBe(placement);
-            // A context, not an attribute: nothing reaches the block's markup
-            expect(wrapper.get('[data-site-block]').attributes('placement')).toBeUndefined();
+            // A context, not an attribute: the block itself never receives a `placement` prop
+            expect(
+                JSON.parse(wrapper.get('[data-testid="placed"]').attributes('data-received'))
+            ).not.toHaveProperty('placement');
         }
     );
 
