@@ -41,6 +41,24 @@ final readonly class ProfileLayout
     }
 
     /**
+     * The owner's new choice (core#743), for what is offered now: their entries in their order, keys not
+     * offered or repeated left out, followed by what this layout says of keys not offered now (a
+     * disabled module), so turning that module on again brings their choice back.
+     *
+     * @param  list<ProfileLayoutEntry>  $sections
+     * @param  list<ProfileLayoutEntry>  $stats
+     * @param  list<string>  $offeredSections  the keys of the sections offered now
+     * @param  list<string>  $offeredStats  the keys of the stats offered now
+     */
+    public function chosen(array $sections, array $stats, array $offeredSections, array $offeredStats): self
+    {
+        return new self(
+            $this->merged($sections, $this->sections, $offeredSections),
+            $this->merged($stats, $this->stats, $offeredStats),
+        );
+    }
+
+    /**
      * Whether nothing was chosen: every section and stat takes its default.
      */
     public function isEmpty(): bool
@@ -104,6 +122,32 @@ final readonly class ProfileLayout
         }
 
         return array_values($result);
+    }
+
+    /**
+     * @param  list<ProfileLayoutEntry>  $chosen
+     * @param  list<ProfileLayoutEntry>  $stored
+     * @param  list<string>  $offered
+     * @return list<ProfileLayoutEntry>
+     */
+    private function merged(array $chosen, array $stored, array $offered): array
+    {
+        $offered = array_flip($offered);
+        $result = [];
+
+        foreach ($chosen as $entry) {
+            if (isset($offered[$entry->key]) && ! isset($result[$entry->key])) {
+                $result[$entry->key] = $entry;
+            }
+        }
+
+        foreach ($stored as $entry) {
+            if (! isset($offered[$entry->key]) && ! isset($result[$entry->key])) {
+                $result[$entry->key] = $entry;
+            }
+        }
+
+        return array_slice(array_values($result), 0, self::MAX_ENTRIES);
     }
 
     /**

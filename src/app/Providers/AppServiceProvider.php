@@ -589,6 +589,30 @@ class AppServiceProvider extends ServiceProvider
             ]
         );
 
+        // The owner editing their public profile (core#743), per account: saving, the banner (each one a
+        // file in the image store) and the availability of an address, asked while typing
+        RateLimiter::for(
+            'profile-edit',
+            static fn (Request $request): array => [
+                Limit::perMinute(10)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+                Limit::perHour(60)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+            ]
+        );
+        RateLimiter::for(
+            'profile-banner',
+            static fn (Request $request): array => [
+                Limit::perMinute(6)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+                Limit::perHour(30)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+            ]
+        );
+        RateLimiter::for(
+            'profile-handle-check',
+            static fn (Request $request): array => [
+                Limit::perMinute(30)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+                Limit::perHour(300)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+            ]
+        );
+
         Gate::policy(UserModel::class, UserPolicy::class);
         Gate::policy(RoleModel::class, RolePolicy::class);
         Gate::policy(EventModel::class, EventPolicy::class);

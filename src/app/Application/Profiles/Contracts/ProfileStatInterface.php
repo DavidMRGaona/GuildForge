@@ -31,6 +31,11 @@ interface ProfileStatInterface
     public function label(): string;
 
     /**
+     * One line for the profile editor (core#743): what it counts, already translated.
+     */
+    public function description(): string;
+
+    /**
      * The default position among the stats, lowest first; the owner may reorder.
      */
     public function order(): int;

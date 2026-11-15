@@ -6,20 +6,31 @@ namespace App\Infrastructure\Profiles\Services;
 
 use App\Application\Media\Services\MediaFileReleaserInterface;
 use App\Application\Profiles\DTOs\ProfileCreationResultDTO;
+use App\Application\Profiles\DTOs\ProfileUpdateDTO;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
+use App\Domain\Profiles\Exceptions\InvalidProfileHandleException;
+use App\Domain\Profiles\Exceptions\ProfileHandleChangeTooSoonException;
+use App\Domain\Profiles\Exceptions\ProfileHandleTakenException;
 use App\Domain\Profiles\Exceptions\ProfileHandleUnavailableException;
+use App\Domain\Profiles\ProfileHandleAvailability;
+use App\Domain\Profiles\ProfileHandleChangeRule;
 use App\Domain\Profiles\ProfileVisibility;
 use App\Domain\Profiles\ValueObjects\ProfileHandle;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileHandleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use App\Infrastructure\Profiles\ProfileHandleCandidates;
+use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -30,9 +41,18 @@ use Throwable;
  * Every try runs in its own transaction, nested as a savepoint when the caller already holds one: a clash
  * rolls back only that try, so the account being saved around it (registration, the panel) never fails in
  * PostgreSQL because of an aborted transaction.
+ *
+ * The owner's own choice of an address (core#743) goes through the same claim(): a reserved word, an
+ * address somebody else holds or held, or one taken meanwhile is refused alike.
  */
 final readonly class UserProfileService implements UserProfileServiceInterface
 {
+    /** Where banners are stored, by year and month; ProfileBannerMediaSource claims it */
+    public const string BANNER_FOLDER = 'profiles/banners/';
+
+    /** The banner types accepted, by what their content is */
+    private const array BANNER_EXTENSIONS = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+
     public function __construct(
         private MediaFileReleaserInterface $mediaReleaser,
     ) {}
@@ -212,6 +232,143 @@ final readonly class UserProfileService implements UserProfileServiceInterface
         }
 
         return new ProfileCreationResultDTO($created, $realigned, $failed);
+    }
+
+    public function handleAvailability(string $userId, string $handle): ProfileHandleAvailability
+    {
+        try {
+            $wanted = ProfileHandle::fromString($handle);
+        } catch (InvalidProfileHandleException $exception) {
+            // A reserved word is said to be unavailable, like an address somebody holds
+            return $exception->reserved ? ProfileHandleAvailability::Unavailable : ProfileHandleAvailability::Malformed;
+        }
+
+        if (UserProfileModel::query()->whereKey($userId)->value('handle') === $wanted->value) {
+            return ProfileHandleAvailability::Current;
+        }
+
+        return $this->isFreeFor($wanted, $userId) ? ProfileHandleAvailability::Available : ProfileHandleAvailability::Unavailable;
+    }
+
+    public function nextHandleChangeAt(string $userId): ?DateTimeImmutable
+    {
+        $profile = UserProfileModel::query()->find($userId);
+
+        return $profile instanceof UserProfileModel
+            ? ProfileHandleChangeRule::nextChangeAt($profile->handle_changed_at, now())
+            : null;
+    }
+
+    public function update(string $userId, ProfileUpdateDTO $update): void
+    {
+        $wanted = ProfileHandle::fromString($update->handle);
+
+        try {
+            DB::transaction(function () use ($userId, $update, $wanted): void {
+                $profile = UserProfileModel::query()->lockForUpdate()->find($userId);
+
+                if (! $profile instanceof UserProfileModel) {
+                    throw new RuntimeException('The account has no public profile to update.');
+                }
+
+                $attributes = [
+                    'visibility' => $update->visibility,
+                    'bio' => $update->bio,
+                    'show_membership' => $update->showMembership,
+                    'layout' => $profile->layout->chosen($update->sections, $update->stats, $update->offeredSections, $update->offeredStats),
+                ];
+
+                if ($wanted->value !== $profile->handle) {
+                    // Read under the lock: two saves at once never both change it
+                    $next = ProfileHandleChangeRule::nextChangeAt($profile->handle_changed_at, now());
+
+                    if ($next instanceof DateTimeImmutable) {
+                        throw ProfileHandleChangeTooSoonException::until($next);
+                    }
+
+                    if (! $this->isFreeFor($wanted, $userId)) {
+                        throw ProfileHandleTakenException::create();
+                    }
+
+                    $this->claim($wanted, $userId);
+                    $this->retire($profile->handle, $userId);
+                    $attributes['handle'] = $wanted->value;
+                    $attributes['handle_chosen'] = true;
+                    $attributes['handle_changed_at'] = now();
+                }
+
+                $profile->update($attributes);
+            });
+        } catch (UniqueConstraintViolationException) {
+            // Taken by somebody else since it was checked: the history decided
+            throw ProfileHandleTakenException::create();
+        }
+    }
+
+    public function replaceBanner(string $userId, UploadedFile $banner): string
+    {
+        if (! $this->hasProfile($userId)) {
+            throw new RuntimeException('The account has no public profile for a banner.');
+        }
+
+        // Named by what the bytes are, never by the name the browser sent
+        $extension = self::BANNER_EXTENSIONS[(string) $banner->getMimeType()]
+            ?? throw new RuntimeException('A banner must be a JPEG, PNG or WebP image.');
+        $path = self::BANNER_FOLDER.now()->format('Y/m').'/'.Str::uuid()->toString().'.'.$extension;
+
+        // Through the disk, like every upload: an impersonation's safety net discards it
+        if (Storage::disk('images')->put($path, $banner->getContent()) === false) {
+            throw new RuntimeException('The banner could not be stored.');
+        }
+
+        try {
+            $previous = DB::transaction(static function () use ($userId, $path): ?string {
+                $profile = UserProfileModel::query()->lockForUpdate()->find($userId);
+
+                if (! $profile instanceof UserProfileModel) {
+                    throw new RuntimeException('The account has no public profile for a banner.');
+                }
+
+                $previous = $profile->banner_public_id;
+                $profile->update(['banner_public_id' => $path]);
+
+                return $previous;
+            });
+        } catch (Throwable $exception) {
+            // Nobody points at it: the library may delete it
+            $this->mediaReleaser->release($path);
+
+            throw $exception;
+        }
+
+        $this->releaseBanner($previous);
+
+        return $path;
+    }
+
+    public function removeBanner(string $userId): void
+    {
+        $previous = DB::transaction(static function () use ($userId): ?string {
+            $profile = UserProfileModel::query()->lockForUpdate()->find($userId);
+
+            if (! $profile instanceof UserProfileModel || $profile->banner_public_id === null) {
+                return null;
+            }
+
+            $previous = $profile->banner_public_id;
+            $profile->update(['banner_public_id' => null]);
+
+            return $previous;
+        });
+
+        $this->releaseBanner($previous);
+    }
+
+    private function releaseBanner(?string $banner): void
+    {
+        if (is_string($banner) && $banner !== '') {
+            $this->mediaReleaser->release($banner);
+        }
     }
 
     /**

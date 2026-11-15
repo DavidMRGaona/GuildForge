@@ -20,6 +20,11 @@ abstract class FakeProfileStat implements ProfileStatInterface
         return 'Contador de ejemplo';
     }
 
+    public function description(): string
+    {
+        return 'Un contador para las pruebas.';
+    }
+
     public function order(): int
     {
         return 100;

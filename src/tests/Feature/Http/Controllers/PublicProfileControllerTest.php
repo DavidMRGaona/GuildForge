@@ -75,7 +75,7 @@ final class PublicProfileControllerTest extends TestCase
                 ->has('profile.sections.aside')
                 ->where('notices.onlyOwner', false)
                 ->where('notices.choosePublicName', false)
-                ->where('editUrl', null)
+                ->where('accountUrl', null)
                 ->where('seo.robots', 'noindex, nofollow')
                 ->missing('profile.header.email')
                 ->missing('profile.header.name'));
@@ -113,7 +113,7 @@ final class PublicProfileControllerTest extends TestCase
                 ->where('profile.header.isOwner', true)
                 ->where('notices.onlyOwner', true)
                 ->where('notices.choosePublicName', false)
-                ->where('editUrl', route('profile.show')));
+                ->where('accountUrl', route('profile.show')));
     }
 
     public function test_an_owner_without_public_name_is_the_only_one_who_sees_it_and_is_asked_for_one(): void

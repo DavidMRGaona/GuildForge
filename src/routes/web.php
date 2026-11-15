@@ -35,6 +35,7 @@ use App\Http\Controllers\MailUnsubscribeController;
 use App\Http\Controllers\OneClickMailUnsubscribeController;
 use App\Http\Controllers\PersonalCalendarFeedController;
 use App\Http\Controllers\Profiles\PublicProfileController;
+use App\Http\Controllers\Profiles\PublicProfileEditController;
 use App\Http\Controllers\Proposals\ArticleProposalController;
 use App\Http\Controllers\Proposals\EventProposalController;
 use App\Http\Controllers\Proposals\ProposalActionController;
@@ -141,6 +142,24 @@ Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('/miembros/{handle}', [PublicProfileController::class, 'show'])
     ->middleware(KeepOutOfSearchEngines::class)
     ->name('profiles.show');
+
+// The owner editing their own profile from it (core#743): signed in, throttled per account, and in the
+// web group like every write, so a read-only impersonation refuses it. Nobody but the owner, not even an
+// administrator: anybody else gets the 404 of an unknown address
+Route::middleware(['auth', KeepOutOfSearchEngines::class])->group(function (): void {
+    Route::put('/miembros/{handle}', [PublicProfileEditController::class, 'update'])
+        ->middleware('throttle:profile-edit')
+        ->name('profiles.update');
+    Route::get('/miembros/{handle}/disponibilidad', [PublicProfileEditController::class, 'availability'])
+        ->middleware('throttle:profile-handle-check')
+        ->name('profiles.handle-availability');
+    Route::post('/miembros/{handle}/banner', [PublicProfileEditController::class, 'storeBanner'])
+        ->middleware('throttle:profile-banner')
+        ->name('profiles.banner.store');
+    Route::delete('/miembros/{handle}/banner', [PublicProfileEditController::class, 'destroyBanner'])
+        ->middleware('throttle:profile-banner')
+        ->name('profiles.banner.destroy');
+});
 
 Route::get('/{slug}', [LegalPageController::class, 'show'])
     ->where('slug', 'politica-de-privacidad|aviso-legal|politica-de-cookies|terminos-y-condiciones')
