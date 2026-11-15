@@ -27,6 +27,7 @@ return [
         'verify_email' => 'Verify email',
         'profile' => 'My profile',
         'notifications' => 'Notifications',
+        'public_profile' => '@:handle\'s profile',
         'mail_unsubscribe' => 'Unsubscribe from a kind of email',
         'mail_mute_subject' => 'Stop notices about one thing',
         'maintenance' => "We're under maintenance",

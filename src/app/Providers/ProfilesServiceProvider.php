@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
+use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Profiles\Observers\UserProfileObserver;
@@ -14,6 +15,7 @@ use App\Infrastructure\Profiles\ProfileRenderer;
 use App\Infrastructure\Profiles\ProfileSectionRegistry;
 use App\Infrastructure\Profiles\ProfileStatRegistry;
 use App\Infrastructure\Profiles\Sections\AboutProfileSection;
+use App\Infrastructure\Profiles\Services\PublicProfileService;
 use App\Infrastructure\Profiles\Services\UserProfileService;
 use App\Infrastructure\Profiles\StoredProfiles;
 use Illuminate\Support\ServiceProvider;
@@ -45,6 +47,7 @@ final class ProfilesServiceProvider extends ServiceProvider
         $this->app->singleton(ProfileStatRegistryInterface::class, static fn ($app): ProfileStatRegistry => new ProfileStatRegistry($app));
         $this->app->scoped(StoredProfiles::class);
         $this->app->scoped(ProfileRendererInterface::class, ProfileRenderer::class);
+        $this->app->bind(PublicProfileServiceInterface::class, PublicProfileService::class);
     }
 
     public function boot(): void

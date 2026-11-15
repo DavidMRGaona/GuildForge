@@ -594,6 +594,19 @@ export default {
             notFound: 'No se encontraron inscripciones',
         },
     },
+    publicProfile: {
+        noPublicName: 'Sin nombre público',
+        membershipBadge: 'Socio',
+        memberSince: 'Miembro desde {date}',
+        choosePublicName: 'Elige un nombre público para que los demás puedan ver tu perfil.',
+        choosePublicNameAction: 'Elegir nombre público',
+        onlyOwner: 'Solo tú ves este perfil.',
+        emptyVisitor: 'Todavía no hay nada que mostrar.',
+        emptyOwnerTitle: 'Tu perfil todavía está vacío',
+        emptyOwnerDescription: 'Lo que añadas aparecerá aquí para quienes puedan ver tu perfil.',
+        editProfile: 'Editar perfil',
+        statsLabel: 'Estadísticas',
+    },
     auth: {
         backToHome: 'Volver al inicio',
         register: {
