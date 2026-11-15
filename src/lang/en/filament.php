@@ -294,6 +294,11 @@ return [
             'emailChangeRequested' => 'Confirmation link sent',
             'emailChangeRequestedBody' => 'The email changes when the person follows the link sent to the new address. Until then it keeps the current one.',
         ],
+        'actions' => [
+            'cancelPendingEmail' => 'Withdraw the email change',
+            'cancelPendingEmailConfirm' => 'Withdraw the pending change to :email? The account keeps its current email and the link sent to that address stops working.',
+            'pendingEmailCancelled' => 'Email change withdrawn',
+        ],
     ],
 
     'roles' => [

@@ -41,6 +41,8 @@ La cuenta nace con el correo sin verificar: a la persona le llegan la bienvenida
 
 El correo no cambia en ese momento. A la nueva dirección le llega un enlace, y el cambio se aplica cuando la persona lo pulsa con su sesión iniciada. Hasta entonces la cuenta conserva el correo actual, y bajo el campo verás el cambio pendiente. Queda registrado quién lo pidió.
 
+Si la dirección pendiente es un error, pulsa **Anular el cambio de correo** arriba en la cuenta. La cuenta conserva su correo y el enlace enviado deja de servir. Volver a guardar el correo actual no anula el cambio, para no deshacer uno que haya pedido la propia persona.
+
 ## Cambiar los roles de alguien
 
 1. Abre la cuenta.

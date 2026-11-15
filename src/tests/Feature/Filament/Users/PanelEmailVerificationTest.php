@@ -6,6 +6,7 @@ namespace Tests\Feature\Filament\Users;
 
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\VerifyPendingEmailNotification;
 use App\Notifications\WelcomeNotification;
@@ -138,6 +139,64 @@ final class PanelEmailVerificationTest extends TestCase
 
         $this->assertNull($user->refresh()->pending_email);
         Notification::assertNothingSent();
+    }
+
+    public function test_a_refused_role_change_saves_no_email_change_and_sends_nothing(): void
+    {
+        $treasurer = RoleModel::query()->create(['name' => 'treasurer', 'display_name' => 'Treasurer', 'max_holders' => 1]);
+        UserModel::factory()->create()->roles()->attach($treasurer->id);
+        $user = UserModel::factory()->create(['email' => 'old@example.com']);
+        $log = Log::spy();
+
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->fillForm(['email' => 'new@example.com', 'roles' => ['member', 'treasurer']])
+            ->call('save');
+
+        $this->assertNull($user->refresh()->pending_email);
+        Notification::assertNothingSent();
+        $log->shouldNotHaveReceived('info', ['Account email change requested from the panel', \Mockery::any()]);
+    }
+
+    public function test_after_saving_the_field_shows_the_current_address_again(): void
+    {
+        $user = UserModel::factory()->create(['email' => 'old@example.com']);
+
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->fillForm(['email' => 'new@example.com'])
+            ->call('save')
+            ->assertHasNoFormErrors()
+            ->assertSchemaStateSet(['email' => 'old@example.com']);
+    }
+
+    public function test_a_pending_change_can_be_withdrawn_and_it_is_logged(): void
+    {
+        $user = UserModel::factory()->create([
+            'email' => 'old@example.com',
+            'pending_email' => 'wrong@example.com',
+        ]);
+        $log = Log::spy();
+
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->assertActionVisible('cancelPendingEmail')
+            ->callAction('cancelPendingEmail');
+
+        $user->refresh();
+        $this->assertSame('old@example.com', $user->email);
+        $this->assertNull($user->pending_email);
+        $log->shouldHaveReceived('info')
+            ->with('Pending account email change cancelled from the panel', [
+                'actor_id' => (string) $this->admin->id,
+                'user_id' => (string) $user->id,
+            ])
+            ->once();
+    }
+
+    public function test_withdrawing_is_only_offered_while_a_change_is_pending(): void
+    {
+        $user = UserModel::factory()->create(['pending_email' => null]);
+
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->assertActionHidden('cancelPendingEmail');
     }
 
     // Creating an account
