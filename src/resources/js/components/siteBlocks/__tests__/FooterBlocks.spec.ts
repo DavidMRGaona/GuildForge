@@ -8,6 +8,8 @@ import ContactBlock from '../ContactBlock.vue';
 import UpcomingEventsBlock from '../UpcomingEventsBlock.vue';
 import ButtonBlock from '../ButtonBlock.vue';
 import LogosBlock from '../LogosBlock.vue';
+import BaseButton from '@/components/ui/BaseButton.vue';
+import { buttonSizeClasses } from '@/utils/buttonClasses';
 import { FOOTER_BLOCK_TITLE_ID } from '../footerBlockTitle';
 import en from '@/locales/en';
 import es from '@/locales/es';
@@ -277,6 +279,18 @@ describe('ButtonBlock', () => {
         // Secondary stays light on the dark footer whatever the page's colour scheme
         expect(secondary.get('a').classes()).toContain('text-white');
         expect(secondary.get('a').classes().join(' ')).not.toContain('--button-primary-bg');
+    });
+
+    it('measures like a BaseButton of size sm, in both styles (core#734)', () => {
+        const sizeClasses = buttonSizeClasses.sm.split(' ');
+        const button = mount(BaseButton, { props: { size: 'sm' } });
+
+        for (const variant of ['primary', 'secondary'] as const) {
+            const link = mount(ButtonBlock, { props: { label: 'A', url: '/a', variant } });
+
+            expect(link.get('a').classes()).toEqual(expect.arrayContaining(sizeClasses));
+        }
+        expect(button.classes()).toEqual(expect.arrayContaining(sizeClasses));
     });
 });
 
