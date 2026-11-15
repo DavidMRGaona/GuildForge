@@ -123,7 +123,7 @@ function props(
 function mountPage(pageProps: PublicProfilePageProps): VueWrapper {
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
-    return mount(Show, { props: pageProps, global: { plugins: [i18n] } });
+    return mount(Show, { attachTo: document.body, props: pageProps, global: { plugins: [i18n] } });
 }
 
 describe('Profiles/Show', () => {
@@ -307,9 +307,27 @@ describe('Profiles/Show', () => {
         );
 
         const notice = wrapper.get('[data-testid="profile-verify-notice"]');
-        expect(notice.text()).toContain('Verifica tu correo electrónico para poder editar tu perfil.');
+        expect(notice.text()).toContain(
+            'Verifica tu correo electrónico para poder editar tu perfil.'
+        );
         expect(notice.get('a').attributes('href')).toBe('/verificar-email');
         expect(wrapper.find('[data-testid="profile-edit"]').exists()).toBe(false);
+    });
+
+    it('gives the focus back to the button that opened the editor', async () => {
+        const wrapper = mountPage(props({ isOwner: true }, { editor: editor() }));
+
+        await wrapper.get('[data-testid="profile-empty-edit"]').trigger('click');
+        await wrapper.get('[data-testid="close-editor"]').trigger('click');
+        await flushPromises();
+        expect(document.activeElement).toBe(
+            wrapper.get('[data-testid="profile-empty-edit"]').element
+        );
+
+        await wrapper.get('[data-testid="profile-edit"]').trigger('click');
+        await wrapper.get('[data-testid="close-editor"]').trigger('click');
+        await flushPromises();
+        expect(document.activeElement).toBe(wrapper.get('[data-testid="profile-edit"]').element);
     });
 
     it('offers the editor only to the owner', () => {
@@ -336,7 +354,6 @@ describe('Profiles/Show', () => {
         expect(wrapper.get('[data-testid="profile-edit"]').attributes('aria-expanded')).toBe(
             'true'
         );
-        expect(wrapper.get('article').attributes('inert')).toBeDefined();
 
         sendPreview?.({
             handle: 'ana-prueba',
@@ -356,14 +373,16 @@ describe('Profiles/Show', () => {
         expect(wrapper.find('[data-testid="profile-editor"]').exists()).toBe(false);
         expect(wrapper.find('[data-profile-section="core.about"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="profile-stats"]').exists()).toBe(true);
-        expect(wrapper.get('article').attributes('inert')).toBeUndefined();
     });
 
     it('tells the owner of a hidden profile that only they see it', () => {
         const wrapper = mountPage(
             props(
                 { isOwner: true },
-                { accountUrl: '/perfil', notices: { choosePublicName: false, onlyOwner: true, verifyEmail: false } }
+                {
+                    accountUrl: '/perfil',
+                    notices: { choosePublicName: false, onlyOwner: true, verifyEmail: false },
+                }
             )
         );
 
@@ -376,7 +395,10 @@ describe('Profiles/Show', () => {
         const wrapper = mountPage(
             props(
                 { publicName: null, isOwner: true },
-                { accountUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: true, verifyEmail: false } }
+                {
+                    accountUrl: '/perfil',
+                    notices: { choosePublicName: true, onlyOwner: true, verifyEmail: false },
+                }
             )
         );
 
@@ -389,7 +411,10 @@ describe('Profiles/Show', () => {
         const wrapper = mountPage(
             props(
                 { publicName: null, isOwner: true },
-                { accountUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: false, verifyEmail: false } }
+                {
+                    accountUrl: '/perfil',
+                    notices: { choosePublicName: true, onlyOwner: false, verifyEmail: false },
+                }
             )
         );
 

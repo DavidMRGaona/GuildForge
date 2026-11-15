@@ -21,7 +21,7 @@ import type { PublicProfilePageProps } from '@/types/profilePage';
  * column. Whoever reaches this page may see it: the server decided, and resolved every section and
  * counter for this person. The owner also sees why nobody else does, when that is the case, and an
  * invitation to fill an empty profile, and edits it from here (core#743): while the editor is open,
- * the page behind is its preview and takes no clicks.
+ * the page behind is its preview, and the editor makes the whole page inert.
  */
 const props = defineProps<PublicProfilePageProps>();
 
@@ -33,6 +33,8 @@ const LEADING_SECTION = 'core.about';
 const editorOpen = ref(false);
 const draft = ref<ProfileEditorForm | null>(null);
 const editButton = ref<HTMLButtonElement | null>(null);
+/** The button that opened the editor (the header's or the empty state's): focus goes back to it */
+let opener: HTMLElement | null = null;
 
 /** What is drawn: the profile, or while editing, how it will look once saved */
 const shown = computed(() =>
@@ -57,14 +59,20 @@ watch(
     { immediate: true }
 );
 
-function openEditor(): void {
+function openEditor(event: MouseEvent): void {
+    opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : editButton.value;
     editorOpen.value = true;
 }
 
 function closeEditor(): void {
     editorOpen.value = false;
     draft.value = null;
-    void nextTick(() => editButton.value?.focus());
+    void nextTick(() => {
+        // The empty state's button is gone once the profile has something: the header's then
+        const target = opener?.isConnected ? opener : editButton.value;
+        target?.focus();
+        opener = null;
+    });
 }
 
 const header = computed(() => shown.value.header);
@@ -118,7 +126,7 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
 </script>
 
 <template>
-    <article class="pb-12 sm:pb-16" aria-labelledby="profile-name" :inert="editorOpen || undefined">
+    <article class="pb-12 sm:pb-16" aria-labelledby="profile-name">
         <!-- The band of the account page (/perfil); with a banner, the banner is its background -->
         <div class="relative overflow-hidden bg-muted py-8 sm:py-12" data-testid="profile-band">
             <template v-if="bannerUrl">

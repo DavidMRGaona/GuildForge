@@ -620,6 +620,7 @@ export default {
             discardMessage: 'What you changed and did not save will be lost.',
             discardConfirm: 'Discard',
             keepEditing: 'Keep editing',
+            leaveConfirm: 'You have unsaved changes to your profile. Leave and discard them?',
             visibility: {
                 legend: 'Who can see it',
                 public: {

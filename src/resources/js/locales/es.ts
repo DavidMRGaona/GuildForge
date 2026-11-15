@@ -620,6 +620,7 @@ export default {
             discardMessage: 'Lo que has cambiado y no has guardado se perderá.',
             discardConfirm: 'Descartar',
             keepEditing: 'Seguir editando',
+            leaveConfirm: 'Tienes cambios sin guardar en tu perfil. ¿Salir y descartarlos?',
             visibility: {
                 legend: 'Quién puede verlo',
                 public: {

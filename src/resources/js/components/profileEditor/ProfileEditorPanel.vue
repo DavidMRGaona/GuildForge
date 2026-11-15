@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, useId, watch } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
+import { router, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { X } from '@lucide/vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
@@ -20,8 +20,10 @@ import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
  * the `preview` event). Everything but the banner is saved in one request, with an error under each
  * field and a notice once saved; the banner is uploaded or taken away on its own, at once.
  *
- * A modal dialog: Tab stays inside and Escape closes it, asking first when something would be lost.
- * The page behind only scrolls on a phone-sized screen when the panel covers it whole.
+ * A modal dialog: the whole page behind (`#app`, header and footer included) is inert and a veil over it
+ * takes the clicks, Tab stays inside, and Escape, the veil or a visit elsewhere ask first when changes
+ * would be lost (so does leaving the site). The page behind still scrolls, except on a phone-sized
+ * screen, where the panel covers it whole.
  */
 const props = defineProps<{
     editor: ProfileEditor;
@@ -84,8 +86,50 @@ watch(
     { deep: true, immediate: true }
 );
 
+/** The page root Inertia mounts in: everything but this panel and its dialogs */
+const APP_ROOT_ID = 'app';
+
+let appRoot: HTMLElement | null = null;
+let appRootWasInert = false;
+
+/** Whether changes would be lost: not while they are being saved */
+const unsaved = computed(() => form.isDirty && !form.processing);
+
+/** The editor's own requests (saving, the banner) are never a visit elsewhere */
+const ownPaths = computed(
+    () =>
+        new Set(
+            [props.editor.urls.update, props.editor.urls.banner].map(
+                (url) => new URL(url, window.location.origin).pathname
+            )
+        )
+);
+
+/**
+ * A visit elsewhere while changes would be lost asks first; refusing cancels it. A native dialog: the
+ * visit is decided at once, before anything leaves.
+ */
+const stopGuardingVisits = router.on('before', (event) => {
+    const url = event.detail.visit.url;
+
+    if (!unsaved.value || ownPaths.value.has(url.pathname)) {
+        return;
+    }
+
+    if (!window.confirm(t('publicProfile.editor.leaveConfirm'))) {
+        event.preventDefault();
+    }
+});
+
+/** Closing or reloading the tab with changes: the browser's own question */
+function onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (unsaved.value) {
+        event.preventDefault();
+    }
+}
+
 function requestClose(): void {
-    if (form.isDirty && !form.processing) {
+    if (unsaved.value) {
         confirmDiscard.value = true;
         return;
     }
@@ -136,19 +180,38 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 onMounted(() => {
+    appRoot = document.getElementById(APP_ROOT_ID);
+    appRootWasInert = appRoot?.hasAttribute('inert') ?? false;
+    appRoot?.setAttribute('inert', '');
+    window.addEventListener('beforeunload', onBeforeUnload);
     heading.value?.focus();
+});
+
+onBeforeUnmount(() => {
+    if (!appRootWasInert) {
+        appRoot?.removeAttribute('inert');
+    }
+    window.removeEventListener('beforeunload', onBeforeUnload);
+    stopGuardingVisits();
 });
 </script>
 
 <template>
     <Teleport to="body">
+        <!-- Over the inert page: it takes the clicks meant for it, and still lets the preview show -->
+        <div
+            class="fixed inset-0 z-[60] bg-neutral-950/30"
+            aria-hidden="true"
+            data-testid="profile-editor-backdrop"
+            @click="requestClose"
+        />
         <div
             ref="panel"
             role="dialog"
             aria-modal="true"
             :aria-labelledby="`${uid}-title`"
             :aria-describedby="`${uid}-intro`"
-            class="fixed inset-0 z-[60] flex flex-col bg-surface shadow-2xl sm:inset-y-0 sm:left-auto sm:w-[28rem] sm:border-l sm:border-default lg:w-[32rem] dark:shadow-depth"
+            class="fixed inset-0 z-[61] flex flex-col bg-surface shadow-2xl sm:inset-y-0 sm:left-auto sm:w-[28rem] sm:border-l sm:border-default lg:w-[32rem] dark:shadow-depth"
             data-testid="profile-editor"
             @keydown="onKeydown"
         >
@@ -260,7 +323,11 @@ onMounted(() => {
                         <PreferenceSwitch
                             :checked="form.show_membership"
                             :labelled-by="`${uid}-membership`"
-                            :described-by="`${uid}-membership-description`"
+                            :described-by="
+                                errorOf('show_membership')
+                                    ? `${uid}-membership-description ${uid}-membership-error`
+                                    : `${uid}-membership-description`
+                            "
                             @toggle="form.show_membership = !form.show_membership"
                         />
                         <div>
@@ -280,6 +347,7 @@ onMounted(() => {
                     </div>
                     <p
                         v-if="errorOf('show_membership')"
+                        :id="`${uid}-membership-error`"
                         class="mt-2 text-sm text-red-600 dark:text-red-400"
                     >
                         {{ errorOf('show_membership') }}
