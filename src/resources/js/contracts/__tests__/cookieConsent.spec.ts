@@ -88,6 +88,121 @@ describe('cookie consent contract', () => {
         expect(changes).toHaveBeenCalledWith(true, false, expect.anything());
     });
 
+    describe('withdrawing the provider', () => {
+        it('returns a function that withdraws the provider', () => {
+            const unregister = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => true,
+            });
+            expect(contract.hasCookieConsent('preferences')).toBe(true);
+
+            unregister();
+
+            expect(contract.hasCookieConsent('preferences')).toBe(false);
+            expect(contract.hasCookieConsentDecided()).toBe(false);
+        });
+
+        it('updates a computed value when the provider is withdrawn', () => {
+            const unregister = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => true,
+            });
+            const allowed = computed(() => contract.hasCookieConsent('preferences'));
+            expect(allowed.value).toBe(true);
+
+            unregister();
+
+            expect(allowed.value).toBe(false);
+        });
+
+        it('does not withdraw a provider that replaced it', () => {
+            const unregisterFirst = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+            });
+            contract.registerCookieConsentProvider({ hasConsent: (): boolean => true });
+
+            unregisterFirst();
+
+            expect(contract.hasCookieConsent('preferences')).toBe(true);
+        });
+
+        it('can be called twice without withdrawing a later provider', () => {
+            const unregisterFirst = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+            });
+            unregisterFirst();
+            contract.registerCookieConsentProvider({ hasConsent: (): boolean => true });
+
+            unregisterFirst();
+
+            expect(contract.hasCookieConsent('preferences')).toBe(true);
+        });
+
+        it('does not run decision listeners', () => {
+            const listener = vi.fn();
+            contract.onCookieConsentDecided(listener);
+            const unregister = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+                hasDecided: (): boolean => false,
+            });
+
+            unregister();
+
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('does not leave a waiting caller hanging: it gives up after the time limit', async () => {
+            vi.useFakeTimers();
+            pageProps.cookieConsentModule = true;
+            const unregister = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+                hasDecided: (): boolean => false,
+            });
+            const settled = vi.fn();
+            void contract.whenConsentDecided().then(settled);
+            await vi.advanceTimersByTimeAsync(contract.CONSENT_PROVIDER_TIMEOUT_MS * 10);
+            expect(settled).not.toHaveBeenCalled();
+
+            unregister();
+
+            await vi.advanceTimersByTimeAsync(contract.CONSENT_PROVIDER_TIMEOUT_MS - 1);
+            expect(settled).not.toHaveBeenCalled();
+            await vi.advanceTimersByTimeAsync(1);
+            expect(settled).toHaveBeenCalledTimes(1);
+            expect(vi.getTimerCount()).toBe(0);
+        });
+
+        it('lets a provider that registers again take over the wait', async () => {
+            vi.useFakeTimers();
+            pageProps.cookieConsentModule = true;
+            const unregister = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+                hasDecided: (): boolean => false,
+            });
+            const settled = vi.fn();
+            void contract.whenConsentDecided().then(settled);
+            unregister();
+
+            contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+                hasDecided: (): boolean => false,
+            });
+            await vi.advanceTimersByTimeAsync(contract.CONSENT_PROVIDER_TIMEOUT_MS * 10);
+
+            expect(settled).not.toHaveBeenCalled();
+        });
+
+        it('resolves at once for a caller that arrives after the withdrawal and the page has no module', async () => {
+            pageProps.cookieConsentModule = true;
+            const unregister = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+                hasDecided: (): boolean => false,
+            });
+            unregister();
+            pageProps.cookieConsentModule = false;
+
+            await expect(contract.whenConsentDecided()).resolves.toBeUndefined();
+        });
+    });
+
     describe('decision', () => {
         function decidingProvider(): { decide: () => void } {
             let decided = false;
