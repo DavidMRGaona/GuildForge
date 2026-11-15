@@ -12,6 +12,7 @@ use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Concerns\SavesRolesThroughTheGrantRule;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Notifications\VerifyPendingEmailNotification;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\RestoreAction;
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 
 class EditUser extends EditRecord
 {
@@ -32,8 +34,12 @@ class EditUser extends EditRecord
 
     protected static string $resource = UserResource::class;
 
-    /** @var list<string> */
-    private const array PROFILE_FIELDS = ['name', 'display_name', 'email', 'avatar_public_id'];
+    /**
+     * The address is not one of them: it never changes from here (splitEmailChange())
+     *
+     * @var list<string>
+     */
+    private const array PROFILE_FIELDS = ['name', 'display_name', 'avatar_public_id'];
 
     /**
      * @param  array<string, mixed>  $data
@@ -57,8 +63,10 @@ class EditUser extends EditRecord
     {
         /** @var UserModel $record */
         [$data, $submittedRoles] = $this->splitSubmittedRoles($data);
+        [$data, $newEmail] = $this->splitEmailChange($record, $data);
+        $actorId = (string) Auth::id();
 
-        return $this->saveAccountWithRoles($record, $submittedRoles, static function () use ($record, $data): UserModel {
+        $saved = $this->saveAccountWithRoles($record, $submittedRoles, static function () use ($record, $data, $newEmail, $actorId): UserModel {
             $record->update($data);
 
             // The same event as when the person edits their own profile, once and after the
@@ -70,8 +78,55 @@ class EditUser extends EditRecord
                 });
             }
 
+            // Only once the change is saved: a refused role change rolls it back and sends nothing
+            if ($newEmail !== null) {
+                DB::afterCommit(static function () use ($record, $newEmail, $actorId): void {
+                    $record->notify(new VerifyPendingEmailNotification($newEmail));
+
+                    // Ids only: the addresses are personal data and stay out of the log
+                    Log::info('Account email change requested from the panel', [
+                        'actor_id' => $actorId,
+                        'user_id' => (string) $record->getKey(),
+                    ]);
+                });
+            }
+
             return $record;
         });
+
+        if ($newEmail !== null) {
+            Notification::make()
+                ->title(__('filament.users.notifications.emailChangeRequested'))
+                ->body(__('filament.users.notifications.emailChangeRequestedBody'))
+                ->info()
+                ->send();
+        }
+
+        return $saved;
+    }
+
+    /**
+     * The address is never written from here: a new one becomes the pending change, and only the
+     * link sent to it makes it the account's (AuthService::verifyPendingEmail()), as on the
+     * profile page. Until then the account keeps its address and its verification. The current
+     * address and the pending one change nothing, so saving other fields never cancels a change
+     * the person requested and never sends the link again.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{array<string, mixed>, string|null} the data to save, and the address to send the link to
+     */
+    private function splitEmailChange(UserModel $record, array $data): array
+    {
+        $email = $data['email'] ?? null;
+        unset($data['email']);
+
+        if (! is_string($email) || $email === $record->email || $email === $record->pending_email) {
+            return [$data, null];
+        }
+
+        $data['pending_email'] = $email;
+
+        return [$data, $email];
     }
 
     /**

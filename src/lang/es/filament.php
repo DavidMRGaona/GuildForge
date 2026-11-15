@@ -505,6 +505,14 @@ return [
             'roles' => 'Roles',
             'rolesHelp' => 'Toda cuenta tiene siempre el rol «member», el rol base: por eso aparece marcado y no se puede desmarcar.',
             'status' => 'Estado',
+            'emailChangeHelp' => 'Si lo cambias, la cuenta conserva el correo actual hasta que la persona confirme el nuevo con el enlace que le llegará a esa dirección.',
+            'emailPendingHelp' => 'Cambio pendiente de confirmar: :email. Se aplica cuando la persona pulse el enlace enviado a esa dirección.',
+            'markEmailVerified' => 'Marcar el correo como verificado',
+            'markEmailVerifiedHelp' => 'Márcalo solo si has comprobado que la dirección es de esta persona. Si no, le llegará un enlace para verificarla. Queda registrado quién lo marca.',
+        ],
+        'notifications' => [
+            'emailChangeRequested' => 'Enlace de confirmación enviado',
+            'emailChangeRequestedBody' => 'El correo cambia cuando la persona pulse el enlace enviado a la nueva dirección. Hasta entonces conserva el actual.',
         ],
         'sections' => [
             'roles' => 'Roles y permisos',

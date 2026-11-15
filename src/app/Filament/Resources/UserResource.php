@@ -30,6 +30,7 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
 use Filament\Actions\RestoreAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
@@ -57,6 +58,9 @@ use RuntimeException;
 
 class UserResource extends BaseResource
 {
+    /** The create form's choice to count the address as verified without its link */
+    public const string MARK_EMAIL_VERIFIED_FIELD = 'mark_email_verified';
+
     protected static ?string $model = UserModel::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
@@ -101,7 +105,19 @@ class UserResource extends BaseResource
                     ->email()
                     ->required()
                     ->maxLength(255)
-                    ->unique(ignoreRecord: true),
+                    ->unique(ignoreRecord: true)
+                    // EditUser never writes the address: a new one waits for the link sent to it
+                    ->helperText(static fn (string $operation, ?UserModel $record): ?string => match (true) {
+                        $operation !== 'edit' => null,
+                        filled($record?->pending_email) => (string) __('filament.users.fields.emailPendingHelp', ['email' => $record->pending_email]),
+                        default => (string) __('filament.users.fields.emailChangeHelp'),
+                    }),
+                // Only when creating: an edited address is verified through its link, never by hand
+                Checkbox::make(self::MARK_EMAIL_VERIFIED_FIELD)
+                    ->label(__('filament.users.fields.markEmailVerified'))
+                    ->helperText(__('filament.users.fields.markEmailVerifiedHelp'))
+                    ->default(false)
+                    ->visibleOn('create'),
                 TextInput::make('password')
                     ->label(__('Contraseña'))
                     ->password()
