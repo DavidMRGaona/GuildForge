@@ -173,7 +173,8 @@ export function onCookieConsentDecided(listener: CookieConsentDecidedListener): 
  * wait for: no consent module on the page, or an answer already given. If the module is declared
  * but its provider does not register within `CONSENT_PROVIDER_TIMEOUT_MS` it resolves too, so a
  * module that failed to load never holds the caller back. If the provider is withdrawn while
- * the caller waits, the same time limit starts again (a provider that comes back stops it). It
+ * the caller waits, it resolves at once if the page no longer declares a consent module, and
+ * otherwise the same time limit starts again (a provider that comes back stops it). It
  * rejects only when the optional signal aborts.
  */
 export function whenConsentDecided(options: WhenConsentDecidedOptions = {}): Promise<void> {
@@ -210,7 +211,14 @@ export function whenConsentDecided(options: WhenConsentDecidedOptions = {}): Pro
 
         const check = (): void => {
             if (provider === null) {
-                // The provider was withdrawn: back to waiting for one to register, with a limit
+                // The provider was withdrawn and the page declares none now: nothing to wait for
+                if (!hasCookieConsentModule()) {
+                    finish();
+
+                    return;
+                }
+
+                // Otherwise back to waiting for one to register, with a limit
                 timer ??= setTimeout(finish, CONSENT_PROVIDER_TIMEOUT_MS);
 
                 return;
