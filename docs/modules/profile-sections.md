@@ -149,11 +149,6 @@ final readonly class MessagesProfileStat implements ProfileStatInterface
         return __('forum::messages.profile.messages');
     }
 
-    public function description(): string
-    {
-        return __('forum::messages.profile.messages_description');
-    }
-
     public function order(): int
     {
         return 10;
@@ -183,13 +178,26 @@ final readonly class MessagesProfileStat implements ProfileStatInterface
 |---|---|
 | `key()` | Same rules as a section key; stats and sections are stored apart in the layout, but a module should still not reuse a section key for a stat |
 | `label()` | The name beside the number and in the profile editor, translated |
-| `description()` | One line for the profile editor saying what it counts, translated (core ≥ the release with #743: a stat written for an earlier core must add it) |
 | `order()` | The default position on the stats row, lowest first; the owner may reorder |
 | `enabledByDefault()` | Whether the stat shows when the owner never turned it on or off |
 | `isAvailable()` | Whether the stat can be offered and counted now; keep it cheap |
 | `stat($owner, $viewer)` | `ProfileStatDTO(int $value, ?string $url)`: a whole number of zero or more, counted for this person, and optionally where it links (an absolute `https` address or a path starting with a single `/`, the rule of site block links, `LinkTargetRule`). `null` when there is nothing to show |
 
 Return `null`, never `0`, when the viewer cannot see the things counted: a 0 would say «this person wrote nothing» when they wrote in a category the viewer cannot read. A real 0 the viewer could check is fine.
+
+**Optional description** (core ≥ the release with #743): a stat may also implement `App\Application\Profiles\Contracts\DescribesProfileStat`, whose `description(): string` is one translated line the profile editor shows under its label («Mensajes que ha escrito en el foro»). It is a separate interface on purpose, so a stat written for the contract of 3.79 keeps working unchanged; without it the editor shows only the label. The interface only exists from that release on: a module that implements it must set `requires.core` to it, since on an older core the class would not load.
+
+```php
+final readonly class MessagesProfileStat implements ProfileStatInterface, DescribesProfileStat
+{
+    public function description(): string
+    {
+        return __('forum::messages.profile.messages_description');
+    }
+
+    // ...
+}
+```
 
 The page shows every stat in the owner's order; a summary card (the forum's user card) shows the first four (`ResolvedProfileDTO::CARD_STATS`).
 
@@ -216,7 +224,7 @@ The owner's choices are stored with their profile (`user_profiles.layout`, `Prof
 
 ### The profile editor
 
-The owner edits their profile from the profile itself («Editar perfil», core ≥ the release with #743). The editor lists every section and every stat that is registered and available now (`isAvailable()`), in the owner's order, each with its `label()`, its `description()`, a switch and buttons to move it up or down. To list them the core builds each one from the container once per request (`ProfileLayoutOptionsInterface`) and reads only those three methods, never `props()` or `stat()`; keep the constructor and `isAvailable()` cheap. One that cannot be built, has another key than it was registered with, or throws is not offered (warned once a day, like the renderer).
+The owner edits their profile from the profile itself («Editar perfil», core ≥ the release with #743). The editor lists every section and every stat that is registered and available now (`isAvailable()`), in the owner's order, each with its `label()`, its description (a section's `description()`; a stat's only when it implements `DescribesProfileStat`), a switch and buttons to move it up or down. To list them the core builds each one from the container once per request (`ProfileLayoutOptionsInterface`) and reads only those methods, never `props()` or `stat()`; keep the constructor and `isAvailable()` cheap. One that cannot be built, has another key than it was registered with, or throws is not offered (warned once a day, like the renderer).
 
 Saving (`PUT /miembros/{handle}`) accepts only the keys offered at that moment: anything else is refused with a field error. What the layout said of keys not offered now (a disabled module, an unavailable section) is kept after the new choice, so it comes back with its module. The editor's preview can only show what the page already drew: a section or stat turned on there appears once saved, except «Sobre mí», which the preview draws from the text being written.
 

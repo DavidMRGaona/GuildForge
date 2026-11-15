@@ -8,7 +8,7 @@ export interface ProfileEditorLayoutItem {
     /** `core.<x>` or `<module>.<x>` */
     key: string;
     label: string;
-    /** One line saying what it shows */
+    /** One line saying what it shows; empty for a stat that does not describe itself */
     description: string;
     enabled: boolean;
     /** Sections only: where it is drawn */

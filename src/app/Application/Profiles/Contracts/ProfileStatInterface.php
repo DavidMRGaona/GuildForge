@@ -14,6 +14,9 @@ use Illuminate\Contracts\Auth\Authenticatable;
  * its classes from registerProfileStats(); each one is built from the container again in every request
  * or job that draws profiles.
  *
+ * A stat may also describe itself in the profile editor by implementing DescribesProfileStat (core#743);
+ * without it the editor shows only its label.
+ *
  * The registry leaves a stat out (with a warning) when its key is invalid, not its owner's or shared
  * with another stat. Drawing it fails closed like a section.
  */
@@ -29,11 +32,6 @@ interface ProfileStatInterface
      * The name shown beside the number and in the profile editor, already translated.
      */
     public function label(): string;
-
-    /**
-     * One line for the profile editor (core#743): what it counts, already translated.
-     */
-    public function description(): string;
 
     /**
      * The default position among the stats, lowest first; the owner may reorder.

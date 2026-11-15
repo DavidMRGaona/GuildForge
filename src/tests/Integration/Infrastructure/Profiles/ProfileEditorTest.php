@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Profiles;
 
+use App\Application\Profiles\Contracts\DescribesProfileStat;
 use App\Application\Profiles\Services\ProfileEditorInterface;
 use App\Application\Profiles\Services\ProfileLayoutOptionsInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
@@ -35,14 +36,17 @@ final class ProfileEditorTest extends TestCase
         $this->section('core.unavailable', available: false);
         $this->section('core.broken', label: static fn (): string => throw new RuntimeException('Nope'));
         $this->stat('core.posts', order: 20);
+        $this->describedStat('core.tables', order: 30);
         $this->stat('core.hidden', available: false);
         $log = Log::spy();
 
         $options = app(ProfileLayoutOptionsInterface::class);
 
         $this->assertSame(['core.about', 'core.extra'], array_map(static fn ($option): string => $option->key, $options->sections()));
-        $this->assertSame(['core.posts'], array_map(static fn ($option): string => $option->key, $options->stats()));
-        $this->assertSame('Un contador para las pruebas.', $options->stats()[0]->description);
+        $this->assertSame(['core.posts', 'core.tables'], array_map(static fn ($option): string => $option->key, $options->stats()));
+        // The description is optional: a stat written for the contract of core#742 still works without it
+        $this->assertSame('', $options->stats()[0]->description);
+        $this->assertSame('Mesas que dirige.', $options->stats()[1]->description);
         $log->shouldHaveReceived('warning')->once()->withArgs(static fn (string $message, array $context): bool => $context['key'] === 'core.broken' && $context['exception'] === RuntimeException::class);
     }
 
@@ -150,6 +154,36 @@ final class ProfileEditorTest extends TestCase
             public function isAvailable(): bool
             {
                 return $this->available;
+            }
+        };
+
+        $id = 'test-stat-'.(++$this->bindings);
+        $this->app->bind($id, static fn (): FakeProfileStat => $instance);
+        app(ProfileStatRegistryInterface::class)->register($id);
+    }
+
+    private function describedStat(string $key, int $order): void
+    {
+        $instance = new class($key, $order) extends FakeProfileStat implements DescribesProfileStat
+        {
+            public function __construct(
+                private readonly string $statKey,
+                private readonly int $position,
+            ) {}
+
+            public function key(): string
+            {
+                return $this->statKey;
+            }
+
+            public function order(): int
+            {
+                return $this->position;
+            }
+
+            public function description(): string
+            {
+                return 'Mesas que dirige.';
             }
         };
 

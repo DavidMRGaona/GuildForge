@@ -9,7 +9,8 @@ use App\Domain\Profiles\ProfileRegion;
 /**
  * A section or stat the owner may turn on or off and reorder in the editor (core#743): registered and
  * available now. Region, module and component only for sections (the editor's preview draws «Sobre mí»
- * from them before it is saved).
+ * from them before it is saved). The description is empty for a stat that does not describe itself
+ * (DescribesProfileStat).
  */
 final readonly class ProfileLayoutOptionDTO
 {

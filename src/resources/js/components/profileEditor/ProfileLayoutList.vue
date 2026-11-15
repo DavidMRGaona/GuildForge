@@ -96,7 +96,7 @@ async function move(key: string, step: -1 | 1): Promise<void> {
                 <PreferenceSwitch
                     :checked="row.choice.enabled"
                     :labelled-by="idOf(row.choice.key, 'label')"
-                    :described-by="idOf(row.choice.key, 'description')"
+                    :described-by="row.item.description ? idOf(row.choice.key, 'description') : ''"
                     @toggle="toggle(row.choice.key)"
                 />
                 <div class="min-w-0 flex-1">
@@ -106,7 +106,11 @@ async function move(key: string, step: -1 | 1): Promise<void> {
                     >
                         {{ row.item.label }}
                     </p>
-                    <p :id="idOf(row.choice.key, 'description')" class="text-xs text-base-muted">
+                    <p
+                        v-if="row.item.description"
+                        :id="idOf(row.choice.key, 'description')"
+                        class="text-xs text-base-muted"
+                    >
                         {{ row.item.description }}
                     </p>
                 </div>

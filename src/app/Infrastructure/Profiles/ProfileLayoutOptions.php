@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Profiles;
 
+use App\Application\Profiles\Contracts\DescribesProfileStat;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
 use App\Application\Profiles\DTOs\ProfileLayoutOptionDTO;
@@ -120,7 +121,10 @@ final class ProfileLayoutOptions implements ProfileLayoutOptionsInterface
                 return null;
             }
 
-            return new ProfileLayoutOptionDTO($registration->key, $item->label(), $item->description(), $registration->enabledByDefault);
+            // Optional: a stat written for the contract of core#742 has no description
+            $description = $item instanceof DescribesProfileStat ? $item->description() : '';
+
+            return new ProfileLayoutOptionDTO($registration->key, $item->label(), $description, $registration->enabledByDefault);
         } catch (Throwable $exception) {
             $this->warn($kind, $registration->key, 'failed', sprintf('A profile %s failed while the editor read it; it is not offered.', $kind), $exception);
 
